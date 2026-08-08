@@ -1,62 +1,63 @@
-# 网页 MCP 助手 (GPT-WebCodex)
+# Trợ lý Web MCP (GPT-WebCodex)
 
-一个让网页版 ChatGPT 能直接读写你本地代码的小工具。**当 Codex / Cursor 额度用尽后，可以用它无缝充当“低配版 Codex”，彻底解决额度不够用的问题**。无需安装 Docker，双击即可在 Windows 上使用。
-
----
-
-## 📌 为什么搞这个工具？
-
-很多做开发的朋友应该都遇到过这个尴尬情况：**Codex 或 Cursor 的订阅额度没用几天就提示耗尽限额了**，想继续用网页版 ChatGPT 来写代码，但网页端偏偏无法直接读取和修改本地的文件，手动复制粘贴代码简直折磨人。
-
-做这个小助手的核心目的就是：**提供一个免配置的“平替低配版 Codex”**。它把 Python 运行时、网络隧道和目录权限隔离打包成了一个普通的 Windows `.exe` 软件。
-
-启动助手后，你在熟悉的网页版 ChatGPT 聊天框里下指令，AI 就能：
-- 📁 **直接读取桌面与本地项目的代码文件**
-- ✏️ **直接在你的本地目录里新建文件、修改代码、修复 Bug**
-
-Codex 额度不够用时，直接切到网页版 ChatGPT 接上这个助手，继续丝滑做本地代码重构。
+Một công cụ nhỏ giúp phiên bản web của ChatGPT có thể đọc và ghi trực tiếp tệp mã nguồn trên máy tính của bạn. **Khi hạn mức Codex / Cursor bị hết, bạn có thể sử dụng công cụ này làm "phiên bản thay thế mượt mà", giải quyết triệt để vấn đề hết hạn mức**. Không cần cài đặt Docker, chỉ cần nhấp đôi là có thể sử dụng trên Windows.
 
 ---
 
-## 💡 几个大家关心的点
+## 📌 Tại sao phát triển công cụ này?
 
-- **平替低配 Codex**：Codex 额度用光也不慌，用网页版 ChatGPT 配套助手继续改本地代码。
-- **免装 Docker**：软件内部内置了便携 Python 运行时，双击即用，不用去改系统的环境变量。
-- **目录权限隔离**：每次只向它授权你选择的**单一工程目录**，绝对不会去越权读取你电脑里的其他盘符和隐私文件。
-- **密钥本地加密**：API Key 保存在 Windows 本地 DPAPI 密钥库里，不上传任何第三方服务器。
-- **自动代理重连**：能自动识别系统代理，后台带连接诊断，掉线了会静默重连。
+Nhiều bạn làm lập trình chắc hẳn đã gặp phải tình huống trớ trêu: **Hạn mức đăng ký Codex hoặc Cursor vừa dùng vài ngày đã báo hết**, muốn tiếp tục dùng ChatGPT bản web để viết code nhưng bản web lại không thể trực tiếp đọc và chỉnh sửa tệp tin cục bộ, việc sao chép và dán thủ công vô cùng phiền phức.
 
----
+Mục đích cốt lõi của trợ lý này là: **Cung cấp một giải pháp thay thế "không cần cấu hình" cho Codex**. Công cụ đóng gói môi trường Python, đường truyền tunnel và cơ chế cách ly quyền truy cập thư mục thành một ứng dụng Windows `.exe` thông thường.
 
-## 📦 怎么下载和使用？
+Sau khi khởi động trợ lý, bạn chỉ cần đưa ra yêu cầu trong khung chat ChatGPT bản web quen thuộc, AI sẽ có thể:
+- 📁 **Đọc trực tiếp các tệp mã nguồn trong dự án cục bộ hoặc trên Desktop**
+- ✏️ **Tạo mới tệp, chỉnh sửa mã nguồn, sửa lỗi (Bug) trực tiếp trong thư mục dự án của bạn**
 
-普通使用**完全不需要配置任何开发环境**：
-
-1. 直接点击 GitHub 页面右侧的 **[Releases](../../releases)** 链接。
-2. 下载最新的 `.exe` 安装包（如 `web-mcp-assistant-setup-0.1.6.exe`），双击安装即可。
+Khi hết hạn mức Codex, bạn chỉ cần chuyển sang ChatGPT bản web kết nối với trợ lý này để tiếp tục tái cấu trúc mã nguồn một cách mượt mà.
 
 ---
 
-## 💻 开发者源码编译（可选）
+## 💡 Các điểm nổi bật
 
-如果你想修改代码或自己打包：
+- **Giải pháp thay thế Codex**: Không lo hết hạn mức Codex, kết hợp ChatGPT bản web với trợ lý để tiếp tục chỉnh sửa code cục bộ.
+- **Không cần cài Docker**: Tích hợp sẵn môi trường Python di động bên trong phần mềm, nhấp đôi để chạy ngay, không cần sửa biến môi trường hệ thống.
+- **Cách ly quyền thư mục**: Mỗi lần sử dụng chỉ cấp quyền cho **duy nhất một thư mục dự án** được chọn, tuyệt đối không truy cập trái phép các ổ đĩa hoặc tệp riêng tư khác trên máy tính.
+- **Mã hóa khóa cục bộ**: API Key được lưu trữ mã hóa trong kho khóa DPAPI cục bộ của Windows, không tải lên bất kỳ máy chủ bên thứ ba nào.
+- **Tự động kết nối lại qua Proxy**: Tự động nhận diện proxy hệ thống, chẩn đoán kết nối chạy ngầm, tự động kết nối lại khi mất mạng.
+
+---
+
+## 📦 Cách tải về và sử dụng
+
+Sử dụng thông thường **hoàn toàn không cần cấu hình bất kỳ môi trường lập trình nào**:
+
+1. Nhấp trực tiếp vào liên kết **[Releases](../../releases)** ở bên phải trang GitHub.
+2. Tải về gói cài đặt `.exe` mới nhất (ví dụ `web-mcp-assistant-setup-0.1.6.exe`), nhấp đôi để cài đặt.
+
+---
+
+## 💻 Biên dịch mã nguồn cho nhà phát triển (Tùy chọn)
+
+Nếu bạn muốn tùy chỉnh mã nguồn hoặc tự đóng gói:
 
 ```powershell
-# 克隆项目并安装依赖
+# Nhân bản dự án và cài đặt phụ thuộc
 git clone https://github.com/3169657175/gpt-webcodex.git
 cd gpt-webcodex
 npm install
 
-# 本地运行
+# Chạy thử cục bộ
 npm start
 
-# 一键打包生成安装包
+# Đóng gói tạo file cài đặt chỉ với 1 lệnh
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1
 ```
 
 ---
 
-## 📜 开源协议
+## 📜 Giấy phép mã nguồn mở
 
-- 本项目基于 [MIT License](LICENSE) 开源。
-- 内置集成 [Coding Tools MCP](https://github.com/anthropics/anthropic-tools) 源码，遵循 Apache License 2.0 规范，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- Dự án này được phát hành dưới dạng mã nguồn mở theo giấy phép [MIT License](LICENSE).
+- Tích hợp mã nguồn [Coding Tools MCP](https://github.com/anthropics/anthropic-tools), tuân thủ quy định Apache License 2.0, xem chi tiết tại [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+

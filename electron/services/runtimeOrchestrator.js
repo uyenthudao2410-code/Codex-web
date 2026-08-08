@@ -66,13 +66,13 @@ function switchMcpWorkspace(port, token, workspace) {
         let parsed = {};
         try { parsed = payload ? JSON.parse(payload) : {}; } catch { /* handled below */ }
         if (response.statusCode !== 200 || parsed.ready !== true) {
-          reject(new Error(parsed.error || `MCP 工作区切换失败（HTTP ${response.statusCode}）`));
+          reject(new Error(parsed.error || `Chuyển đổi workspace MCP thất bại (HTTP ${response.statusCode})`));
           return;
         }
         resolve(parsed);
       });
     });
-    request.on('timeout', () => { request.destroy(new Error('MCP 工作区切换超时')); });
+    request.on('timeout', () => { request.destroy(new Error('Quá thời gian chuyển đổi workspace MCP')); });
     request.on('error', reject);
     request.end(body);
   });
@@ -100,13 +100,13 @@ function setMcpAuthorizedRoots(port, token, roots) {
         let parsed = {};
         try { parsed = payload ? JSON.parse(payload) : {}; } catch { /* handled below */ }
         if (response.statusCode !== 200 || parsed.ready !== true) {
-          reject(new Error(parsed.error || `MCP 授权目录更新失败（HTTP ${response.statusCode}）`));
+          reject(new Error(parsed.error || `Cập nhật thư mục ủy quyền MCP thất bại (HTTP ${response.statusCode})`));
           return;
         }
         resolve(parsed);
       });
     });
-    request.on('timeout', () => { request.destroy(new Error('MCP 授权目录更新超时')); });
+    request.on('timeout', () => { request.destroy(new Error('Quá thời gian cập nhật thư mục ủy quyền MCP')); });
     request.on('error', reject);
     request.end(body);
   });
@@ -174,12 +174,12 @@ class RuntimeOrchestrator {
   }
 
   validate(settings) {
-    if (!settings.workspace || !fs.existsSync(settings.workspace)) throw new Error('请选择一个存在的工作目录。');
+    if (!settings.workspace || !fs.existsSync(settings.workspace)) throw new Error('Vui lòng chọn một thư mục làm việc hợp lệ.');
     validateRuntimeSettings(settings);
   }
 
   async start(options = {}) {
-    if (this.busy) throw new Error('当前已有部署任务正在运行。');
+    if (this.busy) throw new Error('Hiện đã có nhiệm vụ triển khai đang chạy.');
     const automatic = options.automatic === true;
     if (!automatic) {
       this.autoRecoveryBlocked = false;
@@ -193,48 +193,48 @@ class RuntimeOrchestrator {
       const settings = this.settingsStore.load();
       this.validate(settings);
       const runtimeApiKey = this.secrets.get('runtimeApiKey');
-      if (!runtimeApiKey) throw new Error('请先在“部署设置”中保存 Runtime API Key。');
-      if (!settings.tunnelId) throw new Error('请先填写 OpenAI Tunnel ID。');
+      if (!runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
+      if (!settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
       const token = await this.ensureToken();
 
-      this.progress('preflight', 8, '正在检查工作目录、运行环境和端口');
+      this.progress('preflight', 8, 'Đang kiểm tra thư mục làm việc, môi trường chạy và cổng');
       const env = await this.environment.inspect(settings, { forceProxy: true });
-      if (!env.tunnelClient.installed) throw new Error('缺少 OpenAI tunnel-client 运行文件。');
+      if (!env.tunnelClient.installed) throw new Error('Thiếu tệp thực thi OpenAI tunnel-client.');
       if (!env.python.installed) {
-        throw new Error('便携运行时尚未准备好，开发版需要 Python 3.11+；发行包将内置 Python。');
+        throw new Error('Môi trường runtime portable chưa sẵn sàng, phiên bản phát triển cần Python 3.11+; bản phát hành sẽ tích hợp sẵn Python.');
       }
 
-      this.progress('proxy-detect', 14, '正在检测直连、Windows 系统代理和本地代理端口');
+      this.progress('proxy-detect', 14, 'Đang kiểm tra kết nối trực tiếp, Proxy hệ thống Windows và cổng Proxy cục bộ');
       const proxy = await resolveProxy(settings);
       if (settings.proxyMode === 'manual' && !proxy.reachable) {
-        throw new Error(`手动代理不可用：${settings.proxyUrl}。请启动代理软件、修改端口，或切换到自动检测。`);
+        throw new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}. Vui lòng khởi động phần mềm proxy, thay đổi cổng hoặc chuyển sang tự động phát hiện.`);
       }
-      const proxyLabel = proxy.resolvedUrl || '直连';
-      this.log.info('网络路径检测完成', { mode: settings.proxyMode, source: proxy.source, route: proxyLabel, reachable: proxy.reachable });
-      this.progress('proxy-ready', 16, proxy.reachable ? `网络路径可用：${proxyLabel}` : '未验证到可用网络路径，将继续尝试直连并保留诊断日志');
+      const proxyLabel = proxy.resolvedUrl || 'Kết nối trực tiếp';
+      this.log.info('Hoàn tất kiểm tra tuyến đường mạng', { mode: settings.proxyMode, source: proxy.source, route: proxyLabel, reachable: proxy.reachable });
+      this.progress('proxy-ready', 16, proxy.reachable ? `Tuyến đường mạng khả dụng: ${proxyLabel}` : 'Chưa xác minh được tuyến đường mạng khả dụng, sẽ tiếp tục thử kết nối trực tiếp và giữ nhật ký chẩn đoán');
 
-      this.progress('runtime-stop-old', 18, '正在清理本助手上一次启动的旧运行实例');
+      this.progress('runtime-stop-old', 18, 'Đang dọn dẹp các instance chạy cũ từ lần khởi động trước');
       await this.tunnel.stop();
       await this.native.stop().catch(() => false);
       if (await canConnect('127.0.0.1', settings.mcpPort, 350)) {
-        throw new Error(`本地端口 ${settings.mcpPort} 正被其他程序占用。助手不会强制结束未知进程，请在“工作目录”页面更换 MCP 端口。`);
+        throw new Error(`Cổng cục bộ ${settings.mcpPort} đang bị ứng dụng khác chiếm dụng. Trợ lý sẽ không cưỡng chế chấm dứt tiến trình không xác định, vui lòng thay đổi cổng MCP trong trang "Thư mục làm việc".`);
       }
       if (await canConnect('127.0.0.1', settings.healthPort, 350)) {
-        throw new Error(`本地端口 ${settings.healthPort} 正被其他程序占用。助手不会强制结束未知进程，请更换 Tunnel 控制台端口。`);
+        throw new Error(`Cổng cục bộ ${settings.healthPort} đang bị ứng dụng khác chiếm dụng. Trợ lý sẽ không cưỡng chế chấm dứt tiến trình không xác định, vui lòng thay đổi cổng bảng điều khiển Tunnel.`);
       }
 
       await this.native.start(settings, token, this.progress.bind(this));
 
-      this.progress('mcp-health', 64, '正在验证 Coding Tools MCP');
+      this.progress('mcp-health', 64, 'Đang xác minh Coding Tools MCP');
       let ready = false;
       for (let index = 0; index < 35; index += 1) {
         if (await probeMcp(settings.mcpPort, token, settings.workspace)) { ready = true; break; }
         if (!(await this.native.status(settings))) {
-          throw new Error('Coding Tools MCP 进程已提前退出。请查看运行日志中的 mcp.log 获取具体启动错误。');
+          throw new Error('Tiến trình Coding Tools MCP đã thoát sớm. Vui lòng xem mcp.log trong nhật ký vận hành để biết lỗi khởi động chi tiết.');
         }
         await wait(1000);
       }
-      if (!ready) throw new Error('Coding Tools MCP 未能在规定时间内通过健康检查。');
+      if (!ready) throw new Error('Coding Tools MCP không vượt qua kiểm tra sức khỏe trong thời gian quy định.');
 
       await this.tunnel.start({ ...settings, effectiveProxyUrl: proxy.resolvedUrl }, runtimeApiKey, token, this.progress.bind(this));
       this.setManualStop(false);
@@ -243,7 +243,7 @@ class RuntimeOrchestrator {
       this.heartbeatFailures = 0;
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
-      this.progress('complete', 100, '部署完成，MCP 与 OpenAI Tunnel 均已运行');
+      this.progress('complete', 100, 'Triển khai hoàn tất, cả MCP và OpenAI Tunnel đều đang chạy');
       this.invalidateSnapshot();
       return await this.snapshot({ force: true, reason: 'started' });
     } catch (error) {
@@ -264,15 +264,15 @@ class RuntimeOrchestrator {
   }
 
   async stop(options = {}) {
-    if (this.busy) throw new Error('当前已有任务正在运行。');
+    if (this.busy) throw new Error('Hiện đã có nhiệm vụ đang chạy.');
     this.busy = true;
     try {
       if (options.manual !== false) this.setManualStop(true);
-      this.progress('stop-tunnel', 25, '正在停止 OpenAI Tunnel');
+      this.progress('stop-tunnel', 25, 'Đang dừng OpenAI Tunnel');
       await this.tunnel.stop();
-      this.progress('stop-runtime', 65, '正在停止 Coding Tools MCP');
+      this.progress('stop-runtime', 65, 'Đang dừng Coding Tools MCP');
       await this.native.stop().catch(() => false);
-      this.progress('stopped', 100, '所有由本助手启动的服务均已停止');
+      this.progress('stopped', 100, 'Tất cả các dịch vụ do trợ lý khởi động đã dừng');
       this.invalidateSnapshot();
       return await this.snapshot({ force: true, reason: 'stopped' });
     } finally {
@@ -286,11 +286,11 @@ class RuntimeOrchestrator {
   }
 
   async switchWorkspace(nextWorkspace) {
-    if (this.busy) throw new Error('当前已有任务正在运行。');
+    if (this.busy) throw new Error('Hiện đã có nhiệm vụ đang chạy.');
     const previous = this.settingsStore.load();
     const workspace = path.resolve(String(nextWorkspace || '').trim());
     if (!workspace || !fs.existsSync(workspace) || !fs.statSync(workspace).isDirectory()) {
-      throw new Error('请选择一个存在的工作目录。');
+      throw new Error('Vui lòng chọn một thư mục làm việc hợp lệ.');
     }
 
     const recentWorkspaces = mergeRecentWorkspaces(previous.recentWorkspaces, workspace);
@@ -311,7 +311,7 @@ class RuntimeOrchestrator {
 
     if (!runtimeWasRunning) {
       this.settingsStore.save({ workspace, recentWorkspaces });
-      this.progress('workspace-saved', 100, '工作目录已保存，服务下次启动时生效');
+      this.progress('workspace-saved', 100, 'Thư mục làm việc đã lưu, sẽ có hiệu lực ở lần khởi động dịch vụ tiếp theo');
       this.busy = false;
       this.invalidateSnapshot();
       return this.snapshot({ force: true, reason: 'workspace-saved' });
@@ -319,14 +319,14 @@ class RuntimeOrchestrator {
 
     const token = await this.ensureToken();
     try {
-      this.progress('workspace-switch', 20, '正在热切换 MCP 工作目录');
+      this.progress('workspace-switch', 20, 'Đang chuyển đổi nóng thư mục làm việc MCP');
       await switchMcpWorkspace(previous.mcpPort, token, workspace);
       const next = this.settingsStore.save({ workspace, recentWorkspaces });
       await this.native.markWorkspace(next);
-      this.progress('workspace-health', 80, '正在验证新的工作目录');
+      this.progress('workspace-health', 80, 'Đang xác minh thư mục làm việc mới');
       const ready = await probeMcp(next.mcpPort, token, workspace);
-      if (!ready) throw new Error('新工作目录与 MCP 实际目录不一致。');
-      this.progress('workspace-complete', 100, '工作目录已切换，MCP 与 Tunnel 均未重启');
+      if (!ready) throw new Error('Thư mục làm việc mới không khớp với thư mục thực tế của MCP.');
+      this.progress('workspace-complete', 100, 'Đã chuyển thư mục làm việc, cả MCP và Tunnel đều không cần khởi động lại');
       this.invalidateSnapshot();
       return this.snapshot({ force: true, reason: 'workspace-switched' });
     } catch (error) {
@@ -338,14 +338,14 @@ class RuntimeOrchestrator {
       } catch (rollbackError) {
         this.log.error(rollbackError.message, { stage: 'workspace-rollback' });
       }
-      throw new Error(`工作目录切换失败：${error.message}`);
+      throw new Error(`Chuyển đổi thư mục làm việc thất bại: ${error.message}`);
     } finally {
       this.busy = false;
     }
   }
 
   async updateAuthorizedRoots(roots) {
-    if (this.busy) throw new Error('当前已有任务正在运行。');
+    if (this.busy) throw new Error('Hiện đã có nhiệm vụ đang chạy.');
     const previous = this.settingsStore.load();
     const normalized = (Array.isArray(roots) ? roots : [])
       .map((item) => path.resolve(String(item || '').trim()))
@@ -412,7 +412,7 @@ class RuntimeOrchestrator {
     this.recoveryAttempts += 1;
     const delay = Math.min(60000, 2000 * (2 ** Math.min(this.recoveryAttempts - 1, 5)));
     this.nextRecoveryAt = Date.now() + delay;
-    this.log.warn('运行时协议健康检查连续失败，开始自动恢复', {
+    this.log.warn('Kiểm tra sức khỏe giao thức runtime thất bại liên tiếp, bắt đầu tự động khôi phục', {
       failures: this.heartbeatFailures,
       attempt: this.recoveryAttempts,
       mcpRunning: status.mcpRunning,
@@ -466,5 +466,3 @@ class RuntimeOrchestrator {
 }
 
 module.exports = { RuntimeOrchestrator, probeMcp, setMcpAuthorizedRoots };
-
-

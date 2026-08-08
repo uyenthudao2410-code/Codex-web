@@ -25,10 +25,10 @@ test('artifact collection rejects paths outside workspace and hashes files', asy
     const artifacts = await collectArtifacts(root, ['dist']);
     assert.equal(artifacts.length, 1);
     assert.equal(artifacts[0].sha256.length, 64);
-    await assert.rejects(() => collectArtifacts(root, ['..']), /工作目录内/);
+    await assert.rejects(() => collectArtifacts(root, ['..']), /thư mục làm việc/i);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test('workspace is required before build verification', () => {
-  assert.throws(() => requireWorkspace(''), /选择工作目录/);
+  assert.throws(() => requireWorkspace(''), /Vui lòng chọn thư mục làm việc/i);
 });

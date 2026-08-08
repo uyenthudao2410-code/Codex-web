@@ -8,9 +8,9 @@ function readJson(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8'))
 
 function requireWorkspace(root) {
   const value = String(root || '').trim();
-  if (!value) throw new Error('请先选择工作目录。');
+  if (!value) throw new Error('Vui lòng chọn thư mục làm việc trước.');
   const resolved = path.resolve(value);
-  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) throw new Error('当前工作目录不存在。');
+  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) throw new Error('Thư mục làm việc hiện tại không tồn tại.');
   return resolved;
 }
 
@@ -38,7 +38,7 @@ function isWithin(root, target) {
 function normalizeArtifactEntries(root, entries) {
   return [...new Set((entries || []).map((entry) => String(entry || '').trim()).filter(Boolean))].map((entry) => {
     const target = path.resolve(root, entry);
-    if (!isWithin(root, target)) throw new Error(`产物路径必须位于工作目录内：${entry}`);
+    if (!isWithin(root, target)) throw new Error(`Đường dẫn sản phẩm phải nằm trong thư mục làm việc: ${entry}`);
     return target;
   });
 }
@@ -75,15 +75,15 @@ class BuildVerificationService {
   constructor(log, emit = () => {}) { this.log = log; this.emit = emit; this.running = false; this.lastReport = null; }
   inspect(root) { return detectProject(root); }
   async execute(root, options = {}) {
-    if (this.running) throw new Error('已有构建验证正在运行。');
+    if (this.running) throw new Error('Đã có nhiệm vụ xác minh build đang chạy.');
     this.running = true;
     root = requireWorkspace(root);
     const project = detectProject(root);
     const testCommand = String(options.testCommand ?? project.testCommand).trim();
     const buildCommand = String(options.buildCommand ?? project.buildCommand).trim();
     const runCommand = async (stage, command) => {
-      if (!command) return { status: 'skipped', command, summary: '未检测到命令' };
-      if (command.length > 1000 || /[\r\n\0]/.test(command)) throw new Error('构建命令格式不安全。');
+      if (!command) return { status: 'skipped', command, summary: 'Không phát hiện lệnh' };
+      if (command.length > 1000 || /[\r\n\0]/.test(command)) throw new Error('Định dạng lệnh build không an toàn.');
       this.emit({ stage, status: 'running', command });
       const started = Date.now();
       const result = await run('cmd.exe', ['/d', '/s', '/c', command], { cwd: root, allowFailure: true, timeoutMs: 600000, onOutput: (stream, text) => this.emit({ stage, status: 'output', stream, text }) });
@@ -97,7 +97,7 @@ class BuildVerificationService {
       const passed = testResult.status !== 'failed' && buildResult.status !== 'failed' && buildResult.status !== 'blocked' && (options.runBuild === false || artifacts.length > 0);
       this.lastReport = { project, testResult, buildResult, artifacts, overallStatus: passed ? 'passed' : 'failed', generatedAt: new Date().toISOString() };
       this.emit({ stage: 'complete', status: this.lastReport.overallStatus, report: this.lastReport });
-      this.log?.info?.('构建验证完成', { project: project.name, status: this.lastReport.overallStatus, artifacts: artifacts.length });
+      this.log?.info?.('Hoàn tất xác minh build', { project: project.name, status: this.lastReport.overallStatus, artifacts: artifacts.length });
       return this.lastReport;
     } finally { this.running = false; }
   }

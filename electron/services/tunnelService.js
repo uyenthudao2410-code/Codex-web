@@ -13,11 +13,11 @@ class TunnelService {
   }
 
   async start(settings, runtimeApiKey, token, progress) {
-    if (!fs.existsSync(tunnelExecutable())) throw new Error('安装包中缺少 tunnel-client.exe。');
-    if (!runtimeApiKey) throw new Error('请先保存 OpenAI Runtime API Key。');
-    if (!settings.tunnelId) throw new Error('请先填写 OpenAI Tunnel ID。');
+    if (!fs.existsSync(tunnelExecutable())) throw new Error('Gói cài đặt thiếu tệp tunnel-client.exe.');
+    if (!runtimeApiKey) throw new Error('Vui lòng lưu OpenAI Runtime API Key trước.');
+    if (!settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
     await this.stop();
-    progress('tunnel-start', 72, '正在连接 OpenAI MCP Tunnel');
+    progress('tunnel-start', 72, 'Đang kết nối OpenAI MCP Tunnel');
     ensureParent(tunnelLogFile());
     rotateLog(tunnelLogFile());
     const output = fs.openSync(tunnelLogFile(), 'a');
@@ -54,12 +54,12 @@ class TunnelService {
     }));
     for (let index = 0; index < 30; index += 1) {
       if (await canConnect('127.0.0.1', settings.healthPort, 500)) {
-        this.log.info('OpenAI Tunnel 已启动', { pid: child.pid, tunnelId: settings.tunnelId });
+        this.log.info('OpenAI Tunnel đã khởi động', { pid: child.pid, tunnelId: settings.tunnelId });
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    throw new Error(`Tunnel 已启动，但 ${settings.healthPort} 端口未通过就绪检查。请查看 Tunnel 日志。`);
+    throw new Error(`Tunnel đã khởi động nhưng cổng ${settings.healthPort} không qua kiểm tra sẵn sàng. Vui lòng xem nhật ký Tunnel.`);
   }
 
   async stop() {

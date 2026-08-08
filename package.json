@@ -1,7 +1,7 @@
 {
   "name": "web-mcp-assistant",
   "version": "0.1.6",
-  "description": "一键部署与管理 Coding Tools MCP、OpenAI Tunnel 和 ChatGPT 接入的 Windows 桌面助手",
+  "description": "Trợ lý desktop Windows giúp triển khai và quản lý Coding Tools MCP, OpenAI Tunnel và kết nối ChatGPT chỉ với 1 cú nhấp chuột.",
   "author": "3169657175",
   "license": "MIT",
   "main": "electron/main.js",
@@ -23,7 +23,7 @@
   "build": {
     "electronDist": "node_modules/electron/dist",
     "appId": "com.gptwebcodex.assistant",
-    "productName": "网页 MCP 助手",
+    "productName": "Trợ lý Web MCP",
     "artifactName": "web-mcp-assistant-setup-${version}.${ext}",
     "directories": {
       "output": "dist"
@@ -53,7 +53,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "网页 MCP 助手",
+      "shortcutName": "Trợ lý Web MCP",
       "installerIcon": "electron/app-icon.ico",
       "uninstallerIcon": "electron/app-icon.ico",
       "installerHeaderIcon": "electron/app-icon.ico",

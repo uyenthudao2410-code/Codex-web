@@ -1,53 +1,53 @@
-﻿<!doctype html>
-<html lang="zh-CN">
+<!doctype html>
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:*;">
-  <title>网页 MCP 助手</title>
+  <title>Trợ lý Web MCP</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="settings-compact.css">
 </head>
-<body class="booting"><script src="theme-bootstrap.js"></script><div class="manager-window-bar"><span>网页 MCP 助手 · 设置</span><button id="closeManager" title="关闭设置">×</button></div>
-  <div class="boot-screen" id="bootScreen" role="status" aria-live="polite"><div class="boot-logo"><span></span><span></span><span></span></div><b>正在准备管理中心</b><small>读取工作区与本地服务状态…</small><i></i></div>
+<body class="booting"><script src="theme-bootstrap.js"></script><div class="manager-window-bar"><span>Trợ lý Web MCP · Cấu hình</span><button id="closeManager" title="Đóng Cấu hình">×</button></div>
+  <div class="boot-screen" id="bootScreen" role="status" aria-live="polite"><div class="boot-logo"><span></span><span></span><span></span></div><b>Đang chuẩn bị Trung tâm Quản lý</b><small>Đang đọc trạng thái không gian làm việc và dịch vụ cục bộ…</small><i></i></div>
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark"><span></span><span></span><span></span></div>
-        <div><strong>网页 MCP 助手</strong><small>Coding workspace bridge</small></div>
+        <div><strong>Trợ lý Web MCP</strong><small>Coding workspace bridge</small></div>
       </div>
 
-      <nav class="nav-list" aria-label="主导航">
-        <button class="nav-item active" data-page="overview"><span class="nav-icon">⌂</span><span>总览</span></button>
-        <button class="nav-item" data-page="deploy"><span class="nav-icon">◇</span><span>运行与连接</span></button>
-        <button class="nav-item" data-page="workspace"><span class="nav-icon">▱</span><span>工作区与权限</span></button>
-        <button class="nav-item" data-page="task"><span class="nav-icon">✓</span><span>任务状态</span></button>
-        <button class="nav-item" data-page="build"><span class="nav-icon">▣</span><span>构建验证</span></button>
-        <button class="nav-item" data-page="health"><span class="nav-icon">✚</span><span>诊断与修复</span></button>
-        <button class="nav-item" data-page="guide"><span class="nav-icon">?</span><span>接入指南</span></button>
-        <button class="nav-item" data-page="logs"><span class="nav-icon">≡</span><span>运行日志</span></button>
-        <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span><span>偏好设置</span></button>
+      <nav class="nav-list" aria-label="Điều hướng chính">
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">⌂</span><span>Tổng quan</span></button>
+        <button class="nav-item" data-page="deploy"><span class="nav-icon">◇</span><span>Vận hành & Kết nối</span></button>
+        <button class="nav-item" data-page="workspace"><span class="nav-icon">▱</span><span>Không gian làm việc & Quyền</span></button>
+        <button class="nav-item" data-page="task"><span class="nav-icon">✓</span><span>Trạng thái Nhiệm vụ</span></button>
+        <button class="nav-item" data-page="build"><span class="nav-icon">▣</span><span>Xác minh Build</span></button>
+        <button class="nav-item" data-page="health"><span class="nav-icon">✚</span><span>Chẩn đoán & Sửa chữa</span></button>
+        <button class="nav-item" data-page="guide"><span class="nav-icon">?</span><span>Hướng dẫn Kết nối</span></button>
+        <button class="nav-item" data-page="logs"><span class="nav-icon">≡</span><span>Nhật ký Vận hành</span></button>
+        <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span><span>Tùy chọn Cấu hình</span></button>
       </nav>
 
       <div class="sidebar-runtime">
-        <div class="runtime-orbit"><i id="sideRuntimeDot"></i><b id="sideRuntimeText">检查中</b></div>
-        <p id="sideWorkspace">尚未选择工作目录</p>
+        <div class="runtime-orbit"><i id="sideRuntimeDot"></i><b id="sideRuntimeText">Đang kiểm tra</b></div>
+        <p id="sideWorkspace">Chưa chọn thư mục làm việc</p>
         <div class="mini-stats"><span>MCP <b id="sideMcp">--</b></span><span>Tunnel <b id="sideTunnel">--</b></span></div>
       </div>
 
       <div class="sidebar-footer">
         <button class="ghost-button full" data-open="coding-tools-source">Coding Tools MCP · 0.4.3</button>
-        <small>本地状态检查不会调用模型，也不会消耗聊天额度。</small>
+        <small>Kiểm tra trạng thái cục bộ không gọi mô hình và không tiêu tốn hạn mức chat.</small>
       </div>
     </aside>
 
     <main class="main-area">
       <header class="topbar">
-        <div><p class="eyebrow" id="pageEyebrow">CONTROL CENTER</p><h1 id="pageTitle">运行总览</h1><p id="pageSubtitle">集中查看本地 MCP、OpenAI Tunnel 与部署环境。</p></div>
+        <div><p class="eyebrow" id="pageEyebrow">TRUNG TÂM ĐIỀU HÀNH</p><h1 id="pageTitle">Tổng quan Vận hành</h1><p id="pageSubtitle">Xem tập trung MCP cục bộ, OpenAI Tunnel và môi trường triển khai.</p></div>
         <div class="top-actions">
-          <button class="icon-button" id="themeToggle" title="切换主题">◐</button>
-          <button class="secondary-button" id="refreshButton">重新检测</button>
-          <button class="primary-button" id="topStartButton">一键启动</button>
+          <button class="icon-button" id="themeToggle" title="Chuyển chủ đề">◐</button>
+          <button class="secondary-button" id="refreshButton">Kiểm tra lại</button>
+          <button class="primary-button" id="topStartButton">Khởi động nhanh</button>
         </div>
       </header>
 
@@ -55,172 +55,169 @@
         <section class="page active" data-page-view="overview">
           <div class="hero-card">
             <div class="hero-copy">
-              <span class="soft-badge" id="heroBadge">正在检查运行状态</span>
-              <h2 id="heroTitle">让网页聊天安全访问你的代码目录</h2>
-              <p id="heroText">选择一个工作目录，配置 OpenAI Tunnel，然后由助手完成 MCP 的启动、鉴权、健康检查和故障诊断。</p>
+              <span class="soft-badge" id="heroBadge">Đang kiểm tra trạng thái vận hành</span>
+              <h2 id="heroTitle">Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn</h2>
+              <p id="heroText">Chọn một thư mục làm việc, cấu hình OpenAI Tunnel, sau đó trợ lý sẽ hoàn tất việc khởi động MCP, xác thực, kiểm tra sức khỏe và chẩn đoán sự cố.</p>
               <div class="hero-actions">
-                <button class="primary-button large" id="heroStartButton">开始部署</button>
-                <button class="secondary-button large" data-nav="guide">查看接入步骤</button>
+                <button class="primary-button large" id="heroStartButton">Bắt đầu triển khai</button>
+                <button class="secondary-button large" data-nav="guide">Xem hướng dẫn kết nối</button>
               </div>
             </div>
             <div class="connection-visual" aria-hidden="true">
-              <div class="node local"><span>LOCAL</span><b>工作目录</b></div>
+              <div class="node local"><span>CỤC BỘ</span><b>Thư mục làm việc</b></div>
               <div class="flow-line"><i></i></div>
-              <div class="node bridge"><span>MCP</span><b>安全桥接</b></div>
+              <div class="node bridge"><span>MCP</span><b>Cầu nối an toàn</b></div>
               <div class="flow-line"><i></i></div>
               <div class="node cloud"><span>WEB</span><b>ChatGPT</b></div>
             </div>
           </div>
 
           <div class="status-grid">
-            <article class="status-card"><div class="status-head"><span class="status-symbol blue">N</span><i id="runtimeDot"></i></div><h3>便携运行时</h3><strong id="runtimeStatus">检查中</strong><p id="runtimeMeta">正在检查内置 Python</p></article>
-            <article class="status-card"><div class="status-head"><span class="status-symbol violet">M</span><i id="mcpDot"></i></div><h3>Coding Tools MCP</h3><strong id="mcpStatus">未启动</strong><p id="mcpMeta">127.0.0.1:18765</p></article>
-            <article class="status-card"><div class="status-head"><span class="status-symbol cyan">T</span><i id="tunnelDot"></i></div><h3>OpenAI Tunnel</h3><strong id="tunnelStatus">未连接</strong><p id="tunnelMeta">等待完成配置</p></article>
-            <article class="status-card"><div class="status-head"><span class="status-symbol green">W</span><i id="workspaceDot"></i></div><h3>当前工作目录</h3><strong id="workspaceStatus">未选择</strong><p id="workspaceMeta">仅所选目录可被 MCP 访问</p></article>
+            <article class="status-card"><div class="status-head"><span class="status-symbol blue">N</span><i id="runtimeDot"></i></div><h3>Môi trường Portable</h3><strong id="runtimeStatus">Đang kiểm tra</strong><p id="runtimeMeta">Đang kiểm tra Python tích hợp</p></article>
+            <article class="status-card"><div class="status-head"><span class="status-symbol violet">M</span><i id="mcpDot"></i></div><h3>Coding Tools MCP</h3><strong id="mcpStatus">Chưa khởi động</strong><p id="mcpMeta">127.0.0.1:18765</p></article>
+            <article class="status-card"><div class="status-head"><span class="status-symbol cyan">T</span><i id="tunnelDot"></i></div><h3>OpenAI Tunnel</h3><strong id="tunnelStatus">Chưa kết nối</strong><p id="tunnelMeta">Chờ hoàn tất cấu hình</p></article>
+            <article class="status-card"><div class="status-head"><span class="status-symbol green">W</span><i id="workspaceDot"></i></div><h3>Thư mục làm việc hiện tại</h3><strong id="workspaceStatus">Chưa chọn</strong><p id="workspaceMeta">Chỉ thư mục được chọn mới có thể được MCP truy cập</p></article>
           </div>
 
           <div class="two-column overview-bottom">
             <article class="panel quick-panel">
-              <div class="panel-title"><div><span class="section-kicker">QUICK ACTIONS</span><h3>常用操作</h3></div></div>
+              <div class="panel-title"><div><span class="section-kicker">THAO TÁC NHANH</span><h3>Thao tác thường dùng</h3></div></div>
               <div class="action-list">
-                <button id="overviewRestart"><span class="action-icon">↻</span><span><b>重新启动全部服务</b><small>按正确顺序重启 MCP 与 Tunnel</small></span><i>›</i></button>
-                <button data-nav="workspace"><span class="action-icon">▱</span><span><b>切换工作目录</b><small>切换后自动重新创建运行环境</small></span><i>›</i></button>
-                <button data-nav="guide"><span class="action-icon">?</span><span><b>在网页中创建 MCP</b><small>逐步完成 ChatGPT 连接配置</small></span><i>›</i></button>
-                <button data-open="tunnel-ui"><span class="action-icon">↗</span><span><b>打开 Tunnel 控制台</b><small>查看隧道连接和请求状态</small></span><i>›</i></button>
+                <button id="overviewRestart"><span class="action-icon">↻</span><span><b>Khởi động lại toàn bộ dịch vụ</b><small>Khởi động lại MCP và Tunnel theo đúng thứ tự</small></span><i>›</i></button>
+                <button data-nav="workspace"><span class="action-icon">▱</span><span><b>Chuyển thư mục làm việc</b><small>Tự động tạo lại môi trường vận hành sau khi chuyển</small></span><i>›</i></button>
+                <button data-nav="guide"><span class="action-icon">?</span><span><b>Tạo MCP trong ứng dụng Web</b><small>Hoàn tất cấu hình kết nối ChatGPT theo từng bước</small></span><i>›</i></button>
+                <button data-open="tunnel-ui"><span class="action-icon">↗</span><span><b>Mở Bảng điều khiển Tunnel</b><small>Xem trạng thái kết nối đường truyền và yêu cầu</small></span><i>›</i></button>
               </div>
             </article>
             <article class="panel progress-panel">
-              <div class="panel-title"><div><span class="section-kicker">DEPLOYMENT</span><h3>当前任务</h3></div><span class="soft-badge neutral" id="progressBadge">等待操作</span></div>
-              <div class="progress-ring-wrap"><div class="progress-ring" id="progressRing"><span id="progressPercent">0%</span></div><div><b id="progressTitle">尚未开始部署</b><p id="progressMessage">完成部署设置后，点击一键启动。</p></div></div>
+              <div class="panel-title"><div><span class="section-kicker">TRIỂN KHAI</span><h3>Nhiệm vụ hiện tại</h3></div><span class="soft-badge neutral" id="progressBadge">Chờ thao tác</span></div>
+              <div class="progress-ring-wrap"><div class="progress-ring" id="progressRing"><span id="progressPercent">0%</span></div><div><b id="progressTitle">Chưa bắt đầu triển khai</b><p id="progressMessage">Sau khi hoàn tất cấu hình triển khai, nhấp Khởi động nhanh.</p></div></div>
               <div class="progress-track"><i id="progressBar"></i></div>
-              <div class="compact-buttons"><button class="danger-button" id="overviewStop">停止服务</button><button class="secondary-button" data-nav="logs">查看日志</button></div>
+              <div class="compact-buttons"><button class="danger-button" id="overviewStop">Dừng dịch vụ</button><button class="secondary-button" data-nav="logs">Xem nhật ký</button></div>
             </article>
           </div>
         </section>
 
         <section class="page" data-page-view="deploy">
-          <div class="section-header"><div><span class="section-kicker">DEPLOYMENT WIZARD</span><h2>一键部署设置</h2><p>只填写一次，之后启动、重启和健康检查全部由助手完成。</p></div><div class="step-pill"><span>1</span>配置 <i></i><span>2</span>检查 <i></i><span>3</span>部署</div></div>
+          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN TRIỂN KHAI</span><h2>Cấu hình triển khai nhanh</h2><p>Chỉ cần điền một lần, các thao tác khởi động, khởi động lại và kiểm tra sức khỏe sau đó sẽ do trợ lý tự động thực hiện.</p></div><div class="step-pill"><span>1</span>Cấu hình <i></i><span>2</span>Kiểm tra <i></i><span>3</span>Triển khai</div></div>
 
           <div class="two-column deploy-grid">
             <article class="panel">
-              <div class="panel-title"><div><h3>OpenAI Tunnel 身份</h3><p>密钥只在主进程中加密保存，界面与日志不会读取明文。</p></div><span class="security-chip">Windows 加密</span></div>
-              <label class="field"><span>Runtime API Key</span><div class="input-action"><input id="runtimeKeyInput" type="password" autocomplete="off" placeholder="粘贴 Runtime API Key"><button id="saveRuntimeKey">安全保存</button></div><small id="runtimeKeyHint">尚未保存</small></label>
-              <label class="field"><span>Tunnel ID</span><input id="tunnelIdInput" placeholder="例如 tunnel_..."><small>在 OpenAI Platform 的 Tunnels 页面创建或查看。</small></label>
-              <div class="inline-actions"><button class="secondary-button" data-open="openai-runtime-keys">申请 Runtime Key</button><button class="secondary-button" data-open="openai-tunnels">管理 Tunnels</button></div>
+              <div class="panel-title"><div><h3>Định danh OpenAI Tunnel</h3><p>Khóa mật mã được mã hóa lưu trữ trong tiến trình chính, giao diện và nhật ký không bao giờ đọc văn bản thuần.</p></div><span class="security-chip">Mã hóa Windows</span></div>
+              <label class="field"><span>Runtime API Key</span><div class="input-action"><input id="runtimeKeyInput" type="password" autocomplete="off" placeholder="Dán Runtime API Key"><button id="saveRuntimeKey">Lưu an toàn</button></div><small id="runtimeKeyHint">Chưa lưu</small></label>
+              <label class="field"><span>Tunnel ID</span><input id="tunnelIdInput" placeholder="Ví dụ tunnel_..."><small>Tạo hoặc xem trên trang Tunnels của OpenAI Platform.</small></label>
+              <div class="inline-actions"><button class="secondary-button" data-open="openai-runtime-keys">Yêu cầu Runtime Key</button><button class="secondary-button" data-open="openai-tunnels">Quản lý Tunnels</button></div>
             </article>
 
             <article class="panel">
-              <div class="panel-title"><div><h3>网络与代理</h3><p>默认自动选择直连、Windows 系统代理或常见本地代理，不再绑定某个代理软件和端口。</p></div></div>
-              <label class="field"><span>代理模式</span><select id="proxyModeSelect"><option value="auto">自动检测（推荐）</option><option value="system">跟随 Windows 系统</option><option value="manual">手动代理</option><option value="direct">强制直连</option></select><small>自动模式会实际验证 OpenAI 网络连通性。</small></label>
-              <label class="field" id="manualProxyField"><span>手动代理地址</span><input id="proxyUrlInput" placeholder="例如 http://127.0.0.1:7890"><small id="proxyHint">仅手动模式需要填写，支持 HTTP/HTTPS 代理。</small></label>
+              <div class="panel-title"><div><h3>Mạng & Proxy</h3><p>Mặc định tự động chọn kết nối trực tiếp, Proxy hệ thống Windows hoặc Proxy cục bộ phổ biến, không còn cố định vào phần mềm Proxy hay cổng cụ thể nào.</p></div></div>
+              <label class="field"><span>Chế độ Proxy</span><select id="proxyModeSelect"><option value="auto">Tự động phát hiện (Khuyến nghị)</option><option value="system">Theo hệ thống Windows</option><option value="manual">Proxy thủ công</option><option value="direct">Bắt buộc kết nối trực tiếp</option></select><small>Chế độ tự động sẽ xác minh kết nối mạng thực tế tới OpenAI.</small></label>
+              <label class="field" id="manualProxyField"><span>Địa chỉ Proxy thủ công</span><input id="proxyUrlInput" placeholder="Ví dụ http://127.0.0.1:7890"><small id="proxyHint">Chỉ cần điền ở chế độ thủ công, hỗ trợ Proxy HTTP/HTTPS.</small></label>
               <div class="environment-list">
-                <div><i id="envPythonDot"></i><span><b>Python / 便携运行时</b><small id="envPythonText">等待检测</small></span><button id="pythonInstall">安装</button></div>
-                <div><i id="envProxyDot"></i><span><b>当前网络路径</b><small id="envProxyText">等待检测</small></span><button id="proxyDetect">重新检测</button></div>
+                <div><i id="envPythonDot"></i><span><b>Python / Môi trường Portable</b><small id="envPythonText">Chờ kiểm tra</small></span><button id="pythonInstall">Cài đặt</button></div>
+                <div><i id="envProxyDot"></i><span><b>Tuyến đường mạng hiện tại</b><small id="envProxyText">Chờ kiểm tra</small></span><button id="proxyDetect">Kiểm tra lại</button></div>
               </div>
             </article>
           </div>
 
           <article class="deploy-footer panel accent-panel">
-            <div><span class="section-kicker">READY TO DEPLOY</span><h3>保存配置并部署完整服务</h3><p id="deploySummary">请选择工作目录并填写 Tunnel 信息。</p></div>
-            <div class="deploy-actions"><button class="secondary-button" id="saveDeploySettings">仅保存配置</button><button class="primary-button large" id="deployNow">保存并开始部署</button></div>
+            <div><span class="section-kicker">SẴN SÀNG TRIỂN KHAI</span><h3>Lưu cấu hình và triển khai dịch vụ</h3><p id="deploySummary">Vui lòng chọn thư mục làm việc và điền thông tin Tunnel.</p></div>
+            <div class="deploy-actions"><button class="secondary-button" id="saveDeploySettings">Chỉ lưu cấu hình</button><button class="primary-button large" id="deployNow">Lưu và bắt đầu triển khai</button></div>
           </article>
         </section>
 
         <section class="page" data-page-view="workspace">
-          <div class="section-header"><div><span class="section-kicker">WORKSPACE BOUNDARY</span><h2>工作目录与权限</h2><p>这是整个 MCP 最重要的安全边界：网页只能看到你明确选择的目录。</p></div></div>
+          <div class="section-header"><div><span class="section-kicker">RANH GIỚI KHÔNG GIAN LÀM VIỆC</span><h2>Thư mục làm việc & Quyền</h2><p>Đây là ranh giới an toàn quan trọng nhất của MCP: trang web chỉ nhìn thấy thư mục bạn cho phép.</p></div></div>
           <article class="panel workspace-picker">
             <div class="folder-illustration">▱</div>
-            <div class="folder-copy"><span>当前允许访问</span><h3 id="selectedWorkspace">尚未选择目录</h3><p>切换目录后，助手会在后台静默重启本地 MCP 并更新访问边界。</p></div>
-            <button class="primary-button" id="chooseWorkspace">选择文件夹</button>
+            <div class="folder-copy"><span>Đang cho phép truy cập</span><h3 id="selectedWorkspace">Chưa chọn thư mục</h3><p>Sau khi chuyển thư mục, trợ lý sẽ âm thầm khởi động lại MCP cục bộ ở chế độ nền và cập nhật ranh giới truy cập.</p></div>
+            <button class="primary-button" id="chooseWorkspace">Chọn thư mục</button>
           </article>
 
           <article class="panel authorized-roots-panel">
-            <div class="panel-title"><div><h3>额外授权目录</h3><p>无需切换主工作区。添加后，ChatGPT 可以直接读取和修改这些目录中的绝对路径；未授权目录仍会被拒绝。</p></div><button class="secondary-button" id="addAuthorizedRoot">添加授权目录</button></div>
-            <div class="authorized-root-list" id="authorizedRootsList"><span class="task-muted">尚未添加额外授权目录</span></div>
+            <div class="panel-title"><div><h3>Thư mục ủy quyền bổ sung</h3><p>Không cần chuyển vùng làm việc chính. Sau khi thêm, ChatGPT có thể trực tiếp đọc và sửa đổi các đường dẫn tuyệt đối trong các thư mục này; thư mục chưa ủy quyền vẫn sẽ bị từ chối.</p></div><button class="secondary-button" id="addAuthorizedRoot">Thêm thư mục ủy quyền</button></div>
+            <div class="authorized-root-list" id="authorizedRootsList"><span class="task-muted">Chưa thêm thư mục ủy quyền bổ sung</span></div>
           </article>
 
           <div class="two-column">
             <article class="panel">
-              <div class="panel-title"><div><h3>命令权限模式</h3><p>建议普通用户保持安全模式。</p></div></div>
+              <div class="panel-title"><div><h3>Chế độ quyền lệnh</h3><p>Khuyến nghị người dùng thông thường giữ Chế độ an toàn.</p></div></div>
               <div class="choice-stack">
-                <label class="choice selected"><input type="radio" name="permission" value="safe" checked><span><b>安全模式</b><small>联网、脚本展开和危险操作需要明确授权。</small></span><em>推荐</em></label>
-                <label class="choice"><input type="radio" name="permission" value="trusted"><span><b>可信模式</b><small>减少常规开发操作的确认，但仍保留破坏性检查。</small></span></label>
+                <label class="choice selected"><input type="radio" name="permission" value="safe" checked><span><b>Chế độ an toàn</b><small>Kết nối mạng, thực thi kịch bản và thao tác nguy hiểm cần có sự cho phép rõ ràng.</small></span><em>Khuyên dùng</em></label>
+                <label class="choice"><input type="radio" name="permission" value="trusted"><span><b>Chế độ tin cậy</b><small>Giảm bớt xác nhận cho các thao tác phát triển thông thường nhưng vẫn giữ các kiểm tra nguy hại.</small></span></label>
               </div>
             </article>
             <article class="panel">
-              <div class="panel-title"><div><h3>本地端口</h3><p>只有发生端口冲突时才需要修改。</p></div></div>
-              <div class="port-grid"><label class="field"><span>MCP 服务端口</span><input id="mcpPortInput" type="number" min="1024" max="65535" value="18765"></label><label class="field"><span>Tunnel 控制台端口</span><input id="healthPortInput" type="number" min="1024" max="65535" value="18081"></label></div>
-              <div class="notice blue-notice"><b>仅监听本机</b><p>两个端口均绑定到 127.0.0.1，不会直接暴露给局域网。</p></div>
+              <div class="panel-title"><div><h3>Cổng cục bộ</h3><p>Chỉ cần thay đổi khi xảy ra xung đột cổng.</p></div></div>
+              <div class="port-grid"><label class="field"><span>Cổng dịch vụ MCP</span><input id="mcpPortInput" type="number" min="1024" max="65535" value="18765"></label><label class="field"><span>Cổng bảng điều khiển Tunnel</span><input id="healthPortInput" type="number" min="1024" max="65535" value="18081"></label></div>
+              <div class="notice blue-notice"><b>Chỉ lắng nghe trên máy cục bộ</b><p>Cả hai cổng đều gắn vào 127.0.0.1, không lộ trực tiếp ra mạng nội bộ.</p></div>
             </article>
           </div>
-          <div class="page-footer-actions"><button class="secondary-button" id="saveWorkspace">保存工作区设置</button><button class="primary-button" id="saveWorkspaceRestart">保存并重新部署</button></div>
+          <div class="page-footer-actions"><button class="secondary-button" id="saveWorkspace">Lưu cài đặt không gian làm việc</button><button class="primary-button" id="saveWorkspaceRestart">Lưu và tái triển khai</button></div>
         </section>
 
         <section class="page" data-page-view="guide">
-          <div class="section-header"><div><span class="section-kicker">CHATGPT SETUP GUIDE</span><h2>在网页中创建 MCP</h2><p>按照顺序完成。不同套餐或工作空间的入口名称可能略有区别。</p></div><button class="primary-button" data-open="chatgpt-connectors">打开 ChatGPT 连接器设置</button></div>
+          <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN CẤU HÌNH CHATGPT</span><h2>Tạo MCP trong giao diện Web</h2><p>Hoàn thành theo đúng thứ tự. Tên lối vào có thể hơi khác tùy gói tài khoản hoặc workspace.</p></div><button class="primary-button" data-open="chatgpt-connectors">Mở Cài đặt Trình kết nối ChatGPT</button></div>
           <div class="guide-layout">
             <div class="guide-steps">
-              <article class="guide-step" data-guide-step="tunnel"><div class="step-number">1</div><div class="step-content"><div class="step-heading"><h3>在 OpenAI Platform 创建 Tunnel</h3><label><input type="checkbox" data-guide-check="tunnel">已完成</label></div><p>打开 Tunnels 管理页面，创建专用于 Coding Tools MCP 的 Tunnel，然后复制它的 <code>tunnel_...</code> 标识。</p><div class="mock-browser"><div class="mock-bar"><i></i><i></i><i></i><span>platform.openai.com / Tunnels</span></div><div class="mock-content"><span class="mock-label">Tunnel name</span><div class="mock-row"><b>Coding Tools MCP</b><em>Active</em></div><span class="mock-label">Tunnel ID</span><code>tunnel_••••••••••••</code></div></div><button class="secondary-button" data-open="openai-tunnels">打开 Tunnels 页面</button></div></article>
-              <article class="guide-step" data-guide-step="key"><div class="step-number">2</div><div class="step-content"><div class="step-heading"><h3>创建 Runtime API Key</h3><label><input type="checkbox" data-guide-check="key">已完成</label></div><p>为运行时创建独立 API Key。不要使用管理员密钥，也不要把密钥发送给任何人。</p><div class="notice"><b>正确做法</b><p>在本助手“一键部署”页面中粘贴，保存后由 Windows 加密，日志中不会出现明文。</p></div><button class="secondary-button" data-open="openai-runtime-keys">打开 Runtime Keys 页面</button></div></article>
-              <article class="guide-step" data-guide-step="deploy"><div class="step-number">3</div><div class="step-content"><div class="step-heading"><h3>回到助手完成部署</h3><label><input type="checkbox" data-guide-check="deploy">已完成</label></div><p>选择工作目录，填写 Tunnel ID 和 Runtime Key，点击“保存并开始部署”。状态全部变绿后再进行下一步。</p><div class="mini-flow"><span>工作目录</span><i>→</i><span>MCP</span><i>→</i><span>Tunnel</span><i>→</i><span class="green-text">已连接</span></div><button class="secondary-button" data-nav="deploy">返回一键部署</button></div></article>
-              <article class="guide-step" data-guide-step="connector"><div class="step-number">4</div><div class="step-content"><div class="step-heading"><h3>在 ChatGPT 创建自定义连接器</h3><label><input type="checkbox" data-guide-check="connector">已完成</label></div><p>进入“设置 → 连接器/Apps”，启用开发者模式并创建自定义 MCP。选择刚才建立的 Tunnel，并完成账户确认。</p><div class="connector-fields"><div><span>名称</span><b>Coding Tools MCP</b><button data-copy="Coding Tools MCP">复制</button></div><div><span>本地服务</span><b id="guideLocalUrl">http://127.0.0.1:18765/mcp</b><button id="copyLocalUrl">复制</button></div><div><span>Tunnel ID</span><b id="guideTunnelId">尚未填写</b><button id="copyTunnelId">复制</button></div></div><button class="primary-button" data-open="chatgpt-connectors">打开 ChatGPT 设置</button></div></article>
-              <article class="guide-step" data-guide-step="test"><div class="step-number">5</div><div class="step-content"><div class="step-heading"><h3>进行第一次工具测试</h3><label><input type="checkbox" data-guide-check="test">已完成</label></div><p>在网页聊天中选择该 MCP，然后发送下面这句话。第一次写入或执行命令时，请认真检查授权提示。</p><div class="prompt-box"><span>建议测试语句</span><p>请列出当前工作目录的第一层文件，并告诉我这是一个什么项目。不要修改任何文件。</p><button data-copy="请列出当前工作目录的第一层文件，并告诉我这是一个什么项目。不要修改任何文件。">复制测试语句</button></div></div></article>
+              <article class="guide-step" data-guide-step="tunnel"><div class="step-number">1</div><div class="step-content"><div class="step-heading"><h3>Tạo Tunnel trên OpenAI Platform</h3><label><input type="checkbox" data-guide-check="tunnel">Đã hoàn thành</label></div><p>Mở trang quản lý Tunnels, tạo Tunnel dành riêng cho Coding Tools MCP, sau đó sao chép mã định danh <code>tunnel_...</code>.</p><div class="mock-browser"><div class="mock-bar"><i></i><i></i><i></i><span>platform.openai.com / Tunnels</span></div><div class="mock-content"><span class="mock-label">Tunnel name</span><div class="mock-row"><b>Coding Tools MCP</b><em>Active</em></div><span class="mock-label">Tunnel ID</span><code>tunnel_••••••••••••</code></div></div><button class="secondary-button" data-open="openai-tunnels">Mở trang Tunnels</button></div></article>
+              <article class="guide-step" data-guide-step="key"><div class="step-number">2</div><div class="step-content"><div class="step-heading"><h3>Tạo Runtime API Key</h3><label><input type="checkbox" data-guide-check="key">Đã hoàn thành</label></div><p>Tạo API Key riêng cho môi trường chạy. Không dùng khóa quản trị và không gửi khóa cho bất kỳ ai.</p><div class="notice"><b>Cách làm đúng</b><p>Dán vào trang "Triển khai nhanh" của trợ lý này, sau khi lưu sẽ được Windows mã hóa, nhật ký sẽ không có văn bản thuần.</p></div><button class="secondary-button" data-open="openai-runtime-keys">Mở trang Runtime Keys</button></div></article>
+              <article class="guide-step" data-guide-step="deploy"><div class="step-number">3</div><div class="step-content"><div class="step-heading"><h3>Quay lại trợ lý để hoàn tất triển khai</h3><label><input type="checkbox" data-guide-check="deploy">Đã hoàn thành</label></div><p>Chọn thư mục làm việc, điền Tunnel ID và Runtime Key, nhấp "Lưu và bắt đầu triển khai". Chờ tất cả trạng thái chuyển sang xanh lá trước khi tiếp tục.</p><div class="mini-flow"><span>Thư mục làm việc</span><i>→</i><span>MCP</span><i>→</i><span>Tunnel</span><i>→</i><span class="green-text">Đã kết nối</span></div><button class="secondary-button" data-nav="deploy">Quay lại Triển khai nhanh</button></div></article>
+              <article class="guide-step" data-guide-step="connector"><div class="step-number">4</div><div class="step-content"><div class="step-heading"><h3>Tạo Trình kết nối Tùy chỉnh trong ChatGPT</h3><label><input type="checkbox" data-guide-check="connector">Đã hoàn thành</label></div><p>Vào "Cài đặt → Trình kết nối/Apps", bật chế độ nhà phát triển và tạo MCP tùy chỉnh. Chọn Tunnel vừa tạo và hoàn tất xác nhận tài khoản.</p><div class="connector-fields"><div><span>Tên</span><b>Coding Tools MCP</b><button data-copy="Coding Tools MCP">Sao chép</button></div><div><span>Dịch vụ cục bộ</span><b id="guideLocalUrl">http://127.0.0.1:18765/mcp</b><button id="copyLocalUrl">Sao chép</button></div><div><span>Tunnel ID</span><b id="guideTunnelId">Chưa điền</b><button id="copyTunnelId">Sao chép</button></div></div><button class="primary-button" data-open="chatgpt-connectors">Mở Cài đặt ChatGPT</button></div></article>
+              <article class="guide-step" data-guide-step="test"><div class="step-number">5</div><div class="step-content"><div class="step-heading"><h3>Thực hiện bài kiểm tra công cụ đầu tiên</h3><label><input type="checkbox" data-guide-check="test">Đã hoàn thành</label></div><p>Trong cuộc trò chuyện trên web, chọn MCP đó và gửi câu văn dưới đây. Lần đầu tiên ghi hoặc thực thi lệnh, hãy kiểm tra cẩn thận gợi ý ủy quyền.</p><div class="prompt-box"><span>Câu kiểm tra đề xuất</span><p>Hãy liệt kê các tệp ở tầng đầu tiên của thư mục làm việc hiện tại, và cho tôi biết đây là dự án gì. Không được sửa đổi bất kỳ tệp nào.</p><button data-copy="Hãy liệt kê các tệp ở tầng đầu tiên của thư mục làm việc hiện tại, và cho tôi biết đây là dự án gì. Không được sửa đổi bất kỳ tệp nào.">Sao chép câu kiểm tra</button></div></div></article>
             </div>
-            <aside class="guide-aside panel"><span class="section-kicker">CHECKLIST</span><h3>接入进度</h3><div class="guide-progress-number"><b id="guideProgressPercent">0%</b><span>已完成</span></div><div class="progress-track"><i id="guideProgressBar"></i></div><ul id="guideChecklist"><li>创建 Tunnel</li><li>准备 Runtime Key</li><li>部署本地服务</li><li>创建 ChatGPT MCP</li><li>完成只读测试</li></ul><div class="notice warning"><b>注意</b><p>ChatGPT 中创建连接器属于用户账户操作，助手不会模拟点击或读取你的网页登录信息。</p></div></aside>
+            <aside class="guide-aside panel"><span class="section-kicker">DANH SÁCH KIỂM TRA</span><h3>Tiến độ kết nối</h3><div class="guide-progress-number"><b id="guideProgressPercent">0%</b><span>Đã hoàn thành</span></div><div class="progress-track"><i id="guideProgressBar"></i></div><ul id="guideChecklist"><li>Tạo Tunnel</li><li>Chuẩn bị Runtime Key</li><li>Triển khai dịch vụ cục bộ</li><li>Tạo ChatGPT MCP</li><li>Hoàn tất kiểm tra chỉ đọc</li></ul><div class="notice warning"><b>Chú ý</b><p>Việc tạo trình kết nối trong ChatGPT thuộc thao tác tài khoản người dùng, trợ lý sẽ không giả lập nhấp chuột hoặc đọc thông tin đăng nhập web của bạn.</p></div></aside>
           </div>
         </section>
 
         <section class="page" data-page-view="task">
-          <div class="section-header"><div><span class="section-kicker">RESUMABLE TASK</span><h2>任务执行状态</h2><p>状态保存在当前工作区，刷新网页、切换聊天或 MCP 重启后仍可继续。</p></div><div class="inline-actions"><button class="danger-button" id="clearTaskState">清除状态</button><button class="primary-button" id="refreshTaskState">刷新状态</button></div></div>
-          <div id="taskStateEmpty" class="panel task-empty"><b>当前没有任务状态</b><span>网页模型开始编码任务并调用 task_state_update 后，这里会自动显示。</span></div>
+          <div class="section-header"><div><span class="section-kicker">NHIỆM VỤ TIẾP TỤC</span><h2>Trạng thái thực thi nhiệm vụ</h2><p>Trạng thái được lưu trong workspace hiện tại, vẫn có thể tiếp tục sau khi làm mới trang web, chuyển đoạn chat hoặc khởi động lại MCP.</p></div><div class="inline-actions"><button class="danger-button" id="clearTaskState">Xóa trạng thái</button><button class="primary-button" id="refreshTaskState">Làm mới trạng thái</button></div></div>
+          <div id="taskStateEmpty" class="panel task-empty"><b>Hiện không có trạng thái nhiệm vụ</b><span>Sau khi mô hình AI bắt đầu nhiệm vụ lập trình và gọi task_state_update, thông tin sẽ tự động hiển thị ở đây.</span></div>
           <div id="taskStateContent" class="task-dashboard" hidden>
-            <article class="panel task-objective"><span class="section-kicker">CURRENT OBJECTIVE</span><div class="task-title-row"><h3 id="taskObjective">—</h3><span class="soft-badge" id="taskStatus">idle</span></div><p><b>任务 ID：</b><code id="taskId">—</code></p><p><b>当前步骤：</b><span id="taskCurrentStep">—</span></p><p><b>下一步：</b><span id="taskNextStep">—</span></p><p class="task-failure" id="taskFailureRow" hidden><b>失败原因：</b><span id="taskFailure">—</span></p></article>
+            <article class="panel task-objective"><span class="section-kicker">MỤC TIÊU HIỆN TẠI</span><div class="task-title-row"><h3 id="taskObjective">—</h3><span class="soft-badge" id="taskStatus">idle</span></div><p><b>ID Nhiệm vụ:</b><code id="taskId">—</code></p><p><b>Bước hiện tại:</b><span id="taskCurrentStep">—</span></p><p><b>Bước tiếp theo:</b><span id="taskNextStep">—</span></p><p class="task-failure" id="taskFailureRow" hidden><b>Lý do thất bại:</b><span id="taskFailure">—</span></p></article>
             <div class="task-grid">
-              <article class="panel"><div class="panel-title"><h3>执行步骤</h3><span id="taskStepCount">0 / 0</span></div><div class="inline-actions task-controls"><button class="secondary-button" id="pauseTask">暂停</button><button class="secondary-button" id="resumeTask">继续</button><button class="danger-button" id="stopTask">停止</button></div><div class="task-steps" id="taskSteps"></div></article>
-              <article class="panel"><div class="panel-title"><h3>正在执行的命令</h3></div><div class="task-command" id="taskCommand">当前没有运行中的命令</div><div class="panel-title task-subtitle"><h3>最近测试结果</h3></div><div class="task-results" id="taskTests"></div></article>
+              <article class="panel"><div class="panel-title"><h3>Các bước thực thi</h3><span id="taskStepCount">0 / 0</span></div><div class="inline-actions task-controls"><button class="secondary-button" id="pauseTask">Tạm dừng</button><button class="secondary-button" id="resumeTask">Tiếp tục</button><button class="danger-button" id="stopTask">Dừng</button></div><div class="task-steps" id="taskSteps"></div></article>
+              <article class="panel"><div class="panel-title"><h3>Lệnh đang thực thi</h3></div><div class="task-command" id="taskCommand">Hiện không có lệnh nào đang chạy</div><div class="panel-title task-subtitle"><h3>Kết quả kiểm tra gần đây</h3></div><div class="task-results" id="taskTests"></div></article>
             </div>
             <div class="task-grid">
-              <article class="panel"><div class="panel-title"><h3>修改过的文件</h3><span id="taskFileCount">0</span></div><div class="task-files" id="taskFiles"></div></article>
-              <article class="panel"><div class="panel-title"><h3>最近构建报告</h3></div><div class="task-build" id="taskBuild"></div></article>
+              <article class="panel"><div class="panel-title"><h3>Các tệp đã sửa đổi</h3><span id="taskFileCount">0</span></div><div class="task-files" id="taskFiles"></div></article>
+              <article class="panel"><div class="panel-title"><h3>Báo cáo build gần đây</h3></div><div class="task-build" id="taskBuild"></div></article>
             </div>
           </div>
-          <article class="panel task-history-panel"><div class="panel-title"><h3>任务历史</h3><button class="secondary-button" id="refreshTaskHistory">刷新历史</button></div><div class="task-history" id="taskHistory"><span class="task-muted">暂无历史任务</span></div></article>
-          <article class="panel performance-panel"><div class="panel-title"><div><h3>性能分析</h3><span class="task-muted">区分本机执行耗时和模型 / Tunnel 等待时间</span></div><div class="inline-actions"><button class="secondary-button" id="refreshPerformance">刷新</button><button class="danger-button" id="clearPerformance">清空</button></div></div><div class="performance-metrics" id="performanceMetrics"><span class="task-muted">暂无性能记录</span></div><div class="performance-timeline" id="performanceTimeline"></div></article>
+          <article class="panel task-history-panel"><div class="panel-title"><h3>Lịch sử nhiệm vụ</h3><button class="secondary-button" id="refreshTaskHistory">Làm mới lịch sử</button></div><div class="task-history" id="taskHistory"><span class="task-muted">Chưa có lịch sử nhiệm vụ</span></div></article>
+          <article class="panel performance-panel"><div class="panel-title"><div><h3>Phân tích hiệu năng</h3><span class="task-muted">Phân biệt thời gian thực thi trên máy và thời gian chờ mô hình / Tunnel</span></div><div class="inline-actions"><button class="secondary-button" id="refreshPerformance">Làm mới</button><button class="danger-button" id="clearPerformance">Xóa sạch</button></div></div><div class="performance-metrics" id="performanceMetrics"><span class="task-muted">Chưa có bản ghi hiệu năng</span></div><div class="performance-timeline" id="performanceTimeline"></div></article>
         </section>
 
         <section class="page" data-page-view="build">
-          <div class="section-header"><div><span class="section-kicker">BUILD & VERIFY</span><h2>构建与验证</h2><p>识别项目、运行测试和构建、检查产物并计算 SHA256。</p></div><div class="inline-actions"><button class="secondary-button" id="inspectBuild">识别项目</button><button class="primary-button" id="runBuild">开始验证</button></div></div>
-          <div class="two-column"><article class="panel"><div class="panel-title"><h3>项目与命令</h3><span class="soft-badge" id="buildProjectType">未识别</span></div><label class="field"><span>测试命令</span><input id="buildTestCommand" placeholder="自动检测"></label><label class="field"><span>构建命令</span><input id="buildCommand" placeholder="自动检测"></label><label class="field"><span>产物目录（逗号分隔）</span><input id="buildArtifacts" placeholder="dist, build"></label><div class="choice-stack"><label class="choice"><input id="buildRunTests" type="checkbox" checked><span><b>执行测试</b><small>测试失败时阻止构建。</small></span></label><label class="choice"><input id="buildRunBuild" type="checkbox" checked><span><b>执行构建</b><small>构建成功后验证产物。</small></span></label></div></article><article class="panel"><div class="panel-title"><h3>实时进度</h3><span id="buildStatus">等待开始</span></div><pre class="build-console" id="buildConsole">尚未执行构建验证。</pre></article></div>
-          <article class="panel"><div class="panel-title"><h3>构建报告</h3><span id="buildReportStatus">—</span></div><div class="build-report-grid" id="buildReport"><span class="task-muted">完成验证后显示测试、构建、版本、产物和 SHA256。</span></div></article>
+          <div class="section-header"><div><span class="section-kicker">BUILD & XÁC MINH</span><h2>Xác minh & Build</h2><p>Nhận diện dự án, chạy kiểm thử và build, kiểm tra sản phẩm đầu ra và tính mã SHA256.</p></div><div class="inline-actions"><button class="secondary-button" id="inspectBuild">Nhận diện dự án</button><button class="primary-button" id="runBuild">Bắt đầu xác minh</button></div></div>
+          <div class="two-column"><article class="panel"><div class="panel-title"><h3>Dự án & Lệnh</h3><span class="soft-badge" id="buildProjectType">Chưa nhận diện</span></div><label class="field"><span>Lệnh kiểm thử</span><input id="buildTestCommand" placeholder="Tự động phát hiện"></label><label class="field"><span>Lệnh Build</span><input id="buildCommand" placeholder="Tự động phát hiện"></label><label class="field"><span>Thư mục sản phẩm (phân cách bằng dấu phẩy)</span><input id="buildArtifacts" placeholder="dist, build"></label><div class="choice-stack"><label class="choice"><input id="buildRunTests" type="checkbox" checked><span><b>Thực thi kiểm thử</b><small>Ngăn chặn build khi kiểm thử thất bại.</small></span></label><label class="choice"><input id="buildRunBuild" type="checkbox" checked><span><b>Thực thi Build</b><small>Xác minh sản phẩm sau khi build thành công.</small></span></label></div></article><article class="panel"><div class="panel-title"><h3>Tiến độ thời gian thực</h3><span id="buildStatus">Chờ bắt đầu</span></div><pre class="build-console" id="buildConsole">Chưa thực hiện xác minh build.</pre></article></div>
+          <article class="panel"><div class="panel-title"><h3>Báo cáo Build</h3><span id="buildReportStatus">—</span></div><div class="build-report-grid" id="buildReport"><span class="task-muted">Hiển thị kiểm thử, build, phiên bản, sản phẩm và SHA256 sau khi hoàn tất xác minh.</span></div></article>
         </section>
 
         <section class="page" data-page-view="health">
-          <div class="section-header"><div><span class="section-kicker">FIRST RUN DOCTOR</span><h2>系统体检与修复</h2><p>检查工作区、运行环境、密钥、端口、MCP 和 Tunnel。</p></div><div class="inline-actions"><button class="secondary-button" id="inspectHealth">重新体检</button><button class="primary-button" id="repairHealth">一键修复</button></div></div>
-          <article class="panel"><div class="panel-title"><h3>检查结果</h3><span class="soft-badge" id="healthSummary">尚未检查</span></div><div class="health-list" id="healthList"><span class="task-muted">进入本页后自动开始体检。</span></div></article>
-          <div class="notice warning"><b>安全边界</b><p>一键修复只会调整助手自身配置、认证 Token 并重启助手管理的服务；不会结束未知进程，也不会替你填写 Runtime Key 或 Tunnel ID。</p></div>
+          <div class="section-header"><div><span class="section-kicker">CHẨN ĐOÁN SỨC KHỎE HỆ THỐNG</span><h2>Kiểm tra & Sửa chữa Hệ thống</h2><p>Kiểm tra không gian làm việc, môi trường chạy, khóa mật mã, cổng dịch vụ, MCP và Tunnel.</p></div><div class="inline-actions"><button class="secondary-button" id="inspectHealth">Kiểm tra lại</button><button class="primary-button" id="repairHealth">Sửa chữa nhanh</button></div></div>
+          <article class="panel"><div class="panel-title"><h3>Kết quả kiểm tra</h3><span class="soft-badge" id="healthSummary">Chưa kiểm tra</span></div><div class="health-list" id="healthList"><span class="task-muted">Tự động kiểm tra sức khỏe khi vào trang này.</span></div></article>
+          <div class="notice warning"><b>Ranh giới an toàn</b><p>Sửa chữa nhanh chỉ điều chỉnh cấu hình của bản thân trợ lý, Token xác thực và khởi động lại dịch vụ được quản lý; sẽ không chấm dứt các tiến trình không xác định, cũng không điền thay bạn Runtime Key hoặc Tunnel ID.</p></div>
         </section>
 
         <section class="page" data-page-view="logs">
-          <div class="section-header"><div><span class="section-kicker">DIAGNOSTICS</span><h2>运行日志</h2><p>密钥和认证 Token 会自动隐藏；可以安全地复制普通诊断信息。</p></div><div class="inline-actions"><button class="secondary-button" id="clearLogs">清空日志</button><button class="primary-button" id="refreshLogs">刷新日志</button></div></div>
-          <article class="panel log-panel"><div class="log-toolbar"><span><i class="dot green"></i>助手日志</span><div><button class="log-filter active" data-log-filter="all">全部</button><button class="log-filter" data-log-filter="error">错误</button><button class="log-filter" data-log-filter="info">信息</button></div></div><div class="log-output" id="logOutput"><div class="empty-state"><b>暂无日志</b><span>启动或检测服务后，日志会显示在这里。</span></div></div></article>
+          <div class="section-header"><div><span class="section-kicker">CHẨN ĐOÁN</span><h2>Nhật ký Vận hành</h2><p>Khóa bí mật và Token xác thực sẽ tự động ẩn; có thể sao chép an toàn các thông tin chẩn đoán thông thường.</p></div><div class="inline-actions"><button class="secondary-button" id="clearLogs">Xóa nhật ký</button><button class="primary-button" id="refreshLogs">Làm mới nhật ký</button></div></div>
+          <article class="panel log-panel"><div class="log-toolbar"><span><i class="dot green"></i>Nhật ký Trợ lý</span><div><button class="log-filter active" data-log-filter="all">Tất cả</button><button class="log-filter" data-log-filter="error">Lỗi</button><button class="log-filter" data-log-filter="info">Thông tin</button></div></div><div class="log-output" id="logOutput"><div class="empty-state"><b>Chưa có nhật ký</b><span>Sau khi khởi động hoặc kiểm tra dịch vụ, nhật ký sẽ hiển thị ở đây.</span></div></div></article>
         </section>
 
         <section class="page" data-page-view="settings">
-          <div class="section-header"><div><span class="section-kicker">PREFERENCES</span><h2>助手设置</h2><p>控制外观、启动行为与凭据维护。</p></div></div>
+          <div class="section-header"><div><span class="section-kicker">CẤU HÌNH TÙY CHỌN</span><h2>Cài đặt Trợ lý</h2><p>Điều khiển giao diện, hành vi khởi động và quản lý chứng thư.</p></div></div>
           <div class="two-column">
-            <article class="panel settings-list"><div class="panel-title"><h3>外观与运行行为</h3></div><label class="setting-row"><span><b>界面主题</b><small>管理中心默认使用与聊天主界面更协调的浅色风格。</small></span><select id="themeSelect"><option value="light">浅色</option><option value="dark">深色</option></select></label><div class="setting-row"><span><b>智能工具模式</b><small>固定使用精简后的 8 个聚合工具，旧工具仅保留隐藏兼容。</small></span><span class="security-chip">自动</span></div><label class="setting-row"><span><b>开机启动网页 MCP 助手</b><small>登录 Windows 后自动启动应用。</small></span><input id="startWithWindowsToggle" class="toggle" type="checkbox"></label><label class="setting-row"><span><b>打开助手时自动启动服务</b><small>配置完整时自动启动 MCP 与 Tunnel。</small></span><input id="autoStartToggle" class="toggle" type="checkbox"></label><label class="setting-row"><span><b>关闭窗口后保持服务运行</b><small>关闭主界面只隐藏到后台，不停止 MCP 与 Tunnel。</small></span><input id="keepRunningToggle" class="toggle" type="checkbox" checked></label><label class="setting-row"><span><b>长任务主动汇报间隔</b><small>超过该时间仍未完成时，工具会把控制权交还给 ChatGPT 先汇报进度。</small></span><select id="progressReportSelect"><option value="60">60 秒</option><option value="90">90 秒</option><option value="120">2 分钟</option><option value="180">3 分钟</option></select></label></article>
-            <article class="panel settings-list"><div class="panel-title"><h3>安全与维护</h3></div><div class="setting-row"><span><b>Runtime API Key</b><small id="settingsKeyState">尚未保存</small></span><button class="danger-button" id="removeRuntimeKey">删除密钥</button></div><div class="setting-row"><span><b>MCP 本地认证 Token</b><small>重新生成后需要重新启动服务。</small></span><button class="secondary-button" id="regenerateToken">重新生成</button></div><div class="setting-row"><span><b>ChatGPT 登录数据</b><small>清除内联网页的 Cookie、缓存和登录状态。</small></span><button class="danger-button" id="clearChatSession">清除并重新登录</button></div><div class="setting-row"><span><b>匿名遥测</b><small>Coding Tools MCP 已由本助手设置为关闭。</small></span><span class="security-chip">已关闭</span></div></article>
+            <article class="panel settings-list"><div class="panel-title"><h3>Giao diện & Hành vi vận hành</h3></div><label class="setting-row"><span><b>Chủ đề giao diện</b><small>Trung tâm quản lý mặc định sử dụng phong cách sáng hài hòa hơn với giao diện chat chính.</small></span><select id="themeSelect"><option value="light">Sáng</option><option value="dark">Tối</option></select></label><div class="setting-row"><span><b>Chế độ công cụ thông minh</b><small>Cố định sử dụng 8 công cụ tổng hợp đã rút gọn, công cụ cũ chỉ giữ tương thích ẩn.</small></span><span class="security-chip">Tự động</span></div><label class="setting-row"><span><b>Tự khởi động Trợ lý Web MCP cùng Windows</b><small>Tự động khởi động ứng dụng sau khi đăng nhập Windows.</small></span><input id="startWithWindowsToggle" class="toggle" type="checkbox"></label><label class="setting-row"><span><b>Tự động khởi động dịch vụ khi mở trợ lý</b><small>Tự động khởi động MCP và Tunnel khi đã cấu hình đầy đủ.</small></span><input id="autoStartToggle" class="toggle" type="checkbox"></label><label class="setting-row"><span><b>Duy trì dịch vụ chạy ngầm khi đóng cửa sổ</b><small>Đóng giao diện chính chỉ ẩn xuống khay hệ thống, không dừng MCP và Tunnel.</small></span><input id="keepRunningToggle" class="toggle" type="checkbox" checked></label><label class="setting-row"><span><b>Khoảng thời gian báo cáo chủ động nhiệm vụ dài</b><small>Khi vượt quá thời gian này mà chưa hoàn thành, công cụ sẽ trả lại quyền cho ChatGPT để báo cáo tiến độ trước.</small></span><select id="progressReportSelect"><option value="60">60 giây</option><option value="90">90 giây</option><option value="120">2 phút</option><option value="180">3 phút</option></select></label></article>
+            <article class="panel settings-list"><div class="panel-title"><h3>Bảo mật & Bảo trì</h3></div><div class="setting-row"><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div><div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div><div class="setting-row"><span><b>Dữ liệu đăng nhập ChatGPT</b><small>Xóa Cookie, bộ nhớ đệm và trạng thái đăng nhập của trang web tích hợp.</small></span><button class="danger-button" id="clearChatSession">Xóa và đăng nhập lại</button></div><div class="setting-row"><span><b>Thu thập dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP đã được trợ lý này thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div></article>
           </div>
-          <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>网页 MCP 助手 <span>v0.1.6</span></h3><p>用于管理 Coding Tools MCP 与 OpenAI Tunnel。底层 Coding Tools MCP 遵循 Apache License 2.0。</p></div><button class="secondary-button" data-open="coding-tools-source">查看上游项目</button></article>
+          <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Trợ lý Web MCP <span>v0.1.6</span></h3><p>Dùng để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem dự án thượng nguồn</button></article>
         </section>
       </div>
     </main>
   </div>
   <div class="toast-stack" id="toastStack"></div>
-  <div class="busy-overlay" id="busyOverlay"><div class="loader"></div><b>正在处理</b><span>请不要重复点击操作按钮</span></div>
+  <div class="busy-overlay" id="busyOverlay"><div class="loader"></div><b>Đang xử lý</b><span>Vui lòng không nhấp liên tục vào nút thao tác</span></div>
   <script src="app.js"></script>
 </body>
 </html>
-
-
-

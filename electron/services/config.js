@@ -1,4 +1,4 @@
-﻿const path = require('node:path');
+const path = require('node:path');
 
 const DEFAULTS = Object.freeze({
   configVersion: 5,
@@ -84,21 +84,21 @@ function normalize(input = {}) {
 }
 
 function validateRuntimeSettings(settings) {
-  for (const [label, port] of [['MCP 端口', settings.mcpPort], ['Tunnel 健康端口', settings.healthPort]]) {
-    if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error(`${label}必须在 1024-65535 之间。`);
+  for (const [label, port] of [['Cổng MCP', settings.mcpPort], ['Cổng bảng điều khiển Tunnel', settings.healthPort]]) {
+    if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error(`${label} phải nằm trong khoảng 1024-65535.`);
   }
-  if (settings.mcpPort === settings.healthPort) throw new Error('MCP 端口和 Tunnel 健康端口不能相同。');
+  if (settings.mcpPort === settings.healthPort) throw new Error('Cổng MCP và cổng bảng điều khiển Tunnel không được giống nhau.');
   if (settings.tunnelId && !/^tunnel_[A-Za-z0-9_-]{4,}$/.test(settings.tunnelId)) {
-    throw new Error('Tunnel ID 格式不正确，应以 tunnel_ 开头。');
+    throw new Error('Định dạng Tunnel ID không hợp lệ, phải bắt đầu bằng tunnel_.');
   }
   if (settings.proxyMode === 'manual' && !settings.proxyUrl) {
-    throw new Error('手动代理模式需要填写代理地址。');
+    throw new Error('Chế độ proxy thủ công cần điền địa chỉ proxy.');
   }
   if (settings.proxyUrl) {
     let parsed;
-    try { parsed = new URL(settings.proxyUrl); } catch { throw new Error('代理地址不是有效 URL。'); }
-    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('代理地址只支持 http:// 或 https://。');
-    if (parsed.username || parsed.password) throw new Error('请不要在代理地址中保存用户名或密码。');
+    try { parsed = new URL(settings.proxyUrl); } catch { throw new Error('Địa chỉ proxy không phải là URL hợp lệ.'); }
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Địa chỉ proxy chỉ hỗ trợ http:// hoặc https://.');
+    if (parsed.username || parsed.password) throw new Error('Vui lòng không lưu tên người dùng hoặc mật khẩu trong địa chỉ proxy.');
   }
 }
 
@@ -110,4 +110,3 @@ module.exports = {
   workspaceKey,
   mergeRecentWorkspaces
 };
-

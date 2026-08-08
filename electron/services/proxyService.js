@@ -24,7 +24,7 @@ function unique(values) {
 
 function normalizeProxyValue(value) {
   let text = String(value || '').trim().replace(/^['"]|['"]$/g, '');
-  if (!text || /direct access|直接访问|无代理/i.test(text)) return '';
+  if (!text || /direct access|直接访问|无代理|kết nối trực tiếp|không dùng proxy/i.test(text)) return '';
   if (text.includes(';')) {
     const entries = Object.fromEntries(text.split(';').map((part) => part.split('=', 2)).filter((part) => part.length === 2));
     text = entries.https || entries.http || '';
@@ -57,7 +57,7 @@ async function winHttpProxyCandidates() {
   const result = await run('netsh.exe', ['winhttp', 'show', 'proxy'], { allowFailure: true });
   if (result.code !== 0) return [];
   const lines = result.stdout.split(/\r?\n/);
-  const candidate = lines.map((line) => line.match(/(?:Proxy Server\(s\)|代理服务器)\s*:\s*(.+)/i)?.[1]).find(Boolean);
+  const candidate = lines.map((line) => line.match(/(?:Proxy Server\(s\)|代理服务器|Máy chủ proxy)\s*:\s*(.+)/i)?.[1]).find(Boolean);
   return candidate ? [normalizeProxyValue(candidate)] : [];
 }
 

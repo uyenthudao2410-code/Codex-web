@@ -16,7 +16,7 @@ class SecretStore {
 
   _writeAll(value) {
     if (!safeStorage.isEncryptionAvailable()) {
-      throw new Error('Windows 安全存储当前不可用，无法保存密钥。');
+      throw new Error('Kho lưu trữ an toàn Windows hiện không khả dụng, không thể lưu khóa.');
     }
     ensureParent(secretsFile());
     fs.writeFileSync(secretsFile(), safeStorage.encryptString(JSON.stringify(value)), { mode: 0o600 });
@@ -24,7 +24,7 @@ class SecretStore {
 
   set(name, value) {
     const text = String(value || '').trim();
-    if (!text) throw new Error('密钥不能为空。');
+    if (!text) throw new Error('Khóa bí mật không được để trống.');
     const all = this._readAll();
     all[name] = text;
     this._writeAll(all);

@@ -1,8 +1,8 @@
-﻿const api = window.mcpAssistant || createPreviewApi();
+const api = window.mcpAssistant || createPreviewApi();
 
 function createPreviewApi() {
   const previewSettings = {
-    workspace: 'C:\\Users\\示例用户\\Desktop\\my-project', permissionMode: 'safe', toolMode: 'smart',
+    workspace: 'C:\\Users\\ExampleUser\\Desktop\\my-project', permissionMode: 'safe', toolMode: 'smart',
     mcpPort: 18765, healthPort: 18081, proxyMode: 'auto', proxyUrl: '', tunnelId: 'tunnel_demo',
     theme: 'light', startWithWindows: false, progressReportSeconds: 90, keepRunningOnClose: true, autoStartServices: false, firstRunCompleted: true, guideProgress: {}, authorizedRoots: []
   };
@@ -22,7 +22,7 @@ function createPreviewApi() {
     saveSettings: (patch) => { Object.assign(snapshot.settings, patch); return ok(snapshot.settings); },
     saveRuntimeKey: () => ok(snapshot.secrets), removeRuntimeKey: () => ok(snapshot.secrets), regenerateMcpToken: () => ok(snapshot.secrets),
     start: () => ok(snapshot), stop: () => ok(snapshot), restart: () => ok(snapshot),
-    logs: () => ok([{ time: new Date().toISOString(), level: 'info', message: '静态界面预览模式' }]), clearLogs: () => ok(true),
+    logs: () => ok([{ time: new Date().toISOString(), level: 'info', message: 'Chế độ xem trước giao diện tĩnh' }]), clearLogs: () => ok(true),
     taskState: () => ok({ exists: false, state: null }), clearTaskState: () => ok(true), pauseTask: () => ok({}), resumeTask: () => ok({}), stopTask: () => ok({}), taskHistory: () => ok([]), performanceTrace: () => ok(null), clearPerformanceTrace: () => ok(true),
     inspectBuild: () => ok({ type: 'electron', name: 'demo', version: '0.1.0', testCommand: 'npm test', buildCommand: 'npm run dist', artifacts: ['dist'] }), runBuild: () => ok({ overallStatus: 'passed', project: { type: 'electron', name: 'demo', version: '0.1.0' }, testResult: { status: 'passed' }, buildResult: { status: 'passed' }, artifacts: [] }), inspectHealth: () => ok({ healthy: true, checks: [] }), repairHealth: () => ok({ healthy: true, checks: [], actions: [], unresolved: [] }),
     openExternal: () => ok(true), installPython: () => ok(true), detectProxy: () => ok(snapshot.environment.proxy), onProgress: () => () => {}, onLog: () => () => {}, onStatus: () => () => {}, onHeartbeat: () => () => {}, onBuildProgress: () => () => {}
@@ -30,15 +30,15 @@ function createPreviewApi() {
 }
 
 const pageMeta = {
-  overview: ['CONTROL CENTER', '运行总览', '集中查看本地 MCP、OpenAI Tunnel 与部署环境。'],
-  deploy: ['RUNTIME & CONNECTION', '运行与连接', '管理便携运行时、Tunnel 身份和网络环境。'],
-  workspace: ['WORKSPACE ACCESS', '工作区与权限', '管理主工作区、额外授权目录与命令权限。'],
-  task: ['TASK STATE', '任务执行状态', '查看可恢复目标、执行步骤、命令、测试、文件和构建报告。'],
-  build: ['BUILD & VERIFY', '构建与验证', '自动识别项目、执行测试与构建，并校验构建产物。'],
-  health: ['DIAGNOSE & REPAIR', '诊断与修复', '检查运行环境并修复助手能够安全处理的问题。'],
-  guide: ['SETUP GUIDE', '接入指南', '按步骤完成 OpenAI Tunnel 与 ChatGPT 网页连接。'],
-  logs: ['DIAGNOSTICS', '运行日志', '查看便携运行时、MCP 和 Tunnel 的诊断信息。'],
-  settings: ['PREFERENCES', '偏好设置', '管理外观、启动行为、任务反馈和本地凭据。']
+  overview: ['TRUNG TÂM ĐIỀU HÀNH', 'Tổng quan Vận hành', 'Xem tập trung MCP cục bộ, OpenAI Tunnel và môi trường triển khai.'],
+  deploy: ['RUNTIME & KẾT NỐI', 'Vận hành & Kết nối', 'Quản lý môi trường portable, định danh Tunnel và môi trường mạng.'],
+  workspace: ['TRUY CẬP WORKSPACE', 'Không gian làm việc & Quyền', 'Quản lý workspace chính, thư mục ủy quyền bổ sung và quyền thực thi lệnh.'],
+  task: ['TRẠNG THÁI NHIỆM VỤ', 'Trạng thái thực thi nhiệm vụ', 'Xem mục tiêu có thể khôi phục, các bước thực thi, lệnh, kiểm thử, tệp và báo cáo build.'],
+  build: ['BUILD & XÁC MINH', 'Xác minh & Build', 'Tự động nhận diện dự án, thực thi kiểm thử và build, đồng thời kiểm tra sản phẩm đầu ra.'],
+  health: ['CHẨN ĐOÁN & SỬA CHỮA', 'Chẩn đoán & Sửa chữa', 'Kiểm tra môi trường vận hành và tự động sửa chữa các sự cố an toàn.'],
+  guide: ['HƯỚNG DẪN CẤU HÌNH', 'Hướng dẫn Kết nối', 'Hoàn thành các bước kết nối OpenAI Tunnel và ChatGPT Web.'],
+  logs: ['CHẨN ĐOÁN', 'Nhật ký Vận hành', 'Xem thông tin chẩn đoán của môi trường portable, MCP và Tunnel.'],
+  settings: ['CẤU HÌNH TÙY CHỌN', 'Cài đặt Trợ lý', 'Quản lý giao diện, hành vi khởi động, phản hồi nhiệm vụ và chứng thư cục bộ.']
 };
 
 const state = {
@@ -55,7 +55,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 function unwrap(result) {
-  if (!result?.ok) throw new Error(result?.error || '操作失败');
+  if (!result?.ok) throw new Error(result?.error || 'Thao tác thất bại');
   return result.data;
 }
 
@@ -108,7 +108,7 @@ function textOr(value, fallback = '—') { return String(value ?? '').trim() || 
 function renderTaskList(container, items, render) {
   container.replaceChildren();
   if (!items?.length) {
-    const empty = document.createElement('span'); empty.className = 'task-muted'; empty.textContent = '暂无记录'; container.appendChild(empty); return;
+    const empty = document.createElement('span'); empty.className = 'task-muted'; empty.textContent = 'Chưa có bản ghi'; container.appendChild(empty); return;
   }
   items.forEach((item) => container.appendChild(render(item)));
 }
@@ -125,7 +125,7 @@ function renderTaskState(payload) {
   $('#taskStateEmpty').hidden = hasTask;
   $('#taskStateContent').hidden = !hasTask;
   if (!hasTask) return;
-  $('#taskObjective').textContent = textOr(task.objective, '未填写当前目标');
+  $('#taskObjective').textContent = textOr(task.objective, 'Chưa điền mục tiêu hiện tại');
   $('#taskId').textContent = textOr(task.task_id);
   $('#taskStatus').textContent = textOr(task.status, 'idle');
   $('#taskCurrentStep').textContent = textOr(task.current_step);
@@ -137,19 +137,19 @@ function renderTaskState(payload) {
   $('#taskStepCount').textContent = `${done} / ${steps.length}`;
   renderTaskList($('#taskSteps'), steps, (item) => { const row=document.createElement('div'); row.className=`task-step ${item.status || 'pending'}`; const mark=document.createElement('i'); mark.textContent=item.status==='completed'?'✓':item.status==='in_progress'?'→':item.status==='failed'?'!':'•'; const label=document.createElement('span'); label.textContent=textOr(item.text); row.append(mark,label); return row; });
   const command = task.current_command;
-  $('#taskCommand').textContent = command ? `${textOr(command.command)}\n${textOr(command.status)} · ${textOr(command.workdir, '.')}` : '当前没有运行中的命令';
+  $('#taskCommand').textContent = command ? `${textOr(command.command)}\n${textOr(command.status)} · ${textOr(command.workdir, '.')}` : 'Hiện không có lệnh nào đang chạy';
   const tests = Array.isArray(task.test_results) ? task.test_results.slice(-5).reverse() : [];
-  renderTaskList($('#taskTests'), tests, (item) => { const row=document.createElement('div'); row.className=`task-result ${item.status}`; row.textContent=`${item.status === 'passed' ? '通过' : '失败'} · ${textOr(item.command, '测试')} · ${item.duration_ms ?? 0} ms`; return row; });
+  renderTaskList($('#taskTests'), tests, (item) => { const row=document.createElement('div'); row.className=`task-result ${item.status}`; row.textContent=`${item.status === 'passed' ? 'Thành công' : 'Thất bại'} · ${textOr(item.command, 'Kiểm thử')} · ${item.duration_ms ?? 0} ms`; return row; });
   const files = Array.isArray(task.modified_files) ? task.modified_files.slice().reverse() : [];
   $('#taskFileCount').textContent = String(files.length);
   renderTaskList($('#taskFiles'), files, (item) => { const row=document.createElement('div'); row.className='task-file'; const op=document.createElement('b'); op.textContent=textOr(item.operation, 'update').slice(0,1).toUpperCase(); const file=document.createElement('span'); file.textContent=textOr(item.path); row.append(op,file); return row; });
   const report = task.last_build_report;
   const build = $('#taskBuild'); build.replaceChildren();
-  if (!report) { build.textContent='尚未运行 verify_build。'; }
+  if (!report) { build.textContent='Chưa chạy verify_build.'; }
   else {
-    const summary=document.createElement('div'); summary.className=`build-summary ${report.overall_status}`; summary.textContent=`${report.overall_status === 'passed' ? '验证通过' : '验证失败'} · ${textOr(report.project?.type)} · v${textOr(report.project?.version)}`; build.appendChild(summary);
+    const summary=document.createElement('div'); summary.className=`build-summary ${report.overall_status}`; summary.textContent=`${report.overall_status === 'passed' ? 'Xác minh thành công' : 'Xác minh thất bại'} · ${textOr(report.project?.type)} · v${textOr(report.project?.version)}`; build.appendChild(summary);
     (report.artifacts || []).slice(0,8).forEach((item) => { const row=document.createElement('div'); row.className='task-artifact'; const path=document.createElement('span'); path.textContent=textOr(item.path); const hash=document.createElement('code'); hash.textContent=textOr(item.sha256 || item.sha384 || item.sha512).slice(0,16); row.append(path,hash); build.appendChild(row); });
-    if (!(report.artifacts || []).length) { const empty=document.createElement('span'); empty.className='task-muted'; empty.textContent=textOr(report.failure, '没有找到构建产物'); build.appendChild(empty); }
+    if (!(report.artifacts || []).length) { const empty=document.createElement('span'); empty.className='task-muted'; empty.textContent=textOr(report.failure, 'Không tìm thấy sản phẩm build'); build.appendChild(empty); }
   }
 }
 
@@ -158,14 +158,14 @@ async function loadTaskState() {
     const [taskPayload] = await Promise.all([api.taskState(), loadTaskHistory(), loadPerformanceTrace()]);
     renderTaskState(unwrap(taskPayload));
   }
-  catch (error) { toast('任务状态读取失败', error.message, 'error'); }
+  catch (error) { toast('Đọc trạng thái nhiệm vụ thất bại', error.message, 'error'); }
 }
 
 function formatDuration(ms) {
   const value = Number(ms || 0);
   if (value < 1000) return `${value} ms`;
-  if (value < 60000) return `${(value / 1000).toFixed(1)} 秒`;
-  return `${Math.floor(value / 60000)} 分 ${Math.round((value % 60000) / 1000)} 秒`;
+  if (value < 60000) return `${(value / 1000).toFixed(1)} giây`;
+  return `${Math.floor(value / 60000)} phút ${Math.round((value % 60000) / 1000)} giây`;
 }
 
 function renderPerformanceTrace(trace) {
@@ -173,20 +173,20 @@ function renderPerformanceTrace(trace) {
   const timeline = $('#performanceTimeline');
   metrics.replaceChildren(); timeline.replaceChildren();
   if (!trace || !trace.tool_calls) {
-    const empty = document.createElement('span'); empty.className = 'task-muted'; empty.textContent = '暂无性能记录'; metrics.append(empty); return;
+    const empty = document.createElement('span'); empty.className = 'task-muted'; empty.textContent = 'Chưa có bản ghi hiệu năng'; metrics.append(empty); return;
   }
   const items = [
-    ['工具调用', trace.tool_calls], ['本机执行', formatDuration(trace.local_execution_ms)],
-    ['估算等待', formatDuration(trace.estimated_wait_ms)], ['缓存命中', trace.cache_hits || 0],
-    ['重复拦截', trace.deduplicated_calls || 0], ['失败', trace.errors || 0]
+    ['Gọi công cụ', trace.tool_calls], ['Thực thi trên máy', formatDuration(trace.local_execution_ms)],
+    ['Thời gian chờ ước tính', formatDuration(trace.estimated_wait_ms)], ['Trùng bộ nhớ đệm', trace.cache_hits || 0],
+    ['Chắn lặp lại', trace.deduplicated_calls || 0], ['Thất bại', trace.errors || 0]
   ];
   items.forEach(([label, value]) => { const card=document.createElement('div'); card.className='performance-metric'; const b=document.createElement('b'); b.textContent=String(value); const span=document.createElement('span'); span.textContent=label; card.append(b,span); metrics.append(card); });
   (trace.recent || []).slice(-30).reverse().forEach((event) => {
     const row=document.createElement('div'); row.className='performance-event';
     const tool=document.createElement('b'); tool.textContent=textOr(event.tool);
-    const local=document.createElement('span'); local.textContent=`本机 ${formatDuration(event.duration_ms)}`;
-    const wait=document.createElement('span'); wait.textContent=`等待 ${formatDuration(event.wait_before_ms)}`;
-    const flag=document.createElement('span'); flag.textContent=event.deduplicated ? '已去重' : event.cache_hit ? '缓存' : event.ok ? '完成' : '失败'; if (event.cache_hit || event.deduplicated) flag.className='cache-hit';
+    const local=document.createElement('span'); local.textContent=`Trên máy ${formatDuration(event.duration_ms)}`;
+    const wait=document.createElement('span'); wait.textContent=`Thời gian chờ ${formatDuration(event.wait_before_ms)}`;
+    const flag=document.createElement('span'); flag.textContent=event.deduplicated ? 'Đã lọc trùng' : event.cache_hit ? 'Bộ nhớ đệm' : event.ok ? 'Hoàn thành' : 'Thất bại'; if (event.cache_hit || event.deduplicated) flag.className='cache-hit';
     row.append(tool,local,wait,flag); timeline.append(row);
   });
 }
@@ -203,11 +203,11 @@ async function loadTaskHistory() {
     renderTaskList(container, items, (task) => {
       const row = document.createElement('div'); row.className = 'task-history-item';
       const copy = document.createElement('div');
-      const title = document.createElement('b'); title.textContent = textOr(task.objective, '未命名任务');
-      const meta = document.createElement('small'); meta.textContent = `${textOr(task.status, 'unknown')} · ${textOr(task.task_id)} · ${new Date(task.archived_at || task.updated_at || Date.now()).toLocaleString('zh-CN')}`;
+      const title = document.createElement('b'); title.textContent = textOr(task.objective, 'Nhiệm vụ chưa đặt tên');
+      const meta = document.createElement('small'); meta.textContent = `${textOr(task.status, 'unknown')} · ${textOr(task.task_id)} · ${new Date(task.archived_at || task.updated_at || Date.now()).toLocaleString('vi-VN')}`;
       copy.append(title, meta); row.append(copy); return row;
     });
-  } catch (error) { container.textContent = `读取失败：${error.message}`; }
+  } catch (error) { container.textContent = `Đọc thất bại: ${error.message}`; }
 }
 
 function applyTheme(theme) {
@@ -246,41 +246,41 @@ function renderSnapshot(snapshot, options = {}) {
   state.selectedWorkspace = settings.workspace;
   const ready = status.fullyReady;
 
-  $('#sideRuntimeText').textContent = ready ? '服务已就绪' : status.runtimeRunning ? '等待 Tunnel' : '服务未运行';
+  $('#sideRuntimeText').textContent = ready ? 'Dịch vụ sẵn sàng' : status.runtimeRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
   setDot($('#sideRuntimeDot'), ready ? 'ready' : status.runtimeRunning ? 'warn' : 'error');
-  $('#sideWorkspace').textContent = settings.workspace || '尚未选择工作目录';
+  $('#sideWorkspace').textContent = settings.workspace || 'Chưa chọn thư mục làm việc';
   $('#sideMcp').textContent = status.runtimeRunning ? 'ON' : 'OFF';
   $('#sideTunnel').textContent = status.tunnelRunning ? 'ON' : 'OFF';
 
-  $('#runtimeStatus').textContent = environment.python.installed ? '环境正常' : '运行时缺失';
-  $('#runtimeMeta').textContent = environment.python.version || '未找到内置 Python';
+  $('#runtimeStatus').textContent = environment.python.installed ? 'Môi trường bình thường' : 'Thiếu môi trường runtime';
+  $('#runtimeMeta').textContent = environment.python.version || 'Không tìm thấy Python tích hợp';
   setDot($('#runtimeDot'), environment.python.installed ? 'ready' : 'error');
 
-  $('#mcpStatus').textContent = status.runtimeRunning ? '正常运行' : '未启动';
+  $('#mcpStatus').textContent = status.runtimeRunning ? 'Đang chạy bình thường' : 'Chưa khởi động';
   $('#mcpMeta').textContent = status.localMcpUrl;
   setDot($('#mcpDot'), status.runtimeRunning ? 'ready' : 'error');
-  $('#tunnelStatus').textContent = status.tunnelRunning ? '已连接' : '未连接';
-  $('#tunnelMeta').textContent = settings.tunnelId || '尚未填写 Tunnel ID';
+  $('#tunnelStatus').textContent = status.tunnelRunning ? 'Đã kết nối' : 'Chưa kết nối';
+  $('#tunnelMeta').textContent = settings.tunnelId || 'Chưa điền Tunnel ID';
   setDot($('#tunnelDot'), status.tunnelRunning ? 'ready' : settings.tunnelId ? 'warn' : 'error');
-  $('#workspaceStatus').textContent = environment.workspace.exists ? '已授权' : '未选择';
-  $('#workspaceMeta').textContent = settings.workspace || '仅所选目录可被 MCP 访问';
+  $('#workspaceStatus').textContent = environment.workspace.exists ? 'Đã ủy quyền' : 'Chưa chọn';
+  $('#workspaceMeta').textContent = settings.workspace || 'Chỉ thư mục được chọn mới có thể được MCP truy cập';
   setDot($('#workspaceDot'), environment.workspace.exists ? 'ready' : 'error');
-  $('#selectedWorkspace').textContent = settings.workspace || '尚未选择目录';
+  $('#selectedWorkspace').textContent = settings.workspace || 'Chưa chọn thư mục';
   renderAuthorizedRoots(settings.authorizedRoots || []);
 
-  $('#heroBadge').textContent = ready ? '全部服务运行正常' : '尚未完成部署';
-  $('#heroTitle').textContent = ready ? '网页编程工作区已经准备好' : '让网页聊天安全访问你的代码目录';
+  $('#heroBadge').textContent = ready ? 'Tất cả dịch vụ đang hoạt động bình thường' : 'Chưa hoàn tất triển khai';
+  $('#heroTitle').textContent = ready ? 'Workspace lập trình web đã sẵn sàng' : 'Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn';
   $('#heroText').textContent = ready
-    ? '当前通过内置便携运行时运行，网页只可访问所选工作目录。'
-    : '选择一个工作目录，配置 OpenAI Tunnel，然后由助手完成 MCP 的启动、鉴权、健康检查和故障诊断。';
-  $('#heroStartButton').textContent = ready ? '重新部署' : '开始部署';
-  $('#topStartButton').textContent = ready ? '重新部署' : '一键启动';
+    ? 'Hiện đang chạy qua môi trường portable tích hợp, trang web chỉ có thể truy cập thư mục làm việc đã chọn.'
+    : 'Chọn một thư mục làm việc, cấu hình OpenAI Tunnel, sau đó trợ lý sẽ hoàn tất việc khởi động MCP, xác thực, kiểm tra sức khỏe và chẩn đoán sự cố.';
+  $('#heroStartButton').textContent = ready ? 'Triển khai lại' : 'Bắt đầu triển khai';
+  $('#topStartButton').textContent = ready ? 'Triển khai lại' : 'Khởi động nhanh';
 
-  $('#runtimeKeyHint').textContent = secrets.runtimeApiKey ? '已使用 Windows 安全存储保存' : '尚未保存';
+  $('#runtimeKeyHint').textContent = secrets.runtimeApiKey ? 'Đã lưu bằng kho lưu trữ an toàn Windows' : 'Chưa lưu';
   $('#runtimeKeyHint').style.color = secrets.runtimeApiKey ? 'var(--green)' : '';
-  $('#settingsKeyState').textContent = secrets.runtimeApiKey ? '已加密保存' : '尚未保存';
+  $('#settingsKeyState').textContent = secrets.runtimeApiKey ? 'Đã mã hóa và lưu' : 'Chưa lưu';
   $('#guideLocalUrl').textContent = status.localMcpUrl;
-  $('#guideTunnelId').textContent = settings.tunnelId || '尚未填写';
+  $('#guideTunnelId').textContent = settings.tunnelId || 'Chưa điền';
   renderEnvironment(environment);
   renderDeploySummary();
 }
@@ -292,7 +292,7 @@ function renderAuthorizedRoots(roots) {
   if (!roots.length) {
     const empty = document.createElement('span');
     empty.className = 'task-muted';
-    empty.textContent = '尚未添加额外授权目录';
+    empty.textContent = 'Chưa thêm thư mục ủy quyền bổ sung';
     container.appendChild(empty);
     return;
   }
@@ -305,7 +305,7 @@ function renderAuthorizedRoots(roots) {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'danger-button';
-    remove.textContent = '移除';
+    remove.textContent = 'Xóa';
     remove.addEventListener('click', () => removeAuthorizedRoot(root));
     row.append(code, remove);
     container.appendChild(row);
@@ -318,13 +318,13 @@ async function addAuthorizedRoot() {
     if (!selected) return;
     const current = state.snapshot?.settings?.authorizedRoots || [];
     if (current.some((item) => item.toLowerCase() === selected.toLowerCase())) {
-      toast('目录已授权', selected);
+      toast('Thư mục đã được ủy quyền', selected);
       return;
     }
     const snapshot = unwrap(await api.updateAuthorizedRoots([...current, selected]));
     renderSnapshot(snapshot, { forceForms: true });
-    toast('已添加授权目录', selected);
-  } catch (error) { toast('授权目录失败', error.message, 'error'); }
+    toast('Đã thêm thư mục ủy quyền', selected);
+  } catch (error) { toast('Ủy quyền thư mục thất bại', error.message, 'error'); }
 }
 
 async function removeAuthorizedRoot(root) {
@@ -332,22 +332,22 @@ async function removeAuthorizedRoot(root) {
     const current = state.snapshot?.settings?.authorizedRoots || [];
     const snapshot = unwrap(await api.updateAuthorizedRoots(current.filter((item) => item !== root)));
     renderSnapshot(snapshot, { forceForms: true });
-    toast('已移除授权目录', root);
-  } catch (error) { toast('移除授权失败', error.message, 'error'); }
+    toast('Đã xóa thư mục ủy quyền', root);
+  } catch (error) { toast('Xóa ủy quyền thất bại', error.message, 'error'); }
 }
 
 function renderEnvironment(environment) {
   setDot($('#envPythonDot'), environment.python.installed ? 'ready' : 'error');
-  $('#envPythonText').textContent = environment.python.installed ? environment.python.version : '未找到 Python 3.11+';
+  $('#envPythonText').textContent = environment.python.installed ? environment.python.version : 'Không tìm thấy Python 3.11+';
   const proxy = environment.proxy;
   const sourceLabels = {
-    'auto-direct': '自动检测 · 直连', 'auto-system': '自动检测 · Windows 系统代理', 'auto-local': '自动检测 · 本地代理',
-    'system': 'Windows 系统代理', 'system-direct': '系统未设代理 · 直连', manual: '手动代理', direct: '强制直连',
-    'auto-unavailable': '未找到可用网络路径', error: '代理检测失败'
+    'auto-direct': 'Tự động phát hiện · Kết nối trực tiếp', 'auto-system': 'Tự động phát hiện · Proxy hệ thống Windows', 'auto-local': 'Tự động phát hiện · Proxy cục bộ',
+    'system': 'Proxy hệ thống Windows', 'system-direct': 'Hệ thống không đặt Proxy · Kết nối trực tiếp', manual: 'Proxy thủ công', direct: 'Bắt buộc kết nối trực tiếp',
+    'auto-unavailable': 'Không tìm thấy tuyến đường mạng khả dụng', error: 'Kiểm tra proxy thất bại'
   };
   setDot($('#envProxyDot'), proxy.reachable ? 'ready' : 'error');
-  $('#envProxyText').textContent = `${sourceLabels[proxy.source] || '网络检测'}${proxy.url ? ` · ${proxy.url}` : ''}`;
-  $('#proxyHint').textContent = proxy.reachable ? '当前网络路径已通过实际连通性验证。' : '当前路径未通过验证，可重新检测或选择手动代理。';
+  $('#envProxyText').textContent = `${sourceLabels[proxy.source] || 'Kiểm tra mạng'}${proxy.url ? ` · ${proxy.url}` : ''}`;
+  $('#proxyHint').textContent = proxy.reachable ? 'Tuyến đường mạng hiện tại đã qua xác minh kết nối thực tế.' : 'Tuyến đường hiện tại chưa qua xác minh, có thể kiểm tra lại hoặc chọn proxy thủ công.';
 }
 
 function renderProxyControls() {
@@ -362,10 +362,10 @@ function renderDeploySummary() {
   const missing = [];
   const workspace = state.selectedWorkspace || snapshot.settings.workspace;
   const tunnelId = $('#tunnelIdInput').value.trim();
-  if (!workspace) missing.push('工作目录');
+  if (!workspace) missing.push('Thư mục làm việc');
   if (!tunnelId) missing.push('Tunnel ID');
   if (!snapshot.secrets.runtimeApiKey && !$('#runtimeKeyInput').value.trim()) missing.push('Runtime API Key');
-  $('#deploySummary').textContent = missing.length ? `还需要填写：${missing.join('、')}` : '便携运行模式已完成必要配置。';
+  $('#deploySummary').textContent = missing.length ? `Còn cần điền: ${missing.join('、')}` : 'Cấu hình cần thiết cho chế độ portable đã hoàn tất.';
 }
 
 async function refreshSnapshot(options = {}) {
@@ -374,7 +374,7 @@ async function refreshSnapshot(options = {}) {
     renderSnapshot(snapshot, options);
     return snapshot;
   } catch (error) {
-    toast('状态检测失败', error.message, 'error');
+    toast('Kiểm tra trạng thái thất bại', error.message, 'error');
     return null;
   }
 }
@@ -400,7 +400,7 @@ function collectSettings() {
 
 async function saveSettings(showToast = true) {
   const saved = unwrap(await api.saveSettings(collectSettings()));
-  if (showToast) toast('设置已保存', '新的配置会在下一次部署时生效。');
+  if (showToast) toast('Cài đặt đã được lưu', 'Cấu hình mới sẽ có hiệu lực ở lần triển khai tiếp theo.');
   if (state.snapshot) state.snapshot.settings = saved;
   return saved;
 }
@@ -418,10 +418,10 @@ function updateProgress(payload) {
   $('#progressPercent').textContent = `${percent}%`;
   $('#progressBar').style.width = `${percent}%`;
   $('#progressRing').style.setProperty('--value', `${percent * 3.6}deg`);
-  $('#progressTitle').textContent = payload.step === 'failed' ? '部署失败' : payload.step === 'complete' ? '部署完成' : '正在执行部署任务';
+  $('#progressTitle').textContent = payload.step === 'failed' ? 'Triển khai thất bại' : payload.step === 'complete' ? 'Triển khai hoàn tất' : 'Đang thực thi nhiệm vụ triển khai';
   $('#progressMessage').textContent = payload.message;
-  $('#progressBadge').textContent = payload.step === 'failed' ? '需要处理' : payload.step === 'complete' ? '已完成' : '运行中';
-  if (payload.step === 'failed') toast('部署失败', payload.message, 'error');
+  $('#progressBadge').textContent = payload.step === 'failed' ? 'Cần xử lý' : payload.step === 'complete' ? 'Đã hoàn thành' : 'Đang chạy';
+  if (payload.step === 'failed') toast('Triển khai thất bại', payload.message, 'error');
 }
 
 async function runRuntime(action) {
@@ -430,10 +430,10 @@ async function runRuntime(action) {
   try {
     const result = unwrap(await api[action]());
     renderSnapshot(result, { forceForms: true });
-    toast(action === 'stop' ? '服务已停止' : '操作完成', action === 'stop' ? 'MCP 与 Tunnel 已安全停止。' : 'MCP 与 Tunnel 已通过本地健康检查。');
+    toast(action === 'stop' ? 'Dịch vụ đã dừng' : 'Thao tác hoàn tất', action === 'stop' ? 'MCP và Tunnel đã dừng an toàn.' : 'MCP và Tunnel đã qua kiểm tra sức khỏe cục bộ.');
   } catch (error) {
-    toast('操作失败', error.message, 'error');
-    if (/工作目录|Runtime API Key|Tunnel ID|Python/.test(error.message)) navigate('deploy');
+    toast('Thao tác thất bại', error.message, 'error');
+    if (/工作目录|Thư mục làm việc|Runtime API Key|Tunnel ID|Python/.test(error.message)) navigate('deploy');
   } finally {
     setBusy(false);
     await refreshSnapshot();
@@ -448,9 +448,9 @@ async function deployNow() {
     navigate('overview');
     const result = unwrap(await api.start());
     renderSnapshot(result, { forceForms: true });
-    toast('部署完成', '现在可以按照指导页面在 ChatGPT 中创建或测试 MCP。');
+    toast('Triển khai hoàn tất', 'Bây giờ bạn có thể làm theo trang hướng dẫn để tạo hoặc kiểm tra MCP trong ChatGPT.');
   } catch (error) {
-    toast('部署失败', error.message, 'error');
+    toast('Triển khai thất bại', error.message, 'error');
   } finally {
     setBusy(false);
     await refreshSnapshot();
@@ -464,16 +464,16 @@ async function chooseWorkspace() {
     state.selectedWorkspace = selected;
     $('#selectedWorkspace').textContent = selected;
     renderDeploySummary();
-    toast('正在切换工作目录', 'MCP 会在后台静默重建，ChatGPT 与 Tunnel 不会关闭。');
+    toast('Đang chuyển thư mục làm việc', 'MCP sẽ âm thầm tạo lại ở chế độ nền, ChatGPT và Tunnel sẽ không bị đóng.');
     const switched = unwrap(await api.switchWorkspace(selected));
     renderSnapshot(switched, { forceForms: true });
-    toast('工作目录已切换', selected);
-  } catch (error) { toast('无法选择目录', error.message, 'error'); }
+    toast('Đã chuyển thư mục làm việc', selected);
+  } catch (error) { toast('Không thể chọn thư mục', error.message, 'error'); }
 }
 
 async function copyText(text) {
-  try { await navigator.clipboard.writeText(text); toast('已复制', text.length > 70 ? '内容已复制到剪贴板。' : text); }
-  catch { toast('复制失败', '请手动选择并复制。', 'error'); }
+  try { await navigator.clipboard.writeText(text); toast('Đã sao chép', text.length > 70 ? 'Nội dung đã được sao chép vào bộ nhớ tạm.' : text); }
+  catch { toast('Sao chép thất bại', 'Vui lòng chọn và sao chép thủ công.', 'error'); }
 }
 
 function collectGuideProgress() {
@@ -499,7 +499,7 @@ function renderGuideProgress() {
 
 function appendBuildOutput(text) {
   const consoleElement = $('#buildConsole');
-  const next = `${consoleElement.textContent === '尚未执行构建验证。' ? '' : consoleElement.textContent}${text}`;
+  const next = `${consoleElement.textContent === 'Chưa thực hiện xác minh build.' ? '' : consoleElement.textContent}${text}`;
   consoleElement.textContent = next.slice(-60000);
   consoleElement.scrollTop = consoleElement.scrollHeight;
 }
@@ -513,14 +513,14 @@ function applyBuildProject(project) {
 
 async function inspectBuild() {
   try { applyBuildProject(unwrap(await api.inspectBuild())); }
-  catch (error) { toast('项目识别失败', error.message, 'error'); }
+  catch (error) { toast('Nhận diện dự án thất bại', error.message, 'error'); }
 }
 
 function renderBuildReport(report) {
-  $('#buildReportStatus').textContent = report.overallStatus === 'passed' ? '验证通过' : '验证失败';
+  $('#buildReportStatus').textContent = report.overallStatus === 'passed' ? 'Xác minh thành công' : 'Xác minh thất bại';
   const container = $('#buildReport'); container.replaceChildren();
   const summary = document.createElement('div'); summary.className = `build-report-summary ${report.overallStatus}`;
-  summary.textContent = `${textOr(report.project?.name)} · ${textOr(report.project?.type)} · v${textOr(report.project?.version)} · 测试 ${textOr(report.testResult?.status)} · 构建 ${textOr(report.buildResult?.status)}`;
+  summary.textContent = `${textOr(report.project?.name)} · ${textOr(report.project?.type)} · v${textOr(report.project?.version)} · Kiểm thử ${textOr(report.testResult?.status)} · Build ${textOr(report.buildResult?.status)}`;
   container.append(summary);
   (report.artifacts || []).forEach((artifact) => {
     const row = document.createElement('div'); row.className = 'build-report-artifact';
@@ -530,13 +530,13 @@ function renderBuildReport(report) {
     row.append(name, size, hash); container.append(row);
   });
   if (!(report.artifacts || []).length) {
-    const empty = document.createElement('span'); empty.className = 'task-muted'; empty.textContent = '未找到构建产物。'; container.append(empty);
+    const empty = document.createElement('span'); empty.className = 'task-muted'; empty.textContent = 'Không tìm thấy sản phẩm build.'; container.append(empty);
   }
 }
 
 async function runBuildVerification() {
   $('#buildConsole').textContent = '';
-  $('#buildStatus').textContent = '正在执行';
+  $('#buildStatus').textContent = 'Đang thực thi';
   $('#runBuild').disabled = true;
   try {
     const options = {
@@ -548,41 +548,41 @@ async function runBuildVerification() {
     };
     const report = unwrap(await api.runBuild(options));
     renderBuildReport(report);
-    $('#buildStatus').textContent = report.overallStatus === 'passed' ? '已通过' : '未通过';
-    toast(report.overallStatus === 'passed' ? '构建验证通过' : '构建验证未通过', `${report.artifacts?.length || 0} 个产物已校验`, report.overallStatus === 'passed' ? 'success' : 'error');
+    $('#buildStatus').textContent = report.overallStatus === 'passed' ? 'Đã vượt qua' : 'Chưa vượt qua';
+    toast(report.overallStatus === 'passed' ? 'Xác minh build thành công' : 'Xác minh build không thành công', `${report.artifacts?.length || 0} sản phẩm đã được kiểm tra`, report.overallStatus === 'passed' ? 'success' : 'error');
   } catch (error) {
-    $('#buildStatus').textContent = '执行失败'; appendBuildOutput(`\n${error.message}\n`); toast('构建验证失败', error.message, 'error');
+    $('#buildStatus').textContent = 'Thực thi thất bại'; appendBuildOutput(`\n${error.message}\n`); toast('Xác minh build thất bại', error.message, 'error');
   } finally { $('#runBuild').disabled = false; }
 }
 
 function renderHealth(report) {
-  $('#healthSummary').textContent = report.healthy ? '全部正常' : '需要处理';
+  $('#healthSummary').textContent = report.healthy ? 'Tất cả bình thường' : 'Cần xử lý';
   const container = $('#healthList'); container.replaceChildren();
   (report.checks || []).forEach((check) => {
     const row = document.createElement('div'); row.className = `health-item ${check.ok ? 'passed' : 'failed'}`;
     const mark = document.createElement('i'); mark.textContent = check.ok ? '✓' : '!';
     const copy = document.createElement('div'); const title = document.createElement('b'); title.textContent = check.label; const detail = document.createElement('small'); detail.textContent = check.detail; copy.append(title, detail);
-    const status = document.createElement('span'); status.textContent = check.ok ? '正常' : '待处理'; row.append(mark, copy, status); container.append(row);
+    const status = document.createElement('span'); status.textContent = check.ok ? 'Bình thường' : 'Chờ xử lý'; row.append(mark, copy, status); container.append(row);
   });
   (report.actions || []).forEach((action) => {
     const row = document.createElement('div'); row.className = 'health-item passed';
     const mark = document.createElement('i'); mark.textContent = '↻';
-    const copy = document.createElement('div'); const title = document.createElement('b'); title.textContent = '已执行修复'; const detail = document.createElement('small'); detail.textContent = action; copy.append(title, detail);
-    const status = document.createElement('span'); status.textContent = '完成'; row.append(mark, copy, status); container.append(row);
+    const copy = document.createElement('div'); const title = document.createElement('b'); title.textContent = 'Đã thực thi sửa chữa'; const detail = document.createElement('small'); detail.textContent = action; copy.append(title, detail);
+    const status = document.createElement('span'); status.textContent = 'Hoàn thành'; row.append(mark, copy, status); container.append(row);
   });
 }
 
 async function inspectHealth() {
   try { renderHealth(unwrap(await api.inspectHealth())); }
-  catch (error) { toast('系统体检失败', error.message, 'error'); }
+  catch (error) { toast('Kiểm tra sức khỏe hệ thống thất bại', error.message, 'error'); }
 }
 
 async function repairHealth() {
   $('#repairHealth').disabled = true;
   try {
     const report = unwrap(await api.repairHealth()); renderHealth(report);
-    toast(report.healthy ? '一键修复完成' : '已完成可自动处理的项目', report.unresolved?.length ? `仍需手动处理：${report.unresolved.join('、')}` : '当前环境已通过体检。', report.healthy ? 'success' : 'error');
-  } catch (error) { toast('一键修复失败', error.message, 'error'); }
+    toast(report.healthy ? 'Sửa chữa nhanh hoàn tất' : 'Đã hoàn thành các mục có thể xử lý tự động', report.unresolved?.length ? `Vẫn cần xử lý thủ công: ${report.unresolved.join('、')}` : 'Môi trường hiện tại đã qua kiểm tra sức khỏe.', report.healthy ? 'success' : 'error');
+  } catch (error) { toast('Sửa chữa nhanh thất bại', error.message, 'error'); }
   finally { $('#repairHealth').disabled = false; }
 }
 
@@ -594,11 +594,11 @@ function applyHeartbeat(status) {
   const ready = state.snapshot.status.fullyReady;
   $('#sideMcp').textContent = status.mcpRunning ? 'ON' : 'OFF';
   $('#sideTunnel').textContent = status.tunnelRunning ? 'ON' : 'OFF';
-  $('#mcpStatus').textContent = status.mcpRunning ? '正常运行' : '未启动';
-  $('#tunnelStatus').textContent = status.tunnelRunning ? '已连接' : '未连接';
+  $('#mcpStatus').textContent = status.mcpRunning ? 'Đang chạy bình thường' : 'Chưa khởi động';
+  $('#tunnelStatus').textContent = status.tunnelRunning ? 'Đã kết nối' : 'Chưa kết nối';
   setDot($('#mcpDot'), status.mcpRunning ? 'ready' : 'error');
   setDot($('#tunnelDot'), status.tunnelRunning ? 'ready' : 'error');
-  $('#sideRuntimeText').textContent = ready ? '服务已就绪' : status.mcpRunning ? '等待 Tunnel' : '服务未运行';
+  $('#sideRuntimeText').textContent = ready ? 'Dịch vụ sẵn sàng' : status.mcpRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
   setDot($('#sideRuntimeDot'), ready ? 'ready' : status.mcpRunning ? 'warn' : 'error');
 }
 
@@ -606,7 +606,7 @@ async function loadLogs() {
   try {
     state.logs = unwrap(await api.logs());
     renderLogs();
-  } catch (error) { toast('日志读取失败', error.message, 'error'); }
+  } catch (error) { toast('Đọc nhật ký thất bại', error.message, 'error'); }
 }
 
 function renderLogs() {
@@ -616,7 +616,7 @@ function renderLogs() {
   if (!list.length) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.innerHTML = '<b>暂无匹配日志</b><span>执行部署或切换筛选条件后再查看。</span>';
+    empty.innerHTML = '<b>Chưa có nhật ký phù hợp</b><span>Thực hiện triển khai hoặc chuyển điều kiện lọc để xem.</span>';
     output.appendChild(empty);
     return;
   }
@@ -624,7 +624,7 @@ function renderLogs() {
     const row = document.createElement('div');
     row.className = `log-line ${item.level}`;
     const time = document.createElement('time');
-    time.textContent = new Date(item.time).toLocaleString('zh-CN', { hour12: false });
+    time.textContent = new Date(item.time).toLocaleString('vi-VN', { hour12: false });
     const level = document.createElement('em');
     level.textContent = item.level;
     const message = document.createElement('span');
@@ -641,7 +641,7 @@ function bindEvents() {
   $$('[data-nav]').forEach((button) => button.addEventListener('click', () => navigate(button.dataset.nav)));
   $$('[data-open]').forEach((button) => button.addEventListener('click', async () => {
     try { unwrap(await api.openExternal(button.dataset.open)); }
-    catch (error) { toast('无法打开页面', error.message, 'error'); }
+    catch (error) { toast('Không thể mở trang', error.message, 'error'); }
   }));
   $$('input[name="permission"]').forEach((input) => input.addEventListener('change', () => {
     $$('.choice').forEach((choice) => choice.classList.toggle('selected', choice.contains(input) && input.checked));
@@ -657,42 +657,42 @@ function bindEvents() {
   $('#addAuthorizedRoot').addEventListener('click', addAuthorizedRoot);
   $('#saveDeploySettings').addEventListener('click', async () => {
     try { await saveKeyIfPresent(); await saveSettings(); await refreshSnapshot({ forceForms: true }); }
-    catch (error) { toast('保存失败', error.message, 'error'); }
+    catch (error) { toast('Lưu thất bại', error.message, 'error'); }
   });
   $('#saveWorkspace').addEventListener('click', async () => {
     try { await saveSettings(); await refreshSnapshot({ forceForms: true }); }
-    catch (error) { toast('保存失败', error.message, 'error'); }
+    catch (error) { toast('Lưu thất bại', error.message, 'error'); }
   });
   $('#saveWorkspaceRestart').addEventListener('click', async () => {
     try { await saveSettings(false); await runRuntime('restart'); }
-    catch (error) { toast('重新部署失败', error.message, 'error'); }
+    catch (error) { toast('Triển khai lại thất bại', error.message, 'error'); }
   });
   $('#saveRuntimeKey').addEventListener('click', async () => {
     try {
-      if (!(await saveKeyIfPresent())) throw new Error('请先粘贴 Runtime API Key。');
-      toast('密钥已安全保存', '密钥已使用 Windows 安全存储加密。');
+      if (!(await saveKeyIfPresent())) throw new Error('Vui lòng dán Runtime API Key trước.');
+      toast('Khóa mật mã đã được lưu an toàn', 'Khóa mật mã đã được mã hóa bằng kho lưu trữ an toàn Windows.');
       await refreshSnapshot();
-    } catch (error) { toast('保存失败', error.message, 'error'); }
+    } catch (error) { toast('Lưu thất bại', error.message, 'error'); }
   });
   $('#removeRuntimeKey').addEventListener('click', async () => {
-    try { unwrap(await api.removeRuntimeKey()); toast('密钥已删除'); await refreshSnapshot(); }
-    catch (error) { toast('删除失败', error.message, 'error'); }
+    try { unwrap(await api.removeRuntimeKey()); toast('Đã xóa khóa mật mã'); await refreshSnapshot(); }
+    catch (error) { toast('Xóa thất bại', error.message, 'error'); }
   });
   $('#regenerateToken').addEventListener('click', async () => {
-    try { unwrap(await api.regenerateMcpToken()); toast('认证 Token 已重新生成', '重新部署后生效。'); }
-    catch (error) { toast('生成失败', error.message, 'error'); }
+    try { unwrap(await api.regenerateMcpToken()); toast('Token xác thực đã được tạo lại', 'Có hiệu lực sau khi triển khai lại.'); }
+    catch (error) { toast('Tạo thất bại', error.message, 'error'); }
   });
   $('#clearChatSession').addEventListener('click', async () => {
-    if (!confirm('这会退出内联 ChatGPT，并清除该助手保存的网页 Cookie 和缓存。是否继续？')) return;
+    if (!confirm('Thao tác này sẽ đăng xuất ChatGPT tích hợp và xóa Cookie cũng như bộ nhớ đệm web do trợ lý này lưu. Bạn có muốn tiếp tục?')) return;
     try {
       unwrap(await api.clearChatSession());
-      toast('ChatGPT 登录数据已清除', '返回聊天主窗口后可以重新登录。');
-    } catch (error) { toast('清除失败', error.message, 'error'); }
+      toast('Dữ liệu đăng nhập ChatGPT đã được xóa', 'Bạn có thể đăng nhập lại sau khi quay lại cửa sổ chat chính.');
+    } catch (error) { toast('Xóa thất bại', error.message, 'error'); }
   });
   $('#pythonInstall').addEventListener('click', async () => {
     setBusy(true, true);
-    try { unwrap(await api.installPython()); toast('Python 安装完成', '请重新检测环境。'); await refreshSnapshot(); }
-    catch (error) { toast('安装失败', error.message, 'error'); }
+    try { unwrap(await api.installPython()); toast('Cài đặt Python hoàn tất', 'Vui lòng kiểm tra lại môi trường.'); await refreshSnapshot(); }
+    catch (error) { toast('Cài đặt thất bại', error.message, 'error'); }
     finally { setBusy(false); }
   });
   $('#proxyModeSelect').addEventListener('change', () => { renderProxyControls(); renderDeploySummary(); });
@@ -700,9 +700,9 @@ function bindEvents() {
     try {
       await saveSettings(false);
       const result = unwrap(await api.detectProxy());
-      toast(result.reachable ? '网络路径可用' : '未检测到可用路径', result.resolvedUrl || (result.reachable ? '当前使用直连。' : '请检查网络或手动代理设置。'), result.reachable ? 'success' : 'error');
+      toast(result.reachable ? 'Tuyến đường mạng khả dụng' : 'Không phát hiện thấy tuyến đường khả dụng', result.resolvedUrl || (result.reachable ? 'Hiện đang sử dụng kết nối trực tiếp.' : 'Vui lòng kiểm tra cài đặt mạng hoặc proxy thủ công.'), result.reachable ? 'success' : 'error');
       await refreshSnapshot({ forceForms: true });
-    } catch (error) { toast('代理检测失败', error.message, 'error'); }
+    } catch (error) { toast('Kiểm tra proxy thất bại', error.message, 'error'); }
   });
   ['#tunnelIdInput', '#proxyUrlInput', '#runtimeKeyInput'].forEach((selector) => $(selector).addEventListener('input', renderDeploySummary));
 
@@ -726,12 +726,12 @@ function bindEvents() {
   $('#refreshLogs').addEventListener('click', loadLogs);
   $('#refreshTaskState').addEventListener('click', loadTaskState);
   $('#refreshTaskHistory').addEventListener('click', loadTaskHistory);
-  $('#pauseTask').addEventListener('click', async () => { try { unwrap(await api.pauseTask()); await loadTaskState(); toast('任务已暂停', '当前进度已保存在工作区。'); } catch (error) { toast('暂停失败', error.message, 'error'); } });
-  $('#resumeTask').addEventListener('click', async () => { try { unwrap(await api.resumeTask()); await loadTaskState(); toast('任务已继续', '网页模型可从记录的下一步恢复。'); } catch (error) { toast('继续失败', error.message, 'error'); } });
-  $('#stopTask').addEventListener('click', async () => { if (!confirm('确定停止当前任务吗？运行中的命令会被终止。')) return; try { unwrap(await api.stopTask()); await loadTaskState(); toast('任务已停止', '状态与历史仍保留，可稍后继续。'); } catch (error) { toast('停止失败', error.message, 'error'); } });
-  $('#clearTaskState').addEventListener('click', async () => { if (!confirm('确定清除当前工作区的任务状态吗？')) return; unwrap(await api.clearTaskState()); renderTaskState(null); toast('任务状态已清除'); });
+  $('#pauseTask').addEventListener('click', async () => { try { unwrap(await api.pauseTask()); await loadTaskState(); toast('Nhiệm vụ đã tạm dừng', 'Tiến độ hiện tại đã được lưu trong workspace.'); } catch (error) { toast('Tạm dừng thất bại', error.message, 'error'); } });
+  $('#resumeTask').addEventListener('click', async () => { try { unwrap(await api.resumeTask()); await loadTaskState(); toast('Nhiệm vụ đã tiếp tục', 'Mô hình web có thể khôi phục từ bước tiếp theo được ghi lại.'); } catch (error) { toast('Tiếp tục thất bại', error.message, 'error'); } });
+  $('#stopTask').addEventListener('click', async () => { if (!confirm('Bạn có chắc chắn dừng nhiệm vụ hiện tại không? Các lệnh đang chạy sẽ bị chấm dứt.')) return; try { unwrap(await api.stopTask()); await loadTaskState(); toast('Nhiệm vụ đã dừng', 'Trạng thái và lịch sử vẫn được giữ lại, có thể tiếp tục sau.'); } catch (error) { toast('Dừng thất bại', error.message, 'error'); } });
+  $('#clearTaskState').addEventListener('click', async () => { if (!confirm('Bạn có chắc chắn xóa trạng thái nhiệm vụ của workspace hiện tại không?')) return; unwrap(await api.clearTaskState()); renderTaskState(null); toast('Đã xóa trạng thái nhiệm vụ'); });
   $('#refreshPerformance').addEventListener('click', loadPerformanceTrace);
-  $('#clearPerformance').addEventListener('click', async () => { if (!confirm('确定清空当前工作区的性能记录吗？')) return; try { unwrap(await api.clearPerformanceTrace()); renderPerformanceTrace(null); toast('性能记录已清空'); } catch (error) { toast('清空失败', error.message, 'error'); } });
+  $('#clearPerformance').addEventListener('click', async () => { if (!confirm('Bạn có chắc chắn xóa sạch các bản ghi hiệu năng của workspace hiện tại không?')) return; try { unwrap(await api.clearPerformanceTrace()); renderPerformanceTrace(null); toast('Đã xóa sạch bản ghi hiệu năng'); } catch (error) { toast('Xóa sạch thất bại', error.message, 'error'); } });
   $('#inspectBuild').addEventListener('click', inspectBuild);
   $('#runBuild').addEventListener('click', runBuildVerification);
   $('#inspectHealth').addEventListener('click', inspectHealth);
@@ -740,11 +740,11 @@ function bindEvents() {
     try {
       const wasRunning = Boolean(state.snapshot?.status.runtimeRunning);
       await saveSettings(false);
-      toast('工具模式已保存', wasRunning ? '正在静默重建 MCP 以应用新的工具范围。' : '下次启动 MCP 时生效。');
+      toast('Chế độ công cụ đã được lưu', wasRunning ? 'Đang âm thầm tạo lại MCP để áp dụng phạm vi công cụ mới.' : 'Có hiệu lực ở lần khởi động MCP tiếp theo.');
       if (wasRunning) await runRuntime('restart');
-    } catch (error) { toast('工具模式切换失败', error.message, 'error'); }
+    } catch (error) { toast('Chuyển đổi chế độ công cụ thất bại', error.message, 'error'); }
   });
-  $('#clearLogs').addEventListener('click', async () => { unwrap(await api.clearLogs()); state.logs = []; renderLogs(); toast('日志已清空'); });
+  $('#clearLogs').addEventListener('click', async () => { unwrap(await api.clearLogs()); state.logs = []; renderLogs(); toast('Đã xóa nhật ký'); });
   $$('.log-filter').forEach((button) => button.addEventListener('click', () => {
     state.logFilter = button.dataset.logFilter;
     $$('.log-filter').forEach((item) => item.classList.toggle('active', item === button));
@@ -767,8 +767,8 @@ async function initialize() {
     api.onHeartbeat(applyHeartbeat);
     api.onBuildProgress((payload) => {
       if (payload.status === 'output') appendBuildOutput(payload.text || '');
-      else if (payload.status === 'running') { $('#buildStatus').textContent = payload.stage === 'test' ? '正在测试' : '正在构建'; appendBuildOutput(`\n> ${payload.command}\n`); }
-      else if (payload.stage === 'complete') $('#buildStatus').textContent = payload.status === 'passed' ? '已通过' : '未通过';
+      else if (payload.status === 'running') { $('#buildStatus').textContent = payload.stage === 'test' ? 'Đang kiểm thử' : 'Đang build'; appendBuildOutput(`\n> ${payload.command}\n`); }
+      else if (payload.stage === 'complete') $('#buildStatus').textContent = payload.status === 'passed' ? 'Đã vượt qua' : 'Chưa vượt qua';
     });
     const requestedPage = location.hash.slice(1);
     if (pageMeta[requestedPage]) navigate(requestedPage);
@@ -785,8 +785,8 @@ async function initialize() {
         navigate('health');
         await inspectHealth();
         unwrap(await api.saveSettings({ firstRunCompleted: true }));
-        toast('首次运行体检', '已检查当前环境；可点击“一键修复”处理能够自动解决的问题。');
-      } catch (error) { toast('首次运行体检未完成', error.message, 'error'); }
+        toast('Kiểm tra sức khỏe lần chạy đầu tiên', 'Đã kiểm tra môi trường hiện tại; có thể nhấp "Sửa chữa nhanh" để xử lý các vấn đề tự động.');
+      } catch (error) { toast('Chưa hoàn tất kiểm tra sức khỏe lần chạy đầu tiên', error.message, 'error'); }
     }
   } finally {
     document.body.classList.remove('booting');
@@ -796,9 +796,3 @@ async function initialize() {
 }
 
 initialize();
-
-
-
-
-
-

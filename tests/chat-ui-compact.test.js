@@ -23,7 +23,7 @@ test('embedded ChatGPT compacts repeated tool call records without deleting thei
   assert.match(controller, /scheduleChatUiEnhancements/);
   assert.match(controller, /suspendChatUiEnhancements/);
   assert.match(controller, /mcp-tool-call-hidden/);
-  assert.match(controller, /工具 ×/);
+  assert.match(controller, /Công cụ ×/);
   assert.match(controller, /data-testid\^=\\?"conversation-turn-/);
   assert.match(controller, /MutationObserver/);
   assert.match(controller, /scheduleStableRefresh\(1800\)/);
@@ -46,7 +46,7 @@ test('package and manager identify the 0.1.6 release', () => {
   const pkg = JSON.parse(read('package.json'));
   const manager = read('renderer/index.html');
   assert.equal(pkg.version, '0.1.6');
-  assert.match(manager, /网页 MCP 助手 <span>v0\.1\.6<\/span>/);
+  assert.match(manager, /Trợ lý Web MCP <span>v0\.1\.6<\/span>/);
   assert.match(manager, /Coding Tools MCP · 0\.4\.3/);
 });
 

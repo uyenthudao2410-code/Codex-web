@@ -41,7 +41,7 @@ function safeMessage(error) {
 
 function assertTrustedIpc(event) {
   const url = event.senderFrame?.url || event.sender?.getURL?.() || '';
-  if (!url.startsWith('file://')) throw new Error('已阻止来自非本地页面的 IPC 调用。');
+  if (!url.startsWith('file://')) throw new Error('Đã chặn cuộc gọi IPC từ trang không phải cục bộ.');
 }
 
 function secureHandle(channel, handler) {
@@ -53,7 +53,7 @@ function secureHandle(channel, handler) {
 
 function workspaceStatePaths() {
   const workspace = String(settings.load().workspace || '').trim();
-  if (!workspace) throw new Error('请先选择工作目录。');
+  if (!workspace) throw new Error('Vui lòng chọn thư mục làm việc trước.');
   const root = path.resolve(workspace);
   return {
     root,
@@ -88,12 +88,12 @@ function createTray() {
   if (tray && !tray.isDestroyed()) return tray;
   const icon = nativeImage.createFromPath(appIconPath()).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
-  tray.setToolTip('网页 MCP 助手 · 后台运行中');
+  tray.setToolTip('Trợ lý Web MCP · Đang chạy ngầm');
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: '打开网页 MCP 助手', click: () => showChatWindow() },
-    { label: '打开管理设置', click: () => { showChatWindow(); openManagerWindow(); } },
+    { label: 'Mở Trợ lý Web MCP', click: () => showChatWindow() },
+    { label: 'Mở Cấu hình Quản lý', click: () => { showChatWindow(); openManagerWindow(); } },
     { type: 'separator' },
-    { label: '退出助手（保留 MCP 服务）', click: () => { forceQuit = true; app.quit(); } }
+    { label: 'Thoát Trợ lý (Giữ dịch vụ MCP)', click: () => { forceQuit = true; app.quit(); } }
   ]));
   tray.on('click', () => showChatWindow());
   tray.on('double-click', () => showChatWindow());
@@ -114,7 +114,7 @@ function createChatWindow() {
     minHeight: 640,
     show: false,
     backgroundColor: '#f7f7f8',
-    title: '网页 MCP 助手',
+    title: 'Trợ lý Web MCP',
     icon: appIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'browserPreload.js'),
@@ -193,7 +193,7 @@ function openManagerWindow() {
     frame: false,
     transparent: false,
     backgroundColor: '#f7f7f8',
-    title: '网页 MCP 助手 · 管理中心',
+    title: 'Trợ lý Web MCP · Trung tâm Quản lý',
     icon: appIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -244,7 +244,7 @@ function registerIpc() {
       return { exists: true, statePath, state };
     } catch (error) {
       if (error?.code === 'ENOENT') return { exists: false, statePath, state: null };
-      throw new Error(`任务状态读取失败：${safeMessage(error)}`);
+      throw new Error(`Đọc trạng thái nhiệm vụ thất bại: ${safeMessage(error)}`);
     }
   }));
   secureHandle('task-state:clear', () => invokeSafely(async () => {
@@ -257,21 +257,21 @@ function registerIpc() {
   }));
   secureHandle('task-state:pause', () => invokeSafely(async () => {
     const { statePath } = workspaceStatePaths();
-    const state = readJson(statePath, null); if (!state) throw new Error('当前没有可暂停的任务。');
-    state.status = 'paused'; state.pause_reason = '用户从助手暂停'; state.updated_at = new Date().toISOString();
+    const state = readJson(statePath, null); if (!state) throw new Error('Hiện không có nhiệm vụ nào có thể tạm dừng.');
+    state.status = 'paused'; state.pause_reason = 'Người dùng tạm dừng từ trợ lý'; state.updated_at = new Date().toISOString();
     writeJsonAtomic(statePath, state); return state;
   }));
   secureHandle('task-state:resume', () => invokeSafely(async () => {
     const { statePath } = workspaceStatePaths();
-    const state = readJson(statePath, null); if (!state) throw new Error('当前没有可继续的任务。');
+    const state = readJson(statePath, null); if (!state) throw new Error('Hiện không có nhiệm vụ nào có thể tiếp tục.');
     state.status = 'active'; state.pause_reason = ''; state.updated_at = new Date().toISOString();
     writeJsonAtomic(statePath, state); return state;
   }));
   secureHandle('task-state:stop', () => invokeSafely(async () => {
     const { statePath } = workspaceStatePaths();
-    const state = readJson(statePath, null); if (!state) throw new Error('当前没有可停止的任务。');
-    state.status = 'stopped'; state.failure = '用户从助手停止任务';
-    state.next_step = state.next_step || '确认后继续当前任务，或开始新任务。';
+    const state = readJson(statePath, null); if (!state) throw new Error('Hiện không có nhiệm vụ nào có thể dừng.');
+    state.status = 'stopped'; state.failure = 'Người dùng dừng nhiệm vụ từ trợ lý';
+    state.next_step = state.next_step || 'Tiếp tục nhiệm vụ hiện tại sau khi xác nhận, hoặc bắt đầu nhiệm vụ mới.';
     state.updated_at = new Date().toISOString();
     writeJsonAtomic(statePath, state); return state;
   }));
@@ -309,7 +309,7 @@ function registerIpc() {
   secureHandle('chat:navigate', (_event, action) => invokeSafely(async () => chatController?.navigate(action)));
   secureHandle('chat:status', () => invokeSafely(async () => chatController?.getState() || null));
   secureHandle('chat:clear-session', () => invokeSafely(async () => {
-    if (!chatController) throw new Error('ChatGPT 页面尚未初始化。');
+    if (!chatController) throw new Error('Trang ChatGPT chưa được khởi tạo.');
     await chatController.clearSession();
     return true;
   }));
@@ -329,7 +329,7 @@ function registerIpc() {
   }));
   secureHandle('environment:detect-proxy', () => invokeSafely(async () => resolveProxy(settings.load(), { force: true })));
   secureHandle('secrets:runtime-key', (_event, value) => invokeSafely(async () => {
-    if (String(value || '').trim().length < 12) throw new Error('Runtime API Key 长度不正确。');
+    if (String(value || '').trim().length < 12) throw new Error('Độ dài Runtime API Key không hợp lệ.');
     secrets.set('runtimeApiKey', value);
     return secrets.status();
   }));
@@ -352,7 +352,7 @@ function registerIpc() {
   }));
   secureHandle('shell:open', (_event, target) => invokeSafely(async () => {
     const allowed = new Set(['chatgpt-connectors', 'openai-tunnels', 'openai-runtime-keys', 'tunnel-ui', 'coding-tools-source']);
-    if (!allowed.has(target)) throw new Error('不允许打开该地址。');
+    if (!allowed.has(target)) throw new Error('Không được phép mở địa chỉ này.');
     if (target === 'chatgpt-connectors' && chatController) {
       await chatController.openUrl('https://chatgpt.com/#settings/Connectors');
       if (chatWindow && !chatWindow.isDestroyed()) {
@@ -403,7 +403,7 @@ app.whenReady().then(async () => {
     sendManager('runtime:heartbeat', status);
     if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
   }).catch(() => {}), 5000).unref();
-  log.info('网页 MCP 助手已启动');
+  log.info('Trợ lý Web MCP đã khởi động');
   if (settings.load().autoStartServices && !orchestrator.isManuallyStopped()) {
     orchestrator.start({ automatic: true }).catch((error) => log.error(error.message, { stage: 'auto-start' }));
   }
@@ -415,9 +415,3 @@ app.on('window-all-closed', () => {
   if (!forceQuit) app.quit();
 });
 app.on('activate', () => showChatWindow());
-
-
-
-
-
-

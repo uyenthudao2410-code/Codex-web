@@ -37,9 +37,9 @@ test('desktop runtime hot-switches workspaces and shows stale-task progress', ()
   const orchestrator = read('electron/services/runtimeOrchestrator.js');
   const browser = read('renderer/browser.js');
   assert.match(orchestrator, /switchMcpWorkspace/);
-  assert.match(orchestrator, /MCP 与 Tunnel 均未重启/);
+  assert.match(orchestrator, /cả MCP và Tunnel đều không cần khởi động lại/);
   assert.match(orchestrator, /async supervise\(\)/);
-  assert.match(browser, /仍在执行，并非卡死/);
+  assert.match(browser, /Vẫn đang thực thi, không phải bị treo/);
   assert.match(browser, /workspaceSelect/);
 });
 
@@ -52,7 +52,7 @@ test('startup failure cleans runtime state and blocks automatic recovery until m
   assert.match(orchestrator, /await this\.native\.stop\(\)\.catch/);
   assert.match(orchestrator, /if \(this\.autoRecoveryBlocked\)/);
   assert.match(orchestrator, /restart\(\{ automatic: true \}\)/);
-  assert.match(orchestrator, /Coding Tools MCP 进程已提前退出/);
+  assert.match(orchestrator, /Tiến trình Coding Tools MCP đã thoát sớm/);
   assert.match(main, /start\(\{ automatic: true \}\)/);
 });
 
@@ -63,5 +63,5 @@ test('browser task strip exposes stage progress and long-command elapsed time', 
   assert.match(html, /taskProgressText/);
   assert.match(browser, /function progressForTask/);
   assert.match(browser, /current_command/);
-  assert.match(browser, /阶段进度/);
+  assert.match(browser, /Tiến độ giai đoạn/);
 });

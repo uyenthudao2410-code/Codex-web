@@ -139,12 +139,12 @@ class ChatViewController {
       if (!isMainFrame || errorCode === -3) return;
       this.loading = false;
       this.lastError = `${errorDescription} (${errorCode})`;
-      this.log.warn('ChatGPT 页面加载失败', { url: validatedURL, errorCode, errorDescription });
+      this.log.warn('Tải trang ChatGPT thất bại', { url: validatedURL, errorCode, errorDescription });
       this.emitState();
     });
     contents.on('render-process-gone', (_event, details) => {
       this.loading = false;
-      this.lastError = `页面进程已退出：${details.reason}`;
+      this.lastError = `Tiến trình trang đã thoát: ${details.reason}`;
       this.log.error(this.lastError, { exitCode: details.exitCode });
       this.emitState();
     });
@@ -288,8 +288,8 @@ class ChatViewController {
               rows[0].parentElement?.insertBefore(summary, rows[0]);
             }
             const expanded = host.dataset.mcpToolsExpanded === '1';
-            const label = expanded ? ('▾ 工具 × ' + rows.length + ' · 收起') : ('▸ 工具 × ' + rows.length);
-            const title = expanded ? '收起工具调用记录' : '展开查看全部工具调用记录';
+            const label = expanded ? ('▾ Công cụ × ' + rows.length + ' · Thu gọn') : ('▸ Công cụ × ' + rows.length);
+            const title = expanded ? 'Thu gọn nhật ký gọi công cụ' : 'Mở rộng xem tất cả nhật ký gọi công cụ';
             if (summary.textContent !== label) summary.textContent = label;
             if (summary.title !== title) summary.title = title;
             rows.forEach((row) => row.classList.toggle('mcp-tool-call-hidden', !expanded));
@@ -356,7 +356,7 @@ class ChatViewController {
   }
 
   async openUrl(url) {
-    if (!isAllowedNavigation(url)) throw new Error('不允许在内联窗口打开该地址。');
+    if (!isAllowedNavigation(url)) throw new Error('Không được phép mở địa chỉ này trong cửa sổ tích hợp.');
     const contents = this.view?.webContents;
     if (!contents || contents.isDestroyed()) return false;
     if (contents.getURL() === url) return true;
@@ -399,7 +399,7 @@ class ChatViewController {
     else if (action === 'forward' && contents.canGoForward()) contents.goForward();
     else if (action === 'reload') contents.reload();
     else if (action === 'home') await this.loadHome();
-    else throw new Error('不支持的导航操作。');
+    else throw new Error('Thao tác điều hướng không được hỗ trợ.');
     this.emitState();
     return true;
   }

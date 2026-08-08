@@ -25,21 +25,20 @@ test('trusted values are preserved', () => {
 });
 
 test('runtime ports cannot overlap', () => {
-  assert.throws(() => validateRuntimeSettings(normalize({ mcpPort: 9000, healthPort: 9000 })), /不能相同/);
+  assert.throws(() => validateRuntimeSettings(normalize({ mcpPort: 9000, healthPort: 9000 })), /không được giống nhau/i);
 });
 
 test('proxy credentials are rejected', () => {
-  assert.throws(() => validateRuntimeSettings(normalize({ proxyUrl: 'http://user:pass@127.0.0.1:1080' })), /不要在代理地址/);
+  assert.throws(() => validateRuntimeSettings(normalize({ proxyUrl: 'http://user:pass@127.0.0.1:1080' })), /không lưu tên người dùng/i);
 });
 
 test('manual proxy mode requires an address', () => {
-  assert.throws(() => validateRuntimeSettings(normalize({ proxyMode: 'manual', proxyUrl: '' })), /手动代理/);
+  assert.throws(() => validateRuntimeSettings(normalize({ proxyMode: 'manual', proxyUrl: '' })), /proxy thủ công/i);
 });
 
 test('tunnel id must use the official prefix', () => {
   assert.throws(() => validateRuntimeSettings(normalize({ tunnelId: 'wrong-id' })), /tunnel_/);
 });
-
 
 test('recent workspaces use a 50-item MRU list', () => {
   let recent = [];

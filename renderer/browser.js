@@ -6,21 +6,21 @@ let lastRuntimeState = null;
 let lastRuntimeCheckAt = 0;
 
 function unwrap(result) {
-  if (!result?.ok) throw new Error(result?.error || '操作失败');
+  if (!result?.ok) throw new Error(result?.error || 'Thao tác thất bại');
   return result.data;
 }
 
 function baseName(value) {
-  return String(value || '').replace(/[\\/]+$/, '').split(/[\\/]/).pop() || value || '未选择';
+  return String(value || '').replace(/[\\/]+$/, '').split(/[\\/]/).pop() || value || 'Chưa chọn';
 }
 
 function formatDuration(milliseconds) {
   const seconds = Math.max(0, Math.floor(Number(milliseconds || 0) / 1000));
-  if (seconds < 60) return `${seconds}秒`;
+  if (seconds < 60) return `${seconds} giây`;
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
-  if (minutes < 60) return `${minutes}分${rest}秒`;
-  return `${Math.floor(minutes / 60)}小时${minutes % 60}分`;
+  if (minutes < 60) return `${minutes} phút ${rest} giây`;
+  return `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`;
 }
 
 function progressForTask(task, status) {
@@ -55,8 +55,8 @@ function renderChatState(state) {
   element.classList.toggle('ready', !state.loading && !state.error);
   element.classList.toggle('error', Boolean(state.error));
   element.querySelector('span').textContent = state.error
-    ? `加载失败：${state.error}`
-    : state.loading ? '正在切换页面…' : 'ChatGPT 已就绪';
+    ? `Tải thất bại: ${state.error}`
+    : state.loading ? 'Đang chuyển trang…' : 'ChatGPT đã sẵn sàng';
 }
 
 function renderServiceState(state) {
@@ -76,11 +76,11 @@ function renderWorkspaceHealth() {
   const synced = Boolean(activeWorkspace && lastRuntimeState?.mcpRunning);
   button.classList.toggle('ready', synced);
   button.classList.toggle('error', Boolean(activeWorkspace) && !synced);
-  $('#workspaceHealthName').textContent = baseName(activeWorkspace) || '未选择工作区';
+  $('#workspaceHealthName').textContent = baseName(activeWorkspace) || 'Chưa chọn workspace';
   $('#workspaceHealthPath').textContent = activeWorkspace || '-';
-  $('#workspaceHealthState').textContent = !activeWorkspace ? '未选择' : synced ? '✓ 已同步' : lastRuntimeState?.recovering ? '正在恢复' : '等待同步';
-  $('#workspaceHealthTime').textContent = lastRuntimeCheckAt ? new Date(lastRuntimeCheckAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
-  button.title = !activeWorkspace ? '未选择工作区' : synced ? '工作区已与 MCP 同步' : '工作区正在等待 MCP 同步';
+  $('#workspaceHealthState').textContent = !activeWorkspace ? 'Chưa chọn' : synced ? '✓ Đã đồng bộ' : lastRuntimeState?.recovering ? 'Đang khôi phục' : 'Chờ đồng bộ';
+  $('#workspaceHealthTime').textContent = lastRuntimeCheckAt ? new Date(lastRuntimeCheckAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
+  button.title = !activeWorkspace ? 'Chưa chọn workspace' : synced ? 'Workspace đã đồng bộ với MCP' : 'Workspace đang chờ đồng bộ với MCP';
 }
 
 async function refreshStatus() {
@@ -95,7 +95,7 @@ async function refreshTask() {
     const status = String(task?.status || 'idle');
     const strip = $('#taskStrip');
     strip.className = `task-strip ${status}`;
-    $('#taskTitle').textContent = task?.objective || '暂无任务';
+    $('#taskTitle').textContent = task?.objective || 'Chưa có nhiệm vụ';
     if (!task || status === 'idle') {
       $('#taskStep').textContent = '';
       $('#taskProgressBar').style.width = '0%';
@@ -109,26 +109,26 @@ async function refreshTask() {
     const elapsed = formatDuration(now - createdAt);
     const idleFor = now - updatedAt;
     const progress = progressForTask(task, status);
-    const parts = [task.current_step || task.next_step || '任务处理中'];
+    const parts = [task.current_step || task.next_step || 'Đang xử lý nhiệm vụ'];
     const command = task.current_command && typeof task.current_command === 'object' ? task.current_command : null;
     if (command && String(command.status || '') === 'running') {
       const commandStartedAt = Date.parse(command.started_at || '') || now;
-      const kind = { build: '构建', test: '测试', command: '命令' }[String(command.kind || '')] || '命令';
+      const kind = { build: 'Build', test: 'Kiểm thử', command: 'Lệnh' }[String(command.kind || '')] || 'Lệnh';
       parts.unshift(`${kind} ${formatDuration(now - commandStartedAt)}`);
     }
-    if (['active', 'paused'].includes(status)) parts.push(`已运行 ${elapsed}`);
-    if (status === 'active' && idleFor >= 30000) parts.push(`最近活动 ${formatDuration(idleFor)}前`);
-    if (status === 'active' && idleFor >= 120000) parts.push('仍在执行，并非卡死');
+    if (['active', 'paused'].includes(status)) parts.push(`Đã chạy ${elapsed}`);
+    if (status === 'active' && idleFor >= 30000) parts.push(`Hoạt động gần đây ${formatDuration(idleFor)} trước`);
+    if (status === 'active' && idleFor >= 120000) parts.push('Vẫn đang thực thi, không phải bị treo');
     $('#taskStep').textContent = parts.filter(Boolean).join(' · ');
     $('#taskProgressBar').style.width = `${progress}%`;
     $('#taskProgressText').textContent = `${progress}%`;
-    strip.title = `状态：${status}；阶段进度：${progress}%；最后更新：${new Date(updatedAt).toLocaleString('zh-CN')}`;
+    strip.title = `Trạng thái: ${status}; Tiến độ giai đoạn: ${progress}%; Cập nhật lần cuối: ${new Date(updatedAt).toLocaleString('vi-VN')}`;
   } catch { /* no active workspace/task yet */ }
 }
 
 function renderWorkspace(hub) {
   activeWorkspace = hub.activeWorkspace || '';
-  $('#activeWorkspace').textContent = activeWorkspace || '未选择';
+  $('#activeWorkspace').textContent = activeWorkspace || 'Chưa chọn';
   $('#activeWorkspace').title = activeWorkspace;
   renderWorkspaceHealth();
   const chips = $('#workspaceChips');
@@ -137,12 +137,12 @@ function renderWorkspace(hub) {
   select.replaceChildren();
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = `\u5168\u90e8\u5de5\u4f5c\u533a（${(hub.recentWorkspaces || []).length}）`;
+  placeholder.textContent = `Tất cả workspace (${(hub.recentWorkspaces || []).length})`;
   select.appendChild(placeholder);
   (hub.recentWorkspaces || []).filter(Boolean).forEach((workspace) => {
     const option = document.createElement('option');
     option.value = workspace;
-    option.textContent = workspace === activeWorkspace ? `\u5f53\u524d：${baseName(workspace)}` : baseName(workspace);
+    option.textContent = workspace === activeWorkspace ? `Hiện tại: ${baseName(workspace)}` : baseName(workspace);
     option.title = workspace;
     select.appendChild(option);
   });
@@ -165,10 +165,10 @@ async function refreshWorkspace() {
 async function switchWorkspace(workspace, showProgress = true) {
   if (switching || !workspace || workspace === activeWorkspace) return;
   switching = true;
-  if (showProgress) $('#switchState').textContent = 'MCP 正在后台切换工作区…';
+  if (showProgress) $('#switchState').textContent = 'MCP đang chuyển workspace ở chế độ nền…';
   try {
     unwrap(await api.switchWorkspace(workspace));
-    $('#switchState').textContent = '工作区已就绪';
+    $('#switchState').textContent = 'Workspace đã sẵn sàng';
     await Promise.all([refreshWorkspace(), refreshStatus(), refreshTask()]);
     setTimeout(() => { $('#switchState').textContent = ''; }, 1800);
   } catch (error) {
@@ -211,10 +211,10 @@ $('#stopTask').onclick = async () => { try { unwrap(await api.stopTask()); await
 $('#addAuthorizedRootQuick').onclick = async () => {
   if (switching) return;
   switching = true;
-  $('#switchState').textContent = '请选择要授权的额外目录…';
+  $('#switchState').textContent = 'Vui lòng chọn thư mục bổ sung để ủy quyền…';
   try {
     const result = unwrap(await api.chooseAuthorizedRoot());
-    $('#switchState').textContent = result?.selected ? `已授权：${baseName(result.selected)}` : '';
+    $('#switchState').textContent = result?.selected ? `Đã ủy quyền: ${baseName(result.selected)}` : '';
   } catch (error) {
     $('#switchState').textContent = error.message;
   } finally {
@@ -224,11 +224,11 @@ $('#addAuthorizedRootQuick').onclick = async () => {
 $('#addWorkspace').onclick = async () => {
   if (switching) return;
   switching = true;
-  $('#switchState').textContent = '请选择工作目录…';
+  $('#switchState').textContent = 'Vui lòng chọn thư mục làm việc…';
   try {
     const result = unwrap(await api.chooseAndSwitchWorkspace());
     if (result) {
-      $('#switchState').textContent = '工作区已添加';
+      $('#switchState').textContent = 'Workspace đã thêm';
       await Promise.all([refreshWorkspace(), refreshStatus(), refreshTask()]);
     } else {
       $('#switchState').textContent = '';
@@ -244,8 +244,8 @@ api.onChatState(renderChatState);
 api.onHeartbeat(renderServiceState);
 api.onDownload((item) => {
   const node = $('#downloadState');
-  if (item.status === 'completed') node.textContent = `已保存：${baseName(item.path)}`;
-  else if (item.status === 'progressing') node.textContent = `附件 ${item.totalBytes ? Math.round((item.receivedBytes / item.totalBytes) * 100) : 0}%`;
+  if (item.status === 'completed') node.textContent = `Đã lưu: ${baseName(item.path)}`;
+  else if (item.status === 'progressing') node.textContent = `Tệp đính kèm ${item.totalBytes ? Math.round((item.receivedBytes / item.totalBytes) * 100) : 0}%`;
   else if (item.error) node.textContent = item.error;
 });
 api.chatStatus().then((result) => renderChatState(unwrap(result))).catch(() => {});
