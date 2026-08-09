@@ -1,0 +1,1132 @@
+//! Tool Call tests for tool_runtime.
+
+use super::super::*;
+use super::support::*;
+use serde_json::{json, Value};
+
+#[test]
+fn from_tool_name_parses_unit_tools_without_arguments() {
+    for name in [
+        "list_tools",
+        "list_projects",
+        "list_agents",
+        "runtime_status",
+    ] {
+        let call = ToolCall::from_tool_name(name, Value::Null).unwrap_or_else(|e| panic!("{}", e));
+        assert!(
+            matches!(
+                call,
+                ToolCall::ListTools { .. }
+                    | ToolCall::ListProjects
+                    | ToolCall::ListAgents
+                    | ToolCall::RuntimeStatus { .. }
+            ),
+            "unit tool {} should parse",
+            name
+        );
+    }
+}
+
+#[test]
+fn from_tool_name_parses_unit_tools_with_empty_object() {
+    let call = ToolCall::from_tool_name("list_tools", json!({})).unwrap();
+    assert!(matches!(call, ToolCall::ListTools { .. }));
+}
+
+#[test]
+fn from_tool_name_parses_bounded_list_tools_options() {
+    let call = ToolCall::from_tool_name(
+        "list_tools",
+        json!({
+            "category": "artifact",
+            "features": "artifact_upload",
+            "summary_only": true,
+            "limit": 4
+        }),
+    )
+    .unwrap();
+    match call {
+        ToolCall::ListTools {
+            category,
+            features,
+            summary_only,
+            limit,
+        } => {
+            assert_eq!(category.as_deref(), Some("artifact"));
+            assert_eq!(features.as_deref(), Some("artifact_upload"));
+            assert!(summary_only);
+            assert_eq!(limit, Some(4));
+        }
+        other => panic!("expected ListTools, got {:?}", other),
+    }
+}
+
+#[test]
+fn from_tool_name_strips_testing_metadata_before_parsing() {
+    let call = ToolCall::from_tool_name(
+        "job_status",
+        json!({
+            "job_id": "abc",
+            "expected_failure": true,
+            "expected_failure_kind": "job_not_found",
+            "assertion_name": "missing job negative path"
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::JobStatus {
+            ref job_id,
+            include_command_preview: false,
+        } if job_id == "abc"
+    ));
+}
+
+#[test]
+fn from_tool_name_does_not_treat_removed_failure_kind_alias_as_metadata() {
+    let (call, metadata) = ToolCall::from_tool_name_with_recorder_metadata(
+        "job_status",
+        json!({
+            "job_id": "abc",
+            "expected_failure": true,
+            "test_expect_failure_kind": "job_not_found",
+            "assertion_name": "removed alias"
+        }),
+    )
+    .unwrap();
+    assert!(matches!(call, ToolCall::JobStatus { .. }));
+    assert!(metadata.expectation.expected_failure);
+    assert_eq!(metadata.expectation.expected_failure_kind, None);
+    assert_eq!(
+        metadata.expectation.assertion_name.as_deref(),
+        Some("removed alias")
+    );
+}
+
+#[test]
+fn artifact_upload_followup_tools_missing_path_error_is_actionable() {
+    for name in [
+        "artifact_upload_chunk",
+        "artifact_upload_finish",
+        "artifact_upload_abort",
+    ] {
+        let err =
+            ToolCall::from_tool_name(name, json!({"upload_id": "wc_upload_test_1"})).unwrap_err();
+        assert!(
+            err.contains("path is required")
+                && err.contains("artifact_upload_begin")
+                && err.contains("bind upload_id"),
+            "{name}: {err}"
+        );
+    }
+}
+
+#[test]
+fn from_tool_name_parses_read_project_artifact_metadata_allow_missing() {
+    let call = ToolCall::from_tool_name(
+        "read_project_artifact_metadata",
+        json!({
+            "project": "agent:demo:smoke",
+            "path": "artifacts/smoke/missing.artifact",
+            "allow_missing": true
+        }),
+    )
+    .unwrap();
+
+    match call {
+        ToolCall::ReadProjectArtifactMetadata {
+            project,
+            path,
+            allow_missing,
+            ..
+        } => {
+            assert_eq!(project, "agent:demo:smoke");
+            assert_eq!(path, "artifacts/smoke/missing.artifact");
+            assert_eq!(allow_missing, Some(true));
+        }
+        other => panic!("expected ReadProjectArtifactMetadata, got {:?}", other),
+    }
+}
+
+#[test]
+fn from_tool_name_parses_run_shell_with_required_fields() {
+    let call = ToolCall::from_tool_name(
+        "run_shell",
+        json!({"project": "demo", "command": "echo hi"}),
+    )
+    .unwrap();
+    match call {
+        ToolCall::RunShell {
+            project,
+            command,
+            timeout_secs,
+            cwd,
+            ..
+        } => {
+            assert_eq!(project, "demo");
+            assert_eq!(command, "echo hi");
+            assert_eq!(timeout_secs, None);
+            assert_eq!(cwd, None);
+        }
+        other => panic!("expected RunShell, got {:?}", other),
+    }
+}
+
+#[test]
+fn from_tool_name_parses_run_shell_with_optional_fields() {
+    let call = ToolCall::from_tool_name(
+        "run_shell",
+        json!({"project": "demo", "command": "ls", "timeout_secs": 5, "cwd": "sub"}),
+    )
+    .unwrap();
+    match call {
+        ToolCall::RunShell {
+            project,
+            command,
+            timeout_secs,
+            cwd,
+            ..
+        } => {
+            assert_eq!(project, "demo");
+            assert_eq!(command, "ls");
+            assert_eq!(timeout_secs, Some(5));
+            assert_eq!(cwd, Some("sub".to_string()));
+        }
+        other => panic!("expected RunShell, got {:?}", other),
+    }
+}
+
+#[test]
+fn from_tool_name_parses_job_status_and_job_log() {
+    let call = ToolCall::from_tool_name("job_status", json!({"job_id": "abc"})).unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::JobStatus {
+            ref job_id,
+            include_command_preview: false,
+        } if job_id == "abc"
+    ));
+
+    let call = ToolCall::from_tool_name(
+        "job_status",
+        json!({"job_id": "abc", "include_command_preview": true}),
+    )
+    .unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::JobStatus {
+            ref job_id,
+            include_command_preview: true,
+        } if job_id == "abc"
+    ));
+
+    let call = ToolCall::from_tool_name("job_log", json!({"job_id": "abc", "offset": 10})).unwrap();
+    match call {
+        ToolCall::JobLog {
+            job_id,
+            offset,
+            tail_lines,
+            after_observation_token,
+            wait_secs,
+        } => {
+            assert_eq!(job_id, "abc");
+            assert_eq!(offset, Some(10));
+            assert_eq!(tail_lines, None);
+            assert_eq!(after_observation_token, None);
+            assert_eq!(wait_secs, None);
+        }
+        other => panic!("expected JobLog, got {:?}", other),
+    }
+}
+
+#[test]
+fn from_tool_name_parses_stop_job_with_default_confirmation_false() {
+    let call =
+        ToolCall::from_tool_name("stop_job", json!({"project": "demo", "job_id": "abc"})).unwrap();
+    match call {
+        ToolCall::StopJob {
+            project,
+            job_id,
+            confirm,
+            session_id,
+        } => {
+            assert_eq!(project, "demo");
+            assert_eq!(job_id, "abc");
+            assert!(!confirm);
+            assert!(session_id.is_none());
+        }
+        other => panic!("expected StopJob, got {:?}", other),
+    }
+
+    let call = ToolCall::from_tool_name(
+        "stop_job",
+        json!({"project": "demo", "job_id": "abc", "session_id": "wc_sess_x", "confirm": true}),
+    )
+    .unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::StopJob {
+            ref project,
+            ref job_id,
+            ref session_id,
+            confirm: true,
+        } if project == "demo" && job_id == "abc" && session_id.as_deref() == Some("wc_sess_x")
+    ));
+}
+
+#[test]
+fn from_tool_name_parses_read_file_and_git_tools() {
+    let call =
+        ToolCall::from_tool_name("read_file", json!({"project": "demo", "path": "README.md"}))
+            .unwrap();
+    assert!(matches!(call, ToolCall::ReadFile { .. }));
+
+    let call = ToolCall::from_tool_name(
+        "read_file",
+        json!({
+            "project": "demo",
+            "path": "src/main.rs",
+            "start_line": 10,
+            "limit": 3,
+            "with_line_numbers": true
+        }),
+    )
+    .unwrap();
+    match call {
+        ToolCall::ReadFile {
+            project,
+            path,
+            start_line,
+            limit,
+            with_line_numbers,
+            ..
+        } => {
+            assert_eq!(project, "demo");
+            assert_eq!(path, "src/main.rs");
+            assert_eq!(start_line, Some(10));
+            assert_eq!(limit, Some(3));
+            assert_eq!(with_line_numbers, Some(true));
+        }
+        other => panic!("expected ReadFile, got {:?}", other),
+    }
+
+    let call = ToolCall::from_tool_name("git_status", json!({"project": "demo"})).unwrap();
+    assert!(matches!(call, ToolCall::GitStatus { .. }));
+
+    let call = ToolCall::from_tool_name("git_diff", json!({"project": "demo", "args": ["--stat"]}))
+        .unwrap();
+    assert!(matches!(call, ToolCall::GitDiff { .. }));
+
+    let call = ToolCall::from_tool_name("apply_patch", json!({"project": "demo", "patch": "diff"}))
+        .unwrap();
+    assert!(matches!(call, ToolCall::ApplyPatch { .. }));
+
+    let call =
+        ToolCall::from_tool_name("run_job", json!({"project": "demo", "command": "make"})).unwrap();
+    assert!(matches!(call, ToolCall::RunJob { .. }));
+}
+
+#[test]
+fn from_tool_name_rejects_unknown_tool_name() {
+    let err = ToolCall::from_tool_name("not_a_tool", Value::Null).unwrap_err();
+    assert!(err.contains("not_a_tool"));
+}
+
+#[test]
+fn from_tool_name_rejects_missing_required_field() {
+    let err = ToolCall::from_tool_name("run_shell", json!({"command": "echo"})).unwrap_err();
+    assert!(
+        err.contains("project"),
+        "error should mention missing field: {}",
+        err
+    );
+
+    let err = ToolCall::from_tool_name("job_status", json!({})).unwrap_err();
+    assert!(err.contains("job_id"));
+}
+
+#[test]
+fn from_tool_name_rejects_wrong_field_type() {
+    let err = ToolCall::from_tool_name("run_shell", json!({"project": 123, "command": "echo"}))
+        .unwrap_err();
+    assert!(!err.is_empty());
+}
+
+#[test]
+fn from_tool_name_error_includes_tool_name() {
+    let err = ToolCall::from_tool_name("run_shell", json!({})).unwrap_err();
+    assert!(err.contains("run_shell"));
+}
+
+#[test]
+fn tool_call_project_accessor_covers_project_tool_specs() {
+    for spec in registered_tool_specs() {
+        let args = sample_tool_args(&spec.name);
+        let expected_project = if spec.name == "start_session" {
+            // start_session project is task association metadata, not an
+            // execution target exposed by the project accessor.
+            None
+        } else {
+            args.get("project")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        };
+        let call = ToolCall::from_tool_name(&spec.name, args)
+            .unwrap_or_else(|e| panic!("{} should deserialize: {}", spec.name, e));
+        assert_eq!(
+            call.project(),
+            expected_project.as_deref(),
+            "{} ToolCall::project() mismatch",
+            spec.name
+        );
+    }
+
+    // start_session's optional project is task association metadata, not an
+    // execution target used for authorization or kernel project reporting.
+    let start_session =
+        ToolCall::from_tool_name("start_session", json!({"project": "agent:oe:private-drop"}))
+            .unwrap();
+    assert_eq!(start_session.project(), None);
+
+    // session_handoff_summary's optional project IS exposed by project()
+    // when provided, so the kernel can report it and authorize the workspace
+    // git inspection path.
+    let handoff = ToolCall::from_tool_name(
+        "session_handoff_summary",
+        json!({"session_id": "wc_sess_x", "project": "agent:oe:private-drop"}),
+    )
+    .unwrap();
+    assert_eq!(handoff.project(), Some("agent:oe:private-drop"));
+}
+
+#[test]
+fn tool_call_session_id_accessor_covers_session_tool_specs() {
+    for spec in registered_tool_specs() {
+        if spec.input_schema["properties"].get("session_id").is_none() {
+            continue;
+        }
+        if spec.input_schema["required"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|field| field == "session_id")
+        {
+            continue;
+        }
+        let call = ToolCall::from_tool_name(&spec.name, sample_tool_args_with_session(&spec.name))
+            .unwrap_or_else(|e| panic!("{} should deserialize: {}", spec.name, e));
+        assert_eq!(
+            call.session_id(),
+            Some("wc_sess_accessor"),
+            "{} ToolCall::session_id() mismatch",
+            spec.name
+        );
+    }
+}
+
+#[test]
+fn from_tool_name_unknown_tool_lists_available_tools_and_hint() {
+    let err = ToolCall::from_tool_name("definitely_not_a_tool", Value::Null).unwrap_err();
+    assert!(err.contains("definitely_not_a_tool"));
+    assert!(
+        err.contains("listRuntimeTools") || err.contains("list_tools"),
+        "unknown-tool error should hint at discovery: {}",
+        err
+    );
+    // Should list at least a couple of known tool names.
+    assert!(err.contains("git_diff_summary"));
+    assert!(err.contains("apply_patch_checked"));
+    // Must not leak secret/config artifacts.
+    let lower = err.to_lowercase();
+    for forbidden in [
+        "token",
+        "authorization",
+        "agent.toml",
+        "webcodex.env",
+        "secret",
+    ] {
+        assert!(
+            !lower.contains(&forbidden),
+            "unknown-tool error must not leak '{}': {}",
+            forbidden,
+            err
+        );
+    }
+}
+
+#[test]
+fn known_tool_names_matches_spec_count() {
+    let specs = registered_tool_specs();
+    for spec in &specs {
+        assert!(
+            is_known_tool_name(&spec.name),
+            "{} spec must be known to ToolCall",
+            spec.name
+        );
+        assert!(
+            !is_model_hidden_tool_name(&spec.name),
+            "{} must not be model-hidden when exposed in registered tool specs",
+            spec.name
+        );
+    }
+    assert_eq!(
+        specs.len(),
+        known_tool_names().count() - model_hidden_tool_names().count(),
+        "registered tool specs should cover every model-visible known runtime tool; \
+         hidden tools are parser-known but carry no ToolSpec"
+    );
+    // Every known name must be recognized (i.e. must NOT yield the
+    // "unknown tool" error). Unit tools parse with null args; non-unit
+    // tools fail with a missing-field error, which is still a recognition
+    // success (the variant matched).
+    for name in known_tool_names() {
+        assert!(
+            is_known_tool_name(name),
+            "known name '{}' not recognized by is_known_tool_name",
+            name
+        );
+        let result = ToolCall::from_tool_name(name, Value::Null);
+        match result {
+            Ok(_) => {}
+            Err(e) => {
+                assert!(
+                    !e.contains("unknown tool"),
+                    "known tool '{}' was treated as unknown: {}",
+                    name,
+                    e
+                );
+            }
+        }
+    }
+    // An unknown name must still produce the unknown-tool error.
+    let err = ToolCall::from_tool_name("not_a_real_tool", Value::Null).unwrap_err();
+    assert!(err.contains("unknown tool"));
+    assert!(
+        !err.contains("run_codex"),
+        "unknown-tool guidance must not advertise hidden tools: {}",
+        err
+    );
+}
+
+#[test]
+fn from_tool_name_parses_runtime_status() {
+    let call = ToolCall::from_tool_name("runtime_status", Value::Null).unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::RuntimeStatus {
+            compact: false,
+            summary_only: false
+        }
+    ));
+    // Also accepts an empty object.
+    let call = ToolCall::from_tool_name("runtime_status", json!({})).unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::RuntimeStatus {
+            compact: false,
+            summary_only: false
+        }
+    ));
+    let call = ToolCall::from_tool_name(
+        "runtime_status",
+        json!({"compact": true, "summary_only": true}),
+    )
+    .unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::RuntimeStatus {
+            compact: true,
+            summary_only: true
+        }
+    ));
+}
+
+#[test]
+fn start_coding_task_defaults_to_continuation_and_requires_explicit_isolation() {
+    let call =
+        ToolCall::from_tool_name("start_coding_task", json!({"project": "agent:oe:demo"})).unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::StartCodingTask {
+            bind_current: true,
+            new_session: false,
+            ..
+        }
+    ));
+    assert_eq!(call.project(), Some("agent:oe:demo"));
+
+    let isolated = ToolCall::from_tool_name(
+        "start_coding_task",
+        json!({
+            "project": "agent:oe:demo",
+            "bind_current": true,
+            "new_session": true
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        isolated,
+        ToolCall::StartCodingTask {
+            bind_current: true,
+            new_session: true,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn start_coding_task_parses_managed_temporary_project_request_without_project() {
+    let call = ToolCall::from_tool_name(
+        "start_coding_task",
+        json!({
+            "client_id": "runner-1",
+            "temporary_project_name": "Scratch task"
+        }),
+    )
+    .unwrap();
+
+    match &call {
+        ToolCall::StartCodingTask {
+            project,
+            client_id,
+            temporary_project_name,
+            ..
+        } => {
+            assert!(project.is_empty());
+            assert_eq!(client_id.as_deref(), Some("runner-1"));
+            assert_eq!(temporary_project_name.as_deref(), Some("Scratch task"));
+        }
+        _ => panic!("expected start_coding_task"),
+    }
+    assert!(call.project().is_none());
+}
+
+#[test]
+fn coding_task_entries_parse_path_source_and_reject_ambiguous_sources() {
+    let start = ToolCall::from_tool_name(
+        "start_coding_task",
+        json!({
+            "client_id": "runner-1",
+            "path": "/root/git/example"
+        }),
+    )
+    .unwrap();
+    match &start {
+        ToolCall::StartCodingTask {
+            project,
+            client_id,
+            path,
+            ..
+        } => {
+            assert!(project.is_empty());
+            assert_eq!(client_id.as_deref(), Some("runner-1"));
+            assert_eq!(path.as_deref(), Some("/root/git/example"));
+        }
+        _ => panic!("expected start_coding_task"),
+    }
+    let start_audit = start.session_log_arguments();
+    assert_eq!(start_audit["path_source_requested"], true);
+    assert!(start_audit.get("path").is_none());
+    assert!(!start_audit.to_string().contains("/root/git/example"));
+
+    let work = ToolCall::from_tool_name(
+        "work_on_project",
+        json!({
+            "client_id": "runner-1",
+            "path": "/root/git/example",
+            "instruction": "implement it"
+        }),
+    )
+    .unwrap();
+    assert!(work.project().is_none());
+    let work_audit = work.session_log_arguments();
+    assert_eq!(work_audit["path_source_requested"], true);
+    assert!(work_audit.get("path").is_none());
+    assert!(!work_audit.to_string().contains("/root/git/example"));
+
+    for (tool, arguments) in [
+        (
+            "start_coding_task",
+            json!({"project": "agent:x:y", "client_id": "x", "path": "/tmp/y"}),
+        ),
+        ("start_coding_task", json!({"path": "/tmp/y"})),
+        (
+            "start_coding_task",
+            json!({"client_id": "x", "path": "/tmp/y", "temporary_project_name": "tmp"}),
+        ),
+        (
+            "start_coding_task",
+            json!({"client_id": "x", "path": "relative/repo"}),
+        ),
+        ("start_coding_task", json!({"client_id": "x", "path": ""})),
+        (
+            "work_on_project",
+            json!({"project": "agent:x:y", "path": "/tmp/y", "instruction": "x"}),
+        ),
+        (
+            "work_on_project",
+            json!({"client_id": "x", "instruction": "x"}),
+        ),
+        (
+            "work_on_project",
+            json!({"client_id": "x", "path": "relative/repo", "instruction": "x"}),
+        ),
+        (
+            "work_on_project",
+            json!({"client_id": "", "path": "/tmp/y", "instruction": "x"}),
+        ),
+    ] {
+        let error = ToolCall::from_tool_name(tool, arguments).unwrap_err();
+        assert!(
+            error.contains("conflicting fields")
+                || error.contains("missing ")
+                || error.contains("must be absolute")
+                || error.contains("must not be empty"),
+            "{error}"
+        );
+    }
+}
+
+#[test]
+fn session_execution_context_parses_as_strongly_typed_replacement() {
+    let call = ToolCall::from_tool_name(
+        "start_coding_task",
+        json!({
+            "project": "agent:oe:demo",
+            "execution_context": {
+                "default_cwd": "frontend",
+                "default_shell": "bash"
+            }
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::StartCodingTask {
+            execution_context: Some(sessions::SessionExecutionContext {
+                default_cwd: Some(ref cwd),
+                default_shell: Some(ExecutionShell::Bash),
+                ..
+            }),
+            ..
+        } if cwd == "frontend"
+    ));
+
+    let ssh = ToolCall::from_tool_name(
+        "update_session_context",
+        json!({
+            "project": "agent:oe:demo",
+            "session_id": "wc_sess_context01",
+            "execution_context": {
+                "default_cwd": "/opt/webcodex-edge",
+                "resource": "tmp"
+            }
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        ssh,
+        ToolCall::UpdateSessionContext {
+            execution_context: sessions::SessionExecutionContext {
+                default_cwd: Some(ref cwd),
+                resource: Some(ref resource),
+                ..
+            },
+            ..
+        } if cwd == "/opt/webcodex-edge" && resource == "tmp"
+    ));
+
+    let clear = ToolCall::from_tool_name(
+        "update_session_context",
+        json!({
+            "project": "agent:oe:demo",
+            "session_id": "wc_sess_context01",
+            "execution_context": {}
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        clear,
+        ToolCall::UpdateSessionContext {
+            ref project,
+            ref session_id,
+            execution_context: sessions::SessionExecutionContext {
+                default_cwd: None,
+                default_shell: None,
+                ..
+            },
+        } if project == "agent:oe:demo" && session_id == "wc_sess_context01"
+    ));
+
+    for invalid in [
+        json!({
+            "project": "agent:oe:demo",
+            "session_id": "wc_sess_context01",
+            "execution_context": {"env": {"TOKEN": "secret"}}
+        }),
+        json!({
+            "project": "agent:oe:demo",
+            "session_id": "wc_sess_context01",
+            "execution_context": {"default_shell": "zsh"}
+        }),
+    ] {
+        let error = ToolCall::from_tool_name("update_session_context", invalid).unwrap_err();
+        assert!(error.contains("invalid arguments"));
+    }
+}
+
+#[test]
+fn from_tool_name_parses_finish_coding_task_workspace_projection_flag() {
+    let call = ToolCall::from_tool_name(
+        "finish_coding_task",
+        json!({
+            "project": "agent:client:demo",
+            "session_id": "wc_sess_demo",
+            "summary_only": true,
+            "include_workspace": true,
+            "include_validation_summary": true,
+            "include_hygiene": true,
+            "include_handoff": true,
+            "include_diff": false
+        }),
+    )
+    .unwrap();
+
+    match call {
+        ToolCall::FinishCodingTask {
+            project,
+            session_id,
+            summary_only,
+            include_diff,
+            include_workspace,
+            include_hygiene,
+            include_handoff,
+            include_validation_summary,
+        } => {
+            assert_eq!(project, "agent:client:demo");
+            assert_eq!(session_id, "wc_sess_demo");
+            assert!(summary_only);
+            assert_eq!(include_diff, Some(false));
+            assert_eq!(include_workspace, Some(true));
+            assert_eq!(include_hygiene, Some(true));
+            assert_eq!(include_handoff, Some(true));
+            assert_eq!(include_validation_summary, Some(true));
+        }
+        other => panic!("expected finish_coding_task, got {other:?}"),
+    }
+}
+
+#[test]
+fn project_overview_tool_call_parses() {
+    let call = ToolCall::from_tool_name(
+        "project_overview",
+        json!({
+            "project": "agent:client:demo",
+            "path": "crates/example",
+            "max_depth": 3,
+            "limit": 120
+        }),
+    )
+    .unwrap();
+
+    match call {
+        ToolCall::ProjectOverview {
+            project,
+            path,
+            max_depth,
+            limit,
+            ..
+        } => {
+            assert_eq!(project, "agent:client:demo");
+            assert_eq!(path.as_deref(), Some("crates/example"));
+            assert_eq!(max_depth, Some(3));
+            assert_eq!(limit, Some(120));
+        }
+        other => panic!("expected ProjectOverview, got {other:?}"),
+    }
+
+    let audit_call = ToolCall::from_tool_name(
+        "project_overview",
+        json!({
+            "project": "agent:client:demo",
+            "path": "src",
+            "max_depth": 2,
+            "limit": 40
+        }),
+    )
+    .unwrap();
+    assert_eq!(
+        audit_call.session_log_arguments(),
+        json!({
+            "project": "agent:client:demo",
+            "path": "src",
+            "max_depth": 2,
+            "limit": 40
+        })
+    );
+}
+
+#[test]
+fn from_tool_name_parses_phase_a_tools() {
+    let call = ToolCall::from_tool_name("list_project_files", json!({"project": "demo"})).unwrap();
+    match call {
+        ToolCall::ListProjectFiles {
+            project,
+            path,
+            limit,
+            ..
+        } => {
+            assert_eq!(project, "demo");
+            assert_eq!(path, None);
+            assert_eq!(limit, None);
+        }
+        other => panic!("expected ListProjectFiles, got {:?}", other),
+    }
+
+    let call = ToolCall::from_tool_name(
+        "search_project_text",
+        json!({
+            "project": "demo",
+            "pattern": "fn main",
+            "limit": 5,
+            "context_before": 3,
+            "context_after": 8,
+            "include_globs": ["**/*.rs"],
+            "exclude_globs": ["vendor/**"],
+            "result_mode": "count",
+            "timeout_secs": 45
+        }),
+    )
+    .unwrap();
+    match call {
+        ToolCall::SearchProjectText {
+            project,
+            pattern,
+            path,
+            limit,
+            context_before,
+            context_after,
+            include_globs,
+            exclude_globs,
+            result_mode,
+            timeout_secs,
+            ..
+        } => {
+            assert_eq!(project, "demo");
+            assert_eq!(pattern, "fn main");
+            assert_eq!(path, None);
+            assert_eq!(limit, Some(5));
+            assert_eq!(context_before, Some(3));
+            assert_eq!(context_after, Some(8));
+            assert_eq!(include_globs, Some(vec!["**/*.rs".to_string()]));
+            assert_eq!(exclude_globs, Some(vec!["vendor/**".to_string()]));
+            assert_eq!(result_mode, Some(SearchResultMode::Count));
+            assert_eq!(timeout_secs, Some(45));
+        }
+        other => panic!("expected SearchProjectText, got {:?}", other),
+    }
+
+    let legacy_call = ToolCall::from_tool_name(
+        "search_project_text",
+        json!({"project": "demo", "pattern": "ToolManifest"}),
+    )
+    .unwrap();
+    match legacy_call {
+        ToolCall::SearchProjectText {
+            result_mode,
+            include_globs,
+            exclude_globs,
+            timeout_secs,
+            ..
+        } => {
+            assert_eq!(result_mode, None);
+            assert_eq!(include_globs, None);
+            assert_eq!(exclude_globs, None);
+            assert_eq!(timeout_secs, None);
+        }
+        other => panic!("expected legacy SearchProjectText, got {other:?}"),
+    }
+
+    let call = ToolCall::from_tool_name("git_diff_summary", json!({"project": "demo"})).unwrap();
+    assert!(matches!(call, ToolCall::GitDiffSummary { project, .. } if project == "demo"));
+
+    // list_jobs has only optional fields; null arguments must still parse.
+    let call = ToolCall::from_tool_name("list_jobs", Value::Null).unwrap();
+    assert!(matches!(
+        call,
+        ToolCall::ListJobs {
+            limit: None,
+            status: None
+        }
+    ));
+    let call =
+        ToolCall::from_tool_name("list_jobs", json!({"limit": 3, "status": "running"})).unwrap();
+    match call {
+        ToolCall::ListJobs { limit, status } => {
+            assert_eq!(limit, Some(3));
+            assert_eq!(status.as_deref(), Some("running"));
+        }
+        other => panic!("expected ListJobs, got {:?}", other),
+    }
+
+    let call =
+        ToolCall::from_tool_name("job_tail", json!({"job_id": "abc", "tail_lines": 10})).unwrap();
+    match call {
+        ToolCall::JobTail {
+            job_id,
+            tail_lines,
+            after_observation_token,
+            wait_secs,
+        } => {
+            assert_eq!(job_id, "abc");
+            assert_eq!(tail_lines, Some(10));
+            assert_eq!(after_observation_token, None);
+            assert_eq!(wait_secs, None);
+        }
+        other => panic!("expected JobTail, got {:?}", other),
+    }
+}
+
+#[test]
+fn from_tool_name_list_jobs_with_null_arguments_parses() {
+    // Regression: a non-unit tool with all-optional fields must deserialize
+    // when a caller passes `null` arguments (normalized to an empty object).
+    let call = ToolCall::from_tool_name("list_jobs", Value::Null)
+        .unwrap_or_else(|e| panic!("list_jobs with null args should parse: {}", e));
+    assert!(matches!(call, ToolCall::ListJobs { .. }));
+}
+
+#[test]
+fn from_tool_name_parses_checked_and_cleanup_tools() {
+    let checked = ToolCall::from_tool_name(
+        "apply_patch_checked",
+        json!({"project":"agent:c:p","patch":"diff","deny_sensitive_paths":true}),
+    )
+    .unwrap();
+    assert!(matches!(
+        checked,
+        ToolCall::ApplyPatchChecked { project, patch, deny_sensitive_paths, .. }
+            if project == "agent:c:p" && patch == "diff" && deny_sensitive_paths == Some(true)
+    ));
+
+    let delete = ToolCall::from_tool_name(
+        "delete_project_files",
+        json!({"project":"agent:c:p","paths":["tmp.txt"]}),
+    )
+    .unwrap();
+    assert!(
+        matches!(delete, ToolCall::DeleteProjectFiles { project, paths, .. } if project == "agent:c:p" && paths == vec!["tmp.txt"])
+    );
+
+    let restore = ToolCall::from_tool_name(
+        "git_restore_paths",
+        json!({"project":"agent:c:p","paths":["README.md"]}),
+    )
+    .unwrap();
+    assert!(
+        matches!(restore, ToolCall::GitRestorePaths { project, paths, .. } if project == "agent:c:p" && paths == vec!["README.md"])
+    );
+
+    let discard = ToolCall::from_tool_name(
+        "discard_untracked",
+        json!({"project":"agent:c:p","paths":["tmp.txt"]}),
+    )
+    .unwrap();
+    assert!(
+        matches!(discard, ToolCall::DiscardUntracked { project, paths, .. } if project == "agent:c:p" && paths == vec!["tmp.txt"])
+    );
+}
+
+#[test]
+fn from_tool_name_parses_validate_patch() {
+    let call = ToolCall::from_tool_name(
+        "validate_patch",
+        json!({"project": "agent:c:p", "patch": "diff"}),
+    )
+    .unwrap();
+    assert!(
+        matches!(call, ToolCall::ValidatePatch { project, patch, .. } if project == "agent:c:p" && patch == "diff")
+    );
+}
+
+#[test]
+fn from_tool_name_parses_write_project_file() {
+    let write = ToolCall::from_tool_name(
+        "write_project_file",
+        json!({
+            "project": "agent:c:p",
+            "path": "new.txt",
+            "content": "hello"
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        write,
+        ToolCall::WriteProjectFile { project, path, content, overwrite, expected_sha256, expected_content_prefix, .. }
+            if project == "agent:c:p"
+            && path == "new.txt"
+            && content == "hello"
+            && overwrite.is_none()
+            && expected_sha256.is_none()
+            && expected_content_prefix.is_none()
+    ));
+}
+
+#[test]
+fn from_tool_name_rejects_removed_legacy_edit_tools() {
+    // The 7 legacy edit tools replaced by `apply_text_edits` are no longer
+    // known ToolDefinitions, so `from_tool_name` must reject them with the
+    // same unknown-tool error as any other unknown name.
+    for name in [
+        "replace_in_file",
+        "replace_exact_block",
+        "insert_before_pattern",
+        "insert_after_pattern",
+        "replace_line_range",
+        "insert_at_line",
+        "delete_line_range",
+    ] {
+        let err = ToolCall::from_tool_name(name, Value::Null).unwrap_err();
+        assert!(err.contains("unknown tool"), "{name}: {err}");
+    }
+}
+
+#[test]
+fn from_tool_name_parses_project_management_tools() {
+    let register = ToolCall::from_tool_name(
+        "register_project",
+        json!({
+            "client_id":"oe",
+            "id":"my-project",
+            "name":"My Project",
+            "path":"/root/git/my-project"
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        register,
+        ToolCall::RegisterProject { ref client_id, ref id, ref name, ref path, .. }
+            if client_id == "oe" && id == "my-project" && name == "My Project"
+            && path == "/root/git/my-project"
+    ));
+
+    let create = ToolCall::from_tool_name(
+        "create_project",
+        json!({
+            "client_id":"oe",
+            "id":"hello",
+            "name":"Hello",
+            "path":"/root/git/hello",
+            "template":"basic",
+            "git_init":true
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        create,
+        ToolCall::CreateProject { ref client_id, ref id, ref name, ref path, ref template, git_init, .. }
+            if client_id == "oe" && id == "hello" && name == "Hello"
+            && path == "/root/git/hello" && template.as_deref() == Some("basic")
+            && git_init
+    ));
+}

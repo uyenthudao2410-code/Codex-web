@@ -1,0 +1,44 @@
+//! Domain-organized test modules for tool_runtime.
+
+mod support;
+
+mod apply_text_edits;
+mod checkpoint;
+mod coding_task;
+mod coding_task_semantic_navigation;
+mod continuation_feedback;
+mod dispatch;
+mod edit_tool_telemetry;
+mod execution_context;
+mod explicit_resume;
+mod files;
+mod files_helpers;
+mod git;
+mod handoff;
+mod handoff_brief;
+mod hygiene;
+mod jobs;
+mod lsp;
+mod metadata;
+mod permission_gate;
+mod read_files;
+mod reconnect;
+mod schema;
+mod search_project_texts;
+mod session_shells;
+mod sessions;
+mod sessions_current;
+mod sessions_git;
+mod sessions_guards;
+mod sessions_instructions;
+mod sessions_resolver;
+mod startup_brief;
+mod sync_timeout;
+mod tool_call;
+mod trusted_smoke;
+mod validation_events;
+mod validation_handoff;
+mod validation_parser;
+mod validation_profile;
+mod validation_summary;
+mod work_on_project;

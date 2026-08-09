@@ -1,0 +1,497 @@
+//! Synchronous timeout contract for cargo_* and run_shell.
+//!
+//! Read-only structured validation tools (`cargo_check`, `cargo_test`,
+//! `cargo_fmt(check=true)`) now define `timeout_secs` as the total runtime
+//! budget of the command (1..=3600). Short validations return immediately; a
+//! long validation continues as a Job and returns `job_id`. `run_shell`
+//! keeps the synchronous 1..=120 contract.
+
+use super::support::*;
+use crate::shell_protocol::{
+    ShellAgentPollRequest, ShellAgentResultRequest, ShellClientCapabilities,
+};
+use crate::tool_runtime::helpers::{
+    resolve_sync_timeout_secs, DEFAULT_RUN_SHELL_TIMEOUT_SECS, MIN_SYNC_TIMEOUT_SECS,
+};
+use crate::tool_runtime::validation_events::validation_summary_for_session;
+use crate::tool_runtime::{SessionMode, ToolCall, ToolResult};
+
+fn assert_timeout_rejected(result: &ToolResult, tool_name: &str) {
+    assert!(
+        !result.success,
+        "{tool_name} should reject out-of-range timeout"
+    );
+    assert_eq!(result.output["command_started"], false);
+    assert_eq!(result.output["failure_kind"], "invalid_arguments");
+    assert_eq!(result.output["tool_failure"], true);
+    assert!(result.output["exit_code"].is_null());
+    let error = result.error.as_deref().unwrap_or("");
+    assert!(
+        error.contains(tool_name),
+        "error should name calling tool {tool_name}: {error}"
+    );
+    assert!(
+        error.contains("timeout_secs") && error.contains(&MIN_SYNC_TIMEOUT_SECS.to_string()),
+        "error should describe the timeout range: {error}"
+    );
+    assert!(
+        !error.to_ascii_lowercase().contains("runshell"),
+        "error must not leak runShell implementation detail: {error}"
+    );
+    // "run_shell" is allowed only when it is the calling tool name.
+    if tool_name != "run_shell" {
+        assert!(
+            !error.contains("run_shell"),
+            "error must not leak run_shell implementation detail: {error}"
+        );
+    }
+}
+
+async fn assert_no_pending_shell_request(
+    runtime: &crate::tool_runtime::ToolRuntime,
+    client_id: &str,
+) {
+    let req = runtime
+        .shell_clients
+        .poll(ShellAgentPollRequest {
+            client_id: client_id.to_string(),
+            agent_instance_id: "inst".to_string(),
+            projects: None,
+        })
+        .await
+        .expect("poll should succeed");
+    assert!(
+        req.is_none(),
+        "out-of-range timeout must not enqueue agent shell request: {req:?}"
+    );
+}
+
+#[test]
+fn resolve_sync_timeout_secs_rejects_out_of_range() {
+    assert_eq!(
+        resolve_sync_timeout_secs(None, DEFAULT_RUN_SHELL_TIMEOUT_SECS).unwrap(),
+        DEFAULT_RUN_SHELL_TIMEOUT_SECS
+    );
+    assert_eq!(resolve_sync_timeout_secs(Some(1), 120).unwrap(), 1);
+    assert_eq!(resolve_sync_timeout_secs(Some(120), 120).unwrap(), 120);
+    assert!(resolve_sync_timeout_secs(Some(0), 120).is_err());
+    assert!(resolve_sync_timeout_secs(Some(121), 120).is_err());
+    assert!(resolve_sync_timeout_secs(Some(300), 120).is_err());
+    assert!(resolve_sync_timeout_secs(Some(600), 60).is_err());
+}
+
+#[tokio::test]
+async fn cargo_validation_tools_accept_long_total_runtime_budget() {
+    // Read-only validation tools accept a long total runtime budget (1..=3600);
+    // they are no longer limited to the 120s synchronous cap.
+    let runtime = runtime_with_agent_project("sync-timeout-cargo-long")
+        .with_validation_sync_wait(std::time::Duration::from_millis(10));
+    let mut caps = ShellClientCapabilities::default();
+    caps.async_shell_jobs = true;
+    caps.structured_validation_argv = true;
+    register_agent(&runtime, "sync-timeout-cargo-long", None, caps).await;
+    let project = agent_test_project_id("sync-timeout-cargo-long");
+    for (tool_name, timeout) in [
+        ("cargo_check", 300u64),
+        ("cargo_test", 1800),
+        ("cargo_fmt", 300),
+    ] {
+        let result = match tool_name {
+            "cargo_check" => {
+                runtime
+                    .cargo_check(
+                        project.clone(),
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some(timeout),
+                    )
+                    .await
+            }
+            "cargo_test" => {
+                runtime
+                    .cargo_test(
+                        project.clone(),
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some(timeout),
+                    )
+                    .await
+            }
+            "cargo_fmt" => {
+                runtime
+                    .cargo_fmt(project.clone(), None, Some(true), Some(timeout))
+                    .await
+            }
+            _ => unreachable!(),
+        };
+        // These values are within 1..=3600, so the request is accepted and the
+        // validation is promoted to a Job (the wait window is tiny in tests).
+        assert!(
+            result.success,
+            "{tool_name} long budget should be accepted: {:?}",
+            result.error
+        );
+        assert!(result.output["promoted_to_job"].as_bool().unwrap_or(false));
+        assert_eq!(result.output["effective_timeout_secs"], timeout);
+        // The promoted Job is immediately queryable.
+        let job_id = result.output["job_id"].as_str().unwrap().to_string();
+        let status = runtime.job_status_for_auth(job_id, false, None).await;
+        assert!(status.success, "{:?}", status.error);
+    }
+}
+
+#[tokio::test]
+async fn cargo_validation_tools_reject_timeout_outside_1_3600() {
+    let runtime = runtime_with_agent_project("sync-timeout-cargo-range");
+    let mut caps = ShellClientCapabilities::default();
+    caps.shell = true;
+    register_agent(&runtime, "sync-timeout-cargo-range", None, caps).await;
+    let project = agent_test_project_id("sync-timeout-cargo-range");
+
+    for (tool_name, timeout) in [
+        ("cargo_check", 0u64),
+        ("cargo_test", 0),
+        ("cargo_fmt", 0),
+        ("cargo_check", 3601),
+        ("cargo_test", 3601),
+        ("cargo_fmt", 3601),
+    ] {
+        let result = match tool_name {
+            "cargo_check" => {
+                runtime
+                    .cargo_check(
+                        project.clone(),
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some(timeout),
+                    )
+                    .await
+            }
+            "cargo_test" => {
+                runtime
+                    .cargo_test(
+                        project.clone(),
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some(timeout),
+                    )
+                    .await
+            }
+            "cargo_fmt" => {
+                runtime
+                    .cargo_fmt(project.clone(), None, Some(true), Some(timeout))
+                    .await
+            }
+            _ => unreachable!(),
+        };
+        assert!(!result.success, "{tool_name} {timeout} should be rejected");
+        assert_eq!(result.output["failure_kind"], "invalid_arguments");
+        assert_no_pending_shell_request(&runtime, "sync-timeout-cargo-range").await;
+    }
+}
+
+#[tokio::test]
+async fn cargo_fmt_mutating_timeout_stays_within_120_seconds() {
+    let client_id = "sync-timeout-fmt-mutating";
+    let runtime = runtime_with_agent_project(client_id);
+    register_agent(
+        &runtime,
+        client_id,
+        None,
+        ShellClientCapabilities::default(),
+    )
+    .await;
+    let project = agent_test_project_id(client_id);
+
+    let accepted = tokio::spawn({
+        let runtime = runtime.clone();
+        let project = project.clone();
+        async move {
+            runtime
+                .cargo_fmt(project, None, Some(false), Some(120))
+                .await
+        }
+    });
+    let request = next_patch_agent_request(&runtime, client_id)
+        .await
+        .expect("cargo_fmt(check=false, timeout=120) should start");
+    assert_ne!(request.kind, "start_validation_job");
+    complete_patch_agent_request(&runtime, client_id, &request.request_id, 0, "", "").await;
+    let accepted = accepted.await.unwrap();
+    assert!(accepted.success, "{:?}", accepted.error);
+    assert_eq!(accepted.output["promoted_to_job"], false);
+
+    for check in [Some(false), None] {
+        let rejected = runtime
+            .cargo_fmt(project.clone(), None, check, Some(121))
+            .await;
+        assert!(!rejected.success);
+        assert_eq!(rejected.output["failure_kind"], "invalid_arguments");
+        assert_no_pending_shell_request(&runtime, client_id).await;
+    }
+}
+
+#[tokio::test]
+async fn run_shell_rejects_timeout_above_120_before_enqueue() {
+    let runtime = runtime_with_agent_project("sync-timeout-shell");
+    let mut caps = ShellClientCapabilities::default();
+    caps.shell = true;
+    register_agent(&runtime, "sync-timeout-shell", None, caps).await;
+    let project = agent_test_project_id("sync-timeout-shell");
+
+    for timeout in [121u64, 300] {
+        let result = runtime
+            .run_shell(project.clone(), "echo hi".to_string(), Some(timeout), None)
+            .await;
+        assert_timeout_rejected(&result, "run_shell");
+        assert_no_pending_shell_request(&runtime, "sync-timeout-shell").await;
+    }
+}
+
+#[tokio::test]
+async fn explicit_short_cargo_test_timeout_reports_real_terminal_timeout_without_job() {
+    // When `timeout_secs <= SYNC_VALIDATION_WAIT_SECS`, there is no handoff
+    // headroom: the command runs synchronously and a real terminal timeout is
+    // reported at the budget boundary. No Job is created.
+    let client_id = "sync-short-full-test";
+    let runtime = runtime_with_agent_project(client_id);
+    let mut caps = ShellClientCapabilities::default();
+    caps.shell = true;
+    register_agent(&runtime, client_id, None, caps).await;
+    let project = agent_test_project_id(client_id);
+    let auth = auth_context(None, true);
+    let session = runtime.sessions.start_session(Some(project.clone()), None);
+    let session_id = session.session_id.clone();
+
+    let task = tokio::spawn({
+        let runtime = runtime.clone();
+        let auth = auth.clone();
+        async move {
+            runtime
+                .dispatch_with_auth(
+                    ToolCall::CargoTest {
+                        project,
+                        session_id: Some(session_id),
+                        cwd: None,
+                        filter: None,
+                        all_targets: None,
+                        all_features: None,
+                        no_default_features: None,
+                        features: None,
+                        package: None,
+                        no_run: None,
+                        timeout_secs: Some(1),
+                    },
+                    Some(&auth),
+                )
+                .await
+        }
+    });
+    let request = next_patch_agent_request(&runtime, client_id)
+        .await
+        .expect("full cargo_test should be dispatched to the Agent");
+    assert_eq!(request.command, "cargo test");
+    let active_summary = runtime
+        .sessions
+        .summary(&session.session_id, Some(20))
+        .expect("active session summary");
+    assert!(active_summary
+        .events
+        .iter()
+        .any(|event| { event.kind == "tool_call_started" && event.tool_name == "cargo_test" }));
+
+    let result = task.await.unwrap();
+    assert!(!result.success);
+    assert_eq!(result.output["failure_kind"], "timeout");
+    assert_eq!(result.output["command_started"], true);
+    assert_eq!(result.output["command_completed"], true);
+    assert_eq!(result.output["passed"], false);
+    assert!(result
+        .error
+        .as_deref()
+        .is_some_and(|error| error.contains("command was started")));
+
+    let client = runtime
+        .shell_clients
+        .get_client_view(client_id)
+        .await
+        .expect("registered client");
+    assert_eq!(client.pending_requests, 0);
+    assert!(runtime.shell_clients.list_jobs(Some(10)).await.is_empty());
+    let late = runtime
+        .shell_clients
+        .complete(ShellAgentResultRequest {
+            client_id: client_id.to_string(),
+            agent_instance_id: "inst".to_string(),
+            request_id: request.request_id,
+            exit_code: Some(0),
+            stdout: Some("late result".to_string()),
+            stderr: Some(String::new()),
+            duration_ms: Some(3_000),
+            error: None,
+        })
+        .await
+        .unwrap_err();
+    assert!(late.contains("unknown or expired shell request"), "{late}");
+
+    let finished_summary = runtime
+        .sessions
+        .summary(&session.session_id, Some(20))
+        .expect("finished session summary");
+    assert!(finished_summary.events.iter().any(|event| {
+        event.kind == "tool_call_finished"
+            && event.tool_name == "cargo_test"
+            && event.status.as_deref() == Some("failed")
+    }));
+}
+
+#[tokio::test]
+async fn timeout_rejection_does_not_pollute_validation_summary() {
+    let runtime = runtime_with_agent_project("sync-timeout-ledger");
+    let mut caps = ShellClientCapabilities::default();
+    caps.shell = true;
+    register_agent(&runtime, "sync-timeout-ledger", None, caps).await;
+    let project = agent_test_project_id("sync-timeout-ledger");
+    let auth = auth_context(None, true);
+
+    let session = runtime
+        .dispatch_with_auth(
+            ToolCall::StartSession {
+                project: Some(project.clone()),
+                title: Some("timeout contract".to_string()),
+                mode: SessionMode::Normal,
+                deny_write_tools: false,
+                deny_shell_tools: false,
+                execution_context: None,
+            },
+            Some(&auth),
+        )
+        .await;
+    assert!(session.success, "{:?}", session.error);
+    let session_id = session.output["session_id"]
+        .as_str()
+        .or_else(|| session.output["session"]["session_id"].as_str())
+        .expect("session id")
+        .to_string();
+
+    let rejected = runtime
+        .dispatch_with_auth(
+            ToolCall::CargoCheck {
+                project: project.clone(),
+                session_id: Some(session_id.clone()),
+                cwd: None,
+                all_targets: Some(true),
+                all_features: None,
+                no_default_features: None,
+                features: None,
+                package: None,
+                timeout_secs: Some(0),
+            },
+            Some(&auth),
+        )
+        .await;
+    assert!(!rejected.success);
+    assert_eq!(rejected.output["failure_kind"], "invalid_arguments");
+
+    let summary_after_reject = runtime
+        .sessions
+        .summary(&session_id, Some(50))
+        .expect("session summary");
+    let validation_after_reject = validation_summary_for_session(&summary_after_reject);
+    assert_eq!(validation_after_reject["available"], false);
+    assert_eq!(validation_after_reject["status"], "not_run");
+    assert_eq!(validation_after_reject["events_total"], 0);
+    assert_eq!(validation_after_reject["historical_failures"]["count"], 0);
+
+    // A subsequent valid cargo_check must pass and not be mixed by the reject.
+    let check_task = tokio::spawn({
+        let runtime = runtime.clone();
+        let auth = auth.clone();
+        let project = project.clone();
+        let session_id = session_id.clone();
+        async move {
+            runtime
+                .dispatch_with_auth(
+                    ToolCall::CargoCheck {
+                        project,
+                        session_id: Some(session_id),
+                        cwd: None,
+                        all_targets: Some(true),
+                        all_features: None,
+                        no_default_features: None,
+                        features: None,
+                        package: None,
+                        timeout_secs: Some(60),
+                    },
+                    Some(&auth),
+                )
+                .await
+        }
+    });
+    let req = next_patch_agent_request(&runtime, "sync-timeout-ledger")
+        .await
+        .expect("valid cargo_check should enqueue");
+    assert!(req.command.contains("cargo check"));
+    complete_patch_agent_request(
+        &runtime,
+        "sync-timeout-ledger",
+        &req.request_id,
+        0,
+        "Finished `dev` profile [unoptimized + debuginfo] target(s)\n",
+        "",
+    )
+    .await;
+    let check = check_task.await.unwrap();
+    assert!(check.success, "{:?}", check.error);
+
+    let summary = runtime
+        .sessions
+        .summary(&session_id, Some(50))
+        .expect("session summary after success");
+    let validation = validation_summary_for_session(&summary);
+    assert_eq!(validation["available"], true);
+    assert_eq!(validation["status"], "passed");
+    assert_eq!(validation["latest_status"], "passed");
+    assert_eq!(validation["events_total"], 1);
+    assert_eq!(validation["historical_failures"]["count"], 0);
+    assert_eq!(validation["latest"]["tool_name"], "cargo_check");
+    assert_eq!(validation["latest"]["success"], true);
+
+    // Parameter rejection remains a normal tool failure event, not validation evidence.
+    let finished = summary
+        .events
+        .iter()
+        .filter(|e| e.kind == "tool_call_finished" && e.tool_name == "cargo_check")
+        .collect::<Vec<_>>();
+    assert_eq!(finished.len(), 2);
+    let reject_event = finished
+        .iter()
+        .find(|e| e.status.as_deref() == Some("failed"))
+        .expect("reject finished event");
+    assert_eq!(
+        reject_event.failure_kind.as_deref(),
+        Some("invalid_arguments")
+    );
+    assert!(reject_event.validation_output_summary.is_none());
+    assert!(reject_event.exit_code.is_none());
+}

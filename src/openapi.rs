@@ -1,0 +1,2040 @@
+use salvo::prelude::*;
+use serde_json::{json, Value};
+
+use crate::tool_runtime::sessions::{
+    TOOL_ASSERTION_NAME_FIELD, TOOL_CALL_RECORDING_SESSION_ID_FIELD, TOOL_EXPECTED_FAILURE_FIELD,
+    TOOL_EXPECTED_FAILURE_KIND_FIELD,
+};
+use crate::tool_runtime::{
+    accepted_flattened_args_for_spec, registered_tool_specs, ALLOW_CROSS_PROJECT_SESSION_FIELD,
+    TOOL_CALL_ARGUMENTS_FIELD, TOOL_CALL_PARAMS_FIELD, TOOL_CALL_TOOL_FIELD,
+};
+
+const PATCH_FIELD_DESCRIPTION: &str = "raw standard unified diff only. Do not include Codex apply_patch wrapper syntax, shell heredocs, \"*** Begin Patch\", \"*** Update File\", or \"*** End Patch\". The first non-empty line should be \"diff --git ...\", \"--- ...\", or another git-apply-compatible unified diff header.";
+const SESSION_ID_FIELD_DESCRIPTION: &str = "Optional explicit wc_sess_* id returned by start_session. When provided, records this dedicated action in the session ledger and wins over any current-session binding.";
+const FLATTENED_TOOL_ARG_DESCRIPTION: &str =
+    "Flattened tool-specific argument. Used only when `params` and `arguments` are absent.";
+
+fn flattened_tool_arg_schema(schema_type: &str) -> Value {
+    json!({
+        "type": schema_type,
+        "description": FLATTENED_TOOL_ARG_DESCRIPTION
+    })
+}
+
+fn flattened_tool_arg_schema_from_input(input_schema: &Value) -> Option<Value> {
+    let supported = match input_schema.get("type").and_then(Value::as_str) {
+        Some("array") => true,
+        Some("string" | "boolean" | "integer" | "number") => true,
+        _ => false,
+    };
+    if !supported {
+        return None;
+    }
+    let mut schema = input_schema.clone();
+    schema["description"] = Value::String(FLATTENED_TOOL_ARG_DESCRIPTION.to_string());
+    Some(schema)
+}
+
+pub(crate) fn public_url() -> String {
+    std::env::var("WEBCODEX_PUBLIC_URL")
+        .ok()
+        .map(|s| s.trim().trim_end_matches('/').to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "http://localhost:8080".to_string())
+}
+
+/// The exact, ordered set of GPT Actions operation ids exposed by
+/// `/openapi.json`. Tests assert this set matches the generated schema.
+///
+/// Order is grouped by recommended GPT call flow:
+/// 1. discovery (`listRuntimeTools`, `listProjects`, `getRuntimeStatus`)
+/// 2. job inspection (`getRuntimeJobStatus`, `getRuntimeJobLog`)
+/// 3. project inspection (`readProjectFile`, `getProjectGitStatus`,
+///    `getProjectGitDiff`, `getProjectGitDiffSummary`, `listProjectFiles`,
+///    `searchProjectText`)
+/// 4. project mutation (`validateProjectPatch`, `applyProjectPatch`,
+///    `applyProjectPatchChecked`, `runProjectShellCommand`,
+///    `deleteProjectFiles`, `gitRestorePaths`, `discardUntrackedFiles`,
+///    `startProjectShellJob`)
+/// 5. job inspection (`listRuntimeJobs`, `getRuntimeJobTail`)
+/// 6. advanced/generic entry point (`callRuntimeTool`)
+///
+/// Edit tools reachable through `callRuntimeTool` are `apply_text_edits`
+/// (guarded transactional file changes), `apply_patch_checked` (complex checked
+/// unified diff), `write_project_file` (intentional full rewrite), and the
+/// lower-level raw `apply_patch`. The legacy line/pattern edit tools were
+/// removed entirely.
+#[cfg(test)]
+const GPT_ACTION_OPS: &[&str] = &[
+    "listRuntimeTools",
+    "listProjects",
+    "registerProject",
+    "createProject",
+    "getRuntimeStatus",
+    "getRuntimeJobStatus",
+    "getRuntimeJobLog",
+    "readProjectFile",
+    "getProjectGitStatus",
+    "getProjectGitDiff",
+    "getProjectGitDiffSummary",
+    "listProjectFiles",
+    "searchProjectText",
+    "validateProjectPatch",
+    "applyProjectPatch",
+    "applyProjectPatchChecked",
+    "runProjectShellCommand",
+    "deleteProjectFiles",
+    "gitRestorePaths",
+    "discardUntrackedFiles",
+    "importConversationFilesToProject",
+    "startProjectShellJob",
+    "listRuntimeJobs",
+    "getRuntimeJobTail",
+    "callRuntimeTool",
+];
+
+/// Legacy and non-GPT-Actions paths that must never appear in
+/// `/openapi.json`. The GPT Actions surface is intentionally small and
+/// POST-only; removed legacy `/api/codex/*` paths must stay absent from the
+/// GPT-importable schema.
+#[cfg(test)]
+const LEGACY_FORBIDDEN_PATHS: &[&str] = &[
+    "/api/messages",
+    "/api/files",
+    "/api/desktop/task_op",
+    "/api/desktop/task",
+    "/api/codex/command_request_op",
+    "/api/codex/command_request",
+    "/api/codex/context",
+    "/api/codex/context_batch",
+    "/api/codex/apply_patch",
+    "/api/codex/edit",
+    "/api/codex/artifact",
+    "/api/codex/git",
+    "/api/codex/job",
+    "/api/codex/report",
+    "/api/codex/projects",
+    "/api/codex/run",
+    "/api/shell/run",
+    "/api/shell/job",
+    "/api/shell/file",
+    "/api/shell/jobs/status",
+    "/api/shell/jobs/log",
+    "/api/shell/jobs/stop",
+    "/api/jobs/stop",
+    "/api/shell/jobs/list",
+    "/api/shell/agent/register",
+    "/api/shell/agent/poll",
+    "/api/shell/agent/result",
+    "/api/shell/agent/persistent_shell_result",
+    "/api/shell/agent/job_update",
+    // Retained whole-file write tool stays runtime-only through
+    // callRuntimeTool / MCP tools/call; it must not be promoted to a
+    // dedicated GPT Action. The legacy single-purpose edit tools
+    // (replace_in_file, replace_exact_block, insert_before_pattern,
+    // insert_after_pattern, replace_line_range, insert_at_line,
+    // delete_line_range) were removed entirely, so they have no paths.
+    "/api/projects/write_file",
+    "/api/audit/sessions",
+    "/api/audit/session",
+    "/api/audit/stats",
+    // Phase 2 multi-user auth: user/token management is REST-only admin/self
+    // surface. Token creation is sensitive and must not be GPT-importable, so
+    // these paths are deliberately excluded from /openapi.json.
+    "/api/users/create",
+    "/api/users/list",
+    "/api/users/me",
+    "/api/tokens/create",
+    "/api/tokens/register_hash",
+    "/api/tokens/list",
+    "/api/tokens/revoke",
+    // Phase 3 agent token management: same REST-only admin/self surface, also
+    // excluded from GPT Actions. Agent tokens are bound to an owner and an
+    // allowed_client_id and are only used by the webcodex-runner transport.
+    "/api/agent-tokens/create",
+    "/api/agent-tokens/register_hash",
+    "/api/agent-tokens/list",
+    "/api/agent-tokens/revoke",
+    // Pairing/enrollment creates temporary credentials and enrollment tokens.
+    // It is REST-only for CLI/admin flows and must not be GPT-importable.
+    "/api/pairing/create",
+    "/api/pairing/enroll",
+    "/mcp",
+    "/openapi.json",
+    // The MCP App console is a public static HTML/JS/CSS surface served via
+    // GET; it is intentionally NOT a GPT Action and must never appear in the
+    // POST-only /openapi.json schema.
+    "/console",
+    "/console/app.js",
+    "/console/styles.css",
+];
+
+#[handler]
+pub async fn openapi_json(depot: &mut Depot, res: &mut Response) {
+    let spec = match crate::connector_runtime::http::runtime(depot) {
+        Some(_) => crate::connector_runtime::surface::build_openapi_spec(public_url()),
+        None => build_openapi_spec(),
+    };
+    res.render(Json(spec));
+}
+
+pub(crate) fn build_openapi_spec() -> Value {
+    json!({
+        "openapi": "3.1.0",
+        "info": {
+            "title": "WebCodex Runtime API",
+            "version": env!("CARGO_PKG_VERSION"),
+            "description": "Self-hosted tool runtime for ChatGPT. Flow: call listProjects (or listRuntimeTools), inspect with readProjectFile/getProjectGitStatus/git diff tools, edit with structured file/patch actions, and validate with cargo/job tools. Projects are registered by agents and use runtime ids like agent:<client_id>:<project_id>. All endpoints require Bearer auth; static bearer/API-key hosts may use a shared key for quick start or wc_pat_* for managed mode. MCP and GPT Actions share the same ToolRuntime."
+        },
+        "servers": [
+            {
+                "url": public_url(),
+                "description": "WebCodex server"
+            }
+        ],
+        "paths": {
+            "/api/tools/list": {
+                "post": operation(
+                    "listRuntimeTools",
+                    "List runtime tools",
+                    "Read-only. Full detail returns MCP-compatible tool specs and can be too large for GPT Actions. Prefer callRuntimeTool with tool=tool_manifest for daily discovery; when using listRuntimeTools, pass summary_only=true plus category, features, or limit for bounded discovery.",
+                    "ToolsListRequest",
+                    "ToolsListResponse"
+                )
+            },
+            "/api/projects/list": {
+                "post": operation(
+                    "listProjects",
+                    "List agent-registered projects",
+                    "Read-only. Returns projects registered by connected agents with runtime id (`agent:<client_id>:<project_id>`), path, executor, client_id, patch flag, and smoke-selection capabilities such as git_available and recommended_for_smoke. Call this first to learn the project ids required by other actions.",
+                    "EmptyRequest",
+                    "ToolResult"
+                )
+            },
+            "/api/projects/register": {
+                "post": operation_with_examples(
+                    "registerProject",
+                    "Register an existing project",
+                    "Mutation with side effects. Registers an existing directory as a WebCodex project on the selected agent. Executes on the agent and is constrained by agent policy. Requires Bearer auth.",
+                    "RegisterProjectRequest",
+                    "ToolResult",
+                    json!({
+                        "basic": {
+                            "summary": "Register an existing directory",
+                            "value": {
+                                "client_id": "oe",
+                                "id": "my-project",
+                                "name": "My Project",
+                                "path": "/root/git/my-project",
+                                "description": "Optional description",
+                                "allow_patch": true,
+                                "overwrite": false
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/create": {
+                "post": operation_with_examples(
+                    "createProject",
+                    "Create and register a new project",
+                    "Mutation with side effects. Creates a new directory on the selected agent and registers it as a WebCodex project. Executes on the agent and is constrained by agent policy. Requires Bearer auth.",
+                    "CreateProjectRequest",
+                    "ToolResult",
+                    json!({
+                        "basicTemplate": {
+                            "summary": "Create a project with the basic template",
+                            "value": {
+                                "client_id": "oe",
+                                "id": "hello",
+                                "name": "Hello",
+                                "path": "/root/git/hello",
+                                "description": "A new project",
+                                "allow_patch": true,
+                                "template": "basic",
+                                "git_init": true,
+                                "allow_existing_empty": false,
+                                "overwrite": false
+                            }
+                        },
+                        "emptyTemplate": {
+                            "summary": "Create an empty project",
+                            "value": {
+                                "client_id": "oe",
+                                "id": "scratch",
+                                "name": "Scratch",
+                                "path": "/root/git/scratch"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/runtime/status": {
+                "post": operation(
+                    "getRuntimeStatus",
+                    "Get runtime status",
+                    "Read-only runtime health/observability summary with service metadata, registered agent count/online_count/stale_count, project counts, and job counts. Never exposes tokens, secrets, full env, or stdout/stderr. Call first when troubleshooting.",
+                    "EmptyRequest",
+                    "ToolResult"
+                )
+            },
+            "/api/jobs/status": {
+                "post": operation_with_examples(
+                    "getRuntimeJobStatus",
+                    "Get job status",
+                    "Read-only. Returns status, timing, and exit metadata for a runtime job. Use this to poll the job_id returned by run_job until status is completed, failed, stopped, or lost.",
+                    "JobStatusRequest",
+                    "ToolResult",
+                    json!({
+                        "byJobId": {
+                            "summary": "Poll a job by id",
+                            "value": {
+                                "job_id": "11111111-2222-3333-4444-555555555555"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/jobs/log": {
+                "post": operation_with_examples(
+                    "getRuntimeJobLog",
+                    "Get job log",
+                    "Read-only. Returns bounded tails, line totals, truncation, cursor, exit status, and detected summary for a job_id. Use cursor.stdout as offset to continue.",
+                    "JobLogRequest",
+                    "ToolResult",
+                    json!({
+                        "byJobId": {
+                            "summary": "Read the tail of a job log",
+                            "value": {
+                                "job_id": "11111111-2222-3333-4444-555555555555"
+                            }
+                        },
+                        "withTailLines": {
+                            "summary": "Read the last N stdout lines",
+                            "value": {
+                                "job_id": "11111111-2222-3333-4444-555555555555",
+                                "tail_lines": 200
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/jobs/list": {
+                "post": operation_with_examples(
+                    "listRuntimeJobs",
+                    "List runtime jobs",
+                    "Read-only bounded runtime job summaries across agent and local executors. Never returns stdout/stderr bodies — only metadata (job_id, kind, status, project, timestamps, exit_code). Optional `status` filter and `limit`.",
+                    "ListJobsRequest",
+                    "ToolResult",
+                    json!({
+                        "all": {
+                            "summary": "List recent jobs",
+                            "value": {}
+                        },
+                        "running": {
+                            "summary": "List running jobs",
+                            "value": {
+                                "status": "running",
+                                "limit": 20
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/jobs/tail": {
+                "post": operation_with_examples(
+                    "getRuntimeJobTail",
+                    "Get job tail",
+                    "Read-only bounded stdout/stderr tails for a runtime job. Defaults to a bounded tail so the caller never reads full logs by default. Use the job_id returned by run_job.",
+                    "JobTailRequest",
+                    "ToolResult",
+                    json!({
+                        "byJobId": {
+                            "summary": "Read a bounded tail",
+                            "value": {
+                                "job_id": "11111111-2222-3333-4444-555555555555",
+                                "tail_lines": 50
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/read_file": {
+                "post": operation_with_examples(
+                    "readProjectFile",
+                    "Read a project file",
+                    "Read-only. Reads a UTF-8 project file through its owning agent. Output is bounded; use start_line and limit for pagination. The response carries one text representation only: plain by default or 1-based numbered text when with_line_numbers=true.",
+                    "ReadProjectFileRequest",
+                    "ToolResult",
+                    json!({
+                        "readme": {
+                            "summary": "Read a project README",
+                            "value": {
+                                "project": "webcodex",
+                                "path": "README.md"
+                            }
+                        },
+                        "paginated": {
+                            "summary": "Read a slice of a source file",
+                            "value": {
+                                "project": "webcodex",
+                                "path": "src/main.rs",
+                                "start_line": 1,
+                                "limit": 100,
+                                "with_line_numbers": true
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/git_status": {
+                "post": operation_with_examples(
+                    "getProjectGitStatus",
+                    "Get project git status",
+                    "Runs `git status --porcelain` in an agent-registered project and returns stdout, stderr, and exit_code. Safe read-only project inspection; use before proposing changes or invoking mutation tools.",
+                    "ProjectIdRequest",
+                    "ToolResult",
+                    json!({
+                        "byProject": {
+                            "summary": "Check git status of a project",
+                            "value": {
+                                "project": "webcodex"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/git_diff": {
+                "post": operation_with_examples(
+                    "getProjectGitDiff",
+                    "Get project git diff",
+                    "Runs `git diff` in an agent-registered project and returns stdout, stderr, and exit_code. Optional `args` scopes paths or adds flags (e.g. [\"--stat\"]). Read-only inspection; routes to the owning agent.",
+                    "ProjectGitDiffRequest",
+                    "ToolResult",
+                    json!({
+                        "byProject": {
+                            "summary": "Full diff of a project",
+                            "value": {
+                                "project": "webcodex"
+                            }
+                        },
+                        "withStat": {
+                            "summary": "Diffstat of a project",
+                            "value": {
+                                "project": "webcodex",
+                                "args": ["--stat"]
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/git_diff_summary": {
+                "post": operation_with_examples(
+                    "getProjectGitDiffSummary",
+                    "Get project git diff summary",
+                    "Read-only git diff summary for an agent-registered project: `git status --porcelain`, `git diff --stat`, and a parsed changed-file list. Does not modify the worktree. Routes to the owning agent.",
+                    "ProjectIdRequest",
+                    "ToolResult",
+                    json!({
+                        "byProject": {
+                            "summary": "Diff summary of a project",
+                            "value": {
+                                "project": "webcodex"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/list_files": {
+                "post": operation_with_examples(
+                    "listProjectFiles",
+                    "List project files",
+                    "Read-only bounded file listing of an agent-registered project directory. Returns project-relative paths plus a file/dir kind. Optional `path` scopes a subdirectory; `limit` bounds the entry count. Routes to the owning agent.",
+                    "ListProjectFilesRequest",
+                    "ToolResult",
+                    json!({
+                        "root": {
+                            "summary": "List project root",
+                            "value": {
+                                "project": "webcodex"
+                            }
+                        },
+                        "subdir": {
+                            "summary": "List a subdirectory",
+                            "value": {
+                                "project": "webcodex",
+                                "path": "src",
+                                "limit": 100
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/search_text": {
+                "post": operation_with_examples(
+                    "searchProjectText",
+                    "Search project text",
+                    "Read-only bounded text search inside an agent-registered project. Each match carries a project-relative path, 1-based line number, and a preview line. Optional context_before/context_after add bounded 1-based context lines. Sensitive/build dirs (.git, target, node_modules) are excluded.",
+                    "SearchProjectTextRequest",
+                    "ToolResult",
+                    json!({
+                        "byPattern": {
+                            "summary": "Search for a pattern",
+                            "value": {
+                                "project": "webcodex",
+                                "pattern": "fn main",
+                                "limit": 20,
+                                "context_before": 2,
+                                "context_after": 4
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/apply_patch": {
+                "post": operation_with_examples(
+                    "applyProjectPatch",
+                    "Apply a patch to a project",
+                    "Applies a unified diff patch to an agent-registered project through the owning agent. Mutation with side effects; requires Bearer auth and the agent shell capability. Use after inspecting files and validating the patch; for targeted edits prefer apply_text_edits via callRuntimeTool.",
+                    "ApplyPatchRequest",
+                    "ToolResult",
+                    json!({
+                        "example": {
+                            "summary": "Apply a small unified diff",
+                            "value": {
+                                "project": "webcodex",
+                                "patch": "--- a/README.md\n+++ b/README.md\n@@ -1 +1,2 @@\n# WebCodex\n+edited\n"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/run_shell": {
+                "post": operation_with_examples(
+                    "runProjectShellCommand",
+                    "Run a shell command in a project",
+                    "Runs a shell command in an agent-registered project and returns stdout, stderr, exit_code plus command_started/command_ok/failure_kind/tool_failure. Executable with side effects; requires Bearer auth and agent shell capability.",
+                    "RunShellRequest",
+                    "ToolResult",
+                    json!({
+                        "tests": {
+                            "summary": "Run the test suite",
+                            "value": {
+                                "project": "webcodex",
+                                "command": "cargo test"
+                            }
+                        },
+                        "withCwd": {
+                            "summary": "Run a command in a subdirectory",
+                            "value": {
+                                "project": "webcodex",
+                                "command": "ls",
+                                "cwd": "src"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/validate_patch": {
+                "post": operation_with_examples(
+                    "validateProjectPatch",
+                    "Validate a project patch (dry-run)",
+                    "Read-only dry-run patch preflight. Runs `git apply --check` and `git apply --stat` through the owning agent without modifying the worktree. Returns can_apply, affected_files, stat, and warnings. Never writes files.",
+                    "ValidatePatchRequest",
+                    "ToolResult",
+                    json!({
+                        "byProject": {
+                            "summary": "Dry-run a small patch",
+                            "value": {
+                                "project": "webcodex",
+                                "patch": "--- a/f.txt\n+++ b/f.txt\n@@ -1 +1,2 @@\nx\n+y\n"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/apply_patch_checked": {
+                "post": operation_with_examples(
+                    "applyProjectPatchChecked",
+                    "Apply a checked patch to a project",
+                    "Mutation with side effects. Runs the validate_patch preflight first and, only when can_apply=true, applies the patch and returns the post-apply diff summary. Requires Bearer auth and the agent shell capability.",
+                    "ApplyPatchCheckedRequest",
+                    "ToolResult",
+                    json!({
+                        "byProject": {
+                            "summary": "Validate then apply a small patch",
+                            "value": {
+                                "project": "webcodex",
+                                "patch": "--- a/f.txt\n+++ b/f.txt\n@@ -1 +1,2 @@\nx\n+y\n"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/delete_files": {
+                "post": operation_with_examples(
+                    "deleteProjectFiles",
+                    "Delete project files",
+                    "Mutation with side effects. Deletes selected project-relative files only (not directories). Safer than ad hoc rm. Requires Bearer auth and the agent shell capability.",
+                    "DeleteProjectFilesRequest",
+                    "ToolResult",
+                    json!({
+                        "byProject": {
+                            "summary": "Delete selected files",
+                            "value": {
+                                "project": "webcodex",
+                                "paths": ["tmp_probe.txt"]
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/git_restore_paths": {
+                "post": operation_with_examples(
+                    "gitRestorePaths",
+                    "Restore tracked project paths",
+                    "Mutation with side effects. Runs `git restore -- <paths>` on selected tracked project-relative paths. Does not remove untracked files. Requires Bearer auth and the agent shell capability.",
+                    "GitRestorePathsRequest",
+                    "ToolResult",
+                    json!({
+                        "byProject": {
+                            "summary": "Restore selected tracked paths",
+                            "value": {
+                                "project": "webcodex",
+                                "paths": ["tmp_probe.txt"]
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/discard_untracked": {
+                "post": operation_with_examples(
+                    "discardUntrackedFiles",
+                    "Discard untracked project files",
+                    "Mutation with side effects. Runs `git clean -f -- <paths>` only for selected project-relative untracked paths. Requires Bearer auth and the agent shell capability.",
+                    "DiscardUntrackedRequest",
+                    "ToolResult",
+                    json!({
+                        "byProject": {
+                            "summary": "Discard selected untracked files",
+                            "value": {
+                                "project": "webcodex",
+                                "paths": ["tmp_probe.txt"]
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/artifacts/import": {
+                "post": operation_with_examples(
+                    "importConversationFilesToProject",
+                    "Import ChatGPT conversation files to a project",
+                    "Mutation with side effects. Downloads GPT Actions openaiFileIdRefs immediately and saves bounded binary files into an agent-registered project. Populate openaiFileIdRefs from current conversation files generated by image generation, user upload, or Code Interpreter; never call with an empty array.",
+                    "ImportConversationFilesRequest",
+                    "ImportConversationFilesResponse",
+                    json!({
+                        "generatedImage": {
+                            "summary": "Save a generated image into docs/assets",
+                            "value": {
+                                "project": "agent:oe:webcodex",
+                                "output_dir": "docs/assets",
+                                "overwrite": false,
+                                "openaiFileIdRefs": [{
+                                    "name": "generated.png",
+                                    "id": "file_abc123",
+                                    "mime_type": "image/png",
+                                    "download_link": "https://files.oaiusercontent.com/example"
+                                }]
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/projects/run_job": {
+                "post": operation_with_examples(
+                    "startProjectShellJob",
+                    "Start an async project shell job",
+                    "Starts an async background shell job in an agent-registered project and returns a job_id. Execution with side effects; requires Bearer auth and the agent async shell job capability. Poll with getRuntimeJobStatus; read output with getRuntimeJobTail or getRuntimeJobLog.",
+                    "StartProjectShellJobRequest",
+                    "ToolResult",
+                    json!({
+                        "testCommand": {
+                            "summary": "Run a lightweight test command asynchronously",
+                            "value": {
+                                "project": "webcodex",
+                                "command": "cargo test --no-run"
+                            }
+                        },
+                        "withTimeout": {
+                            "summary": "Run a check command with a timeout",
+                            "value": {
+                                "project": "webcodex",
+                                "command": "cargo clippy",
+                                "timeout_secs": 300,
+                                "cwd": "src"
+                            }
+                        }
+                    })
+                )
+            },
+            "/api/tools/call": {
+                "post": operation_with_examples(
+                    "callRuntimeTool",
+                    "Call runtime tool (advanced)",
+                    "Advanced generic escape hatch for runtime tools. Prefer dedicated actions. Use listRuntimeTools for names. GPT Actions should use flattened top-level fields; params/arguments remain for non-Action clients. Use recording_session_id for ledger recording; keep explicit ids for continuity.",
+                    "ToolCallRequest",
+                    "ToolResult",
+                    json!({
+                        "trackedSession": {
+                            "summary": "Start a session with flattened GPT Action fields",
+                            "value": {
+                                "tool": "start_session",
+                                "project": "webcodex",
+                                "title": "implement show_changes follow-up",
+                                "mode": "read_only"
+                            }
+                        },
+                        "workOnAbsolutePath": {
+                            "summary": "Resolve or register a Runner path, then start coding",
+                            "value": {
+                                "tool": "work_on_project",
+                                "client_id": "special",
+                                "path": "/root/git/example-worktree",
+                                "instruction": "Complete the development task"
+                            }
+                        },
+                        "recordedGitStatus": {
+                            "summary": "Record this wrapper call while passing flattened tool args",
+                            "value": {
+                                "tool": "git_status",
+                                "project": "webcodex",
+                                TOOL_CALL_RECORDING_SESSION_ID_FIELD: "wc_sess_example"
+                            }
+                        },
+                        "sessionSummary": {
+                            "summary": "Read a session summary with top-level business session_id",
+                            "value": {
+                                "tool": "session_summary",
+                                "session_id": "wc_sess_example",
+                                "limit": 20
+                            }
+                        },
+                        "postSessionMessage": {
+                            "summary": "Post session-local guidance while recording the wrapper call separately",
+                            "value": {
+                                "tool": "post_session_message",
+                                "session_id": "wc_sess_business",
+                                TOOL_CALL_RECORDING_SESSION_ID_FIELD: "wc_sess_recorder",
+                                "kind": "guidance",
+                                "message": "Keep new capabilities behind callRuntimeTool; do not add dedicated OpenAPI operations.",
+                                "tags": ["openapi", "constraint"],
+                                "priority": "normal"
+                            }
+                        },
+                        "showChanges": {
+                            "summary": "Summarize current worktree changes with optional session activity",
+                            "value": {
+                                "tool": "show_changes",
+                                "project": "webcodex",
+                                "session_id": "wc_sess_example",
+                                "include_diff": false,
+                                "session_event_limit": 30
+                            }
+                        },
+                        "bindCurrentSession": {
+                            "summary": "Bind an existing session as current in memory for a project",
+                            "value": {
+                                "tool": "bind_current_session",
+                                "project": "webcodex",
+                                "session_id": "wc_sess_example"
+                            }
+                        },
+                        "readFile": {
+                            "summary": "Call read_file via flattened GPT Action fields",
+                            "value": {
+                                "tool": "read_file",
+                                "project": "webcodex",
+                                "path": "README.md",
+                                "with_line_numbers": true
+                            }
+                        },
+                        "readFiles": {
+                            "summary": "Read several files with one bounded call",
+                            "value": {
+                                "tool": "read_files",
+                                "project": "webcodex",
+                                "items": [
+                                    {"path": "src/lib.rs", "start_line": 1, "limit": 120},
+                                    {"path": "src/main.rs", "limit": 80}
+                                ],
+                                "with_line_numbers": true
+                            }
+                        },
+                        "searchProjectTexts": {
+                            "summary": "Run several independent bounded text searches",
+                            "value": {
+                                "tool": "search_project_texts",
+                                "project": "webcodex",
+                                "queries": [
+                                    {
+                                        "pattern": "ResolvedProject",
+                                        "path": "src",
+                                        "result_mode": "matches",
+                                        "limit": 20,
+                                        "context_before": 2,
+                                        "context_after": 4
+                                    },
+                                    {
+                                        "pattern": "read_files",
+                                        "path": "src/tool_runtime/tests",
+                                        "result_mode": "files_with_matches",
+                                        "limit": 20
+                                    }
+                                ]
+                            }
+                        },
+                        "checkpointRestore": {
+                            "summary": "Restore a checkpoint via flattened GPT Action fields",
+                            "value": {
+                                "tool": "workspace_checkpoint_restore",
+                                "project": "webcodex",
+                                "checkpoint_id": "wc_ckpt_abc",
+                                "confirm": true,
+                                TOOL_CALL_RECORDING_SESSION_ID_FIELD: "wc_sess_record"
+                            }
+                        },
+                        "applyTextEdits": {
+                            "summary": "Transactional file edit via flattened GPT Action fields",
+                            "value": {
+                                "tool": "apply_text_edits",
+                                "project": "webcodex",
+                                "dry_run": true,
+                                "changes": [{
+                                    "kind": "edit",
+                                    "path": "src/lib.rs",
+                                    "expected_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                                    "edits": [
+                                        {"kind": "replace_exact", "old_text": "alpha", "new_text": "beta"}
+                                    ]
+                                }]
+                            }
+                        },
+                        "argumentsAlias": {
+                            "summary": "MCP-style arguments alias (non-null params wins when both are present)",
+                            "value": {
+                                "tool": "git_diff_summary",
+                                "arguments": {
+                                    "project": "webcodex"
+                                }
+                            }
+                        },
+                        "noParams": {
+                            "summary": "Argument-less tool; omit params",
+                            "value": {
+                                "tool": "list_tools"
+                            }
+                        }
+                    })
+                )
+            }
+        },
+        "components": {
+            "securitySchemes": {
+                "bearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "description": "Bearer token. Static bearer/API-key hosts may send a shared key for quick start or wc_pat_* for managed mode; WEBCODEX_TOKEN is the server bootstrap/admin credential."
+                }
+            },
+            "schemas": schemas()
+        },
+        "security": [
+            {
+                "bearerAuth": []
+            }
+        ]
+    })
+}
+
+fn operation(
+    operation_id: &str,
+    summary: &str,
+    description: &str,
+    request_schema: &str,
+    response_schema: &str,
+) -> Value {
+    operation_with_examples(
+        operation_id,
+        summary,
+        description,
+        request_schema,
+        response_schema,
+        Value::Null,
+    )
+}
+
+fn operation_with_examples(
+    operation_id: &str,
+    summary: &str,
+    description: &str,
+    request_schema: &str,
+    response_schema: &str,
+    examples: Value,
+) -> Value {
+    let mut media_type = json!({
+        "schema": {
+            "$ref": format!("#/components/schemas/{}", request_schema)
+        }
+    });
+    if let Value::Object(examples_obj) = examples {
+        if !examples_obj.is_empty() {
+            media_type["examples"] = Value::Object(examples_obj);
+        }
+    }
+    json!({
+        "operationId": operation_id,
+        "x-openai-isConsequential": is_consequential_operation(operation_id),
+        "summary": summary,
+        "description": description,
+        "requestBody": {
+            "required": true,
+            "content": {
+                "application/json": media_type
+            }
+        },
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": format!("#/components/schemas/{}", response_schema)
+                        }
+                    }
+                }
+            },
+            "400": {
+                "description": "Bad request",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "401": {
+                "description": "Unauthorized"
+            }
+        }
+    })
+}
+
+fn is_consequential_operation(operation_id: &str) -> bool {
+    match operation_id {
+        "listRuntimeTools"
+        | "listProjects"
+        | "listAgents"
+        | "getRuntimeStatus"
+        | "readProjectFile"
+        | "listProjectFiles"
+        | "searchProjectText"
+        | "getProjectGitStatus"
+        | "getProjectGitDiff"
+        | "getProjectGitDiffSummary"
+        | "getProjectGitDiffHunks"
+        | "getRuntimeJobStatus"
+        | "getRuntimeJobLog"
+        | "getRuntimeJobTail"
+        | "listRuntimeJobs"
+        | "validateProjectPatch"
+        | "registerProject"
+        | "createProject" => false,
+
+        "applyProjectPatch"
+        | "applyProjectPatchChecked"
+        | "importConversationFilesToProject"
+        | "runProjectShellCommand"
+        | "startProjectShellJob"
+        | "stopRuntimeJob"
+        | "deleteProjectFiles"
+        | "gitRestorePaths"
+        | "discardUntracked"
+        | "discardUntrackedFiles"
+        | "callRuntimeTool" => true,
+
+        other => panic!("missing consequential classification for operationId {other}"),
+    }
+}
+
+fn schemas() -> Value {
+    let mut schemas = json!({
+        "EmptyRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {},
+            "description": "Empty request body. Send {} for actions that take no arguments."
+        },
+        "ToolsListRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Optional bounded runtime tool discovery request. Omit fields for the legacy full detail list; GPT Actions should prefer summary_only=true with category, features, or limit.",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "description": "Optional tool_manifest category filter such as artifact, edit, session, git, validation, job, project, or runtime."
+                },
+                "features": {
+                    "type": "string",
+                    "description": "Optional loose feature filter such as artifact, artifact_upload, upload, read, edit, session, git, or validation."
+                },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "When true, return compact summaries without full input/output schemas."
+                },
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Maximum returned tools for focused discovery. Runtime caps this at 100."
+                }
+            }
+        },
+        "OpenAiFileIdRef": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["download_link"],
+            "description": "GPT Actions file reference. Field name openaiFileIdRefs must be used by the Action request so ChatGPT can pass conversation files.",
+            "properties": {
+                "name": {"type": "string"},
+                "id": {"type": "string"},
+                "mime_type": {"type": "string"},
+                "download_link": {"type": "string", "description": "Temporary download URL; WebCodex downloads it immediately."}
+            }
+        },
+        "ImportConversationFilesRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["openaiFileIdRefs", "project"],
+            "description": "Import up to 10 GPT Actions conversation files into a project. Supports image/png, image/jpeg, image/webp, application/pdf, application/zip, text/plain, text/csv, application/json, and restricted application/octet-stream.",
+            "properties": {
+                "openaiFileIdRefs": {"type": "array", "maxItems": 10, "items": {"$ref": "#/components/schemas/OpenAiFileIdRef"}},
+                "project": {"type": "string", "description": "Agent-registered runtime project id from listProjects."},
+                "output_dir": {"type": "string", "description": "Optional project-relative output directory, for example docs/assets or artifacts/imports."},
+                "targets": {"type": "array", "items": {"type": "string"}, "description": "Optional per-file output filenames."},
+                "overwrite": {"type": "boolean", "description": "Allow overwriting existing files. Defaults to false."}
+            }
+        },
+        "ImportConversationFilesResponse": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "success": {"type": "boolean"},
+                "output": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                        "count": {"type": "integer"},
+                        "imported": {"type": "array", "items": {"type": "object", "additionalProperties": true}}
+                    }
+                },
+                "error": {"type": "string", "nullable": true}
+            }
+        },
+        "ToolCallRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [TOOL_CALL_TOOL_FIELD],
+            "description": "Generic runtime tool call. `tool` is the runtime tool name. GPT Actions should pass tool-specific arguments as flattened top-level fields because some Action runtimes reject free-form params/arguments objects. `params` and `arguments` remain accepted for non-Action clients, with non-null `params` taking precedence; null wrappers do not suppress flattened arguments. Top-level `session_id` is ordinary project-tool business input; `resume_session_id` is the distinct start_coding_task input that resumes one known active Workflow Session and never creates on failure; use `recording_session_id` to record this wrapper call in the session ledger and enforce that recorder Session's guards. When no explicit tool session_id is provided, project tools may use the exact window/caller/transport/project/canonical-root current Session ensured by start_coding_task (default bind_current=true) or established manually by bind_current_session. Its process-local cache can be restored after restart from a hashed durable projection when the client retains the same stable window identity. Explicit session_id or recording_session_id still wins over current-session lookup; missing identity never falls back to a credential-wide binding. Explicit resume can still continue without a window, but cannot establish a current binding and later project tools must pass session_id. Ordinary project-bound Connector continuity is handled separately by task_start. For daily discovery prefer tool_manifest; it exposes accepted_flattened_args for GPT Action top-level calls. Use list_tools with summary_only/category/features/limit only for focused discovery.",
+            "properties": {
+                ALLOW_CROSS_PROJECT_SESSION_FIELD: {
+                    "type": "boolean",
+                    "description": "Advanced/debug escape hatch for callRuntimeTool. When true, allow recording a project tool call into a session whose associated project differs from the request project; session_project_mismatch warning metadata is still returned. Used only when `params` and `arguments` are absent, or inside params/arguments for non-Action clients."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": "Flattened tool-specific argument. For session_summary and message-board tools this is the required business session id to read or update in the session ledger; for project tools it is the explicit tool session that wins over current-session binding. Use recording_session_id to record the wrapper call itself."
+                },
+                "resume_session_id": {
+                    "type": "string",
+                    "pattern": "^wc_sess_[A-Za-z0-9_]+$",
+                    "description": "Flattened start_coding_task business input. Explicitly resumes exactly one known active wc_sess_* Workflow Session after project, lifecycle, access, and capability checks. Failure never falls back or creates. Without stable window identity it resumes unbound, so later project tools need session_id. Distinct from session_id and recording_session_id; mutually exclusive with new_session=true. Used only when params and arguments are absent."
+                },
+                "kind": {
+                    "type": "string",
+                    "description": "Flattened tool-specific argument. For message-board tools, one of note, proposal, question, answer, decision, risk, progress, guidance, todo. For workspace_checkpoint_create, one of snapshot, baseline, before_refactor, after_refactor, last_known_good, rollback_candidate. Used only when `params` and `arguments` are absent."
+                },
+                "labels": {
+                    "type": "array",
+                    "items": {"type": "string", "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$"},
+                    "maxItems": 20,
+                    "description": "Flattened workspace_checkpoint_create labels. Used only when `params` and `arguments` are absent."
+                },
+                "validation": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Flattened workspace_checkpoint_create validation metadata. The runtime records this metadata only and does not run commands.",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": ["unknown", "not_run", "passed", "failed"]
+                        },
+                        "commands": {
+                            "type": "array",
+                            "items": {"type": "string", "maxLength": 200},
+                            "maxItems": 20
+                        },
+                        "summary": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "null"}
+                            ],
+                            "maxLength": 500
+                        }
+                    }
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Flattened workspace_checkpoint_create optional note (not used by restore). Used only when `params` and `arguments` are absent."
+                },
+                "include_untracked": {
+                    "type": "boolean",
+                    "description": "Flattened workspace_checkpoint_create flag to capture small non-secret UTF-8 untracked files (default false). Used only when `params` and `arguments` are absent."
+                },
+                "checkpoint_id": {
+                    "type": "string",
+                    "description": "Flattened workspace_checkpoint_show/restore/delete wc_ckpt_* id. Used only when `params` and `arguments` are absent."
+                },
+                "confirm": {
+                    "type": "boolean",
+                    "description": "Flattened confirmation flag for workspace_checkpoint_restore/delete and stop_job; must be true to proceed. Used only when `params` and `arguments` are absent."
+                },
+                "include_command_preview": {
+                    "type": "boolean",
+                    "description": "Flattened job_status debug flag. Defaults to false; when true, job_status includes bounded command_preview metadata. stdout/stderr bodies are never included. Used only when `params` and `arguments` are absent."
+                },
+                "include_diff_stat": {
+                    "type": "boolean",
+                    "description": "Flattened workspace_checkpoint_show flag to include tracked/staged diff stat strings (default false). Used only when `params` and `arguments` are absent."
+                },
+                "changes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 16,
+                    "description": "Flattened apply_text_edits transactional file changes. Existing files require expected_sha256. Used only when `params` and `arguments` are absent.",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["kind", "path"],
+                        "properties": {
+                            "kind": {
+                                "type": "string",
+                                "enum": ["edit", "create", "delete", "rename"],
+                                "description": "File change kind."
+                            },
+                            "path": {
+                                "type": "string",
+                                "description": "Project-relative source or target path."
+                            },
+                            "to_path": {
+                                "type": "string",
+                                "description": "Project-relative rename destination."
+                            },
+                            "content": {
+                                "type": "string",
+                                "description": "Complete UTF-8 content for create."
+                            },
+                            "expected_sha256": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$",
+                                "description": "Required live hash for edit, delete, and rename."
+                            },
+                            "edits": {
+                                "type": "array",
+                                "minItems": 1,
+                                "maxItems": 20,
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": ["kind"],
+                                    "properties": {
+                                        "kind": {"type": "string", "enum": ["replace_exact", "insert_after", "insert_before", "delete_exact"]},
+                                        "old_text": {"type": "string"},
+                                        "new_text": {"type": "string"},
+                                        "anchor_text": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "Flattened apply_text_edits / validate_patch flag to compute the plan without writing. Used only when `params` and `arguments` are absent."
+                },
+                "message": {
+                    "type": "string",
+                    "description": "Flattened post_session_message body. Used only when `params` and `arguments` are absent."
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Flattened post_session_message tags. Used only when `params` and `arguments` are absent."
+                },
+                "reply_to": {
+                    "type": "string",
+                    "description": "Flattened post_session_message reply target wc_msg_* id. Used only when `params` and `arguments` are absent."
+                },
+                "priority": {
+                    "type": "string",
+                    "description": "Flattened post_session_message priority: low, normal, or high. Used only when `params` and `arguments` are absent."
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Flattened list_session_messages status filter: open or resolved. Used only when `params` and `arguments` are absent."
+                },
+                "message_id": {
+                    "type": "string",
+                    "description": "Flattened resolve_session_message wc_msg_* id. Used only when `params` and `arguments` are absent."
+                },
+                "resolution": {
+                    "type": "string",
+                    "description": "Flattened resolve_session_message resolution note. Used only when `params` and `arguments` are absent."
+                },
+                "detail": {
+                    "type": "string",
+                    "enum": ["minimal", "standard", "full"],
+                    "description": "Flattened start_coding_task detail level. Defaults to the bounded model-facing standard brief, including repository rules, continuation evidence, and the attempt-scoped exploration workset of validated project-relative paths. minimal retains identity, workspace blockers, instruction status, up to 3 exploration paths, and the first next action without rule bodies; standard and the embedded full startup_brief return up to 12 exploration paths. The workset never contains search text, file/LSP bodies, commands, output, or absolute roots and never executes tools. full preserves complete runtime/connection/authority/binding/Git/manifest diagnostics and embeds the same startup_brief core."
+                },
+                "compact": {
+                    "type": "boolean",
+                    "description": "Flattened runtime_status flag. Defaults to false. When true, returns compact runtime observability for sanity checks instead of the full status payload. Used only when `params` and `arguments` are absent."
+                },
+                "bind_current": {
+                    "type": "boolean",
+                    "description": "Flattened start_coding_task flag. Defaults to true and enables same-window/project/repository continuation through process-local and hashed durable exact bindings. Explicit resume without stable window identity remains allowed but cannot bind. Used only when `params` and `arguments` are absent."
+                },
+                "new_session": {
+                    "type": "boolean",
+                    "description": "Flattened start_coding_task isolation flag. Defaults to false. Set true only to create and bind an independent Workflow Session; title changes never imply isolation. Used only when `params` and `arguments` are absent."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Flattened tool-specific argument. For artifact_upload_chunk/finish/abort this is required and must exactly match the path used by artifact_upload_begin to bind upload_id to the target path. Used only when `params` and `arguments` are absent."
+                },
+                "skip": {
+                    "type": "integer",
+                    "description": "Flattened git_log commit offset. Used only when `params` and `arguments` are absent."
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Flattened list_tools/tool_manifest category filter. Used only when `params` and `arguments` are absent."
+                },
+                "intent": {
+                    "type": "string",
+                    "description": "Flattened tool_manifest task-intent view such as coding, audit, exploration, release, or discovery. Distinct from category. Intent views only filter and rank discovery output; they do not change tool behavior, policy, permissions, execution, or finish verdict semantics. Used only when `params` and `arguments` are absent."
+                },
+                "include_recommended_flows": {
+                    "type": "boolean",
+                    "description": "Flattened tool_manifest flag. Defaults to true and controls recommended_flows in compact discovery output. Used only when `params` and `arguments` are absent."
+                },
+                "include_risk_summary": {
+                    "type": "boolean",
+                    "description": "Flattened tool_manifest flag. Defaults to true and controls risk_summary in compact discovery output. Used only when `params` and `arguments` are absent."
+                },
+                "include_hygiene": {
+                    "type": "boolean",
+                    "description": "Flattened finish_coding_task flag. Defaults to true. Used only when `params` and `arguments` are absent."
+                },
+                "max_findings": {
+                    "type": "integer",
+                    "description": "Flattened workspace_hygiene_check maximum findings to return; clamped by the runtime to 1..200. Used only when `params` and `arguments` are absent."
+                },
+                "include_tracked": {
+                    "type": "boolean",
+                    "description": "Flattened workspace_hygiene_check flag. When true, also report tracked suspicious path names by path/name only; file contents are never read. Used only when `params` and `arguments` are absent."
+                },
+                "include_handoff": {
+                    "type": "boolean",
+                    "description": "Flattened finish_coding_task flag. Defaults to true. Used only when `params` and `arguments` are absent."
+                },
+                "include_validation_summary": {
+                    "type": "boolean",
+                    "description": "Flattened finish_coding_task flag. Defaults to true; minimal diagnostics may be derived from safe bounded validation metadata, but raw stdout/stderr is never exposed. Used only when `params` and `arguments` are absent."
+                },
+                "include_validation": {
+                    "type": "boolean",
+                    "description": "Flattened session_handoff_summary flag. Defaults to true; validation is ledger-derived and parser.available is true only when safe bounded metadata is present. Used only when `params` and `arguments` are absent."
+                },
+                "include_workspace": {
+                    "type": "boolean",
+                    "description": "Flattened session_handoff_summary/finish_coding_task flag. For handoff, include a bounded workspace/git status summary when project is provided. For finish, control the nested handoff workspace block; the top-level finish workspace/show_changes check still runs. Used only when params and arguments are absent."
+                },
+                "include_checkpoints": {
+                    "type": "boolean",
+                    "description": "Flattened session_handoff_summary flag. Include bounded checkpoint candidates when project is provided. Used only when params and arguments are absent."
+                },
+                "features": {
+                    "type": "string",
+                    "description": "Flattened list_tools feature filter, or cargo feature selection for cargo tools. Used only when `params` and `arguments` are absent."
+                },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Flattened list_tools/runtime_status/session_handoff_summary/finish_coding_task flag. For list_tools, returns compact tool summaries without full schemas. For runtime_status, aliases compact=true. For handoff/finish, returns compact closeout outcome fields and omits recent_events, long ledger details, command text, stdout/stderr, tails, and excerpts. Used only when `params` and `arguments` are absent."
+                },
+                "upload_id": {
+                    "type": "string",
+                    "description": "Flattened artifact_upload_chunk/finish/abort wc_upload_* id. The same path from artifact_upload_begin is also required so the runtime can bind upload_id to the requested target path. Used only when `params` and `arguments` are absent."
+                },
+                "expected_bytes": {
+                    "type": "integer",
+                    "description": "Flattened artifact_upload_begin final byte count guard. Used only when `params` and `arguments` are absent."
+                },
+                "allow_missing": {
+                    "type": "boolean",
+                    "description": "Flattened read_project_artifact_metadata flag. When true, a missing artifact returns exists=false instead of a failed tool call. Used only when `params` and `arguments` are absent."
+                },
+            }
+        },
+        "JobStatusRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["job_id"],
+            "description": "Poll a runtime job by id.",
+            "properties": {
+                "job_id": {
+                    "type": "string",
+                    "description": "Runtime job id returned by run_job."
+                }
+            }
+        },
+        "JobLogRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["job_id"],
+            "description": "Read bounded stdout/stderr for a runtime job.",
+            "properties": {
+                "job_id": {
+                    "type": "string",
+                    "description": "Runtime job id returned by run_job."
+                },
+                "offset": {
+                    "type": "integer",
+                    "description": "Optional 1-based continuation offset. Use cursor.stdout from the previous response."
+                },
+                "tail_lines": {
+                    "type": "integer",
+                    "description": "Optional number of trailing stdout/stderr lines. Logs are always bounded; large values are capped server-side."
+                }
+            }
+        },
+        "ReadProjectFileRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "path"],
+            "description": "Read a UTF-8 file from an agent-registered project.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Project-relative file path. Absolute paths and traversal (..) are rejected."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                },
+                "start_line": {
+                    "type": "integer",
+                    "description": "Optional 1-based line offset for pagination."
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Optional maximum line count (bounded server-side)."
+                },
+                "with_line_numbers": {
+                    "type": "boolean",
+                    "description": "Optional. When true, the single text field uses numbered format with 1-based line numbers; plain and numbered content are never duplicated."
+                }
+            }
+        },
+        "ProjectIdRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project"],
+            "description": "Identify a project by id.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                }
+            }
+        },
+        "ProjectGitDiffRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project"],
+            "description": "Run `git diff` in an agent-registered project. Optional `args` scopes paths or adds git diff flags.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "args": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Optional git diff arguments / path specs (e.g. [\"--stat\"] or [\"src/main.rs\"])."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                }
+            }
+        },
+        "ApplyPatchRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "patch"],
+            "description": "Apply a unified diff patch to an agent-registered project. Executable mutation; the owning agent must allow patching.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "patch": {
+                    "type": "string",
+                    "description": PATCH_FIELD_DESCRIPTION
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                }
+            }
+        },
+        "ValidatePatchRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "patch"],
+            "description": "Dry-run a unified diff patch against an agent-registered project without applying it. Read-only preflight.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "patch": {
+                    "type": "string",
+                    "description": PATCH_FIELD_DESCRIPTION
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                },
+                "deny_sensitive_paths": {
+                    "type": "boolean",
+                    "description": "Optional. When true, sensitive-path warnings become a hard policy block (can_apply=false)."
+                }
+            }
+        },
+        "ApplyPatchCheckedRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "patch"],
+            "description": "Validate then apply a unified diff patch. Mutation with side effects; applies only when the preflight passes.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "patch": {
+                    "type": "string",
+                    "description": PATCH_FIELD_DESCRIPTION
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                },
+                "deny_sensitive_paths": {
+                    "type": "boolean",
+                    "description": "Optional. When true, sensitive-path warnings block the apply."
+                }
+            }
+        },
+        "DeleteProjectFilesRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "paths"],
+            "description": "Delete selected project-relative files only (not directories). Mutation with side effects.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "paths": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Project-relative file paths to delete."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                }
+            }
+        },
+        "GitRestorePathsRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "paths"],
+            "description": "Restore selected tracked project-relative paths with git restore. Mutation with side effects.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "paths": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Project-relative tracked paths to restore."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                }
+            }
+        },
+        "DiscardUntrackedRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "paths"],
+            "description": "Discard selected untracked project-relative files with git clean -f. Mutation with side effects.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "paths": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Project-relative untracked paths to remove."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                }
+            }
+        },
+        "WriteProjectFileRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "path", "content"],
+            "description": "Write a UTF-8 project file via the owning agent. Mutation with side effects; creates new files and overwrites existing ones when a guard matches.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Project-relative file path. Absolute paths and traversal (..) are rejected. Sensitive paths are rejected."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Full UTF-8 file content to write."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                },
+                "overwrite": {
+                    "type": "boolean",
+                    "description": "Optional. When true, allows overwriting an existing file (guarded by expected_sha256 / expected_content_prefix when set)."
+                },
+                "expected_sha256": {
+                    "type": "string",
+                    "description": "Optional sha256 of the existing file content. Overwrite only proceeds when it matches; prevents accidental overwrites."
+                },
+                "expected_content_prefix": {
+                    "type": "string",
+                    "description": "Optional prefix the existing file content must start with before overwriting."
+                }
+            }
+        },
+        "StartProjectShellJobRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "command"],
+            "description": "Start an async background shell job in an agent-registered project. Execution with side effects; returns a job_id to poll with getRuntimeJobStatus.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "command": {
+                    "type": "string",
+                    "description": "Shell command to run asynchronously in the project directory."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                },
+                "timeout_secs": {
+                    "type": "integer",
+                    "description": "Optional maximum runtime in seconds."
+                },
+                "cwd": {
+                    "type": "string",
+                    "description": "Optional project-relative working directory. The owning agent enforces its cwd policy."
+                }
+            }
+        },
+        "ListProjectFilesRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project"],
+            "description": "List files in an agent-registered project directory. Read-only bounded listing.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional project-relative directory to list (default: project root)."
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Optional maximum number of entries to return."
+                }
+            }
+        },
+        "SearchProjectTextRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "pattern"],
+            "description": "Search text inside an agent-registered project. Read-only bounded matches.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "pattern": {
+                    "type": "string",
+                    "description": "Text pattern to search for."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional project-relative directory to scope the search (default: project root)."
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Optional maximum number of matches to return."
+                },
+                "context_before": {
+                    "type": "integer",
+                    "description": "Optional context lines before each match; clamped server-side to 20."
+                },
+                "context_after": {
+                    "type": "integer",
+                    "description": "Optional context lines after each match; clamped server-side to 20."
+                },
+                "include_globs": {
+                    "type": "array",
+                    "maxItems": 32,
+                    "items": {"type": "string", "minLength": 1, "maxLength": 256},
+                    "description": "Optional ripgrep include globs. Negated and protected-path globs are rejected."
+                },
+                "exclude_globs": {
+                    "type": "array",
+                    "maxItems": 32,
+                    "items": {"type": "string", "minLength": 1, "maxLength": 256},
+                    "description": "Optional additive ripgrep exclude globs; built-in secret/build exclusions remain active."
+                },
+                "result_mode": {
+                    "type": "string",
+                    "enum": ["matches", "files_with_matches", "count"],
+                    "default": "matches",
+                    "description": "Result shape. limit applies to matches in matches mode and files in other modes."
+                },
+                "timeout_secs": {
+                    "type": "integer",
+                    "default": 30,
+                    "description": "Optional search timeout in seconds. Server clamps the value to 1..120; out-of-range integers are accepted and clamped rather than schema-rejected."
+                }
+            }
+        },
+        "ListJobsRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "List bounded runtime job summaries. Read-only; never returns stdout/stderr bodies.",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Optional maximum number of job summaries to return."
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Optional status filter (e.g. running, completed, failed)."
+                }
+            }
+        },
+        "JobTailRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["job_id"],
+            "description": "Read bounded stdout/stderr tails for a runtime job. Read-only.",
+            "properties": {
+                "job_id": {
+                    "type": "string",
+                    "description": "Runtime job id returned by run_job."
+                },
+                "tail_lines": {
+                    "type": "integer",
+                    "description": "Optional number of trailing lines to return per stream."
+                }
+            }
+        },
+        "RunShellRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["project", "command"],
+            "description": "Run a shell command in an agent-registered project. Executable with side effects; result output includes command_started, command_ok, failure_kind, and tool_failure semantics.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Agent-registered runtime project id from listProjects, such as `agent:<client_id>:<project_id>`."
+                },
+                "command": {
+                    "type": "string",
+                    "description": "Shell command to run in the project directory."
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": SESSION_ID_FIELD_DESCRIPTION
+                },
+                "timeout_secs": {
+                    "type": "integer",
+                    "description": "Optional maximum runtime in seconds."
+                },
+                "cwd": {
+                    "type": "string",
+                    "description": "Optional project-relative working directory. The owning agent enforces its cwd policy."
+                }
+            }
+        },
+        "ToolSpec": {
+            "type": "object",
+            "required": ["name", "description", "inputSchema", "outputSchema", "annotations"],
+            "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "inputSchema": { "type": "object", "additionalProperties": true },
+                "outputSchema": { "type": "object", "additionalProperties": true },
+                "annotations": {
+                    "type": "object",
+                    "description": "Tool annotations / client hints.",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "ToolSummary": {
+            "type": "object",
+            "required": ["name", "category", "risk", "read_only", "requires_project"],
+            "description": "Compact tool summary returned by listRuntimeTools when summary_only=true.",
+            "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "category": { "type": "string" },
+                "risk": { "type": "string" },
+                "read_only": { "type": "boolean" },
+                "requires_project": { "type": "boolean" },
+                "annotations": {
+                    "type": "object",
+                    "description": "Tool annotations / client hints.",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "ToolsListResponse": {
+            "type": "object",
+            "required": ["success", "tools", "names", "count"],
+            "description": "Runtime tool list. No-arg calls return the full MCP-compatible ToolSpec list for schema debugging. Bounded calls can return compact ToolSummary entries without schemas. GPT Actions should prefer tool_manifest for daily discovery.",
+            "properties": {
+                "success": { "type": "boolean" },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "oneOf": [
+                            { "$ref": "#/components/schemas/ToolSpec" },
+                            { "$ref": "#/components/schemas/ToolSummary" }
+                        ]
+                    }
+                },
+                "names": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Accepted runtime tool names, in spec order."
+                },
+                "count": {
+                    "type": "integer",
+                    "description": "Number of tools in `tools`/`names`."
+                },
+                "total_count": {
+                    "type": "integer",
+                    "description": "Total number of model-visible runtime tools before filters."
+                },
+                "filtered_count": {
+                    "type": "integer",
+                    "description": "Number of tools matching category/features before limit."
+                },
+                "truncated": {
+                    "type": "boolean",
+                    "description": "Whether the response was truncated by limit."
+                },
+                "category": {
+                    "type": ["string", "null"],
+                    "description": "Requested category filter, when provided."
+                },
+                "features": {
+                    "type": ["string", "null"],
+                    "description": "Requested feature filter, when provided."
+                },
+                "limit": {
+                    "type": ["integer", "null"],
+                    "description": "Effective bounded discovery limit, when a bounded request was used."
+                },
+                "categories": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                    },
+                    "description": "Optional grouping by family: inspect, git, review, validation, patch, edit, shell, jobs, runtime, cleanup. A tool may appear in more than one category."
+                },
+                "recommended_flows": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Optional short GPT flow hints for common tool sequences."
+                },
+                "hint": {
+                    "type": "string",
+                    "description": "Short guidance for using bounded discovery."
+                },
+                "recommended_next": {
+                    "type": "string",
+                    "description": "Recommended next discovery action."
+                }
+            }
+        },
+        "ToolResult": {
+            "type": "object",
+            "required": ["success", "output"],
+            "properties": {
+                "success": { "type": "boolean" },
+                "output": {
+                    "description": "Tool-specific JSON output.",
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "additionalProperties": true,
+                            "properties": {
+                                "handoff_brief": {
+                                    "$ref": "#/components/schemas/HandoffBrief"
+                                }
+                            }
+                        },
+                        {
+                            "type": ["array", "string", "number", "boolean", "null"]
+                        }
+                    ]
+                },
+                "error": {
+                    "type": "string",
+                    "description": "Human-readable error when success is false."
+                }
+            }
+        },
+        "ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "status": { "type": "integer" },
+                "error": { "type": "string" }
+            }
+        },
+        "RegisterProjectRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["client_id", "id", "name", "path"],
+            "description": "Register an existing directory as a WebCodex project on the selected agent. Mutation with side effects; executes on the agent and is constrained by agent policy.",
+            "properties": {
+                "client_id": {"type": "string", "description": "Registered agent client_id from listAgents."},
+                "id": {"type": "string", "description": "Project id (ASCII letters, digits, '-', '_'; no slash)."},
+                "name": {"type": "string", "description": "Human-readable project name."},
+                "path": {"type": "string", "description": "Absolute directory path on the agent host."},
+                "description": {"type": "string", "description": "Optional project description."},
+                "allow_patch": {"type": "boolean", "description": "Allow patch operations on this project (default true)."},
+                "overwrite": {"type": "boolean", "description": "Overwrite an existing project config file (default false)."}
+            }
+        },
+        "CreateProjectRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["client_id", "id", "name", "path"],
+            "description": "Create a new directory on the selected agent and register it as a WebCodex project. Mutation with side effects; executes on the agent and is constrained by agent policy.",
+            "properties": {
+                "client_id": {"type": "string", "description": "Registered agent client_id from listAgents."},
+                "id": {"type": "string", "description": "Project id (ASCII letters, digits, '-', '_'; no slash)."},
+                "name": {"type": "string", "description": "Human-readable project name."},
+                "path": {"type": "string", "description": "Absolute directory path on the agent host."},
+                "description": {"type": "string", "description": "Optional project description."},
+                "allow_patch": {"type": "boolean", "description": "Allow patch operations on this project (default true)."},
+                "template": {"type": "string", "description": "Template: 'empty' (default) or 'basic'."},
+                "git_init": {"type": "boolean", "description": "Initialize git in the new directory (default false)."},
+                "allow_existing_empty": {"type": "boolean", "description": "Allow registering an existing empty directory (default false)."},
+                "overwrite": {"type": "boolean", "description": "Overwrite an existing project config file (default false)."}
+            }
+        }
+    });
+    insert_tool_call_request_flattened_arg_properties(&mut schemas);
+    insert_tool_call_request_reserved_properties(&mut schemas);
+    insert_handoff_brief_schema(&mut schemas);
+    schemas
+}
+
+fn insert_handoff_brief_schema(schemas: &mut Value) {
+    let schema = registered_tool_specs()
+        .into_iter()
+        .find(|spec| spec.name == "session_handoff_summary")
+        .and_then(|spec| {
+            spec.output_schema
+                .pointer("/properties/output/properties/handoff_brief")
+                .cloned()
+        })
+        .expect("session_handoff_summary must publish handoff_brief");
+    schemas
+        .as_object_mut()
+        .expect("OpenAPI schemas must be an object")
+        .insert("HandoffBrief".to_string(), schema);
+}
+
+fn tool_call_request_properties_mut(
+    schemas: &mut Value,
+) -> Option<&mut serde_json::Map<String, Value>> {
+    schemas
+        .pointer_mut("/ToolCallRequest/properties")
+        .and_then(Value::as_object_mut)
+}
+
+fn insert_tool_call_request_flattened_arg_properties(schemas: &mut Value) {
+    let Some(properties) = tool_call_request_properties_mut(schemas) else {
+        return;
+    };
+
+    for spec in registered_tool_specs() {
+        let input_properties = spec.input_schema["properties"].as_object();
+        for field in accepted_flattened_args_for_spec(&spec) {
+            if properties.contains_key(&field) {
+                continue;
+            }
+            if let Some(input_schema) = input_properties.and_then(|props| props.get(&field)) {
+                let schema = if field == "execution_context" {
+                    let mut schema = input_schema.clone();
+                    schema["description"] =
+                        Value::String(FLATTENED_TOOL_ARG_DESCRIPTION.to_string());
+                    Some(schema)
+                } else {
+                    flattened_tool_arg_schema_from_input(input_schema)
+                };
+                if let Some(schema) = schema {
+                    properties.insert(field, schema);
+                }
+            } else {
+                properties.insert(field, flattened_tool_arg_schema("string"));
+            }
+        }
+    }
+}
+
+fn insert_tool_call_request_reserved_properties(schemas: &mut Value) {
+    let Some(properties) = tool_call_request_properties_mut(schemas) else {
+        return;
+    };
+
+    properties.insert(
+        TOOL_CALL_TOOL_FIELD.to_string(),
+        json!({
+            "type": "string",
+            "description": format!(
+                "Runtime tool name. Accepted values: {}. Prefer tool_manifest for daily discovery; use listRuntimeTools for schema debugging.",
+                crate::tool_runtime::tool_definition::model_visible_tool_names_csv()
+            )
+        }),
+    );
+    properties.insert(
+        TOOL_CALL_PARAMS_FIELD.to_string(),
+        json!({
+            "type": "object",
+            "description": "Tool-specific arguments object for non-Action clients. Takes precedence over `arguments` when both are non-null. A null wrapper does not suppress flattened top-level fields. GPT Actions should prefer flattened top-level fields.",
+            "nullable": true,
+            "additionalProperties": true
+        }),
+    );
+    properties.insert(
+        TOOL_CALL_ARGUMENTS_FIELD.to_string(),
+        json!({
+            "type": "object",
+            "description": "Compatibility alias for `params`. Used only when `params` is absent; ignored otherwise.",
+            "nullable": true,
+            "additionalProperties": true
+        }),
+    );
+    properties.insert(
+        TOOL_CALL_RECORDING_SESSION_ID_FIELD.to_string(),
+        json!({
+            "type": "string",
+            "description": "Optional recorder metadata for the generic wrapper call. Pass an explicit wc_sess_* id from start_session to record this call in the session ledger and enforce that recorder session's guards. This field is stripped before concrete tool dispatch. Use top-level session_id for ordinary tool input such as session_summary.session_id or post_session_message.session_id."
+        }),
+    );
+    properties.insert(
+        TOOL_EXPECTED_FAILURE_FIELD.to_string(),
+        json!({
+            "type": "boolean",
+            "description": "Flattened testing/smoke metadata only. When true, a failed runtime tool call is classified as an expected failure in session_handoff_summary/finish_coding_task. Does not change authorization, permission decisions, execution, hard guards, command_started, or the immediate success/error result."
+        }),
+    );
+    properties.insert(
+        TOOL_EXPECTED_FAILURE_KIND_FIELD.to_string(),
+        json!({
+            "type": "string",
+            "description": "Flattened testing/smoke metadata only. Expected structured failure_kind or error_kind when expected_failure=true. Mismatches are surfaced in handoff/finish summaries and do not change tool behavior."
+        }),
+    );
+    properties.insert(
+        TOOL_ASSERTION_NAME_FIELD.to_string(),
+        json!({
+            "type": "string",
+            "description": "Flattened testing/smoke assertion label recorded in the session ledger. Does not change tool behavior or safety decisions."
+        }),
+    );
+}
+
+#[cfg(test)]
+#[path = "openapi_tests.rs"]
+mod tests;
+
+#[cfg(test)]
+#[path = "openapi_patch_description_tests.rs"]
+mod patch_description_tests;

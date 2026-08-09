@@ -1,0 +1,50 @@
+//! Runtime session store: model, events, queries, and JSON ledger persistence.
+//!
+//! External callers should continue to use `crate::tool_runtime::sessions::{...}`.
+//!
+//! Module layout:
+//! - `store` — create/lifecycle, event recording, guards, persistence
+//! - `bindings` — current-session bind/unbind/lookup
+//! - `messages` — message board post/list/resolve and discussion aggregates
+//! - `model` / `events` / `query` / `persistence` / `util` — supporting pieces
+
+mod bindings;
+mod events;
+mod messages;
+mod model;
+mod persistence;
+mod query;
+mod store;
+mod util;
+
+#[cfg(test)]
+mod tests;
+
+// Re-exports keep `crate::tool_runtime::sessions::{...}` stable for callers.
+// Only symbols referenced outside this module are re-exported here; internal
+// helpers stay `pub(super)` / module-private.
+pub(crate) use events::{
+    exploration_tool_kind, is_valid_session_id, normalize_observed_project_path,
+    strip_tool_call_expectation_metadata, tool_failure_summary_from_events,
+    validation_output_summary_for_tool_result as execution_output_summary_for_tool_result,
+    ExplorationToolKind, EXPLORATION_TOOL_NAMES,
+};
+pub(crate) use model::{
+    CodingSessionError, CodingSessionRequest, CurrentSessionKey, ListSessionMessagesFilter,
+    PostSessionMessageInput, SessionCloseError, SessionCreateOptions, SessionDiscussionCounts,
+    SessionDiscussionSummary, SessionEvent, SessionExecutionContext,
+    SessionExecutionContextUpdateError, SessionGuardDenial, SessionGuards, SessionLifecycle,
+    SessionLifecycleDenial, SessionMessage, SessionMessageError, SessionMessageKind,
+    SessionMessagePriority, SessionMessageStatus, SessionSummary, SessionTransport,
+    ToolCallRecorderMetadata, DEFAULT_MAX_EVENTS_PER_SESSION, DEFAULT_MAX_SESSIONS,
+    MAX_CODING_INSTRUCTION_CHARS, TOOL_ASSERTION_NAME_FIELD, TOOL_CALL_RECORDING_SESSION_ID_FIELD,
+    TOOL_EXPECTATION_RESULT_UNEXPECTED_FAILURE, TOOL_EXPECTED_FAILURE_FIELD,
+    TOOL_EXPECTED_FAILURE_KIND_FIELD,
+};
+pub(crate) use store::SessionStore;
+pub(crate) use util::redact_and_bound_instruction;
+
+// Test-only surface: keep the runtime re-export list narrow while still
+// allowing crate-level tests to reach these constants without pub-ing `model`.
+#[cfg(test)]
+pub(crate) use model::{MAX_VALIDATION_EXCERPT_CHARS, TOOL_CALL_EXPECTATION_METADATA_FIELDS};

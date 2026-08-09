@@ -1,0 +1,1594 @@
+use super::*;
+use serde_json::json;
+use std::ffi::OsString;
+use std::io::BufReader;
+use std::path::PathBuf;
+use std::process::Command;
+use std::sync::OnceLock;
+use tempfile::TempDir;
+
+fn retained_terminal_job(job_id: &str, ended_at: i64) -> RunningJob {
+    let mut snapshot = test_job_snapshot(job_id);
+    snapshot.status = "completed".to_string();
+    snapshot.ended_at = Some(ended_at);
+    snapshot.exit_code = Some(0);
+    snapshot.duration_ms = Some(1);
+    RunningJob {
+        client_id: "test-agent".to_string(),
+        agent_instance_id: "test-instance".to_string(),
+        snapshot,
+        child: None,
+        stop_requested: Arc::new(AtomicBool::new(false)),
+        slot_reserved: false,
+    }
+}
+
+#[test]
+fn job_reconciliation_inventory_prioritizes_active_and_bounds_terminal_history() {
+    let manager = JobManager::new(1);
+    let now = chrono::Utc::now().timestamp();
+    let mut active = test_job_snapshot("active-original-job");
+    active.created_at = now - 100;
+    active.context.command_preview = "safe preview".to_string();
+    lock_unpoison(&manager.jobs).insert(
+        active.job_id.clone(),
+        RunningJob {
+            client_id: "test-agent".to_string(),
+            agent_instance_id: "test-instance".to_string(),
+            snapshot: active,
+            child: None,
+            stop_requested: Arc::new(AtomicBool::new(false)),
+            slot_reserved: true,
+        },
+    );
+    for index in 0..(JOB_INVENTORY_MAX_TERMINAL_JOBS + 8) {
+        let job_id = format!("terminal-{index}");
+        lock_unpoison(&manager.jobs).insert(
+            job_id.clone(),
+            retained_terminal_job(&job_id, now - index as i64),
+        );
+    }
+    let expired_id = "terminal-expired";
+    lock_unpoison(&manager.jobs).insert(
+        expired_id.to_string(),
+        retained_terminal_job(expired_id, now - JOB_TERMINAL_RETENTION_SECS),
+    );
+
+    let inventory = manager.inventory();
+    assert!(inventory.active_complete);
+    assert_eq!(inventory.jobs[0].job_id, "active-original-job");
+    assert_eq!(
+        inventory
+            .jobs
+            .iter()
+            .filter(|snapshot| runner_job_is_terminal(&snapshot.status))
+            .count(),
+        JOB_INVENTORY_MAX_TERMINAL_JOBS
+    );
+    assert_eq!(
+        inventory
+            .jobs
+            .iter()
+            .filter(|snapshot| runner_job_is_active(&snapshot.status))
+            .count(),
+        1
+    );
+    assert!(!inventory
+        .jobs
+        .iter()
+        .any(|snapshot| snapshot.job_id == expired_id));
+    assert!(inventory
+        .jobs
+        .iter()
+        .skip(1)
+        .all(|snapshot| runner_job_is_terminal(&snapshot.status)));
+}
+
+#[test]
+fn job_reconciliation_inventory_drops_terminal_payload_before_active_jobs() {
+    let manager = JobManager::new(1);
+    let now = chrono::Utc::now().timestamp();
+    let mut active = test_job_snapshot("active-safe-metadata");
+    active.context.command_preview = "safe preview".to_string();
+    lock_unpoison(&manager.jobs).insert(
+        active.job_id.clone(),
+        RunningJob {
+            client_id: "test-agent".to_string(),
+            agent_instance_id: "test-instance".to_string(),
+            snapshot: active,
+            child: None,
+            stop_requested: Arc::new(AtomicBool::new(false)),
+            slot_reserved: true,
+        },
+    );
+    let tail = "x\n".repeat(JOB_SNAPSHOT_STREAM_MAX_BYTES / 2);
+    for index in 0..JOB_INVENTORY_MAX_TERMINAL_JOBS {
+        let job_id = format!("large-terminal-{index}");
+        let mut job = retained_terminal_job(&job_id, now - index as i64);
+        job.snapshot.stdout = ShellJobStreamSnapshot {
+            tail: tail.clone(),
+            first_retained_line: 1,
+            next_line: 1 + tail.lines().count(),
+            truncated: false,
+        };
+        job.snapshot.stderr = job.snapshot.stdout.clone();
+        lock_unpoison(&manager.jobs).insert(job_id, job);
+    }
+
+    let inventory = manager.inventory();
+    assert_eq!(inventory.jobs[0].job_id, "active-safe-metadata");
+    assert!(
+        inventory.jobs.len() < JOB_INVENTORY_MAX_TERMINAL_JOBS + 1,
+        "terminal snapshots must yield before the active record"
+    );
+    let encoded = serde_json::to_vec(&inventory).unwrap();
+    assert!(encoded.len() <= JOB_INVENTORY_MAX_SERIALIZED_BYTES);
+    assert!(!String::from_utf8(encoded)
+        .unwrap()
+        .contains("super-secret-raw-command"));
+}
+
+#[test]
+fn job_reconciliation_local_snapshot_advances_before_best_effort_send() {
+    let manager = JobManager::new(1);
+    let mut snapshot = test_job_snapshot("offline-terminal-job");
+    snapshot.context.validation_steps = vec!["check".to_string()];
+    lock_unpoison(&manager.jobs).insert(
+        snapshot.job_id.clone(),
+        RunningJob {
+            client_id: "test-agent".to_string(),
+            agent_instance_id: "test-instance".to_string(),
+            snapshot,
+            child: None,
+            stop_requested: Arc::new(AtomicBool::new(false)),
+            slot_reserved: true,
+        },
+    );
+
+    let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+    manager.install_sink(AgentSink::WebSocket {
+        tx,
+        client_id: "test-agent".to_string(),
+        agent_instance_id: "test-instance".to_string(),
+    });
+    manager.update_and_send(
+        "offline-terminal-job",
+        RunnerJobDelta {
+            status: "running".to_string(),
+            stdout_chunk: Some("one\n".to_string()),
+            validation_progress: Some(ShellJobValidationProgress {
+                completed: 0,
+                current_step: Some("check".to_string()),
+                failed_step: None,
+            }),
+            ..Default::default()
+        },
+    );
+    let first = rx.try_recv().expect("incremental update");
+    let AgentEnvelope::JobUpdate { payload: first } = first else {
+        panic!("expected job update");
+    };
+    assert_eq!(first.update_seq, Some(2));
+    assert!(first.stdout_chunk.is_none());
+    let first_logs = first
+        .log_snapshot
+        .expect("sequenced update has authoritative logs");
+    assert_eq!(first_logs.stdout.tail, "one\n");
+    assert_eq!(first_logs.stdout.next_line, 2);
+
+    drop(rx);
+    manager.update_and_send(
+        "offline-terminal-job",
+        RunnerJobDelta {
+            status: "completed".to_string(),
+            stdout_chunk: Some("two\n".to_string()),
+            exit_code: Some(0),
+            duration_ms: Some(25),
+            validation_progress: Some(ShellJobValidationProgress {
+                completed: 1,
+                current_step: None,
+                failed_step: None,
+            }),
+            finished: true,
+            ..Default::default()
+        },
+    );
+    let inventory = manager.inventory();
+    let retained = inventory
+        .jobs
+        .iter()
+        .find(|snapshot| snapshot.job_id == "offline-terminal-job")
+        .expect("terminal snapshot remains after transport send fails");
+    assert_eq!(retained.status, "completed");
+    assert_eq!(retained.update_seq, 3);
+    assert_eq!(retained.stdout.tail, "one\ntwo\n");
+    assert_eq!(retained.stdout.next_line, 3);
+    assert_eq!(retained.exit_code, Some(0));
+    assert_eq!(retained.duration_ms, Some(25));
+    assert_eq!(
+        retained.validation_progress,
+        Some(ShellJobValidationProgress {
+            completed: 1,
+            current_step: None,
+            failed_step: None,
+        })
+    );
+    let record = lock_unpoison(&manager.jobs)
+        .get("offline-terminal-job")
+        .cloned()
+        .unwrap();
+    assert!(record.child.is_none());
+    assert!(!record.slot_reserved);
+
+    manager.update_and_send(
+        "offline-terminal-job",
+        RunnerJobDelta {
+            status: "running".to_string(),
+            stdout_chunk: Some("late\n".to_string()),
+            ..Default::default()
+        },
+    );
+    let immutable_terminal = manager
+        .inventory()
+        .jobs
+        .into_iter()
+        .find(|snapshot| snapshot.job_id == "offline-terminal-job")
+        .unwrap();
+    assert_eq!(immutable_terminal.status, "completed");
+    assert_eq!(immutable_terminal.update_seq, 3);
+    assert_eq!(immutable_terminal.stdout.tail, "one\ntwo\n");
+
+    let mut registered_inventory = manager.inventory();
+    let (reconnected_tx, mut reconnected_rx) = tokio::sync::mpsc::channel(4);
+    manager.install_sink(AgentSink::WebSocket {
+        tx: reconnected_tx,
+        client_id: "test-agent".to_string(),
+        agent_instance_id: "test-instance".to_string(),
+    });
+    manager.replay_snapshots_since(&registered_inventory);
+    assert!(
+        reconnected_rx.try_recv().is_err(),
+        "unchanged register snapshots need no network replay"
+    );
+    registered_inventory
+        .jobs
+        .iter_mut()
+        .find(|snapshot| snapshot.job_id == "offline-terminal-job")
+        .unwrap()
+        .update_seq -= 1;
+    manager.replay_snapshots_since(&registered_inventory);
+    let replay = reconnected_rx.try_recv().expect("post-register replay");
+    let AgentEnvelope::JobUpdate { payload: replay } = replay else {
+        panic!("expected replay job update");
+    };
+    assert_eq!(replay.job_id, "offline-terminal-job");
+    assert_eq!(replay.update_seq, Some(3));
+    assert!(replay.finished);
+    let logs = replay.log_snapshot.expect("authoritative replay logs");
+    assert_eq!(logs.stdout.tail, "one\ntwo\n");
+    assert_eq!(logs.stdout.next_line, 3);
+
+    manager.stop("offline-terminal-job").unwrap();
+    let stopped_race = reconnected_rx
+        .try_recv()
+        .expect("stop racing a lost terminal update replays the terminal snapshot");
+    let AgentEnvelope::JobUpdate {
+        payload: stopped_race,
+    } = stopped_race
+    else {
+        panic!("expected replay job update");
+    };
+    assert_eq!(stopped_race.status, "completed");
+    assert_eq!(stopped_race.update_seq, Some(3));
+    assert!(stopped_race.finished);
+}
+
+#[test]
+fn job_reconciliation_utf8_log_tail_is_bounded_with_absolute_cursor() {
+    let emoji = "🙂".as_bytes();
+    let mut split_scalar = emoji[..2].to_vec();
+    assert!(take_utf8_output(&mut split_scalar, false).is_empty());
+    assert_eq!(split_scalar, emoji[..2]);
+    split_scalar.extend_from_slice(&emoji[2..]);
+    assert_eq!(take_utf8_output(&mut split_scalar, false), "🙂");
+    assert!(split_scalar.is_empty());
+
+    let mut stream = ShellJobStreamSnapshot::default();
+    let chunk = "🙂\n".repeat(JOB_SNAPSHOT_STREAM_MAX_BYTES / 2);
+    append_runner_stream(&mut stream, Some(&chunk));
+    assert!(stream.tail.len() <= JOB_SNAPSHOT_STREAM_MAX_BYTES);
+    assert!(stream.truncated);
+    assert!(stream.first_retained_line > 1);
+    assert_eq!(
+        stream.next_line,
+        stream
+            .first_retained_line
+            .saturating_add(stream.tail.lines().count())
+    );
+    assert!(std::str::from_utf8(stream.tail.as_bytes()).is_ok());
+
+    let mut long_partial = ShellJobStreamSnapshot::default();
+    append_runner_stream(
+        &mut long_partial,
+        Some(&format!(
+            "first\nsecond\n{}",
+            "z".repeat(JOB_SNAPSHOT_STREAM_MAX_BYTES + 1)
+        )),
+    );
+    assert_eq!(long_partial.first_retained_line, 3);
+    assert_eq!(long_partial.next_line, 4);
+    let observed_next = long_partial.next_line;
+    trim_runner_stream_to(&mut long_partial, 0);
+    assert!(long_partial.tail.is_empty());
+    assert_eq!(long_partial.first_retained_line, observed_next);
+    assert_eq!(long_partial.next_line, observed_next);
+}
+
+#[test]
+fn validation_wait_failure_is_executor_owned_without_a_failed_check() {
+    let error = std::io::Error::other("synthetic wait failure");
+    let encoded = wait_failure_error(true, &error);
+    assert_eq!(encoded, VALIDATION_STEP_WAIT_FAILED_CODE);
+    assert_eq!(
+        validation_failed_step("failed", Some(&encoded), "check"),
+        None
+    );
+
+    let ordinary = wait_failure_error(false, &error);
+    assert_eq!(ordinary, "failed to wait job: synthetic wait failure");
+    assert_eq!(
+        validation_failed_step("failed", Some("check exited non-zero"), "check"),
+        Some("check".to_string())
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn job_manager_stop_terminates_the_process_group() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut command = configured_shell_job_command(
+        &ShellConfig::default(),
+        "sleep 60 & echo $! > descendant.pid; wait",
+    )
+    .unwrap();
+    command
+        .current_dir(temp.path())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let child = Arc::new(Mutex::new(ManagedChild::spawn(&mut command).unwrap()));
+    let leader_pid = child.lock().unwrap().id();
+    let pid_file = temp.path().join("descendant.pid");
+    let descendant_pid = (0..200)
+        .find_map(|_| {
+            let pid = std::fs::read_to_string(&pid_file)
+                .ok()
+                .and_then(|text| text.trim().parse::<u32>().ok());
+            if pid.is_none() {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            pid
+        })
+        .expect("descendant pid marker was not ready");
+    assert!(process_running(leader_pid));
+    assert!(process_running(descendant_pid));
+
+    let manager = JobManager::new(1);
+    let stop_requested = Arc::new(AtomicBool::new(false));
+    manager.jobs.lock().unwrap().insert(
+        "process-group-job".into(),
+        RunningJob {
+            client_id: "test-agent".into(),
+            agent_instance_id: "test-instance".into(),
+            snapshot: test_job_snapshot("process-group-job"),
+            child: Some(child.clone()),
+            stop_requested: stop_requested.clone(),
+            slot_reserved: true,
+        },
+    );
+    manager.stop("process-group-job").unwrap();
+    assert!(stop_requested.load(Ordering::SeqCst));
+
+    for _ in 0..200 {
+        let leader_exited = child.lock().unwrap().try_wait().unwrap().is_some();
+        if leader_exited && !process_running(descendant_pid) {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert!(child.lock().unwrap().try_wait().unwrap().is_some());
+    assert!(
+        !process_running(descendant_pid),
+        "descendant {descendant_pid} survived process-group cancellation"
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn job_shutdown_reaps_a_sigterm_responsive_child() {
+    let temp = tempfile::tempdir().unwrap();
+    let ready = temp.path().join("ready");
+    let mut command = configured_shell_job_command(
+        &ShellConfig::default(),
+        "trap 'exit 0' TERM; : > ready; while :; do sleep 1; done",
+    )
+    .unwrap();
+    command
+        .current_dir(temp.path())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let child = Arc::new(Mutex::new(ManagedChild::spawn(&mut command).unwrap()));
+    let leader_pid = child.lock().unwrap().id();
+    assert!(wait_until(Duration::from_secs(1), || ready.exists()));
+    let manager = JobManager::new(1);
+    let stop_requested = Arc::new(AtomicBool::new(false));
+    lock_unpoison(&manager.jobs).insert(
+        "term-responsive".into(),
+        RunningJob {
+            client_id: "test-agent".into(),
+            agent_instance_id: "test-instance".into(),
+            snapshot: test_job_snapshot("term-responsive"),
+            child: Some(Arc::clone(&child)),
+            stop_requested: Arc::clone(&stop_requested),
+            slot_reserved: true,
+        },
+    );
+
+    manager.stop_accepting_work();
+    let batch = manager.signal_all_for_shutdown();
+    let outcome = manager.drain_shutdown(batch, Instant::now() + Duration::from_millis(800));
+    assert_eq!(outcome.resources, 1);
+    assert_eq!(outcome.timed_out, 0);
+    assert!(stop_requested.load(Ordering::SeqCst));
+    assert!(child.lock().unwrap().try_wait().unwrap().is_some());
+    assert!(!process_running(leader_pid));
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn job_shutdown_escalates_ignored_sigterm_for_parent_and_descendant() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut command = configured_shell_job_command(
+        &ShellConfig::default(),
+        "trap '' TERM; sleep 60 & echo $! > descendant.pid; wait",
+    )
+    .unwrap();
+    command
+        .current_dir(temp.path())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let child = Arc::new(Mutex::new(ManagedChild::spawn(&mut command).unwrap()));
+    let leader_pid = child.lock().unwrap().id();
+    let pid_file = temp.path().join("descendant.pid");
+    assert!(wait_until(Duration::from_secs(2), || pid_file.exists()));
+    let descendant_pid = std::fs::read_to_string(&pid_file)
+        .unwrap()
+        .trim()
+        .parse::<u32>()
+        .unwrap();
+    assert!(process_running(leader_pid));
+    assert!(process_running(descendant_pid));
+
+    let manager = JobManager::new(1);
+    let stop_requested = Arc::new(AtomicBool::new(false));
+    lock_unpoison(&manager.jobs).insert(
+        "term-ignoring".into(),
+        RunningJob {
+            client_id: "test-agent".into(),
+            agent_instance_id: "test-instance".into(),
+            snapshot: test_job_snapshot("term-ignoring"),
+            child: Some(Arc::clone(&child)),
+            stop_requested: Arc::clone(&stop_requested),
+            slot_reserved: true,
+        },
+    );
+    let started = Instant::now();
+    manager.stop_accepting_work();
+    let batch = manager.signal_all_for_shutdown();
+    let outcome = manager.drain_shutdown(batch, Instant::now() + Duration::from_millis(900));
+    let elapsed = started.elapsed();
+
+    assert_eq!(outcome.resources, 1);
+    assert_eq!(outcome.timed_out, 0);
+    assert!(stop_requested.load(Ordering::SeqCst));
+    assert!(
+        elapsed < Duration::from_millis(1100),
+        "job shutdown exceeded its absolute deadline: {elapsed:?}"
+    );
+    assert!(child.lock().unwrap().try_wait().unwrap().is_some());
+    assert!(!process_running(leader_pid));
+    assert!(
+        wait_until(Duration::from_secs(1), || !process_running(descendant_pid)),
+        "descendant survived process-group SIGKILL"
+    );
+}
+
+#[test]
+fn poisoned_job_mutex_does_not_panic_shutdown() {
+    let manager = JobManager::new(1);
+    let jobs = Arc::clone(&manager.jobs);
+    let poisoned = std::thread::spawn(move || {
+        let _guard = jobs.lock().unwrap();
+        panic!("poison jobs mutex");
+    });
+    assert!(poisoned.join().is_err());
+
+    manager.stop_accepting_work();
+    assert_eq!(manager.cancel_queued_for_shutdown(), 0);
+    let batch = manager.signal_all_for_shutdown();
+    let outcome = manager.drain_shutdown(batch, Instant::now() + Duration::from_millis(50));
+    assert_eq!(outcome.resources, 0);
+    assert_eq!(outcome.timed_out, 0);
+}
+
+/// One run of the fail-fast plan, plus the side effect the plan must not have.
+#[cfg(unix)]
+struct FailFastAttempt {
+    updates: Vec<ShellAgentJobUpdateRequest>,
+    test_step_ran: bool,
+}
+
+/// Drain job updates until the job reports `finished`, or the deadline passes.
+///
+/// The deadline is wall-clock rather than a sleep count: under a loaded machine
+/// a 10ms sleep is not 10ms, so a counting loop silently shortens its own
+/// patience exactly when the job needs more of it.
+#[cfg(unix)]
+fn collect_job_updates(
+    rx: &mut tokio::sync::mpsc::Receiver<AgentEnvelope>,
+    deadline: Duration,
+) -> Vec<ShellAgentJobUpdateRequest> {
+    let started = Instant::now();
+    let mut updates: Vec<ShellAgentJobUpdateRequest> = Vec::new();
+    while started.elapsed() < deadline {
+        while let Ok(envelope) = rx.try_recv() {
+            if let AgentEnvelope::JobUpdate { payload } = envelope {
+                updates.push(payload);
+            }
+        }
+        if updates.last().is_some_and(|update| update.finished) {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    updates
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn inspect_job_manager_path_landlocks_commands_and_descendants() {
+    if crate::command_sandbox::inspect_sandbox_available().is_err() {
+        return;
+    }
+    let temp = tempfile::tempdir().unwrap();
+    let project = temp.path().join("project");
+    std::fs::create_dir(&project).unwrap();
+    let tracked = project.join("tracked.txt");
+    std::fs::write(&tracked, "original\n").unwrap();
+    let (tx, mut rx) = tokio::sync::mpsc::channel(32);
+    let sink = AgentSink::WebSocket {
+        tx,
+        client_id: "inspect-agent".into(),
+        agent_instance_id: "inspect-instance".into(),
+    };
+    let manager = JobManager::new(1);
+    manager.enqueue(
+        sink,
+        1,
+        AgentPolicy {
+            allow_cwd_anywhere: true,
+            ..AgentPolicy::default()
+        },
+        ShellConfig::default(),
+        SshConfig::default(),
+        temp.path().join("projects.d"),
+        serde_json::from_value(json!({
+            "request_id": "inspect-job-request",
+            "client_id": "inspect-agent",
+            "kind": "start_job",
+            "job_id": "inspect-job",
+            "cwd": project,
+            "command": "set -eu; cat tracked.txt; printf ok > \"$TMPDIR/proof\"; test \"$(cat \"$TMPDIR/proof\")\" = ok; ! touch created.txt; ! truncate -s 0 tracked.txt; ! sh -c 'printf child > child.txt'",
+            "timeout_secs": 30,
+            "requested_by": "test",
+            "created_at": 1,
+            "sandbox": crate::command_sandbox::INSPECT_SANDBOX_MODE,
+            "job_context": test_job_context(&project, Vec::new())
+        }))
+        .unwrap(),
+    );
+
+    let updates = collect_job_updates(&mut rx, Duration::from_secs(30));
+    let final_update = updates.last().expect("inspect job should finish");
+    assert!(final_update.finished, "{final_update:?}");
+    assert_eq!(final_update.status, "completed", "{final_update:?}");
+    assert_eq!(final_update.exit_code, Some(0), "{final_update:?}");
+    assert_eq!(std::fs::read_to_string(&tracked).unwrap(), "original\n");
+    assert!(!project.join("created.txt").exists());
+    assert!(!project.join("child.txt").exists());
+}
+
+/// The outcome the executor emits when a step could not be spawned at all.
+///
+/// This is a modeled result, not a bug — `validation_spawn_failure_is_
+/// infrastructure_without_failed_assertion` pins it, and the connector treats
+/// it as infrastructure rather than as a failed assertion. Recognising it here
+/// keeps a machine-level spawn failure from being read as a fail-fast
+/// regression.
+#[cfg(unix)]
+fn is_validation_spawn_failure(update: &ShellAgentJobUpdateRequest) -> bool {
+    update.finished
+        && update.status == "failed"
+        && update.exit_code.is_none()
+        && update.error.as_deref() == Some(VALIDATION_STEP_SPAWN_FAILED_CODE)
+}
+
+#[cfg(unix)]
+fn describe_update(update: &ShellAgentJobUpdateRequest) -> String {
+    format!(
+        "status={:?} finished={} exit_code={:?} error={:?} progress={:?}",
+        update.status, update.finished, update.exit_code, update.error, update.validation_progress
+    )
+}
+
+#[cfg(unix)]
+fn run_fail_fast_validation_job(attempt: usize) -> FailFastAttempt {
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp = tempfile::tempdir().unwrap();
+    let bin = temp.path().join("bin");
+    std::fs::create_dir(&bin).unwrap();
+    let cargo = bin.join("cargo");
+    std::fs::write(
+        &cargo,
+        "#!/bin/sh\ncase \"$1\" in\nfmt) echo 'format passed';;\ncheck) exit 7;;\ntest) touch should-not-run;;\nesac\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&cargo, std::fs::Permissions::from_mode(0o700)).unwrap();
+    let (tx, mut rx) = tokio::sync::mpsc::channel(32);
+    let sink = AgentSink::WebSocket {
+        tx,
+        client_id: "validation-agent".into(),
+        agent_instance_id: "validation-instance".into(),
+    };
+    let steps = vec![
+        ShellJobValidationStep {
+            name: "format".into(),
+            program: "cargo".into(),
+            args: vec!["fmt".into(), "--".into(), "--check".into()],
+            env: Vec::new(),
+        },
+        ShellJobValidationStep {
+            name: "check".into(),
+            program: "cargo".into(),
+            args: vec!["check".into(), "--all-targets".into()],
+            env: Vec::new(),
+        },
+        ShellJobValidationStep {
+            name: "test".into(),
+            program: "cargo".into(),
+            args: vec!["test".into()],
+            env: Vec::new(),
+        },
+    ];
+    let mut shell = ShellConfig::default();
+    shell.path_prepend.push(bin);
+    let manager = JobManager::new(1);
+    manager.enqueue(
+        sink,
+        1,
+        AgentPolicy {
+            // These tests run jobs in a temp dir; the boundary itself is
+            // covered separately, and AgentPolicy::default() is fail-closed.
+            allow_cwd_anywhere: true,
+            ..AgentPolicy::default()
+        },
+        shell,
+        SshConfig::default(),
+        temp.path().join("projects.d"),
+        serde_json::from_value(json!({
+            "request_id": format!("validation-request-{attempt}"),
+            "client_id": "validation-agent",
+            "kind": "start_validation_job",
+            "job_id": format!("validation-job-{attempt}"),
+            "cwd": temp.path(),
+            "command": serde_json::to_string(&steps).unwrap(),
+            // Two `sh` one-liners. A timeout here would mean a hang, not a busy
+            // machine, which is the point of the gap between this and the
+            // collector deadline below.
+            "timeout_secs": 60,
+            "requested_by": "test",
+            "created_at": 1,
+            "job_context": test_job_context(
+                temp.path(),
+                steps.iter().map(|step| step.name.clone()).collect(),
+            )
+        }))
+        .unwrap(),
+    );
+    let updates = collect_job_updates(&mut rx, Duration::from_secs(120));
+    FailFastAttempt {
+        test_step_ran: temp.path().join("should-not-run").exists(),
+        updates,
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn validation_job_progress_is_executor_owned_and_fail_fast() {
+    // Spawning a step can fail for reasons that belong to the machine rather
+    // than to the state machine — `fork` returning EAGAIN under a loaded test
+    // suite, or ETXTBSY on a script written moments earlier. The executor
+    // reports that as `validation_step_spawn_failed` with no exit code, which
+    // is the correct answer to a question this test is not asking. Retrying
+    // those attempts is what keeps a busy machine from deciding whether the
+    // fail-fast contract holds; asserting on the first attempt is not.
+    const ATTEMPTS: usize = 3;
+    let mut spawn_failures = Vec::new();
+
+    for attempt in 0..ATTEMPTS {
+        let FailFastAttempt {
+            updates,
+            test_step_ran,
+        } = run_fail_fast_validation_job(attempt);
+        let final_update = updates.last().unwrap_or_else(|| {
+            panic!("attempt {attempt}: validation job emitted no updates before the deadline")
+        });
+        assert!(
+            final_update.finished,
+            "attempt {attempt}: job never finished; last update was {}",
+            describe_update(final_update)
+        );
+        if is_validation_spawn_failure(final_update) {
+            spawn_failures.push(format!(
+                "attempt {attempt}: {}",
+                describe_update(final_update)
+            ));
+            continue;
+        }
+
+        assert_eq!(
+            final_update.status,
+            "failed",
+            "attempt {attempt}: {}",
+            describe_update(final_update)
+        );
+        assert_eq!(
+            final_update.exit_code,
+            Some(7),
+            "attempt {attempt}: the failing step's exit code must reach the final update: {}",
+            describe_update(final_update)
+        );
+        assert_eq!(
+            final_update.validation_progress,
+            Some(ShellJobValidationProgress {
+                completed: 1,
+                current_step: None,
+                failed_step: Some("check".into()),
+            }),
+            "attempt {attempt}: {}",
+            describe_update(final_update)
+        );
+        assert!(
+            updates.iter().any(|update| {
+                update.validation_progress
+                    == Some(ShellJobValidationProgress {
+                        completed: 1,
+                        current_step: Some("check".into()),
+                        failed_step: None,
+                    })
+            }),
+            "attempt {attempt}: no update announced 'check' as the running step; saw {:?}",
+            updates.iter().map(describe_update).collect::<Vec<_>>()
+        );
+        assert!(
+            !test_step_ran,
+            "attempt {attempt}: the plan ran 'test' after 'check' failed"
+        );
+        return;
+    }
+
+    panic!(
+        "every attempt failed to spawn a validation step, so the fail-fast path \
+         was never exercised:\n{}",
+        spawn_failures.join("\n")
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn validation_spawn_failure_is_infrastructure_without_failed_assertion() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut shell = ShellConfig::default();
+    shell.env.insert(
+        "PATH".to_string(),
+        temp.path().to_string_lossy().into_owned(),
+    );
+    let (tx, mut rx) = tokio::sync::mpsc::channel(8);
+    let sink = AgentSink::WebSocket {
+        tx,
+        client_id: "validation-agent".into(),
+        agent_instance_id: "validation-instance".into(),
+    };
+    let manager = JobManager::new(1);
+    manager.enqueue(
+        sink,
+        1,
+        AgentPolicy {
+            // These tests run jobs in a temp dir; the boundary itself is
+            // covered separately, and AgentPolicy::default() is fail-closed.
+            allow_cwd_anywhere: true,
+            ..AgentPolicy::default()
+        },
+        shell,
+        SshConfig::default(),
+        temp.path().join("projects.d"),
+        serde_json::from_value(json!({
+            "request_id": "spawn-failure-request",
+            "client_id": "validation-agent",
+            "kind": "start_validation_job",
+            "job_id": "spawn-failure-job",
+            "cwd": temp.path(),
+            "command": serde_json::to_string(&[ShellJobValidationStep {
+                name: "check".into(),
+                program: "cargo".into(),
+                args: vec!["check".into(), "--all-targets".into()],
+            env: Vec::new(),
+            }]).unwrap(),
+            "timeout_secs": 10,
+            "requested_by": "test",
+            "created_at": 1,
+            "job_context": test_job_context(temp.path(), vec!["check".to_string()])
+        }))
+        .unwrap(),
+    );
+    let update = (0..100)
+        .find_map(|_| {
+            let update = rx.try_recv().ok().and_then(|envelope| match envelope {
+                AgentEnvelope::JobUpdate { payload } if payload.finished => Some(payload),
+                _ => None,
+            });
+            if update.is_none() {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            update
+        })
+        .expect("validation spawn failure update");
+    assert!(update.finished);
+    assert_eq!(update.status, "failed");
+    assert_eq!(update.exit_code, None);
+    assert_eq!(
+        update.error.as_deref(),
+        Some(VALIDATION_STEP_SPAWN_FAILED_CODE)
+    );
+    assert_eq!(
+        update.validation_progress,
+        Some(ShellJobValidationProgress {
+            completed: 0,
+            current_step: None,
+            failed_step: None,
+        })
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn python_module_probe_reports_tool_unavailable_without_running_recipe() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp = tempfile::tempdir().unwrap();
+    let python = temp.path().join("python");
+    let probe_output = temp.path().join("module");
+    std::fs::write(
+        &python,
+        "#!/bin/sh\nprintf '%s' \"$4\" > \"$PROBE_OUTPUT\"\nexit 42\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&python, std::fs::Permissions::from_mode(0o700)).unwrap();
+    let mut shell = ShellConfig::default();
+    shell.env.insert(
+        "PATH".to_string(),
+        temp.path().to_string_lossy().into_owned(),
+    );
+    shell.env.insert(
+        "PROBE_OUTPUT".to_string(),
+        probe_output.to_string_lossy().into_owned(),
+    );
+    let step = ShellJobValidationStep {
+        name: "test".into(),
+        program: "python".into(),
+        args: ["-B", "-m", "unittest", "discover", "-v"]
+            .into_iter()
+            .map(str::to_string)
+            .collect(),
+        env: Vec::new(),
+    };
+    assert!(!validation_module_available(
+        &shell,
+        None,
+        temp.path(),
+        &step,
+        None,
+        None,
+    ));
+    assert_eq!(std::fs::read_to_string(&probe_output).unwrap(), "unittest");
+    assert!(!temp.path().join("recipe-ran").exists());
+
+    std::fs::remove_file(&probe_output).unwrap();
+    let scratch = crate::command_sandbox::InspectScratch::create().unwrap();
+    assert!(!validation_module_available(
+        &shell,
+        None,
+        temp.path(),
+        &step,
+        Some(&scratch),
+        None,
+    ));
+    assert!(
+        !probe_output.exists(),
+        "the inspect validation probe must not write outside scratch"
+    );
+}
+
+/// Platform-native liveness probe for job descendants, so the tree tests never
+/// shell out to `tasklist`/`ps`/PowerShell.
+#[cfg(windows)]
+pub(super) fn process_running(pid: u32) -> bool {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{
+        GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    // SAFETY: OpenProcess returns a handle or NULL; NULL means the pid no
+    // longer exists (or is inaccessible, which also means not ours).
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+    if handle.is_null() {
+        return false;
+    }
+    let mut exit_code = 0u32;
+    // SAFETY: `handle` is valid; `exit_code` is a valid out-param.
+    let ok = unsafe { GetExitCodeProcess(handle, &mut exit_code) };
+    // SAFETY: close the handle we opened.
+    unsafe { CloseHandle(handle) };
+    ok == 1 && exit_code == 259 // 259 == STILL_ACTIVE
+}
+
+#[cfg(all(unix, not(target_os = "linux")))]
+pub(super) fn process_running(pid: u32) -> bool {
+    // SAFETY: signal 0 is an existence probe; the pid comes from our own
+    // helper subprocess.
+    unsafe { libc::kill(pid as i32, 0) == 0 }
+}
+
+#[cfg(target_os = "linux")]
+pub(super) fn process_running(pid: u32) -> bool {
+    let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) else {
+        return false;
+    };
+    stat.rsplit_once(") ")
+        .and_then(|(_, rest)| rest.chars().next())
+        .is_some_and(|state| state != 'Z')
+}
+
+fn wait_until(timeout: Duration, condition: impl Fn() -> bool) -> bool {
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        if condition() {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    condition()
+}
+
+/// Poll `process_running(pid)` until the process is gone or `timeout` elapses.
+fn wait_for_process_exit(pid: u32, timeout: Duration, tag: &str) -> bool {
+    let deadline = Instant::now() + timeout;
+    loop {
+        if !process_running(pid) {
+            return true;
+        }
+        if Instant::now() >= deadline {
+            eprintln!("wait_for_process_exit({tag}): pid {pid} still running");
+            return false;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// JobManager process-tree fixtures and tests
+//
+// The job tree tests run the real `process_tree_helper` binary from
+// `webcodex-process` (compiled at test time with rustc, exactly like the LSP
+// and MCP fake servers), so the same scenarios run on Windows and Unix without
+// cmd, PowerShell, or bash. Liveness is probed with the platform-native
+// `process_running` above. Every test reaps the tree it starts before
+// returning, so no helper process is left behind.
+// ---------------------------------------------------------------------------
+
+/// Compiled copy of the `process_tree_helper` fixture, kept alive for the whole
+/// test process so its binary path never disappears under a running grandchild.
+struct JobTreeHelper {
+    _temp: TempDir,
+    path: PathBuf,
+}
+
+static JOB_TREE_HELPER: OnceLock<Arc<JobTreeHelper>> = OnceLock::new();
+
+fn job_tree_helper() -> Arc<JobTreeHelper> {
+    JOB_TREE_HELPER
+        .get_or_init(|| {
+            let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../webcodex-process/src/bin/process_tree_helper.rs");
+            let temp = tempfile::tempdir().unwrap();
+            let output = temp.path().join(format!(
+                "process-tree-helper{}",
+                std::env::consts::EXE_SUFFIX
+            ));
+            let rustc = std::env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"));
+            let result = Command::new(rustc)
+                .arg("--edition=2021")
+                .arg("--crate-name=webcodex_job_tree_helper")
+                .arg(&source)
+                .arg("-o")
+                .arg(&output)
+                .output()
+                .expect("run rustc for job tree helper");
+            assert!(
+                result.status.success(),
+                "job tree helper compilation failed: {}",
+                String::from_utf8_lossy(&result.stderr)
+            );
+            Arc::new(JobTreeHelper {
+                _temp: temp,
+                path: output,
+            })
+        })
+        .clone()
+}
+
+/// A background line reader over a job's captured stdout. Each complete line is
+/// delivered as `Line`, and a final `Eof` marks the pipe closing (which a
+/// descendant holding the write end would otherwise delay indefinitely).
+enum JobTreeOut {
+    Line(Vec<u8>),
+    Eof,
+}
+
+/// Spawn the helper in `mode`, capturing its stdout and piping it through a
+/// background line reader. The helper's descendants inherit the stdout write
+/// end, so `Eof` only arrives once the whole tree is gone.
+fn spawn_helper_raw(mode: &str, args: &[&str]) -> (ManagedChild, mpsc::Receiver<JobTreeOut>) {
+    let helper = job_tree_helper();
+    let mut cmd = Command::new(&helper.path);
+    cmd.arg(mode).args(args);
+    cmd.stdout(Stdio::piped());
+    let mut managed = ManagedChild::spawn(&mut cmd).expect("spawn job tree helper");
+    let (tx, rx) = mpsc::sync_channel(64);
+    let stdout = managed
+        .child_mut()
+        .stdout
+        .take()
+        .expect("job tree helper piped stdout");
+    std::thread::spawn(move || {
+        let mut reader = BufReader::new(stdout);
+        let mut line = Vec::new();
+        let mut byte = [0u8; 1];
+        loop {
+            match reader.read(&mut byte) {
+                Ok(0) => {
+                    if !line.is_empty() {
+                        let _ = tx.send(JobTreeOut::Line(std::mem::take(&mut line)));
+                    }
+                    let _ = tx.send(JobTreeOut::Eof);
+                    return;
+                }
+                Ok(1) => {
+                    line.push(byte[0]);
+                    if line.ends_with(b"\n") {
+                        let _ = tx.send(JobTreeOut::Line(std::mem::take(&mut line)));
+                    }
+                }
+                Ok(_) => {}
+                Err(_) => {
+                    let _ = tx.send(JobTreeOut::Eof);
+                    return;
+                }
+            }
+        }
+    });
+    (managed, rx)
+}
+
+fn read_grandchild_pid(rx: &mpsc::Receiver<JobTreeOut>) -> u32 {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            panic!("timed out reading GRANDCHILD_PID from job stdout");
+        }
+        match rx.recv_timeout(remaining.min(Duration::from_secs(1))) {
+            Ok(JobTreeOut::Line(line)) => {
+                let text = String::from_utf8_lossy(&line);
+                if let Some(value) = text.trim().strip_prefix("GRANDCHILD_PID=") {
+                    return value.trim().parse().expect("grandchild pid number");
+                }
+            }
+            Ok(JobTreeOut::Eof) => panic!("job stdout reached EOF before GRANDCHILD_PID"),
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                panic!("job stdout reader disconnected before GRANDCHILD_PID")
+            }
+        }
+    }
+}
+
+fn wait_for_stdout_eof(rx: &mpsc::Receiver<JobTreeOut>, timeout: Duration, tag: &str) -> bool {
+    let deadline = Instant::now() + timeout;
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            eprintln!("wait_for_stdout_eof({tag}): no EOF within {timeout:?}");
+            return false;
+        }
+        match rx.recv_timeout(remaining.min(Duration::from_millis(100))) {
+            Ok(JobTreeOut::Eof) => return true,
+            Ok(JobTreeOut::Line(_)) => {}
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+            Err(mpsc::RecvTimeoutError::Disconnected) => {}
+        }
+    }
+}
+
+fn extract_grandchild_pid(text: &str) -> Option<u32> {
+    text.lines().find_map(|line| {
+        line.trim()
+            .strip_prefix("GRANDCHILD_PID=")?
+            .trim()
+            .parse::<u32>()
+            .ok()
+    })
+}
+
+fn insert_running_job(
+    manager: &JobManager,
+    job_id: &str,
+    child: Option<Arc<Mutex<ManagedChild>>>,
+) -> Arc<AtomicBool> {
+    let stop_requested = Arc::new(AtomicBool::new(false));
+    lock_unpoison(&manager.jobs).insert(
+        job_id.to_string(),
+        RunningJob {
+            client_id: "tree-agent".to_string(),
+            agent_instance_id: "tree-instance".to_string(),
+            snapshot: test_job_snapshot(job_id),
+            child,
+            stop_requested: Arc::clone(&stop_requested),
+            slot_reserved: true,
+        },
+    );
+    stop_requested
+}
+
+/// An explicit stop terminates the whole job process tree, including a
+/// descendant that inherited the stdout pipe, and the stdout reader reaches
+/// EOF instead of blocking forever.
+#[test]
+fn job_stop_terminates_whole_tree_including_descendant() {
+    let temp = tempfile::tempdir().unwrap();
+    let marker = temp.path().join("stop-grandchild.marker");
+    let (managed, rx) = spawn_helper_raw(
+        "spawn-grandchild-keepalive",
+        &[marker.to_str().unwrap(), "3", "60", "60"],
+    );
+    let parent_pid = managed.id();
+    let grandchild_pid = read_grandchild_pid(&rx);
+    assert!(
+        process_running(parent_pid),
+        "job parent should be running before stop"
+    );
+    assert!(
+        process_running(grandchild_pid),
+        "job descendant should be running before stop"
+    );
+    let child = Arc::new(Mutex::new(managed));
+
+    let manager = JobManager::new(1);
+    let stop_requested = insert_running_job(&manager, "stop-tree-job", Some(child.clone()));
+    manager.stop("stop-tree-job").expect("stop job");
+    assert!(stop_requested.load(Ordering::SeqCst));
+
+    assert!(
+        wait_for_process_exit(parent_pid, Duration::from_secs(5), "parent-after-stop"),
+        "job parent survived stop"
+    );
+    assert!(
+        wait_for_process_exit(
+            grandchild_pid,
+            Duration::from_secs(5),
+            "grandchild-after-stop"
+        ),
+        "job descendant survived stop; stop must terminate the whole tree"
+    );
+    assert!(
+        wait_for_stdout_eof(&rx, Duration::from_secs(5), "stop-eof"),
+        "stdout must reach EOF after the whole tree is terminated"
+    );
+    assert!(
+        !marker.exists(),
+        "delayed grandchild marker must never appear after stop"
+    );
+}
+
+/// The job worker's cleanup sequence (bounded tree wait, force terminate, then
+/// reader join) must kill an orphaned descendant that keeps the stdout pipe
+/// open, and the output reader must reach EOF instead of being detached.
+#[test]
+fn job_cleanup_after_parent_exit_terminates_descendant_and_reaches_eof() {
+    let temp = tempfile::tempdir().unwrap();
+    let marker = temp.path().join("orphan.marker");
+    let helper = job_tree_helper();
+    let mut cmd = Command::new(&helper.path);
+    cmd.arg("spawn-grandchild")
+        .arg(marker.to_str().unwrap())
+        .arg("3")
+        .arg("60");
+    cmd.stdout(Stdio::piped());
+    let mut managed = ManagedChild::spawn(&mut cmd).expect("spawn job tree helper");
+    let (tx, rx) = mpsc::sync_channel::<OutputChunk>(64);
+    let stdout = managed.child_mut().stdout.take().expect("piped stdout");
+    let readers = vec![spawn_reader(stdout, tx.clone(), true)];
+    drop(tx);
+    let child = Arc::new(Mutex::new(managed));
+
+    // The direct child exits on its own right after spawning the grandchild;
+    // collect its pid line from the production reader's chunk stream.
+    let mut accumulated = String::new();
+    let mut grandchild_pid = None;
+    let read_deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < read_deadline {
+        while let Ok(chunk) = rx.try_recv() {
+            if let OutputChunk::Stdout(text) = chunk {
+                accumulated.push_str(&text);
+            }
+        }
+        if let Some(pid) = extract_grandchild_pid(&accumulated) {
+            grandchild_pid = Some(pid);
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    let grandchild_pid = grandchild_pid.expect("GRANDCHILD_PID in job stdout");
+    assert!(
+        wait_until(Duration::from_secs(5), || lock_unpoison(&child)
+            .try_wait()
+            .unwrap()
+            .is_some()),
+        "job parent should exit on its own"
+    );
+    assert!(
+        process_running(grandchild_pid),
+        "grandchild must still be alive after the parent exits"
+    );
+
+    // This is exactly what the job worker runs after the direct child's status
+    // is decided.
+    cleanup_managed_tree(&child);
+    let detached = join_reader_threads_until(readers, Instant::now() + Duration::from_secs(1));
+    assert_eq!(
+        detached, 0,
+        "stdout reader must finish on EOF instead of being detached"
+    );
+    assert!(
+        wait_for_process_exit(grandchild_pid, Duration::from_secs(5), "orphan-grandchild"),
+        "orphaned grandchild survived tree cleanup"
+    );
+    assert!(
+        !marker.exists(),
+        "delayed grandchild marker must never appear after cleanup"
+    );
+}
+
+/// A shutdown drain terminates every running job's whole tree, leaves a
+/// completed job untouched, and is bounded.
+#[test]
+fn job_stop_all_terminates_all_trees_and_preserves_completed_jobs() {
+    let manager = JobManager::new(2);
+    let completed_stop = Arc::new(AtomicBool::new(false));
+    {
+        let mut snapshot = test_job_snapshot("completed-job");
+        snapshot.status = "completed".to_string();
+        lock_unpoison(&manager.jobs).insert(
+            "completed-job".to_string(),
+            RunningJob {
+                client_id: "tree-agent".to_string(),
+                agent_instance_id: "tree-instance".to_string(),
+                snapshot,
+                child: None,
+                stop_requested: Arc::clone(&completed_stop),
+                slot_reserved: false,
+            },
+        );
+    }
+
+    let temp = tempfile::tempdir().unwrap();
+    let marker_a = temp.path().join("stop-all-a.marker");
+    let marker_b = temp.path().join("stop-all-b.marker");
+    let (managed_a, rx_a) = spawn_helper_raw(
+        "spawn-grandchild-keepalive",
+        &[marker_a.to_str().unwrap(), "3", "60", "60"],
+    );
+    let (managed_b, rx_b) = spawn_helper_raw(
+        "spawn-grandchild-keepalive",
+        &[marker_b.to_str().unwrap(), "3", "60", "60"],
+    );
+    let a_parent = managed_a.id();
+    let a_grandchild = read_grandchild_pid(&rx_a);
+    let b_parent = managed_b.id();
+    let b_grandchild = read_grandchild_pid(&rx_b);
+    insert_running_job(&manager, "running-a", Some(Arc::new(Mutex::new(managed_a))));
+    insert_running_job(&manager, "running-b", Some(Arc::new(Mutex::new(managed_b))));
+
+    manager.stop_all();
+
+    let completed = lock_unpoison(&manager.jobs)
+        .get("completed-job")
+        .cloned()
+        .unwrap();
+    assert_eq!(completed.snapshot.status, "completed");
+    assert!(
+        !completed_stop.load(Ordering::SeqCst),
+        "a terminal job must not be signalled during shutdown"
+    );
+    for (pid, tag) in [
+        (a_parent, "a-parent"),
+        (a_grandchild, "a-grandchild"),
+        (b_parent, "b-parent"),
+        (b_grandchild, "b-grandchild"),
+    ] {
+        assert!(
+            wait_for_process_exit(pid, Duration::from_secs(5), tag),
+            "{tag} survived stop_all"
+        );
+    }
+    assert!(wait_for_stdout_eof(&rx_a, Duration::from_secs(5), "a-eof"));
+    assert!(wait_for_stdout_eof(&rx_b, Duration::from_secs(5), "b-eof"));
+}
+
+/// Repeated stops are idempotent: the second stop must not panic and must not
+/// leave the tree running.
+#[test]
+fn job_stop_twice_is_idempotent() {
+    let temp = tempfile::tempdir().unwrap();
+    let marker = temp.path().join("twice.marker");
+    let (managed, rx) = spawn_helper_raw(
+        "spawn-grandchild-keepalive",
+        &[marker.to_str().unwrap(), "3", "60", "60"],
+    );
+    let parent_pid = managed.id();
+    let grandchild_pid = read_grandchild_pid(&rx);
+    let child = Arc::new(Mutex::new(managed));
+    let manager = JobManager::new(1);
+    insert_running_job(&manager, "twice-job", Some(child));
+
+    manager.stop("twice-job").expect("first stop");
+    manager
+        .stop("twice-job")
+        .expect("second stop must be idempotent");
+
+    assert!(wait_for_process_exit(
+        parent_pid,
+        Duration::from_secs(5),
+        "twice-parent"
+    ));
+    assert!(wait_for_process_exit(
+        grandchild_pid,
+        Duration::from_secs(5),
+        "twice-grandchild"
+    ));
+    assert!(wait_for_stdout_eof(
+        &rx,
+        Duration::from_secs(5),
+        "twice-eof"
+    ));
+}
+
+/// Stopping a job whose tree already exited naturally must not panic and must
+/// report success.
+#[test]
+fn job_stop_after_natural_exit_does_not_panic() {
+    let (managed, _rx) = spawn_helper_raw("sleep", &["0", "0"]);
+    let parent_pid = managed.id();
+    let child = Arc::new(Mutex::new(managed));
+    assert!(
+        wait_until(Duration::from_secs(5), || lock_unpoison(&child)
+            .try_wait()
+            .unwrap()
+            .is_some()),
+        "job should exit on its own"
+    );
+    let manager = JobManager::new(1);
+    insert_running_job(&manager, "exited-job", Some(child));
+    manager.stop("exited-job").expect("stop after natural exit");
+    assert!(wait_for_process_exit(
+        parent_pid,
+        Duration::from_secs(5),
+        "exited-parent"
+    ));
+}
+
+/// Dropping the last real JobManager owner must terminate an active tree even
+/// while a worker clone still holds the jobs map and ManagedChild Arc.
+#[test]
+fn last_job_manager_owner_drop_terminates_running_tree_with_worker_clone_alive() {
+    let temp = tempfile::tempdir().unwrap();
+    let marker = temp.path().join("drop.marker");
+    let (managed, rx) = spawn_helper_raw(
+        "spawn-grandchild-keepalive",
+        &[marker.to_str().unwrap(), "3", "60", "60"],
+    );
+    let parent_pid = managed.id();
+    let grandchild_pid = read_grandchild_pid(&rx);
+    let manager = JobManager::new(1);
+    let second_owner = manager.clone();
+    let worker_manager = manager.clone_for_worker();
+    let stop_requested =
+        insert_running_job(&manager, "drop-job", Some(Arc::new(Mutex::new(managed))));
+
+    drop(manager);
+    assert!(process_running(parent_pid) && process_running(grandchild_pid));
+    assert!(!stop_requested.load(Ordering::SeqCst));
+
+    drop(second_owner);
+    assert!(worker_manager.shutting_down.load(Ordering::SeqCst));
+    assert!(stop_requested.load(Ordering::SeqCst));
+    assert!(
+        wait_for_process_exit(parent_pid, Duration::from_secs(5), "drop-parent"),
+        "running job parent survived last owner drop"
+    );
+    assert!(
+        wait_for_process_exit(grandchild_pid, Duration::from_secs(5), "drop-grandchild"),
+        "running job descendant survived last owner drop"
+    );
+    assert!(wait_for_stdout_eof(&rx, Duration::from_secs(5), "drop-eof"));
+    drop(worker_manager);
+}
+
+/// Cleanup on an already-exited tree must be a no-op that never panics.
+#[test]
+fn cleanup_managed_tree_on_exited_tree_does_not_panic() {
+    let (managed, _rx) = spawn_helper_raw("sleep", &["0", "0"]);
+    let child = Arc::new(Mutex::new(managed));
+    assert!(wait_until(Duration::from_secs(5), || lock_unpoison(&child)
+        .try_wait()
+        .unwrap()
+        .is_some()));
+    cleanup_managed_tree(&child);
+    assert!(
+        lock_unpoison(&child).try_tree_exit().unwrap(),
+        "cleanup must leave an already-exited tree confirmed empty"
+    );
+}
+
+/// A user stop racing Runner shutdown must not deadlock or panic, and both
+/// paths must converge on a fully-terminated tree.
+#[test]
+fn job_stop_racing_shutdown_does_not_panic() {
+    let temp = tempfile::tempdir().unwrap();
+    let marker = temp.path().join("race.marker");
+    let (managed, rx) = spawn_helper_raw(
+        "spawn-grandchild-keepalive",
+        &[marker.to_str().unwrap(), "3", "60", "60"],
+    );
+    let parent_pid = managed.id();
+    let grandchild_pid = read_grandchild_pid(&rx);
+    let child = Arc::new(Mutex::new(managed));
+    let manager = JobManager::new(1);
+    insert_running_job(&manager, "race-job", Some(child.clone()));
+
+    let stop_manager = manager.clone();
+    let stopper = std::thread::spawn(move || {
+        let _ = stop_manager.stop("race-job");
+    });
+    manager.stop_accepting_work();
+    let batch = manager.signal_all_for_shutdown();
+    let outcome = manager.drain_shutdown(batch, Instant::now() + Duration::from_secs(2));
+    stopper.join().expect("stop thread must not panic");
+    assert!(outcome.resources >= 1);
+
+    assert!(wait_for_process_exit(
+        parent_pid,
+        Duration::from_secs(5),
+        "race-parent"
+    ));
+    assert!(wait_for_process_exit(
+        grandchild_pid,
+        Duration::from_secs(5),
+        "race-grandchild"
+    ));
+    assert!(wait_for_stdout_eof(&rx, Duration::from_secs(5), "race-eof"));
+}
+
+/// A job timeout must terminate the whole tree (parent shell, helper, and the
+/// helper's descendant) and publish exactly one `timeout` completion. Requires
+/// a real `sh` for the full worker path, so it runs on Linux.
+#[cfg(target_os = "linux")]
+#[test]
+fn job_timeout_terminates_the_whole_tree() {
+    let temp = tempfile::tempdir().unwrap();
+    let marker = temp.path().join("timeout-grandchild.marker");
+    let helper = job_tree_helper();
+    // `sh -c '<helper> spawn-grandchild-keepalive <marker> 3 60 60'` so the
+    // job's direct child spawns a grandchild and keeps running until timeout.
+    let command = format!(
+        "{} spawn-grandchild-keepalive {} 3 60 60",
+        helper.path.display(),
+        marker.display()
+    );
+    let (tx, mut rx) = tokio::sync::mpsc::channel(32);
+    let sink = AgentSink::WebSocket {
+        tx,
+        client_id: "timeout-agent".into(),
+        agent_instance_id: "timeout-instance".into(),
+    };
+    let manager = JobManager::new(1);
+    manager.enqueue(
+        sink,
+        1,
+        AgentPolicy {
+            allow_cwd_anywhere: true,
+            ..AgentPolicy::default()
+        },
+        ShellConfig::default(),
+        SshConfig::default(),
+        temp.path().join("projects.d"),
+        serde_json::from_value(json!({
+            "request_id": "timeout-request",
+            "client_id": "timeout-agent",
+            "kind": "start_job",
+            "job_id": "timeout-job",
+            "cwd": temp.path(),
+            "command": command,
+            "timeout_secs": 1,
+            "requested_by": "test",
+            "created_at": 1,
+            "job_context": test_job_context(temp.path(), Vec::new())
+        }))
+        .unwrap(),
+    );
+
+    let updates = collect_job_updates(&mut rx, Duration::from_secs(20));
+    let final_update = updates.last().expect("timeout job should finish");
+    assert!(final_update.finished, "{}", describe_update(final_update));
+    assert_eq!(final_update.status, "timeout", "{final_update:?}");
+    assert_eq!(final_update.exit_code, Some(-1), "{final_update:?}");
+    assert!(
+        final_update
+            .error
+            .as_deref()
+            .is_some_and(|error| error.contains("timed out")),
+        "{final_update:?}"
+    );
+    assert_eq!(
+        updates.iter().filter(|update| update.finished).count(),
+        1,
+        "timeout must produce exactly one finished update"
+    );
+
+    // The helper's captured stdout carries the grandchild pid, which must be
+    // gone after the timeout terminates the whole tree.
+    let stdout_tail = final_update
+        .log_snapshot
+        .as_ref()
+        .map(|log| log.stdout.tail.clone())
+        .unwrap_or_default();
+    let grandchild_pid =
+        extract_grandchild_pid(&stdout_tail).expect("GRANDCHILD_PID in job stdout");
+    assert!(
+        wait_for_process_exit(grandchild_pid, Duration::from_secs(5), "timeout-grandchild"),
+        "grandchild survived job timeout"
+    );
+    assert!(
+        !marker.exists(),
+        "delayed grandchild marker must never appear after timeout"
+    );
+}
