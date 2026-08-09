@@ -1,6 +1,6 @@
 {
   "name": "web-mcp-assistant",
-  "version": "0.1.6",
+  "version": "0.3.3",
   "description": "Trợ lý desktop Windows giúp triển khai và quản lý Coding Tools MCP, OpenAI Tunnel và kết nối ChatGPT chỉ với 1 cú nhấp chuột.",
   "author": "3169657175",
   "license": "MIT",
