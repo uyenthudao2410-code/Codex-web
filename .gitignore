@@ -16,7 +16,8 @@ data*
 # Generated patch files
 *.patch
 
-# Frontend dependencies
+# Dependencies
+node_modules/
 /frontend/node_modules
 
 # Local sensitive deployment config — NEVER commit these.
