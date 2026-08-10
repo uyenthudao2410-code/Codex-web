@@ -42,11 +42,11 @@ test('workspace manager exposes extra authorized roots without changing the chat
   assert.match(app, /updateAuthorizedRoots/);
 });
 
-test('package and manager identify the 0.3.3 release', () => {
+test('package and manager identify the 0.3.4 release', () => {
   const pkg = JSON.parse(read('package.json'));
   const manager = read('renderer/index.html');
-  assert.equal(pkg.version, '0.3.3');
-  assert.match(manager, /Trợ lý Web MCP <span>v0\.3\.3<\/span>/);
+  assert.equal(pkg.version, '0.3.4');
+  assert.match(manager, /Trợ lý Web MCP <span>v0\.3\.4<\/span>/);
   assert.match(manager, /Coding Tools MCP · 0\.4\.3/);
 });
 
