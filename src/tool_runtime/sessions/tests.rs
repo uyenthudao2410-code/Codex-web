@@ -20,6 +20,8 @@ fn session_tool_classification_uses_definition_policy() {
         ("start_session", "read_only"),
         ("write_project_file", "project_write"),
         ("apply_patch_checked", "project_write"),
+        ("run_process", "job_run"),
+        ("run_script", "job_run"),
         ("run_shell", "job_run"),
         ("cargo_test", "job_run"),
         ("definitely_not_a_tool", "unknown"),
@@ -321,6 +323,50 @@ fn exploration_input_audit_omits_queries_and_shell_commands() {
     assert_eq!(shell["command_present"], true);
     assert!(shell.get("command").is_none());
     assert!(shell.get("command_summary").is_none());
+
+    let process = session_input_summary_for_tool(
+        "run_process",
+        &json!({
+            "project": "demo",
+            "executable": "RAW_EXECUTABLE",
+            "args": ["RAW_ARG", "secret"],
+            "stdin": "RAW_STDIN",
+            "process_summary": "RAW_EXECUTABLE RAW_ARG",
+            "executable_present": true,
+            "arg_count": 2,
+            "stdin_present": true
+        }),
+    );
+    assert_eq!(process["executable_present"], true);
+    assert_eq!(process["arg_count"], 2);
+    assert_eq!(process["stdin_present"], true);
+    assert!(process.get("executable").is_none());
+    assert!(process.get("args").is_none());
+    assert!(process.get("stdin").is_none());
+    assert!(process.get("process_summary").is_none());
+
+    let script = session_input_summary_for_tool(
+        "run_script",
+        &json!({
+            "project": "demo",
+            "language": "bash",
+            "script": "RAW_SCRIPT_BODY",
+            "args": ["RAW_ARG", "secret"],
+            "stdin": "RAW_STDIN",
+            "script_summary": "bash script (15 bytes, 2 args)",
+            "script_bytes": 15,
+            "arg_count": 2,
+            "stdin_present": true
+        }),
+    );
+    assert_eq!(script["language"], "bash");
+    assert_eq!(script["script_bytes"], 15);
+    assert_eq!(script["arg_count"], 2);
+    assert_eq!(script["stdin_present"], true);
+    assert!(script.get("script").is_none());
+    assert!(script.get("args").is_none());
+    assert!(script.get("stdin").is_none());
+    assert!(script.get("script_summary").is_none());
 
     let persistent = session_input_summary_for_tool(
         "session_shell_exec",
@@ -2584,43 +2630,4 @@ fn closed_session_does_not_reopen() {
     assert!(again.already_closed);
     assert_eq!(again.summary.lifecycle, SessionLifecycle::Closed);
     assert!(!again.summary.lifecycle.allows_mutation());
-}
-
-#[test]
-fn streaming_compact_writer_and_borrowed_ref_parity() {
-    let tmp = tempfile::tempdir().unwrap();
-    let ledger_path = tmp.path().join("compact_sessions.json");
-    let store = SessionStore::with_persistence(ledger_path.clone(), 10, 20);
-
-    let session = store.start_session(Some("demo".to_string()), Some("compact test".to_string()));
-    let start = store.record_tool_call_started(
-        Some(&session.session_id),
-        SessionTransport::Api,
-        "read_file",
-        &json!({"project": "demo", "path": "src/main.rs"}),
-    );
-    store.record_tool_call_finished(
-        start,
-        true,
-        &json!({"content": "ok"}),
-        None,
-        None,
-    );
-    store.close_session(&session.session_id).unwrap();
-    store.flush_persistence();
-
-    let content = std::fs::read_to_string(&ledger_path).unwrap();
-    // Compact JSON should not contain pretty-print newlines within indentation.
-    assert!(!content.contains("\n  \"version\""));
-
-    let restored = load_persisted_ledger(&ledger_path, 10, 20, 8);
-    assert_eq!(restored.restored_sessions, 1);
-    let restored_session = restored.sessions.get(&session.session_id).unwrap();
-    assert_eq!(restored_session.lifecycle, SessionLifecycle::Closed);
-
-    // Verify borrowed ref snapshot serializes identically to restored content.
-    let inner = store.inner.lock().unwrap();
-    let ref_snapshot = inner.to_persisted_ledger_ref();
-    let ref_json = serde_json::to_string(&ref_snapshot).unwrap();
-    assert_eq!(content, ref_json);
 }

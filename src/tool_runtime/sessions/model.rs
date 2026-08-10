@@ -534,42 +534,6 @@ pub(super) struct PersistedSessionRecord {
     pub(super) events_observed: u64,
 }
 
-#[derive(Debug, Serialize)]
-pub(super) struct PersistedSessionLedgerRef<'a> {
-    pub(super) version: u32,
-    pub(super) sessions: Vec<PersistedSessionRecordRef<'a>>,
-    pub(super) durable_current_bindings: PersistedCurrentBindingsRef<'a>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub(super) struct PersistedCurrentBindingRef<'a> {
-    pub(super) binding_key_sha256: &'a str,
-    pub(super) session_id: &'a str,
-    pub(super) updated_at: i64,
-}
-
-#[derive(Debug, Default, Serialize)]
-pub(super) struct PersistedCurrentBindingsRef<'a> {
-    pub(super) records: Vec<PersistedCurrentBindingRef<'a>>,
-    pub(super) malformed_count: usize,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct PersistedSessionRecordRef<'a> {
-    pub(super) session_id: &'a str,
-    pub(super) project: Option<&'a str>,
-    pub(super) title: Option<&'a str>,
-    pub(super) mode: SessionMode,
-    pub(super) guards: SessionGuards,
-    pub(super) execution_context: &'a SessionExecutionContext,
-    pub(super) lifecycle: SessionLifecycle,
-    pub(super) created_at: i64,
-    pub(super) updated_at: i64,
-    pub(super) events: Vec<&'a SessionEvent>,
-    pub(super) messages: Vec<&'a SessionMessage>,
-    pub(super) events_observed: u64,
-}
-
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub(crate) struct SessionGuards {
     pub(crate) deny_write_tools: bool,

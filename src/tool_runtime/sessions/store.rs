@@ -21,15 +21,14 @@ use super::events::{
 use super::model::{
     CodingSessionError, CodingSessionOutcome, CodingSessionRequest, CurrentSessionKey,
     DurableCurrentBinding, ListSessionMessagesFilter, PersistedCurrentBinding,
-    PersistedCurrentBindingRef, PersistedCurrentBindings, PersistedCurrentBindingsRef,
-    PersistedSessionLedger, PersistedSessionLedgerRef, PersistedSessionRecord,
-    PersistedSessionRecordRef, PersistentShellEventEvidence, PostSessionMessageInput,
-    SessionCloseError, SessionCloseOutcome, SessionCounts, SessionCreateOptions,
-    SessionDiscussionSummary, SessionEvent, SessionExecutionContext,
-    SessionExecutionContextUpdateError, SessionExecutionContextUpdateOutcome, SessionGuardDenial,
-    SessionGuards, SessionInboxHint, SessionLifecycle, SessionLifecycleDenial, SessionMessage,
-    SessionMessageError, SessionMessageStatus, SessionRecord, SessionStoreStatus, SessionSummary,
-    SessionTransport, ToolCallRecorderMetadata, ToolCallStart, DEFAULT_MAX_EVENTS_PER_SESSION,
+    PersistedCurrentBindings, PersistedSessionLedger, PersistedSessionRecord,
+    PersistentShellEventEvidence, PostSessionMessageInput, SessionCloseError, SessionCloseOutcome,
+    SessionCounts, SessionCreateOptions, SessionDiscussionSummary, SessionEvent,
+    SessionExecutionContext, SessionExecutionContextUpdateError,
+    SessionExecutionContextUpdateOutcome, SessionGuardDenial, SessionGuards, SessionInboxHint,
+    SessionLifecycle, SessionLifecycleDenial, SessionMessage, SessionMessageError,
+    SessionMessageStatus, SessionRecord, SessionStoreStatus, SessionSummary, SessionTransport,
+    ToolCallRecorderMetadata, ToolCallStart, DEFAULT_MAX_EVENTS_PER_SESSION,
     DEFAULT_MAX_MESSAGES_PER_SESSION, DEFAULT_MAX_SESSIONS, DEFAULT_MESSAGE_LIST_LIMIT,
     DEFAULT_SUMMARY_LIMIT, DURABLE_CURRENT_BINDINGS_PER_SESSION, EVENT_ID_PREFIX,
     MAX_CODING_INSTRUCTION_CHARS, MAX_MESSAGE_LIST_LIMIT, MAX_SUMMARY_LIMIT, MESSAGE_ID_PREFIX,
@@ -218,7 +217,7 @@ fn ledger_writer_loop(
                 .persistence
                 .as_ref()
                 .map(|persistence| persistence.path.clone());
-            path.map(|path| (path, inner.to_persisted_ledger_ref()))
+            path.map(|path| (path, inner.to_persisted_ledger()))
         };
         let result = match snapshot {
             Some((path, ledger)) => write_ledger_atomic(&path, &ledger).map_err(|err| {
@@ -1279,7 +1278,7 @@ impl SessionStore {
 
     pub(super) fn persist_after_mutation_with(
         &self,
-        write_ledger: impl FnOnce(&PathBuf, &PersistedSessionLedgerRef) -> io::Result<()>,
+        write_ledger: impl FnOnce(&PathBuf, &PersistedSessionLedger) -> io::Result<()>,
     ) {
         let _write_guard = self
             .persistence_write_mutex
@@ -1291,7 +1290,7 @@ impl SessionStore {
                 .persistence
                 .as_ref()
                 .map(|persistence| persistence.path.clone());
-            path.map(|path| (path, inner.to_persisted_ledger_ref()))
+            path.map(|path| (path, inner.to_persisted_ledger()))
         }) else {
             return;
         };
@@ -1598,8 +1597,6 @@ impl SessionStoreInner {
                     while record.events.len() > max_events {
                         record.events.pop_front();
                     }
-                    record.events.shrink_to_fit();
-                    record.messages.shrink_to_fit();
                 }
                 self.remove_bindings_for_session(session_id);
                 let summary = self
@@ -1959,43 +1956,6 @@ impl SessionStoreInner {
         self.sessions.get(session_id).map(|record| record.lifecycle)
     }
 
-    fn to_persisted_ledger_ref(&self) -> PersistedSessionLedgerRef<'_> {
-        let sessions = self
-            .lru
-            .iter()
-            .filter_map(|session_id| self.sessions.get(session_id))
-            .map(|record| PersistedSessionRecordRef::from_record(record, self.max_events_per_session))
-            .collect();
-        let mut durable_current_bindings: Vec<PersistedCurrentBindingRef<'_>> = self
-            .durable_current_bindings
-            .iter()
-            .filter(|(_, binding)| {
-                self.sessions
-                    .get(&binding.session_id)
-                    .is_some_and(|session| session.lifecycle.allows_mutation())
-            })
-            .map(|(binding_key_sha256, binding)| PersistedCurrentBindingRef {
-                binding_key_sha256: binding_key_sha256.as_str(),
-                session_id: binding.session_id.as_str(),
-                updated_at: binding.updated_at,
-            })
-            .collect();
-        durable_current_bindings.sort_by(|left, right| {
-            left.updated_at
-                .cmp(&right.updated_at)
-                .then_with(|| left.binding_key_sha256.cmp(right.binding_key_sha256))
-        });
-        PersistedSessionLedgerRef {
-            version: SESSION_LEDGER_VERSION,
-            sessions,
-            durable_current_bindings: PersistedCurrentBindingsRef {
-                records: durable_current_bindings,
-                malformed_count: 0,
-            },
-        }
-    }
-
-    #[cfg(test)]
     fn to_persisted_ledger(&self) -> PersistedSessionLedger {
         let sessions = self
             .lru

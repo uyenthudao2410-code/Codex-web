@@ -10,41 +10,16 @@ use super::events::{
     sanitize_persistent_shell_event_evidence, session_input_summary_for_tool,
 };
 use super::model::{
-    DurableCurrentBinding, PersistedCurrentBindingRef, PersistedCurrentBindingsRef,
-    PersistedSessionLedger, PersistedSessionLedgerRef, PersistedSessionRecord,
-    PersistedSessionRecordRef, SessionEvent, SessionGuards, SessionLifecycle, SessionMessage,
-    SessionRecord, DEFAULT_MAX_MESSAGES_PER_SESSION, EVENT_ID_PREFIX,
-    MAX_CODING_INSTRUCTION_CHARS, MAX_INPUT_ARRAY_ITEMS, MAX_MESSAGE_CHARS,
-    MAX_MESSAGE_RESOLUTION_CHARS, MESSAGE_ID_PREFIX, SESSION_LEDGER_VERSION,
+    DurableCurrentBinding, PersistedSessionLedger, PersistedSessionRecord, SessionEvent,
+    SessionGuards, SessionLifecycle, SessionMessage, SessionRecord,
+    DEFAULT_MAX_MESSAGES_PER_SESSION, EVENT_ID_PREFIX, MAX_CODING_INSTRUCTION_CHARS,
+    MAX_INPUT_ARRAY_ITEMS, MAX_MESSAGE_CHARS, MAX_MESSAGE_RESOLUTION_CHARS, MESSAGE_ID_PREFIX,
+    SESSION_LEDGER_VERSION,
 };
 use super::query::validate_message_tags;
 use super::util::{
     bound_chars, bound_event_error_summary, bound_summary_string, redact_and_bound_instruction,
 };
-
-impl<'a> PersistedSessionRecordRef<'a> {
-    pub(super) fn from_record(record: &'a SessionRecord, max_events_per_session: usize) -> Self {
-        let event_skip = record.events.len().saturating_sub(max_events_per_session);
-        let message_skip = record
-            .messages
-            .len()
-            .saturating_sub(DEFAULT_MAX_MESSAGES_PER_SESSION);
-        Self {
-            session_id: &record.session_id,
-            project: record.project.as_deref(),
-            title: record.title.as_deref(),
-            mode: record.mode,
-            guards: record.guards,
-            execution_context: &record.execution_context,
-            lifecycle: record.lifecycle,
-            created_at: record.created_at,
-            updated_at: record.updated_at,
-            events: record.events.iter().skip(event_skip).collect(),
-            messages: record.messages.iter().skip(message_skip).collect(),
-            events_observed: record.events_observed,
-        }
-    }
-}
 
 impl PersistedSessionRecord {
     pub(super) fn from_record(record: &SessionRecord, max_events_per_session: usize) -> Self {
@@ -105,7 +80,7 @@ impl PersistedSessionRecord {
         } else {
             Default::default()
         };
-        let mut record = SessionRecord {
+        Some(SessionRecord {
             session_id,
             project,
             title: self.title.map(|value| bound_summary_string(value.trim())),
@@ -120,12 +95,7 @@ impl PersistedSessionRecord {
             events_observed: self.events_observed.max(retained_events),
             messages,
             project_instructions: None,
-        };
-        if record.lifecycle != SessionLifecycle::Active {
-            record.events.shrink_to_fit();
-            record.messages.shrink_to_fit();
-        }
-        Some(record)
+        })
     }
 }
 
@@ -276,9 +246,9 @@ fn is_lower_hex_sha256(value: &str) -> bool {
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte))
 }
 
-pub(super) fn write_ledger_atomic<T: serde::Serialize>(
+pub(super) fn write_ledger_atomic(
     path: &PathBuf,
-    ledger: &T,
+    ledger: &PersistedSessionLedger,
 ) -> io::Result<()> {
     if let Some(parent) = path
         .parent()
@@ -294,17 +264,8 @@ pub(super) fn write_ledger_atomic<T: serde::Serialize>(
         ".{file_name}.tmp-{}",
         uuid::Uuid::new_v4().simple()
     ));
-
-    let write_res = (|| -> io::Result<()> {
-        use io::Write;
-        let file = fs::File::create(&tmp_path)?;
-        let mut writer = io::BufWriter::new(file);
-        serde_json::to_writer(&mut writer, ledger).map_err(io::Error::other)?;
-        writer.flush()?;
-        Ok(())
-    })();
-
-    if let Err(err) = write_res.and_then(|_| fs::rename(&tmp_path, path)) {
+    let data = serde_json::to_vec_pretty(ledger).map_err(io::Error::other)?;
+    if let Err(err) = fs::write(&tmp_path, data).and_then(|_| fs::rename(&tmp_path, path)) {
         let _ = fs::remove_file(&tmp_path);
         return Err(err);
     }
