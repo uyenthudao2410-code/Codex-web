@@ -3,6 +3,10 @@
 node_modules/
 **/node_modules/
 dist/
+**/dist/
+build/
+out/
+.electron-builder-cache/
 Tools-Codex-web/
 
 # Excel & Spreadsheet files
