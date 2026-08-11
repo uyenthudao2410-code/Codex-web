@@ -1,12 +1,30 @@
 # Build artifacts
 /target
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+out/
+.electron-builder-cache/
+Tools-Codex-web/
+
+# Excel & Spreadsheet files
+*.xlsx
+*.xls
+*.xlsm
+*.xlsb
+*.csv
+*.ods
+
+# Accounts & local data
+ACC/
+data*
 
 # Python test caches
 __pycache__/
+**/__pycache__/
 *.pyc
-
-# Local runtime data (SQLite DB, uploads, job metadata)
-data*
 
 # Local Codex CLI workspace
 .codex
@@ -37,9 +55,8 @@ data*
 
 # Local-only documentation archive for notes intentionally removed from git.
 /docs-local-archive/
-
-# Local scratch material and reports that must not be committed.
 /ignore/
 
 # Watched frontend development output.
 /frontend/.dev-dist/
+
