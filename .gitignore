@@ -1,7 +1,5 @@
 # Build artifacts
 /target
-/dist
-dist/
 
 # Python test caches
 __pycache__/
@@ -16,8 +14,7 @@ data*
 # Generated patch files
 *.patch
 
-# Dependencies
-node_modules/
+# Frontend dependencies
 /frontend/node_modules
 
 # Local sensitive deployment config — NEVER commit these.

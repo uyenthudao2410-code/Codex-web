@@ -696,6 +696,10 @@ impl AgentProjectCache {
         self.projects.clone()
     }
 
+    pub(crate) fn needs_refresh(&self) -> bool {
+        self.refreshed_at.is_none()
+    }
+
     pub(crate) fn invalidate(&mut self) {
         self.projects.clear();
         self.refreshed_at = None;
@@ -1170,10 +1174,10 @@ fn canonical_project_path_hash(canonical_path: &Path) -> String {
     #[cfg(unix)]
     {
         use std::os::unix::ffi::OsStrExt;
-        return format!(
+        format!(
             "{:x}",
             Sha256::digest(canonical_path.as_os_str().as_bytes())
-        );
+        )
     }
     #[cfg(not(unix))]
     format!(
@@ -1677,7 +1681,7 @@ pub(crate) fn handle_project_lifecycle_op(
         if let Err(error_kind) = validate_windows_project_root(&canonical) {
             return project_error_cmd(start, error_kind);
         }
-        if let Err(_) = validate_project_path_policy(policy, &canonical) {
+        if validate_project_path_policy(policy, &canonical).is_err() {
             return project_error_cmd(start, "path_outside_allowed_roots");
         }
     }
