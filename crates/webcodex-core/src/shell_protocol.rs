@@ -1,0 +1,3672 @@
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashSet};
+use std::path::PathBuf;
+
+pub const EXTERNAL_SEARCH_REQUEST_PREFIX: &str = "# webcodex:search_project_text:v1";
+
+fn default_shell_true() -> bool {
+    true
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
+fn default_timeout_secs() -> u64 {
+    120
+}
+
+fn default_wait_timeout_secs() -> u64 {
+    30
+}
+
+fn default_agent_request_kind() -> String {
+    "run_shell".to_string()
+}
+
+fn default_shell_job_kind() -> String {
+    "shell".to_string()
+}
+
+/// Default `agent_protocol_version` used when a client registers without
+/// declaring one. Old agents that predate the version field show up as
+/// `"unknown"` so operators can distinguish them from agents that explicitly
+/// announce `"polling-v1"`.
+fn default_agent_protocol_version() -> String {
+    "unknown".to_string()
+}
+
+/// Default `transport` for `ShellClientView` when deserializing views that
+/// predate the transport field (e.g. older snapshots). Polling is the legacy
+/// default.
+fn default_transport_polling() -> String {
+    "polling".to_string()
+}
+
+/// Protocol version announced by current `webcodex-runner` polling builds.
+pub const AGENT_PROTOCOL_VERSION_POLLING_V1: &str = "polling-v1";
+pub const VALIDATION_STEP_SPAWN_FAILED_CODE: &str = "validation_step_spawn_failed";
+pub const VALIDATION_TOOL_UNAVAILABLE_CODE: &str = "validation_tool_unavailable";
+/// The step ran, but the executor lost the ability to reap it — `waitpid`
+/// answered with an error rather than a status. Distinct from a spawn
+/// failure because the process did start, and distinct from a step failure
+/// because nothing is known about how the step would have ended. Without its
+/// own code it is indistinguishable from "the check failed", which blames the
+/// project for the host's problem.
+pub const VALIDATION_STEP_WAIT_FAILED_CODE: &str = "validation_step_wait_failed";
+
+/// Return the canonical code when a validation result describes executor
+/// infrastructure rather than a failed project check.
+///
+/// The runner uses this to avoid naming a failed check, the server protocol
+/// validator uses it to accept that shape, and the connector uses it to
+/// attribute the failure to the executor. Keeping the set here prevents those
+/// three decisions from drifting apart.
+pub fn validation_infrastructure_failure_code(error: &str) -> Option<&'static str> {
+    match error {
+        VALIDATION_STEP_SPAWN_FAILED_CODE => Some(VALIDATION_STEP_SPAWN_FAILED_CODE),
+        VALIDATION_TOOL_UNAVAILABLE_CODE => Some(VALIDATION_TOOL_UNAVAILABLE_CODE),
+        VALIDATION_STEP_WAIT_FAILED_CODE => Some(VALIDATION_STEP_WAIT_FAILED_CODE),
+        _ => None,
+    }
+}
+
+/// Maximum byte length of the single argv value that may follow `cargo test`.
+pub const RUST_TEST_FILTER_MAX_BYTES: usize = 200;
+
+/// Maximum byte length of a value-taking Cargo argument (`--features`,
+/// `-p`). Matches the `is_canonical` per-argument bound.
+pub const CARGO_VALUE_MAX_BYTES: usize = 500;
+
+/// Protocol version announced by `webcodex-runner` builds that connect over
+/// WebSocket. Kept in the shared protocol module so both the server and the
+/// agent binary reference the same literal.
+pub const AGENT_PROTOCOL_VERSION_WEBSOCKET_V1: &str = "websocket-v1";
+
+/// Protocol version announced by `webcodex-runner` builds that connect over the
+/// custom QUIC stream transport. Kept in the shared protocol module so the
+/// server and the agent binary reference the same literal.
+///
+/// `quic-v1` is the custom QUIC stream transport protocol version. It uses the
+/// same `AgentEnvelope` model for registration, keepalive, request dispatch,
+/// results, and job updates. The transport label remains `"quic"` (see
+/// `TRANSPORT_QUIC`).
+pub const AGENT_PROTOCOL_VERSION_QUIC_V1: &str = "quic-v1";
+pub const AGENT_QUIC_ALPN_V1: &str = "webcodex-runner/1";
+
+pub const SHELL_CLIENT_CAPABILITY_SHELL: &str = "shell";
+pub const SHELL_CLIENT_CAPABILITY_FILE_READ: &str = "file_read";
+pub const SHELL_CLIENT_CAPABILITY_FILE_WRITE: &str = "file_write";
+pub const SHELL_CLIENT_CAPABILITY_GIT: &str = "git";
+pub const SHELL_CLIENT_CAPABILITY_JOBS: &str = "jobs";
+pub const SHELL_CLIENT_CAPABILITY_ASYNC_JOBS: &str = "async_jobs";
+pub const SHELL_CLIENT_CAPABILITY_ASYNC_SHELL_JOBS: &str = "async_shell_jobs";
+/// Runner-side SSH shell execution for Workflow Session resources. This is
+/// deliberately separate from ordinary local shell support: older runners
+/// must reject a Session-bound SSH request rather than silently running it on
+/// their local project checkout.
+pub const SHELL_CLIENT_CAPABILITY_SSH_SHELL: &str = "ssh_shell";
+/// Command-oriented, long-lived local shell processes owned by one Workflow
+/// Session. Missing on older runners and therefore fails closed.
+pub const SHELL_CLIENT_CAPABILITY_PERSISTENT_SHELL: &str = "persistent_shell";
+/// Long-lived persistent shells opened on a Workflow Session's SSH resource.
+/// This is deliberately separate from `ssh_shell` and `persistent_shell`: an
+/// SSH persistent shell requires all three, and older runners that predate it
+/// must reject the request rather than silently opening a local shell.
+pub const SHELL_CLIENT_CAPABILITY_SSH_PERSISTENT_SHELL: &str = "ssh_persistent_shell";
+pub const SHELL_CLIENT_CAPABILITY_STRUCTURED_VALIDATION_ARGV: &str = "structured_validation_argv";
+/// General model-facing native process execution with a typed executable and
+/// argv. This is deliberately independent from structured Cargo validation:
+/// older Runners may support validation argv without accepting arbitrary
+/// process argv.
+pub const SHELL_CLIENT_CAPABILITY_STRUCTURED_PROCESS_ARGV: &str = "structured_process_argv";
+/// Model-facing bounded script content carried as typed protocol data. This is
+/// deliberately independent from raw shell and native process argv support:
+/// older Runners must fail closed rather than interpreting script text through
+/// the legacy command channel.
+pub const SHELL_CLIENT_CAPABILITY_STRUCTURED_SCRIPT_PAYLOAD: &str = "structured_script_payload";
+/// Durable Job execution for both typed native processes and typed script
+/// payloads. This is deliberately independent from the synchronous structured
+/// execution and legacy async-shell capabilities: older B1/B2 Runners may
+/// advertise those capabilities without understanding typed Job starts.
+pub const SHELL_CLIENT_CAPABILITY_STRUCTURED_EXECUTION_JOBS: &str = "structured_execution_jobs";
+/// Explicit capability for agent-side read-only LSP navigation. Missing on
+/// older agents and defaults to `false` so the server never dispatches typed
+/// LSP requests to agents that cannot handle them.
+pub const SHELL_CLIENT_CAPABILITY_LSP_READ_ONLY_NAVIGATION: &str = "lsp_read_only_navigation";
+/// Linux Landlock ABI v3 inspect-command write sandbox.
+pub const SHELL_CLIENT_CAPABILITY_SANDBOX_INSPECT_COMMANDS: &str = "sandbox_inspect_commands";
+pub const SHELL_CLIENT_CAPABILITY_PROJECT_LIFECYCLE: &str = "project_lifecycle";
+/// Resolve an absolute canonical project path to an existing registration or
+/// atomically persist a new projects.d entry. Missing on older runners and
+/// therefore fails closed.
+pub const SHELL_CLIENT_CAPABILITY_PROJECT_PATH_REGISTRATION: &str = "project_path_registration";
+/// Same-process async job recovery across server restarts and transport
+/// reconnects. Missing on older runners and therefore defaults to `false`.
+pub const SHELL_CLIENT_CAPABILITY_JOB_STATE_RECONCILIATION: &str = "job_state_reconciliation";
+pub const SHELL_CLIENT_CAPABILITY_NAMES: &[&str] = &[
+    SHELL_CLIENT_CAPABILITY_SHELL,
+    SHELL_CLIENT_CAPABILITY_FILE_READ,
+    SHELL_CLIENT_CAPABILITY_FILE_WRITE,
+    SHELL_CLIENT_CAPABILITY_GIT,
+    SHELL_CLIENT_CAPABILITY_JOBS,
+    SHELL_CLIENT_CAPABILITY_ASYNC_JOBS,
+    SHELL_CLIENT_CAPABILITY_ASYNC_SHELL_JOBS,
+    SHELL_CLIENT_CAPABILITY_SSH_SHELL,
+    SHELL_CLIENT_CAPABILITY_PERSISTENT_SHELL,
+    SHELL_CLIENT_CAPABILITY_SSH_PERSISTENT_SHELL,
+    SHELL_CLIENT_CAPABILITY_STRUCTURED_VALIDATION_ARGV,
+    SHELL_CLIENT_CAPABILITY_STRUCTURED_PROCESS_ARGV,
+    SHELL_CLIENT_CAPABILITY_STRUCTURED_SCRIPT_PAYLOAD,
+    SHELL_CLIENT_CAPABILITY_STRUCTURED_EXECUTION_JOBS,
+    SHELL_CLIENT_CAPABILITY_LSP_READ_ONLY_NAVIGATION,
+    SHELL_CLIENT_CAPABILITY_SANDBOX_INSPECT_COMMANDS,
+    SHELL_CLIENT_CAPABILITY_PROJECT_LIFECYCLE,
+    SHELL_CLIENT_CAPABILITY_PROJECT_PATH_REGISTRATION,
+    SHELL_CLIENT_CAPABILITY_JOB_STATE_RECONCILIATION,
+];
+
+/// Maximum retained bytes for one stdout or stderr stream in a runner job
+/// snapshot. The server may retain a larger live tail, but reconciliation
+/// deliberately converges to this bounded authoritative runner tail.
+pub const JOB_SNAPSHOT_STREAM_MAX_BYTES: usize = 64 * 1024;
+/// Runner inventory includes every active job or rejects further job starts.
+pub const JOB_INVENTORY_MAX_ACTIVE_JOBS: usize = 64;
+/// Terminal snapshots retained by one runner process.
+pub const JOB_INVENTORY_MAX_TERMINAL_JOBS: usize = 64;
+pub const JOB_INVENTORY_MAX_JOBS: usize =
+    JOB_INVENTORY_MAX_ACTIVE_JOBS + JOB_INVENTORY_MAX_TERMINAL_JOBS;
+/// Leaves headroom below the server's default 2 MiB polling request-body
+/// ceiling as well as the shared 8 MiB WebSocket/QUIC frame ceiling for
+/// registration, project, policy, and envelope metadata.
+pub const JOB_INVENTORY_MAX_SERIALIZED_BYTES: usize = 1024 * 1024;
+/// Same-process terminal results remain available long enough for ordinary
+/// reconnect backoff without becoming an unbounded process-lifetime ledger.
+pub const JOB_TERMINAL_RETENTION_SECS: i64 = 15 * 60;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellClientCapabilities {
+    #[serde(default = "default_shell_true")]
+    pub shell: bool,
+    #[serde(default)]
+    pub file_read: bool,
+    #[serde(default)]
+    pub file_write: bool,
+    #[serde(default)]
+    pub git: bool,
+    #[serde(default)]
+    pub jobs: bool,
+    #[serde(default)]
+    pub async_jobs: bool,
+    #[serde(default)]
+    pub async_shell_jobs: bool,
+    /// The Runner can execute a Workflow Session's configured SSH resource.
+    /// Missing on older runners and therefore fails closed.
+    #[serde(default)]
+    pub ssh_shell: bool,
+    /// The Runner supports explicit Workflow Session persistent shells on its
+    /// own host. This does not imply SSH or PTY support.
+    #[serde(default)]
+    pub persistent_shell: bool,
+    /// The Runner can open a long-lived persistent shell on a Workflow Session's
+    /// SSH resource. Missing on older runners and therefore fails closed; it is
+    /// never inferred from `ssh_shell` + `persistent_shell`.
+    #[serde(default)]
+    pub ssh_persistent_shell: bool,
+    /// Validation plans use a fixed executable plus argv, never shell text.
+    /// Missing on older agents and therefore fail-closed.
+    #[serde(default)]
+    pub structured_validation_argv: bool,
+    /// General native executable + argv requests. Missing on older agents and
+    /// therefore false; the Server must fail closed without a shell fallback.
+    #[serde(default)]
+    pub structured_process_argv: bool,
+    /// Bounded typed script payloads executed from Runner-owned temporary
+    /// files. Missing on older agents and therefore false; this is never
+    /// inferred from shell, validation argv, or process argv support.
+    #[serde(default)]
+    pub structured_script_payload: bool,
+    /// Typed process and typed script requests can execute as durable Jobs.
+    /// Missing on older agents and therefore false; it is never inferred from
+    /// any synchronous structured-execution or async-shell capability.
+    #[serde(default)]
+    pub structured_execution_jobs: bool,
+    /// Read-only semantic navigation via agent-side rust-analyzer. Defaults to
+    /// false for wire compatibility with older agents.
+    #[serde(default)]
+    pub lsp_read_only_navigation: bool,
+    /// The runner can fail-closed enforce the Linux Landlock ABI v3 write
+    /// sandbox used by inspect commands.
+    #[serde(default)]
+    pub sandbox_inspect_commands: bool,
+    /// Structured project enable/disable/unregister requests. Missing on older
+    /// runners and therefore fail-closed.
+    #[serde(default)]
+    pub project_lifecycle: bool,
+    /// The Runner can resolve an absolute canonical project path or
+    /// atomically register it. Missing on older runners and therefore
+    /// fail-closed.
+    #[serde(default)]
+    pub project_path_registration: bool,
+    /// The runner retains bounded active and recent terminal job snapshots and
+    /// submits a complete active inventory at register/re-register time.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub job_state_reconciliation: bool,
+}
+
+/// Bounded, non-secret status for the agent's active configuration generation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentConfigReloadStatus {
+    pub generation: u64,
+    pub last_reload_result: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_reload_error_code: Option<String>,
+    pub restart_required: bool,
+    #[serde(default)]
+    pub restart_required_fields: Vec<String>,
+}
+
+impl Default for AgentConfigReloadStatus {
+    fn default() -> Self {
+        Self {
+            generation: 1,
+            last_reload_result: "not_attempted".to_string(),
+            last_reload_error_code: None,
+            restart_required: false,
+            restart_required_fields: Vec::new(),
+        }
+    }
+}
+
+impl Default for ShellClientCapabilities {
+    fn default() -> Self {
+        Self {
+            shell: true,
+            file_read: false,
+            file_write: false,
+            git: false,
+            jobs: false,
+            async_jobs: false,
+            async_shell_jobs: false,
+            ssh_shell: false,
+            persistent_shell: false,
+            ssh_persistent_shell: false,
+            structured_validation_argv: false,
+            structured_process_argv: false,
+            structured_script_payload: false,
+            structured_execution_jobs: false,
+            lsp_read_only_navigation: false,
+            sandbox_inspect_commands: false,
+            project_lifecycle: false,
+            project_path_registration: false,
+            job_state_reconciliation: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentProjectSummary {
+    pub id: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    pub path: String,
+    #[serde(default = "default_shell_true")]
+    pub allow_patch: bool,
+    #[serde(default)]
+    pub kind: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub hooks: Vec<String>,
+    #[serde(default)]
+    pub disabled: bool,
+    /// Stable SHA-256 revision of the persisted projects.d TOML content.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<String>,
+    #[serde(default)]
+    pub git_branch: Option<String>,
+    #[serde(default)]
+    pub git_head: Option<String>,
+    #[serde(default)]
+    pub git_dirty: Option<bool>,
+    pub updated_at: i64,
+    /// Project-bound shell profile name (`project.shell_profile`). Non-secret:
+    /// just a profile name. `None` means the project did not override the
+    /// profile, so the agent falls back to `shell.default_profile`. Carried so
+    /// `listProjects` / `runtime_status` can show which profile a project uses
+    /// without exposing env values or init_script contents.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell_profile: Option<String>,
+}
+
+/// Sanitized summary of one configured shell profile. Exposes ONLY safe
+/// metadata: whether an init_script is set (boolean, never the body), the
+/// number of env keys (never the values), the resolved program, and the arg
+/// count. Used by `ShellProfilesSummary`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellProfileSummaryEntry {
+    pub name: String,
+    pub has_init_script: bool,
+    pub env_keys_count: usize,
+    pub program: String,
+    pub args_count: usize,
+    /// Shell dialect for this profile derived from the resolved program
+    /// basename: `sh`, `bash`, or `custom`. Older agents omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dialect: Option<String>,
+}
+
+/// Sanitized summary of an agent's prepared-shell-profile configuration.
+/// Reported by the agent at registration (carried inside `AgentPolicySummary`)
+/// and exposed in `runtime_status` / `listAgents` / `listProjects` so users can
+/// see which profiles are configured and which one a project resolves to.
+///
+/// This summary NEVER includes: init_script bodies, env values, tokens,
+/// Authorization headers, full agent.toml, the full env snapshot, or stderr
+/// tails. `prepared_cache_count` reflects the number of prepared snapshots at
+/// the last registration (snapshots are prepared lazily on first use, so this
+/// is typically 0 right after agent start; it is not a live counter).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellProfilesSummary {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_profile: Option<String>,
+    pub configured_count: usize,
+    pub prepared_cache_count: usize,
+    pub profiles: Vec<ShellProfileSummaryEntry>,
+    /// Dialect of the default execution path when no explicit `shell` is
+    /// selected: `sh`, `bash`, or `custom`. Reported by the runner from its
+    /// actual configuration; the server never guesses. Older agents omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_dialect: Option<String>,
+    /// Dialects an explicit `shell=` selection can resolve to on this runner
+    /// (always includes `sh` and `bash`; configured custom profiles add
+    /// `custom`). Older agents omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub available_dialects: Option<Vec<String>>,
+}
+
+/// Bounded, non-secret snapshot of the agent's experimental tool providers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ToolProvidersStatus {
+    pub strategy: String,
+    pub claude_code: ClaudeCodeProviderStatus,
+    #[serde(default)]
+    pub config_reload: AgentConfigReloadStatus,
+}
+
+/// Bounded evidence for the most recent allowlisted external-provider route.
+/// This is metadata only: it never carries tool arguments, file contents,
+/// project paths, stderr, or raw RPC payloads.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProviderCallSummary {
+    pub capability: String,
+    pub selected_provider: String,
+    pub fallback_used: bool,
+    pub result: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_state: Option<String>,
+    pub duration_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_code: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ClaudeCodeProviderStatus {
+    pub enabled: bool,
+    pub version: Option<String>,
+    pub available: bool,
+    pub process_state: String,
+    pub discovered_tool_names: Vec<String>,
+    pub capabilities: BTreeMap<String, String>,
+    pub last_error_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_call: Option<ProviderCallSummary>,
+}
+
+/// Sanitized agent policy summary. Carried in the registration payload and
+/// exposed in `runtime_status` / `listAgents`. Contains ONLY non-secret
+/// fields: it never includes the agent token, shell env values, init_script
+/// contents, or full agent.toml contents. `allowed_roots` is intentionally
+/// exposed as a path-policy summary. `shell_profiles` carries the sanitized
+/// prepared-shell-profile configuration summary (profile names, default
+/// profile, counts) so observability can show which profile a project uses;
+/// it never carries env values or init_script bodies.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentPolicySummary {
+    #[serde(default = "default_shell_true")]
+    pub allow_raw_shell: bool,
+    #[serde(default)]
+    pub allow_cwd_anywhere: bool,
+    #[serde(default)]
+    pub allowed_roots: Vec<PathBuf>,
+    #[serde(default = "default_policy_max_timeout_secs")]
+    pub max_timeout_secs: u64,
+    #[serde(default = "default_policy_max_output_bytes")]
+    pub max_output_bytes: usize,
+    /// Sanitized prepared-shell-profile summary. `None` for older agents that
+    /// did not report one. Never carries env values or init_script bodies.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell_profiles: Option<ShellProfilesSummary>,
+    /// Read-only provider state captured when the agent registers/reconnects.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_providers: Option<ToolProvidersStatus>,
+}
+
+impl Default for AgentPolicySummary {
+    fn default() -> Self {
+        Self {
+            allow_raw_shell: true,
+            allow_cwd_anywhere: false,
+            allowed_roots: Vec::new(),
+            max_timeout_secs: default_policy_max_timeout_secs(),
+            max_output_bytes: default_policy_max_output_bytes(),
+            shell_profiles: None,
+            tool_providers: None,
+        }
+    }
+}
+
+fn default_policy_max_timeout_secs() -> u64 {
+    3600
+}
+
+fn default_policy_max_output_bytes() -> usize {
+    256 * 1024
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientRegisterRequest {
+    pub client_id: String,
+    /// Stable per-process identity for the registering agent. Generated once
+    /// by `webcodex-runner` at startup and reused for the whole process
+    /// lifetime (including WebSocket reconnects). The server treats this as
+    /// the active agent lease identity: a second agent process with the same
+    /// `client_id` but a different `agent_instance_id` is rejected while the
+    /// first is online, and a stale/replaced instance can no longer poll or
+    /// submit results. It is not a secret.
+    pub agent_instance_id: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub owner: Option<String>,
+    #[serde(default)]
+    pub hostname: Option<String>,
+    #[serde(default)]
+    pub capabilities: Option<ShellClientCapabilities>,
+    #[serde(default)]
+    pub projects: Option<Vec<ShellAgentProjectSummary>>,
+    /// Protocol version announced by the agent during registration. Older
+    /// agents that omit this field are treated as `"unknown"` by the server.
+    #[serde(default)]
+    pub agent_protocol_version: Option<String>,
+    /// Sanitized agent policy summary. Older agents that omit this field
+    /// register with `None`; `runtime_status` / `listAgents` then expose
+    /// `null` for the policy so older/minimal payloads stay compatible.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy: Option<AgentPolicySummary>,
+    /// Unix timestamp when the agent process started. Reported by the runner
+    /// itself so `runner_process` observations come from the process, not
+    /// from server-side inference. Older agents omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub process_started_at: Option<i64>,
+    /// Runner build metadata (crate version and optional git commit). Used
+    /// for mixed-version diagnostics; never carries paths or environment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build: Option<AgentBuildInfo>,
+    /// Effective static Job execution concurrency configured for this Runner
+    /// process. Older Runners omit it, so the Server must preserve `None`
+    /// rather than infer a value from capabilities or observed Jobs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_concurrency_limit: Option<usize>,
+    /// Complete active plus bounded recent-terminal inventory for the current
+    /// runner process. Required when `job_state_reconciliation` is declared;
+    /// absent for older runners.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_inventory: Option<ShellJobInventory>,
+}
+
+/// Non-secret runner build identity for mixed-version diagnostics.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentBuildInfo {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub git_commit: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientView {
+    pub client_id: String,
+    /// Active agent process identity (UUID) for this client. Empty for views
+    /// that predate the instance id field. Not a secret.
+    #[serde(default)]
+    pub agent_instance_id: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub owner: Option<String>,
+    #[serde(default)]
+    pub hostname: Option<String>,
+    pub status: String,
+    pub connected: bool,
+    pub last_seen: i64,
+    pub capabilities: ShellClientCapabilities,
+    pub pending_requests: usize,
+    #[serde(default)]
+    pub projects: Vec<ShellAgentProjectSummary>,
+    /// Agent-announced protocol version. Defaults to `"unknown"` for agents
+    /// that registered before this field existed.
+    #[serde(default = "default_agent_protocol_version")]
+    pub agent_protocol_version: String,
+    /// Transport the agent is currently connected over: `"polling"`,
+    /// `"websocket"`, or `"quic"`. Defaults to `"polling"` for older
+    /// agents/views.
+    #[serde(default = "default_transport_polling")]
+    pub transport: String,
+    /// Sanitized agent policy summary reported at registration. `None`
+    /// (serialized as `null`/omitted) for older agents that did not report a
+    /// policy. Never contains token/env/init_script.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy: Option<AgentPolicySummary>,
+    /// When this client_id first registered its current agent instance.
+    #[serde(default)]
+    pub registered_at: i64,
+    /// When the current transport connection was established (register or
+    /// reconnect). `0` for views that predate connection lifecycle tracking.
+    #[serde(default)]
+    pub connected_at: i64,
+    /// When the server observed the last transport disconnect for the current
+    /// instance, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disconnected_at: Option<i64>,
+    /// Runner-reported process start timestamp, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub process_started_at: Option<i64>,
+    /// Runner-reported build identity, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build: Option<AgentBuildInfo>,
+    /// Runner-reported effective static Job execution concurrency. `None` for
+    /// older Runners; the Server never infers this value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_concurrency_limit: Option<usize>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShellClientRegisterResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client: Option<ShellClientView>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellRunRequest {
+    pub client_id: String,
+    #[serde(default)]
+    pub cwd: Option<String>,
+    pub command: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stdin: Option<String>,
+    #[serde(default = "default_timeout_secs")]
+    pub timeout_secs: u64,
+    #[serde(default = "default_wait_timeout_secs")]
+    pub wait_timeout_secs: u64,
+}
+
+/// Structured native process representation carried end-to-end. This is the
+/// execution source of truth for `run_process`; `ShellAgentShellRequest.command`
+/// stays empty and is never populated by quoting or JSON-encoding this value.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellProcessArgv {
+    pub executable: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+/// Explicit script language selected by the model-facing `run_script`
+/// contract. The Runner owns the mapping from this semantic language to a
+/// concrete interpreter; no executable path or custom shell grammar is
+/// accepted from the model.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ShellScriptLanguage {
+    Sh,
+    Bash,
+    Powershell,
+}
+
+impl ShellScriptLanguage {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Sh => "sh",
+            Self::Bash => "bash",
+            Self::Powershell => "powershell",
+        }
+    }
+
+    pub fn file_extension(self) -> &'static str {
+        match self {
+            Self::Sh | Self::Bash => ".sh",
+            Self::Powershell => ".ps1",
+        }
+    }
+}
+
+/// Structured script representation carried end-to-end. This is the
+/// execution source of truth for `run_script`;
+/// `ShellAgentShellRequest.command` stays empty and is never populated by
+/// quoting or JSON-encoding this value.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellScriptPayload {
+    pub language: ShellScriptLanguage,
+    pub script: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+/// Conservative cross-platform process-input limits.
+///
+/// Windows ultimately represents argv in a CreateProcess command line even
+/// when callers use `Command::args`. Limiting the raw UTF-8 executable + args
+/// plus one boundary byte per value to 16,000 bytes leaves room below the
+/// 32,767 UTF-16-unit platform ceiling even when quoting doubles every byte.
+/// The limit still permits a structured invocation larger than the legacy
+/// 8,000-byte shell-command channel. Long scripts/text belong to `run_script`.
+pub const PROCESS_EXECUTABLE_MAX_BYTES: usize = 1_024;
+pub const PROCESS_ARG_MAX_COUNT: usize = 256;
+pub const PROCESS_ARG_MAX_BYTES: usize = 8_192;
+pub const PROCESS_ARGV_MAX_BYTES: usize = 16_000;
+pub const PROCESS_STDIN_MAX_BYTES: usize = 64 * 1_024;
+pub const PROCESS_CWD_MAX_BYTES: usize = 1_024;
+pub const STRUCTURED_EXECUTION_TIMEOUT_MIN_SECS: u64 = 1;
+pub const STRUCTURED_EXECUTION_TIMEOUT_MAX_SECS: u64 = 3_600;
+pub const STRUCTURED_EXECUTION_TIMEOUT_DEFAULT_SECS: u64 = 60;
+/// Compatibility ceiling for the pre-Phase-C direct synchronous Runner wire.
+/// Durable typed Jobs use `STRUCTURED_EXECUTION_TIMEOUT_MAX_SECS` instead.
+pub const STRUCTURED_EXECUTION_LEGACY_SYNC_TIMEOUT_MAX_SECS: u64 = 120;
+pub const PROCESS_TIMEOUT_MAX_SECS: u64 = STRUCTURED_EXECUTION_TIMEOUT_MAX_SECS;
+
+pub const SCRIPT_MIN_BYTES: usize = 1;
+pub const SCRIPT_MAX_BYTES: usize = 512 * 1024;
+pub const SCRIPT_ARG_MAX_COUNT: usize = 256;
+pub const SCRIPT_ARG_MAX_BYTES: usize = 8_192;
+pub const SCRIPT_ARGV_MAX_BYTES: usize = 16_000;
+pub const SCRIPT_STDIN_MAX_BYTES: usize = 64 * 1024;
+pub const SCRIPT_CWD_MAX_BYTES: usize = 1_024;
+pub const SCRIPT_TIMEOUT_MAX_SECS: u64 = STRUCTURED_EXECUTION_TIMEOUT_MAX_SECS;
+
+/// Validate the transport-neutral executable/argv payload. Both Server and
+/// Runner call this so a stale or malicious peer cannot bypass either side.
+pub fn validate_process_argv(process: &ShellProcessArgv) -> Result<(), String> {
+    if process.executable.trim().is_empty() {
+        return Err("executable must not be empty".to_string());
+    }
+    if process.executable.len() > PROCESS_EXECUTABLE_MAX_BYTES {
+        return Err(format!(
+            "executable is too long; maximum is {PROCESS_EXECUTABLE_MAX_BYTES} bytes"
+        ));
+    }
+    if process.executable.contains('\0') {
+        return Err("executable cannot contain NUL bytes".to_string());
+    }
+    if process.args.len() > PROCESS_ARG_MAX_COUNT {
+        return Err(format!(
+            "args may contain at most {PROCESS_ARG_MAX_COUNT} entries"
+        ));
+    }
+    let mut total = process.executable.len();
+    for (index, arg) in process.args.iter().enumerate() {
+        if arg.len() > PROCESS_ARG_MAX_BYTES {
+            return Err(format!(
+                "args[{index}] is too long; maximum is {PROCESS_ARG_MAX_BYTES} bytes"
+            ));
+        }
+        if arg.contains('\0') {
+            return Err(format!("args[{index}] cannot contain NUL bytes"));
+        }
+        total = total.saturating_add(1).saturating_add(arg.len());
+    }
+    if total > PROCESS_ARGV_MAX_BYTES {
+        return Err(format!(
+            "executable and args are too large; maximum total is {PROCESS_ARGV_MAX_BYTES} bytes"
+        ));
+    }
+    if process_uses_shell_command_mode(process) {
+        return Err(
+            "run_process does not accept shell command modes; use run_shell for shell syntax"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
+/// Validate the complete transport-neutral script request. Both Server and
+/// Runner call this exact helper so bounds and rejection ordering cannot drift.
+/// Whitespace-only scripts are valid; only a zero-byte script is rejected.
+pub fn validate_script_request(
+    payload: &ShellScriptPayload,
+    stdin: Option<&str>,
+    cwd: Option<&str>,
+    timeout_secs: u64,
+) -> Result<(), String> {
+    if payload.script.len() < SCRIPT_MIN_BYTES {
+        return Err("script must contain at least 1 UTF-8 byte".to_string());
+    }
+    if payload.script.len() > SCRIPT_MAX_BYTES {
+        return Err(format!(
+            "script is too large; maximum is {SCRIPT_MAX_BYTES} bytes"
+        ));
+    }
+    if payload.script.contains('\0') {
+        return Err("script cannot contain NUL bytes".to_string());
+    }
+    if payload.args.len() > SCRIPT_ARG_MAX_COUNT {
+        return Err(format!(
+            "args may contain at most {SCRIPT_ARG_MAX_COUNT} entries"
+        ));
+    }
+    let mut total = 0usize;
+    for (index, arg) in payload.args.iter().enumerate() {
+        if arg.len() > SCRIPT_ARG_MAX_BYTES {
+            return Err(format!(
+                "args[{index}] is too long; maximum is {SCRIPT_ARG_MAX_BYTES} bytes"
+            ));
+        }
+        if arg.contains('\0') {
+            return Err(format!("args[{index}] cannot contain NUL bytes"));
+        }
+        total = total.saturating_add(1).saturating_add(arg.len());
+    }
+    if total > SCRIPT_ARGV_MAX_BYTES {
+        return Err(format!(
+            "script args are too large; maximum total is {SCRIPT_ARGV_MAX_BYTES} bytes"
+        ));
+    }
+    if let Some(stdin) = stdin {
+        if stdin.len() > SCRIPT_STDIN_MAX_BYTES {
+            return Err(format!(
+                "stdin is too large; maximum is {SCRIPT_STDIN_MAX_BYTES} bytes"
+            ));
+        }
+        if stdin.contains('\0') {
+            return Err("stdin cannot contain NUL bytes".to_string());
+        }
+    }
+    if let Some(cwd) = cwd {
+        if cwd.len() > SCRIPT_CWD_MAX_BYTES {
+            return Err(format!(
+                "cwd is too long; maximum is {SCRIPT_CWD_MAX_BYTES} bytes"
+            ));
+        }
+        if cwd.contains('\0') {
+            return Err("cwd cannot contain NUL bytes".to_string());
+        }
+    }
+    if timeout_secs == 0 || timeout_secs > SCRIPT_TIMEOUT_MAX_SECS {
+        return Err(format!(
+            "timeout_secs must be between 1 and {SCRIPT_TIMEOUT_MAX_SECS}"
+        ));
+    }
+    Ok(())
+}
+
+/// Reject the shell-parser forms that would turn `run_process` back into a
+/// shell-text transport. Batch files remain a Runner-managed Windows launch
+/// mode and do not pass model-authored `/C` text through this check.
+pub fn process_uses_shell_command_mode(process: &ShellProcessArgv) -> bool {
+    let basename = process
+        .executable
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(process.executable.as_str())
+        .to_ascii_lowercase();
+    match basename.as_str() {
+        "sh" | "sh.exe" | "bash" | "bash.exe" => process
+            .args
+            .iter()
+            .take_while(|arg| *arg != "--")
+            .any(|arg| {
+                let lower = arg.to_ascii_lowercase();
+                lower == "-c"
+                    || (lower.starts_with('-')
+                        && !lower.starts_with("--")
+                        && lower[1..].contains('c'))
+            }),
+        "powershell" | "powershell.exe" | "pwsh" | "pwsh.exe" => process
+            .args
+            .iter()
+            .any(|arg| matches!(arg.to_ascii_lowercase().as_str(), "-command" | "-c")),
+        "cmd" | "cmd.exe" => process
+            .args
+            .iter()
+            .any(|arg| arg.eq_ignore_ascii_case("/c")),
+        _ => false,
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellRunResponse {
+    pub success: bool,
+    pub request_id: String,
+    pub client_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    pub command_preview: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// Server-owned dispatch evidence for synchronous requests. `Some(false)`
+    /// proves the request never left the queue; `Some(true)` does not by
+    /// itself prove that a command process was spawned.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_dispatched: Option<bool>,
+    /// Runner-owned command lifecycle evidence. Absent for non-command
+    /// requests and legacy Runner results.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command_execution_state: Option<ShellCommandExecutionState>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentPollRequest {
+    pub client_id: String,
+    /// Active agent process identity. Must match the instance that currently
+    /// holds the lease for `client_id`; a stale/replaced instance is rejected.
+    pub agent_instance_id: String,
+    #[serde(default)]
+    pub projects: Option<Vec<ShellAgentProjectSummary>>,
+}
+
+/// Polling transport wrapper. Existing `ShellAgentPollRequest` JSON remains
+/// valid; current agents may attach changed-only sanitized runtime metadata.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentPollPayload {
+    #[serde(flatten)]
+    pub request: ShellAgentPollRequest,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_providers: Option<ToolProvidersStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientJobStatusRequest {
+    #[serde(default)]
+    pub client_id: Option<String>,
+    pub job_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientJobLogRequest {
+    #[serde(default)]
+    pub client_id: Option<String>,
+    pub job_id: String,
+    #[serde(default)]
+    pub tail_lines: Option<usize>,
+    #[serde(default)]
+    pub since_stdout_line: Option<usize>,
+    #[serde(default)]
+    pub since_stderr_line: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientJobStopRequest {
+    #[serde(default)]
+    pub client_id: Option<String>,
+    pub job_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientJobsListRequest {
+    pub client_id: String,
+    #[serde(default)]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentShellRequest {
+    pub request_id: String,
+    pub client_id: String,
+    #[serde(default = "default_agent_request_kind")]
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_bytes: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_prefix: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_line: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_line: Option<usize>,
+    #[serde(default)]
+    pub create_dirs: bool,
+    pub command: String,
+    /// Typed native process payload. Present only for `kind = "run_process"`
+    /// or `kind = "start_process_job"`; defaults to `None` for backward
+    /// compatibility with older envelopes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub process: Option<ShellProcessArgv>,
+    /// Typed bounded script payload. Present only for `kind = "run_script"` or
+    /// `kind = "start_script_job"`; defaults to `None` for backward
+    /// compatibility with older envelopes. The raw body never enters
+    /// `command`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script: Option<ShellScriptPayload>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stdin: Option<String>,
+    pub timeout_secs: u64,
+    pub requested_by: String,
+    pub created_at: i64,
+    /// Typed validation bridge payload. Present only for `kind = "validation"`.
+    /// Defaults to `None` so older request bodies continue to deserialize.
+    /// Never carries arbitrary shell commands — only declarative adapter
+    /// requests with project-relative paths.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation: Option<crate::validation_bridge::ValidationBridgeRequest>,
+    /// Typed read-only LSP navigation payload. Present only for `kind = "lsp"`.
+    /// Defaults to `None` so older request bodies continue to deserialize.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lsp: Option<crate::lsp_bridge::AgentLspPayload>,
+    /// Optional kernel sandbox mode (`"inspect"`). Agents fail closed for
+    /// unsupported, partial, or unknown modes and never run them unconfined.
+    /// Absent on the wire when unset so older agents continue to deserialize.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<String>,
+    /// Server-derived safe execution metadata. Async jobs retain it for
+    /// same-process recovery; Session-bound SSH shell requests use only the
+    /// workflow session/resource fields. It never contains raw command text,
+    /// stdin, environment, SSH host/configuration, or credentials.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_context: Option<ShellJobContext>,
+    /// Explicit persistent-shell lifecycle request. It is independent from
+    /// `job_id`/Job state and absent on all legacy request kinds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub persistent_shell: Option<PersistentShellRequest>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShellAgentPollResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request: Option<ShellAgentShellRequest>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentResultRequest {
+    pub client_id: String,
+    /// Active agent process identity. Must match the instance that currently
+    /// holds the lease for `client_id`; a stale/replaced instance is rejected.
+    pub agent_instance_id: String,
+    pub request_id: String,
+    #[serde(default)]
+    pub exit_code: Option<i32>,
+    #[serde(default)]
+    pub stdout: Option<String>,
+    #[serde(default)]
+    pub stderr: Option<String>,
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+/// Narrow Runner-owned lifecycle evidence for one synchronous shell command.
+/// This is transport metadata, not a general execution framework: the Runner
+/// sets it from its actual process-spawn/collection path, while non-command
+/// request results omit it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShellCommandExecutionState {
+    NotStarted,
+    OutcomeUnknown,
+    TimedOut,
+    Completed,
+}
+
+/// Transport payload for synchronous Runner results. Flattening preserves the
+/// existing HTTP/WebSocket/QUIC JSON shape and adds only optional shell-command
+/// lifecycle evidence.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentResultPayload {
+    #[serde(flatten)]
+    pub result: ShellAgentResultRequest,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command_execution_state: Option<ShellCommandExecutionState>,
+}
+
+impl From<ShellAgentResultRequest> for ShellAgentResultPayload {
+    fn from(result: ShellAgentResultRequest) -> Self {
+        Self {
+            result,
+            command_execution_state: None,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShellAgentResultResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// Server-to-Runner request for one explicit persistent-shell lifecycle
+/// operation. The Runner revalidates the project, policy, cwd, and profile on
+/// every request.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PersistentShellRequest {
+    pub action: String,
+    pub shell_id: String,
+    pub workflow_session_id: String,
+    pub runtime_project_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout_secs: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purpose: Option<String>,
+}
+
+/// Runner-authoritative result for a persistent-shell lifecycle operation.
+/// Output is bounded on the Runner before this value crosses the protocol.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PersistentShellResult {
+    pub shell_id: String,
+    pub workflow_session_id: String,
+    pub runtime_project_id: String,
+    pub shell_state: String,
+    pub execution_state: String,
+    pub command_started: bool,
+    pub command_completed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(default)]
+    pub stdout: String,
+    #[serde(default)]
+    pub stderr: String,
+    #[serde(default)]
+    pub stdout_truncated: bool,
+    #[serde(default)]
+    pub stderr_truncated: bool,
+    #[serde(default)]
+    pub duration_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub initial_cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_activity_at: Option<i64>,
+    #[serde(default)]
+    pub busy: bool,
+    #[serde(default)]
+    pub already_closed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub close_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentPersistentShellResultRequest {
+    pub client_id: String,
+    pub agent_instance_id: String,
+    pub request_id: String,
+    pub result: PersistentShellResult,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentPersistentShellResultResponse {
+    pub success: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentJobUpdateRequest {
+    pub client_id: String,
+    /// Active agent process identity. Must match the instance that currently
+    /// holds the lease for `client_id`; a stale/replaced instance is rejected.
+    pub agent_instance_id: String,
+    pub job_id: String,
+    #[serde(default)]
+    pub request_id: Option<String>,
+    /// Runner-owned per-job monotonic sequence. Current reconciliation-capable
+    /// runners always send it; older runners omit it and keep legacy behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub update_seq: Option<u64>,
+    pub status: String,
+    #[serde(default)]
+    pub stdout_chunk: Option<String>,
+    #[serde(default)]
+    pub stderr_chunk: Option<String>,
+    #[serde(default)]
+    pub stdout_tail: Option<String>,
+    #[serde(default)]
+    pub stderr_tail: Option<String>,
+    /// Full authoritative tails with absolute line metadata. Reconciliation-
+    /// capable runners use this for sequenced updates and post-register replay.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub log_snapshot: Option<ShellJobLogSnapshot>,
+    #[serde(default)]
+    pub exit_code: Option<i32>,
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
+    #[serde(default)]
+    pub error: Option<String>,
+    /// Phase-A structured execution lifecycle. It is absent for older Runner
+    /// updates and ordinary legacy shell Jobs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command_execution_state: Option<ShellCommandExecutionState>,
+    /// Executor-owned bounded progress for an internally submitted validation
+    /// plan. Project stdout/stderr never populates this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation_progress: Option<ShellJobValidationProgress>,
+    #[serde(default)]
+    pub finished: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShellAgentJobUpdateResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job: Option<ShellJobInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellFileOpRequest {
+    pub op: String,
+    pub client_id: String,
+    pub path: String,
+    #[serde(default)]
+    pub cwd: Option<String>,
+    #[serde(default)]
+    pub content: Option<String>,
+    #[serde(default)]
+    pub max_bytes: Option<usize>,
+    // Retired edit fields remain on the operator-facing request only so the
+    // Server can reject old payloads explicitly instead of silently ignoring
+    // unknown JSON fields. They are never forwarded to the Runner.
+    #[serde(default)]
+    pub old_text: Option<String>,
+    #[serde(default)]
+    pub pattern: Option<String>,
+    #[serde(default)]
+    pub expected_sha256: Option<String>,
+    #[serde(default)]
+    pub expected_prefix: Option<String>,
+    #[serde(default)]
+    pub start_line: Option<usize>,
+    #[serde(default)]
+    pub end_line: Option<usize>,
+    #[serde(default)]
+    pub line: Option<usize>,
+    #[serde(default)]
+    pub create_dirs: bool,
+    #[serde(default = "default_wait_timeout_secs")]
+    pub wait_timeout_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellFileOpResponse {
+    pub success: bool,
+    pub op: String,
+    pub request_id: String,
+    pub client_id: String,
+    pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entries: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bytes: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellJobCodexMetadata {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub goal_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_request_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suite: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_runtime_secs: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellJobOpRequest {
+    pub op: String,
+    #[serde(default)]
+    pub client_id: Option<String>,
+    #[serde(default)]
+    pub cwd: Option<String>,
+    #[serde(default)]
+    pub command: Option<String>,
+    #[serde(default)]
+    pub timeout_secs: Option<u64>,
+    #[serde(default)]
+    pub job_id: Option<String>,
+    #[serde(default)]
+    pub since_stdout_line: Option<usize>,
+    #[serde(default)]
+    pub since_stderr_line: Option<usize>,
+    #[serde(default)]
+    pub tail_lines: Option<usize>,
+    #[serde(default)]
+    pub limit: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub codex: Option<ShellJobCodexMetadata>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobValidationStep {
+    pub name: String,
+    pub program: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    /// Cache-steering variables applied at spawn (e.g. CARGO_TARGET_DIR so
+    /// the shared build cache survives slot resets). Key-allowlisted by
+    /// `is_canonical`; omitted from the wire when empty so older agents keep
+    /// parsing unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub env: Vec<(String, String)>,
+}
+
+impl ShellJobValidationStep {
+    pub fn is_canonical(&self) -> bool {
+        if self
+            .args
+            .iter()
+            .any(|arg| arg.contains('\0') || arg.len() > CARGO_VALUE_MAX_BYTES)
+        {
+            return false;
+        }
+        const ALLOWED_STEP_ENV_KEYS: &[&str] = &["CARGO_TARGET_DIR"];
+        if !self.env.iter().all(|(key, value)| {
+            ALLOWED_STEP_ENV_KEYS.contains(&key.as_str())
+                && !value.is_empty()
+                && !value.contains('\0')
+                && value.len() <= 500
+        }) {
+            return false;
+        }
+        let args = self.args.iter().map(String::as_str).collect::<Vec<_>>();
+        match (self.name.as_str(), self.program.as_str()) {
+            ("format", "cargo") => args == ["fmt", "--", "--check"],
+            ("check", "cargo") => is_canonical_cargo_check_args(&args),
+            ("test", "cargo") => is_canonical_cargo_test_args(&args),
+            ("check", "go") => args == ["vet", "./..."],
+            ("test", "go") => args == ["test", "./..."],
+            ("format", "python") => {
+                args == ["-m", "ruff", "format", "--check"] || args == ["-m", "black", "--check"]
+            }
+            ("check", "python") => args == ["-m", "ruff", "check"] || args == ["-m", "mypy"],
+            ("test", "python") => {
+                args == ["-m", "pytest"] || args == ["-B", "-m", "unittest", "discover", "-v"]
+            }
+            (kind, "npm" | "pnpm" | "yarn" | "bun") => {
+                args.len() == 3
+                    && args[0] == "run"
+                    && args[1] == "--silent"
+                    && node_script_allowed(kind, args[2])
+            }
+            _ => false,
+        }
+    }
+}
+
+/// Canonical `cargo check` argv: `check` followed by zero or more distinct
+/// read-only flags (`--all-targets`, `--all-features`,
+/// `--no-default-features`) and `--features <value>` / `-p <value>` pairs.
+fn is_canonical_cargo_check_args(args: &[&str]) -> bool {
+    args.first() == Some(&"check") && is_canonical_cargo_flags(&args[1..], false)
+}
+
+/// Canonical `cargo test` argv: the `test` subcommand, an optional libtest
+/// filter (never a Cargo option), then zero or more distinct read-only flags
+/// and `--features <value>` / `-p <value>` pairs, optionally `--no-run`.
+///
+/// The flat argv boundary has inherent information loss: `["test",
+/// "--all-features"]` is a legal `cargo test --all-features` whether the
+/// caller meant the flag or mis-placed it in the filter field, so it is parsed
+/// here as the flag. Rejecting option-like filters is the planner and
+/// request-validation contract (`valid_rust_test_filter`), not this function.
+fn is_canonical_cargo_test_args(args: &[&str]) -> bool {
+    if args.first() != Some(&"test") {
+        return false;
+    }
+    let flags_start = match args.get(1) {
+        Some(filter) if valid_rust_test_filter(filter) => 2,
+        _ => 1,
+    };
+    is_canonical_cargo_flags(&args[flags_start..], true)
+}
+
+/// Normalize and validate one value-taking Cargo argument (`--features`,
+/// `-p`). This is the single shared contract used by the synchronous command
+/// builders and the structured long-Job argv builder, so a given request runs
+/// identical arguments no matter how long it takes.
+///
+/// Applies exactly one leading/trailing whitespace trim, then rejects values
+/// that are NUL/control-containing, longer than [`CARGO_VALUE_MAX_BYTES`],
+/// start with `-` (which would consume the next Cargo option as this option's
+/// value), or are empty after trimming. The length bound applies to the
+/// normalized value that is written into argv, so a padded input whose
+/// trimmed form is within bounds stays accepted. `Ok(None)` means the option
+/// is simply omitted. Valid multi-word values such as `"a b"` are preserved.
+pub fn normalize_cargo_value(raw: &str) -> Result<Option<String>, &'static str> {
+    if raw.contains('\0') {
+        return Err("cannot contain NUL bytes");
+    }
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    if trimmed.chars().any(char::is_control) {
+        return Err("contains control characters");
+    }
+    if trimmed.starts_with('-') {
+        return Err("must not start with '-'");
+    }
+    if trimmed.len() > CARGO_VALUE_MAX_BYTES {
+        return Err("exceeds 500 bytes");
+    }
+    Ok(Some(trimmed.to_string()))
+}
+
+/// Validate the read-only Cargo flag tail shared by `cargo check` and
+/// `cargo test` validation steps. Each single flag and each value-taking flag
+/// appears at most once. A value-taking flag's value must already satisfy the
+/// shared [`normalize_cargo_value`] contract: non-empty after trimming, not a
+/// `-`-prefixed option, NUL/control-free, bounded to `CARGO_VALUE_MAX_BYTES`,
+/// and already normalized (no leading/trailing whitespace). `--no-run` is
+/// accepted only for `cargo test`.
+fn is_canonical_cargo_flags(args: &[&str], allow_no_run: bool) -> bool {
+    let mut seen = HashSet::new();
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        let key = match *arg {
+            "--all-targets" | "--all-features" | "--no-default-features" => *arg,
+            "--no-run" if allow_no_run => "--no-run",
+            "--features" | "-p" => {
+                if !seen.insert(*arg) {
+                    return false;
+                }
+                let Some(value) = iter.next() else {
+                    return false;
+                };
+                // The value must already be exactly its normalized form; a
+                // whitespace-padded, option-like, control-containing, or
+                // over-long value is not a canonical cargo value.
+                match normalize_cargo_value(value) {
+                    Ok(Some(normalized)) if normalized == *value => continue,
+                    _ => return false,
+                }
+            }
+            _ => return false,
+        };
+        if !seen.insert(key) {
+            return false;
+        }
+    }
+    true
+}
+
+fn node_script_allowed(kind: &str, script: &str) -> bool {
+    matches!(
+        (kind, script),
+        ("format", "format:check" | "format-check" | "check:format")
+            | ("check", "check" | "typecheck" | "lint")
+            | ("test", "test")
+    )
+}
+
+/// Normalize and validate the single argv value that may follow `cargo test`:
+/// a libtest name substring, never a Cargo option. This is the shared contract
+/// used by the planner (`safe_rust_filter`), the synchronous command builder,
+/// and the structured long-Job argv builder, so a given filter runs identically
+/// regardless of runtime path.
+///
+/// Applies exactly one leading/trailing trim and rejects control bytes,
+/// over-long values, and anything that begins with `-` after trimming, so a
+/// forged, replayed, or drifted request cannot smuggle an option such as
+/// `--manifest-path` through the filter field. `Ok(None)` means no filter.
+pub fn normalize_rust_test_filter(raw: &str) -> Result<Option<String>, &'static str> {
+    if raw.len() > RUST_TEST_FILTER_MAX_BYTES {
+        return Err("exceeds 200 bytes");
+    }
+    if raw.contains('\0') {
+        return Err("cannot contain NUL bytes");
+    }
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    if trimmed.chars().any(char::is_control) {
+        return Err("contains control characters");
+    }
+    if trimmed.starts_with('-') {
+        return Err("must not start with '-'");
+    }
+    Ok(Some(trimmed.to_string()))
+}
+
+/// True when `value` is a valid non-empty libtest filter (never a Cargo
+/// option). `is_canonical` uses this to decide whether a flat argv's second
+/// element is the filter, but enforcement of "no option-like filter" lives
+/// with the planner and request-validation builders, not the flat-argv
+/// boundary: `["test", "--all-features"]` is a legal `cargo test
+/// --all-features` regardless of how it was constructed.
+pub fn valid_rust_test_filter(value: &str) -> bool {
+    normalize_rust_test_filter(value).is_ok_and(|normalized| normalized.is_some())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobValidationProgress {
+    pub completed: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_step: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failed_step: Option<String>,
+}
+
+/// Stable structured-validation identity retained for Job handoff, status,
+/// terminal projection, and server restart reconciliation. This is internal
+/// protocol metadata; it is not a model input and never contains shell text.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobValidationMetadata {
+    pub tool: String,
+    pub kind: String,
+    pub steps: Vec<ShellJobValidationStep>,
+    pub effective_timeout_secs: u64,
+    pub sync_wait_secs: u64,
+    pub adapter: String,
+}
+
+impl ShellJobValidationMetadata {
+    pub fn is_valid(&self) -> bool {
+        matches!(
+            self.tool.as_str(),
+            "cargo_fmt" | "cargo_check" | "cargo_test"
+        ) && matches!(self.kind.as_str(), "format" | "check" | "test")
+            && self.adapter == self.tool
+            && self.steps.len() == 1
+            && self.steps.iter().all(ShellJobValidationStep::is_canonical)
+            && self.steps[0].name == self.kind
+            && self.effective_timeout_secs >= 1
+            && self.sync_wait_secs <= self.effective_timeout_secs
+    }
+}
+
+/// Safe bounded metadata for a structured execution Job. Raw executable argv,
+/// script bodies, script argv, and stdin are intentionally absent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobStructuredExecutionMetadata {
+    pub execution_source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<ShellScriptLanguage>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_bytes: Option<usize>,
+    pub arg_count: usize,
+    pub stdin_present: bool,
+}
+
+impl ShellJobStructuredExecutionMetadata {
+    pub fn is_valid(&self) -> bool {
+        match self.execution_source.as_str() {
+            "run_process" => {
+                self.language.is_none()
+                    && self.script_bytes.is_none()
+                    && self.arg_count <= PROCESS_ARG_MAX_COUNT
+            }
+            "run_script" => {
+                self.language.is_some()
+                    && self
+                        .script_bytes
+                        .is_some_and(|bytes| (SCRIPT_MIN_BYTES..=SCRIPT_MAX_BYTES).contains(&bytes))
+                    && self.arg_count <= SCRIPT_ARG_MAX_COUNT
+            }
+            _ => false,
+        }
+    }
+}
+
+/// Safe server-derived metadata needed to reconstruct a job record after a
+/// server restart. This is an internal agent protocol model, not a public
+/// `run_job` input.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobContext {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_project_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workflow_session_id: Option<String>,
+    /// Named Runner-local SSH resource. It is safe recovery metadata, unlike
+    /// an SSH host/configuration/key, which never crosses this protocol.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ssh_resource: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purpose: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell: Option<String>,
+    pub command_preview: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub validation_steps: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation: Option<ShellJobValidationMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub structured_execution: Option<ShellJobStructuredExecutionMetadata>,
+}
+
+/// One bounded stream tail plus absolute line range. `next_line` is the
+/// cursor immediately after the last retained/observed line; reconciliation
+/// replaces the server stream with this authoritative range instead of
+/// appending it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobStreamSnapshot {
+    #[serde(default)]
+    pub tail: String,
+    #[serde(default = "default_first_retained_line")]
+    pub first_retained_line: usize,
+    #[serde(default = "default_first_retained_line")]
+    pub next_line: usize,
+    #[serde(default)]
+    pub truncated: bool,
+}
+
+fn default_first_retained_line() -> usize {
+    1
+}
+
+impl Default for ShellJobStreamSnapshot {
+    fn default() -> Self {
+        Self {
+            tail: String::new(),
+            first_retained_line: 1,
+            next_line: 1,
+            truncated: false,
+        }
+    }
+}
+
+/// Authoritative bounded log view attached to a sequenced replay update.
+/// This closes the register/ack race where executor state advances after the
+/// register inventory was serialized but before the new sink becomes usable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobLogSnapshot {
+    pub stdout: ShellJobStreamSnapshot,
+    pub stderr: ShellJobStreamSnapshot,
+}
+
+/// Runner-authoritative same-process job state used only during registration
+/// reconciliation. Raw command, stdin, environment, tokens, and agent config
+/// are intentionally absent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobSnapshot {
+    pub job_id: String,
+    pub request_id: String,
+    pub status: String,
+    pub update_seq: u64,
+    pub created_at: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ended_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// Phase-A lifecycle for typed structured execution Jobs. Older snapshots
+    /// and legacy shell Jobs omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command_execution_state: Option<ShellCommandExecutionState>,
+    pub context: ShellJobContext,
+    #[serde(default)]
+    pub stdout: ShellJobStreamSnapshot,
+    #[serde(default)]
+    pub stderr: ShellJobStreamSnapshot,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation_progress: Option<ShellJobValidationProgress>,
+}
+
+/// Register-time inventory. Terminal records are deliberately partial history,
+/// while `active_complete=true` guarantees every locally active/queued job is
+/// present so omission can safely reconcile a server record to `lost`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobInventory {
+    #[serde(default)]
+    pub active_complete: bool,
+    #[serde(default)]
+    pub jobs: Vec<ShellJobSnapshot>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentShellJobResult {
+    #[serde(default)]
+    pub cwd: Option<String>,
+    pub command_preview: String,
+    #[serde(default)]
+    pub exit_code: Option<i32>,
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellAgentJobResult {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell: Option<ShellAgentShellJobResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellJobInfo {
+    pub job_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+    pub client_id: String,
+    #[serde(default = "default_shell_job_kind")]
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    /// Named Runner-local SSH resource used by this job, when any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ssh_resource: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purpose: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell: Option<String>,
+    pub command_preview: String,
+    pub status: String,
+    pub created_at: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ended_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elapsed_secs: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command_execution_state: Option<ShellCommandExecutionState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub structured_execution: Option<ShellJobStructuredExecutionMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub codex: Option<ShellJobCodexMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<ShellAgentJobResult>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation_progress: Option<ShellJobValidationProgress>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation: Option<ShellJobValidationMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovery_state: Option<String>,
+    #[serde(default)]
+    pub recovered_after_server_restart: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reconciled_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovery_reason_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observation_token: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_update_seq: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stdout_retained_from_line: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stderr_retained_from_line: Option<usize>,
+    #[serde(default)]
+    pub stdout_log_truncated: bool,
+    #[serde(default)]
+    pub stderr_log_truncated: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellJobOpResponse {
+    pub success: bool,
+    pub op: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job: Option<ShellJobInfo>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jobs: Vec<ShellJobInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_stdout_line: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_stderr_line: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientJobStatusResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub elapsed_secs: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<ShellAgentJobResult>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job: Option<ShellJobInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientJobLogResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout_tail: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr_tail: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_stdout_line: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_stderr_line: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job: Option<ShellJobInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientJobStopResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job: Option<ShellJobInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShellClientJobsListResponse {
+    pub success: bool,
+    pub client_id: String,
+    pub jobs: Vec<ShellJobInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+// ============================================================================
+// Transport-neutral agent message envelope
+// ============================================================================
+//
+// A single message format used by the WebSocket agent transport (and future
+// QUIC transport). It wraps the existing polling protocol payloads so the
+// server and agent never duplicate business logic: register/request/result/
+// job_update reuse the same structs as the HTTP polling endpoints.
+//
+// Wire format is JSON with an internal `type` tag:
+//
+//   {"type":"register","client_id":"...","projects":[...]}
+//   {"type":"registered","success":true,"client":{...}}
+//   {"type":"request","request_id":"...","client_id":"...","kind":"run_shell",...}
+//   {"type":"result","client_id":"...","request_id":"...","exit_code":0,...}
+//   {"type":"job_update","client_id":"...","job_id":"...","status":"running",...}
+//   {"type":"ping","ts":1700000000}
+//   {"type":"pong","ts":1700000000}
+//   {"type":"goodbye","reason":"shutdown"}
+//   {"type":"error","code":"bad_request","message":"..."}
+//
+// The envelope is transport-neutral: it carries no WebSocket-specific fields
+// and could be framed over QUIC streams unchanged.
+
+/// One agent transport message. Used by both the server WebSocket handler and
+/// the `webcodex-runner` WebSocket client mode.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AgentEnvelope {
+    /// Agent -> server. First message after the WebSocket handshake. Carries
+    /// the same payload as `POST /api/shell/agent/register`.
+    Register {
+        #[serde(flatten)]
+        payload: ShellClientRegisterRequest,
+        /// Optional agent/bearer token carried inline. Used ONLY by the QUIC
+        /// transport, which has no HTTP middleware to inject an
+        /// `Authorization` header. WebSocket always leaves this `None` (auth
+        /// is enforced by `AuthMiddleware` on the HTTP handshake) and the
+        /// server ignores it on that path. The field is
+        /// `skip_serializing_if = None` so the WebSocket wire format is
+        /// byte-identical to before. Never logged: the QUIC handler reads it
+        /// once and drops it before any tracing.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        auth_token: Option<String>,
+    },
+    /// Server -> agent. Acknowledgement of `Register`.
+    Registered {
+        success: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        client: Option<ShellClientView>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
+    },
+    /// Server -> agent. A pending shell/file/job request pushed to the agent.
+    /// Same payload as the `request` field of the polling response.
+    Request {
+        #[serde(flatten)]
+        request: ShellAgentShellRequest,
+    },
+    /// Agent -> server. Result of a synchronous shell/file request. Same
+    /// payload as `POST /api/shell/agent/result`.
+    Result {
+        #[serde(flatten)]
+        payload: ShellAgentResultPayload,
+    },
+    /// Agent -> server. Incremental or final update for an async job. Same
+    /// payload as `POST /api/shell/agent/job_update`.
+    JobUpdate {
+        #[serde(flatten)]
+        payload: ShellAgentJobUpdateRequest,
+    },
+    /// Agent -> server result for a persistent-shell lifecycle request.
+    PersistentShellResult {
+        #[serde(flatten)]
+        payload: ShellAgentPersistentShellResultRequest,
+    },
+    /// Either direction. Liveness keepalive.
+    Ping { ts: i64 },
+    /// Agent -> server changed-only sanitized runtime metadata. It reuses the
+    /// active transport and never requires an acknowledgement round trip.
+    RuntimeMetadata { tool_providers: ToolProvidersStatus },
+    /// Either direction. Reply to `Ping`.
+    Pong { ts: i64 },
+    /// Agent -> server. Best-effort graceful shutdown notice. Older agents do
+    /// not send this frame; transports still reconcile on observed disconnect.
+    Goodbye {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
+    /// Server -> agent. Fatal protocol error; the agent should reconnect.
+    Error { code: String, message: String },
+}
+
+impl AgentEnvelope {
+    /// Short discriminator string for a variant, e.g. `"register"`. Useful
+    /// for logging and tests.
+    pub fn kind(&self) -> &'static str {
+        match self {
+            AgentEnvelope::Register { .. } => "register",
+            AgentEnvelope::Registered { .. } => "registered",
+            AgentEnvelope::Request { .. } => "request",
+            AgentEnvelope::Result { .. } => "result",
+            AgentEnvelope::JobUpdate { .. } => "job_update",
+            AgentEnvelope::PersistentShellResult { .. } => "persistent_shell_result",
+            AgentEnvelope::Ping { .. } => "ping",
+            AgentEnvelope::RuntimeMetadata { .. } => "runtime_metadata",
+            AgentEnvelope::Pong { .. } => "pong",
+            AgentEnvelope::Goodbye { .. } => "goodbye",
+            AgentEnvelope::Error { .. } => "error",
+        }
+    }
+
+    /// Encode the envelope as a JSON string.
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    /// Decode an envelope from a JSON byte slice.
+    pub fn from_slice(bytes: &[u8]) -> Result<Self, serde_json::Error> {
+        serde_json::from_slice(bytes)
+    }
+}
+
+// ============================================================================
+// QUIC length-prefixed frame codec
+// ============================================================================
+//
+// The custom QUIC agent transport frames each [`AgentEnvelope`] as:
+//
+//   u32_be length (big-endian)
+//   JSON bytes
+//
+// Length-prefixing (rather than newline-delimited JSON) avoids boundary
+// problems when a payload contains embedded newlines. The codec lives in this
+// shared module so the server (`agent_quic.rs`) and the `webcodex-runner`
+// binary (which inlines this file) use byte-identical framing.
+//
+// This is a custom QUIC *stream* transport, NOT HTTP/3. It is transport-
+// neutral framing over a single QUIC bidirectional stream.
+
+/// Maximum frame body size. Matches the WebSocket `WS_MAX_MESSAGE_SIZE` head
+/// room and the registry output cap; bounds memory per peer.
+pub const QUIC_FRAME_MAX_BYTES: usize = 8 * 1024 * 1024;
+
+/// Errors produced by the QUIC frame codec.
+#[derive(Debug)]
+pub enum QuicFrameError {
+    /// Underlying I/O error reading/writing the stream.
+    Io(std::io::Error),
+    /// JSON encode/decode failure.
+    Json(serde_json::Error),
+    /// Announced frame length exceeds `QUIC_FRAME_MAX_BYTES`. `len` is the
+    /// announced (attacker-controlled) length; rejected before allocation.
+    Oversized { len: usize, max: usize },
+    /// The peer closed the stream cleanly before any frame was read.
+    EmptyStream,
+    /// A frame header announced a length but the body was short / invalid.
+    Malformed(&'static str),
+}
+
+impl std::fmt::Display for QuicFrameError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            QuicFrameError::Io(e) => write!(f, "quic frame io error: {}", e),
+            QuicFrameError::Json(e) => write!(f, "quic frame json error: {}", e),
+            QuicFrameError::Oversized { len, max } => write!(
+                f,
+                "quic frame oversized: announced {} bytes, max {}",
+                len, max
+            ),
+            QuicFrameError::EmptyStream => write!(f, "quic stream closed before any frame"),
+            QuicFrameError::Malformed(msg) => write!(f, "quic frame malformed: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for QuicFrameError {}
+
+/// Encode an envelope as a length-prefixed frame: `u32_be(len) || json`.
+pub fn encode_quic_frame(env: &AgentEnvelope) -> Result<Vec<u8>, QuicFrameError> {
+    let json = serde_json::to_vec(env).map_err(QuicFrameError::Json)?;
+    // u32 cap is far above QUIC_FRAME_MAX_BYTES, but guard anyway so a
+    // pathological payload can never overflow the length prefix.
+    if json.len() > QUIC_FRAME_MAX_BYTES {
+        return Err(QuicFrameError::Oversized {
+            len: json.len(),
+            max: QUIC_FRAME_MAX_BYTES,
+        });
+    }
+    let len = u32::try_from(json.len()).expect("checked against MAX");
+    let mut out = Vec::with_capacity(4 + json.len());
+    out.extend_from_slice(&len.to_be_bytes());
+    out.extend_from_slice(&json);
+    Ok(out)
+}
+
+/// Write a single length-prefixed frame to an async sink.
+pub async fn write_quic_frame<W>(w: &mut W, env: &AgentEnvelope) -> Result<(), QuicFrameError>
+where
+    W: tokio::io::AsyncWrite + Unpin,
+{
+    use tokio::io::AsyncWriteExt;
+    let buf = encode_quic_frame(env)?;
+    w.write_all(&buf).await.map_err(QuicFrameError::Io)?;
+    Ok(())
+}
+
+/// Read a single length-prefixed frame from an async source and decode it.
+pub async fn read_quic_frame<R>(r: &mut R) -> Result<AgentEnvelope, QuicFrameError>
+where
+    R: tokio::io::AsyncRead + Unpin,
+{
+    use tokio::io::AsyncReadExt;
+    let mut len_buf = [0u8; 4];
+    match r.read_exact(&mut len_buf).await {
+        Ok(_) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+            return Err(QuicFrameError::EmptyStream);
+        }
+        Err(e) => return Err(QuicFrameError::Io(e)),
+    }
+    let len = u32::from_be_bytes(len_buf) as usize;
+    if len > QUIC_FRAME_MAX_BYTES {
+        // Reject before allocating. `len` is peer-controlled.
+        return Err(QuicFrameError::Oversized {
+            len,
+            max: QUIC_FRAME_MAX_BYTES,
+        });
+    }
+    let mut buf = vec![0u8; len];
+    r.read_exact(&mut buf).await.map_err(|e| {
+        if e.kind() == std::io::ErrorKind::UnexpectedEof {
+            QuicFrameError::Malformed("announced frame length but stream ended early")
+        } else {
+            QuicFrameError::Io(e)
+        }
+    })?;
+    AgentEnvelope::from_slice(&buf).map_err(QuicFrameError::Json)
+}
+
+#[cfg(test)]
+mod envelope_tests {
+    use super::*;
+
+    fn sample_process_request() -> ShellAgentShellRequest {
+        ShellAgentShellRequest {
+            request_id: "req-process-1".to_string(),
+            client_id: "ws-1".to_string(),
+            kind: "run_process".to_string(),
+            job_id: None,
+            cwd: Some("sub dir".to_string()),
+            path: None,
+            content: None,
+            max_bytes: None,
+            expected_sha256: None,
+            expected_prefix: None,
+            start_line: None,
+            end_line: None,
+            create_dirs: false,
+            command: String::new(),
+            process: Some(ShellProcessArgv {
+                executable: "argv-helper".to_string(),
+                args: vec![
+                    "literal space".to_string(),
+                    "\"quote\"".to_string(),
+                    "$(not-shell)".to_string(),
+                ],
+            }),
+            script: None,
+            stdin: Some("bounded input".to_string()),
+            timeout_secs: 60,
+            requested_by: "tester".to_string(),
+            created_at: 123,
+            validation: None,
+            lsp: None,
+            sandbox: None,
+            job_context: None,
+            persistent_shell: None,
+        }
+    }
+
+    fn sample_process_job_request() -> ShellAgentShellRequest {
+        let mut request = sample_process_request();
+        request.kind = "start_process_job".to_string();
+        request.job_id = Some("job-process-1".to_string());
+        request.job_context = Some(ShellJobContext {
+            runtime_project_id: None,
+            workflow_session_id: None,
+            ssh_resource: None,
+            project_cwd: Some("sub dir".to_string()),
+            cwd: Some("sub dir".to_string()),
+            purpose: Some("test".to_string()),
+            shell: Some("direct_argv".to_string()),
+            command_preview: "argv-helper literal space …".to_string(),
+            validation_steps: Vec::new(),
+            validation: None,
+            structured_execution: Some(ShellJobStructuredExecutionMetadata {
+                execution_source: "run_process".to_string(),
+                language: None,
+                script_bytes: None,
+                arg_count: 3,
+                stdin_present: true,
+            }),
+        });
+        request
+    }
+
+    fn sample_script_request() -> ShellAgentShellRequest {
+        ShellAgentShellRequest {
+            request_id: "req-script-1".to_string(),
+            client_id: "ws-1".to_string(),
+            kind: "run_script".to_string(),
+            job_id: None,
+            cwd: Some("sub dir".to_string()),
+            path: None,
+            content: None,
+            max_bytes: None,
+            expected_sha256: None,
+            expected_prefix: None,
+            start_line: None,
+            end_line: None,
+            create_dirs: false,
+            command: String::new(),
+            process: None,
+            script: Some(ShellScriptPayload {
+                language: ShellScriptLanguage::Bash,
+                script: "printf '%s\\n' \"$1\"".to_string(),
+                args: vec!["two words".to_string(), "$(literal)".to_string()],
+            }),
+            stdin: Some("bounded input".to_string()),
+            timeout_secs: 60,
+            requested_by: "tester".to_string(),
+            created_at: 123,
+            validation: None,
+            lsp: None,
+            sandbox: None,
+            job_context: None,
+            persistent_shell: None,
+        }
+    }
+
+    fn sample_script_job_request() -> ShellAgentShellRequest {
+        let mut request = sample_script_request();
+        request.kind = "start_script_job".to_string();
+        request.job_id = Some("job-script-1".to_string());
+        request.job_context = Some(ShellJobContext {
+            runtime_project_id: None,
+            workflow_session_id: None,
+            ssh_resource: None,
+            project_cwd: Some("sub dir".to_string()),
+            cwd: Some("sub dir".to_string()),
+            purpose: Some("test".to_string()),
+            shell: Some("bash".to_string()),
+            command_preview: "bash script (18 bytes, 2 args)".to_string(),
+            validation_steps: Vec::new(),
+            validation: None,
+            structured_execution: Some(ShellJobStructuredExecutionMetadata {
+                execution_source: "run_script".to_string(),
+                language: Some(ShellScriptLanguage::Bash),
+                script_bytes: Some(18),
+                arg_count: 2,
+                stdin_present: true,
+            }),
+        });
+        request
+    }
+
+    fn sample_register() -> ShellClientRegisterRequest {
+        ShellClientRegisterRequest {
+            process_started_at: None,
+            build: None,
+            client_id: "ws-1".to_string(),
+            agent_instance_id: "11111111-1111-1111-1111-111111111111".to_string(),
+            display_name: Some("WS Agent".to_string()),
+            owner: Some("alice".to_string()),
+            hostname: None,
+            capabilities: Some(ShellClientCapabilities {
+                shell: true,
+                file_read: true,
+                file_write: false,
+                git: false,
+                jobs: true,
+                async_jobs: true,
+                async_shell_jobs: true,
+                ssh_shell: true,
+                persistent_shell: true,
+                ssh_persistent_shell: true,
+                structured_validation_argv: true,
+                structured_process_argv: true,
+                structured_script_payload: true,
+                structured_execution_jobs: true,
+                lsp_read_only_navigation: false,
+                sandbox_inspect_commands: false,
+                project_lifecycle: false,
+                project_path_registration: false,
+                job_state_reconciliation: false,
+            }),
+            projects: None,
+            agent_protocol_version: Some(AGENT_PROTOCOL_VERSION_WEBSOCKET_V1.to_string()),
+            policy: None,
+            job_concurrency_limit: Some(4),
+            job_inventory: None,
+        }
+    }
+
+    fn sample_tool_providers() -> ToolProvidersStatus {
+        ToolProvidersStatus {
+            strategy: "claude_code_then_native".to_string(),
+            claude_code: ClaudeCodeProviderStatus {
+                enabled: true,
+                version: Some("2.1.217".to_string()),
+                available: true,
+                process_state: "running".to_string(),
+                discovered_tool_names: vec!["Edit".to_string()],
+                capabilities: BTreeMap::from([
+                    ("edit_file".to_string(), "available".to_string()),
+                    ("search_project_text".to_string(), "unmapped".to_string()),
+                ]),
+                last_error_code: None,
+                last_call: None,
+            },
+            config_reload: AgentConfigReloadStatus::default(),
+        }
+    }
+
+    #[test]
+    fn register_envelope_round_trips_with_type_tag() {
+        let env = AgentEnvelope::Register {
+            payload: sample_register(),
+            auth_token: None,
+        };
+        let json = env.to_json().unwrap();
+        assert!(json.contains(r#""type":"register""#), "json was: {json}");
+        assert!(json.contains(r#""client_id":"ws-1""#));
+        // WebSocket sets auth_token=None; the field must not appear on the
+        // wire so the websocket format is unchanged.
+        assert!(!json.contains(r#""auth_token""#), "json was: {json}");
+        let back = AgentEnvelope::from_slice(json.as_bytes()).unwrap();
+        match back {
+            AgentEnvelope::Register { payload, .. } => {
+                assert_eq!(payload.client_id, "ws-1");
+                assert_eq!(
+                    payload.agent_protocol_version.as_deref(),
+                    Some(AGENT_PROTOCOL_VERSION_WEBSOCKET_V1),
+                );
+                assert_eq!(payload.job_concurrency_limit, Some(4));
+                let caps = payload.capabilities.expect("capabilities");
+                assert!(caps.shell);
+                assert!(!caps.file_write);
+                assert!(caps.persistent_shell);
+            }
+            other => panic!("expected register, got {:?}", other.kind()),
+        }
+    }
+
+    #[test]
+    fn legacy_capabilities_default_persistent_shell_to_false() {
+        let capabilities: ShellClientCapabilities =
+            serde_json::from_str(r#"{"shell":true,"jobs":true}"#).unwrap();
+        assert!(capabilities.shell);
+        assert!(capabilities.jobs);
+        assert!(!capabilities.persistent_shell);
+        // SSH persistent shells are never implied by ssh_shell or persistent_shell;
+        // a legacy/older runner that omits the field fails closed.
+        assert!(!capabilities.ssh_shell);
+        assert!(!capabilities.ssh_persistent_shell);
+        assert!(!capabilities.structured_execution_jobs);
+        assert!(!capabilities.project_path_registration);
+        assert!(!ShellClientCapabilities::default().ssh_persistent_shell);
+        assert!(!ShellClientCapabilities::default().project_path_registration);
+    }
+
+    #[test]
+    fn project_path_registration_capability_deserializes_when_present() {
+        let capabilities: ShellClientCapabilities =
+            serde_json::from_str(r#"{"project_path_registration":true}"#).unwrap();
+        assert!(capabilities.project_path_registration);
+    }
+
+    fn reconciliation_inventory() -> ShellJobInventory {
+        ShellJobInventory {
+            active_complete: true,
+            jobs: vec![ShellJobSnapshot {
+                job_id: "job-original".to_string(),
+                request_id: "request-original".to_string(),
+                status: "running".to_string(),
+                update_seq: 9,
+                created_at: 1_700_000_000,
+                started_at: Some(1_700_000_001),
+                ended_at: None,
+                exit_code: None,
+                duration_ms: None,
+                error: None,
+                command_execution_state: None,
+                context: ShellJobContext {
+                    runtime_project_id: Some("agent:oe:demo".to_string()),
+                    workflow_session_id: Some("wc_sess_reconcile".to_string()),
+                    ssh_resource: None,
+                    project_cwd: Some("/srv/demo".to_string()),
+                    cwd: Some("/srv/demo".to_string()),
+                    purpose: Some("test".to_string()),
+                    shell: Some("bash".to_string()),
+                    command_preview: "cargo test focused".to_string(),
+                    validation_steps: Vec::new(),
+                    validation: None,
+                    structured_execution: None,
+                },
+                stdout: ShellJobStreamSnapshot {
+                    tail: "one\n".to_string(),
+                    first_retained_line: 1,
+                    next_line: 2,
+                    truncated: false,
+                },
+                stderr: ShellJobStreamSnapshot::default(),
+                validation_progress: None,
+            }],
+        }
+    }
+
+    #[tokio::test]
+    async fn job_reconciliation_inventory_round_trips_across_all_register_transports() {
+        let inventory = reconciliation_inventory();
+        let mut polling = sample_register();
+        polling.agent_protocol_version = Some(AGENT_PROTOCOL_VERSION_POLLING_V1.to_string());
+        polling
+            .capabilities
+            .as_mut()
+            .unwrap()
+            .job_state_reconciliation = true;
+        polling.job_inventory = Some(inventory.clone());
+        let polling_json = serde_json::to_vec(&polling).unwrap();
+        let polling_back: ShellClientRegisterRequest =
+            serde_json::from_slice(&polling_json).unwrap();
+        assert_eq!(polling_back.job_inventory.as_ref(), Some(&inventory));
+        assert_eq!(polling_back.job_concurrency_limit, Some(4));
+
+        let mut websocket = polling.clone();
+        websocket.agent_protocol_version = Some(AGENT_PROTOCOL_VERSION_WEBSOCKET_V1.to_string());
+        let websocket_json = AgentEnvelope::Register {
+            payload: websocket,
+            auth_token: None,
+        }
+        .to_json()
+        .unwrap();
+        let websocket_back = AgentEnvelope::from_slice(websocket_json.as_bytes()).unwrap();
+        match websocket_back {
+            AgentEnvelope::Register { payload, .. } => {
+                assert_eq!(payload.job_inventory.as_ref(), Some(&inventory));
+                assert_eq!(payload.job_concurrency_limit, Some(4));
+            }
+            other => panic!("expected websocket register, got {:?}", other.kind()),
+        }
+
+        let mut quic = polling;
+        quic.agent_protocol_version = Some(AGENT_PROTOCOL_VERSION_QUIC_V1.to_string());
+        let quic_frame = encode_quic_frame(&AgentEnvelope::Register {
+            payload: quic,
+            auth_token: Some("test-only-token".to_string()),
+        })
+        .unwrap();
+        let mut quic_reader = quic_frame.as_slice();
+        match read_quic_frame(&mut quic_reader).await.unwrap() {
+            AgentEnvelope::Register { payload, .. } => {
+                assert_eq!(payload.job_inventory.as_ref(), Some(&inventory));
+                assert_eq!(payload.job_concurrency_limit, Some(4));
+            }
+            other => panic!("expected quic register, got {:?}", other.kind()),
+        }
+    }
+
+    #[test]
+    fn request_envelope_flattens_shell_request_fields() {
+        let request = ShellAgentShellRequest {
+            request_id: "req-1".to_string(),
+            client_id: "ws-1".to_string(),
+            kind: "run_shell".to_string(),
+            job_id: None,
+            cwd: Some("/tmp".to_string()),
+            path: None,
+            content: None,
+            max_bytes: None,
+            expected_sha256: None,
+            expected_prefix: None,
+            start_line: None,
+            end_line: None,
+            create_dirs: false,
+            command: "echo hi".to_string(),
+            process: None,
+            script: None,
+            stdin: Some("input".to_string()),
+            timeout_secs: 10,
+            requested_by: "tester".to_string(),
+            created_at: 123,
+            validation: None,
+            lsp: None,
+            sandbox: None,
+            job_context: None,
+            persistent_shell: None,
+        };
+        let env = AgentEnvelope::Request { request };
+        let json = env.to_json().unwrap();
+        assert!(json.contains(r#""type":"request""#));
+        assert!(json.contains(r#""request_id":"req-1""#));
+        assert!(json.contains(r#""kind":"run_shell""#));
+        assert!(json.contains(r#""command":"echo hi""#));
+        assert!(json.contains(r#""stdin":"input""#));
+        let back = AgentEnvelope::from_slice(json.as_bytes()).unwrap();
+        match back {
+            AgentEnvelope::Request { request } => {
+                assert_eq!(request.request_id, "req-1");
+                assert_eq!(request.command, "echo hi");
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+    }
+
+    #[tokio::test]
+    async fn structured_process_request_round_trips_polling_websocket_and_quic() {
+        let request = sample_process_request();
+        let polling: ShellAgentPollResponse = serde_json::from_value(
+            serde_json::to_value(ShellAgentPollResponse {
+                success: true,
+                request: Some(request.clone()),
+                error: None,
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(polling.request.as_ref().unwrap().process, request.process);
+        assert_eq!(polling.request.as_ref().unwrap().command, "");
+        assert_eq!(polling.request.as_ref().unwrap().kind, "run_process");
+
+        let websocket_json = AgentEnvelope::Request {
+            request: request.clone(),
+        }
+        .to_json()
+        .unwrap();
+        match AgentEnvelope::from_slice(websocket_json.as_bytes()).unwrap() {
+            AgentEnvelope::Request { request: decoded } => {
+                assert_eq!(decoded.process, request.process);
+                assert_eq!(decoded.command, "");
+                assert_eq!(decoded.kind, "run_process");
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+
+        let frame = encode_quic_frame(&AgentEnvelope::Request {
+            request: request.clone(),
+        })
+        .unwrap();
+        let mut reader = frame.as_slice();
+        match read_quic_frame(&mut reader).await.unwrap() {
+            AgentEnvelope::Request { request: decoded } => {
+                assert_eq!(decoded.process, request.process);
+                assert_eq!(decoded.command, "");
+                assert_eq!(decoded.kind, "run_process");
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+    }
+
+    #[tokio::test]
+    async fn structured_process_job_request_round_trips_polling_websocket_and_quic() {
+        let request = sample_process_job_request();
+        let polling: ShellAgentPollResponse = serde_json::from_value(
+            serde_json::to_value(ShellAgentPollResponse {
+                success: true,
+                request: Some(request.clone()),
+                error: None,
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(polling.request.as_ref().unwrap().process, request.process);
+        assert_eq!(polling.request.as_ref().unwrap().command, "");
+        assert_eq!(polling.request.as_ref().unwrap().kind, "start_process_job");
+        assert!(polling.request.as_ref().unwrap().script.is_none());
+
+        let websocket_json = AgentEnvelope::Request {
+            request: request.clone(),
+        }
+        .to_json()
+        .unwrap();
+        match AgentEnvelope::from_slice(websocket_json.as_bytes()).unwrap() {
+            AgentEnvelope::Request { request: decoded } => {
+                assert_eq!(decoded.process, request.process);
+                assert_eq!(decoded.command, "");
+                assert_eq!(decoded.kind, "start_process_job");
+                assert!(decoded.script.is_none());
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+
+        let frame = encode_quic_frame(&AgentEnvelope::Request {
+            request: request.clone(),
+        })
+        .unwrap();
+        let mut reader = frame.as_slice();
+        match read_quic_frame(&mut reader).await.unwrap() {
+            AgentEnvelope::Request { request: decoded } => {
+                assert_eq!(decoded.process, request.process);
+                assert_eq!(decoded.command, "");
+                assert_eq!(decoded.kind, "start_process_job");
+                assert!(decoded.script.is_none());
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+    }
+
+    #[tokio::test]
+    async fn structured_script_request_round_trips_polling_websocket_and_quic() {
+        let request = sample_script_request();
+        let polling: ShellAgentPollResponse = serde_json::from_value(
+            serde_json::to_value(ShellAgentPollResponse {
+                success: true,
+                request: Some(request.clone()),
+                error: None,
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(polling.request.as_ref().unwrap().script, request.script);
+        assert_eq!(polling.request.as_ref().unwrap().command, "");
+        assert_eq!(polling.request.as_ref().unwrap().kind, "run_script");
+        assert!(polling.request.as_ref().unwrap().process.is_none());
+
+        let websocket_json = AgentEnvelope::Request {
+            request: request.clone(),
+        }
+        .to_json()
+        .unwrap();
+        assert!(!websocket_json.contains(r#""command":"printf"#));
+        match AgentEnvelope::from_slice(websocket_json.as_bytes()).unwrap() {
+            AgentEnvelope::Request { request: decoded } => {
+                assert_eq!(decoded.script, request.script);
+                assert_eq!(decoded.command, "");
+                assert_eq!(decoded.kind, "run_script");
+                assert!(decoded.process.is_none());
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+
+        let frame = encode_quic_frame(&AgentEnvelope::Request {
+            request: request.clone(),
+        })
+        .unwrap();
+        let mut reader = frame.as_slice();
+        match read_quic_frame(&mut reader).await.unwrap() {
+            AgentEnvelope::Request { request: decoded } => {
+                assert_eq!(decoded.script, request.script);
+                assert_eq!(decoded.command, "");
+                assert_eq!(decoded.kind, "run_script");
+                assert!(decoded.process.is_none());
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+    }
+
+    #[tokio::test]
+    async fn structured_script_job_request_round_trips_polling_websocket_and_quic() {
+        let request = sample_script_job_request();
+        let polling: ShellAgentPollResponse = serde_json::from_value(
+            serde_json::to_value(ShellAgentPollResponse {
+                success: true,
+                request: Some(request.clone()),
+                error: None,
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(polling.request.as_ref().unwrap().script, request.script);
+        assert_eq!(polling.request.as_ref().unwrap().command, "");
+        assert_eq!(polling.request.as_ref().unwrap().kind, "start_script_job");
+        assert!(polling.request.as_ref().unwrap().process.is_none());
+
+        let websocket_json = AgentEnvelope::Request {
+            request: request.clone(),
+        }
+        .to_json()
+        .unwrap();
+        assert!(!websocket_json.contains(r#""command":"printf"#));
+        match AgentEnvelope::from_slice(websocket_json.as_bytes()).unwrap() {
+            AgentEnvelope::Request { request: decoded } => {
+                assert_eq!(decoded.script, request.script);
+                assert_eq!(decoded.command, "");
+                assert_eq!(decoded.kind, "start_script_job");
+                assert!(decoded.process.is_none());
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+
+        let frame = encode_quic_frame(&AgentEnvelope::Request {
+            request: request.clone(),
+        })
+        .unwrap();
+        let mut reader = frame.as_slice();
+        match read_quic_frame(&mut reader).await.unwrap() {
+            AgentEnvelope::Request { request: decoded } => {
+                assert_eq!(decoded.script, request.script);
+                assert_eq!(decoded.command, "");
+                assert_eq!(decoded.kind, "start_script_job");
+                assert!(decoded.process.is_none());
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+    }
+
+    #[test]
+    fn b2_capabilities_do_not_imply_structured_execution_jobs() {
+        let capabilities: ShellClientCapabilities =
+            serde_json::from_str(
+                r#"{"shell":true,"async_jobs":true,"structured_validation_argv":true,"structured_process_argv":true,"structured_script_payload":true}"#,
+            )
+            .unwrap();
+        assert!(capabilities.structured_validation_argv);
+        assert!(capabilities.structured_process_argv);
+        assert!(capabilities.structured_script_payload);
+        assert!(capabilities.async_jobs);
+        assert!(!capabilities.structured_execution_jobs);
+        assert!(!ShellClientCapabilities::default().structured_script_payload);
+        assert!(!ShellClientCapabilities::default().structured_execution_jobs);
+    }
+
+    #[test]
+    fn legacy_capabilities_do_not_imply_structured_process_argv() {
+        let capabilities: ShellClientCapabilities =
+            serde_json::from_str(r#"{"shell":true,"structured_validation_argv":true}"#).unwrap();
+        assert!(capabilities.structured_validation_argv);
+        assert!(!capabilities.structured_process_argv);
+        assert!(!capabilities.structured_script_payload);
+        assert!(!capabilities.structured_execution_jobs);
+    }
+
+    #[test]
+    fn process_argv_validation_is_bounded_and_rejects_shell_command_modes() {
+        let valid = ShellProcessArgv {
+            executable: "tool".to_string(),
+            args: vec!["a".repeat(8_000), "b".repeat(7_994)],
+        };
+        assert!(validate_process_argv(&valid).is_ok());
+
+        let oversized = ShellProcessArgv {
+            executable: "tool".to_string(),
+            args: vec!["a".repeat(8_000), "b".repeat(7_995)],
+        };
+        assert!(validate_process_argv(&oversized)
+            .unwrap_err()
+            .contains("maximum total"));
+
+        for invalid in [
+            ShellProcessArgv {
+                executable: "x".repeat(PROCESS_EXECUTABLE_MAX_BYTES + 1),
+                args: Vec::new(),
+            },
+            ShellProcessArgv {
+                executable: "bad\0program".to_string(),
+                args: Vec::new(),
+            },
+            ShellProcessArgv {
+                executable: "tool".to_string(),
+                args: vec![String::new(); PROCESS_ARG_MAX_COUNT + 1],
+            },
+            ShellProcessArgv {
+                executable: "tool".to_string(),
+                args: vec!["x".repeat(PROCESS_ARG_MAX_BYTES + 1)],
+            },
+            ShellProcessArgv {
+                executable: "tool".to_string(),
+                args: vec!["bad\0arg".to_string()],
+            },
+        ] {
+            assert!(validate_process_argv(&invalid).is_err());
+        }
+
+        for (executable, args) in [
+            ("sh", vec!["-c".to_string(), "echo unsafe".to_string()]),
+            (
+                "bash.exe",
+                vec!["-lc".to_string(), "echo unsafe".to_string()],
+            ),
+            (
+                "powershell.exe",
+                vec![
+                    "-NoProfile".to_string(),
+                    "-Command".to_string(),
+                    "echo unsafe".to_string(),
+                ],
+            ),
+            (
+                "cmd.exe",
+                vec![
+                    "/D".to_string(),
+                    "/C".to_string(),
+                    "echo unsafe".to_string(),
+                ],
+            ),
+        ] {
+            assert!(validate_process_argv(&ShellProcessArgv {
+                executable: executable.to_string(),
+                args,
+            })
+            .unwrap_err()
+            .contains("shell command mode"));
+        }
+    }
+
+    #[test]
+    fn script_request_validation_is_bounded_and_allows_whitespace_only_content() {
+        let valid = ShellScriptPayload {
+            language: ShellScriptLanguage::Sh,
+            script: " \n".to_string(),
+            args: vec!["a".repeat(8_000), "b".repeat(7_998)],
+        };
+        assert!(validate_script_request(
+            &valid,
+            Some(&"i".repeat(SCRIPT_STDIN_MAX_BYTES)),
+            Some("."),
+            SCRIPT_TIMEOUT_MAX_SECS,
+        )
+        .is_ok());
+
+        let invalid_payloads = [
+            ShellScriptPayload {
+                language: ShellScriptLanguage::Sh,
+                script: String::new(),
+                args: Vec::new(),
+            },
+            ShellScriptPayload {
+                language: ShellScriptLanguage::Bash,
+                script: "x".repeat(SCRIPT_MAX_BYTES + 1),
+                args: Vec::new(),
+            },
+            ShellScriptPayload {
+                language: ShellScriptLanguage::Powershell,
+                script: "bad\0script".to_string(),
+                args: Vec::new(),
+            },
+            ShellScriptPayload {
+                language: ShellScriptLanguage::Sh,
+                script: "true".to_string(),
+                args: vec![String::new(); SCRIPT_ARG_MAX_COUNT + 1],
+            },
+            ShellScriptPayload {
+                language: ShellScriptLanguage::Sh,
+                script: "true".to_string(),
+                args: vec!["x".repeat(SCRIPT_ARG_MAX_BYTES + 1)],
+            },
+            ShellScriptPayload {
+                language: ShellScriptLanguage::Sh,
+                script: "true".to_string(),
+                args: vec!["bad\0arg".to_string()],
+            },
+            ShellScriptPayload {
+                language: ShellScriptLanguage::Sh,
+                script: "true".to_string(),
+                args: vec!["a".repeat(8_000), "b".repeat(8_000)],
+            },
+        ];
+        for payload in invalid_payloads {
+            assert!(validate_script_request(&payload, None, None, 60).is_err());
+        }
+        assert!(validate_script_request(
+            &valid,
+            Some(&"i".repeat(SCRIPT_STDIN_MAX_BYTES + 1)),
+            None,
+            60,
+        )
+        .is_err());
+        assert!(validate_script_request(&valid, Some("bad\0stdin"), None, 60).is_err());
+        assert!(validate_script_request(
+            &valid,
+            None,
+            Some(&"c".repeat(SCRIPT_CWD_MAX_BYTES + 1)),
+            60,
+        )
+        .is_err());
+        assert!(validate_script_request(&valid, None, Some("bad\0cwd"), 60).is_err());
+        assert!(validate_script_request(&valid, None, None, 0).is_err());
+        assert!(validate_script_request(&valid, None, None, SCRIPT_TIMEOUT_MAX_SECS + 1).is_err());
+    }
+
+    #[test]
+    fn cmd_is_not_a_script_language() {
+        let error = serde_json::from_value::<ShellScriptLanguage>(serde_json::json!("cmd"))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("unknown variant"), "{error}");
+    }
+
+    #[test]
+    fn persistent_shell_request_and_result_envelopes_round_trip() {
+        let request: ShellAgentShellRequest = serde_json::from_value(serde_json::json!({
+            "request_id": "req-shell-1",
+            "client_id": "ws-1",
+            "kind": "persistent_shell",
+            "command": "",
+            "timeout_secs": 35,
+            "requested_by": "tester",
+            "created_at": 123,
+            "persistent_shell": {
+                "action": "exec",
+                "shell_id": "wc_shell_1234",
+                "workflow_session_id": "wc_sess_1234",
+                "runtime_project_id": "agent:ws-1:demo",
+                "command": "printf ready",
+                "timeout_secs": 30,
+                "purpose": "test"
+            }
+        }))
+        .unwrap();
+        let request_json = AgentEnvelope::Request { request }.to_json().unwrap();
+        match AgentEnvelope::from_slice(request_json.as_bytes()).unwrap() {
+            AgentEnvelope::Request { request } => {
+                let operation = request.persistent_shell.unwrap();
+                assert_eq!(operation.action, "exec");
+                assert_eq!(operation.shell_id, "wc_shell_1234");
+                assert_eq!(operation.command.as_deref(), Some("printf ready"));
+            }
+            other => panic!("expected request, got {:?}", other.kind()),
+        }
+
+        let result = PersistentShellResult {
+            shell_id: "wc_shell_1234".to_string(),
+            workflow_session_id: "wc_sess_1234".to_string(),
+            runtime_project_id: "agent:ws-1:demo".to_string(),
+            shell_state: "running".to_string(),
+            execution_state: "completed".to_string(),
+            command_started: true,
+            command_completed: true,
+            exit_code: Some(0),
+            stdout: "ready".to_string(),
+            stderr: String::new(),
+            stdout_truncated: false,
+            stderr_truncated: false,
+            duration_ms: 4,
+            cwd: Some("/srv/demo".to_string()),
+            initial_cwd: None,
+            shell: None,
+            profile: None,
+            created_at: None,
+            last_activity_at: Some(124),
+            busy: false,
+            already_closed: false,
+            close_reason: None,
+            error_code: None,
+            error: None,
+        };
+        let result_json = AgentEnvelope::PersistentShellResult {
+            payload: ShellAgentPersistentShellResultRequest {
+                client_id: "ws-1".to_string(),
+                agent_instance_id: "11111111-1111-1111-1111-111111111111".to_string(),
+                request_id: "req-shell-1".to_string(),
+                result: result.clone(),
+            },
+        }
+        .to_json()
+        .unwrap();
+        assert!(result_json.contains(r#""type":"persistent_shell_result""#));
+        match AgentEnvelope::from_slice(result_json.as_bytes()).unwrap() {
+            AgentEnvelope::PersistentShellResult { payload } => {
+                assert_eq!(payload.request_id, "req-shell-1");
+                assert_eq!(payload.result, result);
+            }
+            other => panic!("expected persistent shell result, got {:?}", other.kind()),
+        }
+    }
+
+    #[test]
+    fn result_and_job_update_envelopes_round_trip() {
+        let result_env = AgentEnvelope::Result {
+            payload: ShellAgentResultPayload {
+                result: ShellAgentResultRequest {
+                    client_id: "ws-1".to_string(),
+                    agent_instance_id: "11111111-1111-1111-1111-111111111111".to_string(),
+                    request_id: "req-1".to_string(),
+                    exit_code: Some(0),
+                    stdout: Some("hi".to_string()),
+                    stderr: None,
+                    duration_ms: Some(5),
+                    error: None,
+                },
+                command_execution_state: Some(ShellCommandExecutionState::Completed),
+            },
+        };
+        let json = result_env.to_json().unwrap();
+        assert!(json.contains(r#""type":"result""#));
+        match AgentEnvelope::from_slice(json.as_bytes()).unwrap() {
+            AgentEnvelope::Result { payload } => {
+                assert_eq!(payload.result.exit_code, Some(0));
+                assert_eq!(
+                    payload.command_execution_state,
+                    Some(ShellCommandExecutionState::Completed)
+                );
+            }
+            other => panic!("expected result, got {:?}", other.kind()),
+        }
+
+        let job_env = AgentEnvelope::JobUpdate {
+            payload: ShellAgentJobUpdateRequest {
+                client_id: "ws-1".to_string(),
+                agent_instance_id: "11111111-1111-1111-1111-111111111111".to_string(),
+                job_id: "job-1".to_string(),
+                request_id: Some("req-1".to_string()),
+                update_seq: None,
+                status: "running".to_string(),
+                stdout_chunk: Some("out".to_string()),
+                stderr_chunk: None,
+                stdout_tail: None,
+                stderr_tail: None,
+                log_snapshot: None,
+                exit_code: None,
+                duration_ms: None,
+                error: None,
+                command_execution_state: None,
+                validation_progress: None,
+                finished: false,
+            },
+        };
+        let json = job_env.to_json().unwrap();
+        assert!(json.contains(r#""type":"job_update""#));
+        match AgentEnvelope::from_slice(json.as_bytes()).unwrap() {
+            AgentEnvelope::JobUpdate { payload } => assert_eq!(payload.job_id, "job-1"),
+            other => panic!("expected job_update, got {:?}", other.kind()),
+        }
+    }
+
+    #[test]
+    fn legacy_job_update_and_snapshot_default_structured_lifecycle_to_absent() {
+        let update: ShellAgentJobUpdateRequest = serde_json::from_value(serde_json::json!({
+            "client_id": "ws-1",
+            "agent_instance_id": "11111111-1111-1111-1111-111111111111",
+            "job_id": "job-legacy",
+            "status": "completed",
+            "exit_code": 0,
+            "finished": true
+        }))
+        .unwrap();
+        assert_eq!(update.command_execution_state, None);
+
+        let inventory = reconciliation_inventory();
+        let encoded = serde_json::to_value(&inventory).unwrap();
+        assert!(encoded["jobs"][0].get("command_execution_state").is_none());
+        let decoded: ShellJobInventory = serde_json::from_value(encoded).unwrap();
+        assert_eq!(decoded.jobs[0].command_execution_state, None);
+    }
+
+    #[test]
+    fn ping_pong_error_envelopes_round_trip() {
+        let ping = AgentEnvelope::Ping { ts: 1700000000 };
+        let json = ping.to_json().unwrap();
+        assert_eq!(json, r#"{"type":"ping","ts":1700000000}"#);
+        match AgentEnvelope::from_slice(json.as_bytes()).unwrap() {
+            AgentEnvelope::Ping { ts } => assert_eq!(ts, 1700000000),
+            other => panic!("expected ping, got {:?}", other.kind()),
+        }
+
+        let err = AgentEnvelope::Error {
+            code: "bad_request".to_string(),
+            message: "nope".to_string(),
+        };
+        let json = err.to_json().unwrap();
+        assert!(json.contains(r#""type":"error""#));
+        match AgentEnvelope::from_slice(json.as_bytes()).unwrap() {
+            AgentEnvelope::Error { code, message } => {
+                assert_eq!(code, "bad_request");
+                assert_eq!(message, "nope");
+            }
+            other => panic!("expected error, got {:?}", other.kind()),
+        }
+    }
+
+    #[test]
+    fn runtime_metadata_and_legacy_poll_payloads_round_trip() {
+        let env = AgentEnvelope::RuntimeMetadata {
+            tool_providers: sample_tool_providers(),
+        };
+        let json = env.to_json().unwrap();
+        assert!(json.contains(r#""type":"runtime_metadata""#));
+        assert!(json.contains(r#""last_error_code":null"#));
+        assert!(matches!(
+            AgentEnvelope::from_slice(json.as_bytes()).unwrap(),
+            AgentEnvelope::RuntimeMetadata { .. }
+        ));
+
+        let legacy = r#"{"client_id":"oe","agent_instance_id":"inst","projects":null}"#;
+        let payload: ShellAgentPollPayload = serde_json::from_str(legacy).unwrap();
+        assert_eq!(payload.request.client_id, "oe");
+        assert!(payload.tool_providers.is_none());
+    }
+
+    #[test]
+    fn goodbye_envelope_round_trips_and_reason_is_optional() {
+        let env = AgentEnvelope::Goodbye {
+            reason: Some("shutdown".to_string()),
+        };
+        let json = env.to_json().unwrap();
+        assert!(json.contains(r#""type":"goodbye""#));
+        assert!(json.contains(r#""reason":"shutdown""#));
+        match AgentEnvelope::from_slice(json.as_bytes()).unwrap() {
+            AgentEnvelope::Goodbye { reason } => assert_eq!(reason.as_deref(), Some("shutdown")),
+            other => panic!("expected goodbye, got {:?}", other.kind()),
+        }
+
+        let env = AgentEnvelope::Goodbye { reason: None };
+        let json = env.to_json().unwrap();
+        assert!(json.contains(r#""type":"goodbye""#));
+        assert!(!json.contains(r#""reason""#));
+        assert!(matches!(
+            AgentEnvelope::from_slice(json.as_bytes()).unwrap(),
+            AgentEnvelope::Goodbye { reason: None }
+        ));
+    }
+
+    #[test]
+    fn invalid_envelope_type_is_rejected() {
+        let json = r#"{"type":"not_a_real_variant"}"#;
+        assert!(AgentEnvelope::from_slice(json.as_bytes()).is_err());
+    }
+
+    #[test]
+    fn registered_envelope_omits_none_fields() {
+        let env = AgentEnvelope::Registered {
+            success: true,
+            client: None,
+            error: None,
+        };
+        let json = env.to_json().unwrap();
+        assert!(json.contains(r#""type":"registered""#));
+        assert!(json.contains(r#""success":true"#));
+        // client/error are skip_serializing_if None.
+        assert!(!json.contains(r#""client""#));
+        assert!(!json.contains(r#""error""#));
+    }
+
+    #[test]
+    fn register_request_round_trips_agent_instance_id() {
+        let req = sample_register();
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains(r#""agent_instance_id":"11111111-1111-1111-1111-111111111111""#));
+        let back: ShellClientRegisterRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            back.agent_instance_id,
+            "11111111-1111-1111-1111-111111111111"
+        );
+    }
+
+    #[test]
+    fn older_register_request_without_job_concurrency_limit_deserializes_as_unknown() {
+        let json = r#"{
+            "client_id": "legacy-runner",
+            "agent_instance_id": "legacy-instance",
+            "capabilities": {"shell": true}
+        }"#;
+        let request: ShellClientRegisterRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(request.job_concurrency_limit, None);
+    }
+
+    #[test]
+    fn register_request_without_agent_instance_id_is_rejected() {
+        // An old agent that omits agent_instance_id must be rejected at
+        // deserialization: the field is now required for correctness.
+        let json = r#"{
+            "client_id": "oe",
+            "capabilities": {"shell": true}
+        }"#;
+        let err = serde_json::from_str::<ShellClientRegisterRequest>(json);
+        assert!(err.is_err(), "missing agent_instance_id must be rejected");
+    }
+
+    #[test]
+    fn poll_result_job_update_round_trip_agent_instance_id() {
+        let poll = ShellAgentPollRequest {
+            client_id: "oe".to_string(),
+            agent_instance_id: "22222222-2222-2222-2222-222222222222".to_string(),
+            projects: None,
+        };
+        let json = serde_json::to_string(&poll).unwrap();
+        let back: ShellAgentPollRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            back.agent_instance_id,
+            "22222222-2222-2222-2222-222222222222"
+        );
+
+        let result = ShellAgentResultRequest {
+            client_id: "oe".to_string(),
+            agent_instance_id: "22222222-2222-2222-2222-222222222222".to_string(),
+            request_id: "req-1".to_string(),
+            exit_code: Some(0),
+            stdout: None,
+            stderr: None,
+            duration_ms: None,
+            error: None,
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        let back: ShellAgentResultRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            back.agent_instance_id,
+            "22222222-2222-2222-2222-222222222222"
+        );
+
+        let job = ShellAgentJobUpdateRequest {
+            client_id: "oe".to_string(),
+            agent_instance_id: "22222222-2222-2222-2222-222222222222".to_string(),
+            job_id: "job-1".to_string(),
+            request_id: None,
+            update_seq: None,
+            status: "running".to_string(),
+            stdout_chunk: None,
+            stderr_chunk: None,
+            stdout_tail: None,
+            stderr_tail: None,
+            log_snapshot: None,
+            exit_code: None,
+            duration_ms: None,
+            error: None,
+            command_execution_state: None,
+            validation_progress: None,
+            finished: false,
+        };
+        let json = serde_json::to_string(&job).unwrap();
+        let back: ShellAgentJobUpdateRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            back.agent_instance_id,
+            "22222222-2222-2222-2222-222222222222"
+        );
+    }
+
+    #[test]
+    fn poll_result_job_update_without_agent_instance_id_are_rejected() {
+        assert!(serde_json::from_str::<ShellAgentPollRequest>(r#"{"client_id":"oe"}"#).is_err());
+        assert!(serde_json::from_str::<ShellAgentResultRequest>(
+            r#"{"client_id":"oe","request_id":"r1"}"#
+        )
+        .is_err());
+        assert!(serde_json::from_str::<ShellAgentJobUpdateRequest>(
+            r#"{"client_id":"oe","job_id":"j1","status":"running"}"#
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn quic_frame_encode_prefixes_u32_be_length() {
+        let env = AgentEnvelope::Ping { ts: 42 };
+        let frame = encode_quic_frame(&env).unwrap();
+        // First 4 bytes are the big-endian JSON length.
+        let len = u32::from_be_bytes(frame[0..4].try_into().unwrap()) as usize;
+        assert_eq!(len, frame.len() - 4);
+        // The body is valid JSON containing the ping.
+        let body = &frame[4..];
+        assert!(std::str::from_utf8(body)
+            .unwrap()
+            .contains(r#""type":"ping""#));
+    }
+
+    #[tokio::test]
+    async fn quic_frame_round_trips_through_read_write() {
+        use tokio::io::AsyncReadExt;
+        let env = AgentEnvelope::Pong { ts: 99 };
+        let mut buf: Vec<u8> = Vec::new();
+        write_quic_frame(&mut buf, &env).await.unwrap();
+        // Drain the written bytes through a slice reader.
+        let mut reader: &[u8] = &buf;
+        let back = read_quic_frame(&mut reader).await.unwrap();
+        assert!(matches!(back, AgentEnvelope::Pong { ts: 99 }));
+        // The stream is fully consumed.
+        let mut tail = Vec::new();
+        let n = reader.read_to_end(&mut tail).await.unwrap();
+        assert_eq!(n, 0);
+    }
+
+    #[tokio::test]
+    async fn quic_frame_rejects_oversized_announced_length() {
+        // Craft a header announcing a length far above the cap, followed by a
+        // tiny body. The codec must reject *before* allocating/reading the
+        // announced body.
+        let huge = (QUIC_FRAME_MAX_BYTES as u32 + 1).to_be_bytes();
+        let mut bad: Vec<u8> = Vec::new();
+        bad.extend_from_slice(&huge);
+        bad.extend_from_slice(b"{}");
+        let mut reader: &[u8] = &bad;
+        let err = read_quic_frame(&mut reader).await.unwrap_err();
+        match err {
+            QuicFrameError::Oversized { len, max } => {
+                assert_eq!(len, QUIC_FRAME_MAX_BYTES + 1);
+                assert_eq!(max, QUIC_FRAME_MAX_BYTES);
+            }
+            other => panic!("expected Oversized, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn quic_frame_rejects_malformed_body_and_short_stream() {
+        // Announced length says 5 bytes but the body is invalid JSON.
+        let mut bad: Vec<u8> = Vec::new();
+        bad.extend_from_slice(&5u32.to_be_bytes());
+        bad.extend_from_slice(b"notjs");
+        let mut reader: &[u8] = &bad;
+        let err = read_quic_frame(&mut reader).await.unwrap_err();
+        assert!(matches!(err, QuicFrameError::Json(_)), "got {err:?}");
+
+        // Announced length says 10 bytes but the stream ends after 2.
+        let mut short: Vec<u8> = Vec::new();
+        short.extend_from_slice(&10u32.to_be_bytes());
+        short.extend_from_slice(b"ab");
+        let mut reader: &[u8] = &short;
+        let err = read_quic_frame(&mut reader).await.unwrap_err();
+        assert!(matches!(err, QuicFrameError::Malformed(_)), "got {err:?}");
+
+        // Empty stream -> EmptyStream, not Malformed.
+        let empty: Vec<u8> = Vec::new();
+        let mut reader: &[u8] = &empty;
+        let err = read_quic_frame(&mut reader).await.unwrap_err();
+        assert!(matches!(err, QuicFrameError::EmptyStream), "got {err:?}");
+    }
+
+    #[test]
+    fn register_envelope_with_auth_token_serializes_when_some() {
+        // QUIC sets auth_token=Some; the field appears on the wire so the
+        // server can authenticate the agent. WebSocket leaves it None (tested
+        // separately) so its wire format is unchanged.
+        let env = AgentEnvelope::Register {
+            payload: ShellClientRegisterRequest {
+                process_started_at: None,
+                build: None,
+                client_id: "q-1".to_string(),
+                agent_instance_id: "11111111-1111-1111-1111-111111111111".to_string(),
+                display_name: None,
+                owner: None,
+                hostname: None,
+                capabilities: None,
+                projects: None,
+                agent_protocol_version: Some(AGENT_PROTOCOL_VERSION_QUIC_V1.to_string()),
+                policy: None,
+                job_concurrency_limit: None,
+                job_inventory: None,
+            },
+            auth_token: Some("wc_agent_secret".to_string()),
+        };
+        let json = env.to_json().unwrap();
+        assert!(
+            json.contains(r#""auth_token":"wc_agent_secret""#),
+            "json was: {json}"
+        );
+        let back = AgentEnvelope::from_slice(json.as_bytes()).unwrap();
+        match back {
+            AgentEnvelope::Register { auth_token, .. } => {
+                assert_eq!(auth_token.as_deref(), Some("wc_agent_secret"));
+            }
+            other => panic!("expected register, got {:?}", other.kind()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod filter_canonical_tests {
+    use super::*;
+
+    fn cargo_test(filter: &str) -> ShellJobValidationStep {
+        ShellJobValidationStep {
+            name: "test".to_string(),
+            program: "cargo".to_string(),
+            args: vec!["test".to_string(), filter.to_string()],
+            env: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn step_env_allowlist_gates_canonicality() {
+        let mut step = cargo_test("tool_runtime");
+        assert!(step.is_canonical());
+        step.env
+            .push(("CARGO_TARGET_DIR".to_string(), "/state/cache".to_string()));
+        assert!(
+            step.is_canonical(),
+            "allowlisted env key must stay canonical"
+        );
+        step.env.push(("PATH".to_string(), "/tmp/evil".to_string()));
+        assert!(
+            !step.is_canonical(),
+            "non-allowlisted env keys must break canonicality"
+        );
+    }
+
+    #[test]
+    fn canonical_cargo_check_argv_accepts_read_only_flags_only() {
+        let step = |args: Vec<&str>| ShellJobValidationStep {
+            name: "check".to_string(),
+            program: "cargo".to_string(),
+            args: args.into_iter().map(str::to_string).collect(),
+            env: Vec::new(),
+        };
+        let accepted = [
+            vec!["check"],
+            vec!["check", "--all-targets"],
+            vec!["check", "--all-features"],
+            vec!["check", "--no-default-features"],
+            vec!["check", "--all-targets", "--all-features"],
+            vec!["check", "--features", "serde"],
+            vec!["check", "--features", "a b"],
+            vec!["check", "-p", "my-crate"],
+            vec![
+                "check",
+                "--all-targets",
+                "-p",
+                "my-crate",
+                "--features",
+                "x",
+            ],
+        ];
+        for args in accepted {
+            assert!(
+                step(args.clone()).is_canonical(),
+                "expected canonical for {args:?}"
+            );
+        }
+        let rejected = [
+            vec!["check", "--all-targets", "--all-targets"],
+            vec!["check", "--no-run"],
+            vec!["check", "--features"],
+            vec!["check", "--features", ""],
+            vec!["check", "--features", "--no-run"],
+            vec!["check", "-p", "--all-features"],
+            vec!["check", "--features", " "],
+            vec!["check", "--features", "  serde"],
+            vec!["check", "--features", "serde  "],
+            vec!["check", "--features", "line\nbreak"],
+            vec!["check", "-p", "tab\tvalue"],
+            vec!["check", "--manifest-path", "/tmp/Cargo.toml"],
+            vec!["check", "--locked"],
+            vec!["check", "--", "--all-targets"],
+        ];
+        let over_long_value = "a".repeat(CARGO_VALUE_MAX_BYTES + 1);
+        let rejected_over_long = vec!["check", "--features", over_long_value.as_str()];
+        assert!(
+            !step(rejected_over_long.clone()).is_canonical(),
+            "expected non-canonical for {rejected_over_long:?}"
+        );
+        // A feature list at exactly the max length remains canonical.
+        let max_len_feature = "a".repeat(CARGO_VALUE_MAX_BYTES);
+        assert!(
+            step(vec!["check", "--features", max_len_feature.as_str()]).is_canonical(),
+            "max-length feature value must stay canonical"
+        );
+        for args in rejected {
+            assert!(
+                !step(args.clone()).is_canonical(),
+                "expected non-canonical for {args:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn canonical_cargo_test_argv_accepts_filter_and_read_only_flags() {
+        let step = |args: Vec<&str>| ShellJobValidationStep {
+            name: "test".to_string(),
+            program: "cargo".to_string(),
+            args: args.into_iter().map(str::to_string).collect(),
+            env: Vec::new(),
+        };
+        let accepted = [
+            vec!["test"],
+            vec!["test", "focused"],
+            vec!["test", "--all-targets"],
+            vec!["test", "--no-run"],
+            vec!["test", "focused", "--all-features"],
+            vec!["test", "--features", "serde", "--no-run"],
+            vec!["test", "-p", "my-crate", "--no-default-features"],
+        ];
+        for args in accepted {
+            assert!(
+                step(args.clone()).is_canonical(),
+                "expected canonical for {args:?}"
+            );
+        }
+        let rejected = [
+            vec!["test", "--no-run", "--no-run"],
+            vec!["test", "--no-run", "--all-targets", "--all-targets"],
+            vec!["test", "--no-default-features", "--no-default-features"],
+            vec!["test", "--all-features", "--all-features"],
+            vec!["test", "--features", "--no-run"],
+            vec!["test", "-p", "--all-features"],
+            vec!["test", "--features", ""],
+            vec!["test", "--features", "  serde"],
+            vec!["test", "-p", "crate  "],
+            vec!["test", "--features", "nul\0byte"],
+            vec!["test", "--features", "col\tumn"],
+            vec!["test", "--manifest-path", "/tmp/Cargo.toml"],
+            vec!["test", "--", "--all-targets"],
+        ];
+        for args in rejected {
+            assert!(
+                !step(args.clone()).is_canonical(),
+                "expected non-canonical for {args:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn cargo_test_filter_arm_is_the_fail_closed_boundary() {
+        // The reported failure and its variants: a Cargo option or control
+        // bytes smuggled in as a "filter". The Agent-facing canonical contract
+        // must reject them independently of the planner so an old server,
+        // forged request, or protocol drift cannot redirect the manifest.
+        let too_long = "a".repeat(RUST_TEST_FILTER_MAX_BYTES + 1);
+        // `--all-features` and `--no-default-features` are in the Cargo flag
+        // allowlist, so a flat `["test", "--all-features"]` argv is a legal
+        // `cargo test --all-features` and parses as the flag (flat-argv
+        // information loss). The rejection of option-like filters belongs to
+        // `valid_rust_test_filter` / the planner, not this flat-argv boundary.
+        // Every other option is still rejected at the canonical boundary.
+        let rejected = [
+            "--manifest-path=/tmp/outside/Cargo.toml",
+            "--manifest-path",
+            "--target-dir=/tmp/outside-target",
+            "--package=another-package",
+            "--workspace",
+            "--all",
+            "--doc",
+            "--test=another-target",
+            "--bench=another-target",
+            "--features=unexpected",
+            "-Zunstable-options",
+            "-h",
+            "--help",
+            "-",
+            "--",
+            " --",
+            " --help",
+            "line\nbreak",
+            "line\rbreak",
+            "col\tumn",
+            "nul\0byte",
+            "",
+            too_long.as_str(),
+        ];
+        for filter in rejected {
+            assert!(
+                !cargo_test(filter).is_canonical(),
+                "expected non-canonical for {filter:?}"
+            );
+        }
+        // The option-like values that are allowlisted Cargo flags are rejected
+        // as *filters* by the shared contract even though the flat argv parses
+        // as the flag.
+        for filter in ["--all-features", "--no-default-features"] {
+            assert!(
+                !valid_rust_test_filter(filter),
+                "expected non-canonical filter for {filter:?}"
+            );
+            assert!(
+                cargo_test(filter).is_canonical(),
+                "flat argv {filter:?} must parse as the legal Cargo flag"
+            );
+        }
+
+        // No-filter and valid name substrings (including the max length) remain
+        // canonical.
+        let no_filter = ShellJobValidationStep {
+            name: "test".to_string(),
+            program: "cargo".to_string(),
+            args: vec!["test".to_string()],
+            env: Vec::new(),
+        };
+        assert!(no_filter.is_canonical());
+        let max_len = "a".repeat(RUST_TEST_FILTER_MAX_BYTES);
+        for filter in [
+            "module::nested::test_name",
+            "测试::筛选",
+            "name; $(sub)",
+            max_len.as_str(),
+        ] {
+            assert!(
+                cargo_test(filter).is_canonical(),
+                "expected canonical for {filter:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn cargo_value_contract_normalizes_exactly_once_and_fails_closed() {
+        // The shared normalization contract used by both the synchronous
+        // command builders and the structured Job argv builder.
+        assert_eq!(
+            normalize_cargo_value("serde").unwrap(),
+            Some("serde".to_string())
+        );
+        // Multi-word feature lists remain legal.
+        assert_eq!(
+            normalize_cargo_value("a b").unwrap(),
+            Some("a b".to_string())
+        );
+        assert_eq!(
+            normalize_cargo_value("  a  b  ").unwrap(),
+            Some("a  b".to_string())
+        );
+        // Exactly one leading/trailing trim, applied consistently.
+        assert_eq!(
+            normalize_cargo_value("  serde  ").unwrap(),
+            Some("serde".to_string())
+        );
+        // Blank input means "option omitted".
+        assert_eq!(normalize_cargo_value("").unwrap(), None);
+        assert_eq!(normalize_cargo_value("   ").unwrap(), None);
+
+        // Option-like values must never be consumed as an option's value.
+        assert!(normalize_cargo_value("--no-run").is_err());
+        assert!(normalize_cargo_value("--all-features").is_err());
+        assert!(normalize_cargo_value("-p").is_err());
+        // Control bytes and NUL are rejected.
+        assert!(normalize_cargo_value("line\nbreak").is_err());
+        assert!(normalize_cargo_value("tab\tvalue").is_err());
+        assert!(normalize_cargo_value("nul\0byte").is_err());
+        // Over-long values are rejected; the max length is accepted.
+        let over_long = "a".repeat(CARGO_VALUE_MAX_BYTES + 1);
+        assert!(normalize_cargo_value(&over_long).is_err());
+        let max_len_value = "a".repeat(CARGO_VALUE_MAX_BYTES);
+        assert_eq!(
+            normalize_cargo_value(&max_len_value).unwrap(),
+            Some(max_len_value.clone())
+        );
+    }
+
+    #[test]
+    fn flat_argv_with_option_like_value_is_rejected_by_normalization() {
+        // The reported failure and its variants. A value-taking flag must never
+        // consume the next Cargo option as its value, whether on `check` or
+        // `test`, and regardless of runtime path.
+        let check = |args: Vec<&str>| ShellJobValidationStep {
+            name: "check".to_string(),
+            program: "cargo".to_string(),
+            args: args.into_iter().map(str::to_string).collect(),
+            env: Vec::new(),
+        };
+        for args in [
+            vec!["check", "--features", "--no-run"],
+            vec!["check", "-p", "--all-features"],
+            vec!["check", "--features", "-p"],
+        ] {
+            assert!(
+                !check(args.clone()).is_canonical(),
+                "expected non-canonical for {args:?}"
+            );
+        }
+        let test = |args: Vec<&str>| ShellJobValidationStep {
+            name: "test".to_string(),
+            program: "cargo".to_string(),
+            args: args.into_iter().map(str::to_string).collect(),
+            env: Vec::new(),
+        };
+        for args in [
+            vec!["test", "--features", "--no-run"],
+            vec!["test", "-p", "--all-features"],
+        ] {
+            assert!(
+                !test(args.clone()).is_canonical(),
+                "expected non-canonical for {args:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn filter_boundary_is_flat_argv_information_loss_not_acceptance() {
+        // `["test", "--all-features"]` is a legal `cargo test --all-features`
+        // and must parse as the flag. It is NOT a legal filter: the planner
+        // rejects option-like filters before argv is built. `is_canonical`
+        // cannot classify the same flat argv as both legal and illegal.
+        let step = cargo_test("--all-features");
+        assert!(step.is_canonical(), "flat argv parses as the Cargo flag");
+        assert!(
+            !valid_rust_test_filter("--all-features"),
+            "option-like values must be rejected as filters"
+        );
+        // --all-features as a filter value must equally never survive as a
+        // value-taking argument's value.
+        assert!(normalize_cargo_value("--all-features").is_err());
+        // The still-forbidden options remain rejected at the canonical
+        // boundary when they appear as value-taking values or extra flags.
+        for args in [
+            vec!["test", "--manifest-path", "/tmp/Cargo.toml"],
+            vec!["test", "--target-dir", "/tmp/outside-target"],
+            vec!["test", "-Z", "unstable-options"],
+        ] {
+            assert!(
+                !cargo_test_argv(args.clone()).is_canonical(),
+                "expected non-canonical for {args:?}"
+            );
+        }
+    }
+
+    fn cargo_test_argv(args: Vec<&str>) -> ShellJobValidationStep {
+        ShellJobValidationStep {
+            name: "test".to_string(),
+            program: "cargo".to_string(),
+            args: args.into_iter().map(str::to_string).collect(),
+            env: Vec::new(),
+        }
+    }
+}

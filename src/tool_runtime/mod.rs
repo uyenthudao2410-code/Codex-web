@@ -1,0 +1,141 @@
+//! Tool Runtime — unified execution layer for MCP and GPT Actions.
+//!
+//! Both protocol adapters call `ToolRuntime::dispatch()`.
+//! No HTTP framework types here — pure Rust input/output.
+
+pub mod activity;
+mod agent_authorization;
+mod cargo;
+mod cargo_tools;
+mod checkpoint;
+mod coding_task;
+mod coding_task_tools;
+mod continuation_feedback;
+mod discovery_tools;
+mod dispatch;
+mod edit_tool_telemetry;
+mod file_listing;
+mod file_tools;
+pub(crate) mod files;
+mod git;
+mod git_tools;
+mod handoff;
+mod handoff_brief;
+mod handoff_tools;
+mod helpers;
+mod hygiene;
+mod hygiene_tools;
+mod job_tools;
+mod jobs;
+pub(crate) mod kernel;
+mod local_jobs;
+mod lsp_tools;
+pub(crate) mod metadata;
+pub(crate) mod observations;
+mod observe_jobs;
+mod patch;
+mod patch_tools;
+pub(crate) mod permissions;
+mod process;
+pub(crate) mod project_instructions;
+mod project_resolution;
+mod project_tools;
+mod projects;
+mod read_files;
+mod registry;
+mod runtime;
+mod runtime_info;
+mod script;
+mod search_project_texts;
+mod semantic_navigation;
+mod session_context;
+mod session_shell;
+mod session_tools;
+pub(crate) mod sessions;
+mod shell;
+mod shell_tools;
+pub(crate) mod startup_brief;
+mod structured_execution;
+mod surface;
+mod tool_audit;
+mod tool_call;
+mod tool_catalog;
+pub(crate) mod tool_definition;
+mod tool_inputs;
+mod tool_policy;
+mod tool_result;
+mod tool_spec;
+mod validation_events;
+pub(crate) mod validation_parser;
+pub(crate) mod validation_profile;
+
+// Re-export the public API so `crate::tool_runtime::ToolCall` etc. still work.
+#[cfg(test)]
+pub(crate) use agent_authorization::required_agent_capability;
+pub(crate) use local_jobs::ACTIVE_JOB_STATUSES;
+#[cfg(test)]
+pub(crate) use local_jobs::{LocalJobKiller, LocalJobRecord, SystemJobKiller, TerminateOutcome};
+pub use runtime::ToolRuntime;
+pub use runtime_info::RuntimeInfo;
+pub use tool_call::{
+    ObserveJobsItem, ReadFilesItem, SearchProjectTextsQuery, SearchResultMode, ToolCall,
+};
+pub(crate) use tool_call::{
+    TOOL_CALL_ARGUMENTS_FIELD, TOOL_CALL_PARAMS_FIELD, TOOL_CALL_TOOL_FIELD,
+    TOOL_CALL_WRAPPER_FIELDS,
+};
+#[cfg(test)]
+pub use tool_definition::is_known_tool_name;
+#[cfg(test)]
+pub(crate) use tool_definition::is_model_hidden_tool_name;
+#[cfg(test)]
+pub(crate) use tool_definition::{
+    known_tool_names, model_hidden_tool_names, runtime_tool_category as tool_manifest_category,
+    AgentCapability,
+};
+pub use tool_inputs::{
+    default_true, ApplyFileChangeInput, ExecutionPurpose, ExecutionShell, ListToolsOptions,
+    SessionMode,
+};
+#[cfg(test)]
+pub use tool_inputs::{
+    ApplyFileChangeKind, ApplyTextEditInput, ApplyTextEditKind, CheckpointValidationInput,
+    StartupDetail,
+};
+pub use tool_result::ToolResult;
+pub use tool_spec::ToolSpec;
+
+use serde_json::json;
+
+#[cfg(test)]
+pub(crate) use project_resolution::ProjectResolverErrorKind;
+pub(crate) use project_resolution::{agent_project_runtime_id, ProjectResolverError};
+pub(crate) use registry::{accepted_flattened_args_for_spec, registered_tool_specs};
+#[cfg(test)]
+pub(crate) use session_context::current_session_principal;
+pub(crate) use session_context::{
+    add_session_telemetry_hint, current_session_key, session_guard_denied_result,
+    unknown_session_result, ALLOW_CROSS_PROJECT_SESSION_FIELD,
+};
+pub(crate) use session_shell::SessionShellRegistry;
+#[cfg(test)]
+pub(crate) use surface::{recommended_flows, registered_tool_categories};
+
+pub(crate) fn tool_disabled_result(tool_name: &str, message: &'static str) -> ToolResult {
+    ToolResult::err_with_output(
+        message,
+        json!({
+            "code": format!("{tool_name}_disabled"),
+            "tool": tool_name,
+            "message": message,
+        }),
+    )
+}
+
+pub(crate) fn tool_disabled_result_from_definition(tool_name: &str) -> Option<ToolResult> {
+    tool_definition::runtime_tool_disabled_message(tool_name)
+        .map(|message| tool_disabled_result(tool_name, message))
+}
+
+#[cfg(test)]
+mod tests;

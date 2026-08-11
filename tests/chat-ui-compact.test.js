@@ -6,7 +6,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
-test('0.1.6 keeps the top chrome height unchanged and exposes quick authorized-root access', () => {
+test('0.3.3 keeps the top chrome height unchanged and exposes quick authorized-root access', () => {
   const browserCss = read('renderer/browser.css');
   const browserHtml = read('renderer/browser.html');
   const main = read('electron/main.js');
@@ -42,11 +42,11 @@ test('workspace manager exposes extra authorized roots without changing the chat
   assert.match(app, /updateAuthorizedRoots/);
 });
 
-test('package and manager identify the 0.1.6 release', () => {
+test('package and manager identify the 0.3.4 release', () => {
   const pkg = JSON.parse(read('package.json'));
   const manager = read('renderer/index.html');
-  assert.equal(pkg.version, '0.1.6');
-  assert.match(manager, /Trợ lý Web MCP <span>v0\.1\.6<\/span>/);
+  assert.equal(pkg.version, '0.3.4');
+  assert.match(manager, /Trợ lý Web MCP <span>v0\.3\.4<\/span>/);
   assert.match(manager, /Coding Tools MCP · 0\.4\.3/);
 });
 

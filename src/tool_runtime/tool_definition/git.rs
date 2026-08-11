@@ -1,0 +1,90 @@
+use super::AgentCapability::GitOrShell;
+use super::ToolVisibility::ModelVisible;
+use super::{change_summary_like, def, git_like, ToolDefinition, TOOL_CATEGORY_GIT};
+use crate::tool_runtime::metadata::{
+    ToolPathHint::None as NoPath, ToolRisk::ReadOnly, PROJECT_READ, TOOL_PROVIDER_AGENT,
+};
+
+pub(super) const SUMMARY_DEFINITIONS: &[ToolDefinition] = &[
+    change_summary_like(git_like(def(
+        "git_diff_summary",
+        ModelVisible,
+        TOOL_CATEGORY_GIT,
+        Some(GitOrShell),
+        TOOL_PROVIDER_AGENT,
+        ReadOnly,
+        Some(PROJECT_READ),
+        true,
+        NoPath,
+        false,
+        false,
+    ))),
+    change_summary_like(git_like(def(
+        "show_changes",
+        ModelVisible,
+        TOOL_CATEGORY_GIT,
+        Some(GitOrShell),
+        TOOL_PROVIDER_AGENT,
+        ReadOnly,
+        Some(PROJECT_READ),
+        true,
+        NoPath,
+        false,
+        false,
+    ))),
+];
+
+pub(super) const DETAIL_DEFINITIONS: &[ToolDefinition] = &[
+    git_like(def(
+        "git_status",
+        ModelVisible,
+        TOOL_CATEGORY_GIT,
+        Some(GitOrShell),
+        TOOL_PROVIDER_AGENT,
+        ReadOnly,
+        Some(PROJECT_READ),
+        true,
+        NoPath,
+        false,
+        false,
+    )),
+    git_like(def(
+        "git_diff",
+        ModelVisible,
+        TOOL_CATEGORY_GIT,
+        Some(GitOrShell),
+        TOOL_PROVIDER_AGENT,
+        ReadOnly,
+        Some(PROJECT_READ),
+        true,
+        NoPath,
+        false,
+        false,
+    )),
+    change_summary_like(git_like(def(
+        "git_diff_hunks",
+        ModelVisible,
+        TOOL_CATEGORY_GIT,
+        Some(GitOrShell),
+        TOOL_PROVIDER_AGENT,
+        ReadOnly,
+        Some(PROJECT_READ),
+        true,
+        NoPath,
+        false,
+        false,
+    ))),
+    git_like(def(
+        "git_log",
+        ModelVisible,
+        TOOL_CATEGORY_GIT,
+        Some(GitOrShell),
+        TOOL_PROVIDER_AGENT,
+        ReadOnly,
+        Some(PROJECT_READ),
+        true,
+        NoPath,
+        false,
+        false,
+    )),
+];
