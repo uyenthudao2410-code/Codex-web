@@ -2534,7 +2534,12 @@ class Runtime:
 
                 raise ToolFailure("CANDIDATE_TARGET_UNREADABLE", str(exc), category="filesystem") from exc
 
-            count = current.count(old)
+            target_newline = "\r\n" if "\r\n" in current else "\n"
+            normalized_old = old.replace("\r\n", "\n").replace("\r", "\n").replace("\n", target_newline)
+            normalized_new = new.replace("\r\n", "\n").replace("\r", "\n").replace("\n", target_newline)
+            count = current.count(normalized_old)
+            if count == 1:
+                old, new = normalized_old, normalized_new
 
             if count != 1:
 

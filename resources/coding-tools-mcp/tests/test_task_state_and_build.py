@@ -290,6 +290,22 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="sol_ultra", allow_high_cost=True)["effort"], "ultra")
             runtime.close()
 
+    def test_candidate_replacement_normalizes_newlines_before_exact_match(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_bytes(b"VALUE = 1\n")
+            runtime = Runtime(root, permission_mode="dangerous")
+            payload = {
+                "replacements": [{"path": "app.py", "old": "VALUE = 1\r\n", "new": "VALUE = 2\r\n"}],
+                "new_files": [],
+            }
+            patches, new_files = runtime._candidate_payload_to_patches(payload, allowed_paths=["app.py"])
+            self.assertEqual(new_files, [])
+            self.assertEqual(len(patches), 1)
+            self.assertIn("-VALUE = 1", patches[0])
+            self.assertIn("+VALUE = 2", patches[0])
+            runtime.close()
+
     def test_candidate_scope_violation_is_rejected_before_write(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
