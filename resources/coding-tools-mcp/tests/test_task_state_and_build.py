@@ -14,6 +14,7 @@ if str(SOURCE_ROOT) not in sys.path:
 
 import coding_tools_mcp.server as server_module
 from coding_tools_mcp.build_verify import collect_artifacts, detect_project
+from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.task_state import TaskStateStore, classify_command
 from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.protocol import dispatch_rpc
@@ -205,6 +206,21 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual((root / "done.txt").read_text(encoding="utf-8"), "finished\n")
             self.assertEqual(runtime.task_state.get()["status"], "completed")
 
+    def test_apply_changes_and_verify_scopes_diff_to_affected_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            with patch.object(runtime, "git_diff", return_value={"diff": "scoped", "truncated": False}) as git_diff:
+                result = runtime.apply_changes_and_verify({
+                    "objective": "change one file",
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                })
+            self.assertTrue(result["ok"])
+            self.assertEqual(git_diff.call_args.args[0]["paths"], ["app.py"])
+            self.assertNotIn("path", git_diff.call_args.args[0])
+            runtime.close()
     def test_agent_workflow_prepares_bug_context_in_one_call(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -238,6 +254,175 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual((root / "src" / "main.py").read_text(encoding="utf-8"), "print('ready')\n")
             self.assertEqual(result["task"]["status"], "completed")
 
+    def test_agent_workflow_schema_exposes_final_execution_routes_without_new_tool(self) -> None:
+        schemas = server_module.input_schemas()
+        route_schema = schemas["agent_workflow"]["properties"]["execution_route"]
+        self.assertEqual(
+            route_schema["enum"],
+            ["auto", "deterministic", "mini", "luna", "terra", "sol_xhigh", "sol_max", "sol_ultra"],
+        )
+        self.assertIn("allow_high_cost", schemas["agent_workflow"]["properties"])
+        bridge_profiles = schemas["codex_bridge"]["properties"]["profile"]["enum"]
+        self.assertIn("deep_code", bridge_profiles)
+        self.assertIn("parallel_extreme", bridge_profiles)
+        smart_names = set(server_module.TOOL_MODE_ALLOWLISTS["smart"])
+        self.assertEqual(len(smart_names), 8)
+        self.assertNotIn("codex_bridge", smart_names)
+
+    def test_execution_router_keeps_expensive_and_experimental_routes_gated(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            small = {"selected_paths": ["app.py"], "total_content_bytes": 4_000}
+            medium = {"selected_paths": ["a.py", "b.py", "c.py"], "total_content_bytes": 30_000}
+            broad = {"selected_paths": [f"f{i}.py" for i in range(8)], "total_content_bytes": 90_000}
+            self.assertEqual(runtime._select_agent_execution_route(workflow="bugfix", prepared=small, requested="auto", allow_high_cost=False)["selected"], "mini")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=medium, requested="auto", allow_high_cost=False)["selected"], "luna")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="auto", allow_high_cost=False)["selected"], "sol_xhigh")
+            terra = runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="terra", allow_high_cost=False)
+            self.assertEqual((terra["model"], terra["effort"]), ("gpt-5.6-terra", "high"))
+            with self.assertRaises(ToolFailure) as max_error:
+                runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="sol_max", allow_high_cost=False)
+            self.assertEqual(max_error.exception.code, "HIGH_COST_ACK_REQUIRED")
+            with self.assertRaises(ToolFailure) as ultra_error:
+                runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="sol_ultra", allow_high_cost=False)
+            self.assertEqual(ultra_error.exception.code, "HIGH_COST_ACK_REQUIRED")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="sol_max", allow_high_cost=True)["effort"], "max")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="sol_ultra", allow_high_cost=True)["effort"], "ultra")
+            runtime.close()
+
+    def test_candidate_scope_violation_is_rejected_before_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            (root / "other.py").write_text("OTHER = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            payload = {
+                "replacements": [{"path": "other.py", "old": "OTHER = 1", "new": "OTHER = 2"}],
+                "new_files": [],
+            }
+            with self.assertRaises(ToolFailure) as raised:
+                runtime._candidate_payload_to_patches(payload, allowed_paths=["app.py"])
+            self.assertEqual(raised.exception.code, "CANDIDATE_SCOPE_VIOLATION")
+            self.assertEqual((root / "other.py").read_text(encoding="utf-8"), "OTHER = 1\n")
+            runtime.close()
+
+    def test_agent_workflow_run_auto_uses_mini_candidate_then_mcp_writer(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            bridge_result = {
+                "status": "completed",
+                "observation": {
+                    "status": "completed",
+                    "agent_text": json.dumps({
+                        "status": "ready",
+                        "summary": "repair value",
+                        "replacements": [{"path": "app.py", "old": "VALUE = 1", "new": "VALUE = 2"}],
+                        "new_files": [],
+                        "proof": [],
+                        "confidence": "high",
+                    }),
+                    "route": {"profile": "candidate_mini", "model": "gpt-5.4-mini", "effort": "low"},
+                    "wall_time_ms": 100,
+                    "economics": {"estimated_credits": 0.1},
+                    "deadline_hit": False,
+                },
+            }
+            with patch.object(runtime._codex_bridge, "run", return_value=bridge_result) as bridge_run, patch.dict(
+                server_module.os.environ, {server_module.AGENT_EXTERNAL_REVIEW_ENV: "off"}
+            ):
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "run",
+                    "objective": "change VALUE",
+                    "paths": ["app.py"],
+                    "verification": "none",
+                    "include_diff": False,
+                })
+            self.assertTrue(result["execution"]["ok"])
+            self.assertEqual(result["execution_route"]["selected"], "mini")
+            self.assertEqual(result["execution_route"]["model"], "gpt-5.4-mini")
+            self.assertEqual((root / "app.py").read_text(encoding="utf-8"), "VALUE = 2\n")
+            self.assertEqual(bridge_run.call_args.kwargs["profile"], "candidate_mini")
+            runtime.close()
+
+    def test_agent_workflow_auto_packet_review_uses_hidden_bridge(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            execution = {
+                "ok": True,
+                "status": "passed",
+                "affected_files": [{"path": "src/app.py", "operation": "update"}],
+                "check_results": [],
+                "build_report": {
+                    "overall_status": "passed",
+                    "test_result": {"status": "passed"},
+                    "build_result": None,
+                    "artifacts": [],
+                },
+                "git_diff": {"diff": "diff --git a/src/app.py b/src/app.py\n-old\n+new\n", "truncated": False},
+            }
+            bridge_result = {
+                "status": "completed",
+                "route": {"profile": "packet", "model": "gpt-5.4-mini", "effort": "low"},
+                "observation": {
+                    "status": "completed",
+                    "agent_text": json.dumps({"verdict": "accept", "findings": [], "missing_proof": [], "confidence": "high"}),
+                    "route": {"profile": "packet", "model": "gpt-5.4-mini", "effort": "low"},
+                    "wall_time_ms": 123,
+                    "economics": {"estimated_credits": 0.1},
+                    "deadline_hit": False,
+                },
+            }
+            with patch.object(runtime, "apply_changes_and_verify", return_value=execution), patch.object(
+                runtime._codex_bridge, "run", return_value=bridge_result
+            ) as bridge_run:
+                result = runtime.agent_workflow({
+                    "workflow": "feature",
+                    "phase": "execute",
+                    "objective": "change app behavior",
+                    "patch": "*** Begin Patch\n*** End Patch",
+                    "verification": "tests",
+                })
+            bridge_run.assert_called_once()
+            self.assertEqual(bridge_run.call_args.kwargs["profile"], "packet")
+            self.assertEqual(bridge_run.call_args.kwargs["deadline_ms"], server_module.AGENT_REVIEW_DEADLINE_MS)
+            self.assertEqual(result["external_review"]["plane"], "external_mcp")
+            self.assertEqual(result["external_review"]["verdict"], "accept")
+            self.assertFalse(result["external_review"]["attention_required"])
+            runtime.close()
+
+    def test_agent_workflow_skips_review_for_localized_bug_with_strong_oracle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            execution = {
+                "ok": True,
+                "status": "passed",
+                "affected_files": [{"path": "src/app.py", "operation": "update"}],
+                "check_results": [],
+                "build_report": {
+                    "overall_status": "passed",
+                    "test_result": {"status": "passed"},
+                    "build_result": None,
+                    "artifacts": [],
+                },
+                "git_diff": {"diff": "diff --git a/src/app.py b/src/app.py\n-old\n+new\n", "truncated": False},
+            }
+            with patch.object(runtime, "apply_changes_and_verify", return_value=execution), patch.object(
+                runtime._codex_bridge, "run"
+            ) as bridge_run:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "fix localized bug",
+                    "patch": "*** Begin Patch\n*** End Patch",
+                    "verification": "tests",
+                })
+            bridge_run.assert_not_called()
+            self.assertEqual(result["external_review"]["plane"], "none")
+            self.assertEqual(result["external_review"]["reason"], "localized_change_with_strong_oracle")
+            runtime.close()
     def test_agent_workflow_resume_returns_state_and_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

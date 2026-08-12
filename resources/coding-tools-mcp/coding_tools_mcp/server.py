@@ -77,6 +77,7 @@ from .protocol import (
 )
 from .project_context import ProjectContext, load_project_context
 from .build_verify import verify_build as run_build_verification
+from .codex_bridge import CodexAppServerBridge, CodexBridgeError
 from .document_tools import create_docx, create_text_document, convert_document, extract_document
 from .task_state import TaskStateStore
 from .performance_trace import PerformanceTraceStore
@@ -106,7 +107,7 @@ SMART_COMPAT_TOOL_NAMES = frozenset({
     "list_files", "search_text", "prepare_coding_context", "apply_patch",
     "apply_changes_and_verify", "file_batch", "write_stdin", "kill_session",
     "read_output", "git_status", "git_diff", "git_log", "git_show",
-    "git_blame", "git_inspect", "verify_build",
+    "git_blame", "git_inspect", "verify_build", "codex_bridge",
 })
 
 try:
@@ -118,6 +119,130 @@ except (TypeError, ValueError):
     LONG_TOOL_HANDOFF_SECONDS = 90
 BACKGROUND_OPERATION_WAIT_MAX_MS = 60_000
 MAX_BACKGROUND_OPERATIONS = 32
+AGENT_EXTERNAL_REVIEW_ENV = f"{ENV_PREFIX}_EXTERNAL_REVIEW"
+AGENT_REVIEW_PACKET_MAX_DIFF_CHARS = 12_000
+AGENT_REVIEW_DEADLINE_MS = 8_000
+AGENT_REVIEW_OUTPUT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "verdict": {"type": "string", "enum": ["accept", "fix", "blocked"]},
+        "findings": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {"type": "string", "maxLength": 500},
+        },
+        "missing_proof": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {"type": "string", "maxLength": 500},
+        },
+        "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+    },
+    "required": ["verdict", "findings", "missing_proof", "confidence"],
+}
+AGENT_CANDIDATE_PACKET_MAX_CHARS = 14_000
+
+AGENT_CANDIDATE_OUTPUT_SCHEMA = {
+
+    "type": "object",
+
+    "additionalProperties": False,
+
+    "properties": {
+
+        "status": {"type": "string", "enum": ["ready", "blocked"]},
+
+        "summary": {"type": "string", "maxLength": 1_000},
+
+        "replacements": {
+
+            "type": "array",
+
+            "maxItems": 8,
+
+            "items": {
+
+                "type": "object",
+
+                "additionalProperties": False,
+
+                "properties": {
+
+                    "path": {"type": "string", "maxLength": 500},
+
+                    "old": {"type": "string", "maxLength": 8_000},
+
+                    "new": {"type": "string", "maxLength": 8_000},
+
+                },
+
+                "required": ["path", "old", "new"],
+
+            },
+
+        },
+
+        "new_files": {
+
+            "type": "array",
+
+            "maxItems": 4,
+
+            "items": {
+
+                "type": "object",
+
+                "additionalProperties": False,
+
+                "properties": {
+
+                    "path": {"type": "string", "maxLength": 500},
+
+                    "content": {"type": "string", "maxLength": 12_000},
+
+                },
+
+                "required": ["path", "content"],
+
+            },
+
+        },
+
+        "proof": {
+
+            "type": "array",
+
+            "maxItems": 4,
+
+            "items": {"type": "string", "maxLength": 500},
+
+        },
+
+        "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+
+    },
+
+    "required": ["status", "summary", "replacements", "new_files", "proof", "confidence"],
+
+}
+
+AGENT_EXECUTION_ROUTES = {
+
+    "mini": {"profile": "candidate_mini", "model": "gpt-5.4-mini", "effort": "low", "deadline_ms": 10_000, "high_cost": False},
+
+    "luna": {"profile": "candidate_luna", "model": "gpt-5.6-luna", "effort": "high", "deadline_ms": 15_000, "high_cost": False},
+
+    "terra": {"profile": "cross_file", "model": "gpt-5.6-terra", "effort": "high", "deadline_ms": 25_000, "high_cost": False},
+
+    "sol_xhigh": {"profile": "deep_code", "model": "gpt-5.6-sol", "effort": "xhigh", "deadline_ms": 30_000, "high_cost": False},
+
+    "sol_max": {"profile": "consequential", "model": "gpt-5.6-sol", "effort": "max", "deadline_ms": 30_000, "high_cost": True},
+
+    "sol_ultra": {"profile": "parallel_extreme", "model": "gpt-5.6-sol", "effort": "ultra", "deadline_ms": 30_000, "high_cost": True},
+
+}
+
 MCP_ENDPOINT_PATH = "/mcp"
 DEFAULT_EXCLUDED_NAMES = {
     ".git",
@@ -602,6 +727,11 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         description="Preferred read-only tool when the user asks what is in the current working directory or wants a quick project overview. Returns the active workspace, default directory, project type, root entries, Git status, and task summary in one call; do not use exec_command merely to list files.",
         read_only=True,
         idempotent=True,
+    ),
+    "codex_bridge": ToolSpec(
+        title="Bridge to local Codex",
+        description="Coordinate a cost-aware independent Codex App Server reviewer sidecar with packet/scoped/critical/history profiles, explicit model/effort/deadlines, bridge-owned continuation, capacity cooldowns, and token telemetry. It shares Codex Desktop auth/history but never controls a live Desktop turn; every bridge turn is approvalPolicy=never, read-only, and no-network.",
+        read_only=True,
     ),
     "agent_workflow": ToolSpec(
         title="Run complete agent workflow",
@@ -1496,6 +1626,7 @@ class Runtime:
         self.performance_trace = PerformanceTraceStore(self.workspace.root)
         self.workspace_switch_lock = threading.RLock()
         self.workspace_generation = 1
+        self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
         self._tool_handlers = {name: getattr(self, name) for name in TOOL_REGISTRY}
 
     def _set_runtime_dir(self, runtime_dir: Path) -> None:
@@ -1505,6 +1636,7 @@ class Runtime:
         self.cache_dir = self.runtime_dir / "cache"
 
     def close(self) -> None:
+        self._codex_bridge.close()
         with self.sessions_lock:
             if self._closed:
                 return
@@ -2008,6 +2140,800 @@ class Runtime:
 
         threading.Thread(target=preheat, name="coding-tools-preheat", daemon=True).start()
 
+    def codex_bridge(self, args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return self._codex_bridge.handle(args)
+        except CodexBridgeError as exc:
+            raise ToolFailure(
+                exc.code,
+                str(exc),
+                category="runtime",
+                retryable=exc.retryable,
+                details=exc.details,
+            ) from exc
+
+    @staticmethod
+    def _agent_review_proof(execution: dict[str, Any], verification: str) -> tuple[dict[str, Any], bool]:
+        check_rows: list[dict[str, Any]] = []
+        raw_checks = execution.get("check_results", [])
+        for item in raw_checks if isinstance(raw_checks, list) else []:
+            if not isinstance(item, dict):
+                continue
+            check_rows.append({
+                "exit_code": item.get("exit_code"),
+                "timed_out": bool(item.get("timed_out", False)),
+                "summary": str(item.get("summary") or "")[:240],
+            })
+        report = execution.get("build_report") if isinstance(execution.get("build_report"), dict) else {}
+        test_result = report.get("test_result") if isinstance(report.get("test_result"), dict) else {}
+        build_result = report.get("build_result") if isinstance(report.get("build_result"), dict) else {}
+        proof = {
+            "verification": verification,
+            "checks": check_rows,
+            "build": {
+                "overall_status": report.get("overall_status"),
+                "test_status": test_result.get("status"),
+                "build_status": build_result.get("status"),
+                "artifact_count": len(report.get("artifacts", [])) if isinstance(report.get("artifacts"), list) else 0,
+            },
+        }
+        strong_oracle = False
+        if verification == "tests":
+            strong_oracle = test_result.get("status") == "passed"
+        elif verification == "build":
+            strong_oracle = build_result.get("status") == "passed"
+        elif verification == "all":
+            strong_oracle = test_result.get("status") == "passed" and build_result.get("status") == "passed"
+        return proof, strong_oracle
+
+    @staticmethod
+
+    def _normalize_candidate_path(value: object) -> str:
+
+        path = str(value or "").strip().replace("\\", "/")
+
+        while path.startswith("./"):
+
+            path = path[2:]
+
+        parts = path.split("/") if path else []
+
+        if (
+
+            not path
+
+            or path.startswith("/")
+
+            or re.match(r"^[A-Za-z]:", path)
+
+            or any(part in {"", ".", ".."} for part in parts)
+
+        ):
+
+            raise ToolFailure("INVALID_CANDIDATE_PATH", f"Invalid candidate path: {value}", category="validation")
+
+        return "/".join(parts)
+
+
+
+    def _select_agent_execution_route(
+
+        self,
+
+        *,
+
+        workflow: str,
+
+        prepared: dict[str, Any] | None,
+
+        requested: str,
+
+        allow_high_cost: bool,
+
+    ) -> dict[str, Any]:
+
+        requested_name = str(requested or "auto").strip().lower() or "auto"
+
+        supported = {"auto", "deterministic", *AGENT_EXECUTION_ROUTES}
+
+        if requested_name not in supported:
+
+            raise ToolFailure(
+
+                "INVALID_EXECUTION_ROUTE",
+
+                f"Unknown execution route: {requested_name}",
+
+                category="validation",
+
+                details={"supported": sorted(supported)},
+
+            )
+
+        if requested_name in {"sol_max", "sol_ultra"} and not allow_high_cost:
+
+            raise ToolFailure(
+
+                "HIGH_COST_ACK_REQUIRED",
+
+                f"execution_route={requested_name} requires allow_high_cost=true.",
+
+                category="validation",
+
+                details={"route": requested_name},
+
+            )
+
+        if requested_name != "auto":
+
+            selected = requested_name
+
+            reason = "explicit_request"
+
+        else:
+
+            selected_paths = list((prepared or {}).get("selected_paths") or [])
+
+            total_bytes = int((prepared or {}).get("total_content_bytes") or 0)
+
+            if workflow in {"diagnose", "document", "resume", "build_release", "greenfield"}:
+
+                selected = "deterministic"
+
+                reason = "workflow_prefers_local_tools"
+
+            elif workflow in {"bugfix", "test_failure"} and 0 < len(selected_paths) <= 2 and total_bytes <= 24_000:
+
+                selected = "mini"
+
+                reason = "localized_strong_oracle_candidate"
+
+            elif 0 < len(selected_paths) <= 4 and total_bytes <= 60_000:
+
+                selected = "luna"
+
+                reason = "harder_bounded_leaf"
+
+            else:
+
+                selected = "sol_xhigh"
+
+                reason = "deep_or_broad_context"
+
+        if selected == "deterministic":
+
+            return {
+
+                "requested": requested_name,
+
+                "selected": selected,
+
+                "reason": reason,
+
+                "profile": None,
+
+                "model": None,
+
+                "effort": None,
+
+                "high_cost": False,
+
+            }
+
+        spec = AGENT_EXECUTION_ROUTES[selected]
+
+        return {
+
+            "requested": requested_name,
+
+            "selected": selected,
+
+            "reason": reason,
+
+            **spec,
+
+        }
+
+
+
+    def _agent_candidate_packet(
+
+        self,
+
+        *,
+
+        workflow: str,
+
+        objective: str,
+
+        prepared: dict[str, Any],
+
+        proof: dict[str, Any],
+
+        selected_route: str,
+
+    ) -> tuple[dict[str, Any], list[str]]:
+
+        allowed_paths = []
+
+        for raw_path in list(prepared.get("selected_paths") or [])[:20]:
+
+            try:
+
+                path = self._normalize_candidate_path(raw_path)
+
+            except ToolFailure:
+
+                continue
+
+            if path not in allowed_paths:
+
+                allowed_paths.append(path)
+
+        files: list[dict[str, str]] = []
+
+        remaining = AGENT_CANDIDATE_PACKET_MAX_CHARS
+
+        for item in list(prepared.get("files") or []):
+
+            if not isinstance(item, dict):
+
+                continue
+
+            try:
+
+                path = self._normalize_candidate_path(item.get("path"))
+
+            except ToolFailure:
+
+                continue
+
+            if path not in allowed_paths:
+
+                continue
+
+            content = str(item.get("content") or "")
+
+            if not content or remaining <= 0:
+
+                continue
+
+            take = min(len(content), 5_000, remaining)
+
+            files.append({"path": path, "content": content[:take]})
+
+            remaining -= take
+
+        searches: list[dict[str, Any]] = []
+
+        for result in list(prepared.get("searches") or [])[:6]:
+
+            if not isinstance(result, dict):
+
+                continue
+
+            matches = []
+
+            for match in list(result.get("matches") or [])[:3]:
+
+                if not isinstance(match, dict):
+
+                    continue
+
+                matches.append({
+
+                    "path": match.get("path"),
+
+                    "line": match.get("line"),
+
+                    "preview": str(match.get("preview") or match.get("text") or "")[:360],
+
+                })
+
+            searches.append({"query": result.get("query"), "matches": matches})
+
+        return ({
+
+            "objective": objective,
+
+            "workflow": workflow,
+
+            "selected_route": selected_route,
+
+            "allowed_paths": allowed_paths,
+
+            "proof": proof,
+
+            "searches": searches,
+
+            "files": files,
+
+            "contract": (
+
+                "Return exact replacements only within allowed_paths. old must be a non-empty exact contiguous substring. "
+
+                "Do not modify tests or unrelated files unless they are explicitly in allowed_paths. If another path or unsettled "
+
+                "semantic decision is required, return status=blocked."
+
+            ),
+
+        }, allowed_paths)
+
+
+
+    def _candidate_payload_to_patches(
+
+        self,
+
+        payload: dict[str, Any],
+
+        *,
+
+        allowed_paths: list[str],
+
+    ) -> tuple[list[str], list[dict[str, str]]]:
+
+        allowed = set(allowed_paths)
+
+        replacements = list(payload.get("replacements") or [])
+
+        new_files = list(payload.get("new_files") or [])
+
+        if not replacements and not new_files:
+
+            raise ToolFailure("EMPTY_CANDIDATE", "Candidate returned no changes.", category="validation")
+
+        patches: list[str] = []
+
+        normalized_new_files: list[dict[str, str]] = []
+
+        for item in replacements:
+
+            if not isinstance(item, dict):
+
+                raise ToolFailure("INVALID_CANDIDATE", "Replacement must be an object.", category="validation")
+
+            path = self._normalize_candidate_path(item.get("path"))
+
+            if path not in allowed:
+
+                raise ToolFailure(
+
+                    "CANDIDATE_SCOPE_VIOLATION",
+
+                    f"Candidate tried to modify an unapproved path: {path}",
+
+                    category="validation",
+
+                    details={"allowed_paths": sorted(allowed)},
+
+                )
+
+            old = str(item.get("old") or "")
+
+            new = str(item.get("new") or "")
+
+            if not old:
+
+                raise ToolFailure("INVALID_CANDIDATE", f"Replacement old text is empty for {path}.", category="validation")
+
+            target = (self.workspace.root / Path(*path.split("/"))).resolve(strict=False)
+
+            root = self.workspace.root.resolve(strict=False)
+
+            if not target.is_relative_to(root) or not target.is_file():
+
+                raise ToolFailure("CANDIDATE_TARGET_MISSING", f"Candidate target is not a workspace file: {path}", category="validation")
+
+            try:
+
+                current = target.read_text(encoding="utf-8")
+
+            except (OSError, UnicodeError) as exc:
+
+                raise ToolFailure("CANDIDATE_TARGET_UNREADABLE", str(exc), category="filesystem") from exc
+
+            count = current.count(old)
+
+            if count != 1:
+
+                raise ToolFailure(
+
+                    "CANDIDATE_NOT_UNIQUE",
+
+                    f"Candidate old text must match exactly once in {path}; matched {count} times.",
+
+                    category="validation",
+
+                    details={"path": path, "matches": count},
+
+                )
+
+            sections = ["*** Begin Patch", f"*** Update File: {path}", "@@"]
+
+            sections.extend(f"-{line}" for line in old.splitlines())
+
+            sections.extend(f"+{line}" for line in new.splitlines())
+
+            sections.append("*** End Patch")
+
+            patches.append("\n".join(sections))
+
+        for item in new_files:
+
+            if not isinstance(item, dict):
+
+                raise ToolFailure("INVALID_CANDIDATE", "new_files entries must be objects.", category="validation")
+
+            path = self._normalize_candidate_path(item.get("path"))
+
+            if path not in allowed:
+
+                raise ToolFailure(
+
+                    "CANDIDATE_SCOPE_VIOLATION",
+
+                    f"Candidate tried to create an unapproved path: {path}",
+
+                    category="validation",
+
+                    details={"allowed_paths": sorted(allowed)},
+
+                )
+
+            target = (self.workspace.root / Path(*path.split("/"))).resolve(strict=False)
+
+            root = self.workspace.root.resolve(strict=False)
+
+            if not target.is_relative_to(root) or target.exists():
+
+                raise ToolFailure("CANDIDATE_NEW_FILE_INVALID", f"Candidate new file is invalid or already exists: {path}", category="validation")
+
+            normalized_new_files.append({"path": path, "content": str(item.get("content") or "")})
+
+        new_file_patch = self._new_files_patch(normalized_new_files)
+
+        if new_file_patch:
+
+            patches.append(new_file_patch)
+
+        return patches, normalized_new_files
+
+
+
+    def _generate_agent_candidate(
+
+        self,
+
+        *,
+
+        workflow: str,
+
+        objective: str,
+
+        prepared: dict[str, Any],
+
+        requested_route: str,
+
+        allow_high_cost: bool,
+
+        proof: dict[str, Any],
+
+    ) -> dict[str, Any]:
+
+        routing = self._select_agent_execution_route(
+
+            workflow=workflow,
+
+            prepared=prepared,
+
+            requested=requested_route,
+
+            allow_high_cost=allow_high_cost,
+
+        )
+
+        if routing["selected"] == "deterministic":
+
+            return {"status": "deterministic", "routing": routing, "patches": []}
+
+        packet, allowed_paths = self._agent_candidate_packet(
+
+            workflow=workflow,
+
+            objective=objective,
+
+            prepared=prepared,
+
+            proof=proof,
+
+            selected_route=str(routing["selected"]),
+
+        )
+
+        if not allowed_paths:
+
+            return {"status": "blocked", "reason": "candidate_scope_missing", "routing": routing, "patches": []}
+
+        prompt = (
+
+            "Bounded implementation candidate packet:\n"
+
+            + json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+
+            + "\nReturn the structured candidate only. MCP will validate scope, apply the change, and run proof independently."
+
+        )
+
+        try:
+
+            bridge_result = self._codex_bridge.run(
+
+                prompt,
+
+                profile=str(routing["profile"]),
+
+                model=str(routing["model"]),
+
+                effort=str(routing["effort"]),
+
+                deadline_ms=int(AGENT_EXECUTION_ROUTES[str(routing["selected"])].get("deadline_ms", 0) or 0),
+
+                output_schema=AGENT_CANDIDATE_OUTPUT_SCHEMA,
+
+            )
+
+        except CodexBridgeError as exc:
+
+            return {
+
+                "status": "blocked",
+
+                "reason": exc.code,
+
+                "retryable": exc.retryable,
+
+                "routing": routing,
+
+                "patches": [],
+
+                "recommended_next_action": "Return to ChatWeb Sol or choose one different policy-approved route; do not retry unchanged.",
+
+            }
+
+        observation = bridge_result.get("observation") if isinstance(bridge_result.get("observation"), dict) else {}
+
+        status = str(observation.get("status") or bridge_result.get("status") or "unknown")
+
+        base = {
+
+            "routing": routing,
+
+            "model_status": status,
+
+            "wall_time_ms": observation.get("wall_time_ms"),
+
+            "economics": observation.get("economics"),
+
+            "deadline_hit": bool(observation.get("deadline_hit", bridge_result.get("deadline_hit", False))),
+
+            "patches": [],
+
+        }
+
+        if status != "completed":
+
+            return {
+
+                **base,
+
+                "status": "blocked",
+
+                "reason": "candidate_model_not_completed",
+
+                "error": observation.get("error"),
+
+                "recommended_next_action": "Return to ChatWeb Sol; do not serially cascade through every model tier.",
+
+            }
+
+        text = str(observation.get("agent_text") or "").strip()
+
+        try:
+
+            parsed = json.loads(text)
+
+        except (TypeError, ValueError, json.JSONDecodeError):
+
+            parsed = None
+
+        if not isinstance(parsed, dict):
+
+            return {**base, "status": "blocked", "reason": "candidate_output_invalid", "candidate_text": text[:2_000]}
+
+        if str(parsed.get("status") or "blocked") != "ready":
+
+            return {
+
+                **base,
+
+                "status": "blocked",
+
+                "reason": "candidate_reported_blocked",
+
+                "summary": str(parsed.get("summary") or "")[:1_000],
+
+                "confidence": parsed.get("confidence"),
+
+            }
+
+        try:
+
+            patches, new_files = self._candidate_payload_to_patches(parsed, allowed_paths=allowed_paths)
+
+        except ToolFailure as exc:
+
+            return {
+
+                **base,
+
+                "status": "blocked",
+
+                "reason": exc.code,
+
+                "summary": str(parsed.get("summary") or "")[:1_000],
+
+                "validation_error": exc.message,
+
+                "recommended_next_action": "Return candidate validation evidence to ChatWeb Sol; do not apply partial changes.",
+
+            }
+
+        return {
+
+            **base,
+
+            "status": "ready",
+
+            "patches": patches,
+
+            "new_files": new_files,
+
+            "summary": str(parsed.get("summary") or "")[:1_000],
+
+            "proof": list(parsed.get("proof") or [])[:4],
+
+            "confidence": parsed.get("confidence"),
+
+            "allowed_paths": allowed_paths,
+
+        }
+
+    def _maybe_agent_workflow_external_review(
+        self,
+        *,
+        workflow: str,
+        objective: str,
+        verification: str,
+        execution: dict[str, Any],
+        dry_run: bool,
+    ) -> dict[str, Any]:
+        raw_mode = str(os.environ.get(AGENT_EXTERNAL_REVIEW_ENV, "auto")).strip().lower()
+        if raw_mode in {"0", "false", "off", "none", "disabled"}:
+            return {"plane": "none", "status": "skipped", "reason": "external_review_disabled"}
+        force_packet = raw_mode in {"1", "true", "on", "packet", "always"}
+        if dry_run:
+            return {"plane": "none", "status": "skipped", "reason": "dry_run"}
+        if not execution.get("ok"):
+            return {"plane": "none", "status": "skipped", "reason": "execution_not_accepted"}
+        if workflow in {"diagnose", "document", "resume"}:
+            return {"plane": "none", "status": "skipped", "reason": "workflow_has_no_review_value"}
+
+        raw_affected = execution.get("affected_files", [])
+        affected_paths = sorted({
+            str(item.get("path", "")).strip()
+            for item in raw_affected if isinstance(raw_affected, list)
+            if isinstance(item, dict) and str(item.get("path", "")).strip()
+        })[:32]
+        if not affected_paths:
+            return {"plane": "none", "status": "skipped", "reason": "no_code_change"}
+
+        diff_result = execution.get("git_diff") if isinstance(execution.get("git_diff"), dict) else {}
+        diff_text = str(diff_result.get("diff") or "")
+        if not diff_text:
+            return {
+                "plane": "none",
+                "status": "skipped",
+                "reason": "packet_evidence_missing",
+                "recommended_profile": "scoped",
+                "affected_paths": affected_paths,
+            }
+        if bool(diff_result.get("truncated")) or len(diff_text) > AGENT_REVIEW_PACKET_MAX_DIFF_CHARS:
+            return {
+                "plane": "none",
+                "status": "skipped",
+                "reason": "packet_evidence_too_large",
+                "recommended_profile": "scoped",
+                "affected_paths": affected_paths,
+                "diff_sha256": hashlib.sha256(diff_text.encode("utf-8")).hexdigest(),
+            }
+
+        proof, strong_oracle = self._agent_review_proof(execution, verification)
+        localized = len(affected_paths) <= 2 and len(diff_text) <= 6_000
+        if not force_packet and workflow in {"bugfix", "test_failure"} and strong_oracle and localized:
+            return {
+                "plane": "none",
+                "status": "skipped",
+                "reason": "localized_change_with_strong_oracle",
+                "affected_paths": affected_paths,
+            }
+
+        diff_sha256 = hashlib.sha256(diff_text.encode("utf-8")).hexdigest()
+        packet = {
+            "objective": objective,
+            "workflow": workflow,
+            "accept": "Find no material defect in the supplied change evidence, or identify a concrete fix/proof gap.",
+            "affected_paths": affected_paths,
+            "diff_sha256": diff_sha256,
+            "proof": proof,
+            "diff": diff_text,
+            "question": "Review only this packet for material correctness, regression, or missing proof. Do not inspect the repository.",
+        }
+        prompt = "Independent evidence-only review packet:\n" + json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+        try:
+            bridge_result = self._codex_bridge.run(
+                prompt,
+                profile="packet",
+                deadline_ms=AGENT_REVIEW_DEADLINE_MS,
+                output_schema=AGENT_REVIEW_OUTPUT_SCHEMA,
+            )
+        except CodexBridgeError as exc:
+            return {
+                "plane": "external_mcp",
+                "profile": "packet",
+                "status": "unavailable",
+                "reason": exc.code,
+                "retryable": exc.retryable,
+                "affected_paths": affected_paths,
+                "diff_sha256": diff_sha256,
+                "recommended_next_action": "Continue with Sol acceptance; do not repeat an unchanged external-review failure.",
+            }
+
+        observation = bridge_result.get("observation") if isinstance(bridge_result.get("observation"), dict) else {}
+        status = str(observation.get("status") or bridge_result.get("status") or "unknown")
+        review: dict[str, Any] = {
+            "plane": "external_mcp",
+            "profile": "packet",
+            "status": status,
+            "route": observation.get("route") or bridge_result.get("route"),
+            "wall_time_ms": observation.get("wall_time_ms"),
+            "economics": observation.get("economics"),
+            "deadline_hit": bool(observation.get("deadline_hit", bridge_result.get("deadline_hit", False))),
+            "affected_paths": affected_paths,
+            "diff_sha256": diff_sha256,
+        }
+        if status != "completed":
+            review["error"] = observation.get("error")
+            review["recommended_next_action"] = "Continue with Sol acceptance or choose one different policy-approved route; do not retry unchanged."
+            return review
+        reviewer_text = str(observation.get("agent_text") or "").strip()
+        try:
+            parsed = json.loads(reviewer_text)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            parsed = None
+        if isinstance(parsed, dict):
+            verdict = str(parsed.get("verdict") or "blocked")
+            review.update({
+                "verdict": verdict,
+                "findings": list(parsed.get("findings", []))[:5],
+                "missing_proof": list(parsed.get("missing_proof", []))[:5],
+                "confidence": parsed.get("confidence"),
+                "attention_required": verdict != "accept",
+            })
+        else:
+            review.update({"verdict": "blocked", "reviewer_text": reviewer_text[:4_000], "attention_required": True})
+        return review
     def workspace_context(self, args: dict[str, Any]) -> dict[str, Any]:
         detail = str(args.get("detail", "compact")).lower()
         cache_args = {"path": str(args.get("path", ".")), "max_entries": int(args.get("max_entries", 40)), "detail": detail}
@@ -2320,9 +3246,22 @@ class Runtime:
                 }
 
         diff = None
-        if bool(args.get("include_diff", True)):
+        if bool(args.get("include_diff", True)) and affected_files:
             try:
-                diff = self.git_diff({"path": str(args.get("path", ".")), "unstaged": True, "max_bytes": int(args.get("max_diff_bytes", 131072))})
+                affected_paths = sorted({
+                    str(item.get("path", "")).strip()
+                    for item in affected_files
+                    if isinstance(item, dict) and str(item.get("path", "")).strip()
+                })
+                diff_args: dict[str, Any] = {
+                    "unstaged": True,
+                    "max_bytes": int(args.get("max_diff_bytes", 131072)),
+                }
+                if affected_paths:
+                    diff_args["paths"] = affected_paths
+                else:
+                    diff_args["path"] = str(args.get("path", "."))
+                diff = self.git_diff(diff_args)
             except (ToolFailure, OSError, ValueError):
                 diff = None
         set_stage("finalize", "Finalizing result")
@@ -2443,12 +3382,6 @@ class Runtime:
             }
 
         directories = [str(item).strip() for item in args.get("directories", []) if str(item).strip()]
-        directory_result = None
-        if directories:
-            directory_result = self.file_batch({
-                "operations": [{"action": "mkdir", "path": path, "parents": True, "exist_ok": True} for path in directories],
-                "dry_run": args.get("dry_run", False),
-            })
         patches = [str(item) for item in args.get("patches", []) if str(item).strip()]
         if str(args.get("patch", "")).strip():
             patches.insert(0, str(args["patch"]))
@@ -2460,6 +3393,93 @@ class Runtime:
             "test_failure": "tests", "build_release": "all", "diagnose": "none", "custom": "tests",
         }[workflow]
         verification = str(args.get("verification", default_verification)).lower()
+
+        requested_execution_route = str(args.get("execution_route", "auto")).strip().lower() or "auto"
+        explicit_model_route = requested_execution_route not in {"auto", "deterministic"}
+        execution_route: dict[str, Any]
+        candidate_result: dict[str, Any] | None = None
+        if patches:
+            execution_route = {
+                "requested": requested_execution_route,
+                "selected": "deterministic",
+                "reason": "caller_supplied_change_set",
+                "profile": None,
+                "model": None,
+                "effort": None,
+                "high_cost": False,
+            }
+        elif (phase == "run" or explicit_model_route) and not directories:
+            if prepared is None:
+                prepared = self.prepare_coding_context({
+                    "objective": objective,
+                    "path": args.get("path", "."),
+                    "queries": args.get("queries", []),
+                    "paths": args.get("paths", []),
+                    "max_files": args.get("max_files", 12),
+                    "max_entries": args.get("max_entries", 120),
+                    "max_matches_per_query": args.get("max_matches_per_query", 20),
+                    "max_total_bytes": args.get("max_total_bytes", 262144),
+                    "force_refresh": args.get("force_refresh", False),
+                })
+            candidate_result = self._generate_agent_candidate(
+                workflow=workflow,
+                objective=objective or f"Complete {workflow} workflow",
+                prepared=prepared,
+                requested_route=requested_execution_route,
+                allow_high_cost=bool(args.get("allow_high_cost", False)),
+                proof={
+                    "verification": verification,
+                    "commands": list(args.get("commands", args.get("checks", [])))[:6],
+                    "test_command": str(args.get("test_command", "")),
+                    "build_command": str(args.get("build_command", "")),
+                },
+            )
+            execution_route = dict(candidate_result.get("routing") or {})
+            execution_route.update({
+                "candidate_status": candidate_result.get("status"),
+                "model_status": candidate_result.get("model_status"),
+                "wall_time_ms": candidate_result.get("wall_time_ms"),
+                "economics": candidate_result.get("economics"),
+                "deadline_hit": candidate_result.get("deadline_hit", False),
+                "summary": candidate_result.get("summary"),
+                "confidence": candidate_result.get("confidence"),
+            })
+            if candidate_result.get("status") == "ready":
+                patches.extend(str(item) for item in candidate_result.get("patches", []) if str(item).strip())
+            elif candidate_result.get("status") != "deterministic":
+                execution = {
+                    "ok": False,
+                    "status": "blocked",
+                    "reason": candidate_result.get("reason", "candidate_not_ready"),
+                    "recommended_next_action": candidate_result.get(
+                        "recommended_next_action",
+                        "Return the blocked candidate evidence to ChatWeb Sol for a direct decision; do not run a serial model cascade.",
+                    ),
+                }
+                return {
+                    "workflow": workflow,
+                    "phase": "run" if phase == "run" else "execute",
+                    "prepared": prepared,
+                    "directories": None,
+                    "execution_route": execution_route,
+                    "execution": execution,
+                    "external_review": {"plane": "none", "status": "skipped", "reason": "execution_not_accepted"},
+                    "task": self.task_state.get(),
+                }
+        else:
+            execution_route = self._select_agent_execution_route(
+                workflow=workflow,
+                prepared=prepared,
+                requested=requested_execution_route,
+                allow_high_cost=bool(args.get("allow_high_cost", False)),
+            )
+
+        directory_result = None
+        if directories:
+            directory_result = self.file_batch({
+                "operations": [{"action": "mkdir", "path": path, "parents": True, "exist_ok": True} for path in directories],
+                "dry_run": args.get("dry_run", False),
+            })
         execution = self.apply_changes_and_verify({
             "objective": objective or f"Complete {workflow} workflow",
             "patches": patches,
@@ -2484,9 +3504,17 @@ class Runtime:
             "phase": "run" if phase == "run" else "execute",
             "prepared": prepared,
             "directories": directory_result,
+            "execution_route": execution_route,
             "execution": execution,
             "task": self.task_state.get(),
         }
+        result["external_review"] = self._maybe_agent_workflow_external_review(
+            workflow=workflow,
+            objective=objective or f"Complete {workflow} workflow",
+            verification=verification,
+            execution=execution,
+            dry_run=bool(args.get("dry_run", False)),
+        )
         if execution.get("ok"):
             self._fast_cache_put(dedup_key, result)
         return result
@@ -5846,6 +6874,8 @@ def input_schemas() -> dict[str, dict[str, Any]]:
         "agent_workflow": object_schema({
             "workflow": {**string, "enum": ["bugfix", "feature", "greenfield", "refactor", "test_failure", "build_release", "diagnose", "document", "resume", "custom"], "default": "custom", "description": "End-to-end task family. Select the closest intent instead of assembling low-level tools."},
             "phase": {**string, "enum": ["prepare", "execute", "run", "resume"], "default": "prepare", "description": "prepare gathers all context; execute applies a complete plan; run does both when changes are already known; resume restores persisted state and only missing context."},
+            "execution_route": {**string, "enum": ["auto", "deterministic", "mini", "luna", "terra", "sol_xhigh", "sol_max", "sol_ultra"], "default": "auto", "description": "Primary implementation route. auto uses Mini for localized bug/test leaves, Luna for harder bounded leaves, otherwise Sol xhigh. Terra is explicit experimental cross-file routing. Sol max/ultra require allow_high_cost=true and are never selected automatically."},
+            "allow_high_cost": {**boolean, "default": False, "description": "Explicit acknowledgement required for sol_max or sol_ultra. This never makes those routes automatic."},
             "objective": {**string, "description": "Concrete task objective, for example 'find and fix the login crash' or 'create a React dashboard from zero'."},
             "path": {**string, "default": ".", "description": "Project path relative to the configured workspace."},
             "workdir": {**string, "description": "Command working directory relative to the workspace; defaults to path."},
@@ -5867,6 +6897,22 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "path": {**string, "default": "."},
             "max_entries": {**integer, "minimum": 1, "maximum": 500, "default": 40},
             "detail": {**string, "enum": ["compact", "full"], "default": "compact", "description": "compact returns only the project, root entries, Git summary and task summary; full includes complete Git and task state."},
+        }),
+        "codex_bridge": object_schema({
+            "action": {**string, "enum": ["status", "models", "threads", "run", "continue", "observe", "interrupt", "close"], "default": "status", "description": "status probes route/capacity state; models lists compact Codex model capabilities; threads lists persisted Desktop history for the current workspace; run starts a new read-only reviewer thread or explicit history fork; continue starts a follow-up only on a bridge-owned thread; observe polls; interrupt stops a bridge-owned turn; close stops the sidecar process tree."},
+            "profile": {**string, "enum": ["candidate_mini", "candidate_luna", "cross_file", "deep_code", "consequential", "parallel_extreme", "packet", "scoped", "critical", "history"], "description": "Hidden bridge profile. candidate_mini/luna are no-tools patch candidates; cross_file=Terra high read-only inspection; deep_code=Sol xhigh; consequential=Sol max; parallel_extreme=Sol ultra with multi-agent enabled; packet/scoped/critical/history are review modes."},
+            "model": {**string, "maxLength": 80, "description": "Optional Codex model override. Production routing normally uses the profile defaults and records the resolved route."},
+            "effort": {**string, "enum": ["low", "medium", "high", "xhigh", "max", "ultra"], "description": "Optional reasoning-effort override. Applied to thread config and turn/start so Desktop ultra defaults do not leak into reviewer lanes."},
+            "deadline_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 0, "description": "Optional hard turn deadline. When positive, run/continue waits up to the deadline then interrupts the bridge-owned turn instead of leaving it running."},
+            "output_schema": {"type": "object", "additionalProperties": True, "description": "Optional <=8 KiB JSON Schema constraining the final Codex message."},
+            "source_thread_id": {**string, "description": "Optional persisted Codex thread id from action=threads. This selects the explicit history profile and forks read-only instead of mutating/resuming the Desktop thread."},
+            "prompt": {**string, "maxLength": 20000, "description": "Prompt for action=run or continue. Every turn remains approvalPolicy=never, read-only, and network-disabled."},
+            "thread_id": {**string, "description": "Bridge-owned thread id returned by action=run; required for continue/observe/interrupt."},
+            "turn_id": {**string, "description": "Bridge-owned turn id returned by action=run."},
+            "after_cursor": {**integer, "minimum": 0, "default": 0, "description": "For action=observe, return events newer than this cursor."},
+            "wait_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 0, "description": "Bounded wait for action=run/observe; zero returns immediately."},
+            "max_events": {**integer, "minimum": 1, "maximum": 100, "default": 50},
+            "limit": {**integer, "minimum": 1, "maximum": 50, "default": 10, "description": "Maximum current-workspace threads returned by action=threads."},
         }),
         "prepare_coding_context": object_schema({
             "objective": string,

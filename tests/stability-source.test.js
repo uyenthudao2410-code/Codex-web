@@ -15,6 +15,7 @@ test('smart mode keeps a fixed compact tool surface with hidden compatibility', 
     'request_permissions', 'task_control', 'view_image', 'workspace_context'
   ].sort());
   assert.match(server, /SMART_COMPAT_TOOL_NAMES/);
+  assert.match(server, /SMART_COMPAT_TOOL_NAMES[\s\S]*?"codex_bridge"/);
   assert.match(server, /compatibility_call/);
   assert.match(server, /_tools_list_payload/);
   const workflowSchema = server.match(/"agent_workflow": object_schema\(\{([\s\S]*?)\n\s*\}\),\n\s*"workspace_context"/)?.[1] || '';
