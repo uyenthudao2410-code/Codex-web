@@ -25,11 +25,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
+      - name: Build frontend assets
+        run: npm --prefix frontend run build
       - name: Type-check frontend
         run: npm --prefix frontend run typecheck
       - name: Test frontend
         run: npm --prefix frontend test
-      - name: Verify committed frontend build
+      - name: Verify generated frontend build
         run: npm --prefix frontend run check:dist
       - name: Verify workspace boundaries
         run: |
@@ -57,6 +59,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+      - name: Build frontend assets
+        run: npm --prefix frontend run build
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run tests
@@ -71,3 +77,4 @@ jobs:
         # touches the npm registry.
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/npm_install_windows_smoke.ps1
+
