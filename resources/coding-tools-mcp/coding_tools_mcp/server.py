@@ -2229,6 +2229,7 @@ class Runtime:
         requested: str,
 
         allow_high_cost: bool,
+        strong_oracle: bool = False,
 
     ) -> dict[str, Any]:
 
@@ -2282,7 +2283,7 @@ class Runtime:
 
                 reason = "workflow_prefers_local_tools"
 
-            elif workflow in {"bugfix", "test_failure"} and 0 < len(selected_paths) <= 2 and total_bytes <= 24_000:
+            elif strong_oracle and workflow in {"bugfix", "test_failure"} and 0 < len(selected_paths) <= 2 and total_bytes <= 24_000:
 
                 selected = "mini"
 
@@ -2627,6 +2628,10 @@ class Runtime:
 
     ) -> dict[str, Any]:
 
+        verification_name = str(proof.get("verification") or "none").strip().lower()
+        strong_oracle = verification_name in {"tests", "build", "all"} or bool(
+            str(proof.get("test_command") or "").strip() or str(proof.get("build_command") or "").strip()
+        )
         routing = self._select_agent_execution_route(
 
             workflow=workflow,
@@ -2636,6 +2641,7 @@ class Runtime:
             requested=requested_route,
 
             allow_high_cost=allow_high_cost,
+            strong_oracle=strong_oracle,
 
         )
 

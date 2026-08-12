@@ -275,7 +275,8 @@ class ToolModeTests(unittest.TestCase):
             small = {"selected_paths": ["app.py"], "total_content_bytes": 4_000}
             medium = {"selected_paths": ["a.py", "b.py", "c.py"], "total_content_bytes": 30_000}
             broad = {"selected_paths": [f"f{i}.py" for i in range(8)], "total_content_bytes": 90_000}
-            self.assertEqual(runtime._select_agent_execution_route(workflow="bugfix", prepared=small, requested="auto", allow_high_cost=False)["selected"], "mini")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="bugfix", prepared=small, requested="auto", allow_high_cost=False, strong_oracle=True)["selected"], "mini")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="bugfix", prepared=small, requested="auto", allow_high_cost=False, strong_oracle=False)["selected"], "luna")
             self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=medium, requested="auto", allow_high_cost=False)["selected"], "luna")
             self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="auto", allow_high_cost=False)["selected"], "sol_xhigh")
             terra = runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="terra", allow_high_cost=False)
@@ -352,6 +353,7 @@ class ToolModeTests(unittest.TestCase):
                     "workflow": "bugfix",
                     "phase": "run",
                     "objective": "change VALUE",
+                    "execution_route": "mini",
                     "paths": ["app.py"],
                     "verification": "none",
                     "include_diff": False,
