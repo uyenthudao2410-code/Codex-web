@@ -328,6 +328,7 @@ class ToolModeTests(unittest.TestCase):
             root = Path(temp)
             (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
             runtime = Runtime(root, permission_mode="dangerous")
+            test_cmd = f'"{sys.executable}" -c "from pathlib import Path; import sys; value=Path(\'app.py\').read_text(); print(\'expected VALUE = 2\'); sys.exit(0 if \'VALUE = 2\' in value else 1)"'
             bridge_result = {
                 "status": "completed",
                 "observation": {
@@ -353,9 +354,9 @@ class ToolModeTests(unittest.TestCase):
                     "workflow": "bugfix",
                     "phase": "run",
                     "objective": "change VALUE",
-                    "execution_route": "mini",
-                    "paths": ["app.py"],
-                    "verification": "none",
+                                        "paths": ["app.py"],
+                    "verification": "tests",
+                    "test_command": test_cmd,
                     "include_diff": False,
                 })
             self.assertTrue(result["execution"]["ok"])
@@ -363,6 +364,8 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(result["execution_route"]["model"], "gpt-5.4-mini")
             self.assertEqual((root / "app.py").read_text(encoding="utf-8"), "VALUE = 2\n")
             self.assertEqual(bridge_run.call_args.kwargs["profile"], "candidate_mini")
+            self.assertIn("preflight_test", bridge_run.call_args.args[0])
+            self.assertIn("expected VALUE = 2", bridge_run.call_args.args[0])
             runtime.close()
 
     def test_agent_workflow_auto_packet_review_uses_hidden_bridge(self) -> None:

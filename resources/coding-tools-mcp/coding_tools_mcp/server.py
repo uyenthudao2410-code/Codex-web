@@ -2628,9 +2628,11 @@ class Runtime:
 
     ) -> dict[str, Any]:
 
-        verification_name = str(proof.get("verification") or "none").strip().lower()
-        strong_oracle = verification_name in {"tests", "build", "all"} or bool(
-            str(proof.get("test_command") or "").strip() or str(proof.get("build_command") or "").strip()
+        preflight_test = proof.get("preflight_test") if isinstance(proof.get("preflight_test"), dict) else None
+        preflight_build = proof.get("preflight_build") if isinstance(proof.get("preflight_build"), dict) else None
+        strong_oracle = any(
+            item is not None and item.get("exit_code") not in {None, 0}
+            for item in (preflight_test, preflight_build)
         )
         routing = self._select_agent_execution_route(
 
@@ -3432,18 +3434,29 @@ class Runtime:
                     "max_total_bytes": args.get("max_total_bytes", 262144),
                     "force_refresh": args.get("force_refresh", False),
                 })
+            candidate_proof: dict[str, Any] = {
+                "verification": verification,
+                "commands": list(args.get("commands", args.get("checks", [])))[:6],
+                "test_command": str(args.get("test_command", "")),
+                "build_command": str(args.get("build_command", "")),
+            }
+            preflight_timeout_ms = min(max(int(args.get("timeout_seconds", 600)) * 1_000, 1_000), 120_000)
+            candidate_workdir = str(args.get("workdir", args.get("path", ".")))
+            if candidate_proof["test_command"]:
+                candidate_proof["preflight_test"] = self._run_continuous_check(
+                    candidate_proof["test_command"], candidate_workdir, preflight_timeout_ms
+                )
+            elif candidate_proof["build_command"]:
+                candidate_proof["preflight_build"] = self._run_continuous_check(
+                    candidate_proof["build_command"], candidate_workdir, preflight_timeout_ms
+                )
             candidate_result = self._generate_agent_candidate(
                 workflow=workflow,
                 objective=objective or f"Complete {workflow} workflow",
                 prepared=prepared,
                 requested_route=requested_execution_route,
                 allow_high_cost=bool(args.get("allow_high_cost", False)),
-                proof={
-                    "verification": verification,
-                    "commands": list(args.get("commands", args.get("checks", [])))[:6],
-                    "test_command": str(args.get("test_command", "")),
-                    "build_command": str(args.get("build_command", "")),
-                },
+                proof=candidate_proof,
             )
             execution_route = dict(candidate_result.get("routing") or {})
             execution_route.update({
