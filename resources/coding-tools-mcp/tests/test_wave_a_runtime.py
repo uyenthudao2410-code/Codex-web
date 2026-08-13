@@ -220,6 +220,36 @@ class CommandHandleMigrationTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_legacy_session_alias_usage_is_counted_for_deprecation_telemetry(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                self.assertEqual(runtime.legacy_session_alias_uses, 0)
+                payload = runtime.exec_command({
+                    "cmd": "echo alias-telemetry",
+                    "yield_time_ms": 1000,
+                    "max_output_bytes": 4096,
+                    "verbosity": "full",
+                })
+                runtime.command_control({
+                    "action": "poll",
+                    "command_id": payload["command_id"],
+                    "yield_time_ms": 0,
+                    "max_output_bytes": 4096,
+                    "verbosity": "full",
+                })
+                self.assertEqual(runtime.legacy_session_alias_uses, 0)
+                runtime.command_control({
+                    "action": "poll",
+                    "session_id": payload["command_id"],
+                    "yield_time_ms": 0,
+                    "max_output_bytes": 4096,
+                    "verbosity": "full",
+                })
+                self.assertEqual(runtime.legacy_session_alias_uses, 1)
+            finally:
+                runtime.close()
+
 
 if __name__ == "__main__":
     unittest.main()

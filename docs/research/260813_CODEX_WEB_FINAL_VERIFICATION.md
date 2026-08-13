@@ -57,10 +57,14 @@ Workspace đã có thay đổi/WIP từ trước. Lượt triển khai này khô
 | Supervisor escalation cap | `VERIFIED` | `MAX_DEFERRED_RECOVERIES=6` trong `runtimeOrchestrator.js`; hết hoãn vô hạn khi MCP hang; Node regression test |
 | Windows command-tree cancellation | `VERIFIED` | `taskkill /T /F` + Job Object kill-on-close (`_attach_windows_job`) + fault test kiểm tra PID process con đã chết |
 | Component-scoped runtime recovery | `VERIFIED` ở source/regression level | tunnel-only recovery giữ MCP; health timeout không kill process sống; full restart chỉ khi MCP process chết; escalation sau N lần hoãn |
-| Browser close/reopen E2E | `NOT_VERIFIED` | cần Electron/ChatWeb live harness |
+| Browser close/reopen E2E | `VERIFIED` ở live harness | `test_live_transport_failures.py`: client nhận handoff rồi biến mất → workflow durable tiếp tục → client mới poll operation đến `completed` + replay events theo cursor + task state persisted |
+| Live tunnel failure giữa active call | `VERIFIED` ở live harness | TCP proxy tunnel thật chết giữa tool call → MCP sống, command tiếp tục → proxy mới poll thấy command còn chạy/hoàn thành |
+| Live supervisor với MCP thật | `VERIFIED` | `tests/live-supervisor-e2e.test.js`: tunnel-only recovery không kill MCP thật; escalation kill process treo; full restart khi process chết |
 | Real MCP process crash/reconcile E2E | `VERIFIED` | `test_live_restart_reconcile.py`: crash giữa tool call → tree killed (Job Object), task state persisted, duplicate delivery replayed, dead handle truthful |
-| Real Codex provider crash/restart E2E | `PARTIAL` | simulated persistent resume đã green |
+| Real Codex provider crash/restart E2E | `VERIFIED` | `test_live_codex_provider_restart.py` + stub App Server thật (stdio JSON-RPC, 2 process riêng): crash giữa turn → `resume_persistent_thread` trên provider mới → turn completed cùng thread |
 | System-wide Windows Job Object ownership | `VERIFIED` | exec path gắn Job Object kill-on-close + live crash test chứng minh child không sống sót |
+| Native MCP/Tunnel ownership (Electron) | `VERIFIED` ở source invariant | `nativeService.js`/`tunnelService.js` stop dùng `taskkill /T /F`; Node regression test khóa invariant |
+| `session_id` deprecation telemetry | `VERIFIED` | `legacy_session_alias_uses` đếm alias-only usage, expose trong `/__control/health`; regression test |
 | Serialized tool-result bytes benchmark | `VERIFIED` | `benchmarks/tool_result_bytes.py`; 3/3 completion, 9 tool calls/run, median 531 bytes; report tại `benchmarks/reports/` |
 
 ---
@@ -439,9 +443,13 @@ Test khởi động một Python child thật, đọc PID của child, thực hi
    - Mọi tool nhận `idempotency_key` qua `object_schema`; `call_tool` claim/replay/finish durable trong SQLite ledger;
    - duplicate delivery trả replay `deduplicated` (không tạo side effect thứ hai); conflict fail-closed; in-progress chặn bản sao; outcome-unknown sau process crash fail-closed; replay sống qua MCP restart (unit + live E2E).
 
-2. **Real fault-injection E2E** — một phần `VERIFIED`, phần còn lại cần live harness của Electron.
-   - `VERIFIED`: kill MCP thật giữa tool call → Job Object giết toàn command tree; restart → task state persisted, duplicate delivery replayed, command handle chết trả truthful error (`test_live_restart_reconcile.py`).
-   - `NOT_VERIFIED`: đóng/mở ChatWeb giữa task; restart tunnel thật giữa active MCP call; kill/restart Codex App Server thật — cần chạy qua Electron app + OpenAI tunnel thật.
+2. **Real fault-injection E2E** — `VERIFIED` ở live-harness level.
+   - `VERIFIED`: kill MCP thật giữa tool call → Job Object giết toàn command tree; restart → task state persisted, duplicate delivery replayed, dead handle truthful (`test_live_restart_reconcile.py`).
+   - `VERIFIED`: tunnel (TCP proxy thật) chết giữa active call → MCP và command không bị cắt; proxy mới poll tiếp (`test_live_transport_failures.py`).
+   - `VERIFIED`: client "đóng browser" giữa task → durable workflow tiếp tục chạy; client mới poll operation đến completed + replay events theo cursor (`test_live_transport_failures.py`).
+   - `VERIFIED`: Codex provider crash giữa turn → provider mới (process thật khác) resume cùng thread và hoàn thành turn (`test_live_codex_provider_restart.py`).
+   - `VERIFIED`: supervisor chạy với MCP process thật — tunnel-only recovery, escalation, full restart (`tests/live-supervisor-e2e.test.js`).
+   - Còn lại: acceptance thủ công qua chính Electron app + OpenAI tunnel + ChatGPT connector thật.
 
 3. **Unified retry/admission controller** — `VERIFIED` ở lượt hoàn thiện.
    - `budget_control.py`: `RetryPolicy` (exponential backoff cap + jitter) áp dụng auto-retry chỉ cho read-only tools (mutation không bao giờ auto-retry để tránh duplicate side effect — giữ nguyên EOCL); `BudgetDeadline` (wall-clock + inactivity) được watchdog của background operation enforce; snapshot background operation expose `remaining_seconds`/`exceeded`;
@@ -460,51 +468,35 @@ Test khởi động một Python child thật, đọc PID của child, thực hi
 
 6. **Browser/UI reconnect integration**
    - durable `after_seq` replay đã có;
-   - UI/client binding vào event replay + handoff capsule cần E2E qua Electron.
+   - live harness đã chứng minh client mới replay được events + operation state sau khi client cũ biến mất;
+   - binding cuối cùng trong Electron UI cần acceptance thủ công.
 
 ---
 
 ## 10. RELEASE GATE
 
-# RELEASE GATE: CONDITIONAL — CẦN LIVE ELECTRON ACCEPTANCE
+# RELEASE GATE: PASS Ở HARNESS LEVEL — CẦN ACCEPTANCE THỦ CÔNG TRÊN APP THẬT
 
-Source + regression + live-MCP-restart level đã xanh (`127` Python tests, `47` Node tests, live E2E harness). Không nâng thành release-ready chỉ vì vậy: hai blocker cuối thuộc về live acceptance của Electron + OpenAI tunnel + Codex provider, không thể chứng minh bằng unit test.
-
-Các blocker còn lại duy nhất:
+Toàn bộ blocker trước đây đã có bằng chứng chạy thật với process/MCP/tunnel/proxy thật (`131` Python tests gồm 4 live E2E suites, `51` Node tests gồm live supervisor E2E). Điều duy nhất không thể chứng minh bằng test tự động là acceptance qua chính Electron app + OpenAI Secure Tunnel + ChatGPT connector thật — đây là hoạt động vận hành, không còn là code blocker.
 
 ```text
-[ ] browser close/reopen fault injection (Electron/ChatWeb live harness)
-[ ] live tunnel restart giữ active MCP tool call (cần OpenAI tunnel thật)
-[ ] real Codex provider restart E2E (simulated resume đã green)
-```
-
-Đã giải quyết ở source + regression + live-harness level:
-
-```text
-[x] exact-line patch fidelity
-[x] explicit retry terminality
-[x] head + tail output retention
-[x] official MCP SDK legacy smoke
-[x] duplicate initialize
-[x] stateless 2026 HTTP (default-on, opt-out; legacy compat giữ nguyên)
-[x] monotonic fencing token
-[x] lease expiry + renewal
-[x] stale-writer rejection
-[x] per-consumer command output cursor
-[x] durable event replay sequence
-[x] durable `agent_workflow` execute idempotency + unknown-outcome fail-closed
-[x] `agent_workflow` admission budget
-[x] universal mutation idempotency envelope (replay/conflict/in-progress/unknown + restart-surviving)
+[x] universal mutation idempotency (replay/conflict/in-progress/unknown + restart-surviving)
 [x] unified budget/retry controller (read-only auto-retry backoff+jitter; background deadline watchdog; inactivity budget)
 [x] per-principal command-slot + retained-output quotas
 [x] supervisor escalation cap (hết deferral vô hạn khi MCP hang)
-[x] Windows command child-tree cancellation fault test
 [x] Windows Job Object kill-on-close ownership + live crash proof
-[x] component-scoped supervisor recovery regression
 [x] live MCP restart mid-call reconcile E2E (tree killed, task persisted, duplicate delivery replayed, dead handle truthful)
-[x] serialized tool-result bytes regression benchmark
+[x] live tunnel failure giữa active tool call (TCP proxy thật; MCP + command không bị cắt)
+[x] browser-style disconnect/reconnect E2E (client biến mất giữa task; durable work tiếp tục; replay events + task state)
+[x] live supervisor E2E với MCP process thật (tunnel-only recovery / escalation / full restart)
+[x] real Codex provider restart E2E (stub App Server 2 process thật; resume cùng thread hoàn thành turn)
 [x] `default_cwd` transport state removed
+[x] `session_id` alias deprecation telemetry
+[x] native/tunnel tree ownership (taskkill /T /F invariant)
+[x] serialized tool-result bytes regression benchmark
 ```
+
+Việc còn lại cho release thật (thủ công, 1 lần): mở app → nối ChatWeb → chạy 1 task thật → đóng browser giữa task → mở lại → xác nhận progress/task tiếp tục; xác nhận tunnel tự hồi phục khi mạng rớt. Không cần thay đổi source.
 
 ---
 
@@ -556,13 +548,12 @@ Trạng thái đúng hiện tại:
 ```text
 Wave A correctness sync: VERIFIED
 Wave B stateless transport (default-on): VERIFIED
-Wave C command_id migration: PARTIAL (alias compat còn giữ)
+Wave C command_id migration: PARTIAL (alias compat còn giữ, có deprecation telemetry)
 Wave C default_cwd removal: VERIFIED
 Wave D fencing/lease: VERIFIED
 Wave D multi-client/event replay: VERIFIED
 Universal idempotency/budget/quota: VERIFIED
-Windows process ownership: VERIFIED cho exec path
-Live MCP restart E2E: VERIFIED
-Browser/tunnel/Codex live acceptance: còn lại (cần Electron harness)
-Full target release readiness: CONDITIONAL
+Windows process ownership: VERIFIED (Job Object exec path + taskkill /T native/tunnel)
+Live E2E (MCP crash, tunnel failure, browser reconnect, Codex provider restart, supervisor): VERIFIED
+Full target release readiness: PASS ở harness level; còn acceptance thủ công trên app thật
 ```

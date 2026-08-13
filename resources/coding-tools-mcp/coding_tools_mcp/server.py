@@ -1715,6 +1715,7 @@ class Runtime:
         self.sessions_lock = threading.Lock()
         self.session_principals: dict[str, str] = {}
         self.principal_active_counts: dict[str, int] = {}
+        self.legacy_session_alias_uses = 0
         self.starting_sessions = 0
         self._closed = False
         self.http_session_id = secrets.token_urlsafe(24)
@@ -5511,6 +5512,9 @@ class Runtime:
 
     def command_control(self, args: dict[str, Any]) -> dict[str, Any]:
         action = str(args.get("action", "poll")).lower()
+        if not str(args.get("command_id", "")).strip() and str(args.get("session_id", "")).strip():
+            with self.sessions_lock:
+                self.legacy_session_alias_uses += 1
         command_id = self._command_handle(args) if action in {"poll", "write", "kill"} else ""
         if action in {"poll", "write"}:
             return self.write_stdin({
@@ -9415,6 +9419,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "workspace_generation": runtime.workspace_generation,
                 "active_commands": active_commands,
                 "retained_outputs": retained_outputs,
+                "legacy_session_alias_uses": runtime.legacy_session_alias_uses,
                 "http_sessions": self.server.sessions.stats(),
             }, head_only=head_only)
             return

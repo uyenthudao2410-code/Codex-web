@@ -187,3 +187,15 @@ test('supervisor resets the deferral counter once the runtime becomes healthy', 
   assert.equal(orchestrator.deferredRecoveryCount, 0);
   assert.equal(calls.restart, 0);
 });
+
+test('native and tunnel stop paths own the whole process tree on Windows', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const root = path.resolve(__dirname, '..');
+  for (const relative of ['electron/services/nativeService.js', 'electron/services/tunnelService.js']) {
+    const source = fs.readFileSync(path.join(root, relative), 'utf8');
+    assert.match(source, /taskkill\.exe/);
+    assert.match(source, /\/T/);
+    assert.match(source, /\/F/);
+  }
+});
