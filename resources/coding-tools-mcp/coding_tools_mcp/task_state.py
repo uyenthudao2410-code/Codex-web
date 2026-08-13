@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 
-STATE_VERSION = 1
+STATE_VERSION = 2
 MAX_EVENTS = 100
 MAX_RESULTS = 20
 MAX_FILES = 500
@@ -53,6 +53,7 @@ def _default_state() -> dict[str, Any]:
     return {
         "version": STATE_VERSION,
         "task_id": "",
+        "orchestration": {},
         "objective": "",
         "status": "idle",
         "steps": [],
@@ -150,6 +151,9 @@ class TaskStateStore:
             for key in ("objective", "status", "current_step", "next_step"):
                 if key in changes:
                     state[key] = _text(changes[key])
+            if "orchestration" in changes:
+                orchestration = changes.get("orchestration")
+                state["orchestration"] = copy.deepcopy(orchestration) if isinstance(orchestration, dict) else {}
             if "failure" in changes:
                 failure = changes["failure"]
                 state["failure"] = None if failure in (None, "") else _text(failure)
@@ -162,6 +166,16 @@ class TaskStateStore:
                         step["status"] = "completed"
                         step["updated_at"] = utc_now()
             self._event(state, event, {"fields": sorted(changes)})
+            return self._write(state)
+
+    def set_orchestration_projection(self, projection: dict[str, Any], *, event: str = "orchestration_projected") -> dict[str, Any]:
+        """Persist the compact current view; the SQLite ledger remains history authority."""
+        with self._lock:
+            state = self._read()
+            if not self._has_task(state):
+                return state
+            state["orchestration"] = copy.deepcopy(projection)
+            self._event(state, event, {"state": str(projection.get("orchestration_state", ""))})
             return self._write(state)
 
     def record_tool_result(self, name: str, args: dict[str, Any], payload: dict[str, Any]) -> None:
@@ -376,6 +390,8 @@ class TaskStateStore:
         for key in ("steps", "test_results", "build_results", "modified_files", "events"):
             if not isinstance(state.get(key), list):
                 state[key] = []
+        if not isinstance(state.get("orchestration"), dict):
+            state["orchestration"] = {}
         if state.get("status") == "active" and not state.get("current_command"):
             try:
                 updated = datetime.fromisoformat(str(state.get("updated_at", "")).replace("Z", "+00:00"))

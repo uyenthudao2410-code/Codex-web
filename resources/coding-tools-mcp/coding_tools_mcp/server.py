@@ -81,6 +81,10 @@ from .codex_bridge import CodexAppServerBridge, CodexBridgeError
 from .document_tools import create_docx, create_text_document, convert_document, extract_document
 from .task_state import TaskStateStore
 from .performance_trace import PerformanceTraceStore
+from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class
+from .orchestration_ledger import OrchestrationLedger, fingerprint_paths
+from .orchestration_report import OrchestrationReport
+from .proof_ledger import ProofLedger
 from .telemetry import SessionTelemetry
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head
 from .tool_results import make_tool_result
@@ -1624,6 +1628,10 @@ class Runtime:
         self.telemetry = SessionTelemetry(permission_mode=self.permission_mode, transport=transport)
         self.task_state = TaskStateStore(self.workspace.root)
         self.performance_trace = PerformanceTraceStore(self.workspace.root)
+        self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
+        self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
+        self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
+        self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
         self.workspace_switch_lock = threading.RLock()
         self.workspace_generation = 1
         self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
@@ -1699,6 +1707,10 @@ class Runtime:
             self.project_context = load_project_context(self.workspace.root)
             self.task_state = TaskStateStore(self.workspace.root)
             self.performance_trace = PerformanceTraceStore(self.workspace.root)
+            self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
+            self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
+            self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
+            self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
             with self.patch_lock:
                 self.patch_baselines.clear()
             self.workspace_generation += 1
@@ -2134,11 +2146,79 @@ class Runtime:
             try:
                 self.performance_trace.record(
                     tool="workspace_preheat", started_monotonic=started, finished_monotonic=finished, ok=ok,
+                    orchestration=self.task_state.get().get("orchestration", {}),
                 )
             except Exception:
                 pass
 
         threading.Thread(target=preheat, name="coding-tools-preheat", daemon=True).start()
+
+    def _orchestration_workspace_identity(self, path_value: object = ".") -> dict[str, Any]:
+        try:
+            status = self.git_status({"path": str(path_value or "."), "max_entries": 2000})
+        except (ToolFailure, OSError, ValueError):
+            status = {"is_repo": False, "head": "", "branch": "", "entries": []}
+        raw_entries = status.get("entries") if isinstance(status.get("entries"), list) else []
+        entries = [
+            {
+                "path": str(item.get("path") or "").replace("\\", "/"),
+                "index_status": str(item.get("index_status") or ""),
+                "worktree_status": str(item.get("worktree_status") or ""),
+            }
+            for item in raw_entries
+            if isinstance(item, dict)
+            and str(item.get("path") or "").strip()
+            and not str(item.get("path") or "").replace("\\", "/").startswith(".coding-tools/")
+        ]
+        dirty_paths = [item["path"] for item in entries]
+        head = str(status.get("head") or "")
+        worktree_fp = fingerprint_paths(
+            self.workspace.root,
+            dirty_paths,
+            extra={"head": head, "branch": status.get("branch"), "entries": entries},
+        )
+        return {
+            "is_repo": bool(status.get("is_repo")),
+            "base_head": head,
+            "branch": str(status.get("branch") or ""),
+            "worktree_fp": worktree_fp,
+            "dirty_paths": dirty_paths,
+        }
+
+    @staticmethod
+    def _orchestration_mode_for_route(route: object) -> str:
+        selected = str(route or "auto").lower()
+        if selected == "deterministic":
+            return "mcp_only"
+        if selected in {"mini", "luna"}:
+            return "bounded_candidate"
+        if selected == "sol_ultra":
+            return "deep_single_lane"
+        if selected in {"terra", "sol_xhigh", "sol_max"}:
+            return "deep_single_lane"
+        return "auto"
+
+    def _project_orchestration(self, ctx: RunContext, *, event: str = "orchestration_projected") -> None:
+        try:
+            self.task_state.set_orchestration_projection(ctx.projection(), event=event)
+        except (OSError, ValueError):
+            pass
+
+    def _orchestration_result(self, ctx: RunContext | None, *, write_reports: bool = True) -> dict[str, Any] | None:
+        if ctx is None:
+            return None
+        reports: dict[str, Any] = {}
+        if write_reports:
+            try:
+                reports = self.orchestration_report.write_reports(ctx.run_id)
+            except (OSError, ValueError, KeyError) as exc:
+                reports = {"error": str(exc)[:500]}
+        return {
+            **ctx.projection(),
+            "integrity": self.orchestration_ledger.verify_chain(ctx.run_id),
+            "reports": reports,
+            "final_acceptance_required": ctx.state == "ACCEPTING",
+        }
 
     def codex_bridge(self, args: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -2626,6 +2706,10 @@ class Runtime:
 
         proof: dict[str, Any],
 
+        routing: dict[str, Any] | None = None,
+
+        orchestration_ctx: RunContext | None = None,
+
     ) -> dict[str, Any]:
 
         preflight_test = proof.get("preflight_test") if isinstance(proof.get("preflight_test"), dict) else None
@@ -2634,18 +2718,21 @@ class Runtime:
             item is not None and item.get("exit_code") not in {None, 0}
             for item in (preflight_test, preflight_build)
         )
-        routing = self._select_agent_execution_route(
+        if routing is None:
+            routing = self._select_agent_execution_route(
 
-            workflow=workflow,
+                workflow=workflow,
 
-            prepared=prepared,
+                prepared=prepared,
 
-            requested=requested_route,
+                requested=requested_route,
 
-            allow_high_cost=allow_high_cost,
-            strong_oracle=strong_oracle,
+                allow_high_cost=allow_high_cost,
+                strong_oracle=strong_oracle,
 
-        )
+            )
+        else:
+            routing = dict(routing)
 
         if routing["selected"] == "deterministic":
 
@@ -2679,6 +2766,24 @@ class Runtime:
 
         )
 
+        if orchestration_ctx is not None:
+            self.orchestration_ledger.append_event(
+                orchestration_ctx.run_id,
+                wave_id=orchestration_ctx.wave_id,
+                delegation_id=orchestration_ctx.delegation_id,
+                event_type="model_dispatch_started",
+                state_before=orchestration_ctx.state,
+                state_after=orchestration_ctx.state,
+                payload={
+                    "route": routing.get("selected"),
+                    "profile": routing.get("profile"),
+                    "model": routing.get("model"),
+                    "effort": routing.get("effort"),
+                    "allowed_paths": allowed_paths,
+                    "packet_bytes": len(prompt.encode("utf-8")),
+                },
+            )
+
         try:
 
             bridge_result = self._codex_bridge.run(
@@ -2699,6 +2804,17 @@ class Runtime:
 
         except CodexBridgeError as exc:
 
+            if orchestration_ctx is not None:
+                self.orchestration_ledger.append_event(
+                    orchestration_ctx.run_id,
+                    wave_id=orchestration_ctx.wave_id,
+                    delegation_id=orchestration_ctx.delegation_id,
+                    event_type="model_dispatch_finished",
+                    state_before=orchestration_ctx.state,
+                    state_after=orchestration_ctx.state,
+                    payload={"status": "error", "failure_class": normalize_failure_class(exc.code), "retryable": exc.retryable},
+                )
+
             return {
 
                 "status": "blocked",
@@ -2718,6 +2834,22 @@ class Runtime:
         observation = bridge_result.get("observation") if isinstance(bridge_result.get("observation"), dict) else {}
 
         status = str(observation.get("status") or bridge_result.get("status") or "unknown")
+
+        if orchestration_ctx is not None:
+            self.orchestration_ledger.append_event(
+                orchestration_ctx.run_id,
+                wave_id=orchestration_ctx.wave_id,
+                delegation_id=orchestration_ctx.delegation_id,
+                event_type="model_dispatch_finished",
+                state_before=orchestration_ctx.state,
+                state_after=orchestration_ctx.state,
+                payload={
+                    "status": status,
+                    "wall_time_ms": observation.get("wall_time_ms"),
+                    "deadline_hit": bool(observation.get("deadline_hit", bridge_result.get("deadline_hit", False))),
+                    "economics": observation.get("economics"),
+                },
+            )
 
         base = {
 
@@ -3149,8 +3281,10 @@ class Runtime:
         }
 
     def apply_changes_and_verify(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Apply a complete model-proposed change set and run its verification without MCP polling round trips."""
+        """Apply one coherent change set, record proof identity, and avoid redundant proof reruns."""
         objective = str(args.get("objective", "")).strip() or "Apply and verify workspace changes"
+        orchestration_ctx = args.get("_orchestration_context")
+        ctx = orchestration_ctx if isinstance(orchestration_ctx, RunContext) else None
         raw_patches = args.get("patches", [])
         patches = [str(item) for item in raw_patches if str(item).strip()]
         single_patch = str(args.get("patch", "")).strip()
@@ -3184,6 +3318,12 @@ class Runtime:
                     step["status"] = "pending"
             self.task_state.update({"steps": workflow_steps, "current_step": current_step})
 
+        def record_failure(code: object, **details: Any) -> None:
+            if ctx is None or ctx.state in {"REPLAN", "BLOCKED", "ABORTED", "CHECKPOINTED"}:
+                return
+            self.orchestration_control.record_failure(ctx, code, payload=details)
+            self._project_orchestration(ctx, event="orchestration_failure_projected")
+
         first_stage = workflow_steps[0]["id"]
         first_text = {
             "apply": "Applying complete change set",
@@ -3200,27 +3340,86 @@ class Runtime:
             "current_step": first_text,
             "next_step": "Run all requested checks and summarize the result.",
         }, event="continuous_workflow_started")
+
+        workdir = str(args.get("workdir", args.get("path", ".")))
+        if ctx is not None:
+            identity_before = self._orchestration_workspace_identity(args.get("path", "."))
+            try:
+                self.orchestration_control.assert_write_allowed(
+                    ctx,
+                    owner="MCP",
+                    base_head=str(identity_before.get("base_head") or ""),
+                    worktree_fp=str(identity_before.get("worktree_fp") or ""),
+                )
+            except OrchestrationControlError as exc:
+                record_failure(exc.code, details=exc.details)
+                raise ToolFailure(exc.code, str(exc), category="runtime", retryable=True, details=exc.details) from exc
+
         patch_results: list[dict[str, Any]] = []
         affected_files: list[dict[str, str]] = []
-        for patch_text in patches:
-            result = self.apply_patch({"patch": patch_text, "dry_run": bool(args.get("dry_run", False))})
-            patch_results.append(result)
-            affected_files.extend(result.get("affected_files", []))
+        try:
+            for patch_text in patches:
+                result = self.apply_patch({"patch": patch_text, "dry_run": bool(args.get("dry_run", False))})
+                patch_results.append(result)
+                affected_files.extend(result.get("affected_files", []))
+        except ToolFailure as exc:
+            record_failure(exc.code, message=str(exc))
+            raise
         if patches and not bool(args.get("dry_run", False)):
             self._clear_context_bundle_cache()
 
+        if ctx is not None and ctx.state == "EXECUTING":
+            self.orchestration_control.begin_proof(ctx)
+            self._project_orchestration(ctx, event="orchestration_proving")
+
+        proof_identity = self._orchestration_workspace_identity(args.get("path", ".")) if ctx is not None else {}
+        affected_paths = sorted({
+            str(item.get("path", "")).strip().replace("\\", "/")
+            for item in affected_files
+            if isinstance(item, dict) and str(item.get("path", "")).strip()
+        })
+        proof_ids: list[str] = []
+        proof_cache_hits = 0
+        upstream_proof_ids: list[str] = []
+
         command_results: list[dict[str, Any]] = []
         timeout_ms = min(max(int(args.get("timeout_ms", 600000)), 1000), 600000)
-        workdir = str(args.get("workdir", args.get("path", ".")))
         if checks:
             set_stage("checks", "Running requested checks")
         for command in checks:
-            result = self._run_continuous_check(command, workdir, timeout_ms)
+            if ctx is None:
+                result = self._run_continuous_check(command, workdir, timeout_ms)
+            else:
+                command_hash = hashlib.sha256(command.encode("utf-8", errors="replace")).hexdigest()
+                stage_id = f"check:{command_hash[:16]}"
+                proof_fp = self.proof_ledger.fingerprint(
+                    stage_id=stage_id,
+                    base_head=str(proof_identity.get("base_head") or ctx.base_head),
+                    worktree_fp=str(proof_identity.get("worktree_fp") or ""),
+                    contract_fp=ctx.contract_fp,
+                    input_paths=affected_paths,
+                    config={"command_hash": command_hash, "workdir": workdir, "timeout_ms": timeout_ms},
+                    upstream_proof_ids=upstream_proof_ids,
+                )
+                result, proof_id = self.proof_ledger.run_cached(
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                    stage_id=stage_id,
+                    input_fingerprint=proof_fp,
+                    command=command,
+                    upstream_proof_ids=upstream_proof_ids,
+                    metadata={"kind": "check", "workdir": workdir},
+                    runner=lambda command=command: self._run_continuous_check(command, workdir, timeout_ms),
+                )
+                proof_ids.append(proof_id)
+                upstream_proof_ids.append(proof_id)
+                proof_cache_hits += 1 if result.get("cache_hit") else 0
             command_results.append(result)
             if result.get("exit_code") != 0:
                 failure = f"Check failed: {command}"
                 set_stage("checks", "Requested check failed", failed=True)
-                self.task_state.update({"status": "failed", "failure": failure, "next_step": "Fix the failed check and resume this task."})
+                record_failure("CHECK_FAILED", command_hash=hashlib.sha256(command.encode("utf-8")).hexdigest())
+                self.task_state.update({"status": "waiting", "failure": failure, "current_step": "Replan required", "next_step": "Replan from the failed check; do not retry unchanged."})
                 return {
                     "ok": False,
                     "status": "failed",
@@ -3229,13 +3428,14 @@ class Runtime:
                     "affected_files": affected_files,
                     "check_results": command_results,
                     "build_report": None,
+                    "proof_summary": {"proof_ids": proof_ids, "cache_hits": proof_cache_hits},
                     "error": {"code": "CHECK_FAILED", "message": failure, "category": "runtime", "retryable": True, "details": {}},
                 }
 
         build_report = None
         if verification != "none":
             set_stage("verify", "Testing and building")
-            build_report = self.verify_build({
+            verify_args = {
                 "path": str(args.get("path", ".")),
                 "run_tests": verification in {"tests", "all"},
                 "run_build": verification in {"build", "all"},
@@ -3244,9 +3444,43 @@ class Runtime:
                 "artifact_paths": args.get("artifact_paths", []),
                 "hash_algorithm": args.get("hash_algorithm", "sha256"),
                 "timeout_seconds": min(max(int(args.get("timeout_seconds", 600)), 1), 600),
-            })
+            }
+            if ctx is None:
+                build_report = self.verify_build(verify_args)
+            else:
+                stage_id = f"verify:{verification}"
+                proof_fp = self.proof_ledger.fingerprint(
+                    stage_id=stage_id,
+                    base_head=str(proof_identity.get("base_head") or ctx.base_head),
+                    worktree_fp=str(proof_identity.get("worktree_fp") or ""),
+                    contract_fp=ctx.contract_fp,
+                    input_paths=affected_paths,
+                    config=verify_args,
+                    upstream_proof_ids=upstream_proof_ids,
+                )
+                build_report, proof_id = self.proof_ledger.run_cached(
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                    stage_id=stage_id,
+                    input_fingerprint=proof_fp,
+                    command=f"verify_build:{verification}",
+                    upstream_proof_ids=upstream_proof_ids,
+                    metadata={"kind": "verify", "verification": verification},
+                    runner=lambda: self.verify_build(verify_args),
+                )
+                proof_ids.append(proof_id)
+                upstream_proof_ids.append(proof_id)
+                proof_cache_hits += 1 if build_report.get("cache_hit") else 0
             if build_report.get("ok") is False:
                 set_stage("verify", "Verification failed", failed=True)
+                error = build_report.get("error") if isinstance(build_report.get("error"), dict) else {}
+                record_failure(error.get("code") or "VERIFICATION_FAILED", verification=verification)
+                self.task_state.update({
+                    "status": "waiting",
+                    "failure": str(error.get("message") or "Verification failed"),
+                    "current_step": "Replan required",
+                    "next_step": "Replan from the failed proof stage; completed proof fingerprints remain auditable.",
+                })
                 return {
                     "ok": False,
                     "status": "failed",
@@ -3255,17 +3489,13 @@ class Runtime:
                     "affected_files": affected_files,
                     "check_results": command_results,
                     "build_report": build_report,
+                    "proof_summary": {"proof_ids": proof_ids, "cache_hits": proof_cache_hits},
                     "error": build_report.get("error"),
                 }
 
         diff = None
         if bool(args.get("include_diff", True)) and affected_files:
             try:
-                affected_paths = sorted({
-                    str(item.get("path", "")).strip()
-                    for item in affected_files
-                    if isinstance(item, dict) and str(item.get("path", "")).strip()
-                })
                 diff_args: dict[str, Any] = {
                     "unstaged": True,
                     "max_bytes": int(args.get("max_diff_bytes", 131072)),
@@ -3280,11 +3510,19 @@ class Runtime:
         set_stage("finalize", "Finalizing result")
         for step in workflow_steps:
             step["status"] = "completed"
+        final_status = "waiting" if ctx is not None else "completed"
+        final_step = "Waiting for final acceptance" if ctx is not None else "Completed"
+        final_next = (
+            "ChatWeb Sol must accept or reject this proven wave via task_control before another implementation wave."
+            if ctx is not None
+            else "Review the verified changes or continue with the next task."
+        )
+        proof_fingerprint = hashlib.sha256("|".join(proof_ids).encode("utf-8")).hexdigest() if proof_ids else ""
         self.task_state.update({
-            "status": "completed",
+            "status": final_status,
             "steps": workflow_steps,
-            "current_step": "Completed",
-            "next_step": "Review the verified changes or continue with the next task.",
+            "current_step": final_step,
+            "next_step": final_next,
             "failure": None,
         }, event="continuous_workflow_completed")
         return {
@@ -3296,7 +3534,13 @@ class Runtime:
             "check_results": command_results,
             "build_report": build_report,
             "git_diff": diff,
-            "next_step": "Review the verified changes or continue with the next task.",
+            "proof_summary": {
+                "proof_ids": proof_ids,
+                "cache_hits": proof_cache_hits,
+                "proof_fingerprint": proof_fingerprint,
+                "worktree_fp": str(proof_identity.get("worktree_fp") or ""),
+            },
+            "next_step": final_next,
         }
 
     @staticmethod
@@ -3323,14 +3567,150 @@ class Runtime:
         sections.append("*** End Patch")
         return "\n".join(sections)
 
+    def _agent_orchestration_context(
+        self,
+        args: dict[str, Any],
+        *,
+        objective: str,
+    ) -> tuple[RunContext, dict[str, Any]]:
+        current_task = self.task_state.get()
+        projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "")
+        current_ctx = self.orchestration_control.snapshot(run_id) if run_id else None
+
+        if not current_task.get("task_id") or (
+            str(current_task.get("status") or "") in {"completed", "stopped"}
+            and (current_ctx is None or current_ctx.state in {"CHECKPOINTED", "BLOCKED", "ABORTED"})
+        ):
+            current_task = self.task_state.ensure_started(objective, current_step="Orchestration preflight")
+            projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
+            run_id = str(projection.get("run_id") or "")
+            current_ctx = self.orchestration_control.snapshot(run_id) if run_id else None
+
+        identity = self._orchestration_workspace_identity(args.get("path", "."))
+        requested_mode = str(args.get("execution_mode", "auto")).strip().lower() or "auto"
+        contract_fp = self.orchestration_control.stable_contract_fingerprint(args.get("contract_fingerprint", ""))
+        replan_reason = str(args.get("replan_reason", "")).strip()
+
+        if current_ctx is not None:
+            if current_ctx.state == "ACCEPTING":
+                raise ToolFailure(
+                    "FINAL_ACCEPTANCE_REQUIRED",
+                    "The previous proven wave is waiting for ChatWeb Sol acceptance. Use task_control action=accept or reject before another implementation wave.",
+                    category="runtime",
+                    retryable=True,
+                    details={"run_id": current_ctx.run_id, "wave_id": current_ctx.wave_id},
+                )
+            if current_ctx.state in {"ROUTED", "EXECUTING", "PROVING"}:
+                self.orchestration_control.record_failure(
+                    current_ctx,
+                    "RUNTIME_RESUME_REQUIRED",
+                    payload={"reason": "A non-terminal wave was recovered outside its original synchronous execution."},
+                )
+                self._project_orchestration(current_ctx, event="orchestration_replan_required")
+                raise ToolFailure(
+                    "REPLAN_REQUIRED",
+                    "Recovered orchestration state requires an explicit replan_reason before execution can continue.",
+                    category="runtime",
+                    retryable=True,
+                    details={"run_id": current_ctx.run_id, "wave_id": current_ctx.wave_id},
+                )
+            if current_ctx.state == "REPLAN":
+                if not replan_reason:
+                    raise ToolFailure(
+                        "REPLAN_REASON_REQUIRED",
+                        "The current orchestration run is in REPLAN. Provide replan_reason to create a new wave; route/ownership may not change silently.",
+                        category="runtime",
+                        retryable=True,
+                        details={"run_id": current_ctx.run_id, "wave_id": current_ctx.wave_id},
+                    )
+                current_ctx = self.orchestration_control.begin_replan_wave(
+                    current_ctx,
+                    execution_mode=requested_mode,
+                    base_head=str(identity.get("base_head") or ""),
+                    worktree_fp=str(identity.get("worktree_fp") or ""),
+                    contract_fp=contract_fp,
+                    reason=replan_reason,
+                )
+            elif current_ctx.state in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
+                current_ctx = None
+            elif current_ctx.state in {"PREFLIGHT", "READY"}:
+                base_changed = bool(current_ctx.base_head and current_ctx.base_head != str(identity.get("base_head") or ""))
+                worktree_changed = bool(current_ctx.worktree_fp and current_ctx.worktree_fp != str(identity.get("worktree_fp") or ""))
+                contract_changed = bool(current_ctx.contract_fp and contract_fp and current_ctx.contract_fp != contract_fp)
+                if base_changed or worktree_changed or contract_changed:
+                    self.orchestration_control.record_failure(
+                        current_ctx,
+                        "CONTRACT_DRIFT" if contract_changed else "BASE_DRIFT",
+                        payload={
+                            "base_changed": base_changed,
+                            "worktree_changed": worktree_changed,
+                            "contract_changed": contract_changed,
+                        },
+                    )
+                    self._project_orchestration(current_ctx, event="orchestration_drift_detected")
+                    if not replan_reason:
+                        raise ToolFailure(
+                            "REPLAN_REASON_REQUIRED",
+                            "Base/worktree/contract changed after orchestration preflight. Provide replan_reason to create a new wave.",
+                            category="runtime",
+                            retryable=True,
+                            details={"run_id": current_ctx.run_id, "wave_id": current_ctx.wave_id},
+                        )
+                    current_ctx = self.orchestration_control.begin_replan_wave(
+                        current_ctx,
+                        execution_mode=requested_mode,
+                        base_head=str(identity.get("base_head") or ""),
+                        worktree_fp=str(identity.get("worktree_fp") or ""),
+                        contract_fp=contract_fp,
+                        reason=replan_reason,
+                    )
+
+        if current_ctx is None:
+            if current_task.get("task_id") and str(current_task.get("status") or "") in {"completed", "failed", "stopped"}:
+                current_task = self.task_state.update(
+                    {"objective": objective, "status": "active", "failure": None, "current_step": "Orchestration preflight", "new_task": True},
+                    event="task_started",
+                )
+            current_ctx = self.orchestration_control.begin(
+                objective=objective,
+                task_id=str(current_task.get("task_id") or ""),
+                execution_mode=requested_mode,
+                base_head=str(identity.get("base_head") or ""),
+                worktree_fp=str(identity.get("worktree_fp") or ""),
+                contract_fp=contract_fp,
+                metadata={"workflow": str(args.get("workflow", "custom")), "phase": str(args.get("phase", "prepare")), "branch": identity.get("branch")},
+            )
+
+        self._project_orchestration(current_ctx, event="orchestration_context_ready")
+        return current_ctx, identity
+
+    @staticmethod
+    def _validate_execution_mode_route(requested_mode: str, route: dict[str, Any]) -> str:
+        requested_mode = str(requested_mode or "auto").strip().lower() or "auto"
+        selected = str(route.get("selected") or "deterministic")
+        derived = Runtime._orchestration_mode_for_route(selected)
+        if requested_mode == "auto":
+            return derived
+        if requested_mode == "coordinated_multi_worktree":
+            return requested_mode
+        if requested_mode == "mcp_only" and selected != "deterministic":
+            raise ToolFailure("MODE_ROUTE_MISMATCH", "mcp_only execution requires deterministic routing.", category="validation")
+        if requested_mode == "bounded_candidate" and selected not in {"mini", "luna"}:
+            raise ToolFailure("MODE_ROUTE_MISMATCH", "bounded_candidate execution requires Mini or Luna routing.", category="validation")
+        if requested_mode == "deep_single_lane" and selected not in {"terra", "sol_xhigh", "sol_max", "sol_ultra"}:
+            raise ToolFailure("MODE_ROUTE_MISMATCH", "deep_single_lane execution requires a deep model route.", category="validation")
+        return requested_mode
+
     def agent_workflow(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Collapse the common multi-turn agent loop into one explicit workflow boundary."""
+        """End-to-end workflow with durable wave audit, explicit authority, proof, and final acceptance state."""
         workflow = str(args.get("workflow", "custom")).lower()
         phase = str(args.get("phase", "prepare")).lower()
         dedup_key = self._fast_cache_key("agent_workflow_execute", args)
         if phase in {"execute", "run"}:
             cached_execution = self._fast_cache_get(dedup_key, 30)
-            if cached_execution is not None:
+            current_projection = self.task_state.get().get("orchestration", {})
+            if cached_execution is not None and str(current_projection.get("orchestration_state") or "") != "REPLAN":
                 cached_execution["deduplicated"] = True
                 return cached_execution
         supported = {"bugfix", "feature", "greenfield", "refactor", "test_failure", "build_release", "diagnose", "document", "resume", "custom"}
@@ -3367,6 +3747,35 @@ class Runtime:
             result = self.document_workflow(document_args)
             return {"workflow": workflow, "phase": phase, "result": result, "task": self.task_state.get()}
 
+        objective = objective or f"Complete {workflow} workflow"
+        ctx, initial_identity = self._agent_orchestration_context(args, objective=objective)
+        requested_mode = str(args.get("execution_mode", "auto")).strip().lower() or "auto"
+        requested_execution_route = str(args.get("execution_route", "auto")).strip().lower() or "auto"
+        if requested_mode == "mcp_only":
+            requested_execution_route = "deterministic"
+        elif requested_mode == "deep_single_lane" and requested_execution_route == "auto":
+            requested_execution_route = "sol_xhigh"
+        if requested_mode == "coordinated_multi_worktree" and phase in {"execute", "run"}:
+            self.orchestration_control.record_failure(
+                ctx,
+                "SUPERVISOR_NOT_READY",
+                payload={"reason": "No production multi-worktree supervisor adapter is registered in Coding Tools MCP."},
+            )
+            self._project_orchestration(ctx, event="coordination_not_ready")
+            self.task_state.update({
+                "status": "waiting",
+                "failure": "SUPERVISOR_NOT_READY",
+                "current_step": "Replan execution mode",
+                "next_step": "Provide replan_reason and select deep_single_lane or activate a verified coordination adapter.",
+            })
+            return {
+                "workflow": workflow,
+                "phase": phase,
+                "execution": {"ok": False, "status": "blocked", "reason": "SUPERVISOR_NOT_READY"},
+                "orchestration": self._orchestration_result(ctx),
+                "task": self.task_state.get(),
+            }
+
         should_prepare = phase in {"prepare", "run"}
         should_execute = phase in {"execute", "run"}
         prepared = None
@@ -3386,11 +3795,25 @@ class Runtime:
                 "max_total_bytes": args.get("max_total_bytes", 262144),
                 "force_refresh": args.get("force_refresh", False),
             })
+            self.orchestration_ledger.append_event(
+                ctx.run_id,
+                wave_id=ctx.wave_id,
+                event_type="context_prepared",
+                state_before=ctx.state,
+                state_after=ctx.state,
+                payload={
+                    "selected_paths": list(prepared.get("selected_paths") or [])[:40] if isinstance(prepared, dict) else [],
+                    "total_content_bytes": int(prepared.get("total_content_bytes") or 0) if isinstance(prepared, dict) else 0,
+                    "queries": len(args.get("queries", [])),
+                },
+            )
         if not should_execute:
+            self._project_orchestration(ctx, event="orchestration_prepared")
             return {
                 "workflow": workflow,
                 "phase": "prepare",
                 "context": prepared,
+                "orchestration": self._orchestration_result(ctx, write_reports=False),
                 "recommended_next_action": "Reason once over this bundle, then call agent_workflow phase=execute with the complete change set and verification plan.",
             }
 
@@ -3407,21 +3830,18 @@ class Runtime:
         }[workflow]
         verification = str(args.get("verification", default_verification)).lower()
 
-        requested_execution_route = str(args.get("execution_route", "auto")).strip().lower() or "auto"
         explicit_model_route = requested_execution_route not in {"auto", "deterministic"}
         execution_route: dict[str, Any]
         candidate_result: dict[str, Any] | None = None
-        if patches:
-            execution_route = {
-                "requested": requested_execution_route,
-                "selected": "deterministic",
-                "reason": "caller_supplied_change_set",
-                "profile": None,
-                "model": None,
-                "effort": None,
-                "high_cost": False,
-            }
-        elif (phase == "run" or explicit_model_route) and not directories:
+        candidate_proof: dict[str, Any] = {
+            "verification": verification,
+            "commands": list(args.get("commands", args.get("checks", [])))[:6],
+            "test_command": str(args.get("test_command", "")),
+            "build_command": str(args.get("build_command", "")),
+        }
+        strong_oracle = False
+        candidate_branch = not patches and (phase == "run" or explicit_model_route) and not directories
+        if candidate_branch:
             if prepared is None:
                 prepared = self.prepare_coding_context({
                     "objective": objective,
@@ -3434,31 +3854,86 @@ class Runtime:
                     "max_total_bytes": args.get("max_total_bytes", 262144),
                     "force_refresh": args.get("force_refresh", False),
                 })
-            candidate_proof: dict[str, Any] = {
-                "verification": verification,
-                "commands": list(args.get("commands", args.get("checks", [])))[:6],
-                "test_command": str(args.get("test_command", "")),
-                "build_command": str(args.get("build_command", "")),
-            }
             preflight_timeout_ms = min(max(int(args.get("timeout_seconds", 600)) * 1_000, 1_000), 120_000)
             candidate_workdir = str(args.get("workdir", args.get("path", ".")))
             if candidate_proof["test_command"]:
-                candidate_proof["preflight_test"] = self._run_continuous_check(
-                    candidate_proof["test_command"], candidate_workdir, preflight_timeout_ms
-                )
+                candidate_proof["preflight_test"] = self._run_continuous_check(candidate_proof["test_command"], candidate_workdir, preflight_timeout_ms)
             elif candidate_proof["build_command"]:
-                candidate_proof["preflight_build"] = self._run_continuous_check(
-                    candidate_proof["build_command"], candidate_workdir, preflight_timeout_ms
-                )
+                candidate_proof["preflight_build"] = self._run_continuous_check(candidate_proof["build_command"], candidate_workdir, preflight_timeout_ms)
+            strong_oracle = any(
+                isinstance(candidate_proof.get(key), dict) and candidate_proof[key].get("exit_code") not in {None, 0}
+                for key in ("preflight_test", "preflight_build")
+            )
+            self.orchestration_ledger.append_event(
+                ctx.run_id,
+                wave_id=ctx.wave_id,
+                event_type="oracle_preflight",
+                state_before=ctx.state,
+                state_after=ctx.state,
+                payload={"strong_oracle": strong_oracle, "verification": verification},
+            )
+
+        if patches:
+            execution_route = {
+                "requested": requested_execution_route,
+                "selected": "deterministic",
+                "reason": "caller_supplied_change_set",
+                "profile": None,
+                "model": None,
+                "effort": None,
+                "high_cost": False,
+            }
+        else:
+            execution_route = self._select_agent_execution_route(
+                workflow=workflow,
+                prepared=prepared,
+                requested=requested_execution_route,
+                allow_high_cost=bool(args.get("allow_high_cost", False)),
+                strong_oracle=strong_oracle,
+            )
+
+        try:
+            resolved_mode = self._validate_execution_mode_route(requested_mode, execution_route)
+        except ToolFailure as exc:
+            self.orchestration_control.record_failure(ctx, exc.code, payload={"selected_route": execution_route.get("selected")})
+            self._project_orchestration(ctx, event="mode_route_mismatch")
+            raise
+        self.orchestration_control.resolve_execution_mode(ctx, resolved_mode)
+        if ctx.state == "PREFLIGHT":
+            self.orchestration_control.mark_ready(ctx, readiness={"ready": True, "base_head": ctx.base_head, "worktree_fp": ctx.worktree_fp})
+        self.orchestration_control.select_route(ctx, execution_route)
+        self._project_orchestration(ctx, event="orchestration_routed")
+
+        if candidate_branch and execution_route.get("selected") != "deterministic":
+            allowed_scope = list(prepared.get("selected_paths") or []) if isinstance(prepared, dict) else []
+            self.orchestration_control.start_delegation(
+                ctx,
+                authority_owner=f"CODEX:{execution_route.get('selected')}",
+                route=execution_route,
+                allowed_scope=allowed_scope,
+                metadata={"candidate_only": True, "authoritative_write": False},
+            )
             candidate_result = self._generate_agent_candidate(
                 workflow=workflow,
-                objective=objective or f"Complete {workflow} workflow",
-                prepared=prepared,
+                objective=objective,
+                prepared=prepared or {},
                 requested_route=requested_execution_route,
                 allow_high_cost=bool(args.get("allow_high_cost", False)),
                 proof=candidate_proof,
+                routing=execution_route,
+                orchestration_ctx=ctx,
             )
-            execution_route = dict(candidate_result.get("routing") or {})
+            self.orchestration_control.finish_delegation(
+                ctx,
+                status="accepted_candidate" if candidate_result.get("status") == "ready" else "blocked",
+                metadata={
+                    "candidate_status": candidate_result.get("status"),
+                    "reason": candidate_result.get("reason"),
+                    "wall_time_ms": candidate_result.get("wall_time_ms"),
+                    "economics": candidate_result.get("economics"),
+                },
+            )
+            execution_route = dict(candidate_result.get("routing") or execution_route)
             execution_route.update({
                 "candidate_status": candidate_result.get("status"),
                 "model_status": candidate_result.get("model_status"),
@@ -3471,13 +3946,22 @@ class Runtime:
             if candidate_result.get("status") == "ready":
                 patches.extend(str(item) for item in candidate_result.get("patches", []) if str(item).strip())
             elif candidate_result.get("status") != "deterministic":
+                if ctx.state not in {"REPLAN", "BLOCKED", "ABORTED"}:
+                    self.orchestration_control.record_failure(ctx, candidate_result.get("reason", "CANDIDATE_NOT_READY"))
+                self._project_orchestration(ctx, event="candidate_blocked")
+                self.task_state.update({
+                    "status": "waiting",
+                    "failure": str(candidate_result.get("reason") or "candidate_not_ready"),
+                    "current_step": "Replan required",
+                    "next_step": "Provide replan_reason with new evidence/scope/route; do not retry unchanged.",
+                })
                 execution = {
                     "ok": False,
                     "status": "blocked",
                     "reason": candidate_result.get("reason", "candidate_not_ready"),
                     "recommended_next_action": candidate_result.get(
                         "recommended_next_action",
-                        "Return the blocked candidate evidence to ChatWeb Sol for a direct decision; do not run a serial model cascade.",
+                        "Return the blocked candidate evidence to ChatWeb Sol and explicitly replan; do not run a serial model cascade.",
                     ),
                 }
                 return {
@@ -3488,41 +3972,115 @@ class Runtime:
                     "execution_route": execution_route,
                     "execution": execution,
                     "external_review": {"plane": "none", "status": "skipped", "reason": "execution_not_accepted"},
+                    "orchestration": self._orchestration_result(ctx),
                     "task": self.task_state.get(),
                 }
-        else:
-            execution_route = self._select_agent_execution_route(
-                workflow=workflow,
-                prepared=prepared,
-                requested=requested_execution_route,
-                allow_high_cost=bool(args.get("allow_high_cost", False)),
-            )
+
+        identity_before_write = self._orchestration_workspace_identity(args.get("path", "."))
+        if (
+            (ctx.base_head and ctx.base_head != str(identity_before_write.get("base_head") or ""))
+            or (ctx.worktree_fp and ctx.worktree_fp != str(identity_before_write.get("worktree_fp") or ""))
+        ):
+            self.orchestration_control.record_failure(ctx, "BASE_DRIFT", payload={"stage": "before_write"})
+            self._project_orchestration(ctx, event="base_drift_before_write")
+            self.task_state.update({"status": "waiting", "failure": "BASE_DRIFT", "next_step": "Replan against the current base/worktree."})
+            return {
+                "workflow": workflow,
+                "phase": "run" if phase == "run" else "execute",
+                "prepared": prepared,
+                "execution_route": execution_route,
+                "execution": {"ok": False, "status": "blocked", "reason": "BASE_DRIFT"},
+                "orchestration": self._orchestration_result(ctx),
+                "task": self.task_state.get(),
+            }
+
+        allowed_write_paths = list(candidate_result.get("allowed_paths") or []) if isinstance(candidate_result, dict) else []
+        self.orchestration_control.acquire_write_lease(
+            ctx,
+            owner="MCP",
+            mode=resolved_mode,
+            allowed_paths=allowed_write_paths,
+            delegation_id=ctx.delegation_id,
+        )
+        self._project_orchestration(ctx, event="mcp_write_lease_active")
 
         directory_result = None
-        if directories:
-            directory_result = self.file_batch({
-                "operations": [{"action": "mkdir", "path": path, "parents": True, "exist_ok": True} for path in directories],
+        try:
+            if directories:
+                self.orchestration_control.assert_write_allowed(ctx, owner="MCP")
+                directory_result = self.file_batch({
+                    "operations": [{"action": "mkdir", "path": path, "parents": True, "exist_ok": True} for path in directories],
+                    "dry_run": args.get("dry_run", False),
+                })
+            execution = self.apply_changes_and_verify({
+                "objective": objective,
+                "patches": patches,
+                "checks": args.get("commands", args.get("checks", [])),
+                "path": args.get("path", "."),
+                "workdir": args.get("workdir", args.get("path", ".")),
+                "verification": verification,
+                "test_command": args.get("test_command", ""),
+                "build_command": args.get("build_command", ""),
+                "artifact_paths": args.get("artifact_paths", []),
+                "hash_algorithm": args.get("hash_algorithm", "sha256"),
+                "timeout_ms": args.get("timeout_ms", 600000),
+                "timeout_seconds": args.get("timeout_seconds", 600),
+                "include_diff": args.get("include_diff", True),
+                "max_diff_bytes": args.get("max_diff_bytes", 131072),
                 "dry_run": args.get("dry_run", False),
+                "_orchestration_context": ctx,
             })
-        execution = self.apply_changes_and_verify({
-            "objective": objective or f"Complete {workflow} workflow",
-            "patches": patches,
-            "checks": args.get("commands", args.get("checks", [])),
-            "path": args.get("path", "."),
-            "workdir": args.get("workdir", args.get("path", ".")),
-            "verification": verification,
-            "test_command": args.get("test_command", ""),
-            "build_command": args.get("build_command", ""),
-            "artifact_paths": args.get("artifact_paths", []),
-            "hash_algorithm": args.get("hash_algorithm", "sha256"),
-            "timeout_ms": args.get("timeout_ms", 600000),
-            "timeout_seconds": args.get("timeout_seconds", 600),
-            "include_diff": args.get("include_diff", True),
-            "max_diff_bytes": args.get("max_diff_bytes", 131072),
-            "dry_run": args.get("dry_run", False),
-        })
-        if execution.get("ok"):
-            self._invalidate_fast_cache()
+        except (ToolFailure, OrchestrationControlError) as exc:
+            code = getattr(exc, "code", type(exc).__name__)
+            if ctx.state not in {"REPLAN", "BLOCKED", "ABORTED"}:
+                self.orchestration_control.record_failure(ctx, code)
+            self._project_orchestration(ctx, event="execution_exception")
+            self.task_state.update({"status": "waiting", "failure": str(code), "current_step": "Replan required", "next_step": "Provide replan_reason after correcting the failure cause."})
+            raise
+
+        if not execution.get("ok"):
+            error = execution.get("error") if isinstance(execution.get("error"), dict) else {}
+            if ctx.state not in {"REPLAN", "BLOCKED", "ABORTED"}:
+                self.orchestration_control.record_failure(ctx, error.get("code") or execution.get("reason") or "EXECUTION_FAILED")
+            self._project_orchestration(ctx, event="execution_failed")
+            result = {
+                "workflow": workflow,
+                "phase": "run" if phase == "run" else "execute",
+                "prepared": prepared,
+                "directories": directory_result,
+                "execution_route": execution_route,
+                "execution": execution,
+                "external_review": {"plane": "none", "status": "skipped", "reason": "execution_not_accepted"},
+                "orchestration": self._orchestration_result(ctx),
+                "task": self.task_state.get(),
+            }
+            return result
+
+        self._invalidate_fast_cache()
+        external_review = self._maybe_agent_workflow_external_review(
+            workflow=workflow,
+            objective=objective,
+            verification=verification,
+            execution=execution,
+            dry_run=bool(args.get("dry_run", False)),
+        )
+        if ctx.state == "PROVING":
+            self.orchestration_control.mark_accepting(
+                ctx,
+                proof_summary={
+                    **(execution.get("proof_summary") or {}),
+                    "external_review_plane": external_review.get("plane"),
+                    "external_review_status": external_review.get("status"),
+                },
+            )
+        self._project_orchestration(ctx, event="awaiting_final_acceptance")
+        self.task_state.update({
+            "status": "waiting",
+            "current_step": "Waiting for ChatWeb Sol acceptance",
+            "next_step": "Inspect diff/proof/review, then call task_control action=accept or reject.",
+            "failure": None,
+            "orchestration": ctx.projection(),
+        }, event="final_acceptance_required")
         result = {
             "workflow": workflow,
             "phase": "run" if phase == "run" else "execute",
@@ -3530,17 +4088,11 @@ class Runtime:
             "directories": directory_result,
             "execution_route": execution_route,
             "execution": execution,
+            "external_review": external_review,
+            "orchestration": self._orchestration_result(ctx),
             "task": self.task_state.get(),
         }
-        result["external_review"] = self._maybe_agent_workflow_external_review(
-            workflow=workflow,
-            objective=objective or f"Complete {workflow} workflow",
-            verification=verification,
-            execution=execution,
-            dry_run=bool(args.get("dry_run", False)),
-        )
-        if execution.get("ok"):
-            self._fast_cache_put(dedup_key, result)
+        self._fast_cache_put(dedup_key, result)
         return result
 
     def read_files(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -3619,6 +4171,88 @@ class Runtime:
             with self.background_operations_lock:
                 operations = [self._background_operation_snapshot(item) for item in self.background_operations.values()]
             return {"state": self.task_state.get(), "operations": operations[-8:]}
+        if action in {"audit", "accept", "reject"}:
+            state = self.task_state.get()
+            projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+            run_id = str(args.get("run_id") or projection.get("run_id") or "").strip()
+            if not run_id:
+                raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "No orchestration run is associated with the current task.", category="not_found")
+            ctx = self.orchestration_control.snapshot(run_id)
+            if ctx is None:
+                raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "The requested orchestration run was not found.", category="not_found")
+            if action == "audit":
+                reports = self.orchestration_report.write_reports(run_id)
+                summary = self.orchestration_ledger.export_summary(run_id)
+                limit = max(1, min(int(args.get("limit", 20)), 100))
+                summary["events"] = summary.get("events", [])[-limit:]
+                summary["proofs"] = summary.get("proofs", [])[-limit:]
+                return {
+                    "state": state,
+                    "orchestration": self._orchestration_result(ctx, write_reports=False),
+                    "audit": summary,
+                    "reports": reports,
+                }
+            if action == "accept":
+                if ctx.state != "ACCEPTING":
+                    raise ToolFailure(
+                        "FINAL_ACCEPTANCE_NOT_READY",
+                        f"Run is in {ctx.state}, not ACCEPTING.",
+                        category="runtime",
+                        retryable=True,
+                        details={"run_id": run_id, "wave_id": ctx.wave_id, "state": ctx.state},
+                    )
+                proofs = self.orchestration_ledger.list_proofs(run_id, wave_id=ctx.wave_id)
+                proof_fp = hashlib.sha256(
+                    "|".join(f"{item['proof_id']}:{item['input_fingerprint']}" for item in proofs).encode("utf-8")
+                ).hexdigest() if proofs else ""
+                identity = self._orchestration_workspace_identity(".")
+                self.orchestration_control.checkpoint(ctx, reason="chatweb_sol_acceptance")
+                self.orchestration_ledger.record_checkpoint(
+                    run_id=run_id,
+                    wave_id=ctx.wave_id,
+                    git_head=str(identity.get("base_head") or ""),
+                    proof_fingerprint=proof_fp,
+                    status="accepted",
+                    metadata={"accepted_by": "ChatWeb Sol", "worktree_fp": identity.get("worktree_fp")},
+                )
+                self._project_orchestration(ctx, event="final_acceptance_recorded")
+                accepted_state = self.task_state.update({
+                    "status": "completed",
+                    "current_step": "Completed",
+                    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+                    "failure": None,
+                    "orchestration": ctx.projection(),
+                }, event="task_accepted")
+                return {
+                    "accepted": True,
+                    "state": accepted_state,
+                    "orchestration": self._orchestration_result(ctx),
+                }
+            reason = str(args.get("reason", "")).strip()
+            if not reason:
+                raise ToolFailure("REJECTION_REASON_REQUIRED", "reason is required when action=reject.", category="validation")
+            if ctx.state != "ACCEPTING":
+                raise ToolFailure(
+                    "FINAL_ACCEPTANCE_NOT_READY",
+                    f"Run is in {ctx.state}, not ACCEPTING.",
+                    category="runtime",
+                    retryable=True,
+                    details={"run_id": run_id, "wave_id": ctx.wave_id, "state": ctx.state},
+                )
+            self.orchestration_control.record_failure(ctx, "SOL_REJECTED", payload={"reason": reason})
+            self._project_orchestration(ctx, event="final_acceptance_rejected")
+            rejected_state = self.task_state.update({
+                "status": "waiting",
+                "current_step": "Replan required",
+                "next_step": "Provide replan_reason and a changed evidence/scope/strategy before another execution wave.",
+                "failure": reason,
+                "orchestration": ctx.projection(),
+            }, event="task_rejected")
+            return {
+                "rejected": True,
+                "state": rejected_state,
+                "orchestration": self._orchestration_result(ctx),
+            }
         if action == "operation":
             operation_id = str(args.get("operation_id", "")).strip()
             if not operation_id:
@@ -3930,6 +4564,7 @@ class Runtime:
                 ok=bool(payload.get("ok", False)),
                 cache_hit=bool(payload.get("cache_hit") or (isinstance(payload.get("cache"), dict) and payload["cache"].get("hit"))),
                 deduplicated=bool(payload.get("deduplicated")),
+                orchestration=self.task_state.get().get("orchestration", {}),
             )
         except Exception:
             pass
@@ -6900,6 +7535,9 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "phase": {**string, "enum": ["prepare", "execute", "run", "resume"], "default": "prepare", "description": "prepare gathers all context; execute applies a complete plan; run does both when changes are already known; resume restores persisted state and only missing context."},
             "execution_route": {**string, "enum": ["auto", "deterministic", "mini", "luna", "terra", "sol_xhigh", "sol_max", "sol_ultra"], "default": "auto", "description": "Primary implementation route. auto uses Mini for localized bug/test leaves, Luna for harder bounded leaves, otherwise Sol xhigh. Terra is explicit experimental cross-file routing. Sol max/ultra require allow_high_cost=true and are never selected automatically."},
             "allow_high_cost": {**boolean, "default": False, "description": "Explicit acknowledgement required for sol_max or sol_ultra. This never makes those routes automatic."},
+            "execution_mode": {**string, "enum": ["auto", "mcp_only", "bounded_candidate", "deep_single_lane", "coordinated_multi_worktree"], "default": "auto", "description": "EOCL execution mode. auto derives the mode from the resolved route. coordinated_multi_worktree is rejected unless runtime coordination readiness is proven."},
+            "replan_reason": {**string, "description": "Required when continuing an active orchestration run from REPLAN; creates a new wave instead of silently changing route/authority."},
+            "contract_fingerprint": {**string, "maxLength": 512, "description": "Optional settled-contract identity. Non-hash values are deterministically hashed before entering the audit ledger."},
             "objective": {**string, "description": "Concrete task objective, for example 'find and fix the login crash' or 'create a React dashboard from zero'."},
             "path": {**string, "default": ".", "description": "Project path relative to the configured workspace."},
             "workdir": {**string, "description": "Command working directory relative to the workspace; defaults to path."},
@@ -6972,7 +7610,8 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "dry_run": {**boolean, "default": False},
         }),
         "task_control": object_schema({
-            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history"], "default": "get"},
+            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject"], "default": "get"},
+            "run_id": {**string, "description": "Optional orchestration run id for action=audit/accept/reject; defaults to the current task projection."},
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
             "wait_ms": {**integer, "minimum": 0, "maximum": 60000, "default": 0, "description": "Wait up to this many milliseconds for a background operation before returning control."},
             "objective": string,

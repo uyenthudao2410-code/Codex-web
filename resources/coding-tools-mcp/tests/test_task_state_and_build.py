@@ -252,7 +252,12 @@ class ToolModeTests(unittest.TestCase):
             })
             self.assertTrue(result["execution"]["ok"])
             self.assertEqual((root / "src" / "main.py").read_text(encoding="utf-8"), "print('ready')\n")
-            self.assertEqual(result["task"]["status"], "completed")
+            self.assertEqual(result["task"]["status"], "waiting")
+            self.assertEqual(result["orchestration"]["orchestration_state"], "ACCEPTING")
+            accepted = runtime.task_control({"action": "accept", "run_id": result["orchestration"]["run_id"]})
+            self.assertTrue(accepted["accepted"])
+            self.assertEqual(accepted["state"]["status"], "completed")
+            self.assertEqual(accepted["orchestration"]["orchestration_state"], "CHECKPOINTED")
 
     def test_agent_workflow_schema_exposes_final_execution_routes_without_new_tool(self) -> None:
         schemas = server_module.input_schemas()

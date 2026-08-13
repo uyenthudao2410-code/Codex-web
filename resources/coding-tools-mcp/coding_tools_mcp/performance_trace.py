@@ -42,6 +42,7 @@ class PerformanceTraceStore:
         ok: bool = True,
         cache_hit: bool = False,
         deduplicated: bool = False,
+        orchestration: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         with self._lock:
             wait_before_ms = 0
@@ -63,6 +64,9 @@ class PerformanceTraceStore:
                 "cache_hit": bool(cache_hit),
                 "deduplicated": bool(deduplicated),
                 "ok": bool(ok),
+                "run_id": str((orchestration or {}).get("run_id") or ""),
+                "wave_id": str((orchestration or {}).get("wave_id") or ""),
+                "delegation_id": str((orchestration or {}).get("delegation_id") or ""),
             }
             state["tool_calls"] += 1
             state["errors"] += 0 if ok else 1
