@@ -15,6 +15,19 @@ const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrato
 const MCP_ROOT = path.resolve(__dirname, '..', 'resources', 'coding-tools-mcp');
 const PYTHON = process.env.PYTHON || 'python';
 
+function removeTempTree(target) {
+  fs.rmSync(target, {
+    recursive: true,
+    force: true,
+    // Windows can keep a just-exited child process directory briefly locked.
+    // Node retries EBUSY/EPERM/ENOTEMPTY only for recursive removal, so keep
+    // cleanup deterministic with a small bounded retry window instead of an
+    // unbounded sleep or masking the failure.
+    maxRetries: process.platform === 'win32' ? 10 : 0,
+    retryDelay: process.platform === 'win32' ? 100 : 0
+  });
+}
+
 function waitForHealth(port, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const deadline = Date.now() + timeoutMs;
@@ -108,7 +121,7 @@ test('live supervisor recovers only the tunnel and never kills a healthy MCP', a
       mcp.kill();
       await new Promise((resolve) => mcp.once('exit', resolve));
     }
-    fs.rmSync(workspace, { recursive: true, force: true });
+    removeTempTree(workspace);
   }
 });
 
@@ -137,7 +150,7 @@ test('live supervisor escalates and force-restarts a hung live MCP after repeate
       mcp.kill();
       await new Promise((resolve) => mcp.once('exit', resolve));
     }
-    fs.rmSync(workspace, { recursive: true, force: true });
+    removeTempTree(workspace);
   }
 });
 
@@ -160,6 +173,6 @@ test('live supervisor full-restarts when the owned MCP process has exited', asyn
       mcp.kill();
       await new Promise((resolve) => mcp.once('exit', resolve));
     }
-    fs.rmSync(workspace, { recursive: true, force: true });
+    removeTempTree(workspace);
   }
 });

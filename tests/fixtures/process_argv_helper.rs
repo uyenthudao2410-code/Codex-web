@@ -234,13 +234,17 @@ fn main() {
             let active = args.next().unwrap();
             let release = args.next().unwrap();
             let nonce = args.next().unwrap();
+            // `started` is the synchronization barrier consumed by the job
+            // concurrency tests. Establish the active marker first so seeing
+            // `started` guarantees the child is already inside the gated
+            // section instead of exposing a short started->active race.
+            std::fs::write(&active, format!("{nonce}\n")).unwrap();
             let mut started_file = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open(&started)
                 .unwrap();
             writeln!(started_file, "{}:{nonce}", std::process::id()).unwrap();
-            std::fs::write(&active, format!("{nonce}\n")).unwrap();
             let deadline = std::time::Instant::now() + Duration::from_secs(30);
             while !std::path::Path::new(&release).exists() {
                 if std::time::Instant::now() >= deadline {

@@ -40,6 +40,7 @@ def _initialize(port: int) -> None:
 
 
 def _health(port: int) -> bool:
+    connection = None
     try:
         connection = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
         connection.request("GET", "/__control/health")
@@ -49,7 +50,8 @@ def _health(port: int) -> bool:
     except OSError:
         return False
     finally:
-        connection.close()
+        if connection is not None:
+            connection.close()
 
 
 def _spawn_mcp(workspace: Path, port: int, extra_env: dict[str, str] | None = None) -> subprocess.Popen:
@@ -156,6 +158,7 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "step.txt").write_text("before\n", encoding="utf-8")
+            (root / "sleep_step.py").write_text("import time\ntime.sleep(4)\n", encoding="utf-8")
             port = 19111
             process = _spawn_mcp(
                 root, port,
@@ -173,16 +176,16 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
                         "objective": "E2E durable workflow",
                         "commands": [
                             'echo step-one >> step.txt',
-                            f'"{sys.executable}" -c "import time; time.sleep(4)"',
+                            f'"{sys.executable}" sleep_step.py',
                             'echo step-two >> step.txt',
                         ],
                     },
                 }, timeout=30.0)
                 self.assertEqual(status, 200)
                 structured = body.get("result", {}).get("structuredContent", {})
-                if structured.get("status") == "running":
-                    operation_id = structured.get("background_operation", {}).get("operation_id")
-                    self.assertTrue(operation_id)
+                background = structured.get("background_operation")
+                operation_id = background.get("operation_id") if isinstance(background, dict) else None
+                if operation_id:
                     status, body = _rpc(port, "tools/call", {
                         "name": "task_control",
                         "arguments": {"action": "operation", "operation_id": operation_id, "wait_ms": 15000},
@@ -194,10 +197,10 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
                         snapshot_status = str(snapshot.get("status", ""))
                     else:
                         snapshot_status = "completed" if snapshot.get("result") else str(snapshot.get("status", ""))
-                    self.assertEqual(snapshot_status, "completed")
+                    self.assertEqual(snapshot_status, "completed", structured)
                 else:
                     execution = structured.get("execution") or {}
-                    self.assertTrue(execution.get("ok"))
+                    self.assertTrue(execution.get("ok"), structured)
 
                 status, body = _rpc(port, "tools/call", {
                     "name": "task_control",

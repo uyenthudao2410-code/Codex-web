@@ -16,6 +16,11 @@ STUB_PATH = str(Path(__file__).resolve().parent / "support" / "codex_app_server_
 class LiveCodexProviderRestartTests(unittest.TestCase):
     def _bridge_env(self, state_file: Path, *, crash: bool = False) -> dict[str, str]:
         env = dict(os.environ)
+        # The bridge deliberately validates that a Codex binary exists before
+        # consulting the test-only argv override. Use the current Python
+        # executable as that portable probe so this live stub does not depend
+        # on Codex Desktop/CLI being installed on the CI host.
+        env["CODING_TOOLS_MCP_CODEX_BIN"] = sys.executable
         env["CODING_TOOLS_MCP_CODEX_ARGV"] = json.dumps([sys.executable, STUB_PATH])
         env["STUB_STATE_FILE"] = str(state_file)
         env["STUB_TURN_COMPLETE_DELAY_S"] = "0.2"
