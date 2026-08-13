@@ -63,7 +63,25 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run tests
-        run: cargo test --locked --workspace
+        shell: bash
+        run: |
+          set +e
+          cargo test --locked --workspace 2>&1 | tee cargo-test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "### Rust workspace test failure"
+              echo '```text'
+              grep -E -A20 -B5 'FAILED|panicked at|failures:|error:' cargo-test.log | tail -n 250 || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            grep -E 'FAILED|panicked at|failures:|error:' cargo-test.log | tail -n 50 | while IFS= read -r line; do
+              safe=${line//'%'/'%25'}
+              safe=${safe//$'\r'/'%0D'}
+              echo "::error::$safe"
+            done
+            exit "$status"
+          fi
 
   test-windows:
     # Windows release gate: the desktop runtime tests, the crates that must run
