@@ -1522,6 +1522,19 @@ fn inspect_shell_real_smoke_reads_checks_and_blocks_project_writes() {
         // The fail-closed unavailable path has a dedicated sandbox test.
         return;
     }
+    if std::process::Command::new("rg")
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|status| !status.success())
+        .unwrap_or(true)
+    {
+        // The real-smoke command chain relies on ripgrep being installed.
+        // CI installs it; developer machines without it skip this smoke
+        // rather than failing an unrelated environment.
+        return;
+    }
     let tmp = tempfile::tempdir().unwrap();
     let project = tmp.path().join("project");
     let projects_dir = tmp.path().join("projects.d");

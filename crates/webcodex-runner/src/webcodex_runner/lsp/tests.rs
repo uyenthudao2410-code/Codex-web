@@ -249,6 +249,29 @@ fn concurrent_document_refresh_uses_one_monotonic_version() {
         handle.join().unwrap().unwrap();
     }
 
+    // Notifications are fire-and-forget from the client's perspective: the
+    // fake server records them asynchronously after the pipe write returns.
+    // On loaded CI runners the marker file can lag the last prepare_document
+    // return, so wait for the expected didOpen/didChange lines before
+    // asserting the monotonic-version invariants.
+    let marker_ready = || {
+        fs::read_to_string(&fixture.marker)
+            .map(|contents| {
+                contents
+                    .lines()
+                    .filter(|line| line.starts_with("didOpen:"))
+                    .count()
+                    >= 1
+                    && contents
+                        .lines()
+                        .filter(|line| line.starts_with("didChange:"))
+                        .count()
+                        >= 1
+            })
+            .unwrap_or(false)
+    };
+    wait_until(Duration::from_secs(15), marker_ready);
+
     let marker = fs::read_to_string(&fixture.marker).unwrap();
     assert_eq!(
         marker

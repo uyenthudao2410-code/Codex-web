@@ -286,12 +286,18 @@ fn read_project_files(projects_dir: &Path) -> Result<Vec<(PathBuf, ProjectFile)>
 }
 
 fn stored_project_matches(project: &ProjectFile, canonical_project: &Path) -> bool {
-    Path::new(&project.path).canonicalize().is_ok_and(|path| {
-        // Windows `canonicalize` can return `\\?\`-prefixed extended paths and
-        // the filesystem is case-insensitive, so identity uses the shared
-        // normalization instead of raw `Path` equality.
-        webcodex_agent_config::paths::paths_equal(&path, canonical_project)
-    })
+    // Canonicalize both sides: the stored path may still contain short-name
+    // segments (`C:\Users\RUNNER~1\...`) or a `\\?\` prefix, while the live
+    // project path may not, and Windows canonicalization is the only stable
+    // identity across those spellings. Comparison still goes through the
+    // shared case-insensitive normalization.
+    let Ok(stored) = Path::new(&project.path).canonicalize() else {
+        return false;
+    };
+    let Ok(current) = canonical_project.canonicalize() else {
+        return false;
+    };
+    webcodex_agent_config::paths::paths_equal(&stored, &current)
 }
 
 fn recover_key_for_project(
@@ -712,13 +718,24 @@ mod tests {
             ),
         )
         .unwrap();
+        let canonical_project = project.canonicalize().unwrap();
+        // Windows paths must not enter hand-written TOML verbatim: backslash
+        // sequences like `\T` or `\U` are invalid TOML escapes and make the
+        // stored project file unreadable. Forward slashes are equivalent on
+        // Windows and parse everywhere.
+        let stored_project_path = canonical_project.to_string_lossy().replace('\\', "/");
         std::fs::write(
             profile_dir.join("projects.d/project.toml"),
-            format!("id = \"project\"\npath = {:?}\n", project.to_string_lossy()),
+            format!("id = \"project\"\npath = \"{stored_project_path}\"\n"),
         )
         .unwrap();
-        let recovered =
-            resolve_key(&options, &config_base, "https://example.test", &project).unwrap();
+        let recovered = resolve_key(
+            &options,
+            &config_base,
+            "https://example.test",
+            &canonical_project,
+        )
+        .unwrap();
         assert!(recovered.generated);
         assert_eq!(recovered.value, first.value);
         assert_eq!(
@@ -726,8 +743,13 @@ mod tests {
             Some(profile.as_str())
         );
         std::fs::write(profile_dir.join(KEY_DISCLOSED_FILE), "disclosed = true\n").unwrap();
-        let disclosed =
-            resolve_key(&options, &config_base, "https://example.test", &project).unwrap();
+        let disclosed = resolve_key(
+            &options,
+            &config_base,
+            "https://example.test",
+            &canonical_project,
+        )
+        .unwrap();
         assert!(!disclosed.generated);
     }
 
