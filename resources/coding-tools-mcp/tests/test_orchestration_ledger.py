@@ -41,6 +41,31 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(payload["model"], "gpt-test")
             self.assertEqual(len(payload["prompt"]["sha256"]), 64)
 
+    def test_export_summary_includes_checkpoint_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="accepted behavior", task_id="task-checkpoint")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", base_head="abc123", worktree_fp="fp")
+            checkpoint_id = ledger.record_checkpoint(
+                run_id=run_id,
+                wave_id=wave_id,
+                git_head="abc123",
+                proof_fingerprint="proof-fp",
+                status="accepted",
+                metadata={"accepted_by": "ChatWeb Sol"},
+            )
+
+            summary = ledger.export_summary(run_id)
+
+            self.assertEqual(len(summary["checkpoints"]), 1)
+            checkpoint = summary["checkpoints"][0]
+            self.assertEqual(checkpoint["checkpoint_id"], checkpoint_id)
+            self.assertEqual(checkpoint["wave_id"], wave_id)
+            self.assertEqual(checkpoint["git_head"], "abc123")
+            self.assertEqual(checkpoint["proof_fingerprint"], "proof-fp")
+            self.assertEqual(checkpoint["status"], "accepted")
+            self.assertEqual(checkpoint["metadata"]["accepted_by"], "ChatWeb Sol")
+
 
 if __name__ == "__main__":
     unittest.main()

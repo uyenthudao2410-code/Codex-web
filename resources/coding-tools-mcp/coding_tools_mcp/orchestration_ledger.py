@@ -583,6 +583,29 @@ class OrchestrationLedger:
             )
         return checkpoint_id
 
+    def list_checkpoints(self, run_id: str, *, wave_id: str | None = None) -> list[dict[str, Any]]:
+        query = "SELECT * FROM checkpoints WHERE run_id=?"
+        params: list[Any] = [run_id]
+        if wave_id:
+            query += " AND wave_id=?"
+            params.append(wave_id)
+        query += " ORDER BY created_at, checkpoint_id"
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [
+            {
+                "checkpoint_id": row["checkpoint_id"],
+                "run_id": row["run_id"],
+                "wave_id": row["wave_id"],
+                "git_head": row["git_head"],
+                "proof_fingerprint": row["proof_fingerprint"],
+                "status": row["status"],
+                "created_at": row["created_at"],
+                "metadata": json.loads(row["metadata_json"] or "{}"),
+            }
+            for row in rows
+        ]
+
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         with self._lock, self._connect() as connection:
             row = connection.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
@@ -657,6 +680,7 @@ class OrchestrationLedger:
         waves = self.list_waves(run_id)
         events = self.list_events(run_id)
         proofs = self.list_proofs(run_id)
+        checkpoints = self.list_checkpoints(run_id)
         delegations = [item for wave in waves for item in self.list_delegations(wave["wave_id"])]
         return {
             "run": run,
@@ -664,5 +688,6 @@ class OrchestrationLedger:
             "delegations": delegations,
             "events": events,
             "proofs": proofs,
+            "checkpoints": checkpoints,
             "integrity": self.verify_chain(run_id),
         }
