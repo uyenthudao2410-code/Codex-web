@@ -54,6 +54,16 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
             audit = runtime.task_control({"action": "audit", "run_id": result["orchestration"]["run_id"], "limit": 100})
             self.assertEqual(len(audit["audit"]["waves"]), 2)
             self.assertTrue(audit["audit"]["integrity"]["ok"])
+            self.assertEqual(audit["orchestration"]["wave_id"], result["orchestration"]["wave_id"])
+            self.assertEqual(audit["orchestration"]["orchestration_state"], "ACCEPTING")
+            accepted = runtime.task_control({
+                "action": "accept",
+                "run_id": result["orchestration"]["run_id"],
+                "reason": "regression test accepts the proven replacement wave",
+            })
+            self.assertTrue(accepted["accepted"])
+            self.assertEqual(accepted["orchestration"]["wave_id"], result["orchestration"]["wave_id"])
+            self.assertEqual(accepted["orchestration"]["orchestration_state"], "CHECKPOINTED")
             runtime.close()
 
     def test_reject_requires_reason_and_keeps_same_run_in_replan(self) -> None:

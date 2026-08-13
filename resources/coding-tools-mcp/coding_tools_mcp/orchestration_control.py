@@ -184,6 +184,7 @@ class OrchestrationControl:
         with self._lock:
             current = ctx.state
             if to_state == current:
+                self._contexts[ctx.run_id] = ctx
                 return ctx
             if to_state not in _ALLOWED_TRANSITIONS.get(current, frozenset()):
                 raise OrchestrationControlError(
@@ -212,6 +213,7 @@ class OrchestrationControl:
             elif to_state == "CHECKPOINTED":
                 self.ledger.finish_wave(ctx.wave_id, status="accepted")
                 self.ledger.finish_run(ctx.run_id, status="accepted")
+            self._contexts[ctx.run_id] = ctx
             return ctx
 
     def mark_ready(self, ctx: RunContext, *, readiness: dict[str, Any] | None = None) -> RunContext:
@@ -478,6 +480,8 @@ class OrchestrationControl:
             state_after="PREFLIGHT",
             payload={"reason": reason, "execution_mode": execution_mode},
         )
+        with self._lock:
+            self._contexts[ctx.run_id] = ctx
         return ctx
 
     def mark_accepting(self, ctx: RunContext, *, proof_summary: dict[str, Any] | None = None) -> RunContext:
