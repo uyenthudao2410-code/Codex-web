@@ -291,7 +291,8 @@ Reports include:
 - state timeline;
 - failures and REPLAN causes;
 - proof stages/fingerprints/cache hits;
-- hash-chain integrity.
+- hash-chain integrity;
+- durable acceptance checkpoints, accepted Git HEAD, proof fingerprint, and acceptance authority.
 
 These generated files are operational state/evidence. They are not automatically project source and should not be committed unless project policy explicitly requires it.
 
@@ -309,194 +310,205 @@ Existing anonymous product telemetry remains privacy-constrained and separate fr
 
 ## 12. Test evidence
 
-Before final commit, the following was observed on the native Python runtime shipped by the project:
+The original EOCL integration passed 53/53 Python tests and 5/5 Node stability tests. Follow-up corrective waves added checkpoint-summary/report coverage and the final local acceptance gate observed:
 
 ```text
-resources\native-python\python.exe -m unittest discover -s resources\coding-tools-mcp\tests -p test_*.py
+Python: 56/56 PASS
+Node stability: 5/5 PASS
+git diff --check: PASS
 ```
 
-Result:
+The corrective work additionally covered:
 
-```text
-Ran 53 tests
-OK
-```
-
-This includes the previous 44-test suite plus new tests covering:
-
-- SQLite event persistence across restart;
-- audit hash-chain integrity;
-- sensitive audit-payload redaction;
-- state-transition legality;
-- write-owner enforcement;
-- lease revocation on failure;
-- REPLAN/new-wave lineage;
-- active-state recovery;
-- proof cache reuse;
-- proof invalidation after source change;
-- generated Markdown reports;
-- coordinated-mode not-ready -> REPLAN;
-- explicit replan reason requirement;
-- `ACCEPTING -> task_control accept -> CHECKPOINTED`;
-- reject-reason requirement and `ACCEPTING -> REPLAN`.
-
-Source-stability suite:
-
-```text
-node --test tests\stability-source.test.js
-```
-
-Result:
-
-```text
-5/5 PASS
-```
-
-Also observed:
-
-```text
-git diff --cached --check
-PASS
-```
+- in-memory EOCL wave snapshot persistence across transitions/replan;
+- recovery to the current wave after process boundary;
+- durable checkpoint listing in audit summaries;
+- checkpoint provenance in generated run/wave Markdown reports.
 
 ---
 
-## 13. Windows runtime reload
+## 13. Runtime topology correction
 
-Before reload, native MCP was observed listening at:
+Early deployment notes treated port `18765` as the production native backend. Final runtime inspection corrected that assumption.
 
-```text
-127.0.0.1:18765
-PID 28464
-```
-
-A first reload came up as PID `22888` but omitted two required environment settings, revealing an important startup invariant: runtime defaults to coding tool mode and no additional authorized root if the environment is not carried forward.
-
-The server was therefore restarted again with:
+The active Desktop-managed backend is:
 
 ```text
-CODING_TOOLS_MCP_TOOL_MODE=smart
-CODING_TOOLS_MCP_AUTHORIZED_ROOTS=E:\DEV\Tools-Codex-web
+127.0.0.1:18766
+parent: electron.exe
+workspace: E:\DEV\Tools-Codex-web
+permission mode: safe
+tool mode observed by connector: smart
 ```
 
-and the existing safe permission mode/workspace:
+The Electron-managed process was observed starting after the final source HEAD and had an established local connection to the tunnel/client.
 
-```text
---workspace "E:\DEV\HR STA\HR"
---host 127.0.0.1
---port 18765
---permission-mode safe
-```
+A separate `18765` instance was an orphan process left from manual restart experiments. It had no established client connection and was terminated. Final `netstat` showed only `18766` listening.
 
-The corrected native process was observed listening as:
-
-```text
-PID 28264
-```
-
-An `exec_command` using `E:\DEV\Tools-Codex-web` succeeded immediately after the corrected restart, demonstrating that the Tools authorized root had been restored.
+This correction is important operationally: **Electron-owned 18766 is authoritative for the Desktop/tunnel path; manual orphan listeners must not be mistaken for production simply because they bind the older port.**
 
 ---
 
-## 14. Client-session limitation after native reload
+## 14. Live end-to-end EOCL acceptance
 
-The current ChatWeb MCP tunnel retained a pre-reload session id. After the corrected native restart it returned:
+A live deterministic production smoke ran through the active connector with no project-source mutation.
+
+Observed route/state:
 
 ```text
-Session terminated
+route_resolved = deterministic
+execution_mode = mcp_only
+PREFLIGHT -> READY -> ROUTED -> EXECUTING -> PROVING -> ACCEPTING
 ```
 
-and the current ChatWeb wrapper continued to expose the pre-refresh schemas for `agent_workflow` and `task_control`.
+Deterministic proof:
 
-Therefore **no claim is made that this same ChatWeb session executed the new manual `execution_mode`, `audit`, `accept`, or `reject` fields after reload**.
+```text
+command: cmd /d /c echo EOCL_LIVE_SMOKE_OK
+status: passed
+```
 
-The server source implements them and unit/integration tests exercise them. A refreshed/reconnected/new ChatWeb MCP session is required before those new manual fields can be invoked from the client surface. Server-side safe behavior must remain the source of truth; client schema cache is not evidence that a hidden action occurred.
+Observed run:
 
-The tunnel/Electron process was intentionally not restarted merely to force schema refresh, avoiding unnecessary blast radius.
+```text
+run_id  = 5757d8ea9440481fb69f1ac78571dfa3
+wave_id = eaa6e51b79384ba784f444bfff771d75
+```
+
+Final acceptance was recorded through the EOCL runtime API against the same durable ledger. A fresh Runtime recovered the run as:
+
+```text
+STATE=CHECKPOINTED
+INTEGRITY_OK=True
+EVENTS=15
+PROOFS=1
+CHECKPOINTS=1
+CHECKPOINT_STATUS=accepted
+CHECKPOINT_HEAD=83581b4f262846a3c8b0daadb7417391702e5fb3
+```
+
+This proves final acceptance survives a process boundary and is not only an in-memory state.
+
+A second corrective EOCL wave that added checkpoint export/reporting also reached `CHECKPOINTED`; its audit showed one accepted checkpoint with proof fingerprint and integrity `True`.
 
 ---
 
-## 15. Skill v5 synchronization artifact
+## 15. Follow-up corrective commits
 
-`sol-lean-codex` was updated after runtime implementation to encode:
-
-- EOCL RUN/WAVE authority;
-- explicit state path;
-- no second implementation wave while `ACCEPTING`;
-- logged ChatWeb Sol accept/reject;
-- explicit `replan_reason` after failure;
-- write-lease discipline;
-- proof fingerprint reuse rules;
-- coordinated-mode readiness;
-- audit-report use;
-- schema-cache honesty;
-- prohibition on logging private chain-of-thought;
-- route tuning only from durable observed wave history.
-
-Validated package:
+The EOCL implementation was hardened by the following additional commits:
 
 ```text
-skill.zip
-14 files
-58,701 bytes
-SHA-256 858632ab57fe58c07083f2a1344b8169bad54a28a4947c6a11cf934a4159aa87
+83581b4f  fix: persist EOCL wave state transitions
+387308c0  fix: preserve terminal EOCL task projection
+ec91b82e  fix: include EOCL checkpoints in audit summaries
+bd87d8bc  feat: render EOCL acceptance checkpoints in reports
 ```
 
-Skill validation:
+Final source HEAD at deployment acceptance:
 
 ```text
-quick_validate: PASS
-route-policy comparator: 10/10 PASS
-package_skill validation: PASS
+bd87d8bc5c2b1c25f9f9fe5fe3dcb46b29e78fe8
 ```
 
-The package contains a new reference:
+`origin/main` was observed at the same SHA.
+
+---
+
+## 16. Skill v5 final installation status
+
+`sol-lean-codex` v5 is active in ChatWeb resource discovery and installed globally on Windows.
+
+ChatWeb resource discovery observed 14 skill files including:
 
 ```text
 references/eocl-runtime.md
 ```
 
-### Install status
+Windows global installation:
 
-The v5 package is validated and ready. It was **not written to the Windows global skill directory from the terminated MCP session**, and the current ChatWeb skill library cannot be mutated through the available control-plane tools. Do not report those two client-side installations as completed until a fresh connected session verifies the hashes/resources.
+```text
+C:\Users\Admin\.codex\skills\sol-lean-codex
+FILE_COUNT=14
+SKILL.md SHA-256=C62B34ED36930D679B4D0C3DD01B2D2E50D864C1BD88E34EF8BBFF8E9DA034D2
+route-policy comparator=10/10 PASS
+```
+
+Backup retained:
+
+```text
+C:\Users\Admin\.codex\skills\sol-lean-codex.SKILL-pre-v5-20260813.md
+```
+
+The validated package remains archived in ChatGPT Library under:
+
+```text
+/Codex Orchestration/sol-lean-codex-v5-skill.zip
+```
+
+Package SHA-256 used during validation:
+
+```text
+858632ab57fe58c07083f2a1344b8169bad54a28a4947c6a11cf934a4159aa87
+```
 
 ---
 
-## 16. Deployment acceptance matrix
+## 17. Client schema-cache status
+
+The active server source exposes manual EOCL actions/fields (`audit`, `accept`, `reject`, execution-mode controls), but the **current conversation's preloaded function schema still shows the older task_control enum**. This is a client-session schema cache limitation, not a server/runtime deployment failure.
+
+Important distinction:
+
+```text
+SERVER/BACKEND EOCL: ACTIVE
+CHATWEB SKILL V5: ACTIVE
+WINDOWS GLOBAL SKILL V5: ACTIVE
+CURRENT CONVERSATION MANUAL ACTION ENUM: STALE CACHE
+```
+
+Server-side auto routing and EOCL enforcement are active now. Manual `task_control accept/reject/audit` from the typed function surface should be expected to appear after a fresh ChatWeb conversation/tool-schema discovery. The live final acceptance above was intentionally performed through the same EOCL runtime API and durable ledger rather than pretending the stale client enum exposed an action that it did not.
+
+---
+
+## 18. Deployment acceptance matrix — final observed state
 
 | Layer | Status | Evidence |
 |---|---|---|
-| EOCL source | DEPLOYED | commit `42e6737d8440bdaf9dd13a73a6f7367143fdd12e` |
-| GitHub `main` | PUSHED | `ab89263f..42e6737d` push observed |
-| Existing Python regressions | PASS | 44/44 before full integration |
-| Full Python suite | PASS | 53/53 after EOCL integration |
-| Node stability suite | PASS | 5/5 |
-| Diff hygiene | PASS | `git diff --cached --check` |
-| Public 8-tool smart surface | PRESERVED | no new public model-facing tools introduced |
-| Native MCP corrected restart | OBSERVED | PID 28264 listening after smart/authorized-root env restoration |
-| Fresh client schema handshake | PENDING | current tunnel session terminated after native reload |
-| Skill v5 package | VALIDATED | 14 files, SHA above |
-| Windows global skill v5 install | PENDING CLIENT RECONNECT | cannot mutate host after session termination |
-| ChatWeb Skill Library v5 upload/refresh | PENDING | no custom-skill write control available in current tool surface |
+| EOCL source | DEPLOYED | implementation `42e6737d` plus corrective commits through `bd87d8bc` |
+| GitHub `main` | PUSHED | local HEAD and `origin/main` observed at `bd87d8bc5c2b1c25f9f9fe5fe3dcb46b29e78fe8` |
+| Full Python suite | PASS | 56/56 final local gate |
+| Node stability suite | PASS | 5/5 final local gate |
+| Diff hygiene | PASS | scoped `git diff --check` |
+| Public 8-tool smart surface | PRESERVED | connector still discovers 8 smart tools |
+| Active Desktop MCP backend | ACTIVE | Electron-managed `127.0.0.1:18766` |
+| Orphan manual backend | REMOVED | `18765` process terminated; final listener check showed only 18766 |
+| Live EOCL state path | PASS | production smoke reached `ACCEPTING` |
+| Durable final acceptance | PASS | fresh runtime recovered `CHECKPOINTED`, integrity OK, proof + checkpoint present |
+| Checkpoint audit export | PASS | `checkpoints[]` contains accepted provenance |
+| Checkpoint Markdown reports | PASS | focused + full tests; commit `bd87d8bc` |
+| Skill v5 package | VALIDATED | 14 files, package SHA above |
+| Windows global skill v5 | INSTALLED | 14 files, SKILL SHA `C62B34...034D2`, comparator 10/10 |
+| ChatWeb skill v5 | ACTIVE | v5 resource tree including EOCL runtime reference |
+| Current-conversation manual EOCL schema | STALE CLIENT CACHE | server source is new; current typed enum was prefetched before refresh |
+| GitHub Actions for final HEAD | IN PROGRESS AT RECORD UPDATE | run `31671263347`; no failure observed at update time |
 
 ---
 
-## 17. Next-session acceptance procedure
+## 19. Final operational status
 
-On the first fresh MCP-connected ChatWeb session:
+The system is production-ready for **server-enforced automatic orchestration** under the current ChatWeb + Coding Tools MCP path.
 
-1. Verify native listener/runtime is reachable.
-2. Verify `agent_workflow` schema exposes `execution_mode`, `replan_reason`, `contract_fingerprint`.
-3. Verify `task_control` exposes `audit`, `accept`, `reject`.
-4. Run a low-risk fixture workflow:
-   - execute known deterministic patch;
-   - observe `PREFLIGHT -> READY -> ROUTED -> EXECUTING -> PROVING -> ACCEPTING`;
-   - call `task_control audit` and verify hash-chain `ok=true`;
-   - call `task_control accept`;
-   - verify `CHECKPOINTED` and generated reports.
-5. Verify a forced failure enters `REPLAN` and cannot continue without `replan_reason`.
-6. Install the validated v5 `skill.zip` into Windows global skill directory using staging/backup/hash verification.
-7. Upload/replace the ChatWeb skill with the same package and start a fresh chat so skill resources are rediscovered.
-8. Only after these checks treat EOCL manual controls as fully client-deployed.
+For new work, the effective architecture is:
 
-This procedure intentionally separates **server deployment** from **client-schema/skill activation** so future incident reports cannot collapse them into one ambiguous "deployed" status.
+```text
+ChatWeb Sol
+  -> Coding Tools MCP / EOCL
+     -> deterministic / Mini / Luna / Sol xhigh according to policy
+     -> explicit Terra/Max/Ultra gates only
+  -> proof fingerprint + audit ledger
+  -> ACCEPTING
+  -> ChatWeb Sol final acceptance
+  -> CHECKPOINTED
+```
+
+The only remaining session-local limitation is display/invocation of newly added manual EOCL arguments through the current conversation's cached function schema. This does **not** disable server-side EOCL enforcement or automatic routing. A fresh ChatWeb conversation/tool discovery is the correct way to refresh those manual fields; no server rollback or further runtime patch is required for that cache behavior.
