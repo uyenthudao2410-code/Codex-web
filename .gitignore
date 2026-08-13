@@ -33,10 +33,14 @@ __pycache__/
 *.patch
 
 # Workspace-local Coding Tools runtime state.
-# Includes task/history state, performance traces, EOCL ledger/reports,
-# temporary probes, and automation worktrees. Keep it local and back it up
-# separately only when migrating unfinished work or preserving research data.
-/.coding-tools/
+# Keep transient task/history state, performance traces, generated reports,
+# probes, and automation worktrees local. The canonical orchestration ledger
+# is intentionally versioned because it is the durable dataset used for
+# cross-machine research, evaluation, and process optimization.
+/.coding-tools/*
+!/.coding-tools/orchestration/
+/.coding-tools/orchestration/*
+!/.coding-tools/orchestration/ledger.sqlite3
 /ci-windows-fix2/
 
 # Frontend dependencies
