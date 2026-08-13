@@ -25,6 +25,7 @@ class OrchestrationReport:
             raise KeyError(f"Unknown wave: {wave_id}")
         events = self.ledger.list_events(run_id, wave_id=wave_id)
         proofs = self.ledger.list_proofs(run_id, wave_id=wave_id)
+        checkpoints = self.ledger.list_checkpoints(run_id, wave_id=wave_id)
         delegations = self.ledger.list_delegations(wave_id)
         lines = [
             f"# Orchestration Wave {wave['ordinal']}",
@@ -101,6 +102,27 @@ class OrchestrationReport:
                 )
         else:
             lines.append("| - | - | - | - | - | - |")
+        lines.extend([
+            "",
+            "## Acceptance checkpoints",
+            "",
+            "| Checkpoint | Status | Git HEAD | Proof fingerprint | Accepted by |",
+            "|---|---|---|---|---|",
+        ])
+        if checkpoints:
+            for checkpoint in checkpoints:
+                metadata = checkpoint.get("metadata") or {}
+                lines.append(
+                    "| " + " | ".join(
+                        self._cell(value)
+                        for value in (
+                            checkpoint["checkpoint_id"], checkpoint["status"], checkpoint["git_head"],
+                            checkpoint["proof_fingerprint"], metadata.get("accepted_by", ""),
+                        )
+                    ) + " |"
+                )
+        else:
+            lines.append("| - | - | - | - | - |")
         integrity = self.ledger.verify_chain(run_id)
         lines.extend([
             "",
@@ -120,6 +142,7 @@ class OrchestrationReport:
         waves = self.ledger.list_waves(run_id)
         events = self.ledger.list_events(run_id)
         proofs = self.ledger.list_proofs(run_id)
+        checkpoints = self.ledger.list_checkpoints(run_id)
         route_events = [item for item in events if item["event_type"] == "route_selected"]
         failure_events = [item for item in events if item["event_type"] == "failure_observed"]
         replan_count = sum(1 for item in events if item.get("state_after") == "REPLAN")
@@ -142,6 +165,7 @@ class OrchestrationReport:
             f"- REPLAN transitions: **{replan_count}**",
             f"- Proof stages: **{len(proofs)}**",
             f"- Proof cache hits: **{cache_hits}**",
+            f"- Acceptance checkpoints: **{len(checkpoints)}**",
             "",
             "## Waves",
             "",
@@ -152,6 +176,27 @@ class OrchestrationReport:
             lines.append(
                 f"| {wave['ordinal']} | `{wave['wave_id']}` | `{wave['execution_mode']}` | `{wave['base_head']}` | {wave['status']} |"
             )
+        lines.extend([
+            "",
+            "## Acceptance checkpoints",
+            "",
+            "| Checkpoint | Wave | Status | Git HEAD | Proof fingerprint | Accepted by |",
+            "|---|---|---|---|---|---|",
+        ])
+        if checkpoints:
+            for checkpoint in checkpoints:
+                metadata = checkpoint.get("metadata") or {}
+                lines.append(
+                    "| " + " | ".join(
+                        self._cell(value)
+                        for value in (
+                            checkpoint["checkpoint_id"], checkpoint["wave_id"], checkpoint["status"],
+                            checkpoint["git_head"], checkpoint["proof_fingerprint"], metadata.get("accepted_by", ""),
+                        )
+                    ) + " |"
+                )
+        else:
+            lines.append("| - | - | - | - | - | - |")
         lines.extend([
             "",
             "## Route decisions",

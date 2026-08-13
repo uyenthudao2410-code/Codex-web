@@ -41,6 +41,14 @@ class OrchestrationReportTests(unittest.TestCase):
                 input_fingerprint="proof-fp",
                 status="passed",
             )
+            ledger.record_checkpoint(
+                run_id=run_id,
+                wave_id=wave_id,
+                git_head="abc",
+                proof_fingerprint="proof-fp",
+                status="accepted",
+                metadata={"accepted_by": "ChatWeb Sol"},
+            )
             ledger.finish_delegation(delegation_id, status="accepted_candidate")
             ledger.finish_wave(wave_id, status="accepted")
             ledger.finish_run(run_id, status="accepted")
@@ -52,8 +60,13 @@ class OrchestrationReportTests(unittest.TestCase):
             self.assertIn("Orchestration Run Summary", run_text)
             self.assertIn("mini", run_text)
             self.assertIn("Hash chain valid: **True**", run_text)
+            self.assertIn("Acceptance checkpoints: **1**", run_text)
+            self.assertIn("ChatWeb Sol", run_text)
+            self.assertIn("proof-fp", run_text)
             self.assertIn("CODEX:mini", wave_text)
             self.assertIn("focused", wave_text)
+            self.assertIn("## Acceptance checkpoints", wave_text)
+            self.assertIn("ChatWeb Sol", wave_text)
 
 
 if __name__ == "__main__":
