@@ -29,7 +29,8 @@ test('obsolete custom conversation sidebar is removed from the product code', ()
 test('embedded ChatGPT view uses the full available width', () => {
   const controller = read('electron/chatViewController.js');
   assert.match(controller, /x:\s*0,/);
-  assert.match(controller, /width:\s*Math\.max\(0, width\)/);
+  assert.match(controller, /width:\s*Math\.max\(0, width - this\.rightInset\)/);
+  assert.match(controller, /this\.rightInset = 0/);
 });
 
 test('authentication popup returns completed ChatGPT login to the embedded view', () => {

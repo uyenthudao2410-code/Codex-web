@@ -27,5 +27,12 @@ contextBridge.exposeInMainWorld('browserAssistant', {
   taskState: () => ipcRenderer.invoke('task-state:read'),
   pauseTask: () => ipcRenderer.invoke('task-state:pause'),
   resumeTask: () => ipcRenderer.invoke('task-state:resume'),
-  stopTask: () => ipcRenderer.invoke('task-state:stop')
+  stopTask: () => ipcRenderer.invoke('task-state:stop'),
+  togglePanel: () => ipcRenderer.invoke('panel:toggle'),
+  panelVisibility: () => ipcRenderer.invoke('panel:visibility'),
+  onPanelVisibility: (listener) => {
+    const wrapped = (_event, payload) => listener(payload);
+    ipcRenderer.on('panel:visibility', wrapped);
+    return () => ipcRenderer.removeListener('panel:visibility', wrapped);
+  }
 });

@@ -3,7 +3,7 @@
   "task_id": "96176e1742584137985d552dc31ba9ce",
   "orchestration": {},
   "objective": "Run a workspace command",
-  "status": "active",
+  "status": "stopped",
   "steps": [],
   "current_step": "Waiting for model",
   "current_command": null,
@@ -11,10 +11,10 @@
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
-  "failure": null,
+  "failure": "Người dùng dừng nhiệm vụ từ trợ lý",
   "next_step": "Generate the result from the inspected content, then save it once.",
   "created_at": "2026-08-13T09:42:58.410Z",
-  "updated_at": "2026-08-13T09:48:22.032Z",
+  "updated_at": "2026-08-13T16:07:45.341Z",
   "events": [
     {
       "time": "2026-08-13T09:42:58.410Z",

@@ -183,6 +183,24 @@ async function navigate(action) {
   catch (error) { renderChatState({ error: error.message }); }
 }
 
+function renderPanelVisibility(payload) {
+  const button = $('#panelToggleButton');
+  if (!button) return;
+  button.classList.toggle('active', Boolean(payload?.visible));
+  button.title = payload?.visible
+    ? 'Ẩn bảng điều khiển điều phối'
+    : 'Hiện bảng điều khiển điều phối bên cạnh ChatGPT';
+}
+
+async function togglePanel() {
+  try {
+    const result = unwrap(await api.togglePanel());
+    renderPanelVisibility(result);
+  } catch (error) {
+    $('#switchState').textContent = error.message;
+  }
+}
+
 $('#backButton').onclick = () => navigate('back');
 $('#forwardButton').onclick = () => navigate('forward');
 $('#reloadButton').onclick = () => navigate('reload');
@@ -242,6 +260,9 @@ $('#addWorkspace').onclick = async () => {
 
 api.onChatState(renderChatState);
 api.onHeartbeat(renderServiceState);
+api.onPanelVisibility(renderPanelVisibility);
+api.panelVisibility().then((result) => renderPanelVisibility(unwrap(result))).catch(() => {});
+$('#panelToggleButton').onclick = () => togglePanel();
 api.onDownload((item) => {
   const node = $('#downloadState');
   if (item.status === 'completed') node.textContent = `Đã lưu: ${baseName(item.path)}`;

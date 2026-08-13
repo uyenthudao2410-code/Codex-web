@@ -1,7 +1,8 @@
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
-const { app, BrowserWindow, dialog, ipcMain, shell, Tray, Menu, nativeImage, session } = require('electron');
+const http = require('node:http');
+const { app, BrowserWindow, dialog, ipcMain, shell, Tray, Menu, nativeImage, session, WebContentsView } = require('electron');
 const { SettingsStore } = require('./services/settingsStore');
 const { SecretStore } = require('./services/secretStore');
 const { LogService } = require('./services/logService');
@@ -13,6 +14,7 @@ const { resolveProxy, clearProxyCache } = require('./services/proxyService');
 const { BuildVerificationService } = require('./services/buildVerificationService');
 const { HealthService } = require('./services/healthService');
 const { readJson, writeJsonAtomic } = require('./services/jsonStore');
+const { panelInset, panelBounds } = require('./services/panelLayout');
 
 let chatWindow;
 let managerWindow;
@@ -22,6 +24,9 @@ let forceQuit = false;
 let tray = null;
 let buildVerification;
 let healthService;
+let panelView = null;
+let panelVisible = false;
+const TOOLBAR_HEIGHT = 112;
 const settings = new SettingsStore();
 const secrets = new SecretStore();
 const log = new LogService();
@@ -84,6 +89,85 @@ function showChatWindow() {
   return target;
 }
 
+function httpRequestJson({ port, path: requestPath, method, token, body, headers = {}, timeout }) {
+  return new Promise((resolve, reject) => {
+    const payload = body === undefined ? null : JSON.stringify(body);
+    const request = http.request({
+      host: '127.0.0.1',
+      port,
+      path: requestPath,
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}),
+        ...headers
+      },
+      timeout
+    }, (response) => {
+      let data = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { if (data.length < 4 * 1024 * 1024) data += chunk; });
+      response.on('end', () => {
+        if (response.statusCode >= 400) {
+          reject(new Error(`MCP trả về HTTP ${response.statusCode}: ${String(data).slice(0, 200)}`));
+          return;
+        }
+        try { resolve(data ? JSON.parse(data) : null); } catch { resolve(data); }
+      });
+    });
+    request.on('timeout', () => { request.destroy(new Error('Quá thời gian kết nối MCP.')); });
+    request.on('error', reject);
+    if (payload) request.write(payload);
+    request.end();
+  });
+}
+
+function layoutViews() {
+  if (!chatWindow || chatWindow.isDestroyed()) return;
+  const [width, height] = chatWindow.getContentSize();
+  if (chatController) chatController.setRightInset(panelInset(width, panelVisible));
+  if (panelView && !panelView.webContents.isDestroyed()) {
+    const bounds = panelBounds(width, height, TOOLBAR_HEIGHT, panelVisible);
+    panelView.setBounds(bounds || { x: width, y: TOOLBAR_HEIGHT, width: 0, height: Math.max(0, height - TOOLBAR_HEIGHT) });
+  }
+}
+
+function broadcastPanelVisibility() {
+  if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('panel:visibility', { visible: panelVisible });
+}
+
+function createPanelView() {
+  if (panelView && !panelView.webContents.isDestroyed()) return panelView;
+  panelView = new WebContentsView({
+    webPreferences: {
+      preload: path.join(__dirname, 'panelPreload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  panelView.setBackgroundColor('#ffffff');
+  chatWindow.contentView.addChildView(panelView);
+  panelView.webContents.loadFile(path.join(__dirname, '..', 'renderer', 'panel.html'));
+  return panelView;
+}
+
+function destroyPanelView() {
+  if (!panelView) return;
+  try { chatWindow?.contentView?.removeChildView(panelView); } catch { /* already detached */ }
+  if (panelView.webContents && !panelView.webContents.isDestroyed()) panelView.webContents.close();
+  panelView = null;
+}
+
+function togglePanel() {
+  panelVisible = !panelVisible;
+  if (panelVisible) createPanelView();
+  else destroyPanelView();
+  layoutViews();
+  broadcastPanelVisibility();
+  return panelVisible;
+}
+
 function createTray() {
   if (tray && !tray.isDestroyed()) return tray;
   const icon = nativeImage.createFromPath(appIconPath()).resize({ width: 16, height: 16 });
@@ -139,11 +223,14 @@ function createChatWindow() {
     }
   });
   chatController.mount();
+  chatWindow.on('resize', () => layoutViews());
 
   chatWindow.once('ready-to-show', () => chatWindow.show());
   chatWindow.on('closed', () => {
     if (chatController) chatController.dispose();
     chatController = null;
+    destroyPanelView();
+    panelVisible = false;
     chatWindow = null;
     if (managerWindow && !managerWindow.isDestroyed()) managerWindow.destroy();
   });
@@ -308,6 +395,45 @@ function registerIpc() {
   secureHandle('manager:open', () => invokeSafely(async () => { openManagerWindow(); return true; }));
   secureHandle('chat:navigate', (_event, action) => invokeSafely(async () => chatController?.navigate(action)));
   secureHandle('chat:status', () => invokeSafely(async () => chatController?.getState() || null));
+  secureHandle('panel:toggle', () => invokeSafely(async () => ({ visible: togglePanel() })));
+  secureHandle('panel:visibility', () => invokeSafely(async () => ({ visible: panelVisible })));
+  secureHandle('panel:orchestration', () => invokeSafely(async () => {
+    const current = settings.load();
+    const token = secrets.get('mcpAuthToken');
+    if (!token) throw new Error('MCP chưa sẵn sàng để đọc trạng thái điều phối.');
+    return httpRequestJson({ port: current.mcpPort, path: '/__control/orchestration', method: 'GET', token, timeout: 2500 });
+  }));
+  secureHandle('panel:handoff', (_event, payload) => invokeSafely(async () => {
+    const current = settings.load();
+    const token = secrets.get('mcpAuthToken');
+    if (!token) throw new Error('MCP chưa sẵn sàng để ghi capsule handoff.');
+    const summaryText = String((payload && payload.summary) || '').slice(0, 600);
+    const request = {
+      jsonrpc: '2.0',
+      id: `panel-handoff-${Date.now()}`,
+      method: 'tools/call',
+      params: {
+        name: 'task_control',
+        arguments: { action: 'handoff', handoff_action: 'record', payload: { panel_summary: summaryText } },
+        _meta: {
+          'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+          'io.modelcontextprotocol/clientCapabilities': {},
+          'io.modelcontextprotocol/clientInfo': { name: 'web-mcp-assistant-panel', version: app.getVersion() }
+        }
+      }
+    };
+    const response = await httpRequestJson({
+      port: current.mcpPort,
+      path: '/mcp',
+      method: 'POST',
+      token,
+      body: request,
+      headers: { 'MCP-Protocol-Version': '2026-07-28', 'Mcp-Method': 'tools/call', 'Mcp-Name': 'task_control' },
+      timeout: 10000
+    });
+    if (response && response.error) throw new Error(response.error.message || 'MCP từ chối thao tác handoff.');
+    return (response && response.result) || null;
+  }));
   secureHandle('chat:clear-session', () => invokeSafely(async () => {
     if (!chatController) throw new Error('Trang ChatGPT chưa được khởi tạo.');
     await chatController.clearSession();

@@ -1748,6 +1748,14 @@ class Runtime:
         self.orphaned_idempotency_records = self.orchestration_ledger.mark_orphaned_idempotency(
             current_process_instance_id=self.process_instance_id
         )
+        try:
+            stale_run_seconds = int(os.environ.get(f"{ENV_PREFIX}_STALE_RUN_SECONDS", str(24 * 60 * 60)))
+        except ValueError:
+            stale_run_seconds = 24 * 60 * 60
+        stale_run_seconds = max(60 * 60, min(stale_run_seconds, 30 * 24 * 60 * 60))
+        self.stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
+            stale_after_seconds=stale_run_seconds
+        )
         self.recovered_agent_lanes = 0
         for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
             owner_process = str((lane.get("metadata") or {}).get("owner_process_instance_id") or "")
@@ -3559,6 +3567,15 @@ class Runtime:
             "git": git,
             "task": task,
             "tool_mode": self.tool_mode,
+            "runtime": {
+                "server_instance_id": self.server_instance_id,
+                "process_instance_id": self.process_instance_id,
+                "performance_trace_version": self.performance_trace.schema_version,
+                "stale_orchestration_runs": len(self.stale_orchestration_runs),
+                "orphaned_background_operations": int(self.orphaned_background_operations),
+                "orphaned_idempotency_records": int(self.orphaned_idempotency_records),
+                "agent_lanes_waiting_after_restart": int(self.recovered_agent_lanes),
+            },
             "detail": detail,
             "cache": {"hit": False, "age_ms": 0},
         }
@@ -3807,6 +3824,7 @@ class Runtime:
         })
         proof_ids: list[str] = []
         proof_cache_hits = 0
+        proof_cache_saved_ms = 0
         upstream_proof_ids: list[str] = []
 
         command_results: list[dict[str, Any]] = []
@@ -3841,6 +3859,7 @@ class Runtime:
                 proof_ids.append(proof_id)
                 upstream_proof_ids.append(proof_id)
                 proof_cache_hits += 1 if result.get("cache_hit") else 0
+                proof_cache_saved_ms += max(0, int(result.get("cache_saved_ms", 0) or 0))
             command_results.append(result)
             if result.get("exit_code") != 0:
                 failure = f"Check failed: {command}"
@@ -3855,7 +3874,7 @@ class Runtime:
                     "affected_files": affected_files,
                     "check_results": command_results,
                     "build_report": None,
-                    "proof_summary": {"proof_ids": proof_ids, "cache_hits": proof_cache_hits},
+                    "proof_summary": {"proof_ids": proof_ids, "cache_hits": proof_cache_hits, "cache_saved_ms": proof_cache_saved_ms},
                     "error": {"code": "CHECK_FAILED", "message": failure, "category": "runtime", "retryable": True, "details": {}},
                 }
 
@@ -3898,6 +3917,7 @@ class Runtime:
                 proof_ids.append(proof_id)
                 upstream_proof_ids.append(proof_id)
                 proof_cache_hits += 1 if build_report.get("cache_hit") else 0
+                proof_cache_saved_ms += max(0, int(build_report.get("cache_saved_ms", 0) or 0))
             if build_report.get("ok") is False:
                 set_stage("verify", "Verification failed", failed=True)
                 error = build_report.get("error") if isinstance(build_report.get("error"), dict) else {}
@@ -3916,7 +3936,7 @@ class Runtime:
                     "affected_files": affected_files,
                     "check_results": command_results,
                     "build_report": build_report,
-                    "proof_summary": {"proof_ids": proof_ids, "cache_hits": proof_cache_hits},
+                    "proof_summary": {"proof_ids": proof_ids, "cache_hits": proof_cache_hits, "cache_saved_ms": proof_cache_saved_ms},
                     "error": build_report.get("error"),
                 }
 
@@ -3964,6 +3984,7 @@ class Runtime:
             "proof_summary": {
                 "proof_ids": proof_ids,
                 "cache_hits": proof_cache_hits,
+                "cache_saved_ms": proof_cache_saved_ms,
                 "proof_fingerprint": proof_fingerprint,
                 "worktree_fp": str(proof_identity.get("worktree_fp") or ""),
             },
@@ -5234,6 +5255,8 @@ class Runtime:
                 "operations": operations[-8:],
                 "recovery": {
                     "orphaned_background_operations": self.orphaned_background_operations,
+                    "orphaned_idempotency_records": self.orphaned_idempotency_records,
+                    "stale_orchestration_runs": self.stale_orchestration_runs,
                     "agent_lanes_waiting_after_restart": self.recovered_agent_lanes,
                 },
             }
@@ -5758,6 +5781,20 @@ class Runtime:
         error = raw_error if isinstance(raw_error, dict) else {}
         finished_at = time.monotonic()
         duration_ms = int((finished_at - started_at) * 1000)
+        execution = payload.get("execution") if isinstance(payload.get("execution"), dict) else {}
+        proof_summary = execution.get("proof_summary") if isinstance(execution.get("proof_summary"), dict) else {}
+        if not proof_summary and isinstance(payload.get("proof_summary"), dict):
+            proof_summary = payload["proof_summary"]
+        try:
+            proof_cache_hits = max(0, int(proof_summary.get("cache_hits", 0) or 0))
+        except (TypeError, ValueError):
+            proof_cache_hits = 0
+        try:
+            proof_cache_saved_ms = max(0, int(proof_summary.get("cache_saved_ms", 0) or 0))
+        except (TypeError, ValueError):
+            proof_cache_saved_ms = 0
+        result_orchestration = payload.get("orchestration") if isinstance(payload.get("orchestration"), dict) else {}
+        trace_orchestration = result_orchestration or self.task_state.get().get("orchestration", {})
         try:
             self.performance_trace.record(
                 tool=name,
@@ -5768,7 +5805,11 @@ class Runtime:
                 ok=bool(payload.get("ok", False)),
                 cache_hit=bool(payload.get("cache_hit") or (isinstance(payload.get("cache"), dict) and payload["cache"].get("hit"))),
                 deduplicated=bool(payload.get("deduplicated")),
-                orchestration=self.task_state.get().get("orchestration", {}),
+                idempotency_eligible=self._idempotency_eligible_call(name, args),
+                idempotency_key_present=bool(str(args.get("idempotency_key", "") or "").strip()),
+                proof_cache_hits=proof_cache_hits,
+                proof_cache_saved_ms=proof_cache_saved_ms,
+                orchestration=trace_orchestration,
             )
         except Exception:
             pass
@@ -5794,6 +5835,25 @@ class Runtime:
             "args": redact_for_trace(args),
         }
         print(json.dumps(event, sort_keys=True, separators=(",", ":")), file=sys.stderr, flush=True)
+
+    @staticmethod
+    def _idempotency_eligible_call(name: str, args: dict[str, Any]) -> bool:
+        """Whether a call belongs in the durable-operation-identity denominator."""
+        if name == "agent_workflow":
+            return str(args.get("phase", "prepare")).strip().lower() in {"execute", "run"}
+        if name == "document_workflow":
+            return str(args.get("action", "inspect")).strip().lower() in {"create", "convert"}
+        if name == "task_control":
+            action = str(args.get("action", "get")).strip().lower()
+            if action == "handoff":
+                return str(args.get("handoff_action", "get")).strip().lower() == "record"
+            return action in {"start", "update", "pause", "stop", "resume", "clear", "accept", "reject"}
+        if name == "command_control":
+            return str(args.get("action", "poll")).strip().lower() in {"write", "kill"}
+        if name == "write_stdin":
+            return bool(str(args.get("chars", "")))
+        spec = TOOL_REGISTRY.get(name)
+        return bool(spec and not spec.read_only and (spec.destructive or spec.open_world))
 
     def read_file(self, args: dict[str, Any]) -> dict[str, Any]:
         requested_path = str(args.get("path", ""))
@@ -9378,6 +9438,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "/__control/health",
             "/__control/workspace",
             "/__control/roots",
+            "/__control/orchestration",
             "/.well-known/oauth-authorization-server",
             "/.well-known/oauth-protected-resource",
             "/oauth/authorize",
@@ -9423,6 +9484,12 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "http_sessions": self.server.sessions.stats(),
             }, head_only=head_only)
             return
+        if normalized == "/__control/orchestration":
+            if not self.is_authorized():
+                self.send_unauthorized(head_only=head_only)
+                return
+            self.send_json(self.control_orchestration_snapshot(), head_only=head_only)
+            return
         if normalized == "/.well-known/oauth-authorization-server":
             self.handle_oauth_as_metadata(head_only=head_only)
             return
@@ -9452,6 +9519,71 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             self.send_json(server_card_payload(self.runtime, oauth_base_url=self.oauth_base_url()), head_only=head_only)
             return
         self.send_json({"error": "Unknown endpoint"}, status=404, head_only=head_only)
+
+    def control_orchestration_snapshot(self) -> dict[str, Any]:
+        runtime = self.runtime
+        state = runtime.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        ledger = runtime.orchestration_ledger
+        run_id = str(projection.get("run_id") or "").strip()
+        if not run_id:
+            active = ledger.current_active_run()
+            if active:
+                run_id = str(active.get("run_id") or "").strip()
+        summary = ledger.export_summary(run_id) if run_id else {}
+        events = summary.get("events") or []
+        compact_events = [
+            {
+                "seq": int(event.get("seq") or 0),
+                "event_type": str(event.get("event_type") or ""),
+                "state_before": str(event.get("state_before") or ""),
+                "state_after": str(event.get("state_after") or ""),
+                "event_time": str(event.get("event_time") or ""),
+                "payload": json.dumps(event.get("payload") or {}, ensure_ascii=False)[:400],
+                "wave_id": str(event.get("wave_id") or "")[:16],
+            }
+            for event in events[-15:]
+        ]
+        proofs = [
+            {
+                "stage_id": str(item.get("stage_id") or ""),
+                "status": item.get("status"),
+                "duration_ms": item.get("duration_ms"),
+                "cache_hit": bool(item.get("cache_hit")),
+                "finished_at": str(item.get("finished_at") or ""),
+            }
+            for item in (summary.get("proofs") or [])[-6:]
+        ]
+        command = state.get("current_command")
+        if isinstance(command, dict):
+            command = {key: command.get(key) for key in ("kind", "command", "status", "started_at")}
+        return {
+            "task": {
+                "task_id": state.get("task_id"),
+                "objective": str(state.get("objective") or "")[:400],
+                "status": state.get("status"),
+                "current_step": str(state.get("current_step") or "")[:300],
+                "next_step": str(state.get("next_step") or "")[:300],
+                "modified_files": [str(item) for item in list(state.get("modified_files") or [])[:10]],
+                "current_command": command,
+                "updated_at": state.get("updated_at"),
+                "pause_reason": str(state.get("pause_reason") or ""),
+            },
+            "run_id": run_id,
+            "run": summary.get("run"),
+            "waves": (summary.get("waves") or [])[-3:],
+            "events": compact_events,
+            "proofs": proofs,
+            "delegations": (summary.get("delegations") or [])[-4:],
+            "capsule": summary.get("latest_handoff_capsule"),
+            "background_operations": ledger.list_background_operations(limit=8),
+            "counts": {
+                "events": len(events),
+                "waves": len(summary.get("waves") or []),
+                "checkpoints": len(summary.get("checkpoints") or []),
+            },
+            "integrity": summary.get("integrity"),
+        }
 
     def handle_control_workspace(self) -> None:
         if not self.is_authorized():

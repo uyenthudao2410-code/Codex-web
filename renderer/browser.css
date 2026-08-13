@@ -21,6 +21,7 @@ button{font:inherit}
 .page-state.error i,.service-state span.error i{background:var(--red)}
 .service-state span{display:inline-flex;align-items:center;gap:6px;padding:0 5px;color:var(--muted);font-size:11px}
 .manager-button{margin-left:7px;padding:0 17px;color:#fff;background:#202123;font-size:12px;font-weight:700}
+.manager-button.active{background:var(--green)}
 .workspace-bar{display:flex;height:49px;align-items:center;gap:10px;padding:0 15px;border-top:1px solid #f0f0f0}
 .workspace-label{position:relative;display:flex;min-width:255px;align-items:center;gap:9px}
 .workspace-label span{padding:3px 7px;border-radius:6px;color:#087f65;background:#e7f6f1;font-size:10px;font-weight:800}

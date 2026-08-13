@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self';style-src 'self';script-src 'self';">
+  <title>Bảng điều khiển</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header class="panel-header">
+    <b>Bảng điều khiển</b>
+    <span id="serviceDots" class="service-dots">
+      <span id="mcpDot" title="Coding Tools MCP"><i></i>MCP</span>
+      <span id="tunnelDot" title="OpenAI Tunnel"><i></i>Tunnel</span>
+    </span>
+    <button id="closeButton" class="close-button" title="Đóng bảng điều khiển" aria-label="Đóng bảng điều khiển">✕</button>
+  </header>
+
+  <main class="panel-scroll">
+  <section class="panel-section" id="taskSection">
+    <h2>Nhiệm vụ <span id="taskStatus" class="badge">chưa có</span></h2>
+    <p id="taskObjective" class="objective">—</p>
+    <div class="progress-row"><span class="progress"><span id="taskBar"></span></span><b id="taskPercent">0%</b></div>
+    <p id="taskStep" class="detail">—</p>
+    <p id="taskCommand" class="detail command"></p>
+    <div class="controls">
+      <button id="pauseTask">Tạm dừng</button>
+      <button id="resumeTask">Tiếp tục</button>
+      <button id="stopTask" class="danger">Dừng</button>
+    </div>
+  </section>
+
+  <section class="panel-section" id="orchSection">
+    <h2>Điều phối <span id="runStatus" class="badge">—</span></h2>
+    <p id="runObjective" class="objective">—</p>
+    <div id="waveLine" class="detail">—</div>
+    <div id="orchCounts" class="detail counts"></div>
+    <div id="capsuleLine" class="detail"></div>
+    <div class="controls">
+      <button id="handoffButton" title="Ghi capsule trạng thái ≤8KB để mở chat mới và tiếp tục từ capsule">Ghi capsule handoff</button>
+      <button id="refreshButton">Làm mới</button>
+    </div>
+  </section>
+
+  <section class="panel-section" id="eventsSection">
+    <h2>Trình tự sự kiện <span id="eventCount" class="badge">0</span></h2>
+    <ol id="eventList" class="event-list"></ol>
+  </section>
+
+  <section class="panel-section" id="proofsSection">
+    <h2>Bằng chứng</h2>
+    <ol id="proofList" class="proof-list"></ol>
+  </section>
+
+  <section class="panel-section" id="delegationsSection" hidden>
+    <h2>Ủy quyền model</h2>
+    <ol id="delegationList" class="delegation-list"></ol>
+  </section>
+  </main>
+
+  <footer class="panel-footer">
+    <span id="syncState">Đang chờ dữ liệu…</span>
+    <span id="clock"></span>
+  </footer>
+  <script src="panel.js"></script>
+</body>
+</html>

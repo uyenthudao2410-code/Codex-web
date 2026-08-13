@@ -82,6 +82,14 @@ jobs:
             done
             exit "$status"
           fi
+      - name: Upload Rust workspace failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-workspace-test-log-${{ github.sha }}
+          path: cargo-test.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   test-windows:
     # Windows release gate: the desktop runtime tests, the crates that must run
