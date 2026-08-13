@@ -180,9 +180,9 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
                 }, timeout=30.0)
                 self.assertEqual(status, 200)
                 structured = body.get("result", {}).get("structuredContent", {})
-                if structured.get("status") == "running":
-                    operation_id = structured.get("background_operation", {}).get("operation_id")
-                    self.assertTrue(operation_id)
+                background = structured.get("background_operation")
+                operation_id = background.get("operation_id") if isinstance(background, dict) else None
+                if operation_id:
                     status, body = _rpc(port, "tools/call", {
                         "name": "task_control",
                         "arguments": {"action": "operation", "operation_id": operation_id, "wait_ms": 15000},
@@ -194,10 +194,10 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
                         snapshot_status = str(snapshot.get("status", ""))
                     else:
                         snapshot_status = "completed" if snapshot.get("result") else str(snapshot.get("status", ""))
-                    self.assertEqual(snapshot_status, "completed")
+                    self.assertEqual(snapshot_status, "completed", structured)
                 else:
                     execution = structured.get("execution") or {}
-                    self.assertTrue(execution.get("ok"))
+                    self.assertTrue(execution.get("ok"), structured)
 
                 status, body = _rpc(port, "tools/call", {
                     "name": "task_control",
