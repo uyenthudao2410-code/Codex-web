@@ -1072,12 +1072,28 @@ class CodexAppServerBridge:
             configured_servers = configured_mcp_server_names(codex_home)
             disable_args = _mcp_disable_args(configured_servers)
             child_env = sanitized_codex_env()
+            argv_override = os.environ.get("CODING_TOOLS_MCP_CODEX_ARGV", "").strip()
+            if argv_override:
+                try:
+                    argv = json.loads(argv_override)
+                except json.JSONDecodeError as exc:
+                    raise CodexBridgeError(
+                        "INVALID_CODEX_ARGV",
+                        "CODING_TOOLS_MCP_CODEX_ARGV must be a JSON array of argv tokens.",
+                    ) from exc
+                if not isinstance(argv, list) or not argv or not all(isinstance(item, str) for item in argv):
+                    raise CodexBridgeError(
+                        "INVALID_CODEX_ARGV",
+                        "CODING_TOOLS_MCP_CODEX_ARGV must be a non-empty JSON array of strings.",
+                    )
+            else:
+                argv = [str(binary), "app-server", "--listen", "stdio://", *disable_args]
             creationflags = 0
             if os.name == "nt":
                 creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
             try:
                 proc = subprocess.Popen(
-                    [str(binary), "app-server", "--listen", "stdio://", *disable_args],
+                    argv,
                     cwd=str(workspace),
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,

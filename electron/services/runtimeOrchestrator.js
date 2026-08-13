@@ -12,6 +12,8 @@ const { readJson, updateJsonAtomic } = require('./jsonStore');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
+const MAX_DEFERRED_RECOVERIES = 6;
+
 function probeMcp(port, token, expectedWorkspace = '') {
   return new Promise((resolve) => {
     const request = http.request({
@@ -133,6 +135,7 @@ class RuntimeOrchestrator {
     this.nextRecoveryAt = 0;
     this.autoRecoveryBlocked = false;
     this.lastStartFailure = '';
+    this.deferredRecoveryCount = 0;
   }
 
   progress(step, percent, message) {
@@ -189,6 +192,7 @@ class RuntimeOrchestrator {
       this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
+      this.deferredRecoveryCount = 0;
     }
     this.busy = true;
     try {
@@ -421,6 +425,7 @@ class RuntimeOrchestrator {
       this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
+      this.deferredRecoveryCount = 0;
       return status;
     }
     const runtimeState = readJson(stateFile(), {});
@@ -438,6 +443,7 @@ class RuntimeOrchestrator {
       this.heartbeatFailures = 0;
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
+      this.deferredRecoveryCount = 0;
     }
     this.heartbeatFailures += 1;
     if (this.heartbeatFailures < 3 || Date.now() < this.nextRecoveryAt) {
@@ -459,23 +465,37 @@ class RuntimeOrchestrator {
       if (status.mcpRunning) {
         await this.recoverTunnelOnly();
       } else if (status.nativeAlive) {
-        this.log.warn('Coding Tools MCP không trả lời health check nhưng process vẫn còn sống; hoãn restart để không cắt tool call đang chạy', {
-          failures: this.heartbeatFailures,
-          attempt: this.recoveryAttempts
-        });
-        return {
-          ...status,
-          recovering: false,
-          recoveryDeferred: true,
-          recoveryReason: 'mcp_process_alive_health_unavailable'
-        };
+        this.deferredRecoveryCount += 1;
+        if (this.deferredRecoveryCount >= MAX_DEFERRED_RECOVERIES) {
+          this.log.warn('Coding Tools MCP không trả lời health check sau nhiều chu kỳ mặc dù process còn sống; buộc khởi động lại để thoát khỏi trạng thái treo', {
+            failures: this.heartbeatFailures,
+            deferredRecoveryCount: this.deferredRecoveryCount,
+            attempt: this.recoveryAttempts
+          });
+          this.deferredRecoveryCount = 0;
+          await this.restart({ automatic: true });
+        } else {
+          this.log.warn('Coding Tools MCP không trả lời health check nhưng process vẫn còn sống; hoãn restart để không cắt tool call đang chạy', {
+            failures: this.heartbeatFailures,
+            deferredRecoveryCount: this.deferredRecoveryCount,
+            maxDeferredRecoveries: MAX_DEFERRED_RECOVERIES,
+            attempt: this.recoveryAttempts
+          });
+          return {
+            ...status,
+            recovering: false,
+            recoveryDeferred: true,
+            deferredRecoveryCount: this.deferredRecoveryCount,
+            recoveryReason: 'mcp_process_alive_health_unavailable'
+          };
+        }
       } else {
         await this.restart({ automatic: true });
       }
       this.heartbeatFailures = 0;
-      this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
+      this.deferredRecoveryCount = 0;
     } catch (error) {
       this.log.error(error.message, { stage: 'automatic-recovery', retryAfterMs: delay });
     } finally {

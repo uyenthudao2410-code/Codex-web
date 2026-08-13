@@ -1,12 +1,12 @@
 const path = require('node:path');
 
 const DEFAULTS = Object.freeze({
-  configVersion: 5,
+  configVersion: 6,
   workspace: '',
   permissionMode: 'safe',
   toolMode: 'smart',
-  mcpPort: 18765,
-  healthPort: 18081,
+  mcpPort: 18766,
+  healthPort: 18082,
   proxyMode: 'auto',
   proxyUrl: '',
   tunnelId: '',
@@ -57,12 +57,16 @@ function normalize(input = {}) {
   for (const key of Object.keys(DEFAULTS)) {
     if (Object.hasOwn(input, key)) merged[key] = input[key];
   }
-  merged.configVersion = 5;
+  merged.configVersion = 6;
   merged.permissionMode = ['safe', 'trusted'].includes(merged.permissionMode) ? merged.permissionMode : 'safe';
   merged.toolMode = 'smart';
   merged.proxyMode = ['auto', 'system', 'manual', 'direct'].includes(merged.proxyMode) ? merged.proxyMode : 'auto';
-  merged.mcpPort = Number.isInteger(Number(merged.mcpPort)) ? Number(merged.mcpPort) : 18765;
-  merged.healthPort = Number.isInteger(Number(merged.healthPort)) ? Number(merged.healthPort) : 18081;
+  merged.mcpPort = Number.isInteger(Number(merged.mcpPort)) ? Number(merged.mcpPort) : 18766;
+  merged.healthPort = Number.isInteger(Number(merged.healthPort)) ? Number(merged.healthPort) : 18082;
+  if (sourceVersion < 6 && Number(input.mcpPort) === 18765 && Number(input.healthPort) === 18081) {
+    merged.mcpPort = 18766;
+    merged.healthPort = 18082;
+  }
   merged.proxyUrl = String(merged.proxyUrl || '').trim();
   merged.workspace = normalizeWorkspacePath(merged.workspace);
   merged.tunnelId = String(merged.tunnelId || '').trim();

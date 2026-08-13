@@ -33,10 +33,10 @@ function recoveryHarness(status) {
 }
 
 test('native runtime identity changes with workspace and port while tool mode stays smart', () => {
-  const base = { workspace: 'C:\\work\\one', mcpPort: 18765, permissionMode: 'safe' };
+  const base = { workspace: 'C:\\work\\one', mcpPort: 18766, permissionMode: 'safe' };
   assert.equal(runtimeFingerprint(base), runtimeFingerprint({ ...base }));
   assert.notEqual(runtimeFingerprint(base), runtimeFingerprint({ ...base, workspace: 'C:\\work\\two' }));
-  assert.notEqual(runtimeFingerprint(base), runtimeFingerprint({ ...base, mcpPort: 18766 }));
+  assert.notEqual(runtimeFingerprint(base), runtimeFingerprint({ ...base, mcpPort: 18767 }));
   assert.notEqual(runtimeFingerprint(base), runtimeFingerprint({ ...base, authorizedRoots: ['D:\\shared'] }));
   assert.equal(runtimeFingerprint(base), runtimeFingerprint({ ...base, toolMode: 'readonly' }));
 });
@@ -142,5 +142,48 @@ test('supervisor requires three consecutive failures of the same kind', async ()
   const result = await orchestrator.supervise();
   assert.equal(result.failures, 1);
   assert.equal(calls.tunnel, 0);
+  assert.equal(calls.restart, 0);
+});
+
+test('supervisor escalates to a full restart after repeated deferrals of a hung live MCP', async () => {
+  const { orchestrator, calls } = recoveryHarness({
+    fullyReady: false,
+    mcpRunning: false,
+    nativeAlive: true,
+    tunnelRunning: false
+  });
+  const maxDeferred = 6;
+  for (let attempt = 1; attempt < maxDeferred; attempt += 1) {
+    orchestrator.nextRecoveryAt = 0;
+    const result = await orchestrator.supervise();
+    assert.equal(result.recoveryDeferred, true);
+    assert.equal(calls.restart, 0);
+  }
+  orchestrator.nextRecoveryAt = 0;
+  await orchestrator.supervise();
+  assert.equal(calls.restart, 1);
+  assert.equal(calls.tunnel, 0);
+  assert.equal(orchestrator.deferredRecoveryCount, 0);
+});
+
+test('supervisor resets the deferral counter once the runtime becomes healthy', async () => {
+  const { orchestrator, calls } = recoveryHarness({
+    fullyReady: false,
+    mcpRunning: false,
+    nativeAlive: true,
+    tunnelRunning: false
+  });
+  orchestrator.nextRecoveryAt = 0;
+  const deferred = await orchestrator.supervise();
+  assert.equal(deferred.recoveryDeferred, true);
+  assert.equal(orchestrator.deferredRecoveryCount, 1);
+  orchestrator.lightweightSnapshot = async () => ({
+    fullyReady: true,
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: true
+  });
+  await orchestrator.supervise();
+  assert.equal(orchestrator.deferredRecoveryCount, 0);
   assert.equal(calls.restart, 0);
 });

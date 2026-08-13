@@ -16,6 +16,105 @@ SESSION_BUFFER_BYTES = 524_288
 SESSION_HEAD_DIVISOR = 8
 MAX_CONSUMER_CURSORS = 16
 HARD_KILL_SIGNAL = getattr(signal, "SIGKILL", signal.SIGTERM)
+WINDOWS_JOB_OBJECT_ENV = "CODING_TOOLS_MCP_WINDOWS_JOB_OBJECT"
+
+_JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
+_JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS = 9
+
+_kernel32: Any = None
+if os.name == "nt":
+    try:
+        import ctypes
+
+        _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+        class _JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ("PerProcessUserTimeLimit", ctypes.c_int64),
+                ("PerJobUserTimeLimit", ctypes.c_int64),
+                ("LimitFlags", ctypes.c_uint32),
+                ("MinimumWorkingSetSize", ctypes.c_size_t),
+                ("MaximumWorkingSetSize", ctypes.c_size_t),
+                ("ActiveProcessLimit", ctypes.c_uint32),
+                ("Affinity", ctypes.c_size_t),
+                ("PriorityClass", ctypes.c_uint32),
+                ("SchedulingClass", ctypes.c_uint32),
+            ]
+
+        class _IO_COUNTERS(ctypes.Structure):
+            _fields_ = [
+                ("ReadOperationCount", ctypes.c_uint64),
+                ("WriteOperationCount", ctypes.c_uint64),
+                ("OtherOperationCount", ctypes.c_uint64),
+                ("ReadTransferCount", ctypes.c_uint64),
+                ("WriteTransferCount", ctypes.c_uint64),
+                ("OtherTransferCount", ctypes.c_uint64),
+            ]
+
+        class _JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ("BasicLimitInformation", _JOBOBJECT_BASIC_LIMIT_INFORMATION),
+                ("IoInfo", _IO_COUNTERS),
+                ("ProcessMemoryLimit", ctypes.c_size_t),
+                ("JobMemoryLimit", ctypes.c_size_t),
+                ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                ("PeakJobMemoryUsed", ctypes.c_size_t),
+            ]
+    except Exception:  # noqa: BLE001 - job objects are an optimization, never a requirement
+        _kernel32 = None
+
+
+def windows_job_object_enabled() -> bool:
+    if os.name != "nt" or _kernel32 is None:
+        return False
+    raw = os.environ.get(WINDOWS_JOB_OBJECT_ENV)
+    if raw is not None and str(raw).strip() in {"0", "false", "off", "no"}:
+        return False
+    return True
+
+
+def _attach_windows_job(process: subprocess.Popen[bytes]) -> bool:
+    """Attach the spawned process to a kill-on-close Job Object.
+
+    Closing the job handle later becomes a deterministic whole-tree kill:
+    every descendant the command created dies with the job, regardless of
+    whether it ignored console control events.
+    """
+
+    if _kernel32 is None:
+        return False
+    try:
+        handle = _kernel32.CreateJobObjectW(None, None)
+        if not handle:
+            return False
+        info = _JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+        info.BasicLimitInformation.LimitFlags = _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        size = ctypes.sizeof(info)
+        if not _kernel32.SetInformationJobObject(
+            handle, _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS, ctypes.byref(info), size
+        ):
+            _kernel32.CloseHandle(handle)
+            return False
+        process_handle = getattr(process, "_handle", None)
+        if process_handle is None or not _kernel32.AssignProcessToJobObject(handle, process_handle):
+            _kernel32.CloseHandle(handle)
+            return False
+        setattr(process, "_coding_tools_job_handle", handle)
+        return True
+    except Exception:  # noqa: BLE001 - fall back to taskkill tree termination
+        return False
+
+
+def _close_windows_job(process: subprocess.Popen[bytes]) -> bool:
+    handle = getattr(process, "_coding_tools_job_handle", None)
+    if not handle:
+        return False
+    try:
+        _kernel32.CloseHandle(handle)
+    except Exception:  # noqa: BLE001
+        pass
+    setattr(process, "_coding_tools_job_handle", None)
+    return True
 
 
 def terminate_process_group(
@@ -26,6 +125,12 @@ def terminate_process_group(
 ) -> None:
     if not hasattr(os, "killpg"):
         if os.name == "nt":
+            if _close_windows_job(process):
+                try:
+                    process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    pass
+                return
             # A shell-backed command can exit before its child process, so
             # waiting only for the Popen shell is not evidence that the command
             # tree is gone.  Use the same tree-oriented Windows primitive as the
@@ -85,6 +190,14 @@ def spawn_process(
 ) -> tuple[subprocess.Popen[bytes], int | None]:
     """Spawn a pipe-backed or true POSIX PTY-backed process."""
 
+    use_job_object = os.name == "nt" and windows_job_object_enabled()
+    if use_job_object:
+        suspended_flag = getattr(subprocess, "CREATE_SUSPENDED", 0)
+        popen_kwargs = {
+            **popen_kwargs,
+            "creationflags": int(popen_kwargs.get("creationflags", 0)) | suspended_flag,
+        }
+
     if not tty:
         process = subprocess.Popen(
             command,
@@ -96,6 +209,14 @@ def spawn_process(
             env=env,
             **popen_kwargs,
         )
+        if use_job_object:
+            _attach_windows_job(process)
+            thread_handle = getattr(process, "_thread", None)
+            if thread_handle is not None:
+                try:
+                    _kernel32.ResumeThread(thread_handle)
+                except Exception:  # noqa: BLE001
+                    pass
         return process, None
     if os.name == "nt":
         raise ToolFailure(

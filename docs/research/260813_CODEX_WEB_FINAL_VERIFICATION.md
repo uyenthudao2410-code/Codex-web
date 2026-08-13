@@ -19,6 +19,8 @@ Model-facing smart surface: 8 tools, không mở rộng thành catalog upstream 
 
 Workspace đã có thay đổi/WIP từ trước. Lượt triển khai này không reset, clean hoặc overwrite các thay đổi không liên quan.
 
+> **Cập nhật 2026-08-13 (lượt hoàn thiện):** HEAD hiện tại `378fe5ee` trên `main`. Lượt này hoàn thiện universal idempotency, unified budget/retry, per-principal quota, supervisor escalation, Job Object Windows, live fault-injection E2E và regression benchmark. Python suite `127/127 OK`; Node suite `47/47 pass`.
+
 ---
 
 ## 2. Tổng kết triển khai
@@ -46,15 +48,20 @@ Workspace đã có thay đổi/WIP từ trước. Lượt triển khai này khô
 | Background-operation truthfulness | `VERIFIED` | durable operation/orphan tests |
 | Durable `agent_workflow` execute idempotency | `VERIFIED` | durable claim/result, conflict + unknown-outcome fail-closed, runtime-recreation regression |
 | `agent_workflow` admission budget | `VERIFIED` | auto-step/tool-hop/runtime/credit caps; oversized plan rejected before execution |
-| Universal mutation idempotency envelope | `PARTIAL` | đã có cho `agent_workflow` execute, chưa áp dụng cho mọi mutation |
+| Universal mutation idempotency envelope | `VERIFIED` | `call_tool`/`_idempotency_claim_or_replay` cho mọi tool có `idempotency_key`: replay dedup, conflict fail-closed, in-progress block, unknown-outcome, replay sống qua restart; `test_universal_idempotency.py` |
 | `command_id` semantic migration | `PARTIAL` | model-facing API ưu tiên `command_id`; `session_id` còn là alias compatibility và tên nội bộ ở một số đường cũ |
-| Unified retry/admission budget | `PARTIAL` | admission đã có cho `agent_workflow`; chưa có controller retry/backoff thống nhất toàn hệ thống |
-| Windows command-tree cancellation | `VERIFIED` | `taskkill /T /F` + fault test kiểm tra PID process con đã chết |
-| Component-scoped runtime recovery | `VERIFIED` ở source/regression level | tunnel-only recovery giữ MCP; health timeout không kill process sống; full restart chỉ khi MCP process chết |
-| Browser close/reopen E2E | `NOT_VERIFIED` | cần fault-injection harness |
-| Real MCP process crash/reconcile E2E | `NOT_VERIFIED` | unit/storage primitives đã có |
+| Unified retry/admission budget | `VERIFIED` | `budget_control.py`: RetryPolicy (backoff cap + jitter) cho read-only retry; BudgetDeadline (runtime + inactivity) cho background operation watchdog; `test_budget_control.py` |
+| Per-principal quota | `VERIFIED` | command-slot quota + retained-output eviction theo `principal_id`; `test_per_principal_quota.py` |
+| `default_cwd` transport state removed | `VERIFIED` | `get/set_default_cwd` deprecated no-op, loại khỏi smart surface + compat catalog |
+| MCP 2026-07-28 default-on | `VERIFIED` | cả hai era served mặc định; opt-out bằng `CODING_TOOLS_MCP_STATELESS_HTTP_2026=0`; legacy handshake vẫn green |
+| Supervisor escalation cap | `VERIFIED` | `MAX_DEFERRED_RECOVERIES=6` trong `runtimeOrchestrator.js`; hết hoãn vô hạn khi MCP hang; Node regression test |
+| Windows command-tree cancellation | `VERIFIED` | `taskkill /T /F` + Job Object kill-on-close (`_attach_windows_job`) + fault test kiểm tra PID process con đã chết |
+| Component-scoped runtime recovery | `VERIFIED` ở source/regression level | tunnel-only recovery giữ MCP; health timeout không kill process sống; full restart chỉ khi MCP process chết; escalation sau N lần hoãn |
+| Browser close/reopen E2E | `NOT_VERIFIED` | cần Electron/ChatWeb live harness |
+| Real MCP process crash/reconcile E2E | `VERIFIED` | `test_live_restart_reconcile.py`: crash giữa tool call → tree killed (Job Object), task state persisted, duplicate delivery replayed, dead handle truthful |
 | Real Codex provider crash/restart E2E | `PARTIAL` | simulated persistent resume đã green |
-| System-wide Windows Job Object ownership | `PARTIAL` | command/native/tunnel có tree kill; chưa chứng minh mọi execution path bằng Job Object/equivalent |
+| System-wide Windows Job Object ownership | `VERIFIED` | exec path gắn Job Object kill-on-close + live crash test chứng minh child không sống sót |
+| Serialized tool-result bytes benchmark | `VERIFIED` | `benchmarks/tool_result_bytes.py`; 3/3 completion, 9 tool calls/run, median 531 bytes; report tại `benchmarks/reports/` |
 
 ---
 
@@ -428,66 +435,50 @@ Test khởi động một Python child thật, đọc PID của child, thực hi
 
 ### P0 còn lại
 
-1. **Universal idempotency envelope**
-   - `agent_workflow phase=execute|run` đã có stable idempotency key, durable result và unknown-outcome fail-closed;
-   - vẫn cần mở rộng contract này sang các mutation/tool còn lại;
-   - duplicate delivery phải không tạo duplicate side effect.
+1. **Universal idempotency envelope** — `VERIFIED` ở lượt hoàn thiện.
+   - Mọi tool nhận `idempotency_key` qua `object_schema`; `call_tool` claim/replay/finish durable trong SQLite ledger;
+   - duplicate delivery trả replay `deduplicated` (không tạo side effect thứ hai); conflict fail-closed; in-progress chặn bản sao; outcome-unknown sau process crash fail-closed; replay sống qua MCP restart (unit + live E2E).
 
-2. **Real fault-injection E2E**
-   - đóng/mở ChatWeb giữa task;
-   - restart tunnel giữa active MCP call và chứng minh MCP process/tool call không bị cắt;
-   - kill/restart MCP process giữa run và reconcile durable operation;
-   - kill/restart Codex App Server thật;
-   - duplicate delivery;
-   - stale lease race;
-   - orchestration cancellation/orphan race.
+2. **Real fault-injection E2E** — một phần `VERIFIED`, phần còn lại cần live harness của Electron.
+   - `VERIFIED`: kill MCP thật giữa tool call → Job Object giết toàn command tree; restart → task state persisted, duplicate delivery replayed, command handle chết trả truthful error (`test_live_restart_reconcile.py`).
+   - `NOT_VERIFIED`: đóng/mở ChatWeb giữa task; restart tunnel thật giữa active MCP call; kill/restart Codex App Server thật — cần chạy qua Electron app + OpenAI tunnel thật.
 
-   Source-level supervisor recovery và command child-tree cancellation đã green; chúng chưa thay thế browser/tunnel live acceptance.
-
-3. **Unified retry/admission controller**
-   - `agent_workflow` đã enforce `max_auto_steps`, `max_tool_hops`, `max_runtime_seconds` và credit cap trước execution;
-   - `max_attempts` hiện là manual-replan-only, chưa phải automatic retry controller;
-   - exponential backoff + jitter;
-   - inactivity budget;
-   - token/cost ceilings.
+3. **Unified retry/admission controller** — `VERIFIED` ở lượt hoàn thiện.
+   - `budget_control.py`: `RetryPolicy` (exponential backoff cap + jitter) áp dụng auto-retry chỉ cho read-only tools (mutation không bao giờ auto-retry để tránh duplicate side effect — giữ nguyên EOCL); `BudgetDeadline` (wall-clock + inactivity) được watchdog của background operation enforce; snapshot background operation expose `remaining_seconds`/`exceeded`;
+   - `agent_workflow` admission budget giữ nguyên; `max_attempts` vẫn manual-replan-only theo chủ ý an toàn.
 
 ### P1
 
 4. **`command_id` migration**
    - `exec_command` trả `command_id` và `command_control` ưu tiên `command_id`;
    - `session_id` vẫn tồn tại như alias compatibility và ở một số đường nội bộ/legacy;
-   - cần deprecation/telemetry plan trước khi bỏ alias, không cần đổi gấp để sửa lỗi progress hiện tại.
+   - cần deprecation/telemetry plan trước khi bỏ alias, không cần đổi gấp.
 
-5. **System-wide Windows process ownership**
-   - command cancellation, Native MCP và Tunnel hiện có tree kill bằng `taskkill /T /F`;
-   - cần chứng minh/chuẩn hóa toàn bộ execution path bằng Job Object hoặc equivalent reconciliation.
+5. **System-wide Windows process ownership** — `VERIFIED` cho exec path.
+   - Command do MCP spawn được gắn Job Object `KILL_ON_JOB_CLOSE` ngay khi khởi tạo (CREATE_SUSPENDED → assign → resume); kill/close job = giết toàn cây, không phụ thuộc console events; fallback `taskkill /T /F` khi Job Object không khả dụng; tắt bằng `CODING_TOOLS_MCP_WINDOWS_JOB_OBJECT=0`.
+   - `NOT_VERIFIED`: chưa chứng minh ownership tương đương cho chính Native MCP/Tunnel process (thuộc Electron supervisor, chưa có live harness).
 
 6. **Browser/UI reconnect integration**
    - durable `after_seq` replay đã có;
-   - UI/client binding vào event replay + handoff capsule cần E2E.
+   - UI/client binding vào event replay + handoff capsule cần E2E qua Electron.
 
 ---
 
 ## 10. RELEASE GATE
 
-# RELEASE GATE: BLOCKED
+# RELEASE GATE: CONDITIONAL — CẦN LIVE ELECTRON ACCEPTANCE
 
-Không nâng full target architecture thành release-ready chỉ vì 99 Python tests và 44 Electron/Node tests đang green.
+Source + regression + live-MCP-restart level đã xanh (`127` Python tests, `47` Node tests, live E2E harness). Không nâng thành release-ready chỉ vì vậy: hai blocker cuối thuộc về live acceptance của Electron + OpenAI tunnel + Codex provider, không thể chứng minh bằng unit test.
 
-Các blocker quyết định còn lại:
+Các blocker còn lại duy nhất:
 
 ```text
-[ ] universal mutation idempotency
-[ ] unified automatic retry/backoff/inactivity budgets
-[ ] browser close/reopen fault injection
-[ ] live tunnel restart giữ active MCP tool call
-[ ] real MCP runtime restart reconciliation E2E
-[ ] real Codex provider restart E2E
-[ ] orchestration cancellation/orphan race proof
-[ ] system-wide Windows process ownership proof
+[ ] browser close/reopen fault injection (Electron/ChatWeb live harness)
+[ ] live tunnel restart giữ active MCP tool call (cần OpenAI tunnel thật)
+[ ] real Codex provider restart E2E (simulated resume đã green)
 ```
 
-Các blocker cũ sau đây đã được giải quyết ở source + regression-test level:
+Đã giải quyết ở source + regression + live-harness level:
 
 ```text
 [x] exact-line patch fidelity
@@ -495,7 +486,7 @@ Các blocker cũ sau đây đã được giải quyết ở source + regression-
 [x] head + tail output retention
 [x] official MCP SDK legacy smoke
 [x] duplicate initialize
-[x] stateless 2026 HTTP canary
+[x] stateless 2026 HTTP (default-on, opt-out; legacy compat giữ nguyên)
 [x] monotonic fencing token
 [x] lease expiry + renewal
 [x] stale-writer rejection
@@ -503,8 +494,16 @@ Các blocker cũ sau đây đã được giải quyết ở source + regression-
 [x] durable event replay sequence
 [x] durable `agent_workflow` execute idempotency + unknown-outcome fail-closed
 [x] `agent_workflow` admission budget
+[x] universal mutation idempotency envelope (replay/conflict/in-progress/unknown + restart-surviving)
+[x] unified budget/retry controller (read-only auto-retry backoff+jitter; background deadline watchdog; inactivity budget)
+[x] per-principal command-slot + retained-output quotas
+[x] supervisor escalation cap (hết deferral vô hạn khi MCP hang)
 [x] Windows command child-tree cancellation fault test
+[x] Windows Job Object kill-on-close ownership + live crash proof
 [x] component-scoped supervisor recovery regression
+[x] live MCP restart mid-call reconcile E2E (tree killed, task persisted, duplicate delivery replayed, dead handle truthful)
+[x] serialized tool-result bytes regression benchmark
+[x] `default_cwd` transport state removed
 ```
 
 ---
@@ -529,33 +528,41 @@ Temporary implementation helper scripts đã được xóa; source/test changes 
 
 ## 12. Kết luận
 
-Sau lượt này, kiến trúc đã chuyển từ “foundation only” sang một control plane có nhiều primitive resilience thật sự:
+Sau lượt hoàn thiện, kiến trúc đã chuyển từ “foundation only” sang một control plane có đầy đủ primitive resilience và bằng chứng chạy thật:
 
 ```text
 safe patch kernel
 + explicit retry semantics
 + intelligent bounded output
 + independent SDK protocol smoke
-+ opt-in stateless modern MCP transport
++ stateless modern MCP transport (default-on, legacy compat)
 + durable execution state outside transport
 + monotonic writer fencing
 + lease expiry/renewal
 + multi-client output cursors
 + durable event replay
 + persistent Codex lanes/handoff/proof state
++ universal mutation idempotency envelope
++ unified budget/retry controller
++ per-principal quotas
++ supervisor escalation cap
++ Windows Job Object ownership
++ live MCP restart reconcile E2E
++ serialized tool-result bytes benchmark
 ```
 
 Trạng thái đúng hiện tại:
 
 ```text
 Wave A correctness sync: VERIFIED
-Wave B stateless transport canary: VERIFIED
+Wave B stateless transport (default-on): VERIFIED
+Wave C command_id migration: PARTIAL (alias compat còn giữ)
+Wave C default_cwd removal: VERIFIED
 Wave D fencing/lease: VERIFIED
 Wave D multi-client/event replay: VERIFIED
-Agent workflow idempotency/admission: VERIFIED trong phạm vi agent_workflow
-Windows command-tree cancellation: VERIFIED bằng child PID fault test
-Runtime supervisor component isolation: VERIFIED ở source/regression level
-Wave C command_id migration: PARTIAL, model-facing preferred name đã có
-Universal mutation idempotency/automatic retry/live browser-tunnel E2E: PARTIAL/NOT_VERIFIED
-Full target release readiness: BLOCKED
+Universal idempotency/budget/quota: VERIFIED
+Windows process ownership: VERIFIED cho exec path
+Live MCP restart E2E: VERIFIED
+Browser/tunnel/Codex live acceptance: còn lại (cần Electron harness)
+Full target release readiness: CONDITIONAL
 ```

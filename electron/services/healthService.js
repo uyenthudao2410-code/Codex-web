@@ -9,7 +9,7 @@ function freePort(start, avoid) {
       server.once('error', () => tryPort(port + 1));
       server.listen(port, '127.0.0.1', () => server.close(() => resolve(port)));
     };
-    tryPort(Math.max(1024, Number(start) || 18765));
+    tryPort(Math.max(1024, Number(start) || 18766));
   });
 }
 

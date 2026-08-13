@@ -134,6 +134,44 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertNotIn("mcp-session-id", headers)
         self.assertEqual(body["error"]["code"], -32022)
 
+    def test_modern_era_is_served_by_default_without_the_canary_flag(self) -> None:
+        with patch.dict(os.environ):
+            os.environ.pop("CODING_TOOLS_MCP_STATELESS_HTTP_2026", None)
+            status, headers, body = self.request("tools/list", modern_params(), request_id=8)
+        self.assertEqual(status, 200)
+        self.assertNotIn("mcp-session-id", headers)
+        self.assertIn("result", body)
+        self.assertIn("tools", body["result"])
+
+    def test_legacy_handshake_still_works_when_modern_era_is_default_on(self) -> None:
+        with patch.dict(os.environ):
+            os.environ.pop("CODING_TOOLS_MCP_STATELESS_HTTP_2026", None)
+            legacy_headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream",
+            }
+            body = json.dumps({
+                "jsonrpc": "2.0",
+                "id": 9,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-11-25",
+                    "capabilities": {},
+                    "clientInfo": {"name": "legacy-client", "version": "1"},
+                },
+            }).encode("utf-8")
+            connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                connection.request("POST", "/mcp", body=body, headers=legacy_headers)
+                response = connection.getresponse()
+                raw = response.read()
+                decoded = json.loads(raw.decode("utf-8")) if raw else {}
+                self.assertEqual(response.status, 200)
+                self.assertIn("result", decoded)
+                self.assertIn("protocolVersion", decoded["result"])
+            finally:
+                connection.close()
+
 
 if __name__ == "__main__":
     unittest.main()
