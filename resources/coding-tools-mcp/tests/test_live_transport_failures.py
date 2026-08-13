@@ -40,6 +40,7 @@ def _initialize(port: int) -> None:
 
 
 def _health(port: int) -> bool:
+    connection = None
     try:
         connection = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
         connection.request("GET", "/__control/health")
@@ -49,7 +50,8 @@ def _health(port: int) -> bool:
     except OSError:
         return False
     finally:
-        connection.close()
+        if connection is not None:
+            connection.close()
 
 
 def _spawn_mcp(workspace: Path, port: int, extra_env: dict[str, str] | None = None) -> subprocess.Popen:
@@ -156,6 +158,7 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "step.txt").write_text("before\n", encoding="utf-8")
+            (root / "sleep_step.py").write_text("import time\ntime.sleep(4)\n", encoding="utf-8")
             port = 19111
             process = _spawn_mcp(
                 root, port,
@@ -173,7 +176,7 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
                         "objective": "E2E durable workflow",
                         "commands": [
                             'echo step-one >> step.txt',
-                            f'"{sys.executable}" -c "import time; time.sleep(4)"',
+                            f'"{sys.executable}" sleep_step.py',
                             'echo step-two >> step.txt',
                         ],
                     },
