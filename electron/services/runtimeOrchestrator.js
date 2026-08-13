@@ -127,6 +127,7 @@ class RuntimeOrchestrator {
     this.snapshotCacheAt = 0;
     this.snapshotInFlight = null;
     this.heartbeatFailures = 0;
+    this.heartbeatFailureKind = '';
     this.recovering = false;
     this.recoveryAttempts = 0;
     this.nextRecoveryAt = 0;
@@ -185,6 +186,7 @@ class RuntimeOrchestrator {
       this.autoRecoveryBlocked = false;
       this.lastStartFailure = '';
       this.heartbeatFailures = 0;
+      this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
     }
@@ -241,6 +243,7 @@ class RuntimeOrchestrator {
       this.autoRecoveryBlocked = false;
       this.lastStartFailure = '';
       this.heartbeatFailures = 0;
+      this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
       this.progress('complete', 100, 'Triển khai hoàn tất, cả MCP và OpenAI Tunnel đều đang chạy');
@@ -250,6 +253,7 @@ class RuntimeOrchestrator {
       this.autoRecoveryBlocked = true;
       this.lastStartFailure = error.message;
       this.heartbeatFailures = 0;
+      this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
       await this.tunnel.stop().catch(() => false);
@@ -372,13 +376,15 @@ class RuntimeOrchestrator {
   async lightweightSnapshot() {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
-    const [mcpRunning, tunnelRunning] = await Promise.all([
+    const [mcpRunning, nativeAlive, tunnelRunning] = await Promise.all([
       token ? probeMcp(settings.mcpPort, token, settings.workspace) : Promise.resolve(false),
+      this.native.status().catch(() => false),
       this.tunnel.status(settings).catch(() => false)
     ]);
     return {
       workspace: settings.workspace,
       mcpRunning,
+      nativeAlive,
       tunnelRunning,
       fullyReady: mcpRunning && tunnelRunning,
       recovering: this.recovering,
@@ -388,10 +394,31 @@ class RuntimeOrchestrator {
     };
   }
 
+  async recoverTunnelOnly() {
+    const settings = this.settingsStore.load();
+    const runtimeApiKey = this.secrets.get('runtimeApiKey');
+    if (!runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
+    if (!settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
+    const token = await this.ensureToken();
+    const proxy = await resolveProxy(settings);
+    if (settings.proxyMode === 'manual' && !proxy.reachable) {
+      throw new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}.`);
+    }
+    await this.tunnel.start(
+      { ...settings, effectiveProxyUrl: proxy.resolvedUrl },
+      runtimeApiKey,
+      token,
+      this.progress.bind(this)
+    );
+    this.log.info('OpenAI Tunnel đã được khôi phục mà không khởi động lại Coding Tools MCP');
+    this.invalidateSnapshot();
+  }
+
   async supervise() {
     const status = await this.lightweightSnapshot();
     if (status.fullyReady) {
       this.heartbeatFailures = 0;
+      this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
       return status;
@@ -402,6 +429,15 @@ class RuntimeOrchestrator {
     if (this.busy || this.recovering || this.isManuallyStopped() || !expectedRunning) return status;
     if (this.autoRecoveryBlocked) {
       return { ...status, recoveryBlocked: true, lastStartFailure: this.lastStartFailure };
+    }
+    const failureKind = status.mcpRunning
+      ? 'tunnel_unavailable'
+      : (status.nativeAlive ? 'mcp_health_unavailable' : 'mcp_process_exited');
+    if (failureKind !== this.heartbeatFailureKind) {
+      this.heartbeatFailureKind = failureKind;
+      this.heartbeatFailures = 0;
+      this.recoveryAttempts = 0;
+      this.nextRecoveryAt = 0;
     }
     this.heartbeatFailures += 1;
     if (this.heartbeatFailures < 3 || Date.now() < this.nextRecoveryAt) {
@@ -416,11 +452,28 @@ class RuntimeOrchestrator {
       failures: this.heartbeatFailures,
       attempt: this.recoveryAttempts,
       mcpRunning: status.mcpRunning,
+      nativeAlive: status.nativeAlive,
       tunnelRunning: status.tunnelRunning
     });
     try {
-      await this.restart({ automatic: true });
+      if (status.mcpRunning) {
+        await this.recoverTunnelOnly();
+      } else if (status.nativeAlive) {
+        this.log.warn('Coding Tools MCP không trả lời health check nhưng process vẫn còn sống; hoãn restart để không cắt tool call đang chạy', {
+          failures: this.heartbeatFailures,
+          attempt: this.recoveryAttempts
+        });
+        return {
+          ...status,
+          recovering: false,
+          recoveryDeferred: true,
+          recoveryReason: 'mcp_process_alive_health_unavailable'
+        };
+      } else {
+        await this.restart({ automatic: true });
+      }
       this.heartbeatFailures = 0;
+      this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
     } catch (error) {

@@ -67,11 +67,14 @@ from .processes import (
     terminate_process_group,
 )
 from .protocol import (
+    LEGACY_PROTOCOL_VERSIONS,
     PROTOCOL_VERSION,
+    STATELESS_PROTOCOL_VERSION,
     SUPPORTED_PROTOCOL_VERSIONS,
     dispatch_rpc,
     jsonrpc_error,
     protocol_version_is_supported,
+    request_protocol_version,
     response_id,
     validate_rpc_envelope,
 )
@@ -284,6 +287,7 @@ AGENT_EXECUTION_ROUTES = {
 }
 
 MCP_ENDPOINT_PATH = "/mcp"
+STATELESS_HTTP_2026_ENV = f"{ENV_PREFIX}_STATELESS_HTTP_2026"
 DEFAULT_EXCLUDED_NAMES = {
     ".git",
     ".reference",
@@ -543,6 +547,34 @@ def _first_header_value(value: str | None) -> str:
 def _first_form_value(params: dict[str, list[str]], key: str) -> str:
     values = params.get(key)
     return values[0] if values else ""
+
+
+def stateless_http_2026_enabled() -> bool:
+    return truthy_env(os.environ.get(STATELESS_HTTP_2026_ENV))
+
+
+def _decode_mcp_name_header(value: str) -> str | None:
+    if not (value.startswith("=?base64?") and value.endswith("?=")):
+        return value
+    try:
+        raw = base64.b64decode(value[len("=?base64?") : -2], validate=True)
+        return raw.decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
+def _request_mcp_name(request: dict[str, Any]) -> str | None:
+    params = request.get("params")
+    if not isinstance(params, dict):
+        return None
+    method = str(request.get("method") or "")
+    if method in {"tools/call", "prompts/get"}:
+        value = params.get("name")
+        return value if isinstance(value, str) else None
+    if method == "resources/read":
+        value = params.get("uri")
+        return value if isinstance(value, str) else None
+    return None
 
 
 def _forwarded_header_param(value: str | None, name: str) -> str:
@@ -1672,6 +1704,9 @@ class Runtime:
         self.orphaned_background_operations = self.orchestration_ledger.mark_orphaned_background_operations(
             current_server_instance_id=self.process_instance_id
         )
+        self.orphaned_idempotency_records = self.orchestration_ledger.mark_orphaned_idempotency(
+            current_process_instance_id=self.process_instance_id
+        )
         self.recovered_agent_lanes = 0
         for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
             owner_process = str((lane.get("metadata") or {}).get("owner_process_instance_id") or "")
@@ -1779,6 +1814,9 @@ class Runtime:
             self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
             self.orphaned_background_operations = self.orchestration_ledger.mark_orphaned_background_operations(
                 current_server_instance_id=self.process_instance_id
+            )
+            self.orphaned_idempotency_records = self.orchestration_ledger.mark_orphaned_idempotency(
+                current_process_instance_id=self.process_instance_id
             )
             self.recovered_agent_lanes = 0
             for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
@@ -3824,7 +3862,181 @@ class Runtime:
             raise ToolFailure("MODE_ROUTE_MISMATCH", "deep_single_lane execution requires a deep model route.", category="validation")
         return requested_mode
 
+    @staticmethod
+    def _agent_workflow_request_hash(args: dict[str, Any]) -> str:
+        stable = {key: value for key, value in args.items() if key != "idempotency_key" and not key.startswith("_")}
+        encoded = json.dumps(stable, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+        return hashlib.sha256(encoded.encode("utf-8", errors="replace")).hexdigest()
+
+    @staticmethod
+    def _agent_admission_budget(args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        max_auto_steps = max(1, min(int(args.get("max_auto_steps", 64)), 256))
+        max_tool_hops = max(1, min(int(args.get("max_tool_hops", 96)), 512))
+        max_attempts = max(1, min(int(args.get("max_attempts", 1)), 10))
+        max_runtime_seconds = max(1, min(int(args.get("max_runtime_seconds", 600)), 600))
+        try:
+            max_estimated_credits = max(0.0, float(args.get("max_estimated_credits", 0.0) or 0.0))
+        except (TypeError, ValueError) as exc:
+            raise ToolFailure("INVALID_ARGUMENT", "max_estimated_credits must be a non-negative number.", category="validation") from exc
+        patches = len(args.get("patches", []) if isinstance(args.get("patches"), list) else []) + (1 if str(args.get("patch", "")).strip() else 0)
+        files = len(args.get("files", []) if isinstance(args.get("files"), list) else [])
+        directories = len(args.get("directories", []) if isinstance(args.get("directories"), list) else [])
+        commands = len(args.get("commands", []) if isinstance(args.get("commands"), list) else [])
+        candidate = 1 if str(args.get("execution_route", "auto")) not in {"deterministic"} and not patches else 0
+        planned_auto_steps = 2 + patches + files + directories + commands + candidate
+        if str(args.get("test_command", "")).strip():
+            planned_auto_steps += 1
+        if str(args.get("build_command", "")).strip():
+            planned_auto_steps += 1
+        planned_tool_hops = 2 + commands + (1 if patches or files or directories else 0) + candidate
+        if planned_auto_steps > max_auto_steps or planned_tool_hops > max_tool_hops:
+            raise ToolFailure(
+                "WORKFLOW_BUDGET_EXCEEDED",
+                "The planned workflow exceeds the deterministic admission budget.",
+                category="policy",
+                retryable=False,
+                details={
+                    "planned_auto_steps": planned_auto_steps,
+                    "max_auto_steps": max_auto_steps,
+                    "planned_tool_hops": planned_tool_hops,
+                    "max_tool_hops": max_tool_hops,
+                },
+            )
+        normalized = dict(args)
+        normalized["timeout_seconds"] = min(int(args.get("timeout_seconds", 600)), max_runtime_seconds)
+        budget = {
+            "max_auto_steps": max_auto_steps,
+            "planned_auto_steps": planned_auto_steps,
+            "max_tool_hops": max_tool_hops,
+            "planned_tool_hops": planned_tool_hops,
+            "max_attempts": max_attempts,
+            "attempts_used": 1,
+            "retry_mode": "manual_replan_only",
+            "max_runtime_seconds": max_runtime_seconds,
+            "max_estimated_credits": max_estimated_credits,
+        }
+        normalized["_admission_budget"] = budget
+        return normalized, budget
+
+    @staticmethod
+    def _agent_idempotency_summary(result: dict[str, Any]) -> dict[str, Any]:
+        execution = result.get("execution") if isinstance(result.get("execution"), dict) else {}
+        orchestration = result.get("orchestration") if isinstance(result.get("orchestration"), dict) else {}
+        proof = execution.get("proof_summary") if isinstance(execution.get("proof_summary"), dict) else {}
+        review = result.get("external_review") if isinstance(result.get("external_review"), dict) else {}
+        return {
+            "workflow": result.get("workflow"),
+            "phase": result.get("phase"),
+            "execution_status": execution.get("status"),
+            "execution_ok": execution.get("ok"),
+            "run_id": orchestration.get("run_id"),
+            "wave_id": orchestration.get("wave_id"),
+            "orchestration_state": orchestration.get("orchestration_state"),
+            "proof_fingerprint": proof.get("proof_fingerprint"),
+            "external_review_status": review.get("status"),
+            "reports": orchestration.get("reports"),
+        }
+
     def agent_workflow(self, args: dict[str, Any]) -> dict[str, Any]:
+        normalized, budget = self._agent_admission_budget(args)
+        phase = str(normalized.get("phase", "prepare")).lower()
+        idempotency_key = str(normalized.get("idempotency_key", "") or "").strip()
+        if idempotency_key and len(idempotency_key) > 128:
+            raise ToolFailure("INVALID_ARGUMENT", "idempotency_key must be at most 128 characters.", category="validation")
+        if phase not in {"execute", "run"} or not idempotency_key:
+            result = self._agent_workflow_impl(normalized)
+            result["admission_budget"] = budget
+            if idempotency_key:
+                result["idempotency"] = {"active": False, "reason": "prepare_resume_not_mutating"}
+            return result
+
+        request_hash = self._agent_workflow_request_hash(args)
+        projection = self.task_state.get().get("orchestration", {})
+        run_id = str(projection.get("run_id") or "") if isinstance(projection, dict) else ""
+        wave_id = str(projection.get("wave_id") or "") if isinstance(projection, dict) else ""
+        claim = self.orchestration_ledger.claim_idempotency(
+            idempotency_key=idempotency_key,
+            operation="agent_workflow",
+            request_hash=request_hash,
+            process_instance_id=self.process_instance_id,
+            run_id=run_id,
+            wave_id=wave_id,
+        )
+        if not claim.get("claimed"):
+            reason = str(claim.get("reason") or "")
+            record = claim.get("record") if isinstance(claim.get("record"), dict) else {}
+            if reason == "conflict":
+                raise ToolFailure(
+                    "IDEMPOTENCY_CONFLICT",
+                    "The idempotency_key was already used for a different agent_workflow request.",
+                    category="validation",
+                    details={"idempotency_key": idempotency_key, "status": record.get("status")},
+                )
+            if reason == "completed":
+                return {
+                    "workflow": record.get("summary", {}).get("workflow"),
+                    "phase": record.get("summary", {}).get("phase"),
+                    "deduplicated": True,
+                    "durable_idempotency": True,
+                    "idempotency": record,
+                    "admission_budget": budget,
+                    "recommended_next_action": "Use the recorded run/wave/report pointers; do not repeat the mutation.",
+                }
+            if reason == "failed":
+                raise ToolFailure(
+                    "IDEMPOTENT_REQUEST_FAILED",
+                    "This exact idempotent workflow request already reached a known terminal failure; do not repeat it unchanged.",
+                    category="runtime",
+                    details={"idempotency_key": idempotency_key, "summary": record.get("summary")},
+                )
+            if reason == "unknown":
+                raise ToolFailure(
+                    "IDEMPOTENCY_OUTCOME_UNKNOWN",
+                    "A previous process may have started this idempotent workflow but its outcome is unknown. Reconcile evidence before any replay.",
+                    category="runtime",
+                    details={"idempotency_key": idempotency_key, "summary": record.get("summary")},
+                )
+            raise ToolFailure(
+                "IDEMPOTENCY_IN_PROGRESS",
+                "This idempotent workflow is already in progress; observe the existing task instead of starting another copy.",
+                category="runtime",
+                retryable=True,
+                details={"idempotency_key": idempotency_key, "run_id": record.get("run_id"), "wave_id": record.get("wave_id")},
+            )
+
+        try:
+            result = self._agent_workflow_impl(normalized)
+        except Exception as exc:
+            known_terminal = isinstance(exc, ToolFailure) and exc.code in {
+                "WORKFLOW_BUDGET_EXCEEDED", "WORKFLOW_CREDIT_BUDGET_EXCEEDED", "INVALID_ARGUMENT", "MODE_ROUTE_MISMATCH"
+            }
+            self.orchestration_ledger.finish_idempotency(
+                idempotency_key,
+                request_hash=request_hash,
+                status="failed" if known_terminal else "unknown",
+                summary={
+                    "error_code": getattr(exc, "code", type(exc).__name__),
+                    "category": getattr(exc, "category", "runtime"),
+                    "outcome_unknown": not known_terminal,
+                },
+            )
+            raise
+        summary = self._agent_idempotency_summary(result)
+        orchestration = result.get("orchestration") if isinstance(result.get("orchestration"), dict) else {}
+        record = self.orchestration_ledger.finish_idempotency(
+            idempotency_key,
+            request_hash=request_hash,
+            status="completed",
+            summary=summary,
+            run_id=str(orchestration.get("run_id") or ""),
+            wave_id=str(orchestration.get("wave_id") or ""),
+        )
+        result["idempotency"] = record
+        result["durable_idempotency"] = True
+        result["admission_budget"] = budget
+        return result
+
+    def _agent_workflow_impl(self, args: dict[str, Any]) -> dict[str, Any]:
         """End-to-end workflow with durable wave audit, explicit authority, proof, and final acceptance state."""
         workflow = str(args.get("workflow", "custom")).lower()
         phase = str(args.get("phase", "prepare")).lower()
@@ -4066,6 +4278,24 @@ class Runtime:
                 "confidence": candidate_result.get("confidence"),
             })
             if candidate_result.get("status") == "ready":
+                budget = args.get("_admission_budget") if isinstance(args.get("_admission_budget"), dict) else {}
+                economics = candidate_result.get("economics") if isinstance(candidate_result.get("economics"), dict) else {}
+                estimated_credits = economics.get("estimated_credits")
+                credit_cap = float(budget.get("max_estimated_credits") or 0.0)
+                if credit_cap > 0 and isinstance(estimated_credits, (int, float)) and float(estimated_credits) > credit_cap:
+                    self.orchestration_control.record_failure(
+                        ctx,
+                        "WORKFLOW_CREDIT_BUDGET_EXCEEDED",
+                        payload={"estimated_credits": float(estimated_credits), "max_estimated_credits": credit_cap},
+                        block=True,
+                    )
+                    self._project_orchestration(ctx, event="credit_budget_exceeded")
+                    raise ToolFailure(
+                        "WORKFLOW_CREDIT_BUDGET_EXCEEDED",
+                        "The candidate route exceeded the configured estimated-credit budget before mutation.",
+                        category="policy",
+                        details={"estimated_credits": float(estimated_credits), "max_estimated_credits": credit_cap},
+                    )
                 patches.extend(str(item) for item in candidate_result.get("patches", []) if str(item).strip())
             elif candidate_result.get("status") != "deterministic":
                 if ctx.state not in {"REPLAN", "BLOCKED", "ABORTED"}:
@@ -4738,6 +4968,21 @@ class Runtime:
             }
         if action == "lane":
             return self._coordination_lane(args)
+        if action == "events":
+            _state, _projection, run_id, _wave_id = self._coordination_ids(args)
+            if not run_id:
+                raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "No orchestration run is associated with the current task.", category="not_found")
+            replay = self.orchestration_ledger.list_events_since(
+                run_id,
+                after_seq=max(0, int(args.get("after_seq", 0))),
+                limit=max(1, min(int(args.get("limit", 100)), 500)),
+            )
+            replay["recommended_next_action"] = (
+                "Call task_control action=events with after_seq=next_after_seq until has_more=false."
+                if replay.get("has_more")
+                else "Event replay is current; continue from task state, pending messages, and the latest handoff capsule."
+            )
+            return replay
         if action == "messages":
             _state, _projection, run_id, _wave_id = self._coordination_ids(args)
             return {
@@ -4980,19 +5225,35 @@ class Runtime:
             return {"state": state, "stopped": True}
         raise ToolFailure("INVALID_ARGUMENT", f"Unknown task action: {action}", category="validation")
 
+    def _command_handle(self, args: dict[str, Any]) -> str:
+        command_id = str(args.get("command_id", "") or "").strip()
+        session_id = str(args.get("session_id", "") or "").strip()
+        if command_id and session_id and command_id != session_id:
+            raise ToolFailure(
+                "INVALID_ARGUMENT",
+                "command_id and deprecated session_id identify different commands.",
+                category="validation",
+            )
+        handle = command_id or session_id
+        if not handle:
+            raise ToolFailure("INVALID_ARGUMENT", "command_id is required.", category="validation")
+        return handle
+
     def command_control(self, args: dict[str, Any]) -> dict[str, Any]:
         action = str(args.get("action", "poll")).lower()
+        command_id = self._command_handle(args) if action in {"poll", "write", "kill"} else ""
         if action in {"poll", "write"}:
             return self.write_stdin({
-                "session_id": args.get("session_id", ""),
+                "command_id": command_id,
                 "chars": str(args.get("chars", "")) if action == "write" else "",
                 "yield_time_ms": args.get("yield_time_ms", 10000),
                 "max_output_bytes": args.get("max_output_bytes", 65536),
+                "consumer_id": args.get("consumer_id", ""),
                 "verbosity": args.get("verbosity", "summary"),
             })
         if action == "kill":
             return self.kill_session({
-                "session_id": args.get("session_id", ""),
+                "command_id": command_id,
                 "signal": args.get("signal", "TERM"),
                 "wait_ms": args.get("wait_ms", 3000),
                 "verbosity": args.get("verbosity", "summary"),
@@ -6416,16 +6677,22 @@ class Runtime:
         terminal = payload.get("status") != "running"
         if terminal:
             self._complete_session(session)
+        payload["command_id"] = session.session_id
+        payload.setdefault("session_id", session.session_id)
         if payload.get("status") == "running":
             payload["next_action"] = {
-                "tool": "write_stdin",
+                "tool": "command_control",
                 "arguments": {
-                    "session_id": session.session_id,
-                    "chars": "",
+                    "action": "poll",
+                    "command_id": session.session_id,
                     "yield_time_ms": 10000,
                 },
             }
         output_refs = {
+            "stdout": f"command:{session.session_id}:stdout",
+            "stderr": f"command:{session.session_id}:stderr",
+        }
+        legacy_output_refs = {
             "stdout": f"session:{session.session_id}:stdout",
             "stderr": f"session:{session.session_id}:stderr",
         }
@@ -6453,6 +6720,7 @@ class Runtime:
             payload["output_ref"] = output_ref
             payload["output_stream"] = output_stream
             payload["output_refs"] = output_refs
+            payload["legacy_output_refs"] = legacy_output_refs
             payload["output_truncated"] = True
             payload["truncated_output_streams"] = truncated_streams
             read_actions = [read_output_action(output_refs[stream]) for stream in truncated_streams]
@@ -6474,6 +6742,7 @@ class Runtime:
         payload["output_ref"] = output_ref
         payload["output_stream"] = output_stream
         payload["output_refs"] = output_refs
+        payload["legacy_output_refs"] = legacy_output_refs
         if verbosity == "full":
             return payload
         compact = {
@@ -6530,54 +6799,63 @@ class Runtime:
 
     def read_output(self, args: dict[str, Any]) -> dict[str, Any]:
         output_ref = str(args.get("output_ref", ""))
-        match = re.fullmatch(r"session:([^:]+):(full|stdout|stderr)", output_ref)
+        match = re.fullmatch(r"(command|session):([^:]+):(full|stdout|stderr)", output_ref)
         if not match:
             raise ToolFailure(
                 "INVALID_ARGUMENT",
-                "output_ref must look like session:<id>:stdout or session:<id>:stderr.",
+                "output_ref must look like command:<id>:stdout; legacy session:<id>:stdout is also accepted.",
                 category="validation",
             )
-        session = self._get_output_session(match.group(1))
+        session = self._get_output_session(match.group(2))
         session.refresh_status()
-        ref_stream = match.group(2)
+        ref_stream = match.group(3)
         requested_stream = str(args.get("stream", "") or "")
         if requested_stream and requested_stream not in {"stdout", "stderr"}:
             raise ToolFailure("INVALID_ARGUMENT", "stream must be stdout or stderr.", category="validation")
         if ref_stream in {"stdout", "stderr"} and requested_stream and requested_stream != ref_stream:
             raise ToolFailure("INVALID_ARGUMENT", "stream does not match output_ref.", category="validation")
         stream = ref_stream if ref_stream in {"stdout", "stderr"} else requested_stream or "stdout"
-        data, retained_start_offset, total_stream_bytes, dropped_bytes = session.retained_stream_bytes(stream)
         requested_offset = max(0, int(args.get("offset", 0)))
-        offset = max(requested_offset, retained_start_offset)
         limit = max(1, min(int(args.get("limit", EXEC_PREVIEW_BYTES)), SESSION_BUFFER_BYTES))
-        buffer_offset = max(0, offset - retained_start_offset)
-        chunk = data[buffer_offset : buffer_offset + limit]
-        next_offset = offset + len(chunk) if offset + len(chunk) < total_stream_bytes else None
-        omitted_bytes = max(0, retained_start_offset - requested_offset)
+        window = session.retained_stream_window(stream, requested_offset, limit)
+        chunk = window["data"]
+        offset = int(window["offset"])
+        next_offset = window["next_offset"]
+        omitted_bytes = int(window["omitted_bytes"])
+        dropped_bytes = int(window["evicted_bytes_total"])
         warnings: list[str] = []
         if omitted_bytes:
-            warnings.append(f"{stream} offset skipped dropped bytes")
-        if dropped_bytes:
-            warnings.append(f"older {stream} output was dropped from the rolling session buffer")
+            warnings.append(f"{stream} offset crossed bytes evicted from the middle retention gap")
+        if window["evicted_gap_bytes"]:
+            warnings.append(f"middle {stream} output was evicted; the frozen head and rolling tail were preserved")
         if ref_stream == "full":
             warnings.append("legacy full output_ref defaults to stdout; use output_refs for stable stream paging")
         result = {
             "output_ref": output_ref,
-            "stream_output_ref": f"session:{session.session_id}:{stream}",
+            "command_id": session.session_id,
+            "session_id": session.session_id,
+            "stream_output_ref": f"command:{session.session_id}:{stream}",
+            "legacy_stream_output_ref": f"session:{session.session_id}:{stream}",
             "stream": stream,
             "offset": offset,
             "requested_offset": requested_offset,
             "limit": limit,
             "content": chunk.decode("utf-8", errors="replace"),
             "next_offset": next_offset,
-            "total_retained_bytes": len(data),
-            "retained_start_offset": retained_start_offset,
-            "total_stream_bytes": total_stream_bytes,
+            "total_retained_bytes": window["total_retained_bytes"],
+            "retained_start_offset": window["retained_start_offset"],
+            "tail_start_offset": window["tail_start_offset"],
+            "total_stream_bytes": window["total_stream_bytes"],
             "stdout_dropped_bytes": session.stdout_dropped_bytes,
             "stderr_dropped_bytes": session.stderr_dropped_bytes,
             "stream_dropped_bytes": dropped_bytes,
+            "head_retained_bytes": window["head_retained_bytes"],
+            "tail_retained_bytes": window["tail_retained_bytes"],
+            "evicted_gap_bytes": window["evicted_gap_bytes"],
+            "evict_events": window["evict_events"],
+            "evicted_bytes_total": window["evicted_bytes_total"],
             "omitted_bytes": omitted_bytes,
-            "truncated": next_offset is not None,
+            "truncated": next_offset is not None or omitted_bytes > 0,
             "ok": True,
             "warnings": warnings,
         }
@@ -6588,14 +6866,17 @@ class Runtime:
         return result
 
     def write_stdin(self, args: dict[str, Any]) -> dict[str, Any]:
-        session_id = str(args.get("session_id", ""))
+        session_id = self._command_handle(args)
         session = self._get_session(session_id)
         session.refresh_status()
+        consumer_id = str(args.get("consumer_id", "") or "").strip()
+        if len(consumer_id) > 128:
+            raise ToolFailure("INVALID_ARGUMENT", "consumer_id must be at most 128 characters.", category="validation")
         chars = str(args.get("chars", ""))
         if session.process.poll() is not None:
             if chars:
-                raise ToolFailure("SESSION_CLOSED", "Session is closed; stdin write blocked.", category="runtime")
-            payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)))
+                raise ToolFailure("COMMAND_CLOSED", "Command is closed; stdin write blocked.", category="runtime")
+            payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)), consumer_id=consumer_id)
             return self._format_session_output(session, payload, args)
         if chars:
             session.write_input(chars.encode("utf-8"))
@@ -6609,13 +6890,16 @@ class Runtime:
             if task_status in {"paused", "stopped"}:
                 terminate_process_group(session.process, signal.SIGTERM)
                 session.refresh_status()
-                payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)))
+                payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)), consumer_id=consumer_id)
                 payload["task_control"] = task_status
                 payload["status"] = task_status
                 return self._format_session_output(session, payload, args)
             time.sleep(0.02)
             with session.lock:
-                has_new_output = len(session.stdout) > session.stdout_cursor or len(session.stderr) > session.stderr_cursor
+                has_new_output = (
+                    session.stdout_total_bytes > session.stdout_cursor
+                    or session.stderr_total_bytes > session.stderr_cursor
+                )
                 if has_new_output and not chars:
                     break
                 if has_new_output and chars:
@@ -6623,7 +6907,7 @@ class Runtime:
                         first_output_at = time.time()
                     if time.time() - first_output_at >= 0.05:
                         break
-        payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)))
+        payload = session.snapshot_since_cursor(int(args.get("max_output_bytes", 65536)), consumer_id=consumer_id)
         return self._format_session_output(session, payload, args)
 
     def _wait_for_session_exit(self, session: ExecSession, wait_seconds: float) -> bool:
@@ -6636,7 +6920,7 @@ class Runtime:
         return session.process.poll() is not None
 
     def kill_session(self, args: dict[str, Any]) -> dict[str, Any]:
-        session_id = str(args.get("session_id", ""))
+        session_id = self._command_handle(args)
         session = self._get_session(session_id)
         signal_name = str(args.get("signal", "TERM"))
         force = signal_name == "KILL"
@@ -6697,7 +6981,7 @@ class Runtime:
         with self.sessions_lock:
             session = self.sessions.get(session_id) or self.output_sessions.get(session_id)
         if session is None:
-            raise ToolFailure("SESSION_NOT_FOUND", "Session not found; stdin access denied.", category="not_found")
+            raise ToolFailure("COMMAND_NOT_FOUND", "Command handle was not found.", category="not_found")
         return session
 
     def git_status(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -8207,6 +8491,12 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "execution_mode": {**string, "enum": ["auto", "mcp_only", "bounded_candidate", "deep_single_lane", "coordinated_multi_worktree"], "default": "auto", "description": "EOCL execution mode. auto derives the mode from the resolved route. coordinated_multi_worktree is rejected unless runtime coordination readiness is proven."},
             "replan_reason": {**string, "description": "Required when continuing an active orchestration run from REPLAN; creates a new wave instead of silently changing route/authority."},
             "contract_fingerprint": {**string, "maxLength": 512, "description": "Optional settled-contract identity. Non-hash values are deterministically hashed before entering the audit ledger."},
+            "idempotency_key": {**string, "maxLength": 128, "description": "Optional durable mutation identity for execute/run. Reusing the same key+request deduplicates across MCP reconnect/restart; conflicting reuse fails closed."},
+            "max_auto_steps": {**integer, "minimum": 1, "maximum": 256, "default": 64, "description": "Deterministic admission cap for planned workflow steps; no automatic retry loop is created."},
+            "max_tool_hops": {**integer, "minimum": 1, "maximum": 512, "default": 96, "description": "Deterministic admission cap for planned internal tool hops."},
+            "max_attempts": {**integer, "minimum": 1, "maximum": 10, "default": 1, "description": "Attempt budget. Current mutation policy remains manual-replan-only; unsafe side effects are never auto-replayed."},
+            "max_runtime_seconds": {**integer, "minimum": 1, "maximum": 600, "default": 600, "description": "Upper bound applied to the workflow timeout budget."},
+            "max_estimated_credits": {"type": "number", "minimum": 0, "default": 0, "description": "Optional candidate-model estimated-credit ceiling; 0 disables the credit cap. Enforced before mutation when usage economics are available."},
             "objective": {**string, "description": "Concrete task objective, for example 'find and fix the login crash' or 'create a React dashboard from zero'."},
             "path": {**string, "default": ".", "description": "Project path relative to the configured workspace."},
             "workdir": {**string, "description": "Command working directory relative to the workspace; defaults to path."},
@@ -8280,10 +8570,11 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "dry_run": {**boolean, "default": False},
         }),
         "task_control": object_schema({
-            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "messages", "ack", "handoff"], "default": "get"},
+            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "events", "messages", "ack", "handoff"], "default": "get"},
             "run_id": {**string, "description": "Optional orchestration run id; defaults to the current task projection."},
             "wave_id": {**string, "description": "Optional orchestration wave id; defaults to the current task projection."},
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
+            "after_seq": {**integer, "minimum": 0, "default": 0, "description": "Durable orchestration event sequence cursor for action=events."},
             "wait_ms": {**integer, "minimum": 0, "maximum": 60000, "default": 0, "description": "Wait up to this many milliseconds for a background operation before returning control."},
             "lane_action": {**string, "enum": ["list", "start", "continue", "observe", "close"], "default": "list", "description": "Manage a durable Codex App Server lane without adding another top-level tool."},
             "lane_id": {**string, "description": "Durable lane id returned by lane_action=start or list."},
@@ -8334,10 +8625,12 @@ def input_schemas() -> dict[str, dict[str, Any]]:
         }, ["operations"]),
         "command_control": object_schema({
             "action": {**string, "enum": ["poll", "write", "kill", "read"], "default": "poll"},
-            "session_id": string,
+            "command_id": {**string, "description": "Preferred command handle returned by exec_command."},
+            "session_id": {**string, "description": "Deprecated compatibility alias for command_id."},
             "chars": string,
             "yield_time_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 10000},
             "max_output_bytes": {**integer, "minimum": 1, "maximum": 1048576, "default": 65536},
+            "consumer_id": {**string, "maxLength": 128, "description": "Optional independent poll cursor identity so multiple clients do not consume each other's command output."},
             "verbosity": {**string, "enum": ["summary", "preview", "full"], "default": "summary"},
             "signal": {**string, "enum": ["TERM", "KILL", "INT"], "default": "TERM"},
             "wait_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 3000},
@@ -8682,9 +8975,28 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         )
 
     def do_GET(self) -> None:
+        if (
+            posixpath.normpath(self.path.split("?", 1)[0]) == MCP_ENDPOINT_PATH
+            and self.headers.get("MCP-Protocol-Version") == STATELESS_PROTOCOL_VERSION
+            and stateless_http_2026_enabled()
+        ):
+            self.send_rpc_error(-32601, "GET is not supported by stateless MCP 2026-07-28", status=405)
+            return
         self.handle_metadata_request(head_only=False)
 
     def do_HEAD(self) -> None:
+        if (
+            posixpath.normpath(self.path.split("?", 1)[0]) == MCP_ENDPOINT_PATH
+            and self.headers.get("MCP-Protocol-Version") == STATELESS_PROTOCOL_VERSION
+            and stateless_http_2026_enabled()
+        ):
+            self.send_rpc_error(
+                -32601,
+                "HEAD is not supported by stateless MCP 2026-07-28",
+                status=405,
+                head_only=True,
+            )
+            return
         self.handle_metadata_request(head_only=True)
 
     def do_DELETE(self) -> None:
@@ -8694,6 +9006,12 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             return
         if not self.is_authorized():
             self.send_unauthorized()
+            return
+        if (
+            self.headers.get("MCP-Protocol-Version") == STATELESS_PROTOCOL_VERSION
+            and stateless_http_2026_enabled()
+        ):
+            self.send_rpc_error(-32601, "DELETE is not supported by stateless MCP 2026-07-28", status=405)
             return
         session_id = self.headers.get("Mcp-Session-Id")
         if not session_id or not self.server.sessions.delete(session_id):  # type: ignore[attr-defined]
@@ -8925,6 +9243,68 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             )
             return
         method = request.get("method")
+        body_protocol_version = request_protocol_version(request)
+        modern_marker = (
+            protocol_version == STATELESS_PROTOCOL_VERSION
+            or body_protocol_version == STATELESS_PROTOCOL_VERSION
+        )
+        if modern_marker and not stateless_http_2026_enabled():
+            self.send_rpc_error(
+                -32022,
+                "MCP 2026-07-28 stateless HTTP canary is disabled",
+                status=400,
+                request_id=request.get("id"),
+                data={
+                    "supported": list(LEGACY_PROTOCOL_VERSIONS),
+                    "requested": STATELESS_PROTOCOL_VERSION,
+                    "enable_with": STATELESS_HTTP_2026_ENV,
+                },
+            )
+            return
+        if modern_marker:
+            if protocol_version != STATELESS_PROTOCOL_VERSION or body_protocol_version != STATELESS_PROTOCOL_VERSION:
+                self.send_rpc_error(
+                    -32020,
+                    "Header mismatch: MCP-Protocol-Version must match params._meta protocolVersion",
+                    status=400,
+                    request_id=request.get("id"),
+                )
+                return
+            header_method = self.headers.get("Mcp-Method")
+            if header_method != method:
+                self.send_rpc_error(
+                    -32020,
+                    "Header mismatch: required Mcp-Method must match the JSON-RPC method",
+                    status=400,
+                    request_id=request.get("id"),
+                    data={"header": header_method, "body": method},
+                )
+                return
+            body_name = _request_mcp_name(request)
+            if method in {"tools/call", "prompts/get", "resources/read"}:
+                header_name_raw = self.headers.get("Mcp-Name")
+                header_name = _decode_mcp_name_header(header_name_raw) if header_name_raw else None
+                if not body_name or header_name != body_name:
+                    self.send_rpc_error(
+                        -32020,
+                        "Header mismatch: required Mcp-Name must match the named request",
+                        status=400,
+                        request_id=request.get("id"),
+                        data={"header": header_name, "body": body_name},
+                    )
+                    return
+            self._runtime = self.server.control_runtime  # type: ignore[attr-defined]
+            self._send_session_header = False
+            response = self.handle_rpc(request, stateless_2026=True)
+            if response is None:
+                self.send_response(202)
+                self.send_cors_headers()
+                self.end_headers()
+                return
+            error = response.get("error") if isinstance(response, dict) else None
+            status = 404 if isinstance(error, dict) and error.get("code") == -32601 else 200
+            self.send_json(response, status=status)
+            return
         session_id = self.headers.get("Mcp-Session-Id")
         created_session = False
         if method == "initialize":
@@ -8998,9 +9378,14 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             return
         self.send_json(response)
 
-    def handle_rpc(self, request: dict[str, Any]) -> dict[str, Any] | None:
+    def handle_rpc(
+        self,
+        request: dict[str, Any],
+        *,
+        stateless_2026: bool = False,
+    ) -> dict[str, Any] | None:
         try:
-            return dispatch_rpc(self.runtime, request)
+            return dispatch_rpc(self.runtime, request, stateless_2026=stateless_2026)
         except Exception as exc:  # noqa: BLE001 - HTTP must always answer with JSON-RPC
             return jsonrpc_error(response_id(request), -32603, str(exc))
 
@@ -9367,7 +9752,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS")
             self.send_header(
                 "Access-Control-Allow-Headers",
-                "Accept, Authorization, Content-Type, MCP-Protocol-Version, Mcp-Session-Id",
+                "Accept, Authorization, Content-Type, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id",
             )
 
     def send_json(

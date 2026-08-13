@@ -6,7 +6,9 @@ from .errors import JsonRpcError
 
 
 PROTOCOL_VERSION = "2025-11-25"
-SUPPORTED_PROTOCOL_VERSIONS = (PROTOCOL_VERSION, "2025-06-18")
+STATELESS_PROTOCOL_VERSION = "2026-07-28"
+LEGACY_PROTOCOL_VERSIONS = (PROTOCOL_VERSION, "2025-06-18")
+SUPPORTED_PROTOCOL_VERSIONS = (STATELESS_PROTOCOL_VERSION, *LEGACY_PROTOCOL_VERSIONS)
 
 
 def jsonrpc_error(
@@ -59,11 +61,11 @@ def validate_initialize_params(params: dict[str, Any]) -> str:
     requested = params.get("protocolVersion")
     if requested is None:
         return PROTOCOL_VERSION
-    if not protocol_version_is_supported(requested):
+    if not legacy_protocol_version_is_supported(requested):
         raise JsonRpcError(
             -32602,
             "Unsupported MCP protocol version",
-            {"supported": list(SUPPORTED_PROTOCOL_VERSIONS), "received": requested},
+            {"supported": list(LEGACY_PROTOCOL_VERSIONS), "received": requested},
         )
     return str(requested)
 
@@ -77,7 +79,65 @@ def protocol_version_is_supported(version: Any) -> bool:
     return isinstance(version, str) and version in SUPPORTED_PROTOCOL_VERSIONS
 
 
-def dispatch_rpc(runtime: Any, request: dict[str, Any]) -> dict[str, Any] | None:
+def legacy_protocol_version_is_supported(version: Any) -> bool:
+    return isinstance(version, str) and version in LEGACY_PROTOCOL_VERSIONS
+
+
+def request_protocol_version(request: dict[str, Any]) -> str | None:
+    params = request.get("params")
+    if not isinstance(params, dict):
+        return None
+    meta = params.get("_meta")
+    if not isinstance(meta, dict):
+        return None
+    value = meta.get("io.modelcontextprotocol/protocolVersion")
+    return value if isinstance(value, str) else None
+
+
+def validate_stateless_request_meta(request: dict[str, Any]) -> None:
+    params = rpc_params(request)
+    meta = params.get("_meta")
+    if not isinstance(meta, dict):
+        raise JsonRpcError(-32602, "Invalid params: MCP 2026-07-28 requests require params._meta")
+    version = meta.get("io.modelcontextprotocol/protocolVersion")
+    if version != STATELESS_PROTOCOL_VERSION:
+        raise JsonRpcError(-32602, "Invalid params: MCP 2026-07-28 requests require matching params._meta protocolVersion")
+    if request.get("id") is not None:
+        capabilities = meta.get("io.modelcontextprotocol/clientCapabilities")
+        if not isinstance(capabilities, dict):
+            raise JsonRpcError(-32602, "Invalid params: MCP 2026-07-28 requests require params._meta clientCapabilities")
+        client_info = meta.get("io.modelcontextprotocol/clientInfo")
+        if client_info is not None and not (
+            isinstance(client_info, dict)
+            and isinstance(client_info.get("name"), str)
+            and isinstance(client_info.get("version"), str)
+        ):
+            raise JsonRpcError(-32602, "Invalid params: params._meta clientInfo must contain string name and version fields when present")
+
+
+def _stateless_result(runtime: Any, result: dict[str, Any], *, cacheable: bool) -> dict[str, Any]:
+    decorated = dict(result)
+    decorated.setdefault("resultType", "complete")
+    if cacheable:
+        decorated.setdefault("ttlMs", 0)
+        decorated.setdefault("cacheScope", "private")
+    meta = decorated.get("_meta")
+    if not isinstance(meta, dict):
+        meta = {}
+        decorated["_meta"] = meta
+    meta.setdefault(
+        "io.modelcontextprotocol/serverInfo",
+        {"name": "coding-tools-mcp", "version": str(runtime.server_info_payload().get("version", ""))},
+    )
+    return decorated
+
+
+def dispatch_rpc(
+    runtime: Any,
+    request: dict[str, Any],
+    *,
+    stateless_2026: bool = False,
+) -> dict[str, Any] | None:
     """Dispatch one MCP JSON-RPC request against a runtime, shared by all transports.
 
     Handshake state lives on ``runtime.initialized``; transports add only their
@@ -90,9 +150,22 @@ def dispatch_rpc(runtime: Any, request: dict[str, Any]) -> dict[str, Any] | None
         validate_rpc_envelope(request)
         method = request["method"]
         params = rpc_params(request)
-        if not runtime.initialized and method not in {"initialize", "ping", "server/discover"}:
+        if stateless_2026:
+            validate_stateless_request_meta(request)
+        if not stateless_2026 and not runtime.initialized and method not in {"initialize", "ping", "server/discover"}:
             raise JsonRpcError(-32002, "Server not initialized")
-        if method == "initialize":
+        if method == "server/discover" and stateless_2026:
+            result = _stateless_result(
+                runtime,
+                {
+                    "supportedVersions": list(SUPPORTED_PROTOCOL_VERSIONS),
+                    "capabilities": {"tools": {"listChanged": False}},
+                },
+                cacheable=True,
+            )
+        elif stateless_2026 and method in {"initialize", "ping", "notifications/initialized", "notifications/cancelled"}:
+            raise JsonRpcError(-32601, f"Unknown method: {method}")
+        elif method == "initialize":
             validate_initialize_request(request)
             runtime.protocol_version = validate_initialize_params(params)
             client_info = params.get("clientInfo")
@@ -116,6 +189,8 @@ def dispatch_rpc(runtime: Any, request: dict[str, Any]) -> dict[str, Any] | None
             }
         elif method == "tools/list":
             result = runtime.list_tools()
+            if stateless_2026:
+                result = _stateless_result(runtime, result, cacheable=True)
         elif method == "tools/call":
             if not isinstance(params.get("name"), str):
                 raise JsonRpcError(-32602, "tools/call requires a tool name")
@@ -123,6 +198,8 @@ def dispatch_rpc(runtime: Any, request: dict[str, Any]) -> dict[str, Any] | None
             if not isinstance(arguments, dict):
                 raise JsonRpcError(-32602, "tools/call arguments must be an object")
             result = runtime.call_tool(params["name"], arguments, request_id=request_id)
+            if stateless_2026:
+                result = _stateless_result(runtime, result, cacheable=False)
         else:
             raise JsonRpcError(-32601, f"Unknown method: {method}")
         if request_id is None:

@@ -13,6 +13,8 @@ from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_tail
 
 
 SESSION_BUFFER_BYTES = 524_288
+SESSION_HEAD_DIVISOR = 8
+MAX_CONSUMER_CURSORS = 16
 HARD_KILL_SIGNAL = getattr(signal, "SIGKILL", signal.SIGTERM)
 
 
@@ -23,15 +25,31 @@ def terminate_process_group(
     force: bool = False,
 ) -> None:
     if not hasattr(os, "killpg"):
-        if os.name == "nt" and not force:
-            event = getattr(signal, "CTRL_BREAK_EVENT", None)
-            if event is not None:
+        if os.name == "nt":
+            # A shell-backed command can exit before its child process, so
+            # waiting only for the Popen shell is not evidence that the command
+            # tree is gone.  Use the same tree-oriented Windows primitive as the
+            # Codex sidecar: /T owns descendants and /F makes cancellation
+            # deterministic even when the child ignores CTRL_BREAK.
+            try:
+                subprocess.run(
+                    ["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=3,
+                    check=False,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
                 try:
-                    process.send_signal(event)
                     process.wait(timeout=1)
-                    return
-                except Exception:
+                except subprocess.TimeoutExpired:
                     pass
+                return
+            except (OSError, subprocess.SubprocessError):
+                # Fall through to the direct Popen fallback only when taskkill is
+                # unavailable.  The caller will still refresh and report the
+                # actual process state rather than assuming success.
+                pass
         try:
             if force:
                 process.kill()
@@ -121,16 +139,25 @@ class ExecSession:
     process: subprocess.Popen[bytes]
     timeout_at: float | None = None
     warnings: list[str] = field(default_factory=list)
+    # Keep a frozen head plus a rolling tail. This preserves startup warnings and
+    # first/root-cause errors while still retaining the newest progress. stdout /
+    # stderr remain the rolling-tail fields for compatibility with older call
+    # sites; the new *_head fields hold the immutable prefix.
+    stdout_head: bytearray = field(default_factory=bytearray)
+    stderr_head: bytearray = field(default_factory=bytearray)
     stdout: bytearray = field(default_factory=bytearray)
     stderr: bytearray = field(default_factory=bytearray)
     stdout_start_offset: int = 0
     stderr_start_offset: int = 0
     stdout_cursor: int = 0
     stderr_cursor: int = 0
+    consumer_cursors: dict[str, tuple[int, int, float]] = field(default_factory=dict)
     stdout_total_bytes: int = 0
     stderr_total_bytes: int = 0
     stdout_dropped_bytes: int = 0
     stderr_dropped_bytes: int = 0
+    stdout_evict_events: int = 0
+    stderr_evict_events: int = 0
     buffer_limit: int = SESSION_BUFFER_BYTES
     lock: threading.Lock = field(default_factory=threading.Lock)
     reader_threads: list[threading.Thread] = field(default_factory=list)
@@ -147,28 +174,32 @@ class ExecSession:
     @property
     def retained_bytes(self) -> int:
         with self.lock:
-            return len(self.stdout) + len(self.stderr)
+            return len(self.stdout_head) + len(self.stdout) + len(self.stderr_head) + len(self.stderr)
 
     def append_stdout(self, chunk: bytes) -> None:
         with self.lock:
-            self.stdout.extend(chunk)
-            self.stdout_total_bytes += len(chunk)
-            self.stdout_dropped_bytes += _trim_buffer(
-                self.stdout,
-                total_bytes=self.stdout_total_bytes,
-                start_offset_attr="stdout_start_offset",
-                session=self,
+            _append_retained_stream(
+                self,
+                head=self.stdout_head,
+                tail=self.stdout,
+                chunk=chunk,
+                total_attr="stdout_total_bytes",
+                tail_start_attr="stdout_start_offset",
+                dropped_attr="stdout_dropped_bytes",
+                evict_events_attr="stdout_evict_events",
             )
 
     def append_stderr(self, chunk: bytes) -> None:
         with self.lock:
-            self.stderr.extend(chunk)
-            self.stderr_total_bytes += len(chunk)
-            self.stderr_dropped_bytes += _trim_buffer(
-                self.stderr,
-                total_bytes=self.stderr_total_bytes,
-                start_offset_attr="stderr_start_offset",
-                session=self,
+            _append_retained_stream(
+                self,
+                head=self.stderr_head,
+                tail=self.stderr,
+                chunk=chunk,
+                total_attr="stderr_total_bytes",
+                tail_start_attr="stderr_start_offset",
+                dropped_attr="stderr_dropped_bytes",
+                evict_events_attr="stderr_evict_events",
             )
 
     def write_input(self, data: bytes) -> None:
@@ -195,17 +226,36 @@ class ExecSession:
             except OSError:
                 pass
 
-    def snapshot_since_cursor(self, max_output_bytes: int) -> dict[str, Any]:
+    def snapshot_since_cursor(
+        self,
+        max_output_bytes: int,
+        *,
+        consumer_id: str = "",
+    ) -> dict[str, Any]:
         self.refresh_status()
+        consumer = str(consumer_id or "").strip()[:128]
         with self.lock:
-            stdout_omitted = max(0, self.stdout_start_offset - self.stdout_cursor)
-            stderr_omitted = max(0, self.stderr_start_offset - self.stderr_cursor)
-            stdout_start = max(0, self.stdout_cursor - self.stdout_start_offset)
-            stderr_start = max(0, self.stderr_cursor - self.stderr_start_offset)
-            stdout_bytes = bytes(self.stdout[stdout_start:])
-            stderr_bytes = bytes(self.stderr[stderr_start:])
-            self.stdout_cursor = self.stdout_total_bytes
-            self.stderr_cursor = self.stderr_total_bytes
+            if consumer:
+                prior = self.consumer_cursors.get(consumer, (0, 0, 0.0))
+                stdout_cursor, stderr_cursor = int(prior[0]), int(prior[1])
+            else:
+                stdout_cursor, stderr_cursor = self.stdout_cursor, self.stderr_cursor
+            stdout_bytes, stdout_omitted = self._unread_stream_locked("stdout", stdout_cursor)
+            stderr_bytes, stderr_omitted = self._unread_stream_locked("stderr", stderr_cursor)
+            stdout_retention = self._stream_metrics_locked("stdout")
+            stderr_retention = self._stream_metrics_locked("stderr")
+            if consumer:
+                if consumer not in self.consumer_cursors and len(self.consumer_cursors) >= MAX_CONSUMER_CURSORS:
+                    oldest = min(self.consumer_cursors, key=lambda key: self.consumer_cursors[key][2])
+                    self.consumer_cursors.pop(oldest, None)
+                self.consumer_cursors[consumer] = (
+                    self.stdout_total_bytes,
+                    self.stderr_total_bytes,
+                    time.time(),
+                )
+            else:
+                self.stdout_cursor = self.stdout_total_bytes
+                self.stderr_cursor = self.stderr_total_bytes
         stdout_truncation = truncate_output_bytes_tail(stdout_bytes, max_output_bytes)
         stderr_truncation = truncate_output_bytes_tail(stderr_bytes, max_output_bytes)
         if self.timed_out:
@@ -217,7 +267,9 @@ class ExecSession:
         else:
             status = "running" if self.process.poll() is None else "exited"
         payload: dict[str, Any] = {
+            "command_id": self.session_id,
             "session_id": self.session_id,
+            "consumer_id": consumer or None,
             "status": status,
             "exit_code": self.exit_code,
             "signal": self.signal_name,
@@ -236,6 +288,10 @@ class ExecSession:
             "stderr_dropped_bytes": self.stderr_dropped_bytes,
             "stdout_omitted_bytes": stdout_omitted,
             "stderr_omitted_bytes": stderr_omitted,
+            "output_retention": {
+                "stdout": stdout_retention,
+                "stderr": stderr_retention,
+            },
             "truncated": (
                 stdout_truncation.truncated
                 or stderr_truncation.truncated
@@ -285,8 +341,8 @@ class ExecSession:
 
     def retained_output_bytes(self) -> bytes:
         with self.lock:
-            stdout = bytes(self.stdout)
-            stderr = bytes(self.stderr)
+            stdout = self._retained_stream_display_locked("stdout")
+            stderr = self._retained_stream_display_locked("stderr")
         sections: list[bytes] = []
         if stdout:
             sections.extend([b"--- stdout ---\n", stdout])
@@ -297,12 +353,132 @@ class ExecSession:
         return b"".join(sections)
 
     def retained_stream_bytes(self, stream: str) -> tuple[bytes, int, int, int]:
+        """Compatibility view of one retained stream.
+
+        Before eviction the stream is contiguous and starts at offset zero. Once
+        a middle gap exists, this legacy view returns the rolling tail and its
+        logical start offset. New paging code should use retained_stream_window().
+        """
         with self.lock:
-            if stream == "stdout":
-                return bytes(self.stdout), self.stdout_start_offset, self.stdout_total_bytes, self.stdout_dropped_bytes
-            if stream == "stderr":
-                return bytes(self.stderr), self.stderr_start_offset, self.stderr_total_bytes, self.stderr_dropped_bytes
+            head, tail, tail_start, total, dropped, _events = self._stream_components_locked(stream)
+            head_end = len(head)
+            if tail_start <= head_end:
+                return bytes(head) + bytes(tail), 0, total, dropped
+            return bytes(tail), tail_start, total, dropped
+
+    def retained_stream_metrics(self, stream: str) -> dict[str, int]:
+        with self.lock:
+            return self._stream_metrics_locked(stream)
+
+    def retained_stream_window(self, stream: str, offset: int, limit: int) -> dict[str, Any]:
+        """Read one logical stream range without pretending the evicted middle exists."""
+        requested = max(0, int(offset))
+        limit = max(1, int(limit))
+        with self.lock:
+            head, tail, tail_start, total, dropped, events = self._stream_components_locked(stream)
+            head_end = len(head)
+            gap = max(0, tail_start - head_end)
+            actual = min(requested, total)
+            omitted = 0
+
+            if gap == 0:
+                retained = bytes(head) + bytes(tail)
+                chunk = retained[actual : actual + limit]
+            elif actual < head_end:
+                chunk = bytes(head[actual : min(head_end, actual + limit)])
+            else:
+                if actual < tail_start:
+                    omitted = tail_start - actual
+                    actual = tail_start
+                tail_index = max(0, actual - tail_start)
+                chunk = bytes(tail[tail_index : tail_index + limit])
+
+            consumed_to = actual + len(chunk)
+            if gap > 0 and requested < head_end and consumed_to >= head_end:
+                next_offset = tail_start if tail_start < total else None
+                omitted = gap if next_offset is not None else 0
+            else:
+                next_offset = consumed_to if consumed_to < total else None
+
+            return {
+                "data": chunk,
+                "offset": actual,
+                "requested_offset": requested,
+                "next_offset": next_offset,
+                "omitted_bytes": omitted,
+                "total_stream_bytes": total,
+                "total_retained_bytes": len(head) + len(tail),
+                "retained_start_offset": 0 if head else tail_start,
+                "tail_start_offset": tail_start,
+                "head_retained_bytes": head_end,
+                "tail_retained_bytes": len(tail),
+                "evicted_gap_bytes": gap,
+                "evict_events": events,
+                "evicted_bytes_total": dropped,
+            }
+
+    def _stream_components_locked(
+        self, stream: str
+    ) -> tuple[bytearray, bytearray, int, int, int, int]:
+        if stream == "stdout":
+            return (
+                self.stdout_head,
+                self.stdout,
+                self.stdout_start_offset,
+                self.stdout_total_bytes,
+                self.stdout_dropped_bytes,
+                self.stdout_evict_events,
+            )
+        if stream == "stderr":
+            return (
+                self.stderr_head,
+                self.stderr,
+                self.stderr_start_offset,
+                self.stderr_total_bytes,
+                self.stderr_dropped_bytes,
+                self.stderr_evict_events,
+            )
         raise ValueError(f"Unknown output stream: {stream}")
+
+    def _stream_metrics_locked(self, stream: str) -> dict[str, int]:
+        head, tail, tail_start, total, dropped, events = self._stream_components_locked(stream)
+        return {
+            "head_retained_bytes": len(head),
+            "tail_retained_bytes": len(tail),
+            "total_retained_bytes": len(head) + len(tail),
+            "total_stream_bytes": total,
+            "tail_start_offset": tail_start,
+            "evicted_gap_bytes": max(0, tail_start - len(head)),
+            "evict_events": events,
+            "evicted_bytes_total": dropped,
+        }
+
+    def _retained_stream_display_locked(self, stream: str) -> bytes:
+        head, tail, tail_start, _total, _dropped, _events = self._stream_components_locked(stream)
+        gap = max(0, tail_start - len(head))
+        if not gap:
+            return bytes(head) + bytes(tail)
+        marker = f"\n... {gap} bytes evicted from middle ...\n".encode("utf-8")
+        return bytes(head) + marker + bytes(tail)
+
+    def _unread_stream_locked(self, stream: str, cursor: int) -> tuple[bytes, int]:
+        head, tail, tail_start, total, _dropped, _events = self._stream_components_locked(stream)
+        if cursor >= total:
+            return b"", 0
+        head_end = len(head)
+        position = max(0, cursor)
+        parts: list[bytes] = []
+        if position < head_end:
+            parts.append(bytes(head[position:]))
+            position = head_end
+        omitted = 0
+        if position < tail_start:
+            omitted = tail_start - position
+            position = tail_start
+            parts.append(f"\n... {omitted} bytes evicted from middle ...\n".encode("utf-8"))
+        if position < total:
+            parts.append(bytes(tail[max(0, position - tail_start) :]))
+        return b"".join(parts), omitted
 
 
 def start_reader_threads(session: ExecSession) -> None:
@@ -379,19 +555,37 @@ def start_session_watchdog(session: ExecSession) -> None:
     ).start()
 
 
-def _trim_buffer(
-    buffer: bytearray,
-    *,
-    total_bytes: int,
-    start_offset_attr: str,
+def _append_retained_stream(
     session: ExecSession,
-) -> int:
-    overflow = len(buffer) - session.buffer_limit
-    if overflow <= 0:
-        return 0
-    del buffer[:overflow]
-    setattr(session, start_offset_attr, total_bytes - len(buffer))
-    return overflow
+    *,
+    head: bytearray,
+    tail: bytearray,
+    chunk: bytes,
+    total_attr: str,
+    tail_start_attr: str,
+    dropped_attr: str,
+    evict_events_attr: str,
+) -> None:
+    if not chunk:
+        return
+    head_limit = min(session.buffer_limit, max(1, session.buffer_limit // SESSION_HEAD_DIVISOR))
+    tail_limit = max(0, session.buffer_limit - head_limit)
+    remaining = chunk
+    if len(head) < head_limit:
+        take = min(head_limit - len(head), len(remaining))
+        head.extend(remaining[:take])
+        remaining = remaining[take:]
+    if remaining:
+        tail.extend(remaining)
+
+    total = int(getattr(session, total_attr)) + len(chunk)
+    setattr(session, total_attr, total)
+    overflow = max(0, len(tail) - tail_limit)
+    if overflow:
+        del tail[:overflow]
+        setattr(session, dropped_attr, int(getattr(session, dropped_attr)) + overflow)
+        setattr(session, evict_events_attr, int(getattr(session, evict_events_attr)) + 1)
+    setattr(session, tail_start_attr, total - len(tail))
 
 
 def truncate_output_bytes_tail(data: bytes, max_bytes: int, max_lines: int = DEFAULT_MAX_LINES) -> TextTruncation:

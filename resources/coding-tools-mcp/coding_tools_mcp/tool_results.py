@@ -49,11 +49,19 @@ def _render_error(payload: dict[str, Any]) -> str:
     code = str(error.get("code") or "TOOL_ERROR")
     message = str(error.get("message") or "Tool call failed.")
     lines = [f"{code}: {message}"]
+    category = str(error.get("category") or "runtime")
+    retryable = bool(error.get("retryable", False))
+    lines.append(f"Category: {category}.")
+    lines.append(f"Retryable: {'yes' if retryable else 'no'}.")
     raw_details = error.get("details")
     details: dict[str, Any] = raw_details if isinstance(raw_details, dict) else {}
     retry_hint = details.get("retry_hint")
     if isinstance(retry_hint, str) and retry_hint:
         lines.append(f"Retry: {retry_hint}")
+    elif retryable:
+        lines.append("Retry only after the blocking condition or call arguments change.")
+    else:
+        lines.append("Do not repeat this call unchanged.")
     diagnostics = payload.get("diagnostics")
     if isinstance(diagnostics, list):
         for item in diagnostics:

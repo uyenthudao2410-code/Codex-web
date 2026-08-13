@@ -7,13 +7,14 @@ import os
 import re
 import sqlite3
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 _MAX_TEXT = 16_000
 HANDOFF_CAPSULE_MAX_BYTES = 8_192
 _SECRET_KEY_RE = re.compile(r"(authorization|credential|password|passwd|secret|token|api[_-]?key|private[_-]?key)", re.I)
@@ -43,7 +44,7 @@ def _bounded_text(value: Any, limit: int = _MAX_TEXT) -> str:
 
 
 def _sanitize(value: Any, *, key: str = "") -> Any:
-    if _SECRET_KEY_RE.search(key):
+    if key.lower() != "fencing_token" and _SECRET_KEY_RE.search(key):
         return "[REDACTED]"
     if key.lower() in _SENSITIVE_PAYLOAD_KEYS:
         text = str(value or "")
@@ -288,6 +289,34 @@ class OrchestrationLedger:
                 );
                 CREATE INDEX IF NOT EXISTS idx_background_operations_status
                     ON background_operations(status, updated_at DESC);
+                CREATE TABLE IF NOT EXISTS write_fences (
+                    scope_key TEXT PRIMARY KEY,
+                    fencing_token INTEGER NOT NULL DEFAULT 0,
+                    lease_id TEXT NOT NULL DEFAULT '',
+                    owner TEXT NOT NULL DEFAULT '',
+                    run_id TEXT NOT NULL DEFAULT '',
+                    wave_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'released',
+                    expires_at REAL NOT NULL DEFAULT 0,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_write_fences_status
+                    ON write_fences(status, expires_at);
+                CREATE TABLE IF NOT EXISTS idempotency_records (
+                    idempotency_key TEXT PRIMARY KEY,
+                    operation TEXT NOT NULL,
+                    request_hash TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    process_instance_id TEXT NOT NULL DEFAULT '',
+                    run_id TEXT NOT NULL DEFAULT '',
+                    wave_id TEXT NOT NULL DEFAULT '',
+                    started_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    finished_at TEXT,
+                    summary_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE INDEX IF NOT EXISTS idx_idempotency_records_status
+                    ON idempotency_records(status, updated_at DESC);
                 """
             )
             connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
@@ -488,6 +517,30 @@ class OrchestrationLedger:
         with self._lock, self._connect() as connection:
             rows = connection.execute(query, params).fetchall()
         return [self._event_row(row) for row in rows]
+
+    def list_events_since(
+        self,
+        run_id: str,
+        *,
+        after_seq: int = 0,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        bounded_limit = max(1, min(int(limit), 500))
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM events WHERE run_id=? AND seq>? ORDER BY seq LIMIT ?",
+                (run_id, max(0, int(after_seq)), bounded_limit + 1),
+            ).fetchall()
+        has_more = len(rows) > bounded_limit
+        selected = rows[:bounded_limit]
+        events = [self._event_row(row) for row in selected]
+        return {
+            "run_id": run_id,
+            "after_seq": max(0, int(after_seq)),
+            "events": events,
+            "next_after_seq": int(events[-1]["seq"]) if events else max(0, int(after_seq)),
+            "has_more": has_more,
+        }
 
     def latest_event(self, run_id: str, *, event_types: set[str] | None = None) -> dict[str, Any] | None:
         with self._lock, self._connect() as connection:
@@ -1171,6 +1224,281 @@ class OrchestrationLedger:
                 (max(1, min(int(limit), 200)),),
             ).fetchall()
         return [self._background_row(row) for row in rows]
+
+    def acquire_write_fence(
+        self,
+        *,
+        scope_key: str,
+        lease_id: str,
+        owner: str,
+        run_id: str,
+        wave_id: str,
+        ttl_seconds: float = 60.0,
+    ) -> dict[str, Any]:
+        now = time.time()
+        ttl = max(0.05, float(ttl_seconds))
+        expires_at = now + ttl
+        scope = _bounded_text(scope_key or "workspace", 256)
+        lease = _bounded_text(lease_id, 256)
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM write_fences WHERE scope_key=?", (scope,)).fetchone()
+            if row and row["status"] == "active" and float(row["expires_at"] or 0) > now and row["lease_id"] != lease:
+                current = self._write_fence_row(row)
+                connection.commit()
+                return {"acquired": False, "reason": "active_lease", "current": current}
+            token = int(row["fencing_token"] or 0) + 1 if row else 1
+            connection.execute(
+                """INSERT INTO write_fences(
+                    scope_key,fencing_token,lease_id,owner,run_id,wave_id,status,expires_at,updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(scope_key) DO UPDATE SET
+                    fencing_token=excluded.fencing_token,lease_id=excluded.lease_id,owner=excluded.owner,
+                    run_id=excluded.run_id,wave_id=excluded.wave_id,status='active',
+                    expires_at=excluded.expires_at,updated_at=excluded.updated_at""",
+                (scope, token, lease, _bounded_text(owner, 200), _bounded_text(run_id, 256), _bounded_text(wave_id, 256), "active", expires_at, utc_now()),
+            )
+            connection.commit()
+        return {
+            "acquired": True,
+            "scope_key": scope,
+            "lease_id": lease,
+            "owner": owner,
+            "run_id": run_id,
+            "wave_id": wave_id,
+            "fencing_token": token,
+            "expires_at": expires_at,
+            "status": "active",
+        }
+
+    @staticmethod
+    def _write_fence_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "scope_key": row["scope_key"],
+            "fencing_token": int(row["fencing_token"] or 0),
+            "lease_id": row["lease_id"],
+            "owner": row["owner"],
+            "run_id": row["run_id"],
+            "wave_id": row["wave_id"],
+            "status": row["status"],
+            "expires_at": float(row["expires_at"] or 0),
+            "updated_at": row["updated_at"],
+        }
+
+    def get_write_fence(self, scope_key: str = "workspace") -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute("SELECT * FROM write_fences WHERE scope_key=?", (_bounded_text(scope_key, 256),)).fetchone()
+        return self._write_fence_row(row) if row else None
+
+    def assert_write_fence(
+        self,
+        *,
+        scope_key: str,
+        lease_id: str,
+        fencing_token: int,
+        owner: str,
+    ) -> dict[str, Any]:
+        now = time.time()
+        with self._lock, self._connect() as connection:
+            row = connection.execute("SELECT * FROM write_fences WHERE scope_key=?", (_bounded_text(scope_key, 256),)).fetchone()
+            if not row:
+                return {"valid": False, "reason": "missing"}
+            current = self._write_fence_row(row)
+            if current["status"] != "active":
+                return {"valid": False, "reason": "inactive", "current": current}
+            if current["expires_at"] <= now:
+                connection.execute(
+                    "UPDATE write_fences SET status='expired', updated_at=? WHERE scope_key=? AND fencing_token=?",
+                    (utc_now(), current["scope_key"], current["fencing_token"]),
+                )
+                current["status"] = "expired"
+                return {"valid": False, "reason": "expired", "current": current}
+            if current["lease_id"] != lease_id or current["fencing_token"] != int(fencing_token) or current["owner"] != owner:
+                return {"valid": False, "reason": "stale", "current": current}
+            return {"valid": True, "current": current}
+
+    def renew_write_fence(
+        self,
+        *,
+        scope_key: str,
+        lease_id: str,
+        fencing_token: int,
+        owner: str,
+        ttl_seconds: float = 60.0,
+    ) -> dict[str, Any]:
+        check = self.assert_write_fence(
+            scope_key=scope_key, lease_id=lease_id, fencing_token=fencing_token, owner=owner
+        )
+        if not check.get("valid"):
+            return {"renewed": False, **check}
+        expires_at = time.time() + max(0.05, float(ttl_seconds))
+        with self._lock, self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE write_fences SET expires_at=?, updated_at=?
+                WHERE scope_key=? AND lease_id=? AND fencing_token=? AND owner=? AND status='active'""",
+                (expires_at, utc_now(), _bounded_text(scope_key, 256), _bounded_text(lease_id, 256), int(fencing_token), _bounded_text(owner, 200)),
+            )
+        return {"renewed": bool(cursor.rowcount), "expires_at": expires_at, "fencing_token": int(fencing_token)}
+
+    def release_write_fence(
+        self,
+        *,
+        scope_key: str,
+        lease_id: str,
+        fencing_token: int,
+        owner: str,
+    ) -> bool:
+        with self._lock, self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE write_fences SET status='released', updated_at=?
+                WHERE scope_key=? AND lease_id=? AND fencing_token=? AND owner=? AND status='active'""",
+                (utc_now(), _bounded_text(scope_key, 256), _bounded_text(lease_id, 256), int(fencing_token), _bounded_text(owner, 200)),
+            )
+        return bool(cursor.rowcount)
+
+    @staticmethod
+    def _idempotency_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "idempotency_key": row["idempotency_key"],
+            "operation": row["operation"],
+            "request_hash": row["request_hash"],
+            "status": row["status"],
+            "process_instance_id": row["process_instance_id"],
+            "run_id": row["run_id"],
+            "wave_id": row["wave_id"],
+            "started_at": row["started_at"],
+            "updated_at": row["updated_at"],
+            "finished_at": row["finished_at"],
+            "summary": json.loads(row["summary_json"] or "{}"),
+        }
+
+    def claim_idempotency(
+        self,
+        *,
+        idempotency_key: str,
+        operation: str,
+        request_hash: str,
+        process_instance_id: str,
+        run_id: str = "",
+        wave_id: str = "",
+    ) -> dict[str, Any]:
+        key = _bounded_text(idempotency_key, 128)
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT * FROM idempotency_records WHERE idempotency_key=?", (key,)
+            ).fetchone()
+            if row:
+                existing = self._idempotency_row(row)
+                connection.commit()
+                if existing["operation"] != operation or existing["request_hash"] != request_hash:
+                    return {"claimed": False, "reason": "conflict", "record": existing}
+                return {"claimed": False, "reason": existing["status"], "record": existing}
+            connection.execute(
+                """INSERT INTO idempotency_records(
+                    idempotency_key,operation,request_hash,status,process_instance_id,
+                    run_id,wave_id,started_at,updated_at,finished_at,summary_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    key,
+                    _bounded_text(operation, 100),
+                    _bounded_text(request_hash, 128),
+                    "in_progress",
+                    _bounded_text(process_instance_id, 256),
+                    _bounded_text(run_id, 256),
+                    _bounded_text(wave_id, 256),
+                    now,
+                    now,
+                    None,
+                    "{}",
+                ),
+            )
+            connection.commit()
+        return {
+            "claimed": True,
+            "reason": "new",
+            "record": {
+                "idempotency_key": key,
+                "operation": operation,
+                "request_hash": request_hash,
+                "status": "in_progress",
+                "process_instance_id": process_instance_id,
+                "run_id": run_id,
+                "wave_id": wave_id,
+                "started_at": now,
+                "updated_at": now,
+                "finished_at": None,
+                "summary": {},
+            },
+        }
+
+    def finish_idempotency(
+        self,
+        idempotency_key: str,
+        *,
+        request_hash: str,
+        status: str,
+        summary: dict[str, Any] | None = None,
+        run_id: str = "",
+        wave_id: str = "",
+    ) -> dict[str, Any] | None:
+        now = utc_now()
+        key = _bounded_text(idempotency_key, 128)
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT request_hash FROM idempotency_records WHERE idempotency_key=?", (key,)
+            ).fetchone()
+            if not row or str(row["request_hash"]) != request_hash:
+                return None
+            connection.execute(
+                """UPDATE idempotency_records
+                SET status=?, run_id=CASE WHEN ?<>'' THEN ? ELSE run_id END,
+                    wave_id=CASE WHEN ?<>'' THEN ? ELSE wave_id END,
+                    updated_at=?, finished_at=?, summary_json=?
+                WHERE idempotency_key=? AND request_hash=?""",
+                (
+                    _bounded_text(status, 64),
+                    run_id, _bounded_text(run_id, 256),
+                    wave_id, _bounded_text(wave_id, 256),
+                    now,
+                    now,
+                    _json(_sanitize(summary or {})),
+                    key,
+                    request_hash,
+                ),
+            )
+            updated = connection.execute(
+                "SELECT * FROM idempotency_records WHERE idempotency_key=?", (key,)
+            ).fetchone()
+        return self._idempotency_row(updated) if updated else None
+
+    def get_idempotency(self, idempotency_key: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM idempotency_records WHERE idempotency_key=?",
+                (_bounded_text(idempotency_key, 128),),
+            ).fetchone()
+        return self._idempotency_row(row) if row else None
+
+    def mark_orphaned_idempotency(self, *, current_process_instance_id: str) -> int:
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                """SELECT idempotency_key,summary_json FROM idempotency_records
+                WHERE status='in_progress' AND process_instance_id<>?""",
+                (current_process_instance_id,),
+            ).fetchall()
+            for row in rows:
+                summary = json.loads(row["summary_json"] or "{}")
+                summary["outcome_unknown_reason"] = "mcp_process_restarted"
+                connection.execute(
+                    """UPDATE idempotency_records
+                    SET status='unknown', updated_at=?, finished_at=?, summary_json=?
+                    WHERE idempotency_key=?""",
+                    (now, now, _json(_sanitize(summary)), row["idempotency_key"]),
+                )
+        return len(rows)
 
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         with self._lock, self._connect() as connection:

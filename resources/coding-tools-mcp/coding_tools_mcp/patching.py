@@ -274,7 +274,15 @@ def _fsync_directory(directory: Path) -> None:
 
 
 def parse_patch(patch: str) -> list[PatchOperation]:
-    lines = patch.splitlines()
+    # Patch syntax is LF-delimited. str.splitlines() is intentionally avoided:
+    # Python treats several Unicode/control characters (for example \x0c, \x85,
+    # U+2028 and U+2029) as line boundaries, which can silently rewrite bytes
+    # that were only patch content. Normalize CRLF transport framing and split
+    # on literal LF only.
+    normalized_patch = patch.replace("\r\n", "\n")
+    lines = normalized_patch.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
     if not lines or lines[0].strip() != "*** Begin Patch" or lines[-1].strip() != "*** End Patch":
         raise ToolFailure("PATCH_FAILED", "Patch must use *** Begin Patch / *** End Patch envelope.", category="validation")
     operations: list[PatchOperation] = []
@@ -332,7 +340,15 @@ def apply_update_hunks(content: str, hunks: list[list[str]], path: str = "<patch
     line_ending = detect_line_ending(text)
     normalized = normalize_to_lf(text)
     had_trailing_newline = normalized.endswith("\n")
-    lines = normalized.splitlines()
+    # Preserve every non-LF code point exactly. splitlines() would treat Unicode
+    # separators/control characters as structural newlines and corrupt unrelated
+    # content when the file is joined again after applying a hunk.
+    if normalized == "":
+        lines: list[str] = []
+    else:
+        lines = normalized.split("\n")
+        if had_trailing_newline:
+            lines.pop()
     parsed = [parse_update_hunk(hunk) for hunk in hunks]
     matched: list[MatchedHunk] = []
     for index, hunk in enumerate(parsed):

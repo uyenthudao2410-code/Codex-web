@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -91,6 +92,53 @@ class OrchestrationControlTests(unittest.TestCase):
             self.assertEqual(recovered.state, "EXECUTING")
             self.assertIsNotNone(recovered.write_lease)
             self.assertEqual(recovered.write_lease.lease_id, lease.lease_id)
+
+
+    def test_workspace_fence_blocks_concurrent_writer_and_increments_after_release(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            first_control = OrchestrationControl(root, ledger)
+            first = first_control.begin(objective="first", task_id="t1", execution_mode="mcp_only", base_head="a", worktree_fp="w1")
+            first_control.mark_ready(first)
+            first_control.select_route(first, {"requested": "auto", "selected": "deterministic"})
+            lease1 = first_control.acquire_write_lease(first, owner="MCP", mode="mcp_only")
+            self.assertEqual(lease1.fencing_token, 1)
+
+            second_control = OrchestrationControl(root, OrchestrationLedger(root))
+            second = second_control.begin(objective="second", task_id="t2", execution_mode="mcp_only", base_head="a", worktree_fp="w2")
+            second_control.mark_ready(second)
+            second_control.select_route(second, {"requested": "auto", "selected": "deterministic"})
+            with self.assertRaises(OrchestrationControlError) as conflict:
+                second_control.acquire_write_lease(second, owner="MCP-2", mode="mcp_only")
+            self.assertEqual(conflict.exception.code, "WRITE_LEASE_CONFLICT")
+
+            first_control.revoke_write_lease(first, reason="handoff")
+            lease2 = second_control.acquire_write_lease(second, owner="MCP-2", mode="mcp_only")
+            self.assertEqual(lease2.fencing_token, 2)
+
+            first.write_lease = lease1
+            first.state = "EXECUTING"
+            with self.assertRaises(OrchestrationControlError) as stale:
+                first_control.assert_write_allowed(first, owner="MCP")
+            self.assertEqual(stale.exception.code, "STALE_WRITE_FENCE")
+
+    def test_write_lease_expiry_and_renewal_are_enforced(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            control = OrchestrationControl(root, ledger)
+            ctx = control.begin(objective="ttl", task_id="ttl", execution_mode="mcp_only", base_head="a", worktree_fp="w")
+            control.mark_ready(ctx)
+            control.select_route(ctx, {"requested": "auto", "selected": "deterministic"})
+            lease = control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only", ttl_seconds=0.08)
+            before = lease.expires_at
+            renewed = control.renew_write_lease(ctx, owner="MCP", ttl_seconds=0.15)
+            self.assertGreater(renewed.expires_at, before)
+            time.sleep(0.18)
+            with self.assertRaises(OrchestrationControlError) as expired:
+                control.assert_write_allowed(ctx, owner="MCP")
+            self.assertEqual(expired.exception.code, "WRITE_LEASE_EXPIRED")
 
 
 if __name__ == "__main__":

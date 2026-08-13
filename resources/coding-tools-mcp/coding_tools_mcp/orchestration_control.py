@@ -12,6 +12,10 @@ from typing import Any
 from .orchestration_ledger import OrchestrationLedger
 
 
+WRITE_LEASE_TTL_SECONDS = 60.0
+WRITE_FENCE_SCOPE = "workspace"
+
+
 STATES = frozenset({
     "PREFLIGHT",
     "READY",
@@ -63,6 +67,9 @@ class WriteLease:
     mode: str
     base_head: str
     worktree_fp: str
+    fencing_token: int
+    expires_at: float
+    scope_key: str = WRITE_FENCE_SCOPE
     allowed_paths: tuple[str, ...] = ()
     delegation_id: str | None = None
 
@@ -324,18 +331,36 @@ class OrchestrationControl:
         mode: str,
         allowed_paths: list[str] | None = None,
         delegation_id: str | None = None,
+        ttl_seconds: float = WRITE_LEASE_TTL_SECONDS,
     ) -> WriteLease:
         with self._lock:
             if ctx.state != "ROUTED":
                 raise OrchestrationControlError("WRITE_LEASE_OUTSIDE_ROUTED", "Write lease can only be acquired in ROUTED state.")
             if ctx.write_lease is not None:
                 raise OrchestrationControlError("WRITE_LEASE_CONFLICT", "A write lease is already active for this wave.")
+            lease_id = uuid.uuid4().hex
+            fence = self.ledger.acquire_write_fence(
+                scope_key=WRITE_FENCE_SCOPE,
+                lease_id=lease_id,
+                owner=str(owner),
+                run_id=ctx.run_id,
+                wave_id=ctx.wave_id,
+                ttl_seconds=ttl_seconds,
+            )
+            if not fence.get("acquired"):
+                raise OrchestrationControlError(
+                    "WRITE_LEASE_CONFLICT",
+                    "Another unexpired writer already holds the workspace fence.",
+                    details={"current": fence.get("current")},
+                )
             lease = WriteLease(
-                lease_id=uuid.uuid4().hex,
+                lease_id=lease_id,
                 owner=str(owner),
                 mode=str(mode),
                 base_head=ctx.base_head,
                 worktree_fp=ctx.worktree_fp,
+                fencing_token=int(fence["fencing_token"]),
+                expires_at=float(fence["expires_at"]),
                 allowed_paths=tuple(sorted({str(item).replace("\\", "/") for item in (allowed_paths or []) if str(item).strip()})),
                 delegation_id=delegation_id or ctx.delegation_id,
             )
@@ -351,6 +376,9 @@ class OrchestrationControl:
                     "lease_id": lease.lease_id,
                     "owner": lease.owner,
                     "mode": lease.mode,
+                    "fencing_token": lease.fencing_token,
+                    "expires_at": lease.expires_at,
+                    "scope_key": lease.scope_key,
                     "base_head": lease.base_head,
                     "worktree_fp": lease.worktree_fp,
                     "allowed_paths": list(lease.allowed_paths),
@@ -384,6 +412,20 @@ class OrchestrationControl:
             raise OrchestrationControlError("BASE_DRIFT", "Base HEAD changed after the write lease was acquired.")
         if worktree_fp is not None and lease.worktree_fp and worktree_fp != lease.worktree_fp:
             raise OrchestrationControlError("BASE_DRIFT", "Worktree fingerprint changed before the authorized mutation.")
+        fence = self.ledger.assert_write_fence(
+            scope_key=lease.scope_key,
+            lease_id=lease.lease_id,
+            fencing_token=lease.fencing_token,
+            owner=lease.owner,
+        )
+        if not fence.get("valid"):
+            reason = str(fence.get("reason") or "stale")
+            code = "WRITE_LEASE_EXPIRED" if reason == "expired" else "STALE_WRITE_FENCE"
+            raise OrchestrationControlError(
+                code,
+                "The workspace write fence is no longer valid; the attempt must not mutate state.",
+                details={"reason": reason, "lease_id": lease.lease_id, "fencing_token": lease.fencing_token, "current": fence.get("current")},
+            )
         if lease.allowed_paths:
             allowed = set(lease.allowed_paths)
             for raw in paths or []:
@@ -395,6 +437,41 @@ class OrchestrationControl:
                         details={"allowed_paths": sorted(allowed)},
                     )
 
+    def renew_write_lease(
+        self,
+        ctx: RunContext,
+        *,
+        owner: str,
+        ttl_seconds: float = WRITE_LEASE_TTL_SECONDS,
+    ) -> WriteLease:
+        lease = ctx.write_lease
+        if lease is None or lease.owner != owner:
+            raise OrchestrationControlError("WRITE_OWNER_MISMATCH", "Only the active write owner may renew the lease.")
+        renewed = self.ledger.renew_write_fence(
+            scope_key=lease.scope_key,
+            lease_id=lease.lease_id,
+            fencing_token=lease.fencing_token,
+            owner=lease.owner,
+            ttl_seconds=ttl_seconds,
+        )
+        if not renewed.get("renewed"):
+            raise OrchestrationControlError(
+                "STALE_WRITE_FENCE",
+                "The workspace write fence could not be renewed because it is stale or expired.",
+                details=renewed,
+            )
+        lease.expires_at = float(renewed["expires_at"])
+        self.ledger.append_event(
+            ctx.run_id,
+            wave_id=ctx.wave_id,
+            delegation_id=lease.delegation_id,
+            event_type="write_lease_renewed",
+            state_before=ctx.state,
+            state_after=ctx.state,
+            payload={"lease_id": lease.lease_id, "fencing_token": lease.fencing_token, "expires_at": lease.expires_at},
+        )
+        return lease
+
     def revoke_write_lease(self, ctx: RunContext, *, reason: str) -> None:
         with self._lock:
             self._revoke_write_lease_locked(ctx, reason=reason)
@@ -403,6 +480,12 @@ class OrchestrationControl:
         lease = ctx.write_lease
         if lease is None:
             return
+        self.ledger.release_write_fence(
+            scope_key=lease.scope_key,
+            lease_id=lease.lease_id,
+            fencing_token=lease.fencing_token,
+            owner=lease.owner,
+        )
         self.ledger.append_event(
             ctx.run_id,
             wave_id=ctx.wave_id,
@@ -532,10 +615,22 @@ class OrchestrationControl:
                     mode=str(payload.get("mode") or ""),
                     base_head=str(payload.get("base_head") or ""),
                     worktree_fp=str(payload.get("worktree_fp") or ""),
+                    fencing_token=int(payload.get("fencing_token") or 0),
+                    expires_at=float(payload.get("expires_at") or 0),
+                    scope_key=str(payload.get("scope_key") or WRITE_FENCE_SCOPE),
                     allowed_paths=tuple(payload.get("allowed_paths") or []),
                     delegation_id=event.get("delegation_id"),
                 )
             elif event["event_type"] == "write_lease_revoked":
+                lease = None
+        if lease is not None:
+            fence = self.ledger.assert_write_fence(
+                scope_key=lease.scope_key,
+                lease_id=lease.lease_id,
+                fencing_token=lease.fencing_token,
+                owner=lease.owner,
+            )
+            if not fence.get("valid"):
                 lease = None
         ctx = RunContext(
             run_id=run_id,
