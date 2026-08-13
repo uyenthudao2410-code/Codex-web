@@ -2,8 +2,9 @@
 //!
 //! These tests run the real `process_tree_helper` binary on both Windows and
 //! Unix. Liveness is probed via platform-native APIs (OpenProcess +
-//! GetExitCodeProcess on Windows, `kill(pid, 0)` on Unix) rather than by
-//! shelling out to `tasklist` / `ps`, so the tests are self-contained.
+//! GetExitCodeProcess on Windows, `kill(pid, 0)` plus `/proc/<pid>/stat` on
+//! Linux, and `kill(pid, 0)` on other Unix platforms) rather than by shelling
+//! out to `tasklist` / `ps`, so the tests are self-contained.
 
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
@@ -664,9 +665,36 @@ fn process_alive(pid: u32) -> bool {
 
 #[cfg(unix)]
 fn process_alive(pid: u32) -> bool {
-    // SAFETY: signal 0 is an existence probe; the pid comes from our own test
-    // helper.
-    (unsafe { libc::kill(pid as i32, 0) }) == 0
+    // First use signal 0 as the portable existence probe. The pid comes from
+    // our own test helper, so EPERM is not expected here.
+    if (unsafe { libc::kill(pid as i32, 0) }) != 0 {
+        return false;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // `kill(pid, 0)` also succeeds for zombies. That disagrees with the
+        // production `group_has_live_members()` contract, which treats Z/X as
+        // exited because such a process can no longer execute code. Mirror the
+        // same `/proc/<pid>/stat` interpretation here so the integration-test
+        // oracle measures runtime liveness rather than process-table presence.
+        let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) else {
+            // The process may have disappeared between kill(0) and the procfs
+            // read. A later poll will observe ESRCH; conservatively retain the
+            // portable probe for this instant.
+            return true;
+        };
+        let Some((_, rest)) = stat.rsplit_once(')') else {
+            return true;
+        };
+        let state = rest.split_whitespace().next().unwrap_or("");
+        state != "Z" && state != "X"
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        true
+    }
 }
 
 // ---------------------------------------------------------------------------
