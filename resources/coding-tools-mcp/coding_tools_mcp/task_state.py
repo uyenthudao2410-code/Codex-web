@@ -185,6 +185,7 @@ class TaskStateStore:
             state = self._read()
             if not self._has_task(state):
                 return
+            terminal_orchestration = self._has_terminal_orchestration(state)
             ok = payload.get("ok", True) is not False
             if name in {"apply_patch", "apply_changes_and_verify", "file_batch", "document_workflow", "document_create", "document_convert"} and ok and not args.get("dry_run"):
                 for item in payload.get("affected_files", []):
@@ -204,11 +205,11 @@ class TaskStateStore:
                     current["finished_at"] = utc_now()
                     state["current_command"] = None
                     self._event(state, "command_terminated", {"session_id": args.get("session_id")})
-            if not ok and name not in {"task_state_get", "task_state_update", "task_state_clear"}:
+            if not ok and name not in {"task_state_get", "task_state_update", "task_state_clear"} and not terminal_orchestration:
                 error = payload.get("error") if isinstance(payload.get("error"), dict) else {}
                 state["failure"] = _text(error.get("message") or f"{name} failed")
                 self._event(state, "tool_failed", {"tool": name, "code": error.get("code")})
-            elif ok:
+            elif ok and not terminal_orchestration:
                 state["failure"] = None
                 if name == "document_workflow":
                     action = str(args.get("action", "inspect")).lower()
@@ -251,6 +252,7 @@ class TaskStateStore:
                 state["objective"] = f"Build and verify {_text(project.get('name') or 'project', 500)}"
                 state["task_id"] = uuid.uuid4().hex
                 state["status"] = "active"
+            terminal_orchestration = self._has_terminal_orchestration(state)
             test_result = report.get("test_result")
             build_result = report.get("build_result")
             if isinstance(test_result, dict):
@@ -259,13 +261,14 @@ class TaskStateStore:
                 state["build_results"] = (state["build_results"] + [build_result])[-MAX_RESULTS:]
             state["last_build_report"] = copy.deepcopy(report)
             status = str(report.get("overall_status", "unknown"))
-            state["status"] = "completed" if status == "passed" else "failed"
-            state["failure"] = None if status == "passed" else _text(report.get("failure") or "Build verification failed")
-            state["next_step"] = (
-                "Review or publish the verified artifacts."
-                if status == "passed"
-                else "Fix the failed test/build step, then run verify_build again."
-            )
+            if not terminal_orchestration:
+                state["status"] = "completed" if status == "passed" else "failed"
+                state["failure"] = None if status == "passed" else _text(report.get("failure") or "Build verification failed")
+                state["next_step"] = (
+                    "Review or publish the verified artifacts."
+                    if status == "passed"
+                    else "Fix the failed test/build step, then run verify_build again."
+                )
             self._event(state, "build_verification_finished", {"status": status})
             self._write(state)
 
@@ -306,6 +309,13 @@ class TaskStateStore:
             or str(state.get("status") or "idle") != "idle"
         )
 
+    @staticmethod
+    def _has_terminal_orchestration(state: dict[str, Any]) -> bool:
+        projection = state.get("orchestration")
+        if not isinstance(projection, dict):
+            return False
+        return str(projection.get("orchestration_state") or "").upper() in {"CHECKPOINTED", "BLOCKED", "ABORTED"}
+
     def _record_command_payload(self, state: dict[str, Any], command: str, payload: dict[str, Any]) -> None:
         status = str(payload.get("status", ""))
         session_id = str(payload.get("session_id", ""))
@@ -339,10 +349,11 @@ class TaskStateStore:
         elif kind == "build":
             state["build_results"] = (state["build_results"] + [result])[-MAX_RESULTS:]
         state["current_command"] = None
-        state["status"] = "waiting" if result["status"] == "passed" else "failed"
-        state["current_step"] = "Waiting for model" if result["status"] == "passed" else "Command failed"
-        if result["status"] == "failed":
-            state["failure"] = result["summary"] or f"Command failed with exit code {result['exit_code']}"
+        if not self._has_terminal_orchestration(state):
+            state["status"] = "waiting" if result["status"] == "passed" else "failed"
+            state["current_step"] = "Waiting for model" if result["status"] == "passed" else "Command failed"
+            if result["status"] == "failed":
+                state["failure"] = result["summary"] or f"Command failed with exit code {result['exit_code']}"
         self._event(state, "command_finished", {"command": _text(command, 500), "status": result["status"]})
 
     def _normalize_steps(self, raw: Any) -> list[dict[str, Any]]:

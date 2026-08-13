@@ -180,6 +180,64 @@ class ToolModeTests(unittest.TestCase):
             store.record_tool_result("exec_command", {"cmd": "echo ok"}, {"ok": True, "status": "exited", "session_id": "session-one", "exit_code": 0, "elapsed_ms": 1})
             self.assertEqual(store.get()["status"], "waiting")
 
+    def test_terminal_orchestration_is_not_downgraded_by_command_housekeeping(self) -> None:
+        for orchestration_state, task_status, current_step in (
+            ("CHECKPOINTED", "completed", "Completed"),
+            ("BLOCKED", "failed", "Blocked"),
+            ("ABORTED", "stopped", "Aborted"),
+        ):
+            with self.subTest(orchestration_state=orchestration_state), tempfile.TemporaryDirectory() as temp:
+                store = TaskStateStore(Path(temp))
+                store.update({
+                    "objective": "Terminal orchestration",
+                    "status": task_status,
+                    "current_step": current_step,
+                    "next_step": "Terminal next step",
+                    "failure": "terminal failure" if orchestration_state != "CHECKPOINTED" else None,
+                    "orchestration": {"orchestration_state": orchestration_state, "run_id": "run-terminal"},
+                })
+                before = store.get()
+                store.record_command_started("echo later", "session-terminal", ".")
+                store.record_tool_result(
+                    "exec_command",
+                    {"cmd": "echo later"},
+                    {"ok": True, "status": "exited", "session_id": "session-terminal", "exit_code": 0, "elapsed_ms": 1},
+                )
+                after = store.get()
+                self.assertEqual(after["orchestration"]["orchestration_state"], orchestration_state)
+                self.assertEqual(after["status"], before["status"])
+                self.assertEqual(after["current_step"], before["current_step"])
+                self.assertEqual(after["next_step"], before["next_step"])
+                self.assertEqual(after["failure"], before["failure"])
+                self.assertIsNone(after["current_command"])
+                self.assertEqual(after["events"][-1]["event"], "command_finished")
+
+    def test_terminal_orchestration_is_not_retroactively_failed_by_later_command_or_build(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = TaskStateStore(Path(temp))
+            store.update({
+                "objective": "Accepted orchestration",
+                "status": "completed",
+                "current_step": "Completed",
+                "next_step": "Start next accepted behavior",
+                "failure": None,
+                "orchestration": {"orchestration_state": "CHECKPOINTED", "run_id": "run-accepted"},
+            })
+            store.record_command_started("cmd /c exit 7", "session-failed-later", ".")
+            store.record_tool_result(
+                "exec_command",
+                {"cmd": "cmd /c exit 7"},
+                {"ok": False, "status": "exited", "session_id": "session-failed-later", "exit_code": 7, "elapsed_ms": 1, "error": {"message": "later operator command failed"}},
+            )
+            store.record_build_report({"overall_status": "failed", "failure": "later build failed"})
+            after = store.get()
+            self.assertEqual(after["status"], "completed")
+            self.assertEqual(after["current_step"], "Completed")
+            self.assertEqual(after["next_step"], "Start next accepted behavior")
+            self.assertIsNone(after["failure"])
+            self.assertEqual(after["orchestration"]["orchestration_state"], "CHECKPOINTED")
+            self.assertEqual(after["last_build_report"]["overall_status"], "failed")
+
     def test_prepare_coding_context_batches_search_reads_and_caches(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(temp)
