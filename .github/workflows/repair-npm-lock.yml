@@ -1,0 +1,39 @@
+name: Repair production npm lock
+
+on:
+  push:
+    branches: [release-hardening-20260813]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release-hardening-20260813
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate only the production vulnerability fix
+        run: npm audit fix --package-lock-only --omit=dev
+      - name: Verify manifest is unchanged
+        run: git diff --exit-code -- package.json
+      - name: Verify production audit is green
+        run: npm audit --omit=dev --audit-level=high
+      - name: Commit repaired lockfile
+        shell: bash
+        run: |
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "package-lock.json already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix: update production npm security lock"
+          git push origin HEAD:release-hardening-20260813
