@@ -26,7 +26,7 @@ Issues = "https://github.com/xyTom/coding-tools-mcp/issues"
 [project.optional-dependencies]
 dev = [
   "mcp>=1.26,<2",
-  "mypy>=2.1,<2.2",
+  "mypy>=2.1,<2.4",
   "PyYAML>=6.0",
   "ruff>=0.15,<0.16",
   "typing_extensions>=4.12",
