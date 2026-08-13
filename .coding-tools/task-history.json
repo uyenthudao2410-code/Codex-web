@@ -1,6 +1,91 @@
 [
   {
     "version": 2,
+    "task_id": "ba423a8808fe4950946d35635cacb91c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-08-13T07:09:07.915Z",
+    "updated_at": "2026-08-13T07:09:07.933Z",
+    "events": [
+      {
+        "time": "2026-08-13T07:09:07.915Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-13T07:09:07.933Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import json,sys; from pathlib import Path; sys.path.insert(0,'resources/coding-tools-mcp'); from coding_tools_mcp.orchestration_ledger import OrchestrationLedger; l=OrchestrationLedger(Path('.')); print(json.dumps(l.export_summary('780558d11ee045638f455ffac811a47f'),ensure_ascii=False,indent=2))\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-13T07:09:07.933Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-13T07:09:17.087Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "bbddd02872e84d999c8c1b19fa465098",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-13T07:09:17.098Z",
+    "updated_at": "2026-08-13T07:10:29.547Z",
+    "events": [
+      {
+        "time": "2026-08-13T07:09:17.098Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-13T07:09:17.121Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 120 \"tools/list|notifications/initialized|Mcp-Session-Id|--stdio\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "3v16gJhjwdXvCYdBAFW9fhLI"
+        }
+      },
+      {
+        "time": "2026-08-13T07:09:17.217Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 120 \"tools/list|notifications/initialized|Mcp-Session-Id|--stdio\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      }
+    "version": 2,
     "task_id": "4b361057430a47da85002a31c32b5436",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -14150,7 +14235,7 @@
         "time": "2026-08-13T21:16:28.381Z",
         "event": "command_started",
         "details": {
-          "command": "rg -n -C 18 -e \"def workspace_context\" -e \"\\\"runtime\\\": \\{\" -e \"expected_workspace_match\" -e \"configured_workspace\" resources/coding-tools-mcp/coding_tools_mcp/server.py scripts/mcp_controlled_restart.js resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "command": "rg -n -C 18 -e \"def workspace_context\" -e \"\\\"runtime\\\": \\\"\\{\\\" -e \"expected_workspace_match\" -e \"configured_workspace\" resources/coding-tools-mcp/coding_tools_mcp/server.py scripts/mcp_controlled_restart.js resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
           "session_id": "2wQhln4IGcWCa9KGOkoQ46E5"
         }
       },
@@ -14158,448 +14243,9 @@
         "time": "2026-08-13T21:16:28.453Z",
         "event": "command_finished",
         "details": {
-          "command": "rg -n -C 18 -e \"def workspace_context\" -e \"\\\"runtime\\\": \\{\" -e \"expected_workspace_match\" -e \"configured_workspace\" resources/coding-tools-mcp/coding_tools_mcp/server.py scripts/mcp_controlled_restart.js resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "command": "rg -n -C 18 -e \"def workspace_context\" -e \"\\\"runtime\\\": \\\"\\{\\\" -e \"expected_workspace_match\" -e \"configured_workspace\" resources/coding-tools-mcp/coding_tools_mcp/server.py scripts/mcp_controlled_restart.js resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
           "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T21:16:34.740Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Get-Content scripts/mcp_controlled_restart.js -TotalCount 120; Write-Output '---TEST---'; Get-Content resources/coding-tools-mcp/tests/test_runtime_activation.py -TotalCount 220\"",
-          "session_id": "TXaHhgPUW9Q_BpxC-CdKgtGs"
-        }
-      },
-      {
-        "time": "2026-08-13T21:16:35.107Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Get-Content scripts/mcp_controlled_restart.js -TotalCount 120; Write-Output '---TEST---'; Get-Content resources/coding-tools-mcp/tests/test_runtime_activation.py -TotalCount 220\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T21:16:43.679Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 10 -e \"performance_trace_version\" -e \"workspace_context\\(\" -e \"runtime\\]\" resources/coding-tools-mcp/tests package.json README.md docs/research/2026-08-14_RUNTIME_ACTIVATION_AND_PRODUCTION_TELEMETRY_LOG.md",
-          "session_id": "HVjUJWt6AwJ-zEYTU7EbtRYz"
-        }
-      },
-      {
-        "time": "2026-08-13T21:16:43.762Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 10 -e \"performance_trace_version\" -e \"workspace_context\\(\" -e \"runtime\\]\" resources/coding-tools-mcp/tests package.json README.md docs/research/2026-08-14_RUNTIME_ACTIVATION_AND_PRODUCTION_TELEMETRY_LOG.md",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:27:54.606Z",
-        "event": "command_started",
-        "details": {
-          "command": "git remote -v && git branch --show-current && git rev-parse HEAD && git rev-parse origin/main && git log --oneline --decorate -3 origin/main && git status --short",
-          "session_id": "6h1Bm5KVTCErMQ86nPGtwBxK"
-        }
-      },
-      {
-        "time": "2026-08-13T23:27:54.890Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git remote -v && git branch --show-current && git rev-parse HEAD && git rev-parse origin/main && git log --oneline --decorate -3 origin/main && git status --short",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:28:06.334Z",
-        "event": "command_started",
-        "details": {
-          "command": "git add -A && git diff --cached --check && git diff --cached --name-only && git diff --cached --stat",
-          "session_id": "8yFcjWRxYNWPfWfyHXzrvQ20"
-        }
-      },
-      {
-        "time": "2026-08-13T23:28:08.864Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git add -A && git diff --cached --check && git diff --cached --name-only && git diff --cached --stat",
-          "status": "failed"
         }
       }
-    ],
-    "archived_at": "2026-08-13T23:28:23.021Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "8fb03b84019845d7bcf0f90bcb055638",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-13T23:28:23.040Z",
-    "updated_at": "2026-08-13T23:29:23.715Z",
-    "events": [
-      {
-        "time": "2026-08-13T23:28:23.040Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-13T23:28:23.057Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='docs/ac/codex_accounts_2026-08-13.json'; if (!(Test-Path $p)) { Write-Output 'ACCOUNT_FILE_MISSING'; exit 2 }; $raw=Get-Content $p -Raw; $obj=$raw | ConvertFrom-Json; $names=@(); function Walk($x) { if ($null -eq $x) { return }; if ($x -is [System.Collections.IDictionary]) { foreach($k in $x.Keys){ $script:names += [string]$k; Walk $x[$k] } } elseif ($x -is [pscustomobject]) { foreach($prop in $x.PSObject.Properties){ $script:names += [string]$prop.Name; Walk ",
-          "session_id": "KPgZWXdOzQC3m8ltuaO_D6KJ"
-        }
-      },
-      {
-        "time": "2026-08-13T23:28:23.509Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='docs/ac/codex_accounts_2026-08-13.json'; if (!(Test-Path $p)) { Write-Output 'ACCOUNT_FILE_MISSING'; exit 2 }; $raw=Get-Content $p -Raw; $obj=$raw | ConvertFrom-Json; $names=@(); function Walk($x) { if ($null -eq $x) { return }; if ($x -is [System.Collections.IDictionary]) { foreach($k in $x.Keys){ $script:names += [string]$k; Walk $x[$k] } } elseif ($x -is [pscustomobject]) { foreach($prop in $x.PSObject.Properties){ $script:names += [string]$prop.Name; Walk ",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:28:44.109Z",
-        "event": "command_started",
-        "details": {
-          "command": "git restore --staged -- docs/ac/codex_accounts_2026-08-13.json && git status --short docs/ac/codex_accounts_2026-08-13.json",
-          "session_id": "VGjWIRg3z8anszZLwz34aCIh"
-        }
-      },
-      {
-        "time": "2026-08-13T23:28:44.234Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git restore --staged -- docs/ac/codex_accounts_2026-08-13.json && git status --short docs/ac/codex_accounts_2026-08-13.json",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:28:52.720Z",
-        "event": "command_started",
-        "details": {
-          "command": "git grep --cached -l -I -E \"sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|Bearer[[:space:]]+[A-Za-z0-9._~-]{20,}\" -- .",
-          "session_id": "uF5ZuHjiFMsxemssnb-JLf62"
-        }
-      },
-      {
-        "time": "2026-08-13T23:28:56.623Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git grep --cached -l -I -E \"sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|Bearer[[:space:]]+[A-Za-z0-9._~-]{20,}\" -- .",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:29:06.068Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --cached --name-only -- crates/webcodex-runner/src/webcodex_runner/transport_tests.rs src/tool_runtime/tests/hygiene.rs",
-          "session_id": "Qwzrh86BcHpCMB-a8hd8JZS0"
-        }
-      },
-      {
-        "time": "2026-08-13T23:29:06.140Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --cached --name-only -- crates/webcodex-runner/src/webcodex_runner/transport_tests.rs src/tool_runtime/tests/hygiene.rs",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:29:14.952Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --cached --stat && git diff --cached --numstat && git diff --cached --name-only | findstr /I /R \"secret token credential account cookie session password key\"",
-          "session_id": "ODEPFdr8YNxJOO8HsyUbfO_L"
-        }
-      },
-      {
-        "time": "2026-08-13T23:29:15.207Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --cached --stat && git diff --cached --numstat && git diff --cached --name-only | findstr /I /R \"secret token credential account cookie session password key\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:29:23.646Z",
-        "event": "command_started",
-        "details": {
-          "command": "git grep --cached -l -I -E \"\\\"(access_token|refresh_token|id_token|password|secret|cookie)\\\"[[:space:]]*:\" -- .",
-          "session_id": "1LVc6Df3KAAiWEsm18B0Uw8K"
-        }
-      },
-      {
-        "time": "2026-08-13T23:29:23.715Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git grep --cached -l -I -E \"\\\"(access_token|refresh_token|id_token|password|secret|cookie)\\\"[[:space:]]*:\" -- .",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-13T23:29:35.442Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "112fa38cc04240e39e2f3c9cf44a021a",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-13T23:29:35.458Z",
-    "updated_at": "2026-08-13T23:30:22.993Z",
-    "events": [
-      {
-        "time": "2026-08-13T23:29:35.458Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-13T23:29:35.469Z",
-        "event": "command_started",
-        "details": {
-          "command": "git show --stat --oneline --no-renames origin/main -1 && git show --name-only --format= origin/main -1",
-          "session_id": "NalQ8eBJx5TyFPvVPLcj1FX8"
-        }
-      },
-      {
-        "time": "2026-08-13T23:29:35.627Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git show --stat --oneline --no-renames origin/main -1 && git show --name-only --format= origin/main -1",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:22.920Z",
-        "event": "command_started",
-        "details": {
-          "command": "git config user.name && git config user.email && git write-tree",
-          "session_id": "fTHv8YmJTnf2jJmW_rO0Kx4L"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:22.993Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git config user.name && git config user.email && git write-tree",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-13T23:30:28.082Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "663328d19f284f60b1615bacb5adbdb4",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-13T23:30:28.098Z",
-    "updated_at": "2026-08-13T23:30:47.182Z",
-    "events": [
-      {
-        "time": "2026-08-13T23:30:28.098Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:28.112Z",
-        "event": "command_started",
-        "details": {
-          "command": "git write-tree",
-          "session_id": "87gn0eee_HiZcJUHzqYdVgUJ"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:29.025Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git write-tree",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:41.268Z",
-        "event": "command_started",
-        "details": {
-          "command": "echo feat: consolidate runtime controls and deployment telemetry | git commit-tree 9d693cdabcf078f667f729737bd05fc623fe383d -p d3c6f184b8f5b2b3f603615f0e5a3abb889b9d0c",
-          "session_id": "QjoORx1qyM3MskbJwhv-7amK"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:41.422Z",
-        "event": "command_finished",
-        "details": {
-          "command": "echo feat: consolidate runtime controls and deployment telemetry | git commit-tree 9d693cdabcf078f667f729737bd05fc623fe383d -p d3c6f184b8f5b2b3f603615f0e5a3abb889b9d0c",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:46.768Z",
-        "event": "command_started",
-        "details": {
-          "command": "git merge-tree --write-tree c8c489395b2534e76b93fd172368f34f96778395 4e9c9042228cc8bb6f3f44a154b789f56f24e7c2",
-          "session_id": "M8Y1cT7XxxKIPIcYGKkhJOoH"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:47.182Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git merge-tree --write-tree c8c489395b2534e76b93fd172368f34f96778395 4e9c9042228cc8bb6f3f44a154b789f56f24e7c2",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-13T23:30:54.906Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "081dd55ccac54fa2bed11e02344f2d6e",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Shell command substitution and parameter expansion require explicit permission.",
-    "next_step": "",
-    "created_at": "2026-08-13T23:30:54.928Z",
-    "updated_at": "2026-08-13T23:31:44.463Z",
-    "events": [
-      {
-        "time": "2026-08-13T23:30:54.928Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:54.952Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff d3c6f184b8f5b2b3f603615f0e5a3abb889b9d0c..c8c489395b2534e76b93fd172368f34f96778395 -- .github/workflows/ci.yml scripts/npm_install_windows_smoke.ps1 && echo =====LOCAL===== && git diff d3c6f184b8f5b2b3f603615f0e5a3abb889b9d0c..4e9c9042228cc8bb6f3f44a154b789f56f24e7c2 -- .github/workflows/ci.yml scripts/npm_install_windows_smoke.ps1",
-          "session_id": "ttWKFBXpr7OQ20byfJZFtrn5"
-        }
-      },
-      {
-        "time": "2026-08-13T23:30:55.067Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff d3c6f184b8f5b2b3f603615f0e5a3abb889b9d0c..c8c489395b2534e76b93fd172368f34f96778395 -- .github/workflows/ci.yml scripts/npm_install_windows_smoke.ps1 && echo =====LOCAL===== && git diff d3c6f184b8f5b2b3f603615f0e5a3abb889b9d0c..4e9c9042228cc8bb6f3f44a154b789f56f24e7c2 -- .github/workflows/ci.yml scripts/npm_install_windows_smoke.ps1",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:31:18.598Z",
-        "event": "command_started",
-        "details": {
-          "command": "git cat-file blob 54c4d42bafeb7c039dd4a7dcc8100a3b6f1653b9 > .git/ci.remote.tmp && git cat-file blob b4b9022df01177d99ddc64f4fcbfb40b187c6c8d > .git/ci.base.tmp && git cat-file blob 96a73e139c9aed747af62745c65f838e105eee9c > .git/ci.local.tmp && git merge-file -p .git/ci.remote.tmp .git/ci.base.tmp .git/ci.local.tmp > .git/ci.merged.tmp & exit /b 0",
-          "session_id": "B48alfvEMGjOAfthhvicLNcJ"
-        }
-      },
-      {
-        "time": "2026-08-13T23:31:18.794Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git cat-file blob 54c4d42bafeb7c039dd4a7dcc8100a3b6f1653b9 > .git/ci.remote.tmp && git cat-file blob b4b9022df01177d99ddc64f4fcbfb40b187c6c8d > .git/ci.base.tmp && git cat-file blob 96a73e139c9aed747af62745c65f838e105eee9c > .git/ci.local.tmp && git merge-file -p .git/ci.remote.tmp .git/ci.base.tmp .git/ci.local.tmp > .git/ci.merged.tmp & exit /b 0",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:31:22.729Z",
-        "event": "command_started",
-        "details": {
-          "command": "findstr /N /C:\"<<<<<<<\" /C:\"=======\" /C:\">>>>>>>\" /C:\"Upload Rust workspace failure log\" .git\\ci.merged.tmp",
-          "session_id": "4EEFQ1OqnysKlUVessArNkUq"
-        }
-      },
-      {
-        "time": "2026-08-13T23:31:22.779Z",
-        "event": "command_finished",
-        "details": {
-          "command": "findstr /N /C:\"<<<<<<<\" /C:\"=======\" /C:\">>>>>>>\" /C:\"Upload Rust workspace failure log\" .git\\ci.merged.tmp",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:31:27.578Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$lines=Get-Content .git/ci.merged.tmp; for($i=64;$i -le 109;$i++){ if($i -lt $lines.Count){ '{0}: {1}' -f ($i+1),$lines[$i] } }\"",
-          "session_id": "bBVzJ-Hoy5dI1upZqJYgJUi3"
-        }
-      },
-      {
-        "time": "2026-08-13T23:31:27.864Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$lines=Get-Content .git/ci.merged.tmp; for($i=64;$i -le 109;$i++){ if($i -lt $lines.Count){ '{0}: {1}' -f ($i+1),$lines[$i] } }\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:31:44.463Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$src='.git/ci.remote.tmp'; $dst='.git/ci.resolved.tmp'; $lines=[System.IO.File]::ReadAllLines($src); $idx=[Array]::IndexOf($lines,'  test-windows:'); if($idx -lt 0){ throw 'test-windows marker not found' }; $block=@('      - name: Upload Rust workspace failure log','        if: failure()','        uses: actions/upload-artifact@v4','        with:','          name: rust-workspace-test-log-${{ github.sha }}','          path: cargo-test.log','          if-no-files-fou",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-13T23:31:44.463Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "PERMISSION_REQUIRED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-13T23:32:43.304Z",
-    "archive_reason": "finished"
   }
 ]

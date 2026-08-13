@@ -3,7 +3,7 @@
 # Exercises the full Windows distribution chain on one Windows machine,
 # without Git Bash, WSL, or the npm registry:
 #
-#   cargo build -> Windows artifact -> local manifest + real SHA-256
+#   cargo build -> Windows artifact -> canonical npm manifest + local manifest
 #     -> npm installer (postinstall) -> temporary npm prefix
 #     -> vendor/bin/*.exe -> npm wrapper
 #
