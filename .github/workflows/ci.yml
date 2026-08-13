@@ -44,8 +44,6 @@ jobs:
         run: python -m pip install -e "resources/coding-tools-mcp[dev]"
       - name: Test Coding Tools MCP
         run: python -m unittest discover -s resources/coding-tools-mcp/tests -p 'test_*.py'
-      - name: Test desktop runtime integration
-        run: npm test
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
       - name: Build frontend assets
@@ -66,11 +64,11 @@ jobs:
         run: cargo test --locked --workspace
 
   test-windows:
-    # Windows release gate: the crates that must run natively on Windows 11
-    # (CLI, Runner, persistent-shell's fail-closed gate, and the
-    # cross-platform libraries they depend on), the npm distribution checks,
-    # and the full Windows artifact -> npm install smoke. The Server and its
-    # Unix-only runtime stay Linux-only.
+    # Windows release gate: the desktop runtime tests, the crates that must run
+    # natively on Windows 11 (CLI, Runner, persistent-shell's fail-closed gate,
+    # and the cross-platform libraries they depend on), the npm distribution
+    # checks, and the full Windows artifact -> npm install smoke. The Server
+    # and its Unix-only runtime stay Linux-only.
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -90,6 +88,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: resources/coding-tools-mcp/pyproject.toml
+      - name: Install Coding Tools MCP runtime
+        run: python -m pip install -e resources/coding-tools-mcp
+      - name: Install desktop dependencies
+        run: npm ci
+      - name: Test desktop runtime integration
+        run: npm test
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
       - name: Build frontend assets
