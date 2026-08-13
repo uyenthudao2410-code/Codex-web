@@ -45,7 +45,15 @@ class ChatViewController {
     this.view = null;
     this.loading = false;
     this.lastError = '';
+    this.rightInset = 0;
     this.boundResize = () => this.resize();
+  }
+
+  setRightInset(pixels) {
+    const next = Math.max(0, Number(pixels) || 0);
+    if (next === this.rightInset) return;
+    this.rightInset = next;
+    this.resize();
   }
 
   mount() {
@@ -334,7 +342,7 @@ class ChatViewController {
     this.view.setBounds({
       x: 0,
       y: this.toolbarHeight,
-      width: Math.max(0, width),
+      width: Math.max(0, width - this.rightInset),
       height: Math.max(0, height - this.toolbarHeight)
     });
   }

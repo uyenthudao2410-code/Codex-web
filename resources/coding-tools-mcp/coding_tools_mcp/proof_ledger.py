@@ -131,6 +131,7 @@ class ProofLedger:
                 "exit_code": cached.get("exit_code", result.get("exit_code", 0)),
                 "duration_ms": 0,
                 "cache_hit": True,
+                "cache_saved_ms": max(0, int(cached.get("duration_ms") or 0)),
                 "proof_id": cached["proof_id"],
                 "input_fingerprint": input_fingerprint,
             })

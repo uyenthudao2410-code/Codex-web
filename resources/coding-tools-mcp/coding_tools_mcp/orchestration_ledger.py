@@ -1569,6 +1569,88 @@ class OrchestrationLedger:
             return None
         return self.get_run(str(row["run_id"]))
 
+    def reconcile_stale_runs(
+        self,
+        *,
+        stale_after_seconds: float = 24 * 60 * 60,
+        now: float | None = None,
+    ) -> list[str]:
+        """Close abandoned active runs without touching work that still has live ownership.
+
+        This is lifecycle hygiene, not garbage collection: rows and evidence are retained.
+        A run is protected while it owns a live background operation, an active/waiting
+        agent lane, or a non-expired write fence. Only inactivity older than the bounded
+        threshold becomes ``stale``.
+        """
+
+        now_ts = time.time() if now is None else float(now)
+        threshold = max(60.0, float(stale_after_seconds))
+        cutoff = datetime.fromtimestamp(now_ts - threshold, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        stale: list[tuple[str, str]] = []
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                """SELECT r.run_id, r.started_at,
+                          MAX(e.event_time) AS event_time,
+                          MAX(w.started_at) AS wave_started_at,
+                          MAX(w.finished_at) AS wave_finished_at,
+                          MAX(b.updated_at) AS background_updated_at,
+                          MAX(l.updated_at) AS lane_updated_at,
+                          MAX(h.created_at) AS handoff_created_at
+                   FROM runs r
+                   LEFT JOIN events e ON e.run_id=r.run_id
+                   LEFT JOIN waves w ON w.run_id=r.run_id
+                   LEFT JOIN background_operations b ON b.run_id=r.run_id
+                   LEFT JOIN agent_lanes l ON l.run_id=r.run_id
+                   LEFT JOIN handoff_capsules h ON h.run_id=r.run_id
+                   WHERE r.status='active'
+                   GROUP BY r.run_id, r.started_at"""
+            ).fetchall()
+            for row in rows:
+                run_id = str(row["run_id"])
+                if connection.execute(
+                    "SELECT 1 FROM background_operations WHERE run_id=? AND status='running' LIMIT 1",
+                    (run_id,),
+                ).fetchone():
+                    continue
+                if connection.execute(
+                    "SELECT 1 FROM agent_lanes WHERE run_id=? AND lifecycle IN ('active','waiting','idle') LIMIT 1",
+                    (run_id,),
+                ).fetchone():
+                    continue
+                if connection.execute(
+                    "SELECT 1 FROM write_fences WHERE run_id=? AND status='active' AND expires_at>? LIMIT 1",
+                    (run_id, now_ts),
+                ).fetchone():
+                    continue
+                activity = max(
+                    str(row[key] or "")
+                    for key in (
+                        "started_at", "event_time", "wave_started_at", "wave_finished_at",
+                        "background_updated_at", "lane_updated_at", "handoff_created_at",
+                    )
+                )
+                if activity and activity < cutoff:
+                    latest_wave = connection.execute(
+                        "SELECT wave_id FROM waves WHERE run_id=? ORDER BY ordinal DESC LIMIT 1",
+                        (run_id,),
+                    ).fetchone()
+                    stale.append((run_id, str(latest_wave["wave_id"]) if latest_wave else ""))
+        for run_id, wave_id in stale:
+            self.finish_run(
+                run_id,
+                status="stale",
+                metadata={"stale_reason": "inactivity_timeout", "stale_after_seconds": threshold},
+            )
+            self.append_event(
+                run_id,
+                wave_id=wave_id,
+                event_type="run_stale_reconciled",
+                state_before="active",
+                state_after="ABORTED",
+                payload={"reason": "inactivity_timeout", "stale_after_seconds": threshold},
+            )
+        return [run_id for run_id, _wave_id in stale]
+
     def export_summary(self, run_id: str) -> dict[str, Any]:
         run = self.get_run(run_id) or {}
         waves = self.list_waves(run_id)

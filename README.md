@@ -402,6 +402,16 @@ Script hiện tại chạy:
 electron .
 ```
 
+Trên thanh công cụ có nút **Bảng điều khiển**: mở panel giám sát ngay bên cạnh ChatGPT, hiển thị theo thời gian thực:
+
+- trạng thái nhiệm vụ (objective, bước hiện tại, tiến độ, command đang chạy kèm thời gian);
+- trình tự điều phối (run/wave, execution mode, base HEAD, số sự kiện/wave/checkpoint);
+- luồng sự kiện audit mới nhất, bằng chứng (proofs), ủy quyền model (delegations);
+- trạng thái MCP + Tunnel và cảnh báo khi đang tự khôi phục;
+- điều khiển: tạm dừng / tiếp tục / dừng nhiệm vụ, **Ghi capsule handoff** (≤8 KB) để xoay chat mới rồi tiếp tục từ capsule — không cần copy transcript cũ.
+
+Dữ liệu panel lấy từ endpoint mới `GET /__control/orchestration` của Coding Tools MCP (yêu cầu Bearer token).
+
 ### Chạy test của desktop app
 
 ```powershell

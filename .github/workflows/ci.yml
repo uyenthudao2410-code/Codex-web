@@ -42,7 +42,31 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run tests
-        run: cargo test --locked --workspace
+        shell: bash
+        run: |
+          set +e
+          cargo test --locked --workspace 2>&1 | tee cargo-test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "## Rust workspace test failure"
+              echo '```text'
+              grep -E -B 3 -A 8 'FAILED|panicked at|failures:|test result: FAILED|error:' cargo-test.log | tail -n 200
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            while IFS= read -r line; do
+              echo "::error::$line"
+            done < <(grep -E 'FAILED|panicked at|test result: FAILED|error:' cargo-test.log | tail -n 40)
+          fi
+          exit "$status"
+      - name: Upload Rust workspace failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-workspace-test-log-${{ github.sha }}
+          path: cargo-test.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   test-windows:
     # Windows release gate: the crates that must run natively on Windows 11

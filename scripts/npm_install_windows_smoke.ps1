@@ -69,6 +69,8 @@ $TempRoot = Join-Path $env:TEMP ("webcodex-smoke-" + [guid]::NewGuid().ToString(
 $ArtifactOut = Join-Path $TempRoot "artifact-out"
 $Prefix = Join-Path $TempRoot "install-prefix"
 $ManifestPath = Join-Path $TempRoot "local-manifest.json"
+$PackageStage = Join-Path $TempRoot "npm-package"
+$PackageSourceArchive = Join-Path $TempRoot "npm-package-source.zip"
 New-Item -ItemType Directory -Force -Path $ArtifactOut | Out-Null
 $env:npm_config_registry = "http://127.0.0.1:9"
 try {
@@ -113,9 +115,13 @@ try {
     }
 
     # -----------------------------------------------------------------------
-    # 3. Local manifest with the actual SHA-256.
+    # 3. Produce two manifests from the same real artifact digest. The npm
+    #    tarball must contain a publish-ready canonical GitHub release URL,
+    #    while the installer smoke uses a local file:// URL so it remains
+    #    fully offline. Keeping these distinct preserves the strict prepack
+    #    release contract instead of bypassing it for CI.
     # -----------------------------------------------------------------------
-    $manifest = [ordered]@{
+    $localManifest = [ordered]@{
         version = $Version
         binaries = @("webcodex", "webcodex-server", "webcodex-runner")
         artifacts = [ordered]@{
@@ -125,19 +131,48 @@ try {
             }
         }
     }
+    $releaseManifest = [ordered]@{
+        version = $Version
+        binaries = @("webcodex", "webcodex-server", "webcodex-runner")
+        artifacts = [ordered]@{
+            "win32-x64" = [ordered]@{
+                url = "https://github.com/yyjeqhc/webcodex/releases/download/v$Version/$ExpectedArchiveName"
+                sha256 = $sha256
+            }
+        }
+    }
     # BOM-less UTF-8: install.js parses the manifest with JSON.parse, which
     # rejects a leading byte-order mark.
+    $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
     [System.IO.File]::WriteAllText(
         $ManifestPath,
-        ($manifest | ConvertTo-Json -Depth 6),
-        [System.Text.UTF8Encoding]::new($false)
+        ($localManifest | ConvertTo-Json -Depth 6),
+        $Utf8NoBom
     )
 
     # -----------------------------------------------------------------------
-    # 4. Pack the npm package locally, then install it into a temp prefix.
+    # 4. Stage only tracked npm package sources from this exact commit, add
+    #    the canonical manifest, then pack from the staging tree. This mirrors
+    #    release staging and cannot accidentally include local credentials,
+    #    node_modules, vendor binaries, or other untracked workstation files.
     # -----------------------------------------------------------------------
-    $PackageDir = Join-Path $Root "npm\webcodex"
-    Push-Location $PackageDir
+    & git -C $Root archive --format=zip --output=$PackageSourceArchive "HEAD:npm/webcodex"
+    if ($LASTEXITCODE -ne 0) {
+        throw "git archive failed with exit code $LASTEXITCODE"
+    }
+    Expand-Archive -LiteralPath $PackageSourceArchive -DestinationPath $PackageStage
+    $PackageManifestPath = Join-Path $PackageStage "manifest.json"
+    [System.IO.File]::WriteAllText(
+        $PackageManifestPath,
+        ($releaseManifest | ConvertTo-Json -Depth 6),
+        $Utf8NoBom
+    )
+    & node (Join-Path $PackageStage "test\release-manifest-check.js") $PackageManifestPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "release manifest validation failed with exit code $LASTEXITCODE"
+    }
+
+    Push-Location $PackageStage
     try {
         & npm pack --pack-destination $TempRoot --silent
         if ($LASTEXITCODE -ne 0) {
@@ -215,7 +250,7 @@ try {
     [System.IO.File]::WriteAllText(
         $BadManifestPath,
         ($badManifest | ConvertTo-Json -Depth 6),
-        [System.Text.UTF8Encoding]::new($false)
+        $Utf8NoBom
     )
     $env:WEBCODEX_MANIFEST = $BadManifestPath
     try {

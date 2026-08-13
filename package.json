@@ -9,6 +9,10 @@
     "icon:build": "node scripts/generate-icon.js",
     "start": "electron .",
     "test": "node --test tests/*.test.js && node scripts/check-source-root-clean.js",
+    "test:mcp": "cd resources/coding-tools-mcp && python -m pytest tests",
+    "test:all": "npm test && npm run test:mcp",
+    "benchmark:routing": "cd resources/coding-tools-mcp && python -m benchmarks.routing_economics",
+    "benchmark:activation": "cd resources/coding-tools-mcp && python -m benchmarks.runtime_activation",
     "audit:prod": "npm audit --omit=dev",
     "dist": "npm run icon:build && npm test && electron-builder --win nsis",
     "dist:dir": "npm run icon:build && electron-builder --dir"

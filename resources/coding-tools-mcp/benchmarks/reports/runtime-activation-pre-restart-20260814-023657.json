@@ -1,0 +1,52 @@
+{
+  "benchmark": "runtime activation telemetry snapshot",
+  "evidence_class": "local_runtime_measurement_snapshot",
+  "schema_version": 1,
+  "captured_at": "2026-08-13T19:36:57.148Z",
+  "workspace": "E:\\Github\\Tools-Codex-web",
+  "performance": {
+    "version": 1,
+    "tool_calls": 1096,
+    "errors": 74,
+    "local_execution_ms": 4461915,
+    "estimated_wait_ms": 25944649,
+    "idempotency_eligible_calls": 0,
+    "idempotency_eligible_key_calls": 0,
+    "idempotency_coverage": null,
+    "proof_cache_hits": 0,
+    "proof_cache_saved_ms": 0,
+    "execution_mode_counts": {},
+    "route_resolved_counts": {},
+    "orchestration_state_counts": {},
+    "run_metrics": {}
+  },
+  "ledger": {
+    "present": true,
+    "run_status_counts": {
+      "accepted": 14,
+      "active": 36
+    },
+    "wave_status_counts": {
+      "accepted": 14,
+      "active": 36,
+      "replanned": 6
+    },
+    "idempotency_status_counts": {},
+    "background_status_counts": {
+      "completed": 13
+    },
+    "lane_lifecycle_counts": {},
+    "proof_records": 38,
+    "handoff_capsules": 0,
+    "accepted_run_tta": {
+      "n": 14,
+      "p50_seconds": 90.291,
+      "p90_seconds": 339.099
+    }
+  },
+  "notes": [
+    "estimated_wait_ms is a runtime gap proxy, not pure network/model latency",
+    "idempotency coverage denominator includes only mutating/expensive calls marked eligible by runtime semantics",
+    "accepted-run TTA is measured from durable run timestamps and is not a model-only latency metric"
+  ]
+}
