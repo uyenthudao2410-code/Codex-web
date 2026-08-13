@@ -102,6 +102,127 @@ class CodexBridgeTests(unittest.TestCase):
             self.assertTrue(fork_params["ephemeral"])
             self.assertNotIn("deferGoalContinuation", fork_params)
 
+    def test_persistent_lane_can_be_resumed_by_a_new_bridge_instance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            first = CodexAppServerBridge(lambda: root)
+            first._ensure_connected = lambda: None
+            first_calls = []
+
+            def first_request(method, params):
+                first_calls.append((method, dict(params)))
+                if method == "thread/start":
+                    return {
+                        "thread": {
+                            "id": "persistent-thread",
+                            "sessionId": "session-1",
+                            "cwd": str(root),
+                            "model": "gpt-5.6-terra",
+                            "reasoningEffort": "high",
+                        }
+                    }
+                if method == "turn/start":
+                    return {"turn": {"id": "turn-1", "status": "inProgress"}}
+                raise AssertionError(method)
+
+            first._request = first_request
+            started = first.run(
+                "investigate the bounded lane",
+                profile="cross_file",
+                lifetime="persistent",
+            )
+            start_params = next(params for method, params in first_calls if method == "thread/start")
+            self.assertFalse(start_params["ephemeral"])
+            self.assertEqual(started["creation_mode"], "persistent_new")
+            self.assertEqual(started["lifetime"], "persistent")
+            self.assertEqual(started["session_id"], "session-1")
+
+            restored = CodexAppServerBridge(lambda: root)
+            restored._ensure_connected = lambda: None
+            restored_calls = []
+
+            def restored_request(method, params):
+                restored_calls.append((method, dict(params)))
+                if method == "thread/read":
+                    return {
+                        "thread": {
+                            "id": "persistent-thread",
+                            "sessionId": "session-1",
+                            "cwd": str(root),
+                        }
+                    }
+                if method == "thread/resume":
+                    return {
+                        "thread": {
+                            "id": "persistent-thread",
+                            "sessionId": "session-1",
+                            "cwd": str(root),
+                            "model": "gpt-5.6-terra",
+                            "reasoningEffort": "high",
+                        }
+                    }
+                if method == "turn/start":
+                    return {"turn": {"id": "turn-2", "status": "inProgress"}}
+                raise AssertionError(method)
+
+            restored._request = restored_request
+            resumed = restored.resume_persistent_thread(
+                thread_id="persistent-thread",
+                expected_session_id="session-1",
+                prompt="continue from the durable lane state",
+                profile="cross_file",
+                model="gpt-5.6-terra",
+                effort="high",
+            )
+            self.assertEqual(resumed["creation_mode"], "persistent_resume")
+            self.assertEqual(resumed["lifetime"], "persistent")
+            self.assertEqual(resumed["session_id"], "session-1")
+            methods = [method for method, _params in restored_calls]
+            self.assertEqual(methods[:3], ["thread/read", "thread/resume", "turn/start"])
+            resume_params = next(params for method, params in restored_calls if method == "thread/resume")
+            self.assertEqual(resume_params["threadId"], "persistent-thread")
+            self.assertEqual(resume_params["approvalPolicy"], "never")
+            self.assertEqual(resume_params["sandbox"], "read-only")
+
+    def test_persistent_resume_rejects_workspace_or_session_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            sibling = root.parent / f"{root.name}-sibling"
+            sibling.mkdir(exist_ok=True)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            bridge._request = lambda method, _params: {
+                "thread": {
+                    "id": "persistent-thread",
+                    "sessionId": "other-session",
+                    "cwd": str(sibling),
+                }
+            } if method == "thread/read" else None
+            with self.assertRaises(CodexBridgeError) as raised:
+                bridge.resume_persistent_thread(
+                    thread_id="persistent-thread",
+                    expected_session_id="session-1",
+                    prompt="continue",
+                    profile="cross_file",
+                )
+            self.assertEqual(raised.exception.code, "PERSISTENT_WORKSPACE_MISMATCH")
+            sibling.rmdir()
+
+            bridge._request = lambda method, _params: {
+                "thread": {
+                    "id": "persistent-thread",
+                    "cwd": str(root),
+                }
+            } if method == "thread/read" else None
+            with self.assertRaises(CodexBridgeError) as raised:
+                bridge.resume_persistent_thread(
+                    thread_id="persistent-thread",
+                    expected_session_id="session-1",
+                    prompt="continue",
+                    profile="cross_file",
+                )
+            self.assertEqual(raised.exception.code, "PERSISTENT_SESSION_MISMATCH")
+
     def test_packet_profile_overrides_desktop_ultra_and_disables_agentic_features(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

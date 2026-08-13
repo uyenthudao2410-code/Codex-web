@@ -13,8 +13,9 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _MAX_TEXT = 16_000
+HANDOFF_CAPSULE_MAX_BYTES = 8_192
 _SECRET_KEY_RE = re.compile(r"(authorization|credential|password|passwd|secret|token|api[_-]?key|private[_-]?key)", re.I)
 _SENSITIVE_PAYLOAD_KEYS = {
     "content",
@@ -213,6 +214,80 @@ class OrchestrationLedger:
                     created_at TEXT NOT NULL,
                     metadata_json TEXT NOT NULL DEFAULT '{}'
                 );
+                CREATE TABLE IF NOT EXISTS agent_lanes (
+                    lane_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL DEFAULT '',
+                    wave_id TEXT NOT NULL DEFAULT '',
+                    semantic_key TEXT NOT NULL DEFAULT '',
+                    role TEXT NOT NULL DEFAULT '',
+                    provider TEXT NOT NULL DEFAULT 'codex_app_server',
+                    thread_id TEXT NOT NULL DEFAULT '',
+                    session_id TEXT NOT NULL DEFAULT '',
+                    lifecycle TEXT NOT NULL,
+                    profile TEXT NOT NULL DEFAULT '',
+                    model TEXT NOT NULL DEFAULT '',
+                    effort TEXT NOT NULL DEFAULT '',
+                    base_head TEXT NOT NULL DEFAULT '',
+                    worktree_fp TEXT NOT NULL DEFAULT '',
+                    contract_fp TEXT NOT NULL DEFAULT '',
+                    last_turn_id TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    metadata_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE INDEX IF NOT EXISTS idx_agent_lanes_run_updated
+                    ON agent_lanes(run_id, updated_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_agent_lanes_semantic
+                    ON agent_lanes(run_id, semantic_key, lifecycle, updated_at DESC);
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_lanes_one_live_semantic
+                    ON agent_lanes(run_id, semantic_key)
+                    WHERE semantic_key<>'' AND lifecycle IN ('starting','active','waiting','idle');
+                CREATE TABLE IF NOT EXISTS coordination_messages (
+                    message_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL DEFAULT '',
+                    wave_id TEXT NOT NULL DEFAULT '',
+                    lane_id TEXT NOT NULL DEFAULT '',
+                    direction TEXT NOT NULL,
+                    kind TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    base_head TEXT NOT NULL DEFAULT '',
+                    worktree_fp TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    acknowledged_at TEXT,
+                    payload_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE INDEX IF NOT EXISTS idx_coordination_messages_pending
+                    ON coordination_messages(run_id, status, created_at);
+                CREATE INDEX IF NOT EXISTS idx_coordination_messages_lane
+                    ON coordination_messages(lane_id, created_at);
+                CREATE TABLE IF NOT EXISTS handoff_capsules (
+                    capsule_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL DEFAULT '',
+                    wave_id TEXT NOT NULL DEFAULT '',
+                    conversation_epoch INTEGER NOT NULL DEFAULT 1,
+                    version INTEGER NOT NULL DEFAULT 1,
+                    status TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    sha256 TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_handoff_capsules_run_created
+                    ON handoff_capsules(run_id, created_at DESC);
+                CREATE TABLE IF NOT EXISTS background_operations (
+                    operation_id TEXT PRIMARY KEY,
+                    server_instance_id TEXT NOT NULL,
+                    tool TEXT NOT NULL,
+                    task_id TEXT NOT NULL DEFAULT '',
+                    run_id TEXT NOT NULL DEFAULT '',
+                    wave_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    finished_at TEXT,
+                    summary_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE INDEX IF NOT EXISTS idx_background_operations_status
+                    ON background_operations(status, updated_at DESC);
                 """
             )
             connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
@@ -606,6 +681,497 @@ class OrchestrationLedger:
             for row in rows
         ]
 
+    def upsert_agent_lane(
+        self,
+        *,
+        lane_id: str,
+        run_id: str = "",
+        wave_id: str = "",
+        semantic_key: str = "",
+        role: str = "worker",
+        provider: str = "codex_app_server",
+        thread_id: str = "",
+        session_id: str = "",
+        lifecycle: str = "active",
+        profile: str = "",
+        model: str = "",
+        effort: str = "",
+        base_head: str = "",
+        worktree_fp: str = "",
+        contract_fp: str = "",
+        last_turn_id: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> str:
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT created_at, metadata_json FROM agent_lanes WHERE lane_id=?",
+                (lane_id,),
+            ).fetchone()
+            created_at = str(row["created_at"]) if row else now
+            existing = json.loads(row["metadata_json"] or "{}") if row else {}
+            existing.update(_sanitize(metadata or {}))
+            try:
+                connection.execute(
+                    """INSERT INTO agent_lanes(
+                    lane_id,run_id,wave_id,semantic_key,role,provider,thread_id,session_id,lifecycle,
+                    profile,model,effort,base_head,worktree_fp,contract_fp,last_turn_id,created_at,updated_at,metadata_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(lane_id) DO UPDATE SET
+                    run_id=excluded.run_id,wave_id=excluded.wave_id,semantic_key=excluded.semantic_key,
+                    role=excluded.role,provider=excluded.provider,thread_id=excluded.thread_id,
+                    session_id=excluded.session_id,lifecycle=excluded.lifecycle,profile=excluded.profile,
+                    model=excluded.model,effort=excluded.effort,base_head=excluded.base_head,
+                    worktree_fp=excluded.worktree_fp,contract_fp=excluded.contract_fp,
+                    last_turn_id=excluded.last_turn_id,updated_at=excluded.updated_at,
+                    metadata_json=excluded.metadata_json""",
+                    (
+                    _bounded_text(lane_id, 256),
+                    _bounded_text(run_id, 256),
+                    _bounded_text(wave_id, 256),
+                    _bounded_text(semantic_key, 512),
+                    _bounded_text(role, 100),
+                    _bounded_text(provider, 100),
+                    _bounded_text(thread_id, 256),
+                    _bounded_text(session_id, 256),
+                    _bounded_text(lifecycle, 64),
+                    _bounded_text(profile, 100),
+                    _bounded_text(model, 200),
+                    _bounded_text(effort, 50),
+                    _bounded_text(base_head, 128),
+                    _bounded_text(worktree_fp, 128),
+                    _bounded_text(contract_fp, 128),
+                    _bounded_text(last_turn_id, 256),
+                    created_at,
+                    now,
+                    _json(existing),
+                    ),
+                )
+            except sqlite3.IntegrityError:
+                existing_lane = connection.execute(
+                    """SELECT lane_id FROM agent_lanes
+                    WHERE run_id=? AND semantic_key=?
+                    AND lifecycle IN ('starting','active','waiting','idle')
+                    ORDER BY updated_at DESC LIMIT 1""",
+                    (_bounded_text(run_id, 256), _bounded_text(semantic_key, 512)),
+                ).fetchone()
+                if existing_lane:
+                    return str(existing_lane["lane_id"])
+                raise
+        return lane_id
+
+    def update_agent_lane(self, lane_id: str, **changes: Any) -> dict[str, Any] | None:
+        allowed = {
+            "lifecycle",
+            "thread_id",
+            "session_id",
+            "last_turn_id",
+            "base_head",
+            "worktree_fp",
+            "contract_fp",
+            "profile",
+            "model",
+            "effort",
+            "wave_id",
+        }
+        updates = {key: value for key, value in changes.items() if key in allowed}
+        metadata = changes.get("metadata")
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT metadata_json FROM agent_lanes WHERE lane_id=?",
+                (lane_id,),
+            ).fetchone()
+            if not row:
+                return None
+            assignments: list[str] = []
+            params: list[Any] = []
+            for key, value in updates.items():
+                assignments.append(f"{key}=?")
+                params.append(_bounded_text(value, 256))
+            if isinstance(metadata, dict):
+                existing = json.loads(row["metadata_json"] or "{}")
+                existing.update(_sanitize(metadata))
+                assignments.append("metadata_json=?")
+                params.append(_json(existing))
+            assignments.append("updated_at=?")
+            params.append(utc_now())
+            params.append(lane_id)
+            connection.execute(
+                f"UPDATE agent_lanes SET {','.join(assignments)} WHERE lane_id=?",
+                params,
+            )
+        return self.get_agent_lane(lane_id)
+
+    @staticmethod
+    def _lane_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "lane_id": row["lane_id"],
+            "run_id": row["run_id"],
+            "wave_id": row["wave_id"],
+            "semantic_key": row["semantic_key"],
+            "role": row["role"],
+            "provider": row["provider"],
+            "thread_id": row["thread_id"],
+            "session_id": row["session_id"],
+            "lifecycle": row["lifecycle"],
+            "profile": row["profile"],
+            "model": row["model"],
+            "effort": row["effort"],
+            "base_head": row["base_head"],
+            "worktree_fp": row["worktree_fp"],
+            "contract_fp": row["contract_fp"],
+            "last_turn_id": row["last_turn_id"],
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
+            "metadata": json.loads(row["metadata_json"] or "{}"),
+        }
+
+    def get_agent_lane(self, lane_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM agent_lanes WHERE lane_id=?",
+                (lane_id,),
+            ).fetchone()
+        return self._lane_row(row) if row else None
+
+    def find_agent_lane(self, *, run_id: str, semantic_key: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                """SELECT * FROM agent_lanes
+                WHERE run_id=? AND semantic_key=? AND lifecycle IN ('active','waiting','idle')
+                ORDER BY updated_at DESC LIMIT 1""",
+                (run_id, semantic_key),
+            ).fetchone()
+        return self._lane_row(row) if row else None
+
+    def list_agent_lanes(
+        self,
+        *,
+        run_id: str = "",
+        lifecycle: str = "",
+    ) -> list[dict[str, Any]]:
+        query = "SELECT * FROM agent_lanes WHERE 1=1"
+        params: list[Any] = []
+        if run_id:
+            query += " AND run_id=?"
+            params.append(run_id)
+        if lifecycle:
+            query += " AND lifecycle=?"
+            params.append(lifecycle)
+        query += " ORDER BY updated_at DESC, lane_id"
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [self._lane_row(row) for row in rows]
+
+    def append_coordination_message(
+        self,
+        *,
+        direction: str,
+        kind: str,
+        payload: dict[str, Any],
+        run_id: str = "",
+        wave_id: str = "",
+        lane_id: str = "",
+        status: str = "pending",
+        base_head: str = "",
+        worktree_fp: str = "",
+        message_id: str | None = None,
+    ) -> str:
+        message_id = message_id or uuid.uuid4().hex
+        with self._lock, self._connect() as connection:
+            connection.execute(
+                """INSERT OR IGNORE INTO coordination_messages(
+                    message_id,run_id,wave_id,lane_id,direction,kind,status,base_head,worktree_fp,
+                    created_at,acknowledged_at,payload_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    _bounded_text(message_id, 256),
+                    _bounded_text(run_id, 256),
+                    _bounded_text(wave_id, 256),
+                    _bounded_text(lane_id, 256),
+                    _bounded_text(direction, 64),
+                    _bounded_text(kind, 100),
+                    _bounded_text(status, 64),
+                    _bounded_text(base_head, 128),
+                    _bounded_text(worktree_fp, 128),
+                    utc_now(),
+                    None,
+                    _json(_sanitize(payload)),
+                ),
+            )
+        return message_id
+
+    @staticmethod
+    def _message_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "message_id": row["message_id"],
+            "run_id": row["run_id"],
+            "wave_id": row["wave_id"],
+            "lane_id": row["lane_id"],
+            "direction": row["direction"],
+            "kind": row["kind"],
+            "status": row["status"],
+            "base_head": row["base_head"],
+            "worktree_fp": row["worktree_fp"],
+            "created_at": row["created_at"],
+            "acknowledged_at": row["acknowledged_at"],
+            "payload": json.loads(row["payload_json"] or "{}"),
+        }
+
+    def list_coordination_messages(
+        self,
+        *,
+        run_id: str = "",
+        lane_id: str = "",
+        status: str = "",
+        direction: str = "",
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        query = "SELECT * FROM coordination_messages WHERE 1=1"
+        params: list[Any] = []
+        for key, value in (
+            ("run_id", run_id),
+            ("lane_id", lane_id),
+            ("status", status),
+            ("direction", direction),
+        ):
+            if value:
+                query += f" AND {key}=?"
+                params.append(value)
+        query += " ORDER BY created_at, message_id LIMIT ?"
+        params.append(max(1, min(int(limit), 200)))
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [self._message_row(row) for row in rows]
+
+    def acknowledge_coordination_message(self, message_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM coordination_messages WHERE message_id=?",
+                (message_id,),
+            ).fetchone()
+            if not row:
+                return None
+            if row["status"] != "acknowledged":
+                connection.execute(
+                    """UPDATE coordination_messages
+                    SET status='acknowledged', acknowledged_at=? WHERE message_id=?""",
+                    (utc_now(), message_id),
+                )
+            updated = connection.execute(
+                "SELECT * FROM coordination_messages WHERE message_id=?",
+                (message_id,),
+            ).fetchone()
+        return self._message_row(updated)
+
+    def record_handoff_capsule(
+        self,
+        *,
+        payload: dict[str, Any],
+        run_id: str = "",
+        wave_id: str = "",
+        conversation_epoch: int = 1,
+        status: str = "active",
+        version: int = 1,
+        capsule_id: str | None = None,
+    ) -> dict[str, Any]:
+        capsule_id = capsule_id or uuid.uuid4().hex
+        safe_payload = _sanitize(payload)
+        encoded = _json(safe_payload).encode("utf-8")
+        if len(encoded) > HANDOFF_CAPSULE_MAX_BYTES:
+            raise ValueError(f"handoff capsule exceeds {HANDOFF_CAPSULE_MAX_BYTES} bytes")
+        digest = hashlib.sha256(encoded).hexdigest()
+        created_at = utc_now()
+        epoch = max(1, int(conversation_epoch))
+        capsule_version = max(1, int(version))
+        with self._lock, self._connect() as connection:
+            connection.execute(
+                """INSERT INTO handoff_capsules(
+                    capsule_id,run_id,wave_id,conversation_epoch,version,status,
+                    created_at,payload_json,sha256
+                ) VALUES(?,?,?,?,?,?,?,?,?)""",
+                (
+                    _bounded_text(capsule_id, 256),
+                    _bounded_text(run_id, 256),
+                    _bounded_text(wave_id, 256),
+                    epoch,
+                    capsule_version,
+                    _bounded_text(status, 64),
+                    created_at,
+                    encoded.decode("utf-8"),
+                    digest,
+                ),
+            )
+        return {
+            "capsule_id": capsule_id,
+            "run_id": run_id,
+            "wave_id": wave_id,
+            "conversation_epoch": epoch,
+            "version": capsule_version,
+            "status": status,
+            "created_at": created_at,
+            "payload": safe_payload,
+            "sha256": digest,
+            "bytes": len(encoded),
+        }
+
+    def latest_handoff_capsule(self, *, run_id: str = "") -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            if run_id:
+                row = connection.execute(
+                    """SELECT * FROM handoff_capsules
+                    WHERE run_id=? ORDER BY created_at DESC, capsule_id DESC LIMIT 1""",
+                    (run_id,),
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    """SELECT * FROM handoff_capsules
+                    ORDER BY created_at DESC, capsule_id DESC LIMIT 1"""
+                ).fetchone()
+        if not row:
+            return None
+        payload_json = row["payload_json"] or "{}"
+        return {
+            "capsule_id": row["capsule_id"],
+            "run_id": row["run_id"],
+            "wave_id": row["wave_id"],
+            "conversation_epoch": int(row["conversation_epoch"]),
+            "version": int(row["version"]),
+            "status": row["status"],
+            "created_at": row["created_at"],
+            "payload": json.loads(payload_json),
+            "sha256": row["sha256"],
+            "bytes": len(payload_json.encode("utf-8")),
+        }
+
+    def start_background_operation(
+        self,
+        *,
+        operation_id: str,
+        server_instance_id: str,
+        tool: str,
+        task_id: str = "",
+        run_id: str = "",
+        wave_id: str = "",
+        summary: dict[str, Any] | None = None,
+    ) -> None:
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            connection.execute(
+                """INSERT INTO background_operations(
+                    operation_id,server_instance_id,tool,task_id,run_id,wave_id,status,
+                    started_at,updated_at,finished_at,summary_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(operation_id) DO UPDATE SET
+                    server_instance_id=excluded.server_instance_id,
+                    tool=excluded.tool,task_id=excluded.task_id,run_id=excluded.run_id,
+                    wave_id=excluded.wave_id,status=excluded.status,
+                    updated_at=excluded.updated_at,finished_at=excluded.finished_at,
+                    summary_json=excluded.summary_json""",
+                (
+                    _bounded_text(operation_id, 256),
+                    _bounded_text(server_instance_id, 256),
+                    _bounded_text(tool, 100),
+                    _bounded_text(task_id, 256),
+                    _bounded_text(run_id, 256),
+                    _bounded_text(wave_id, 256),
+                    "running",
+                    now,
+                    now,
+                    None,
+                    _json(_sanitize(summary or {})),
+                ),
+            )
+
+    def finish_background_operation(
+        self,
+        operation_id: str,
+        *,
+        status: str,
+        summary: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT summary_json FROM background_operations WHERE operation_id=?",
+                (operation_id,),
+            ).fetchone()
+            if not row:
+                return None
+            existing = json.loads(row["summary_json"] or "{}")
+            existing.update(_sanitize(summary or {}))
+            connection.execute(
+                """UPDATE background_operations
+                SET status=?, updated_at=?, finished_at=?, summary_json=?
+                WHERE operation_id=?""",
+                (
+                    _bounded_text(status, 64),
+                    now,
+                    now,
+                    _json(existing),
+                    operation_id,
+                ),
+            )
+        return self.get_background_operation(operation_id)
+
+    def mark_orphaned_background_operations(
+        self,
+        *,
+        current_server_instance_id: str,
+    ) -> int:
+        now = utc_now()
+        changed = 0
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                """SELECT operation_id, summary_json FROM background_operations
+                WHERE status='running' AND server_instance_id<>?""",
+                (current_server_instance_id,),
+            ).fetchall()
+            for row in rows:
+                summary = json.loads(row["summary_json"] or "{}")
+                summary["orphan_reason"] = "mcp_runtime_restarted"
+                connection.execute(
+                    """UPDATE background_operations
+                    SET status='orphaned', updated_at=?, finished_at=?, summary_json=?
+                    WHERE operation_id=?""",
+                    (now, now, _json(_sanitize(summary)), row["operation_id"]),
+                )
+                changed += 1
+        return changed
+
+    @staticmethod
+    def _background_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "operation_id": row["operation_id"],
+            "server_instance_id": row["server_instance_id"],
+            "tool": row["tool"],
+            "task_id": row["task_id"],
+            "run_id": row["run_id"],
+            "wave_id": row["wave_id"],
+            "status": row["status"],
+            "started_at": row["started_at"],
+            "updated_at": row["updated_at"],
+            "finished_at": row["finished_at"],
+            "summary": json.loads(row["summary_json"] or "{}"),
+        }
+
+    def get_background_operation(self, operation_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM background_operations WHERE operation_id=?",
+                (operation_id,),
+            ).fetchone()
+        return self._background_row(row) if row else None
+
+    def list_background_operations(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                """SELECT * FROM background_operations
+                ORDER BY updated_at DESC, operation_id DESC LIMIT ?""",
+                (max(1, min(int(limit), 200)),),
+            ).fetchall()
+        return [self._background_row(row) for row in rows]
+
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         with self._lock, self._connect() as connection:
             row = connection.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
@@ -682,6 +1248,9 @@ class OrchestrationLedger:
         proofs = self.list_proofs(run_id)
         checkpoints = self.list_checkpoints(run_id)
         delegations = [item for wave in waves for item in self.list_delegations(wave["wave_id"])]
+        lanes = self.list_agent_lanes(run_id=run_id)
+        messages = self.list_coordination_messages(run_id=run_id, limit=100)
+        capsule = self.latest_handoff_capsule(run_id=run_id)
         return {
             "run": run,
             "waves": waves,
@@ -689,5 +1258,8 @@ class OrchestrationLedger:
             "events": events,
             "proofs": proofs,
             "checkpoints": checkpoints,
+            "lanes": lanes,
+            "messages": messages,
+            "latest_handoff_capsule": capsule,
             "integrity": self.verify_chain(run_id),
         }

@@ -1,0 +1,21 @@
+{
+  "file_count": 14,
+  "files": {
+    "SKILL.md": "f682300f318285d1b529233de945abc121a5a807bd4e52090132e274581ad4d9",
+    "agents/openai.yaml": "4d7d11b850d89dd396f3568736ba9dd3e4ca84ca40e109e3c00c538b84f206fb",
+    "assets/icon.svg": "8936b24f674a1250d999e2c2b5901374fb4240426f32bd1ae340c352a90d617d",
+    "references/context-runtime.md": "b9fb6b44d8b37888d2bbae92de9d68871b725d46ee1d0afff09b00473f17b816",
+    "references/critical-mode.md": "f7b1844da9659ba9feca890e9d4ebe872252cf40743384beb028c0944ed6107d",
+    "references/eocl-runtime.md": "1cb6fee552852cc99e5e23344f96fd3c1e17a852f373af6ba90637a728d2f106",
+    "references/evaluation.md": "e943145de9415b164d0479bc54c5fc47202d6d264b7a3012a81ae12b58cb7568",
+    "references/examples.md": "907c8c1ca0f7c7c727f35d80d863424ec38f8cdb980b29224bd1ef3eb656e0ae",
+    "references/external-mcp-plane.md": "eb011d327b2b696284c7e31e070c68cf1742b7c0ac4474d390624ba76c212b58",
+    "references/orchestration-protocol.md": "d739dd07af270a97f93655b20de51bcafeec3bb316231fd335444f82f7df1c87",
+    "references/research-basis.md": "379ac44a246cb923aa60007f7b134b4668fafb99d38fc8f5c7cc97f525575455",
+    "references/routing-policy.md": "be41a9f108f88286dc51a84e721299fc621865d53f5e2a55dca1651374f2ff9d",
+    "scripts/compare_route_policies.py": "aca38925f10eb16f975cd7a9ba15951409f2ee8012288dd86c7d85d75781497a",
+    "scripts/test_compare_route_policies.py": "9061ec16bc9a5b2820bd6ced1e9b18bbf67a70dda243775a4bbc949fae48ba22"
+  },
+  "package_sha256": "858632ab57fe58c07083f2a1344b8169bad54a28a4947c6a11cf934a4159aa87",
+  "skill_name": "sol-lean-codex"
+}

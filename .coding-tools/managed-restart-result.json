@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "sourceHead": "deb03fc523f688b523aaa3a264c8954920450ccf",
+  "workspace": "E:\\DEV\\Tools-Codex-web",
+  "mcpPort": 18766,
+  "healthPort": 18082,
+  "permissionMode": "safe",
+  "toolMode": "smart",
+  "oldNativePid": 24524,
+  "newNativePid": 42340,
+  "oldTunnelPid": 25156,
+  "newTunnelPid": 456,
+  "mcpRunning": true,
+  "tunnelRunning": true,
+  "fullyReady": true,
+  "manualStop": false,
+  "finishedAt": "2026-08-13T05:58:47.906Z"
+}

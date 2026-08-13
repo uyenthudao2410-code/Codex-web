@@ -94,6 +94,7 @@ from .transport_stdio import serve_stdio
 
 SERVER_NAME = "coding-tools-mcp"
 SERVER_TITLE = "Coding Tools MCP"
+PROCESS_INSTANCE_ID = secrets.token_urlsafe(12)
 TOOL_MODE_ALLOWLISTS = {
     "smart": frozenset({
         "workspace_context", "agent_workflow", "task_control", "document_workflow",
@@ -123,6 +124,8 @@ except (TypeError, ValueError):
     LONG_TOOL_HANDOFF_SECONDS = 90
 BACKGROUND_OPERATION_WAIT_MAX_MS = 60_000
 MAX_BACKGROUND_OPERATIONS = 32
+PROCESS_BACKGROUND_OPERATIONS: dict[str, dict[str, Any]] = {}
+PROCESS_BACKGROUND_OPERATIONS_LOCK = threading.RLock()
 AGENT_EXTERNAL_REVIEW_ENV = f"{ENV_PREFIX}_EXTERNAL_REVIEW"
 AGENT_REVIEW_PACKET_MAX_DIFF_CHARS = 12_000
 AGENT_REVIEW_DEADLINE_MS = 8_000
@@ -144,6 +147,39 @@ AGENT_REVIEW_OUTPUT_SCHEMA = {
         "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
     },
     "required": ["verdict", "findings", "missing_proof", "confidence"],
+}
+COORDINATION_LANE_OUTPUT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "status": {
+            "type": "string",
+            "enum": ["completed", "blocked", "needs_input"],
+        },
+        "summary": {"type": "string", "maxLength": 2_000},
+        "question": {"type": ["string", "null"], "maxLength": 1_000},
+        "findings": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string", "maxLength": 700},
+        },
+        "missing_proof": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string", "maxLength": 700},
+        },
+        "next_action": {"type": "string", "maxLength": 1_000},
+        "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+    },
+    "required": [
+        "status",
+        "summary",
+        "question",
+        "findings",
+        "missing_proof",
+        "next_action",
+        "confidence",
+    ],
 }
 AGENT_CANDIDATE_PACKET_MAX_CHARS = 14_000
 
@@ -1600,6 +1636,7 @@ class Runtime:
         self.auth_token = auth_token or None
         self.oauth_config = oauth_config
         self.server_instance_id = secrets.token_urlsafe(12)
+        self.process_instance_id = PROCESS_INSTANCE_ID
         self._set_runtime_dir(runtime_dir_for_workspace(self.workspace.root, self.server_instance_id))
         self.fallback_runtime_dir = fallback_runtime_dir_for_workspace(self.workspace.root, self.server_instance_id)
         self.default_cwd = self.workspace.root
@@ -1622,13 +1659,30 @@ class Runtime:
         self.request_sessions: dict[str | int, str] = {}
         self.request_sessions_lock = threading.Lock()
         self.request_context = threading.local()
-        self.background_operations: dict[str, dict[str, Any]] = {}
-        self.background_operations_lock = threading.RLock()
+        # Background operations are process-scoped rather than HTTP-session-scoped.
+        # A reconnect in the same MCP process must be able to poll the original
+        # Event/result instead of falsely declaring it orphaned.
+        self.background_operations = PROCESS_BACKGROUND_OPERATIONS
+        self.background_operations_lock = PROCESS_BACKGROUND_OPERATIONS_LOCK
         self.initialized = False
         self.telemetry = SessionTelemetry(permission_mode=self.permission_mode, transport=transport)
         self.task_state = TaskStateStore(self.workspace.root)
         self.performance_trace = PerformanceTraceStore(self.workspace.root)
         self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
+        self.orphaned_background_operations = self.orchestration_ledger.mark_orphaned_background_operations(
+            current_server_instance_id=self.process_instance_id
+        )
+        self.recovered_agent_lanes = 0
+        for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
+            owner_process = str((lane.get("metadata") or {}).get("owner_process_instance_id") or "")
+            if not owner_process or owner_process == self.process_instance_id:
+                continue
+            if self.orchestration_ledger.update_agent_lane(
+                str(lane["lane_id"]),
+                lifecycle="waiting",
+                metadata={"recovery_reason": "mcp_runtime_restarted"},
+            ):
+                self.recovered_agent_lanes += 1
         self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
         self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
         self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
@@ -1690,6 +1744,20 @@ class Runtime:
                         retryable=True,
                         details={"active_commands": len(active), "starting_commands": self.starting_sessions},
                     )
+            with self.background_operations_lock:
+                active_background = [
+                    item for item in self.background_operations.values()
+                    if item.get("workspace") == str(self.workspace.root)
+                    and not item["event"].is_set()
+                ]
+            if active_background:
+                raise ToolFailure(
+                    "WORKSPACE_BUSY",
+                    "Cannot switch workspace while background workflows are running.",
+                    category="runtime",
+                    retryable=True,
+                    details={"active_background_operations": len(active_background)},
+                )
             if target == self.workspace.root:
                 return {
                     "ready": True,
@@ -1698,6 +1766,7 @@ class Runtime:
                     "changed": False,
                 }
             old_runtime_dir = self.runtime_dir
+            self._codex_bridge.close()
             self._invalidate_fast_cache()
             self._clear_context_bundle_cache()
             self.workspace = Workspace(target, self.authorized_roots)
@@ -1708,9 +1777,24 @@ class Runtime:
             self.task_state = TaskStateStore(self.workspace.root)
             self.performance_trace = PerformanceTraceStore(self.workspace.root)
             self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
+            self.orphaned_background_operations = self.orchestration_ledger.mark_orphaned_background_operations(
+                current_server_instance_id=self.process_instance_id
+            )
+            self.recovered_agent_lanes = 0
+            for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
+                owner_process = str((lane.get("metadata") or {}).get("owner_process_instance_id") or "")
+                if not owner_process or owner_process == self.process_instance_id:
+                    continue
+                if self.orchestration_ledger.update_agent_lane(
+                    str(lane["lane_id"]),
+                    lifecycle="waiting",
+                    metadata={"recovery_reason": "workspace_runtime_restarted"},
+                ):
+                    self.recovered_agent_lanes += 1
             self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
             self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
             self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
+            self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
             with self.patch_lock:
                 self.patch_baselines.clear()
             self.workspace_generation += 1
@@ -1883,6 +1967,7 @@ class Runtime:
         payload: dict[str, Any] = {
             "operation_id": operation["operation_id"],
             "tool": operation["tool"],
+            "workspace": operation.get("workspace"),
             "status": "completed" if finished else "running",
             "elapsed_seconds": max(0, int(time.monotonic() - operation["started_monotonic"])),
             "requires_progress_report": not finished,
@@ -1906,11 +1991,28 @@ class Runtime:
         operation: dict[str, Any] = {
             "operation_id": operation_id,
             "tool": name,
+            "workspace": str(self.workspace.root),
             "started_monotonic": time.monotonic(),
+            "started_at": datetime.now(timezone.utc).isoformat(),
             "event": done,
             "result": None,
             "error": None,
         }
+        current_task = self.task_state.get()
+        projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
+        self.orchestration_ledger.start_background_operation(
+            operation_id=operation_id,
+            server_instance_id=self.process_instance_id,
+            tool=name,
+            task_id=str(current_task.get("task_id") or ""),
+            run_id=str(projection.get("run_id") or ""),
+            wave_id=str(projection.get("wave_id") or ""),
+            summary={
+                "phase": str(arguments.get("phase") or ""),
+                "objective": str(arguments.get("objective") or "")[:1_000],
+                "request_id": str(request_id or ""),
+            },
+        )
 
         def worker() -> None:
             try:
@@ -1923,6 +2025,26 @@ class Runtime:
                     "retryable": False,
                 }
             finally:
+                result = operation.get("result")
+                result_status = ""
+                if isinstance(result, dict):
+                    structured = result.get("structuredContent")
+                    if isinstance(structured, dict):
+                        result_status = str(
+                            structured.get("status")
+                            or structured.get("phase")
+                            or structured.get("workflow")
+                            or ""
+                        )[:100]
+                self.orchestration_ledger.finish_background_operation(
+                    operation_id,
+                    status="failed" if operation.get("error") else "completed",
+                    summary={
+                        "result_available_in_memory": result is not None,
+                        "result_status": result_status,
+                        "error": operation.get("error"),
+                    },
+                )
                 done.set()
 
         with self.background_operations_lock:
@@ -4165,12 +4287,538 @@ class Runtime:
                 raise ToolFailure("INVALID_ARGUMENT", f"Unknown batch action: {action}", category="validation")
         return {"dry_run": dry_run, "results": results, "count": len(results), "affected_files": [] if dry_run else affected}
 
+    def _coordination_ids(self, args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], str, str]:
+        state = self.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        run_id = str(args.get("run_id") or projection.get("run_id") or "").strip()
+        wave_id = str(args.get("wave_id") or projection.get("wave_id") or "").strip()
+        return state, projection, run_id, wave_id
+
+    @staticmethod
+    def _coordination_lane_outcome(bridge_result: dict[str, Any]) -> dict[str, Any]:
+        observation = bridge_result.get("observation") if isinstance(bridge_result.get("observation"), dict) else {}
+        status = str(observation.get("status") or bridge_result.get("status") or "unknown")
+        terminal = bool(observation.get("terminal")) or status in {
+            "completed",
+            "failed",
+            "interrupted",
+            "deadline",
+        }
+        text = str(observation.get("agent_text") or "").strip()
+        try:
+            parsed = json.loads(text) if text else None
+        except (TypeError, ValueError, json.JSONDecodeError):
+            parsed = None
+        if isinstance(parsed, dict):
+            response = {
+                "status": str(parsed.get("status") or "blocked"),
+                "summary": str(parsed.get("summary") or "")[:2_000],
+                "question": str(parsed.get("question") or "")[:1_000] or None,
+                "findings": [str(item)[:700] for item in list(parsed.get("findings") or [])[:8]],
+                "missing_proof": [str(item)[:700] for item in list(parsed.get("missing_proof") or [])[:8]],
+                "next_action": str(parsed.get("next_action") or "")[:1_000],
+                "confidence": str(parsed.get("confidence") or "low"),
+            }
+        elif text:
+            response = {
+                "status": "blocked",
+                "summary": "Codex returned an unstructured response.",
+                "question": None,
+                "findings": [],
+                "missing_proof": ["structured_lane_output"],
+                "next_action": "Review the bounded agent_text and repacket instead of retrying unchanged.",
+                "confidence": "low",
+                "agent_text": text[:4_000],
+            }
+        else:
+            response = {
+                "status": "blocked" if terminal else "running",
+                "summary": "No terminal structured result is available yet.",
+                "question": None,
+                "findings": [],
+                "missing_proof": [],
+                "next_action": "Poll the lane with task_control action=lane lane_action=observe.",
+                "confidence": "low",
+            }
+        return {
+            "status": status,
+            "terminal": terminal,
+            "thread_id": str(bridge_result.get("thread_id") or ""),
+            "turn_id": str(bridge_result.get("turn_id") or observation.get("turn_id") or ""),
+            "session_id": str(bridge_result.get("session_id") or ""),
+            "lifetime": str(bridge_result.get("lifetime") or "persistent"),
+            "creation_mode": bridge_result.get("creation_mode"),
+            "route": observation.get("route") or bridge_result.get("route"),
+            "wall_time_ms": observation.get("wall_time_ms"),
+            "economics": observation.get("economics"),
+            "deadline_hit": bool(observation.get("deadline_hit", bridge_result.get("deadline_hit", False))),
+            "error": observation.get("error"),
+            "response": response,
+        }
+
+    def _record_coordination_lane_outcome(
+        self,
+        lane: dict[str, Any],
+        bridge_result: dict[str, Any],
+    ) -> dict[str, Any]:
+        outcome = self._coordination_lane_outcome(bridge_result)
+        response = outcome["response"]
+        if not outcome["terminal"]:
+            lifecycle = "active"
+        elif outcome["status"] == "completed" and response.get("status") == "completed":
+            lifecycle = "idle"
+        else:
+            lifecycle = "waiting"
+        route = outcome.get("route") if isinstance(outcome.get("route"), dict) else {}
+        lane_id = str(lane["lane_id"])
+        updated = self.orchestration_ledger.update_agent_lane(
+            lane_id,
+            lifecycle=lifecycle,
+            thread_id=outcome.get("thread_id") or lane.get("thread_id") or "",
+            session_id=outcome.get("session_id") or lane.get("session_id") or "",
+            last_turn_id=outcome.get("turn_id") or lane.get("last_turn_id") or "",
+            profile=str(route.get("profile") or lane.get("profile") or ""),
+            model=str(route.get("model") or lane.get("model") or ""),
+            effort=str(route.get("effort") or lane.get("effort") or ""),
+            metadata={
+                "last_bridge_status": outcome["status"],
+                "deadline_hit": outcome["deadline_hit"],
+                "last_wall_time_ms": outcome.get("wall_time_ms"),
+                "last_economics": outcome.get("economics"),
+                "owner_process_instance_id": self.process_instance_id,
+            },
+        ) or lane
+        if outcome["terminal"] and outcome.get("turn_id"):
+            kind = "question" if response.get("question") else "result"
+            stable_id = hashlib.sha256(
+                f"{lane_id}:{outcome['turn_id']}:{kind}".encode("utf-8")
+            ).hexdigest()
+            self.orchestration_ledger.append_coordination_message(
+                message_id=stable_id,
+                run_id=str(updated.get("run_id") or ""),
+                wave_id=str(updated.get("wave_id") or ""),
+                lane_id=lane_id,
+                direction="codex_to_chatweb",
+                kind=kind,
+                status="pending",
+                base_head=str(updated.get("base_head") or ""),
+                worktree_fp=str(updated.get("worktree_fp") or ""),
+                payload={
+                    "turn_id": outcome["turn_id"],
+                    "bridge_status": outcome["status"],
+                    "response": response,
+                    "error": outcome.get("error"),
+                    "economics": outcome.get("economics"),
+                    "deadline_hit": outcome.get("deadline_hit"),
+                },
+            )
+        return {"lane": updated, "outcome": outcome}
+
+    def _coordination_lane(self, args: dict[str, Any]) -> dict[str, Any]:
+        state, projection, run_id, wave_id = self._coordination_ids(args)
+        lane_action = str(args.get("lane_action") or "list").strip().lower()
+        if lane_action == "list":
+            return {
+                "state": state,
+                "lanes": self.orchestration_ledger.list_agent_lanes(
+                    run_id=run_id,
+                    lifecycle=str(args.get("lifecycle") or "").strip(),
+                ),
+            }
+
+        semantic_key = str(args.get("semantic_key") or "").strip()
+        lane_id = str(args.get("lane_id") or "").strip()
+        lane = self.orchestration_ledger.get_agent_lane(lane_id) if lane_id else None
+        if lane is None and semantic_key and run_id:
+            lane = self.orchestration_ledger.find_agent_lane(
+                run_id=run_id,
+                semantic_key=semantic_key,
+            )
+
+        if lane_action == "start":
+            if not semantic_key:
+                raise ToolFailure(
+                    "SEMANTIC_KEY_REQUIRED",
+                    "semantic_key is required when lane_action=start.",
+                    category="validation",
+                )
+            if lane is not None:
+                return {
+                    "status": "existing_lane",
+                    "lane": lane,
+                    "recommended_next_action": "Use lane_action=continue; duplicate persistent lanes are not auto-created.",
+                }
+            prompt = str(args.get("prompt") or "").strip()
+            if not prompt:
+                raise ToolFailure("PROMPT_REQUIRED", "prompt is required when lane_action=start.", category="validation")
+            profile = str(args.get("profile") or "cross_file").strip().lower()
+            lane_id = lane_id or secrets.token_urlsafe(12)
+            identity = self._orchestration_workspace_identity(".")
+            contract_fp = str(args.get("contract_fingerprint") or projection.get("contract_fp") or "")
+            claimed_lane_id = self.orchestration_ledger.upsert_agent_lane(
+                lane_id=lane_id,
+                run_id=run_id,
+                wave_id=wave_id,
+                semantic_key=semantic_key,
+                role=str(args.get("role") or "executor")[:100],
+                lifecycle="starting",
+                profile=profile,
+                model=str(args.get("model") or ""),
+                effort=str(args.get("effort") or ""),
+                base_head=str(identity.get("base_head") or ""),
+                worktree_fp=str(identity.get("worktree_fp") or ""),
+                contract_fp=contract_fp,
+                metadata={
+                    "created_by": "ChatWeb Sol",
+                    "conversation_epoch": args.get("conversation_epoch", 1),
+                    "owner_process_instance_id": self.process_instance_id,
+                },
+            )
+            if claimed_lane_id != lane_id:
+                existing_lane = self.orchestration_ledger.get_agent_lane(claimed_lane_id)
+                return {
+                    "status": "existing_lane",
+                    "lane": existing_lane,
+                    "recommended_next_action": "Use lane_action=continue; a concurrent caller already claimed this semantic lane.",
+                }
+            lane = self.orchestration_ledger.get_agent_lane(lane_id) or {"lane_id": lane_id}
+            self.orchestration_ledger.append_coordination_message(
+                run_id=run_id,
+                wave_id=wave_id,
+                lane_id=lane_id,
+                direction="chatweb_to_codex",
+                kind="instruction",
+                base_head=str(identity.get("base_head") or ""),
+                worktree_fp=str(identity.get("worktree_fp") or ""),
+                payload={
+                    "prompt": prompt,
+                    "summary": str(args.get("summary") or semantic_key)[:1_000],
+                    "profile": profile,
+                },
+            )
+            try:
+                bridge_result = self._codex_bridge.run(
+                    prompt,
+                    profile=profile,
+                    model=str(args.get("model") or "").strip() or None,
+                    effort=str(args.get("effort") or "").strip().lower() or None,
+                    lifetime="persistent",
+                    deadline_ms=max(0, min(int(args.get("deadline_ms", 0)), 30_000)),
+                    output_schema=COORDINATION_LANE_OUTPUT_SCHEMA,
+                    wait_ms=max(0, min(int(args.get("wait_ms", 0)), 30_000)),
+                )
+            except CodexBridgeError as exc:
+                updated = self.orchestration_ledger.update_agent_lane(
+                    lane_id,
+                    lifecycle="waiting",
+                    metadata={"last_error": exc.code, "retryable": exc.retryable},
+                ) or lane
+                self.orchestration_ledger.append_coordination_message(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    lane_id=lane_id,
+                    direction="codex_to_chatweb",
+                    kind="error",
+                    payload={"code": exc.code, "message": str(exc), "retryable": exc.retryable},
+                )
+                return {
+                    "status": "blocked",
+                    "lane": updated,
+                    "error": {"code": exc.code, "message": str(exc), "retryable": exc.retryable},
+                    "recommended_next_action": "Repacket or choose one policy-approved alternative; do not retry unchanged.",
+                }
+            route = bridge_result.get("route") if isinstance(bridge_result.get("route"), dict) else {}
+            lane = self.orchestration_ledger.update_agent_lane(
+                lane_id,
+                lifecycle="active",
+                thread_id=str(bridge_result.get("thread_id") or ""),
+                session_id=str(bridge_result.get("session_id") or ""),
+                last_turn_id=str(bridge_result.get("turn_id") or ""),
+                profile=str(route.get("profile") or profile),
+                model=str(route.get("model") or ""),
+                effort=str(route.get("effort") or ""),
+                metadata={"owner_process_instance_id": self.process_instance_id},
+            ) or lane
+            return {"status": "started", **self._record_coordination_lane_outcome(lane, bridge_result)}
+
+        if lane is None:
+            raise ToolFailure("LANE_NOT_FOUND", "The requested persistent lane was not found.", category="not_found")
+        lane_id = str(lane["lane_id"])
+        if lane_action == "close":
+            updated = self.orchestration_ledger.update_agent_lane(
+                lane_id,
+                lifecycle="closed",
+                metadata={"closed_reason": str(args.get("reason") or "closed_by_chatweb")[:1_000]},
+            ) or lane
+            self.orchestration_ledger.append_coordination_message(
+                run_id=str(updated.get("run_id") or ""),
+                wave_id=str(updated.get("wave_id") or ""),
+                lane_id=lane_id,
+                direction="system",
+                kind="lane_closed",
+                payload={"reason": str(args.get("reason") or "closed_by_chatweb")[:1_000]},
+            )
+            return {"status": "closed", "lane": updated}
+
+        if lane_action == "observe":
+            if not self._codex_bridge.owns_thread(str(lane.get("thread_id") or "")):
+                return {
+                    "status": "waiting",
+                    "lane": lane,
+                    "messages": self.orchestration_ledger.list_coordination_messages(
+                        lane_id=lane_id,
+                        status="pending",
+                        limit=max(1, min(int(args.get("limit", 20)), 100)),
+                    ),
+                    "reason": "live_turn_handle_not_owned_after_runtime_rollover",
+                    "recommended_next_action": "Use lane_action=continue to resume the persisted thread with a compact delta packet.",
+                }
+            observation = self._codex_bridge.observe(
+                thread_id=str(lane.get("thread_id") or ""),
+                turn_id=str(args.get("turn_id") or lane.get("last_turn_id") or "") or None,
+                after_cursor=max(0, int(args.get("after_cursor", 0))),
+                wait_ms=max(0, min(int(args.get("wait_ms", 0)), 30_000)),
+                max_events=max(1, min(int(args.get("max_events", 50)), 100)),
+            )
+            bridge_result = {
+                "status": observation.get("status"),
+                "thread_id": lane.get("thread_id"),
+                "turn_id": observation.get("turn_id") or lane.get("last_turn_id"),
+                "session_id": lane.get("session_id"),
+                "lifetime": "persistent",
+                "route": {
+                    "profile": lane.get("profile"),
+                    "model": lane.get("model"),
+                    "effort": lane.get("effort"),
+                },
+                "observation": observation,
+            }
+            return {"status": "observed", **self._record_coordination_lane_outcome(lane, bridge_result)}
+
+        if lane_action != "continue":
+            raise ToolFailure(
+                "INVALID_LANE_ACTION",
+                f"Unsupported lane_action: {lane_action}",
+                category="validation",
+            )
+        if str(lane.get("lifecycle") or "") == "closed":
+            raise ToolFailure("LANE_CLOSED", "The persistent lane is closed.", category="runtime")
+        prompt = str(args.get("prompt") or "").strip()
+        if not prompt:
+            raise ToolFailure("PROMPT_REQUIRED", "prompt is required when lane_action=continue.", category="validation")
+        identity = self._orchestration_workspace_identity(".")
+        current_contract = str(args.get("contract_fingerprint") or lane.get("contract_fp") or "")
+        drift = {
+            "base_head": [lane.get("base_head"), identity.get("base_head")],
+            "worktree_fp": [lane.get("worktree_fp"), identity.get("worktree_fp")],
+            "contract_fp": [lane.get("contract_fp"), current_contract],
+        }
+        changed = {
+            key: values for key, values in drift.items()
+            if values[0] and values[1] and values[0] != values[1]
+        }
+        if changed and not bool(args.get("allow_rebase", False)):
+            return {
+                "status": "blocked",
+                "lane": lane,
+                "reason": "lane_base_drift",
+                "drift": changed,
+                "recommended_next_action": "Revalidate affected evidence, then continue with allow_rebase=true and a material reason.",
+            }
+        if changed:
+            reason = str(args.get("reason") or "").strip()
+            if not reason:
+                raise ToolFailure(
+                    "REBASE_REASON_REQUIRED",
+                    "reason is required when allow_rebase=true and lane state drifted.",
+                    category="validation",
+                )
+            lane = self.orchestration_ledger.update_agent_lane(
+                lane_id,
+                base_head=str(identity.get("base_head") or ""),
+                worktree_fp=str(identity.get("worktree_fp") or ""),
+                contract_fp=current_contract,
+                metadata={
+                    "rebase_reason": reason[:1_000],
+                    "revalidated_at": datetime.now(timezone.utc).isoformat(),
+                    "owner_process_instance_id": self.process_instance_id,
+                },
+            ) or lane
+            self.orchestration_ledger.append_coordination_message(
+                run_id=str(lane.get("run_id") or ""),
+                wave_id=str(lane.get("wave_id") or ""),
+                lane_id=lane_id,
+                direction="system",
+                kind="lane_rebased",
+                base_head=str(identity.get("base_head") or ""),
+                worktree_fp=str(identity.get("worktree_fp") or ""),
+                payload={"reason": reason[:1_000], "drift": changed},
+            )
+        self.orchestration_ledger.append_coordination_message(
+            run_id=str(lane.get("run_id") or ""),
+            wave_id=str(lane.get("wave_id") or ""),
+            lane_id=lane_id,
+            direction="chatweb_to_codex",
+            kind="instruction",
+            base_head=str(lane.get("base_head") or ""),
+            worktree_fp=str(lane.get("worktree_fp") or ""),
+            payload={"prompt": prompt, "summary": str(args.get("summary") or "lane continuation")[:1_000]},
+        )
+        profile = str(args.get("profile") or lane.get("profile") or "cross_file")
+        try:
+            if self._codex_bridge.owns_thread(str(lane.get("thread_id") or "")):
+                bridge_result = self._codex_bridge.continue_thread(
+                    thread_id=str(lane.get("thread_id") or ""),
+                    prompt=prompt,
+                    model=str(args.get("model") or lane.get("model") or "").strip() or None,
+                    effort=str(args.get("effort") or lane.get("effort") or "").strip().lower() or None,
+                    deadline_ms=max(0, min(int(args.get("deadline_ms", 0)), 30_000)),
+                    output_schema=COORDINATION_LANE_OUTPUT_SCHEMA,
+                    wait_ms=max(0, min(int(args.get("wait_ms", 0)), 30_000)),
+                )
+            else:
+                bridge_result = self._codex_bridge.resume_persistent_thread(
+                    thread_id=str(lane.get("thread_id") or ""),
+                    expected_session_id=str(lane.get("session_id") or ""),
+                    prompt=prompt,
+                    profile=profile,
+                    model=str(args.get("model") or lane.get("model") or "").strip() or None,
+                    effort=str(args.get("effort") or lane.get("effort") or "").strip().lower() or None,
+                    deadline_ms=max(0, min(int(args.get("deadline_ms", 0)), 30_000)),
+                    output_schema=COORDINATION_LANE_OUTPUT_SCHEMA,
+                    wait_ms=max(0, min(int(args.get("wait_ms", 0)), 30_000)),
+                )
+        except CodexBridgeError as exc:
+            updated = self.orchestration_ledger.update_agent_lane(
+                lane_id,
+                lifecycle="waiting",
+                metadata={"last_error": exc.code, "retryable": exc.retryable},
+            ) or lane
+            self.orchestration_ledger.append_coordination_message(
+                run_id=str(updated.get("run_id") or ""),
+                wave_id=str(updated.get("wave_id") or ""),
+                lane_id=lane_id,
+                direction="codex_to_chatweb",
+                kind="error",
+                payload={"code": exc.code, "message": str(exc), "retryable": exc.retryable},
+            )
+            return {
+                "status": "blocked",
+                "lane": updated,
+                "error": {"code": exc.code, "message": str(exc), "retryable": exc.retryable},
+                "recommended_next_action": "Repacket or select one different route; do not retry unchanged.",
+            }
+        return {"status": "continued", **self._record_coordination_lane_outcome(lane, bridge_result)}
+
     def task_control(self, args: dict[str, Any]) -> dict[str, Any]:
         action = str(args.get("action", "get")).lower()
         if action == "get":
             with self.background_operations_lock:
-                operations = [self._background_operation_snapshot(item) for item in self.background_operations.values()]
-            return {"state": self.task_state.get(), "operations": operations[-8:]}
+                memory_operations = {
+                    item["operation_id"]: self._background_operation_snapshot(item)
+                    for item in self.background_operations.values()
+                    if item.get("workspace") == str(self.workspace.root)
+                }
+            durable_operations = {
+                item["operation_id"]: item
+                for item in self.orchestration_ledger.list_background_operations(limit=20)
+            }
+            durable_operations.update(memory_operations)
+            operations = sorted(
+                durable_operations.values(),
+                key=lambda item: str(item.get("updated_at") or item.get("started_at") or ""),
+            )
+            return {
+                "state": self.task_state.get(),
+                "operations": operations[-8:],
+                "recovery": {
+                    "orphaned_background_operations": self.orphaned_background_operations,
+                    "agent_lanes_waiting_after_restart": self.recovered_agent_lanes,
+                },
+            }
+        if action == "lane":
+            return self._coordination_lane(args)
+        if action == "messages":
+            _state, _projection, run_id, _wave_id = self._coordination_ids(args)
+            return {
+                "messages": self.orchestration_ledger.list_coordination_messages(
+                    run_id=run_id,
+                    lane_id=str(args.get("lane_id") or "").strip(),
+                    status=str(args.get("message_status") or "pending").strip(),
+                    direction=str(args.get("direction") or "").strip(),
+                    limit=max(1, min(int(args.get("limit", 20)), 100)),
+                )
+            }
+        if action == "ack":
+            message_id = str(args.get("message_id") or "").strip()
+            if not message_id:
+                raise ToolFailure("MESSAGE_ID_REQUIRED", "message_id is required when action=ack.", category="validation")
+            message = self.orchestration_ledger.acknowledge_coordination_message(message_id)
+            if message is None:
+                raise ToolFailure("MESSAGE_NOT_FOUND", "The coordination message was not found.", category="not_found")
+            return {"acknowledged": True, "message": message}
+        if action == "handoff":
+            state, projection, run_id, wave_id = self._coordination_ids(args)
+            handoff_action = str(args.get("handoff_action") or "get").strip().lower()
+            if handoff_action == "get":
+                capsule = self.orchestration_ledger.latest_handoff_capsule(run_id=run_id)
+                return {
+                    "capsule": capsule,
+                    "recommended_next_action": (
+                        "Resume from this capsule and pending messages; do not replay the previous ChatWeb transcript."
+                        if capsule else
+                        "Record a bounded handoff capsule before rolling to a new ChatWeb conversation."
+                    ),
+                }
+            if handoff_action != "record":
+                raise ToolFailure("INVALID_HANDOFF_ACTION", f"Unsupported handoff_action: {handoff_action}", category="validation")
+            payload = args.get("payload")
+            if not isinstance(payload, dict):
+                raise ToolFailure("HANDOFF_PAYLOAD_REQUIRED", "payload object is required when handoff_action=record.", category="validation")
+            pending_messages = self.orchestration_ledger.list_coordination_messages(
+                run_id=run_id,
+                status="pending",
+                limit=50,
+            )
+            active_lanes = self.orchestration_ledger.list_agent_lanes(run_id=run_id)
+            augmented = dict(payload)
+            augmented["runtime"] = {
+                "task_id": state.get("task_id"),
+                "objective": state.get("objective"),
+                "task_status": state.get("status"),
+                "current_step": state.get("current_step"),
+                "next_step": state.get("next_step"),
+                "run_id": run_id,
+                "wave_id": wave_id,
+                "orchestration_state": projection.get("orchestration_state"),
+                "base_head": projection.get("base_head"),
+                "worktree_fp": projection.get("worktree_fp"),
+                "contract_fp": projection.get("contract_fp"),
+                "active_lane_ids": [
+                    row["lane_id"] for row in active_lanes
+                    if row.get("lifecycle") not in {"closed"}
+                ][:20],
+                "pending_message_ids": [row["message_id"] for row in pending_messages][:50],
+            }
+            try:
+                capsule = self.orchestration_ledger.record_handoff_capsule(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    conversation_epoch=max(1, int(args.get("conversation_epoch", 1))),
+                    payload=augmented,
+                )
+            except ValueError as exc:
+                raise ToolFailure(
+                    "HANDOFF_CAPSULE_TOO_LARGE",
+                    str(exc),
+                    category="validation",
+                    details={"strategy": "Store hashes, proof ids and next actions instead of transcript or raw command output."},
+                ) from exc
+            return {
+                "recorded": True,
+                "capsule": capsule,
+                "recommended_next_action": "Open a fresh ChatWeb conversation, fetch this capsule, then poll pending messages.",
+            }
         if action in {"audit", "accept", "reject"}:
             state = self.task_state.get()
             projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
@@ -4259,8 +4907,29 @@ class Runtime:
                 raise ToolFailure("INVALID_ARGUMENT", "operation_id is required when action=operation.", category="validation")
             with self.background_operations_lock:
                 operation = self.background_operations.get(operation_id)
+                if operation is not None and operation.get("workspace") != str(self.workspace.root):
+                    operation = None
             if operation is None:
-                raise ToolFailure("NOT_FOUND", "Background operation was not found.", category="runtime", retryable=False)
+                durable = self.orchestration_ledger.get_background_operation(operation_id)
+                if durable is None:
+                    raise ToolFailure("NOT_FOUND", "Background operation was not found.", category="runtime", retryable=False)
+                if durable.get("status") == "running":
+                    durable = self.orchestration_ledger.finish_background_operation(
+                        operation_id,
+                        status="orphaned",
+                        summary={"orphan_reason": "in_memory_handle_missing"},
+                    ) or durable
+                durable = dict(durable)
+                durable["durable_only"] = True
+                durable["requires_progress_report"] = False
+                if durable.get("status") == "orphaned":
+                    durable["message"] = (
+                        "The MCP runtime that owned this operation is gone. Resume from durable task/proof/lane state; "
+                        "do not assume the Python worker is still running."
+                    )
+                elif durable.get("status") == "completed":
+                    durable["message"] = "The durable summary is available, but the prior runtime's full result payload is not retained."
+                return {"state": self.task_state.get(), "background_operation": durable}
             wait_ms = min(max(int(args.get("wait_ms", 0)), 0), BACKGROUND_OPERATION_WAIT_MAX_MS)
             if wait_ms and not operation["event"].is_set():
                 operation["event"].wait(wait_ms / 1000)
@@ -7565,6 +8234,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "profile": {**string, "enum": ["candidate_mini", "candidate_luna", "cross_file", "deep_code", "consequential", "parallel_extreme", "packet", "scoped", "critical", "history"], "description": "Hidden bridge profile. candidate_mini/luna are no-tools patch candidates; cross_file=Terra high read-only inspection; deep_code=Sol xhigh; consequential=Sol max; parallel_extreme=Sol ultra with multi-agent enabled; packet/scoped/critical/history are review modes."},
             "model": {**string, "maxLength": 80, "description": "Optional Codex model override. Production routing normally uses the profile defaults and records the resolved route."},
             "effort": {**string, "enum": ["low", "medium", "high", "xhigh", "max", "ultra"], "description": "Optional reasoning-effort override. Applied to thread config and turn/start so Desktop ultra defaults do not leak into reviewer lanes."},
+            "lifetime": {**string, "enum": ["ephemeral", "persistent"], "default": "ephemeral", "description": "Ephemeral is the default reviewer lifetime. Persistent creates a resumable App Server lane; runtime code must persist and authorize its thread id before later resume."},
             "deadline_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 0, "description": "Optional hard turn deadline. When positive, run/continue waits up to the deadline then interrupts the bridge-owned turn instead of leaving it running."},
             "output_schema": {"type": "object", "additionalProperties": True, "description": "Optional <=8 KiB JSON Schema constraining the final Codex message."},
             "source_thread_id": {**string, "description": "Optional persisted Codex thread id from action=threads. This selects the explicit history profile and forks read-only instead of mutating/resuming the Desktop thread."},
@@ -7610,10 +8280,33 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "dry_run": {**boolean, "default": False},
         }),
         "task_control": object_schema({
-            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject"], "default": "get"},
-            "run_id": {**string, "description": "Optional orchestration run id for action=audit/accept/reject; defaults to the current task projection."},
+            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "messages", "ack", "handoff"], "default": "get"},
+            "run_id": {**string, "description": "Optional orchestration run id; defaults to the current task projection."},
+            "wave_id": {**string, "description": "Optional orchestration wave id; defaults to the current task projection."},
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
             "wait_ms": {**integer, "minimum": 0, "maximum": 60000, "default": 0, "description": "Wait up to this many milliseconds for a background operation before returning control."},
+            "lane_action": {**string, "enum": ["list", "start", "continue", "observe", "close"], "default": "list", "description": "Manage a durable Codex App Server lane without adding another top-level tool."},
+            "lane_id": {**string, "description": "Durable lane id returned by lane_action=start or list."},
+            "semantic_key": {**string, "maxLength": 512, "description": "Stable workstream identity. Reuse is based on semantic continuity, not agent identity."},
+            "lifecycle": {**string, "enum": ["starting", "active", "waiting", "idle", "closed"], "description": "Optional lane lifecycle filter for lane_action=list."},
+            "role": {**string, "maxLength": 100, "description": "Bounded lane role such as executor, reviewer, or investigator."},
+            "prompt": {**string, "maxLength": 20000, "description": "Compact delta packet for lane start/continue. The durable ledger stores only a redacted hash/size representation under the prompt key."},
+            "summary": {**string, "maxLength": 1000, "description": "Human-readable bounded instruction summary for the coordination ledger."},
+            "profile": {**string, "enum": ["candidate_mini", "candidate_luna", "cross_file", "deep_code", "consequential", "parallel_extreme", "packet", "scoped", "critical", "history"], "description": "Codex route profile for a persistent lane."},
+            "model": {**string, "maxLength": 80},
+            "effort": {**string, "enum": ["low", "medium", "high", "xhigh", "max", "ultra"]},
+            "deadline_ms": {**integer, "minimum": 0, "maximum": 30000, "default": 0},
+            "turn_id": {**string, "description": "Optional current turn id for lane_action=observe."},
+            "after_cursor": {**integer, "minimum": 0, "default": 0},
+            "max_events": {**integer, "minimum": 1, "maximum": 100, "default": 50},
+            "contract_fingerprint": {**string, "maxLength": 128, "description": "Optional interface/contract fingerprint used by the lane drift gate."},
+            "allow_rebase": {**boolean, "default": False, "description": "Allow a lane to continue after base/worktree/contract drift only with a material reason."},
+            "message_id": {**string, "description": "Coordination message id required by action=ack."},
+            "message_status": {**string, "enum": ["pending", "acknowledged"], "default": "pending"},
+            "direction": {**string, "enum": ["chatweb_to_codex", "codex_to_chatweb", "system"]},
+            "handoff_action": {**string, "enum": ["get", "record"], "default": "get"},
+            "conversation_epoch": {**integer, "minimum": 1, "default": 1},
+            "payload": {"type": "object", "additionalProperties": True, "description": "Bounded handoff capsule payload. Raw transcript, source files and command output must not be included."},
             "objective": string,
             "status": {**string, "enum": ["idle", "active", "waiting", "paused", "stopped", "completed", "failed"]},
             "steps": {"type": "array", "items": {"type": "object", "additionalProperties": True}},

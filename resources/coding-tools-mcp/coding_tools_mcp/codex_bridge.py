@@ -398,6 +398,7 @@ class CodexAppServerBridge:
                 profile=str(args.get("profile", "")).strip().lower() or None,
                 model=str(args.get("model", "")).strip() or None,
                 effort=str(args.get("effort", "")).strip().lower() or None,
+                lifetime=str(args.get("lifetime", "ephemeral")).strip().lower() or "ephemeral",
                 deadline_ms=int(args.get("deadline_ms", 0)),
                 output_schema=output_schema,
                 wait_ms=int(args.get("wait_ms", 0)),
@@ -495,6 +496,11 @@ class CodexAppServerBridge:
             })
         return {"ok": True, "models": rows, "count": len(rows), "capacity_cooldowns": self._capacity_status()}
 
+    def owns_thread(self, thread_id: str) -> bool:
+        """Return whether the current sidecar process owns the supplied thread handle."""
+        with self._condition:
+            return bool(thread_id and thread_id in self._owned_threads)
+
     def threads(self, *, limit: int = 10) -> dict[str, Any]:
         self._ensure_connected()
         limit = max(1, min(50, int(limit)))
@@ -526,6 +532,7 @@ class CodexAppServerBridge:
         profile: str | None = None,
         model: str | None = None,
         effort: str | None = None,
+        lifetime: str = "ephemeral",
         deadline_ms: int = 0,
         output_schema: dict[str, Any] | None = None,
         wait_ms: int = 0,
@@ -533,6 +540,13 @@ class CodexAppServerBridge:
         self._ensure_connected()
         prompt = self._validate_prompt(prompt)
         workspace = self._workspace()
+        lifetime = str(lifetime or "ephemeral").strip().lower()
+        if lifetime not in {"ephemeral", "persistent"}:
+            raise CodexBridgeError(
+                "INVALID_LIFETIME",
+                "lifetime must be ephemeral or persistent.",
+                details={"supported": ["ephemeral", "persistent"]},
+            )
         route = self._resolve_route(profile=profile, model=model, effort=effort, source_thread_id=source_thread_id)
         self._check_capacity(route["model"])
         common_thread = self._thread_route_params(route, workspace)
@@ -552,19 +566,19 @@ class CodexAppServerBridge:
                 {
                     **common_thread,
                     "threadId": source_thread_id,
-                    "ephemeral": True,
+                    "ephemeral": lifetime == "ephemeral",
                 },
             )
-            creation_mode = "fork"
+            creation_mode = "fork" if lifetime == "ephemeral" else "persistent_fork"
         else:
             thread_response = self._request(
                 "thread/start",
                 {
                     **common_thread,
-                    "ephemeral": True,
+                    "ephemeral": lifetime == "ephemeral",
                 },
             )
-            creation_mode = "new"
+            creation_mode = "new" if lifetime == "ephemeral" else "persistent_new"
         thread = thread_response.get("thread") if isinstance(thread_response, dict) else None
         if not isinstance(thread, dict) or not str(thread.get("id", "")).strip():
             raise CodexBridgeError("THREAD_START_FAILED", "Codex did not return a bridge thread id.")
@@ -575,9 +589,11 @@ class CodexAppServerBridge:
                 "source_thread_id": source_thread_id,
                 "created_at": time.time(),
                 "mode": creation_mode,
+                "lifetime": lifetime,
                 "profile": route["profile"],
                 "model": route["model"],
                 "effort": route["effort"],
+                "session_id": str(thread.get("sessionId") or ""),
                 "reported_model": thread.get("model"),
                 "reported_effort": thread.get("reasoningEffort"),
             }
@@ -587,6 +603,110 @@ class CodexAppServerBridge:
             route=route,
             creation_mode=creation_mode,
             source_thread_id=source_thread_id,
+            deadline_ms=deadline_ms,
+            output_schema=output_schema,
+            wait_ms=wait_ms,
+        )
+
+    def resume_persistent_thread(
+        self,
+        *,
+        thread_id: str,
+        prompt: str,
+        profile: str,
+        model: str | None = None,
+        effort: str | None = None,
+        expected_session_id: str = "",
+        deadline_ms: int = 0,
+        output_schema: dict[str, Any] | None = None,
+        wait_ms: int = 0,
+    ) -> dict[str, Any]:
+        """Resume a registry-authorized persistent lane after process rollover.
+
+        This is intentionally not a model-facing action. The caller must first
+        resolve the thread from the durable orchestration lane registry so an
+        arbitrary live Codex Desktop thread cannot be claimed by the bridge.
+        """
+        self._ensure_connected()
+        if not thread_id:
+            raise CodexBridgeError("THREAD_ID_REQUIRED", "A persisted lane thread_id is required.")
+        prompt = self._validate_prompt(prompt)
+        workspace = self._workspace()
+        source_result = self._request(
+            "thread/read",
+            {"threadId": thread_id, "includeTurns": False},
+        )
+        source = source_result.get("thread") if isinstance(source_result, dict) else None
+        if not isinstance(source, dict):
+            raise CodexBridgeError(
+                "PERSISTENT_THREAD_NOT_FOUND",
+                "Codex did not return the persisted lane thread.",
+                details={"thread_id": thread_id},
+            )
+        if not _is_within_workspace(source.get("cwd"), workspace):
+            raise CodexBridgeError(
+                "PERSISTENT_WORKSPACE_MISMATCH",
+                "The persisted lane belongs to a different workspace.",
+                details={
+                    "thread_id": thread_id,
+                    "source_cwd": source.get("cwd"),
+                    "workspace": str(workspace),
+                },
+            )
+        actual_session_id = str(source.get("sessionId") or "")
+        if expected_session_id and actual_session_id != expected_session_id:
+            raise CodexBridgeError(
+                "PERSISTENT_SESSION_MISMATCH",
+                "The persisted lane session identity no longer matches the durable registry.",
+                details={
+                    "thread_id": thread_id,
+                    "expected_session_id": expected_session_id,
+                    "actual_session_id": actual_session_id,
+                },
+            )
+        route = self._resolve_route(
+            profile=profile,
+            model=model,
+            effort=effort,
+            source_thread_id="history-source" if profile == "history" else None,
+            continuing=True,
+        )
+        self._check_capacity(route["model"])
+        resume_response = self._request(
+            "thread/resume",
+            {
+                "threadId": thread_id,
+                **self._thread_route_params(route, workspace),
+            },
+        )
+        resumed = resume_response.get("thread") if isinstance(resume_response, dict) else None
+        if not isinstance(resumed, dict) or str(resumed.get("id") or thread_id) != thread_id:
+            raise CodexBridgeError(
+                "PERSISTENT_THREAD_RESUME_FAILED",
+                "Codex did not confirm the persisted lane thread during resume.",
+                details={"thread_id": thread_id},
+            )
+        with self._condition:
+            self._owned_threads[thread_id] = {
+                "workspace": str(workspace),
+                "source_thread_id": None,
+                "created_at": time.time(),
+                "mode": "persistent_resume",
+                "lifetime": "persistent",
+                "profile": route["profile"],
+                "model": route["model"],
+                "effort": route["effort"],
+                "session_id": str(resumed.get("sessionId") or actual_session_id),
+                "reported_model": resumed.get("model"),
+                "reported_effort": resumed.get("reasoningEffort"),
+                "restored": True,
+            }
+        return self._launch_turn(
+            thread_id=thread_id,
+            prompt=prompt,
+            route=route,
+            creation_mode="persistent_resume",
+            source_thread_id=None,
             deadline_ms=deadline_ms,
             output_schema=output_schema,
             wait_ms=wait_ms,
@@ -820,6 +940,7 @@ class CodexAppServerBridge:
                 "finalized": False,
             })
             self._latest_turn_by_thread[thread_id] = turn_id
+            owned = dict(self._owned_threads.get(thread_id, {}))
             self._condition.notify_all()
         payload: dict[str, Any] = {
             "ok": True,
@@ -827,6 +948,8 @@ class CodexAppServerBridge:
             "thread_id": thread_id,
             "turn_id": turn_id,
             "creation_mode": creation_mode,
+            "lifetime": str(owned.get("lifetime") or "ephemeral"),
+            "session_id": str(owned.get("session_id") or "") or None,
             "source_thread_id": source_thread_id,
             "workspace": str(workspace),
             "route": {"profile": route["profile"], "model": route["model"], "effort": route["effort"], "recommended_deadline_ms": route["recommended_deadline_ms"]},
@@ -1219,6 +1342,7 @@ class CodexAppServerBridge:
     def _thread_summary(self, thread: dict[str, Any]) -> dict[str, Any]:
         return {
             "id": thread.get("id") or thread.get("sessionId"),
+            "session_id": thread.get("sessionId"),
             "name": thread.get("name"),
             "preview": _bounded(thread.get("preview"), 500),
             "cwd": thread.get("cwd"),
