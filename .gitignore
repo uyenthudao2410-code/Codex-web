@@ -32,8 +32,11 @@ __pycache__/
 # Generated patch files
 *.patch
 
-# Automation worktrees that must never become tracked gitlinks
-/.coding-tools/ci-windows-fix/
+# Workspace-local Coding Tools runtime state.
+# Includes task/history state, performance traces, EOCL ledger/reports,
+# temporary probes, and automation worktrees. Keep it local and back it up
+# separately only when migrating unfinished work or preserving research data.
+/.coding-tools/
 /ci-windows-fix2/
 
 # Frontend dependencies
