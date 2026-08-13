@@ -6,7 +6,19 @@ use crate::shell_protocol::{
 use base64::{engine::general_purpose, Engine as _};
 use sha2::{Digest, Sha256};
 
+thread_local! {
+    static TEST_MODEL_SURFACE_OVERRIDE: std::cell::Cell<Option<ModelSurface>> =
+        std::cell::Cell::new(None);
+}
+
 fn test_runtime() -> ToolRuntime {
+    let model_surface = TEST_MODEL_SURFACE_OVERRIDE
+        .with(|surface| surface.get())
+        .unwrap_or(ModelSurface::LocalCoding);
+    test_runtime_with_surface(model_surface)
+}
+
+fn test_runtime_from_env() -> ToolRuntime {
     let model_surface = crate::model_surface::resolve_model_surface(None)
         .expect("test model surface configuration");
     test_runtime_with_surface(model_surface)
@@ -17,44 +29,40 @@ fn test_runtime_with_surface(model_surface: ModelSurface) -> ToolRuntime {
 }
 
 /// Lock the shared env lock and select the full operator runtime MCP surface
-/// for the duration of a test. Restores the env on drop. Used by tests whose
-/// assertions target the full operator surface, which is no longer the
-/// default (the default is `local_coding`).
-///
-/// The env var is set only AFTER the lock is acquired so a concurrently
-/// running test that holds the lock cannot clear it between the set and the
-/// lock; on drop the var is removed before the guard is released.
+/// for runtime construction in this test thread. The selection is test-local
+/// rather than process-env-backed so unrelated parallel tests cannot observe
+/// it. The shared lock is retained because some callers also exercise other
+/// process-env-controlled MCP behavior while this guard is alive.
 fn full_operator_mcp_env() -> impl Drop {
     struct Cleanup {
         _guard: std::sync::MutexGuard<'static, ()>,
     }
     impl Drop for Cleanup {
         fn drop(&mut self) {
-            std::env::remove_var(crate::model_surface::MCP_MODEL_SURFACE_ENV);
+            TEST_MODEL_SURFACE_OVERRIDE.with(|surface| surface.set(None));
         }
     }
     let guard = crate::admin_cli::TEST_ENV_LOCK.lock().unwrap();
-    std::env::set_var(
-        crate::model_surface::MCP_MODEL_SURFACE_ENV,
-        crate::model_surface::MCP_MODEL_SURFACE_FULL_OPERATOR_V1,
-    );
-    Cleanup { _guard: guard }
+    let cleanup = Cleanup { _guard: guard };
+    let previous = TEST_MODEL_SURFACE_OVERRIDE
+        .with(|surface| surface.replace(Some(ModelSurface::FullOperatorRuntime)));
+    assert_eq!(previous, None, "nested MCP test surface override");
+    cleanup
 }
 
-/// Variant for callers that already hold `TEST_ENV_LOCK`: only sets/removes
-/// the surface env var.
+/// Variant for callers that already hold `TEST_ENV_LOCK`.
 fn full_operator_mcp_env_locked() -> impl Drop {
     struct SurfaceEnvCleanup;
     impl Drop for SurfaceEnvCleanup {
         fn drop(&mut self) {
-            std::env::remove_var(crate::model_surface::MCP_MODEL_SURFACE_ENV);
+            TEST_MODEL_SURFACE_OVERRIDE.with(|surface| surface.set(None));
         }
     }
-    std::env::set_var(
-        crate::model_surface::MCP_MODEL_SURFACE_ENV,
-        crate::model_surface::MCP_MODEL_SURFACE_FULL_OPERATOR_V1,
-    );
-    SurfaceEnvCleanup
+    let cleanup = SurfaceEnvCleanup;
+    let previous = TEST_MODEL_SURFACE_OVERRIDE
+        .with(|surface| surface.replace(Some(ModelSurface::FullOperatorRuntime)));
+    assert_eq!(previous, None, "nested MCP test surface override");
+    cleanup
 }
 
 fn rpc(method: &str, id: Option<Value>, params: Value) -> JsonRpcRequest {
@@ -3365,7 +3373,7 @@ async fn explicit_local_coding_v1_selects_local_coding() {
         crate::model_surface::MCP_MODEL_SURFACE_ENV,
         crate::model_surface::MCP_MODEL_SURFACE_LOCAL_CODING_V1,
     );
-    let runtime = test_runtime();
+    let runtime = test_runtime_from_env();
     let outcome = handle_mcp_request(
         &runtime,
         rpc("tools/list", Some(Value::from(74)), json!({})),
@@ -3391,8 +3399,12 @@ async fn explicit_local_coding_v1_selects_local_coding() {
 
 #[tokio::test]
 async fn explicit_full_operator_v1_reports_full_operator_surface() {
-    let _full = full_operator_mcp_env();
-    let runtime = test_runtime();
+    let _guard = crate::admin_cli::TEST_ENV_LOCK.lock().unwrap();
+    std::env::set_var(
+        crate::model_surface::MCP_MODEL_SURFACE_ENV,
+        crate::model_surface::MCP_MODEL_SURFACE_FULL_OPERATOR_V1,
+    );
+    let runtime = test_runtime_from_env();
     let outcome = handle_mcp_request(
         &runtime,
         rpc("initialize", Some(Value::from(75)), json!({})),
@@ -3407,13 +3419,14 @@ async fn explicit_full_operator_v1_reports_full_operator_surface() {
         value["result"]["serverInfo"]["modelSurface"],
         crate::model_surface::MODEL_SURFACE_FULL_OPERATOR_RUNTIME
     );
+    std::env::remove_var(crate::model_surface::MCP_MODEL_SURFACE_ENV);
 }
 
 #[tokio::test]
 async fn selected_surface_is_immutable_after_environment_changes() {
     let _guard = crate::admin_cli::TEST_ENV_LOCK.lock().unwrap();
     std::env::remove_var(crate::model_surface::MCP_MODEL_SURFACE_ENV);
-    let local = test_runtime();
+    let local = test_runtime_from_env();
     std::env::set_var(
         crate::model_surface::MCP_MODEL_SURFACE_ENV,
         crate::model_surface::MCP_MODEL_SURFACE_FULL_OPERATOR_V1,
