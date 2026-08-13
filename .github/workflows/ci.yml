@@ -58,6 +58,8 @@ jobs:
         run: |
           bash scripts/workspace_boundary_check.sh --self-test
           bash scripts/workspace_boundary_check.sh
+      - name: Reset Rust build artifacts
+        run: cargo clean
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run tests
@@ -103,6 +105,8 @@ jobs:
         run: npm ci --prefix frontend
       - name: Build frontend assets
         run: npm --prefix frontend run build
+      - name: Reset Rust build artifacts
+        run: cargo clean
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run tests
