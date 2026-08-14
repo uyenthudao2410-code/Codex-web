@@ -1065,5 +1065,1102 @@
     ],
     "archived_at": "2026-08-14T00:14:40.735Z",
     "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "76ac5a5a0f584ce0901a5ee63743776e",
+    "orchestration": {
+      "run_id": "16066fc1213f4547b3a9c8c45cd1239c",
+      "wave_id": "5444b67c162c460cbc13fc9bd26e6f72",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "29a1318bf09f893aca0fbc2c13de3429d9b2fdb9",
+      "worktree_fp": "4859c9361d95ab356b83df7ee387ead067f15bc412fcc639dac312fd17ccb140",
+      "contract_fp": ""
+    },
+    "objective": "P1 live proof-cache canary, first exact proof opportunity. Execute the real proof-ledger pytest oracle once on the pinned current source state. This first opportunity must be a cache miss and must run the oracle. Do not modify project source; preserve all concurrent work. Return proof ids/fingerprint, cache_hits, cache_saved_ms, and orchestration state.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:17:46.436Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:17:46.436Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": {
+      "command": "python -m pytest tests/test_proof_ledger.py -q -o cache_dir=.pytest_cache/p1-live-20260814-0718",
+      "kind": "test",
+      "session_id": "s-epX7a3WB4WnpCRnkZNhLi8",
+      "workdir": "resources/coding-tools-mcp",
+      "status": "running",
+      "started_at": "2026-08-14T00:17:45.212Z"
+    },
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-14T00:14:40.742Z",
+    "updated_at": "2026-08-14T00:17:59.230Z",
+    "events": [
+      {
+        "time": "2026-08-14T00:14:40.742Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-14T00:14:40.748Z",
+        "event": "command_started",
+        "details": {
+          "command": "git rev-parse --verify HEAD",
+          "session_id": "fz7C3pyzsqSTqduhLKG-KsRn"
+        }
+      },
+      {
+        "time": "2026-08-14T00:14:40.821Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-parse --verify HEAD",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T00:15:37.918Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-14T00:15:38.669Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-14T00:15:54.772Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 -e \"def .*proof\" -e \"find_cached_pass\" -e \"record_pass\" -e \"cache_saved_ms\" -e \"proof_fingerprint\" -e \"ProofLedger\" resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/tests/test_proof_ledger.py resources/coding-tools-mcp/tests/test_system_capability_suite.py",
+          "session_id": "4LYhZLNIRVy_ZbbR40BvXney"
+        }
+      },
+      {
+        "time": "2026-08-14T00:15:54.867Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 -e \"def .*proof\" -e \"find_cached_pass\" -e \"record_pass\" -e \"cache_saved_ms\" -e \"proof_fingerprint\" -e \"ProofLedger\" resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/tests/test_proof_ledger.py resources/coding-tools-mcp/tests/test_system_capability_suite.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T00:16:01.204Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 -e \"class ProofLedger\" -e \"def fingerprint\" -e \"def run_cached\" -e \"find_cached\" resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py",
+          "session_id": "D7ve1Qx0C7LNS8UqLAItheB6"
+        }
+      },
+      {
+        "time": "2026-08-14T00:16:01.282Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 -e \"class ProofLedger\" -e \"def fingerprint\" -e \"def run_cached\" -e \"find_cached\" resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T00:16:59.788Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 6 -e \"\\\"proof_cache_hits\\\"\" -e \"\\\"proof_cache_saved_ms\\\"\" .coding-tools/performance.json",
+          "session_id": "eBu4L8ROtmBCVz6_OqpcFpBI"
+        }
+      },
+      {
+        "time": "2026-08-14T00:16:59.872Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 6 -e \"\\\"proof_cache_hits\\\"\" -e \"\\\"proof_cache_saved_ms\\\"\" .coding-tools/performance.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:43.623Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:44.058Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:44.541Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:44.549Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:45.039Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:45.196Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:45.212Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_proof_ledger.py -q -o cache_dir=.pytest_cache/p1-live-20260814-0718",
+          "session_id": "s-epX7a3WB4WnpCRnkZNhLi8"
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:46.426Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:46.436Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:46.540Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:46.555Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:59.188Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:17:59.208Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T00:18:08.911Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a98fda7ce7244434a2e02166945fe844",
+    "orchestration": {
+      "run_id": "b609d40619fd4907847de66edfeb1396",
+      "wave_id": "0e0338a49c6e418ea31478f7d6dc1227",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "29a1318bf09f893aca0fbc2c13de3429d9b2fdb9",
+      "worktree_fp": "4859c9361d95ab356b83df7ee387ead067f15bc412fcc639dac312fd17ccb140",
+      "contract_fp": ""
+    },
+    "objective": "P1 live proof-cache canary, second exact proof opportunity. Use the exact same oracle command, workdir, source state, and proof configuration as the accepted baseline miss, but a different agent_workflow idempotency key. Expect proof-cache reuse rather than command execution. Do not modify project source. Return cache_hit, proof id/input fingerprint, cache_hits, cache_saved_ms, and worktree_fp.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:18:11.563Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:18:11.563Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-14T00:18:08.924Z",
+    "updated_at": "2026-08-14T00:18:43.392Z",
+    "events": [
+      {
+        "time": "2026-08-14T00:18:08.924Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "P1 live proof-cache canary, second exact proof opportunity. Use the exact same oracle command, workdir, source state, and proof configuration as the accepted baseline miss, but a different agent_workflow idempotency key. Expect proof-cache reuse rather than command execution. Do not modify project source. Return cache_hit, proof id/input fingerprint, cache_hits, cache_saved_ms, and worktree_fp."
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:09.448Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:10.324Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:10.783Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:10.793Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:11.260Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:11.411Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:11.542Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:11.563Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:11.668Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:11.670Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:24.777Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:24.787Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T00:18:46.941Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d27b145672c84a158cce1dec684e2a09",
+    "orchestration": {
+      "run_id": "50ac86ab90af42efa367c8dc317015c2",
+      "wave_id": "0090feac642b42bdb4eacc1ba2c886d6",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "29a1318bf09f893aca0fbc2c13de3429d9b2fdb9",
+      "worktree_fp": "4859c9361d95ab356b83df7ee387ead067f15bc412fcc639dac312fd17ccb140",
+      "contract_fp": ""
+    },
+    "objective": "Create one temporary source-tree canary file owned by this P1 verification to create a controlled relevant source/worktree fingerprint change without modifying any existing file. Preserve all unrelated work and do not commit. The canary will be removed after the live invalidation measurement.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:19:12.866Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:19:12.866Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:19:12.866Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-14T00:18:46.948Z",
+    "updated_at": "2026-08-14T00:19:25.331Z",
+    "events": [
+      {
+        "time": "2026-08-14T00:18:46.948Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:46.954Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 20 \".\" resources/coding-tools-mcp/tests/test_proof_ledger.py",
+          "session_id": "EEpEPUs4gV5G0_LNwrUxbX-m"
+        }
+      },
+      {
+        "time": "2026-08-14T00:18:47.031Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 20 \".\" resources/coding-tools-mcp/tests/test_proof_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:10.543Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:11.333Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:11.796Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:11.814Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:12.301Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:12.455Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:12.471Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/tests/p1_proof_cache_live_canary.py",
+          "session_id": "kXi9bjyXHD_TQDuIbbIcyHl8"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:12.860Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:12.866Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:13.041Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:13.059Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:18.874Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/tests/p1_proof_cache_live_canary.py && rg -n \".\" resources/coding-tools-mcp/tests/p1_proof_cache_live_canary.py",
+          "session_id": "4ZqNEtGu8_UjczxMlbTjr6Lz"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:18.993Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/tests/p1_proof_cache_live_canary.py && rg -n \".\" resources/coding-tools-mcp/tests/p1_proof_cache_live_canary.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:25.304Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:25.317Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T00:19:30.210Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "9596b556bb9b4e00a14066e1e7167d48",
+    "orchestration": {
+      "run_id": "6496bfac04de471087ad596fd8f47197",
+      "wave_id": "ae7c874139cf48b29567b754e5e7e4cf",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "29a1318bf09f893aca0fbc2c13de3429d9b2fdb9",
+      "worktree_fp": "4dd0016a6e2b0e1f4ad2bba4f2d516912dda5722139134d216472102859bef78",
+      "contract_fp": ""
+    },
+    "objective": "P1 live proof-cache negative-control after a controlled relevant source-tree change. Use the exact same oracle command/workdir/config as the baseline and exact-repeat runs, with a new agent_workflow idempotency key. The changed source worktree fingerprint must invalidate the prior proof, so this opportunity must be a cache miss and run the real pytest oracle. Do not make additional source changes.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:19:33.900Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:19:33.900Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": {
+      "command": "python -m pytest tests/test_proof_ledger.py -q -o cache_dir=.pytest_cache/p1-live-20260814-0718",
+      "kind": "test",
+      "session_id": "Hq02Vqpr5MZO4gtot3gZlY85",
+      "workdir": "resources/coding-tools-mcp",
+      "status": "running",
+      "started_at": "2026-08-14T00:19:32.738Z"
+    },
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-14T00:19:30.220Z",
+    "updated_at": "2026-08-14T00:19:51.986Z",
+    "events": [
+      {
+        "time": "2026-08-14T00:19:30.220Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "P1 live proof-cache negative-control after a controlled relevant source-tree change. Use the exact same oracle command/workdir/config as the baseline and exact-repeat runs, with a new agent_workflow idempotency key. The changed source worktree fingerprint must invalidate the prior proof, so this opportunity must be a cache miss and run the real pytest oracle. Do not make additional source changes."
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:30.760Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:31.640Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:32.110Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:32.119Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:32.574Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:32.724Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:32.738Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_proof_ledger.py -q -o cache_dir=.pytest_cache/p1-live-20260814-0718",
+          "session_id": "Hq02Vqpr5MZO4gtot3gZlY85"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:33.887Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:33.900Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:34.010Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:34.012Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:51.950Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:51.965Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T00:19:58.147Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d602478af65f4686890292f6ee8c5d30",
+    "orchestration": {
+      "run_id": "de7ade545daa4806bd498d6942179892",
+      "wave_id": "571b12a540494a80b5c6910340ee38e8",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "29a1318bf09f893aca0fbc2c13de3429d9b2fdb9",
+      "worktree_fp": "4dd0016a6e2b0e1f4ad2bba4f2d516912dda5722139134d216472102859bef78",
+      "contract_fp": ""
+    },
+    "objective": "Clean up only the temporary P1-owned proof-cache live canary file created by run 50ac86ab90af42efa367c8dc317015c2. Do not modify any other file. Do not reset, clean, restore, commit, or alter unrelated work. Confirm the canary path is no longer present in Git status after deletion.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:20:00.972Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:20:00.972Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-14T00:20:00.972Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": {
+      "command": "git status --short -- resources/coding-tools-mcp/tests/p1_proof_cache_live_canary.py",
+      "kind": "command",
+      "session_id": "czSBGnE_8F5qC0OpeM4LdzqT",
+      "workdir": ".",
+      "status": "running",
+      "started_at": "2026-08-14T00:20:00.582Z"
+    },
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-14T00:19:58.147Z",
+    "updated_at": "2026-08-14T00:20:09.260Z",
+    "events": [
+      {
+        "time": "2026-08-14T00:19:58.152Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Clean up only the temporary P1-owned proof-cache live canary file created by run 50ac86ab90af42efa367c8dc317015c2. Do not modify any other file. Do not reset, clean, restore, commit, or alter unrelated work. Confirm the canary path is no longer present in Git status after deletion."
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:58.684Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:59.475Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:59.933Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:19:59.950Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:00.413Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:00.565Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:00.582Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/tests/p1_proof_cache_live_canary.py",
+          "session_id": "czSBGnE_8F5qC0OpeM4LdzqT"
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:00.959Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:00.972Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:01.102Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:01.119Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:09.232Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:09.239Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T00:20:15.410Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8dee865c61004db1946f301b4a91b4aa",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-14T00:20:15.422Z",
+    "updated_at": "2026-08-14T00:21:57.704Z",
+    "events": [
+      {
+        "time": "2026-08-14T00:20:15.422Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:15.430Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 2 -e \"\\\"proof_cache_hits\\\"\" -e \"\\\"proof_cache_saved_ms\\\"\" .coding-tools/performance.json",
+          "session_id": "WUDDF5joAiXGn5Ok2jA0ynlo"
+        }
+      },
+      {
+        "time": "2026-08-14T00:20:15.504Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 2 -e \"\\\"proof_cache_hits\\\"\" -e \"\\\"proof_cache_saved_ms\\\"\" .coding-tools/performance.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T00:21:36.608Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log -5 --oneline --decorate && git show --stat --oneline --summary HEAD && git remote -v && git diff --stat && git status --short",
+          "session_id": "44xxlIBds3THxn1ZMm8PkIuy"
+        }
+      },
+      {
+        "time": "2026-08-14T00:21:36.908Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log -5 --oneline --decorate && git show --stat --oneline --summary HEAD && git remote -v && git diff --stat && git status --short",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T00:21:56.889Z",
+        "event": "command_started",
+        "details": {
+          "command": "git add -- .coding-tools/orchestration/ledger.sqlite3 .coding-tools/performance.json .coding-tools/task-history.json .coding-tools/task-state.json .coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c .coding-tools/orchestration/reports/run-50ac86ab90af42efa367c8dc317015c2 .coding-tools/orchestration/reports/run-6496bfac04de471087ad596fd8f47197 .coding-tools/orchestration/reports/run-b609d40619fd4907847de66edfeb1396 .coding-tools/orchestration/reports/run-de7ade545daa4806bd498",
+          "session_id": "VzRig8m_b0tgo_dPQvVoH4n1"
+        }
+      },
+      {
+        "time": "2026-08-14T00:21:57.704Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git add -- .coding-tools/orchestration/ledger.sqlite3 .coding-tools/performance.json .coding-tools/task-history.json .coding-tools/task-state.json .coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c .coding-tools/orchestration/reports/run-50ac86ab90af42efa367c8dc317015c2 .coding-tools/orchestration/reports/run-6496bfac04de471087ad596fd8f47197 .coding-tools/orchestration/reports/run-b609d40619fd4907847de66edfeb1396 .coding-tools/orchestration/reports/run-de7ade545daa4806bd498",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T00:22:02.618Z",
+    "archive_reason": "finished"
   }
 ]
