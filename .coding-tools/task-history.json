@@ -1,457 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "acf22d7529c0437b9e94e8950bcb1af2",
-    "orchestration": {
-      "run_id": "e1fa7a337f614ffa93153c3a3c36f10d",
-      "wave_id": "6cbd0dd802844ddeabf8e1ff6275a8fa",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "5f756b5f9a4ab29ca84401314bcc72efc17ae31b",
-      "worktree_fp": "f1828cab3fec3eb376e641b28cf810ea96b6d85b47e2ab1b3c74f8ed728526a0",
-      "contract_fp": ""
-    },
-    "objective": "Complete final Execution Hub source acceptance after repository hygiene rejection. Remove only the three README trailing-space markers reported by git diff --check; preserve all validated Hub source and prior test proof. Re-run only git diff --check because the change is docs-only and cannot invalidate runtime/UI/proxy/transport proofs.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-14T05:46:29.578Z"
-      },
-      {
-        "id": "verify",
-        "text": "Run tests and build verification",
-        "status": "completed",
-        "updated_at": "2026-08-14T05:46:29.578Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-14T05:46:29.578Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [
-      {
-        "command": "node --test tests/codex-desktop-config.test.js tests/control-panel.test.js tests/hub-proxy-gateway.test.js tests/runtime-lifecycle.test.js && node --check electron/main.js && node --check electron/services/hubProxyGateway.js && node --check electron/services/codexDesktopConfig.js && cd resources/coding-tools-mcp && python -m pytest tests/test_coordination_state.py tests/test_execution_hub.py tests/test_hub_proxy_stdio.py tests/test_execution_hub_faults.py -q && python -m pytest tests/test_efficiency_runtime.py -k workspace_context_exposes_non_secret_runtime_activation_identity -q && python -m pytest tests/test_stateless_http_2026.py -q && python -m pytest tests/test_system_capability_suite.py -k \"orchestration_endpoint or session_churn or client_abort_mid_response or partial_upload\" -q",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 24846,
-        "summary": "exit 0 | 24.8s | 43 lines | tail: '4 passed, 30 deselected in 4.36s'"
-      },
-      {
-        "command": "git diff --check",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 218,
-        "summary": "exit 0 | 0.2s | 8 lines | tail: \"warning: in the working copy of 'tests/runtime-lifecycle.test.js', LF will be replaced by CRLF the next time Git touc...\""
-      }
-    ],
-    "build_results": [],
-    "last_build_report": {
-      "project": {
-        "type": "electron",
-        "name": "web-mcp-assistant",
-        "version": "0.3.4",
-        "package_manager": "npm",
-        "test_command": "npm run test",
-        "build_command": "npm run dist",
-        "artifact_paths": [
-          "dist",
-          "build"
-        ]
-      },
-      "commands": {
-        "test": "git diff --check",
-        "build": "npm run dist"
-      },
-      "test_result": {
-        "command": "git diff --check",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 218,
-        "summary": "exit 0 | 0.2s | 8 lines | tail: \"warning: in the working copy of 'tests/runtime-lifecycle.test.js', LF will be replaced by CRLF the next time Git touc...\""
-      },
-      "build_result": null,
-      "artifacts": [],
-      "hash_algorithm": "sha256",
-      "overall_status": "passed",
-      "failure": null,
-      "report_generated_at": "2026-08-14T05:46:28.998Z"
-    },
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-14T05:43:04.931Z",
-    "updated_at": "2026-08-14T05:51:56.909Z",
-    "events": [
-      {
-        "time": "2026-08-14T05:43:04.931Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-14T05:43:04.948Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -m 50 -e \"smart-v3\" -e \"tool_contract\" -e \"tool_count\" -e \"SMART_TOOL\" resources/coding-tools-mcp/tests tests",
-          "session_id": "Ysftdj4-qJpF0ury6QxPYtUI"
-        }
-      },
-      {
-        "time": "2026-08-14T05:43:05.059Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -m 50 -e \"smart-v3\" -e \"tool_contract\" -e \"tool_count\" -e \"SMART_TOOL\" resources/coding-tools-mcp/tests tests",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-14T05:43:12.836Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A25 -B12 \"contract = identity\\[\\\"tool_contract\\\"\\]\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
-          "session_id": "qVcjIPW8ngWvr0VZljh17CT3"
-        }
-      },
-      {
-        "time": "2026-08-14T05:43:12.960Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A25 -B12 \"contract = identity\\[\\\"tool_contract\\\"\\]\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-14T05:43:28.987Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-14T05:43:29.751Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "PERMISSION_REQUIRED"
-        }
-      },
-      {
-        "time": "2026-08-14T05:43:43.419Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-14T05:43:44.046Z",
-        "event": "command_started",
-        "details": {
-          "command": "node --test tests/codex-desktop-config.test.js tests/control-panel.test.js tests/hub-proxy-gateway.test.js tests/runtime-lifecycle.test.js && node --check electron/main.js && node --check electron/services/hubProxyGateway.js && node --check electron/services/codexDesktopConfig.js && cd resources/coding-tools-mcp && python -m pytest tests/test_coordination_state.py tests/test_execution_hub.py tests/test_hub_proxy_stdio.py tests/test_execution_hub_faults.py -q && python -m pytest tests/test_effici",
-          "session_id": "KV_6r1rKNw0mSOJzZ58Z4gCK"
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:13.150Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:14.065Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:14.080Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:14.935Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:15.183Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:15.272Z",
-        "event": "command_started",
-        "details": {
-          "command": "node --test tests/codex-desktop-config.test.js tests/control-panel.test.js tests/hub-proxy-gateway.test.js tests/runtime-lifecycle.test.js && node --check electron/main.js && node --check electron/services/hubProxyGateway.js && node --check electron/services/codexDesktopConfig.js && cd resources/coding-tools-mcp && python -m pytest tests/test_coordination_state.py tests/test_execution_hub.py tests/test_hub_proxy_stdio.py tests/test_execution_hub_faults.py -q && python -m pytest tests/test_effici",
-          "session_id": "xxaFQN9MQ6LQN46qveiid2ak"
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:40.043Z",
-        "event": "build_verification_finished",
-        "details": {
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:40.402Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:40.415Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:40.658Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-14T05:44:40.670Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:45:54.414Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --check",
-          "session_id": "EeP63jNDCfcDOx-mcBcUyikP"
-        }
-      },
-      {
-        "time": "2026-08-14T05:45:54.575Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --check",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:09.830Z",
-        "event": "final_acceptance_rejected",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:09.858Z",
-        "event": "task_rejected",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:25.877Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:26.612Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:27.400Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:27.418Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:28.527Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:28.767Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:28.781Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --check",
-          "session_id": "9-6-3PqpNuPVP1rSP_OGr2vC"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:28.998Z",
-        "event": "build_verification_finished",
-        "details": {
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:29.571Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:29.578Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:29.800Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:29.816Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:46.476Z",
-        "event": "command_started",
-        "details": {
-          "command": "git status --short && git diff --stat -- README.md docs/research/260814_EXECUTION_HUB_CHATWEB_CODEX_DESKTOP_TONG_THE.md docs/research/2026-08-14_POST_P1_FOLLOWUP_TRACKER.md electron/main.js electron/panelPreload.js electron/paths.js electron/services/hubProxyGateway.js electron/services/codexDesktopConfig.js renderer/panel.html renderer/panel.js renderer/panel.css resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/c",
-          "session_id": "ncTno5IWu60i8fbKVwiEsK6Q"
-        }
-      },
-      {
-        "time": "2026-08-14T05:46:46.638Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git status --short && git diff --stat -- README.md docs/research/260814_EXECUTION_HUB_CHATWEB_CODEX_DESKTOP_TONG_THE.md docs/research/2026-08-14_POST_P1_FOLLOWUP_TRACKER.md electron/main.js electron/panelPreload.js electron/paths.js electron/services/hubProxyGateway.js electron/services/codexDesktopConfig.js renderer/panel.html renderer/panel.js renderer/panel.css resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/c",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-14T05:47:11.594Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-14T05:47:11.605Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-14T05:52:08.426Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "1612f056e0b74a2b9f57312b526410a8",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -16288,6 +15837,51 @@
       }
     ],
     "archived_at": "2026-08-14T10:08:10.477Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "11450e0a27904d97acacd891e83c7222",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-14T10:08:10.496Z",
+    "updated_at": "2026-08-14T10:16:22.339Z",
+    "events": [
+      {
+        "time": "2026-08-14T10:08:10.496Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-14T10:16:22.260Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"git log -3 --oneline --decorate; Write-Output '--- recent relevant files ---'; git diff --name-status 7609297462713beb104e5c933ea4d6bf3b24ec11..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/opencode_provider.py docs/research/260814_NON_UI_TECHNICAL_COMPLETION_STATUS.md docs/research/260814_EXECUTION_HUB_IMPLEMENTATION_STATUS.md docs/research/260814_EXECUTION_HUB_MULTIPROVIDER_ORCHESTRATION_UI.md; Write-Output '--- relaunch symbols ---'; rg -n \\\"app\\\\.relaunc",
+          "session_id": "tUnetaM1VnbIdP8GMIWPHjxj"
+        }
+      },
+      {
+        "time": "2026-08-14T10:16:22.339Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"git log -3 --oneline --decorate; Write-Output '--- recent relevant files ---'; git diff --name-status 7609297462713beb104e5c933ea4d6bf3b24ec11..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/opencode_provider.py docs/research/260814_NON_UI_TECHNICAL_COMPLETION_STATUS.md docs/research/260814_EXECUTION_HUB_IMPLEMENTATION_STATUS.md docs/research/260814_EXECUTION_HUB_MULTIPROVIDER_ORCHESTRATION_UI.md; Write-Output '--- relaunch symbols ---'; rg -n \\\"app\\\\.relaunc",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T10:16:26.964Z",
     "archive_reason": "finished"
   }
 ]
