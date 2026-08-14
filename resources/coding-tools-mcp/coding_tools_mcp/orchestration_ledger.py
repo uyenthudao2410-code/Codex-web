@@ -28,6 +28,17 @@ _SAFE_NUMERIC_USAGE_KEYS = {
     "cache_read_tokens",
     "cache_write_tokens",
 }
+_PROVIDER_MESSAGE_NUMERIC_KEYS = frozenset({
+    "input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "reasoning_output_tokens",
+    "cache_read_tokens",
+    "cache_write_tokens",
+    "provider_cost",
+    "duration_ms",
+})
+_MAX_PROVIDER_MESSAGE_ECONOMICS = 128
 _SENSITIVE_PAYLOAD_KEYS = {
     "content",
     "file_content",
@@ -558,7 +569,45 @@ class OrchestrationLedger:
         def merge_metadata(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
             merged = dict(existing)
             for key, value in incoming.items():
-                if key == "economics" and isinstance(value, dict):
+                if key == "message_economics" and isinstance(value, dict):
+                    messages = dict(merged.get("message_economics") or {})
+                    for raw_message_id, raw_metrics in value.items():
+                        message_id = _bounded_text(raw_message_id, 256).strip()
+                        if not message_id or not isinstance(raw_metrics, dict):
+                            continue
+                        if message_id not in messages and len(messages) >= _MAX_PROVIDER_MESSAGE_ECONOMICS:
+                            continue
+                        current = dict(messages.get(message_id) or {})
+                        for metric, metric_value in raw_metrics.items():
+                            if metric not in _PROVIDER_MESSAGE_NUMERIC_KEYS:
+                                continue
+                            if isinstance(metric_value, bool) or not isinstance(metric_value, (int, float)) or metric_value < 0:
+                                continue
+                            previous = current.get(metric)
+                            current[metric] = max(previous, metric_value) if isinstance(previous, (int, float)) and not isinstance(previous, bool) else metric_value
+                        messages[message_id] = current
+                    merged["message_economics"] = messages
+                    totals: dict[str, int | float] = {metric: 0 for metric in _PROVIDER_MESSAGE_NUMERIC_KEYS}
+                    for metrics in messages.values():
+                        if not isinstance(metrics, dict):
+                            continue
+                        for metric in _PROVIDER_MESSAGE_NUMERIC_KEYS:
+                            measured = metrics.get(metric)
+                            if isinstance(measured, (int, float)) and not isinstance(measured, bool) and measured >= 0:
+                                totals[metric] += measured
+                    merged["economics"] = {
+                        "input_tokens": totals["input_tokens"],
+                        "cached_input_tokens": totals["cached_input_tokens"],
+                        "output_tokens": totals["output_tokens"],
+                        "reasoning_output_tokens": totals["reasoning_output_tokens"],
+                        "cache_read_tokens": totals["cache_read_tokens"],
+                        "cache_write_tokens": totals["cache_write_tokens"],
+                        "provider_cost": totals["provider_cost"],
+                        "measured": True,
+                        "source": "opencode",
+                    }
+                    merged["provider_message_duration_ms"] = totals["duration_ms"]
+                elif key == "economics" and isinstance(value, dict):
                     economics = dict(merged.get("economics") or {})
                     for metric, metric_value in value.items():
                         if metric in _SAFE_NUMERIC_USAGE_KEYS or metric == "provider_cost":
@@ -589,8 +638,11 @@ class OrchestrationLedger:
                     raise ValueError("external delegation authority changed")
                 if str(row["model"]) and str(row["model"]) != model_value:
                     raise ValueError("external delegation model changed")
-                merged_metadata = merge_metadata(json.loads(row["metadata_json"] or "{}"), safe_metadata)
                 current_status = str(row["status"] or "active").lower()
+                if current_status in terminal_statuses and incoming_status != current_status:
+                    connection.commit()
+                    return {"created": False, "changed": False, "terminal_transition": False, "delegation": self._delegation_row(row)}
+                merged_metadata = merge_metadata(json.loads(row["metadata_json"] or "{}"), safe_metadata)
                 next_status = current_status if current_status in terminal_statuses else incoming_status
                 terminal_transition = current_status not in terminal_statuses and next_status in terminal_statuses
                 finished_at = row["finished_at"] or (now if terminal_transition else None)
@@ -607,12 +659,13 @@ class OrchestrationLedger:
                 return {"created": False, "changed": changed, "terminal_transition": terminal_transition, "delegation": self._delegation_row(updated)}
 
             terminal = incoming_status in terminal_statuses
+            initial_metadata = merge_metadata({}, safe_metadata)
             connection.execute(
                 """INSERT INTO delegations(
                     delegation_id,wave_id,parent_delegation_id,authority_owner,route_requested,route_resolved,
                     model,effort,allowed_scope_json,status,started_at,finished_at,metadata_json
                 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (delegation, wave, None, owner, route_requested_value, route_resolved_value, model_value, "", "[]", incoming_status, now, now if terminal else None, _json(safe_metadata)),
+                (delegation, wave, None, owner, route_requested_value, route_resolved_value, model_value, "", "[]", incoming_status, now, now if terminal else None, _json(initial_metadata)),
             )
             created = connection.execute("SELECT * FROM delegations WHERE delegation_id=?", (delegation,)).fetchone()
             connection.commit()

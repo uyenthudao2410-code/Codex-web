@@ -14,6 +14,8 @@
     "benchmark:routing": "cd resources/coding-tools-mcp && python -m benchmarks.routing_economics",
     "benchmark:activation": "cd resources/coding-tools-mcp && python -m benchmarks.runtime_activation",
     "probe:execution-hub": "node scripts/execution-hub-activation-probe.js",
+    "canary:opencode-flash:preflight": "electron scripts/execution-hub-provider-canary.js --preflight",
+    "canary:opencode-flash": "electron scripts/execution-hub-provider-canary.js",
     "audit:prod": "npm audit --omit=dev",
     "dist": "npm run icon:build && npm test && electron-builder --win nsis",
     "dist:dir": "npm run icon:build && electron-builder --dir"

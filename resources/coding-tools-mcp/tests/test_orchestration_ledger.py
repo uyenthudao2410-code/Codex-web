@@ -90,6 +90,33 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(stale["delegation"]["metadata"]["economics"]["input_tokens"], 100)
             self.assertEqual(stale["delegation"]["metadata"]["economics"]["cache_read_tokens"], 40)
 
+    def test_external_delegation_aggregates_message_economics_and_freezes_conflicting_terminal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="aggregate provider messages")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            common = dict(
+                delegation_id="opencode-provider-aggregate",
+                wave_id=wave_id,
+                authority_owner="opencode",
+                route_requested="opencode",
+                route_resolved="opencode-go/deepseek-v4-flash",
+                model="opencode-go/deepseek-v4-flash",
+            )
+            first = ledger.upsert_external_delegation(**common, status="active", metadata={"message_economics": {"msg-1": {"input_tokens": 100, "output_tokens": 10, "provider_cost": 0.001, "duration_ms": 600}}})
+            duplicate = ledger.upsert_external_delegation(**common, status="active", metadata={"message_economics": {"msg-1": {"input_tokens": 100, "output_tokens": 10, "provider_cost": 0.001, "duration_ms": 600}}})
+            self.assertTrue(first["created"])
+            self.assertFalse(duplicate["changed"])
+            second = ledger.upsert_external_delegation(**common, status="completed", metadata={"message_economics": {"msg-2": {"input_tokens": 50, "output_tokens": 5, "provider_cost": 0.002, "duration_ms": 300}}})
+            economics = second["delegation"]["metadata"]["economics"]
+            self.assertEqual((economics["input_tokens"], economics["output_tokens"]), (150, 15))
+            self.assertAlmostEqual(economics["provider_cost"], 0.003)
+            self.assertEqual(second["delegation"]["metadata"]["provider_message_duration_ms"], 900)
+            conflicting = ledger.upsert_external_delegation(**common, status="failed", metadata={"error_class": "deadline_or_timeout", "timing": {"total_ms": 45000}})
+            self.assertFalse(conflicting["changed"])
+            self.assertEqual(conflicting["delegation"]["status"], "completed")
+            self.assertNotIn("error_class", conflicting["delegation"]["metadata"])
+
     def test_shadow_route_record_is_idempotent_and_projects_actual_run_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))

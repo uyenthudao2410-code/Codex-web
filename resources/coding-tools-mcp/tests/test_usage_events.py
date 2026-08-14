@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
-from coding_tools_mcp.usage_events import build_usage_event, usage_event_from_provider_telemetry
+from coding_tools_mcp.usage_events import build_usage_event, usage_event_from_provider_delegation, usage_event_from_provider_telemetry
 
 
 class UsageEventTests(unittest.TestCase):
@@ -49,6 +49,33 @@ class UsageEventTests(unittest.TestCase):
         )
         self.assertEqual(event["error"]["class"], "capacity_or_rate_limit")
         self.assertNotIn(raw, repr(event))
+
+    def test_aggregated_provider_delegation_builds_one_terminal_usage_event(self) -> None:
+        event = usage_event_from_provider_delegation(
+            run_id="run-a",
+            wave_id="wave-a",
+            delegation={
+                "delegation_id": "delegation-a",
+                "model": "opencode-go/deepseek-v4-flash",
+                "status": "failed",
+                "metadata": {
+                    "provider_id": "opencode-go",
+                    "model_id": "deepseek-v4-flash",
+                    "economics": {"measured": True, "input_tokens": 150, "cached_input_tokens": 40, "output_tokens": 15, "reasoning_output_tokens": 2, "cache_read_tokens": 40, "cache_write_tokens": 1, "provider_cost": 0.003},
+                    "provider_message_duration_ms": 900,
+                    "timing": {"queue_ms": 2},
+                    "error_class": "provider_cli_idle_timeout_after_tool_calls",
+                },
+            },
+            total_ms=45000,
+        )
+        self.assertIsNotNone(event)
+        self.assertEqual(event["usage"]["input_tokens"], 150)
+        self.assertEqual(event["usage"]["uncached_input_tokens"], 110)
+        self.assertAlmostEqual(event["cost"]["provider_cost"], 0.003)
+        self.assertEqual(event["timing"]["provider_ms"], 900)
+        self.assertEqual(event["timing"]["total_ms"], 45000)
+        self.assertEqual(event["error"]["class"], "deadline_or_timeout")
 
     def test_ledger_usage_projection_is_sanitized_and_ordered(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

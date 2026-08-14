@@ -144,3 +144,45 @@ def usage_event_from_provider_telemetry(
         provider_ms=telemetry.get("duration_ms"),
         error_name=str(telemetry.get("error_name") or ""),
     )
+
+
+def usage_event_from_provider_delegation(
+    *,
+    run_id: str,
+    wave_id: str,
+    delegation: dict[str, Any],
+    source: str = "opencode:provider_dispatch",
+    total_ms: Any = None,
+) -> dict[str, Any] | None:
+    metadata = delegation.get("metadata") if isinstance(delegation.get("metadata"), dict) else {}
+    economics = metadata.get("economics") if isinstance(metadata.get("economics"), dict) else {}
+    if not economics or economics.get("measured") is not True:
+        return None
+    model = str(delegation.get("model") or "").strip()
+    provider_id = str(metadata.get("provider_id") or "").strip()
+    model_id = str(metadata.get("model_id") or "").strip()
+    if not provider_id and "/" in model:
+        provider_id = model.split("/", 1)[0]
+    if not model_id:
+        model_id = model.split("/", 1)[1] if "/" in model else model
+    timing = metadata.get("timing") if isinstance(metadata.get("timing"), dict) else {}
+    return build_usage_event(
+        run_id=run_id,
+        wave_id=wave_id,
+        delegation_id=str(delegation.get("delegation_id") or ""),
+        provider_id=provider_id,
+        model_id=model_id,
+        status=str(delegation.get("status") or ""),
+        source=source,
+        input_tokens=economics.get("input_tokens"),
+        cached_input_tokens=economics.get("cached_input_tokens"),
+        output_tokens=economics.get("output_tokens"),
+        reasoning_output_tokens=economics.get("reasoning_output_tokens"),
+        cache_read_tokens=economics.get("cache_read_tokens"),
+        cache_write_tokens=economics.get("cache_write_tokens"),
+        provider_cost=economics.get("provider_cost"),
+        queue_ms=timing.get("queue_ms"),
+        provider_ms=metadata.get("provider_message_duration_ms"),
+        total_ms=total_ms if total_ms is not None else timing.get("total_ms"),
+        error_name=str(metadata.get("error_class") or metadata.get("error_name") or ""),
+    )

@@ -27,6 +27,7 @@ MAX_RESULT_CHARS = 64 * 1024
 MAX_EVENT_LINE_BYTES = 256 * 1024
 MAX_RETAINED_DISPATCHES = 32
 SAFE_TOOLS = frozenset({"read", "glob", "grep", "list", "lsp"})
+LIFECYCLE_EVENT_TYPES = frozenset({"step_start", "step_finish", "tool_use", "text", "error"})
 
 
 class OpenCodeProviderError(RuntimeError):
@@ -118,6 +119,10 @@ class _Dispatch:
     output_truncated: bool = False
     result_parts: list[str] = field(default_factory=list)
     result_chars: int = 0
+    event_counts: dict[str, int] = field(default_factory=dict)
+    last_step_finish: str = ""
+    last_tool: str = ""
+    last_tool_status: str = ""
     lock: threading.RLock = field(default_factory=threading.RLock)
 
 
@@ -156,6 +161,12 @@ class OpenCodeProviderAdapter:
                 "error_class": item.error_class,
                 "read_only_enforced": True,
                 "allowed_tools": sorted(SAFE_TOOLS),
+                "lifecycle_evidence": {
+                    "event_counts": dict(item.event_counts),
+                    "last_step_finish": item.last_step_finish,
+                    "last_tool": item.last_tool,
+                    "last_tool_status": item.last_tool_status,
+                },
                 "timing": {
                     "queue_ms": max(0, item.started_at_ms - item.created_at_ms),
                     "provider_ms": None,
@@ -269,6 +280,9 @@ class OpenCodeProviderAdapter:
             with item.lock:
                 item.session_id = session_id
         event_type = str(event.get("type") or "")
+        if event_type in LIFECYCLE_EVENT_TYPES:
+            with item.lock:
+                item.event_counts[event_type] = min(1_000_000, item.event_counts.get(event_type, 0) + 1)
         if event_type == "text" and isinstance(event.get("part"), dict):
             self._append_result(item, str(event["part"].get("text") or ""))
         elif event_type == "error":
@@ -278,10 +292,21 @@ class OpenCodeProviderAdapter:
                 item.error_class = classify_provider_error(name, status="failed") or "provider_error"
         elif event_type == "tool_use" and isinstance(event.get("part"), dict):
             tool = str(event["part"].get("tool") or "").strip()
+            state = event["part"].get("state") if isinstance(event["part"].get("state"), dict) else {}
+            tool_status = str(state.get("status") or "").strip()[:80]
+            with item.lock:
+                item.last_tool = tool[:100]
+                item.last_tool_status = tool_status
             if tool and tool not in SAFE_TOOLS:
                 with item.lock:
                     item.policy_violation = True
                     item.error_class = "side_effect_policy_violation"
+        elif event_type == "step_finish":
+            part = event.get("part") if isinstance(event.get("part"), dict) else event
+            reason = str(part.get("reason") or part.get("finish") or "").strip()[:100]
+            if reason:
+                with item.lock:
+                    item.last_step_finish = reason
 
     def _read_stdout(self, item: _Dispatch) -> None:
         stream = item.process.stdout
@@ -347,7 +372,7 @@ class OpenCodeProviderAdapter:
                 item.error_class = item.error_class or "cancelled_or_interrupted"
             elif item.timed_out:
                 item.status = "timed_out"
-                item.error_class = item.error_class or "deadline_or_timeout"
+                item.error_class = item.error_class or ("provider_cli_idle_timeout_after_tool_calls" if item.last_step_finish.lower() == "tool-calls" else "deadline_or_timeout")
             elif item.error_class is not None or returncode not in {0, None}:
                 item.status = "failed"
                 item.error_class = item.error_class or "provider_process_error"

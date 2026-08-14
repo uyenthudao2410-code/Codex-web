@@ -18,7 +18,12 @@ capture = os.environ.get("OPENCODE_STUB_CAPTURE")
 if capture:
     with open(capture, "w", encoding="utf-8") as handle:
         json.dump({"argv": sys.argv[1:], "prompt": prompt, "config": json.loads(os.environ["OPENCODE_CONFIG_CONTENT"]), "dispatch_id": os.environ.get("CODING_TOOLS_MCP_PROVIDER_DISPATCH_ID"), "delegation_id": os.environ.get("CODING_TOOLS_MCP_PROVIDER_DELEGATION_ID")}, handle)
-if "SLEEP" in prompt:
+if "TOOLCALL_HANG" in prompt:
+    print(json.dumps({"type":"step_start","timestamp":1,"sessionID":"ses-stub","part":{}}), flush=True)
+    print(json.dumps({"type":"tool_use","timestamp":2,"sessionID":"ses-stub","part":{"type":"tool","tool":"read","state":{"status":"completed"}}}), flush=True)
+    print(json.dumps({"type":"step_finish","timestamp":3,"sessionID":"ses-stub","part":{"reason":"tool-calls"}}), flush=True)
+    time.sleep(2)
+elif "SLEEP" in prompt:
     time.sleep(2)
 print(json.dumps({"type":"text","timestamp":1,"sessionID":"ses-stub","part":{"type":"text","text":"bounded findings","time":{"end":1}}}), flush=True)
 if "VIOLATE" in prompt:
@@ -128,6 +133,23 @@ class OpenCodeProviderAdapterTests(unittest.TestCase):
                 timeout_ms=100,
             )
             self.assertEqual(self.wait_terminal(timeout_dispatch["dispatch_id"])["status"], "timed_out")
+
+            toolcall_timeout = self.adapter.start(
+                run_id="run",
+                wave_id="wave",
+                model="opencode-go/deepseek-v4-flash",
+                prompt="TOOLCALL_HANG",
+                request_id="toolcall-timeout",
+                timeout_ms=100,
+            )
+            toolcall_result = self.wait_terminal(toolcall_timeout["dispatch_id"])
+            self.assertEqual(toolcall_result["status"], "timed_out")
+            self.assertEqual(toolcall_result["error_class"], "provider_cli_idle_timeout_after_tool_calls")
+            evidence = toolcall_result["lifecycle_evidence"]
+            self.assertEqual(evidence["last_step_finish"], "tool-calls")
+            self.assertEqual(evidence["last_tool"], "read")
+            self.assertEqual(evidence["last_tool_status"], "completed")
+            self.assertGreaterEqual(evidence["event_counts"]["step_finish"], 1)
 
             cancel_dispatch = self.adapter.start(
                 run_id="run",

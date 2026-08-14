@@ -95,7 +95,7 @@ from .proof_ledger import ProofLedger
 from .telemetry import SessionTelemetry
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head
 from .tool_results import make_tool_result, model_visible_text_bytes
-from .usage_events import usage_event_from_provider_telemetry
+from .usage_events import usage_event_from_provider_delegation
 from .transport_http import HTTPSessionManager
 from .transport_stdio import serve_stdio
 
@@ -2204,6 +2204,18 @@ class Runtime:
             "measured": True,
             "source": "opencode",
         }
+        message_economics = {
+            telemetry["message_id"]: {
+                "input_tokens": telemetry["input_tokens"],
+                "cached_input_tokens": telemetry["cache_read_tokens"],
+                "output_tokens": telemetry["output_tokens"],
+                "reasoning_output_tokens": telemetry["reasoning_output_tokens"],
+                "cache_read_tokens": telemetry["cache_read_tokens"],
+                "cache_write_tokens": telemetry["cache_write_tokens"],
+                "provider_cost": telemetry["provider_cost"],
+                **({"duration_ms": telemetry["duration_ms"]} if "duration_ms" in telemetry else {}),
+            }
+        }
         metadata: dict[str, Any] = {
             "source": "opencode:message.updated",
             "provider_id": provider_id,
@@ -2213,6 +2225,8 @@ class Runtime:
             "provider_started_at_ms": telemetry["started_at_ms"],
             "provider_cost": telemetry["provider_cost"],
             "economics": economics,
+            "message_economics": message_economics,
+            "provider_message_status": telemetry["status"],
         }
         for key in ("completed_at_ms", "duration_ms", "finish", "error_name"):
             if key in telemetry:
@@ -2221,6 +2235,8 @@ class Runtime:
             metadata["provider_dispatch_id"] = str(dispatch.get("dispatch_id") or "")
             metadata["side_effect_class"] = "read_only"
             metadata["read_only_enforced"] = True
+        intermediate_tool_calls = bool(dispatch) and telemetry["status"] == "completed" and str(telemetry.get("finish") or "").strip().lower() == "tool-calls"
+        delegation_status = "active" if intermediate_tool_calls else telemetry["status"]
         projected = self.orchestration_ledger.upsert_external_delegation(
             delegation_id=delegation_id,
             wave_id=wave_id,
@@ -2228,7 +2244,7 @@ class Runtime:
             route_requested="opencode",
             route_resolved=model,
             model=model,
-            status=telemetry["status"],
+            status=delegation_status,
             metadata=metadata,
         )
         delegation = projected["delegation"]
@@ -2242,21 +2258,22 @@ class Runtime:
                 event_type=event_type,
                 state_before=ctx.state,
                 state_after=ctx.state,
-                payload={"source": "opencode:message.updated", "provider_id": provider_id, "model": model, "session_id": telemetry["session_id"], "message_id": telemetry["message_id"], "status": delegation["status"], "economics": economics},
+                payload={"source": "opencode:message.updated", "provider_id": provider_id, "model": model, "session_id": telemetry["session_id"], "message_id": telemetry["message_id"], "provider_message_status": telemetry["status"], "finish": telemetry.get("finish") or "", "status": delegation["status"], "economics": economics},
             )
-        if telemetry["status"] in {"completed", "failed"}:
-            usage_event = usage_event_from_provider_telemetry(
+        if delegation_status in {"completed", "failed"}:
+            usage_event = usage_event_from_provider_delegation(
                 run_id=run_id,
                 wave_id=wave_id,
-                delegation_id=delegation_id,
-                telemetry=telemetry,
+                delegation=delegation,
+                source="opencode:provider_dispatch" if dispatch else "opencode:message.updated",
             )
-            self.orchestration_ledger.record_usage_event(
-                run_id=run_id,
-                wave_id=wave_id,
-                delegation_id=delegation_id,
-                usage_event=usage_event,
-            )
+            if usage_event is not None:
+                self.orchestration_ledger.record_usage_event(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    delegation_id=delegation_id,
+                    usage_event=usage_event,
+                )
         return {"run_id": run_id, "wave_id": wave_id, "delegation_id": delegation_id, "changed": bool(projected["changed"]), "created": bool(projected["created"]), "delegation": delegation, "usage_event": usage_event}
 
     def _require_provider_supervisor(self, identity: dict[str, Any]) -> None:
@@ -2329,6 +2346,7 @@ class Runtime:
             "result_chars": snapshot.get("result_chars", 0),
             "output_truncated": bool(snapshot.get("output_truncated")),
             "error_class": snapshot.get("error_class"),
+            "lifecycle_evidence": snapshot.get("lifecycle_evidence") or {},
             "timing": snapshot.get("timing") or {},
         }
         projected = self.orchestration_ledger.upsert_external_delegation(
@@ -2363,7 +2381,23 @@ class Runtime:
                     "timing": snapshot.get("timing") or {},
                 },
             )
-        return projected["delegation"]
+        delegation = projected["delegation"]
+        if delegation["status"] in {"completed", "failed"}:
+            usage_event = usage_event_from_provider_delegation(
+                run_id=ctx.run_id,
+                wave_id=ctx.wave_id,
+                delegation=delegation,
+                source="opencode:provider_dispatch",
+                total_ms=(snapshot.get("timing") or {}).get("total_ms"),
+            )
+            if usage_event is not None:
+                self.orchestration_ledger.record_usage_event(
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                    delegation_id=str(snapshot["delegation_id"]),
+                    usage_event=usage_event,
+                )
+        return delegation
 
     def _on_opencode_provider_terminal(self, snapshot: dict[str, Any]) -> None:
         ctx = self.orchestration_control.snapshot(str(snapshot.get("run_id") or ""))

@@ -281,6 +281,69 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(cancel_status, 200, cancelled)
         self.assertEqual(cancelled["dispatch"]["status"], "cancelled")
 
+    def test_correlated_tool_call_message_is_intermediate_and_final_usage_aggregates_messages(self) -> None:
+        control = self.runtime.orchestration_control
+        control.mark_ready(self.ctx)
+        control.select_route(self.ctx, {"requested": "opencode", "selected": "opencode", "reason": "test"})
+        control.transition(self.ctx, "EXECUTING", reason="provider_inference")
+        run_id, wave_id = self.ctx.run_id, self.ctx.wave_id
+
+        class FakeProvider:
+            def __init__(self):
+                self.snapshot = {
+                    "dispatch_id": "dispatch-multi", "request_id": "req", "run_id": run_id, "wave_id": wave_id,
+                    "delegation_id": "delegation-multi", "provider_id": "opencode-go", "model": "opencode-go/deepseek-v4-flash",
+                    "status": "running", "session_id": "ses-multi", "prompt_sha256": "abc", "prompt_bytes": 7,
+                    "result_text": "", "result_chars": 0, "output_truncated": False, "stdout_bytes": 0, "stderr_bytes": 0,
+                    "returncode": None, "error_class": None, "read_only_enforced": True, "allowed_tools": ["read"],
+                    "lifecycle_evidence": {"event_counts": {}, "last_step_finish": "", "last_tool": "", "last_tool_status": ""},
+                    "timing": {"queue_ms": 1, "provider_ms": None, "total_ms": None},
+                }
+
+            def observe(self, dispatch_id):
+                if dispatch_id != "dispatch-multi":
+                    raise AssertionError(dispatch_id)
+                return dict(self.snapshot)
+
+            def find_by_session(self, **kwargs):
+                return dict(self.snapshot) if kwargs.get("session_id") == "ses-multi" else None
+
+            def active_count(self):
+                return 1
+
+            def close(self):
+                return None
+
+        self.runtime._opencode_provider.close()
+        self.runtime._opencode_provider = FakeProvider()
+        common = {
+            "schema_version": 1, "event_type": "message.updated", "session_id": "ses-multi",
+            "provider_dispatch_id": "dispatch-multi", "provider_delegation_id": "delegation-multi",
+            "provider_id": "opencode-go", "model_id": "deepseek-v4-flash", "started_at_ms": 1000,
+            "reasoning_output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0,
+        }
+        first = {**common, "message_id": "msg-1", "status": "completed", "completed_at_ms": 1600, "duration_ms": 600, "finish": "tool-calls", "provider_cost": 0.001, "input_tokens": 100, "output_tokens": 10}
+        status, intermediate = self.post_hub({"action": "provider_telemetry", "client_id": "opencode", "client_type": "opencode", "telemetry": first})
+        self.assertEqual(status, 200, intermediate)
+        self.assertEqual(intermediate["delegation"]["status"], "active")
+        self.assertIsNone(intermediate["usage_event"])
+        self.assertEqual(self.runtime.orchestration_ledger.list_usage_events(self.ctx.run_id), [])
+        status, duplicate = self.post_hub({"action": "provider_telemetry", "client_id": "opencode", "client_type": "opencode", "telemetry": first})
+        self.assertEqual(status, 200, duplicate)
+        self.assertFalse(duplicate["changed"])
+        second = {**common, "message_id": "msg-2", "status": "completed", "started_at_ms": 1700, "completed_at_ms": 2000, "duration_ms": 300, "finish": "stop", "provider_cost": 0.002, "input_tokens": 50, "output_tokens": 5}
+        status, final = self.post_hub({"action": "provider_telemetry", "client_id": "opencode", "client_type": "opencode", "telemetry": second})
+        self.assertEqual(status, 200, final)
+        self.assertEqual(final["delegation"]["status"], "completed")
+        economics = final["delegation"]["metadata"]["economics"]
+        self.assertEqual((economics["input_tokens"], economics["output_tokens"]), (150, 15))
+        self.assertAlmostEqual(economics["provider_cost"], 0.003)
+        usage = self.runtime.orchestration_ledger.list_usage_events(self.ctx.run_id)
+        self.assertEqual(len(usage), 1)
+        self.assertEqual((usage[0]["usage"]["input_tokens"], usage[0]["usage"]["output_tokens"]), (150, 15))
+        self.assertAlmostEqual(usage[0]["cost"]["provider_cost"], 0.003)
+        self.assertEqual(usage[0]["timing"]["provider_ms"], 900)
+
     def test_shadow_route_is_idempotent_and_does_not_mutate_execution_authority(self) -> None:
         class NoDispatchProvider:
             def __init__(self):
