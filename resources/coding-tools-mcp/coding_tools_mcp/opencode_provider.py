@@ -329,6 +329,13 @@ class OpenCodeProviderAdapter:
         finally:
             stdout_thread.join(timeout=1.0)
             stderr_thread.join(timeout=1.0)
+            for stream in (item.process.stdout, item.process.stderr):
+                if stream is None:
+                    continue
+                try:
+                    stream.close()
+                except OSError:
+                    pass
         with item.lock:
             item.returncode = returncode
             item.finished_at_ms = int(time.time() * 1000)

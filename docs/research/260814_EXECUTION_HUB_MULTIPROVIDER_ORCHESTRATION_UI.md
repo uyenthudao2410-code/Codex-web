@@ -6,6 +6,8 @@
 **Base HEAD:** `5f756b5f9a4ab29ca84401314bcc72efc17ae31b`  
 **Trạng thái:** kiến trúc mục tiêu + UI router đã triển khai ở source và qua focused proof; chưa thay production routing threshold, chưa restart Electron trong wave này.
 
+> **Completion update:** xem `docs/research/260814_NON_UI_TECHNICAL_COMPLETION_STATUS.md` cho trạng thái authoritative sau các wave Measurement Truth, exact OpenCode telemetry, read-only Provider Adapter và shadow routing. Các phần “target/future” bên dưới được giữ lại để bảo toàn lịch sử thiết kế.
+
 ---
 
 ## 1. Kết luận kiến trúc

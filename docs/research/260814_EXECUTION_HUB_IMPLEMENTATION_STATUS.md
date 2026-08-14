@@ -7,6 +7,8 @@
 **Public MCP contract:** giữ `smart-v3`, 8 top-level tools; không thêm tool công khai chỉ để phục vụ Hub.  
 **Operations trong đợt triển khai này:** chưa commit, chưa push, chưa release, chưa restart Electron/runtime sau các thay đổi Hub.
 
+> **Completion update:** trạng thái non-UI mới nhất nằm tại `docs/research/260814_NON_UI_TECHNICAL_COMPLETION_STATUS.md`. Tài liệu này được giữ như snapshot lịch sử; các dòng cũ nói P-MP1/P-MP2/P-MP3 còn là future work hoặc gateway chưa live không còn là trạng thái source hiện tại.
+
 ---
 
 ## 1. Kết luận triển khai
