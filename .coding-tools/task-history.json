@@ -1,84 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "3365132fe82c45fd95948a0eb8d095da",
-    "orchestration": {},
-    "objective": "Execution Hub live benchmark 2026-08-14: evaluate real connectivity, transport overhead, model routing economics, continuation/handoff coordination, time-to-result, cache/credits, and recommended ChatWeb/Codex Desktop orchestration policy. Benchmark/read-only artifacts only; no production source behavior changes, routing threshold changes, commit, push, release, restart or deploy.",
-    "status": "failed",
-    "steps": [
-      {
-        "id": "hub",
-        "text": "Measure live Execution Hub connectivity/transport",
-        "status": "pending",
-        "updated_at": "2026-08-14T06:04:32.951Z"
-      },
-      {
-        "id": "models",
-        "text": "Run paired real-model candidate/deep benchmarks",
-        "status": "pending",
-        "updated_at": "2026-08-14T06:04:32.951Z"
-      },
-      {
-        "id": "continuity",
-        "text": "Measure continuation versus fresh lane",
-        "status": "pending",
-        "updated_at": "2026-08-14T06:04:32.951Z"
-      },
-      {
-        "id": "report",
-        "text": "Write evidence-calibrated report",
-        "status": "pending",
-        "updated_at": "2026-08-14T06:04:32.951Z"
-      }
-    ],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Command path could not be inspected safely.",
-    "next_step": "Synthesize results into Vietnamese research report",
-    "created_at": "2026-08-14T06:04:32.951Z",
-    "updated_at": "2026-08-14T06:05:01.367Z",
-    "events": [
-      {
-        "time": "2026-08-14T06:04:32.951Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T06:05:01.367Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git check-ignore -v tmp tmp/execution-hub-benchmark 2>NUL",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-14T06:05:01.367Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "INVALID_ARGUMENT"
-        }
-      }
-    ],
-    "archived_at": "2026-08-14T06:05:11.075Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "1db2587af875454e87c58f210f9e4831",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -16864,6 +16786,51 @@
       }
     ],
     "archived_at": "2026-08-14T11:39:23.729Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "51647e924fcc469d9a7cc12c156ff817",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-14T11:39:23.748Z",
+    "updated_at": "2026-08-14T11:39:30.073Z",
+    "events": [
+      {
+        "time": "2026-08-14T11:39:23.748Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-14T11:39:23.780Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; Set-Location (Resolve-Path '.').Path; git add -A; $staged=(git diff --cached --name-only); if($staged){ git commit -m 'chore: record shutdown retry state' | Out-Host }; git push origin main | Out-Host; $local=(git rev-parse HEAD).Trim(); $remote=(git ls-remote origin refs/heads/main | ForEach-Object { ($_ -split '\\s+')[0] }).Trim(); if($local -ne $remote){ throw ('REMOTE_HEAD_MISMATCH local='+$local+' remote='+$remote) }; $dirty=(git",
+          "session_id": "rJwsivUAIcObqWd4h22MOu09"
+        }
+      },
+      {
+        "time": "2026-08-14T11:39:30.073Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; Set-Location (Resolve-Path '.').Path; git add -A; $staged=(git diff --cached --name-only); if($staged){ git commit -m 'chore: record shutdown retry state' | Out-Host }; git push origin main | Out-Host; $local=(git rev-parse HEAD).Trim(); $remote=(git ls-remote origin refs/heads/main | ForEach-Object { ($_ -split '\\s+')[0] }).Trim(); if($local -ne $remote){ throw ('REMOTE_HEAD_MISMATCH local='+$local+' remote='+$remote) }; $dirty=(git",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T11:39:39.785Z",
     "archive_reason": "finished"
   }
 ]
