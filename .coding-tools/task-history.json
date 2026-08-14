@@ -1,51 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "1db2587af875454e87c58f210f9e4831",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-14T06:05:11.090Z",
-    "updated_at": "2026-08-14T06:05:11.215Z",
-    "events": [
-      {
-        "time": "2026-08-14T06:05:11.090Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-14T06:05:11.112Z",
-        "event": "command_started",
-        "details": {
-          "command": "git check-ignore -v tmp tmp/execution-hub-benchmark",
-          "session_id": "fAd_ZmcNWCl6bNv1Xly83u3t"
-        }
-      },
-      {
-        "time": "2026-08-14T06:05:11.215Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git check-ignore -v tmp tmp/execution-hub-benchmark",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-14T06:05:31.650Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "61e19db66aa94ad8a1423f9fffbace27",
     "orchestration": {
       "run_id": "0f7ccac706964b86aa7bcbeb842f59db",
@@ -16831,6 +16786,83 @@
       }
     ],
     "archived_at": "2026-08-14T11:39:39.785Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "34e0e0f613e14eb4bcdefb6e8a3dcb5c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-14T11:39:39.802Z",
+    "updated_at": "2026-08-14T11:40:18.640Z",
+    "events": [
+      {
+        "time": "2026-08-14T11:39:39.802Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-14T11:39:39.823Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Command shutdown.exe -All | Select-Object CommandType,Source,Path | Format-List; Write-Output ('system32_exists='+[bool](Test-Path 'C:\\Windows\\System32\\shutdown.exe'))\"",
+          "session_id": "haNaL7a8lF4emIrmGhM1ZF2w"
+        }
+      },
+      {
+        "time": "2026-08-14T11:39:40.353Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Command shutdown.exe -All | Select-Object CommandType,Source,Path | Format-List; Write-Output ('system32_exists='+[bool](Test-Path 'C:\\Windows\\System32\\shutdown.exe'))\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T11:39:57.619Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"foreach($n in @('USERDOMAIN','USERNAME','WINDIR','SystemRoot')){ Write-Output ($n+'_present='+[bool](Test-Path ('Env:'+$n))) }\"",
+          "session_id": "s8wvKyT_SfK21ulMBHphj5gk"
+        }
+      },
+      {
+        "time": "2026-08-14T11:39:58.064Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"foreach($n in @('USERDOMAIN','USERNAME','WINDIR','SystemRoot')){ Write-Output ($n+'_present='+[bool](Test-Path ('Env:'+$n))) }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-14T11:40:12.609Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; Set-Location (Resolve-Path '.').Path; git add -A; $staged=(git diff --cached --name-only); if($staged){ git commit -m 'chore: record shutdown environment diagnosis' | Out-Host }; git push origin main | Out-Host; $local=(git rev-parse HEAD).Trim(); $remote=(git ls-remote origin refs/heads/main | ForEach-Object { ($_ -split '\\s+')[0] }).Trim(); if($local -ne $remote){ throw ('REMOTE_HEAD_MISMATCH local='+$local+' remote='+$remote) }; $",
+          "session_id": "JK1X0O2r1svpjnrivgp9nbWN"
+        }
+      },
+      {
+        "time": "2026-08-14T11:40:18.640Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; Set-Location (Resolve-Path '.').Path; git add -A; $staged=(git diff --cached --name-only); if($staged){ git commit -m 'chore: record shutdown environment diagnosis' | Out-Host }; git push origin main | Out-Host; $local=(git rev-parse HEAD).Trim(); $remote=(git ls-remote origin refs/heads/main | ForEach-Object { ($_ -split '\\s+')[0] }).Trim(); if($local -ne $remote){ throw ('REMOTE_HEAD_MISMATCH local='+$local+' remote='+$remote) }; $",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-14T11:40:56.274Z",
     "archive_reason": "finished"
   }
 ]
