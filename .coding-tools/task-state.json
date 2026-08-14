@@ -6,14 +6,7 @@
   "status": "waiting",
   "steps": [],
   "current_step": "Waiting for model",
-  "current_command": {
-    "command": "git add -- .coding-tools/orchestration/ledger.sqlite3 .coding-tools/performance.json .coding-tools/task-history.json .coding-tools/task-state.json .coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c .coding-tools/orchestration/reports/run-50ac86ab90af42efa367c8dc317015c2 .coding-tools/orchestration/reports/run-6496bfac04de471087ad596fd8f47197 .coding-tools/orchestration/reports/run-b609d40619fd4907847de66edfeb1396 .coding-tools/orchestration/reports/run-de7ade545daa4806bd498d6942179892",
-    "kind": "command",
-    "session_id": "CxznosJMTiuegKquYoCTndwC",
-    "workdir": ".",
-    "status": "running",
-    "started_at": "2026-08-14T00:22:18.616Z"
-  },
+  "current_command": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
@@ -21,7 +14,7 @@
   "failure": null,
   "next_step": "",
   "created_at": "2026-08-14T00:22:02.633Z",
-  "updated_at": "2026-08-14T00:22:18.616Z",
+  "updated_at": "2026-08-14T00:24:31.034Z",
   "events": [
     {
       "time": "2026-08-14T00:22:02.633Z",
@@ -52,6 +45,62 @@
       "details": {
         "command": "git add -- .coding-tools/orchestration/ledger.sqlite3 .coding-tools/performance.json .coding-tools/task-history.json .coding-tools/task-state.json .coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c .coding-tools/orchestration/reports/run-50ac86ab90af42efa367c8dc317015c2 .coding-tools/orchestration/reports/run-6496bfac04de471087ad596fd8f47197 .coding-tools/orchestration/reports/run-b609d40619fd4907847de66edfeb1396 .coding-tools/orchestration/reports/run-de7ade545daa4806bd498",
         "session_id": "CxznosJMTiuegKquYoCTndwC"
+      }
+    },
+    {
+      "time": "2026-08-14T00:22:18.836Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git add -- .coding-tools/orchestration/ledger.sqlite3 .coding-tools/performance.json .coding-tools/task-history.json .coding-tools/task-state.json .coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c .coding-tools/orchestration/reports/run-50ac86ab90af42efa367c8dc317015c2 .coding-tools/orchestration/reports/run-6496bfac04de471087ad596fd8f47197 .coding-tools/orchestration/reports/run-b609d40619fd4907847de66edfeb1396 .coding-tools/orchestration/reports/run-de7ade545daa4806bd498",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T00:22:22.958Z",
+      "event": "command_started",
+      "details": {
+        "command": "git -c user.name=\"uyenthu\" -c user.email=\"uyenthu.dao2410@gmail.com\" commit -m \"chore: record P1 proof-cache live reuse evidence\"",
+        "session_id": "ry9bVO4aSr10KfjynVA7us44"
+      }
+    },
+    {
+      "time": "2026-08-14T00:22:23.195Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git -c user.name=\"uyenthu\" -c user.email=\"uyenthu.dao2410@gmail.com\" commit -m \"chore: record P1 proof-cache live reuse evidence\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T00:24:18.747Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo ===run-16066fc1213f4547b3a9c8c45cd1239c/run-summary.md=== && git show ced8c34:.coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c/run-summary.md && echo ===run-16066fc1213f4547b3a9c8c45cd1239c/wave-001.md=== && git show ced8c34:.coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c/wave-001.md && echo ===run-b609d40619fd4907847de66edfeb1396/run-summary.md=== && git show ced8c34:.coding-tools/orchestration/reports/run-b609d40619fd4907847de66edfeb1396/ru",
+        "session_id": "V_Dd3GsTEFwQyWXVjf-SNy3f"
+      }
+    },
+    {
+      "time": "2026-08-14T00:24:19.203Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo ===run-16066fc1213f4547b3a9c8c45cd1239c/run-summary.md=== && git show ced8c34:.coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c/run-summary.md && echo ===run-16066fc1213f4547b3a9c8c45cd1239c/wave-001.md=== && git show ced8c34:.coding-tools/orchestration/reports/run-16066fc1213f4547b3a9c8c45cd1239c/wave-001.md && echo ===run-b609d40619fd4907847de66edfeb1396/run-summary.md=== && git show ced8c34:.coding-tools/orchestration/reports/run-b609d40619fd4907847de66edfeb1396/ru",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T00:24:30.880Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo ===.coding-tools/performance.json=== && git show ced8c34:.coding-tools/performance.json && echo ===.coding-tools/task-history.json=== && git show ced8c34:.coding-tools/task-history.json && echo ===.coding-tools/task-state.json=== && git show ced8c34:.coding-tools/task-state.json",
+        "session_id": "2-R4tx4VQyOwc7cuO6S4vUix"
+      }
+    },
+    {
+      "time": "2026-08-14T00:24:31.034Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo ===.coding-tools/performance.json=== && git show ced8c34:.coding-tools/performance.json && echo ===.coding-tools/task-history.json=== && git show ced8c34:.coding-tools/task-history.json && echo ===.coding-tools/task-state.json=== && git show ced8c34:.coding-tools/task-state.json",
+        "status": "passed"
       }
     }
   ]
