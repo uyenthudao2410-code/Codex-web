@@ -105,6 +105,8 @@ class TaskStateTests(unittest.TestCase):
             self.assertEqual(artifact["schema_version"], 1)
             self.assertEqual(artifact["kind"], "command_output")
             self.assertEqual(artifact["scope"], "runtime_retained")
+            self.assertEqual(artifact["source"], "command")
+            self.assertEqual(artifact["locator"], {"command_id": "command-one"})
             self.assertEqual(artifact["command_id"], "command-one")
             self.assertEqual(artifact["retrieval"], {"tool": "command_control", "action": "read"})
             self.assertEqual(artifact["durability"], "process_runtime")
@@ -155,6 +157,43 @@ class TaskStateTests(unittest.TestCase):
                 terminal["test_results"][-1]["artifact_ref"]["streams"]["stdout"]["output_ref"],
                 "command:command-running:stdout",
             )
+
+    def test_command_control_terminal_poll_terminalizes_current_command(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = TaskStateStore(root)
+            store.update({"objective": "Poll public command control"})
+            store.record_command_started("npm test", "command-public", ".")
+            store.record_tool_result(
+                "command_control",
+                {"action": "poll", "command_id": "command-public"},
+                {
+                    "ok": True,
+                    "status": "exited",
+                    "command_id": "command-public",
+                    "session_id": "command-public",
+                    "exit_code": 0,
+                    "elapsed_ms": 55,
+                    "summary": "95 tests passed",
+                    "output_refs": {
+                        "stdout": "command:command-public:stdout",
+                        "stderr": "command:command-public:stderr",
+                    },
+                    "output_retention": {
+                        "stdout": {"total_stream_bytes": 20, "total_retained_bytes": 20},
+                        "stderr": {"total_stream_bytes": 0, "total_retained_bytes": 0},
+                    },
+                },
+            )
+            terminal = TaskStateStore(root).get()
+            self.assertIsNone(terminal["current_command"])
+            self.assertEqual(terminal["status"], "waiting")
+            self.assertEqual(terminal["test_results"][-1]["status"], "passed")
+            self.assertEqual(
+                terminal["test_results"][-1]["artifact_ref"]["streams"]["stdout"]["output_ref"],
+                "command:command-public:stdout",
+            )
+            self.assertEqual(terminal["events"][-1]["event"], "command_finished")
 
     def test_command_classification(self) -> None:
         self.assertEqual(classify_command("python -m pytest -q"), "test")
@@ -212,6 +251,37 @@ class BackgroundOperationTests(unittest.TestCase):
 
 
 class BuildVerificationTests(unittest.TestCase):
+    def test_verify_build_projects_content_addressed_workspace_artifact_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            artifact_path = root / "dist" / "app.bin"
+            artifact_path.parent.mkdir(parents=True)
+            artifact_path.write_bytes(b"verified-build-artifact")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                report = runtime.verify_build({
+                    "path": ".",
+                    "run_tests": False,
+                    "run_build": False,
+                    "artifact_paths": ["dist/app.bin"],
+                    "hash_algorithm": "sha256",
+                })
+                self.assertTrue(report["ok"])
+                self.assertEqual(len(report["artifacts"]), 1)
+                artifact = report["artifacts"][0]
+                ref = artifact["artifact_ref"]
+                self.assertEqual(ref["kind"], "build_artifact")
+                self.assertEqual(ref["scope"], "workspace_file")
+                self.assertEqual(ref["locator"], {"path": "dist/app.bin"})
+                self.assertEqual(ref["retrieval"], {"scheme": "workspace_path", "path": "dist/app.bin"})
+                self.assertTrue(ref["restart_safe"])
+                self.assertTrue(ref["content_addressed"])
+                self.assertEqual(ref["sha256"], artifact["sha256"])
+                self.assertEqual(ref["content_hash"], artifact["sha256"])
+                self.assertEqual(runtime.task_state.get()["last_build_report"]["artifacts"][0]["artifact_ref"], ref)
+            finally:
+                runtime.close()
+
     def test_detects_node_project_and_hashes_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -490,6 +560,10 @@ class ToolModeTests(unittest.TestCase):
             self.assertNotIn("greet", json.dumps(composite, ensure_ascii=False))
             self.assertNotIn("hello", json.dumps(composite, ensure_ascii=False))
             self.assertFalse(composite["cache"]["hit"])
+            compact_prepare = first["task_resume"]
+            self.assertNotIn("events", compact_prepare)
+            self.assertNotIn("test_results", compact_prepare)
+            self.assertNotIn("build_results", compact_prepare)
 
             second = runtime.prepare_coding_context({
                 "objective": "change greeting",
@@ -502,6 +576,52 @@ class ToolModeTests(unittest.TestCase):
             self.assertTrue(second["composite_read"]["cache"]["hit"])
             self.assertEqual(second["composite_read"]["cache"]["source"], "cached_previous_execution")
             self.assertEqual(second["composite_read"]["plan"]["plan_sha256"], composite["plan"]["plan_sha256"])
+
+    def test_prepare_coding_context_prefers_semantic_provider_then_falls_back_per_query(self) -> None:
+        class SemanticStub:
+            def status(self):
+                return {"available": True, "provider": "native-lsp-test", "read_only": True}
+
+            def localize(self, *, workspace, path, queries, max_results):
+                del workspace, path, max_results
+                return [
+                    {
+                        "query_index": 0,
+                        "handled": True,
+                        "matches": [{"path": "semantic.py", "line": 1, "kind": "definition", "symbol": queries[0]}],
+                    },
+                    {"query_index": 1, "handled": False, "matches": []},
+                ]
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "semantic.py").write_text("def target_symbol():\n    return 1\n", encoding="utf-8")
+            (root / "fallback.py").write_text("fallback_token = 2\n", encoding="utf-8")
+            runtime = Runtime(root, semantic_localizer=SemanticStub())
+            try:
+                with patch.object(runtime, "search_text", wraps=runtime.search_text) as search_text:
+                    result = runtime.prepare_coding_context({
+                        "objective": "semantic localization",
+                        "queries": ["target_symbol", "fallback_token"],
+                        "max_files": 4,
+                        "max_matches_per_query": 10,
+                    })
+                self.assertEqual(search_text.call_count, 1)
+                self.assertEqual(search_text.call_args.args[0]["query"], "fallback_token")
+                self.assertTrue(result["searches"][0]["engine"].startswith("semantic:"))
+                self.assertEqual(result["searches"][0]["matches"][0]["path"], "semantic.py")
+                localization = result["composite_read"]["execution"]["localization"]
+                self.assertEqual(localization["semantic_attempted"], 2)
+                self.assertEqual(localization["semantic_handled"], 1)
+                self.assertEqual(localization["text_fallback_queries"], 1)
+                self.assertEqual(localization["provider"]["provider"], "native-lsp-test")
+                composite_text = json.dumps(result["composite_read"], ensure_ascii=False)
+                self.assertNotIn("target_symbol", composite_text)
+                self.assertNotIn("fallback_token", composite_text)
+                self.assertIn("semantic.py", result["selected_paths"])
+                self.assertIn("fallback.py", result["selected_paths"])
+            finally:
+                runtime.close()
 
     def test_continuous_check_terminalizes_internal_command_bookkeeping(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -888,6 +1008,8 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(result["context"]["files"][0]["path"], "todo.py")
             self.assertEqual(result["evidence"]["query"]["run_id"], run_id)
             self.assertEqual(result["evidence"]["query"]["wave_id"], wave_id)
+            self.assertEqual(result["evidence"]["query"]["mode"], "model_free_priority")
+            self.assertLessEqual(len(result["evidence"]["items"]), 12)
             self.assertTrue(result["evidence"]["model_free"])
             compact_resume = result["context"]["task_resume"]
             self.assertEqual(compact_resume["task_id"], state["task_id"])

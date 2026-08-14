@@ -72,6 +72,13 @@ class OpenCodeProviderAdapterTests(unittest.TestCase):
         self.assertEqual(finished["status"], "completed")
         self.assertEqual(finished["session_id"], "ses-stub")
         self.assertEqual(finished["result_text"], "bounded findings")
+        self.assertEqual(finished["capability_profile"], "opencode_readonly")
+        artifact = finished["artifact_ref"]
+        self.assertEqual(artifact["kind"], "provider_result")
+        self.assertEqual(artifact["locator"], {"dispatch_id": started["dispatch_id"]})
+        self.assertEqual(artifact["owner_run"], "run")
+        self.assertEqual(artifact["owner_wave"], "wave")
+        self.assertNotIn(private_prompt, json.dumps(artifact, ensure_ascii=False))
         captured = json.loads(self.capture.read_text(encoding="utf-8"))
         self.assertEqual(captured["prompt"], private_prompt)
         self.assertNotIn(private_prompt, " ".join(captured["argv"]))

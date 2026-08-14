@@ -13,6 +13,9 @@ class ProviderRoutingTests(unittest.TestCase):
         self.assertEqual(flash["recommendation"]["model"], "opencode-go/deepseek-v4-flash")
         self.assertFalse(flash["automatic_dispatch"])
         self.assertFalse(flash["mutation_allowed"])
+        self.assertEqual(flash["fallback_policy"]["max_fallbacks"], 1)
+        self.assertFalse(flash["fallback_policy"]["automatic"])
+        self.assertTrue(flash["fallback_policy"]["requires_new_evidence"])
         pro = recommend_shadow_route({
             "side_effect_class": "read_only", "scope": "broad", "risk": "medium", "hard_reasoning": True,
         })

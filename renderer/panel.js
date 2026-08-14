@@ -370,7 +370,8 @@ function renderDelegations(delegations) {
   });
 }
 
-async function refreshOrchestration() {
+async function refreshOrchestration(force = false) {
+  if (document.hidden && !force) return;
   try {
     const data = unwrap(await api.orchestration());
     lastOrchestration = data;
@@ -386,7 +387,8 @@ async function refreshOrchestration() {
   }
 }
 
-async function refreshHealth() {
+async function refreshHealth(force = false) {
+  if (document.hidden && !force) return;
   try { renderHealth(unwrap(await api.health())); }
   catch { /* giữ trạng thái cũ */ }
 }
@@ -467,7 +469,15 @@ $('#handoffButton').onclick = () => recordHandoff();
 $('#toDesktopButton').onclick = () => transferController('codex-desktop');
 $('#toChatWebButton').onclick = () => transferController('chatweb');
 $('#copyCodexConfigButton').onclick = () => copyCodexConfig();
-$('#refreshButton').onclick = () => { refreshOrchestration(); refreshHealth(); };
+$('#refreshButton').onclick = () => { refreshOrchestration(true); refreshHealth(true); };
+
+document.addEventListener('visibilitychange', () => {
+  document.body.classList.toggle('is-hidden', document.hidden);
+  if (!document.hidden) {
+    refreshOrchestration(true);
+    refreshHealth(true);
+  }
+});
 
 refreshHealth();
 refreshOrchestration();

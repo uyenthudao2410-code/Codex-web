@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -151,6 +152,71 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(projected["actual_delegations"][0]["delegation_id"], "actual-1")
             self.assertEqual(projected["accepted_result"]["run_id"], run_id)
             self.assertFalse(projected["accepted_result"]["accepted"])
+
+    def test_routing_evidence_projects_similar_accepted_cohorts_and_warm_threads(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            for repaired in (False, True):
+                historical = ledger.create_run(objective="historical bugfix", metadata={"workflow": "bugfix"})
+                first_wave = ledger.create_wave(historical, execution_mode="bounded_candidate")
+                ledger.append_event(
+                    historical,
+                    wave_id=first_wave,
+                    event_type="route_selected",
+                    payload={"resolved": "mini", "model": "gpt-5.4-mini", "effort": "low", "profile": "candidate_mini"},
+                )
+                if repaired:
+                    ledger.finish_wave(first_wave, status="replanned")
+                    second_wave = ledger.create_wave(historical, execution_mode="bounded_candidate")
+                    ledger.append_event(
+                        historical,
+                        wave_id=second_wave,
+                        event_type="route_selected",
+                        payload={"resolved": "mini", "model": "gpt-5.4-mini", "effort": "low", "profile": "candidate_mini"},
+                    )
+                    ledger.finish_wave(second_wave, status="accepted")
+                else:
+                    ledger.finish_wave(first_wave, status="accepted")
+                ledger.finish_run(historical, status="accepted")
+
+            current = ledger.create_run(objective="current bugfix", metadata={"workflow": "bugfix"})
+            current_wave = ledger.create_wave(current, execution_mode="mcp_only")
+            ledger.upsert_agent_lane(
+                lane_id="warm-lane",
+                run_id=current,
+                wave_id=current_wave,
+                semantic_key="review",
+                lifecycle="idle",
+                thread_id="thread-warm",
+            )
+            ledger.upsert_agent_lane(
+                lane_id="waiting-lane",
+                run_id=current,
+                wave_id=current_wave,
+                semantic_key="investigate",
+                lifecycle="waiting",
+            )
+
+            projected = ledger.routing_evidence(current)
+            cohorts = projected["similar_accepted_cohorts"]
+            self.assertEqual(cohorts["task_class"], "bugfix")
+            self.assertEqual(cohorts["sampled_runs"], 2)
+            self.assertEqual(len(cohorts["cohorts"]), 1)
+            mini = cohorts["cohorts"][0]
+            self.assertEqual(mini["route"], "mini")
+            self.assertEqual(mini["accepted_results"], 2)
+            self.assertEqual(mini["first_pass_accepted"], 1)
+            self.assertEqual(mini["first_pass_rate"], 0.5)
+            self.assertEqual(mini["repaired_results"], 1)
+            self.assertIsNone(mini["provider_cost"]["total"])
+            self.assertEqual(mini["provider_cost"]["measurement"], "unobserved")
+            health = projected["warm_thread_health"]
+            self.assertEqual(health["lane_count"], 2)
+            self.assertEqual(health["reusable_lane_count"], 1)
+            self.assertEqual(health["reusable_lane_ids"], ["warm-lane"])
+            self.assertFalse(health["automatic_reuse"])
+            self.assertTrue(cohorts["model_free"])
+            self.assertTrue(health["content_free"])
 
     def test_accepted_result_economics_keeps_measured_provider_cost_separate_from_estimated_credits(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -463,6 +529,10 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(recent["relationships"]["checkpoint_ids"], [checkpoint_id])
             self.assertEqual(recent["latest_handoff_capsule"]["capsule_id"], capsule["capsule_id"])
             self.assertNotIn("payload", recent["latest_handoff_capsule"])
+            self.assertEqual(recent["proofs"][0]["artifact_ref"]["kind"], "orchestration_proof")
+            self.assertTrue(recent["proofs"][0]["artifact_ref"]["restart_safe"])
+            self.assertEqual(recent["latest_handoff_capsule"]["artifact_ref"]["kind"], "handoff_capsule")
+            self.assertTrue(recent["latest_handoff_capsule"]["artifact_ref"]["content_addressed"])
             self.assertTrue(recent["model_free"])
             self.assertTrue(recent["content_free"])
             self.assertFalse(recent["raw_transcript_included"])
@@ -477,6 +547,61 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertTrue(delta["has_more"])
             self.assertFalse(delta["omitted_earlier_events"])
             self.assertTrue(delta["integrity"]["ok"])
+
+    def test_session_query_prunes_by_priority_under_one_item_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="priority resume", task_id="task-priority")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            ledger.append_event(run_id, wave_id=wave_id, event_type="context_prepared", state_after="PREFLIGHT", payload={"prompt": "never expose raw prompt"})
+            ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", state_after="ROUTED")
+            ledger.append_event(run_id, wave_id=wave_id, event_type="failure_observed", state_after="REPLAN")
+            ledger.append_event(run_id, wave_id=wave_id, event_type="awaiting_final_acceptance", state_after="ACCEPTING")
+            proof_id = ledger.record_proof(
+                run_id=run_id,
+                wave_id=wave_id,
+                stage_id="focused",
+                stage_version="1",
+                input_fingerprint="fp-priority",
+                status="passed",
+            )
+            ledger.record_checkpoint(
+                run_id=run_id,
+                wave_id=wave_id,
+                git_head="head-priority",
+                proof_fingerprint="proof-priority",
+            )
+            ledger.create_delegation(
+                wave_id,
+                authority_owner="CODEX:mini",
+                route_requested="mini",
+                route_resolved="mini",
+                model="gpt-5.4-mini",
+                effort="low",
+            )
+            ledger.record_handoff_capsule(
+                run_id=run_id,
+                wave_id=wave_id,
+                payload={"next_action": "continue"},
+            )
+
+            session = ledger.session_query(run_id, wave_id=wave_id, limit=6)
+            self.assertEqual(session["query"]["mode"], "model_free_priority")
+            self.assertEqual(session["query"]["limit"], 6)
+            self.assertLessEqual(len(session["items"]), 6)
+            self.assertGreater(session["pruning"]["omitted_items"], 0)
+            ranks = {"critical": 0, "acceptance": 1, "proof": 2, "route": 3, "context": 4, "recent": 5}
+            projected = [ranks[item["priority"]] for item in session["items"]]
+            self.assertEqual(projected, sorted(projected))
+            self.assertEqual(session["items"][0]["priority"], "critical")
+            proof_items = [item for item in session["items"] if item.get("kind") == "proof"]
+            self.assertTrue(proof_items)
+            self.assertEqual(proof_items[0]["proof_id"], proof_id)
+            self.assertEqual(proof_items[0]["artifact_ref"]["kind"], "orchestration_proof")
+            self.assertNotIn("never expose raw prompt", json.dumps(session, ensure_ascii=False))
+            self.assertTrue(session["model_free"])
+            self.assertTrue(session["content_free"])
+            self.assertFalse(session["raw_transcript_included"])
 
     def test_durable_idempotency_deduplicates_and_rejects_conflicting_reuse(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -184,16 +184,30 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
     required = int(performance.get("idempotency_required_calls", 0) or 0)
     required_with_key = int(performance.get("idempotency_required_key_calls", 0) or 0)
     required_coverage = round(required_with_key / required, 6) if required else None
+    policy_epoch = str(performance.get("idempotency_policy_epoch") or "")
+    current_required = int(performance.get("idempotency_current_policy_required_calls", 0) or 0)
+    current_required_with_key = int(performance.get("idempotency_current_policy_required_key_calls", 0) or 0)
+    current_required_coverage = round(current_required_with_key / current_required, 6) if current_required else None
     optional = int(performance.get("idempotency_optional_calls", 0) or 0)
     optional_with_key = int(performance.get("idempotency_optional_key_calls", 0) or 0)
-    coverage_source = "required_v5" if performance_version >= 5 else "legacy_v4"
-    decision_coverage = required_coverage if coverage_source == "required_v5" else legacy_coverage
+    if performance_version >= 5 and policy_epoch:
+        coverage_source = "required_current_policy"
+        decision_coverage = current_required_coverage
+    else:
+        coverage_source = "required_v5" if performance_version >= 5 else "legacy_v4"
+        decision_coverage = required_coverage if coverage_source == "required_v5" else legacy_coverage
     error_class_counts = _count_map(performance.get("error_class_counts"))
     classified_error_samples = sum(error_class_counts.values())
     unknown_error_samples = int(error_class_counts.get("UNKNOWN", 0))
     unknown_error_share = round(unknown_error_samples / classified_error_samples, 6) if classified_error_samples else None
     phase_timing_samples = int(performance.get("phase_timing_samples", 0) or 0)
     phase_timing_ms = _count_map(performance.get("phase_timing_ms"))
+    localization_samples = int(performance.get("localization_samples", 0) or 0)
+    localization_queries = int(performance.get("localization_queries", 0) or 0)
+    lsp_available_samples = int(performance.get("lsp_available_samples", 0) or 0)
+    lsp_attempted_queries = int(performance.get("lsp_attempted_queries", 0) or 0)
+    lsp_handled_queries = int(performance.get("lsp_handled_queries", 0) or 0)
+    fallback_search_queries = int(performance.get("fallback_search_queries", 0) or 0)
     return {
         "benchmark": "runtime activation telemetry snapshot",
         "evidence_class": "local_runtime_measurement_snapshot",
@@ -212,11 +226,18 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
             "idempotency_required_calls": required,
             "idempotency_required_key_calls": required_with_key,
             "idempotency_required_coverage": required_coverage,
+            "idempotency_policy_epoch": policy_epoch or None,
+            "idempotency_current_policy_required_calls": current_required,
+            "idempotency_current_policy_required_key_calls": current_required_with_key,
+            "idempotency_current_policy_required_coverage": current_required_coverage,
+            "idempotency_current_policy_by_operation": dict(performance.get("idempotency_current_policy_by_operation", {}) or {}),
             "idempotency_optional_calls": optional,
             "idempotency_optional_key_calls": optional_with_key,
             "idempotency_auto_key_calls": int(performance.get("idempotency_auto_key_calls", 0) or 0),
             "idempotency_coverage": decision_coverage,
             "idempotency_coverage_source": coverage_source,
+            "idempotency_coverage_target": 0.95,
+            "idempotency_coverage_gate_passed": decision_coverage is not None and decision_coverage >= 0.95,
             "idempotency_v5_epoch": "post_activation_only" if performance_version >= 5 else "not_active",
             "error_class_counts": error_class_counts,
             "error_classified_samples": classified_error_samples,
@@ -225,6 +246,15 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
             "phase_timing_samples": phase_timing_samples,
             "phase_timing_ms": phase_timing_ms,
             "phase_timing_available": bool(phase_timing_samples and phase_timing_ms),
+            "localization_samples": localization_samples,
+            "localization_queries": localization_queries,
+            "lsp_available_samples": lsp_available_samples,
+            "lsp_available_rate": round(lsp_available_samples / localization_samples, 6) if localization_samples else None,
+            "lsp_attempted_queries": lsp_attempted_queries,
+            "lsp_handled_queries": lsp_handled_queries,
+            "lsp_hit_rate": round(lsp_handled_queries / lsp_attempted_queries, 6) if lsp_attempted_queries else None,
+            "fallback_search_queries": fallback_search_queries,
+            "fallback_search_rate": round(fallback_search_queries / localization_queries, 6) if localization_queries else None,
             "proof_cache_eligible": int(performance.get("proof_cache_eligible", 0) or 0),
             "proof_cache_hits": int(performance.get("proof_cache_hits", 0) or 0),
             "proof_cache_misses": int(performance.get("proof_cache_misses", 0) or 0),
@@ -238,12 +268,13 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
         "ledger": ledger,
         "notes": [
             "estimated_wait_ms is a runtime gap proxy, not pure network/model latency",
-            "PerformanceTrace v5 routing/production gates use required-idempotency coverage; the legacy mutating/expensive denominator is retained only for historical comparability",
+            "PerformanceTrace v5 retains cumulative required-idempotency coverage for audit; when a named current policy epoch exists, production coverage gates use only post-policy required samples and never backfill historical misses",
             "optional idempotency covers side effects whose exact repeat can be intentional; it must not be forced into the required replay-protection gate",
             "v5 required/optional/error/phase counters begin with the activated v5 runtime epoch and are not retroactively inferred from v4 history",
             "error_unknown_share is measured only over v5 classified error samples, not over historical errors that predate the taxonomy",
             "phase_timing_available reports measured phase samples only; missing provider/model timing is not estimated from EOCL execution windows",
             "proof-cache coverage uses eligible proof stages as the denominator; miss reasons classify cold, fingerprint, or stage-version invalidation without changing reuse semantics",
+            "LSP/localization rates use only live composite-read measurements; cached replay is excluded by the Runtime extractor and unavailable semantic providers remain explicit fallback evidence",
             "accepted-run TTA is measured from durable run timestamps and is not a model-only latency metric",
             "accepted-run cohort dimensions are derived only from durable run metadata/events/wave state; missing dimensions remain unknown",
             "routing comparisons should use complete homogeneous accepted-run cohorts rather than raw global TTA",

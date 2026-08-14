@@ -13,7 +13,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .artifact_refs import provider_result_artifact_ref
 from .processes import spawn_process, terminate_process_group
+from .tool_contract import OPENCODE_SAFE_TOOLS
 from .usage_events import classify_provider_error
 
 
@@ -26,7 +28,7 @@ MAX_PROMPT_BYTES = 20_000
 MAX_RESULT_CHARS = 64 * 1024
 MAX_EVENT_LINE_BYTES = 256 * 1024
 MAX_RETAINED_DISPATCHES = 32
-SAFE_TOOLS = frozenset({"read", "glob", "grep", "list", "lsp"})
+SAFE_TOOLS = OPENCODE_SAFE_TOOLS
 LIFECYCLE_EVENT_TYPES = frozenset({"step_start", "step_finish", "tool_use", "text", "error"})
 
 
@@ -140,7 +142,7 @@ class OpenCodeProviderAdapter:
         with item.lock:
             terminal = item.status in {"completed", "failed", "cancelled", "timed_out"}
             total_ms = max(0, item.finished_at_ms - item.created_at_ms) if terminal and item.finished_at_ms is not None else None
-            return {
+            snapshot = {
                 "dispatch_id": item.dispatch_id,
                 "request_id": item.request_id,
                 "run_id": item.run_id,
@@ -173,6 +175,17 @@ class OpenCodeProviderAdapter:
                     "total_ms": total_ms,
                 },
             }
+            snapshot["capability_profile"] = "opencode_readonly"
+            snapshot["artifact_ref"] = provider_result_artifact_ref(
+                dispatch_id=item.dispatch_id,
+                run_id=item.run_id,
+                wave_id=item.wave_id,
+                provider_id="opencode-go",
+                model=item.model,
+                result_chars=item.result_chars,
+                output_truncated=item.output_truncated,
+            )
+            return snapshot
 
     def _evict(self) -> None:
         if len(self._dispatches) < MAX_RETAINED_DISPATCHES:
@@ -433,6 +446,7 @@ class OpenCodeProviderAdapter:
             "retained_limit": MAX_RETAINED_DISPATCHES,
             "models": sorted(ALLOWED_OPENCODE_MODELS),
             "read_only_enforced": True,
+            "capability_profile": "opencode_readonly",
         }
 
     def close(self) -> None:

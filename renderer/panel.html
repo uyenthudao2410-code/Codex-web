@@ -9,111 +9,69 @@
 </head>
 <body>
   <header class="panel-header">
-    <b>Execution Control Center</b>
-    <span id="serviceDots" class="service-dots">
-      <span id="mcpDot" title="Coding Tools MCP"><i></i>MCP</span>
-      <span id="tunnelDot" title="OpenAI Tunnel"><i></i>Tunnel</span>
-    </span>
+    <div class="panel-title"><b>Operator Control Panel</b><span class="live-mark"><i></i>Live</span></div>
+    <span id="serviceDots" class="service-dots"><span id="mcpDot" title="Coding Tools MCP"><i></i>MCP</span><span id="tunnelDot" title="OpenAI Tunnel"><i></i>Tunnel</span></span>
     <button id="closeButton" class="close-button" title="Đóng bảng điều khiển" aria-label="Đóng bảng điều khiển">✕</button>
   </header>
 
-  <main class="panel-scroll">
-  <section class="panel-section" id="taskSection">
-    <h2>Nhiệm vụ <span id="taskStatus" class="badge">chưa có</span></h2>
-    <p id="taskObjective" class="objective">—</p>
-    <div class="progress-row"><span class="progress"><span id="taskBar"></span></span><b id="taskPercent">0%</b></div>
-    <p id="taskStep" class="detail">—</p>
-    <p id="taskCommand" class="detail command"></p>
-    <div class="controls">
-      <button id="pauseTask">Tạm dừng</button>
-      <button id="resumeTask">Tiếp tục</button>
-      <button id="stopTask" class="danger">Dừng</button>
+  <main class="panel-scroll operator-dashboard">
+    <section class="dashboard-card executive-card">
+      <div class="section-heading"><div><span class="eyebrow">CONTROL PLANE</span><h2>Executive Summary</h2></div><span class="updated-at">Live evidence</span></div>
+      <div class="executive-grid">
+        <article class="summary-tile tone-green"><span>Clients</span><b id="hubStatus" class="badge">—</b><small>Observed by Execution Hub</small></article>
+        <article class="summary-tile tone-amber"><span>Continuity</span><b id="continuityStatus" class="badge">—</b><small>Rotation safety gate</small></article>
+        <article class="summary-tile tone-blue"><span>Task</span><b id="taskStatus" class="badge">chưa có</b><small>Durable task state</small></article>
+        <article class="summary-tile tone-violet"><span>Run</span><b id="runStatus" class="badge">—</b><small>EOCL orchestration</small></article>
+      </div>
+    </section>
+
+    <section class="kpi-grid" aria-label="Live operational summary">
+      <article class="kpi-card"><span class="kpi-icon">✓</span><div><small>Task Progress</small><b id="taskPercent">0%</b><span>Accepted work progress</span></div></article>
+      <article class="kpi-card"><span class="kpi-icon mint">↯</span><div><small>Events</small><b id="eventCount">0</b><span>Current orchestration view</span></div></article>
+      <article class="kpi-card wide"><span class="kpi-icon violet">⌁</span><div><small>Routing Evidence</small><b id="routerSummary" class="router-kpi">0 active</b><span>Connectivity never implies model activity</span></div></article>
+    </section>
+
+    <div class="decision-grid">
+      <section class="dashboard-card continuity-section" id="continuitySection">
+        <div class="section-heading compact"><h2>Alerts &amp; Decisions</h2><span class="truth-badge">EVIDENCE</span></div>
+        <div id="rotationLine" class="continuity-callout">Đang đánh giá khả năng xoay ChatWeb…</div>
+        <div id="continuityReasons" class="detail decision-copy"></div><div id="contextPressureLine" class="detail decision-copy"></div><div id="resumeLine" class="detail decision-copy"></div>
+      </section>
+      <section class="dashboard-card" id="hubSection">
+        <div class="section-heading compact"><h2>Capacity &amp; Authority</h2><span class="truth-badge">LIVE</span></div>
+        <div class="client-grid">
+          <div class="client-card" id="chatwebClient"><b>ChatWeb</b><span id="chatwebClientStatus" class="client-state">offline</span><small id="chatwebCursor">cursor —</small></div>
+          <div class="client-card" id="desktopClient"><b>Codex Desktop</b><span id="desktopClientStatus" class="client-state">offline</span><small id="desktopCursor">cursor —</small></div>
+          <div class="client-card" id="opencodeClient"><b>OpenCode</b><span id="opencodeClientStatus" class="client-state">offline</span><small id="opencodeCursor">cursor —</small></div>
+        </div>
+        <div id="controllerLine" class="detail authority-line">Controller: —</div><div id="writeAuthorityLine" class="detail authority-line">Writer: —</div>
+        <div class="quota-unknown">Provider quota / billing: <b>UNKNOWN</b> unless provider evidence exposes it.</div>
+      </section>
     </div>
-  </section>
 
-  <section class="panel-section" id="orchSection">
-    <h2>Điều phối <span id="runStatus" class="badge">—</span></h2>
-    <p id="runObjective" class="objective">—</p>
-    <div id="waveLine" class="detail">—</div>
-    <div id="orchCounts" class="detail counts"></div>
-    <div id="capsuleLine" class="detail"></div>
-    <div class="controls">
-      <button id="handoffButton" title="Ghi capsule trạng thái ≤8KB để mở chat mới và tiếp tục từ capsule">Ghi capsule handoff</button>
-      <button id="refreshButton">Làm mới</button>
-    </div>
-  </section>
+    <section class="dashboard-card recent-card panel-section" id="eventsSection"><div class="section-heading compact"><h2>Recent Actions</h2><span class="truth-note">Durable event ledger</span></div><ol id="eventList" class="event-list recent-events"></ol></section>
 
-  <section class="panel-section" id="hubSection">
-    <h2>Clients & Authority <span id="hubStatus" class="badge">—</span></h2>
-    <div class="client-grid">
-      <div class="client-card" id="chatwebClient"><b>ChatWeb</b><span id="chatwebClientStatus" class="client-state">offline</span><small id="chatwebCursor">cursor —</small></div>
-      <div class="client-card" id="desktopClient"><b>Codex Desktop</b><span id="desktopClientStatus" class="client-state">offline</span><small id="desktopCursor">cursor —</small></div>
-      <div class="client-card" id="opencodeClient"><b>OpenCode</b><span id="opencodeClientStatus" class="client-state">offline</span><small id="opencodeCursor">cursor —</small></div>
-    </div>
-    <div id="controllerLine" class="detail authority-line">Controller: —</div>
-    <div id="writeAuthorityLine" class="detail authority-line">Writer: —</div>
-    <div class="controls authority-controls">
-      <button id="toChatWebButton">Control → ChatWeb</button>
-      <button id="toDesktopButton">Control → Codex</button>
-      <button id="copyCodexConfigButton">Copy Codex MCP config</button>
-    </div>
-  </section>
+    <section class="dashboard-card quick-card">
+      <div class="section-heading compact"><h2>Quick Controls</h2><span class="truth-note">EOCL guarded</span></div>
+      <div class="quick-control-grid"><button id="pauseTask" class="quick-control"><span>Ⅱ</span><b>Pause</b></button><button id="resumeTask" class="quick-control"><span>▶</span><b>Resume</b></button><button id="handoffButton" class="quick-control" title="Ghi capsule trạng thái ≤8KB để mở chat mới và tiếp tục từ capsule"><span>⇄</span><b>Handoff</b></button><button id="refreshButton" class="quick-control"><span>⟳</span><b>Refresh</b></button><button id="stopTask" class="quick-control danger"><span>■</span><b>Stop</b></button></div>
+    </section>
 
-  <section class="panel-section" id="routerSection">
-    <h2>Live Router Fabric <span id="routerSummary" class="badge">0 active</span></h2>
-    <p class="detail">9 node · trạng thái lấy từ client, authority, runtime và delegation thật; chỉ đường active mới chạy animation.</p>
-    <div id="routerFabric" class="router-fabric" aria-label="Execution Hub live routing topology">
-      <svg class="router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
-        <line id="routerEdgeChatWeb" class="router-edge offline" x1="50" y1="50" x2="150" y2="150"></line>
-        <line id="routerEdgeDesktop" class="router-edge offline" x1="150" y1="50" x2="150" y2="150"></line>
-        <line id="routerEdgeOpenCode" class="router-edge offline" x1="250" y1="50" x2="150" y2="150"></line>
-        <line id="routerEdgeFast" class="router-edge offline" x1="50" y1="150" x2="150" y2="150"></line>
-        <line id="routerEdgeDeepSeek" class="router-edge offline" x1="250" y1="150" x2="150" y2="150"></line>
-        <line id="routerEdgeTerra" class="router-edge offline" x1="50" y1="250" x2="150" y2="150"></line>
-        <line id="routerEdgeWriter" class="router-edge offline" x1="150" y1="250" x2="150" y2="150"></line>
-        <line id="routerEdgeSol" class="router-edge offline" x1="250" y1="250" x2="150" y2="150"></line>
-      </svg>
-      <div id="routerChatWeb" class="router-node offline"><b>ChatWeb</b><small>semantic controller</small><span class="router-state">offline</span></div>
-      <div id="routerDesktop" class="router-node offline"><b>Codex Desktop</b><small>deep frontend</small><span class="router-state">offline</span></div>
-      <div id="routerOpenCode" class="router-node offline"><b>OpenCode</b><small>Go frontend</small><span class="router-state">offline</span></div>
-      <div id="routerFast" class="router-node offline"><b>Codex Fast</b><small>Mini / Luna</small><span class="router-state">idle</span></div>
-      <div id="routerHub" class="router-node hub offline"><b>Execution Hub</b><small>one runtime authority</small><span class="router-state">offline</span></div>
-      <div id="routerDeepSeek" class="router-node offline"><b>OpenCode Go</b><small>DeepSeek Flash / Pro</small><span class="router-state">idle</span></div>
-      <div id="routerTerra" class="router-node offline"><b>Codex Deep</b><small>Terra</small><span class="router-state">idle</span></div>
-      <div id="routerWriter" class="router-node offline"><b>MCP Writer</b><small>proof + fence</small><span class="router-state">idle</span></div>
-      <div id="routerSol" class="router-node offline"><b>Codex Critical</b><small>Sol</small><span class="router-state">idle</span></div>
-    </div>
-    <div class="router-legend" aria-hidden="true"><span class="connected">connected</span><span class="active">active</span><span class="waiting">waiting</span><span class="blocked">blocked</span></div>
-  </section>
+    <section class="dashboard-card router-card panel-section" id="routerSection">
+      <div class="section-heading compact"><div><h2>Live Routing <span class="mini-label">(Mini)</span></h2><span class="truth-note">Real runtime + delegation evidence</span></div><span class="live-pill">Real-time</span></div>
+      <div id="routerFabric" class="router-fabric" aria-label="Execution Hub live routing topology">
+        <svg class="router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true"><line id="routerEdgeChatWeb" class="router-edge offline" x1="50" y1="50" x2="150" y2="150"></line><line id="routerEdgeDesktop" class="router-edge offline" x1="150" y1="50" x2="150" y2="150"></line><line id="routerEdgeOpenCode" class="router-edge offline" x1="250" y1="50" x2="150" y2="150"></line><line id="routerEdgeFast" class="router-edge offline" x1="50" y1="150" x2="150" y2="150"></line><line id="routerEdgeDeepSeek" class="router-edge offline" x1="250" y1="150" x2="150" y2="150"></line><line id="routerEdgeTerra" class="router-edge offline" x1="50" y1="250" x2="150" y2="150"></line><line id="routerEdgeWriter" class="router-edge offline" x1="150" y1="250" x2="150" y2="150"></line><line id="routerEdgeSol" class="router-edge offline" x1="250" y1="250" x2="150" y2="150"></line></svg>
+        <div id="routerChatWeb" class="router-node offline"><b>ChatWeb</b><small>semantic controller</small><span class="router-state">offline</span></div><div id="routerDesktop" class="router-node offline"><b>Codex Desktop</b><small>deep frontend</small><span class="router-state">offline</span></div><div id="routerOpenCode" class="router-node offline"><b>OpenCode</b><small>Go frontend</small><span class="router-state">offline</span></div><div id="routerFast" class="router-node offline"><b>Codex Fast</b><small>Mini / Luna</small><span class="router-state">idle</span></div><div id="routerHub" class="router-node hub offline"><b>Execution Hub</b><small>one runtime authority</small><span class="router-state">offline</span></div><div id="routerDeepSeek" class="router-node offline"><b>OpenCode Go</b><small>DeepSeek Flash / Pro</small><span class="router-state">idle</span></div><div id="routerTerra" class="router-node offline"><b>Codex Deep</b><small>Terra</small><span class="router-state">idle</span></div><div id="routerWriter" class="router-node offline"><b>MCP Writer</b><small>proof + fence</small><span class="router-state">idle</span></div><div id="routerSol" class="router-node offline"><b>Codex Critical</b><small>Sol</small><span class="router-state">idle</span></div>
+      </div>
+      <div class="router-legend" aria-hidden="true"><span class="connected">connected</span><span class="active">active</span><span class="waiting">waiting</span><span class="blocked">blocked</span></div>
+    </section>
 
-  <section class="panel-section continuity-section" id="continuitySection">
-    <h2>Continuity <span id="continuityStatus" class="badge">—</span></h2>
-    <div id="rotationLine" class="continuity-callout">Đang đánh giá khả năng xoay ChatWeb…</div>
-    <div id="continuityReasons" class="detail"></div>
-    <div id="contextPressureLine" class="detail"></div>
-    <div id="resumeLine" class="detail"></div>
-  </section>
-
-  <section class="panel-section" id="eventsSection">
-    <h2>Trình tự sự kiện <span id="eventCount" class="badge">0</span></h2>
-    <ol id="eventList" class="event-list"></ol>
-  </section>
-
-  <section class="panel-section" id="proofsSection">
-    <h2>Bằng chứng</h2>
-    <ol id="proofList" class="proof-list"></ol>
-  </section>
-
-  <section class="panel-section" id="delegationsSection" hidden>
-    <h2>Ủy quyền model</h2>
-    <ol id="delegationList" class="delegation-list"></ol>
-  </section>
+    <details id="advancedOperations" class="advanced-ops"><summary><span><b>Advanced Operations</b><small>Task, run, proofs, authority transfer &amp; capsule details</small></span><span class="summary-chevron">⌄</span></summary><div class="advanced-content">
+      <section class="panel-section" id="taskSection"><h2>Task details</h2><p id="taskObjective" class="objective">—</p><div class="progress-row"><span class="progress"><span id="taskBar"></span></span></div><p id="taskStep" class="detail">—</p><p id="taskCommand" class="detail command"></p></section>
+      <section class="panel-section" id="orchSection"><h2>Orchestration</h2><p id="runObjective" class="objective">—</p><div id="waveLine" class="detail">—</div><div id="orchCounts" class="detail counts"></div><div id="capsuleLine" class="detail"></div></section>
+      <section class="panel-section authority-actions"><h2>Authority controls</h2><div class="controls authority-controls"><button id="toChatWebButton">Control → ChatWeb</button><button id="toDesktopButton">Control → Codex</button><button id="copyCodexConfigButton">Copy Codex MCP config</button></div></section>
+      <section class="panel-section" id="proofsSection"><h2>Bằng chứng</h2><ol id="proofList" class="proof-list"></ol></section><section class="panel-section" id="delegationsSection" hidden><h2>Ủy quyền model</h2><ol id="delegationList" class="delegation-list"></ol></section>
+    </div></details>
   </main>
-
-  <footer class="panel-footer">
-    <span id="syncState">Đang chờ dữ liệu…</span>
-    <span id="clock"></span>
-  </footer>
-  <script src="panel.js"></script>
+  <footer class="panel-footer"><span id="syncState">Đang chờ dữ liệu…</span><span id="clock"></span></footer><script src="panel.js"></script>
 </body>
 </html>

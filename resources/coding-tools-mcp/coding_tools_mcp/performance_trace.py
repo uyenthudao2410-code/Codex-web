@@ -14,6 +14,7 @@ MAX_RUN_METRICS = 200
 MAX_IDLE_GAP_MS = 30 * 60 * 1000
 IDEMPOTENCY_POLICIES = frozenset({"none", "optional", "required"})
 IDEMPOTENCY_KEY_SOURCES = frozenset({"none", "explicit", "derived"})
+IDEMPOTENCY_POLICY_EPOCH = "task_epoch_v1"
 ERROR_CLASSES = frozenset({
     "CONTROL_PATH", "CONTROL_CWD", "CONTROL_SCHEMA", "CONTROL_CONNECTOR",
     "CAPACITY", "DEADLINE", "PROMPT_SIZE", "MODEL_CANDIDATE_INVALID",
@@ -66,6 +67,8 @@ class PerformanceTraceStore:
         idempotency_key_present: bool = False,
         idempotency_policy: str = "none",
         idempotency_key_source: str = "none",
+        idempotency_operation: str = "",
+        idempotency_missing_reason: str = "",
         error_class: str = "",
         proof_cache_eligible: int = 0,
         proof_cache_hits: int = 0,
@@ -74,6 +77,7 @@ class PerformanceTraceStore:
         proof_cache_saved_ms: int = 0,
         orchestration: dict[str, Any] | None = None,
         phase_timing: dict[str, Any] | None = None,
+        localization: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         with self._lock:
             wait_before_ms = 0
@@ -89,6 +93,7 @@ class PerformanceTraceStore:
             route_resolved = str(orchestration.get("route_resolved") or "")
             orchestration_state = str(orchestration.get("orchestration_state") or "")
             measured_phase_timing = self._normalize_phase_timing(phase_timing)
+            measured_localization = self._normalize_localization(localization)
             measured_miss_reasons = self._normalize_count_map(proof_cache_miss_reasons)
             measured_policy = str(idempotency_policy or "none").strip().lower()
             if measured_policy not in IDEMPOTENCY_POLICIES:
@@ -96,6 +101,10 @@ class PerformanceTraceStore:
             measured_key_source = str(idempotency_key_source or "none").strip().lower()
             if measured_key_source not in IDEMPOTENCY_KEY_SOURCES or not idempotency_key_present:
                 measured_key_source = "none"
+            measured_operation = str(idempotency_operation or tool).strip()[:120] or str(tool)[:120]
+            measured_missing_reason = str(idempotency_missing_reason or "").strip()[:80]
+            if measured_policy != "required" or idempotency_key_present:
+                measured_missing_reason = ""
             measured_error_class = self._normalize_error_class(error_class) if not ok else ""
             event = {
                 "tool": tool,
@@ -112,6 +121,8 @@ class PerformanceTraceStore:
                 "idempotency_key_present": bool(idempotency_key_present),
                 "idempotency_policy": measured_policy,
                 "idempotency_key_source": measured_key_source,
+                "idempotency_operation": measured_operation,
+                "idempotency_missing_reason": measured_missing_reason,
                 "error_class": measured_error_class,
                 "proof_cache_eligible": max(0, int(proof_cache_eligible)),
                 "proof_cache_hits": max(0, int(proof_cache_hits)),
@@ -127,6 +138,7 @@ class PerformanceTraceStore:
                 "route_resolved": route_resolved,
                 "orchestration_state": orchestration_state,
                 "phase_timing": measured_phase_timing,
+                "localization": measured_localization,
             }
             state["tool_calls"] += 1
             state["errors"] += 0 if ok else 1
@@ -138,6 +150,18 @@ class PerformanceTraceStore:
             if measured_policy == "required":
                 state["idempotency_required_calls"] += 1
                 state["idempotency_required_key_calls"] += 1 if idempotency_key_present else 0
+                state["idempotency_current_policy_required_calls"] += 1
+                state["idempotency_current_policy_required_key_calls"] += 1 if idempotency_key_present else 0
+                bucket = state["idempotency_current_policy_by_operation"].setdefault(
+                    measured_operation,
+                    {"calls": 0, "keyed": 0, "missing": 0, "missing_reasons": {}},
+                )
+                bucket["calls"] += 1
+                bucket["keyed"] += 1 if idempotency_key_present else 0
+                bucket["missing"] += 0 if idempotency_key_present else 1
+                if measured_missing_reason:
+                    reasons = bucket["missing_reasons"]
+                    reasons[measured_missing_reason] = int(reasons.get(measured_missing_reason, 0)) + 1
             elif measured_policy == "optional":
                 state["idempotency_optional_calls"] += 1
                 state["idempotency_optional_key_calls"] += 1 if idempotency_key_present else 0
@@ -162,6 +186,13 @@ class PerformanceTraceStore:
                     if not key.endswith("_ms"):
                         continue
                     state["phase_timing_ms"][key] = int(state["phase_timing_ms"].get(key, 0)) + int(value)
+            if measured_localization:
+                state["localization_samples"] += 1
+                state["localization_queries"] += measured_localization["query_count"]
+                state["lsp_available_samples"] += 1 if measured_localization["semantic_available"] else 0
+                state["lsp_attempted_queries"] += measured_localization["semantic_attempted"]
+                state["lsp_handled_queries"] += measured_localization["semantic_handled"]
+                state["fallback_search_queries"] += measured_localization["text_fallback_queries"]
             state["last_finished_at"] = event["finished_at"]
             for bucket_name, value in (
                 ("execution_mode_counts", execution_mode),
@@ -203,6 +234,12 @@ class PerformanceTraceStore:
                     "proof_cache_saved_ms": 0,
                     "phase_timing_samples": 0,
                     "phase_timing_ms": {},
+                    "localization_samples": 0,
+                    "localization_queries": 0,
+                    "lsp_available_samples": 0,
+                    "lsp_attempted_queries": 0,
+                    "lsp_handled_queries": 0,
+                    "fallback_search_queries": 0,
                     "execution_mode_counts": {},
                     "route_resolved_counts": {},
                     "first_started_at": event["started_at"],
@@ -242,6 +279,13 @@ class PerformanceTraceStore:
                         if not key.endswith("_ms"):
                             continue
                         metric["phase_timing_ms"][key] = int(metric["phase_timing_ms"].get(key, 0)) + int(value)
+                if measured_localization:
+                    metric["localization_samples"] += 1
+                    metric["localization_queries"] += measured_localization["query_count"]
+                    metric["lsp_available_samples"] += 1 if measured_localization["semantic_available"] else 0
+                    metric["lsp_attempted_queries"] += measured_localization["semantic_attempted"]
+                    metric["lsp_handled_queries"] += measured_localization["semantic_handled"]
+                    metric["fallback_search_queries"] += measured_localization["text_fallback_queries"]
                 metric["last_finished_at"] = event["finished_at"]
                 for bucket_name, value in (
                     ("execution_mode_counts", execution_mode),
@@ -280,6 +324,10 @@ class PerformanceTraceStore:
             "idempotency_key_calls": 0,
             "idempotency_required_calls": 0,
             "idempotency_required_key_calls": 0,
+            "idempotency_policy_epoch": IDEMPOTENCY_POLICY_EPOCH,
+            "idempotency_current_policy_required_calls": 0,
+            "idempotency_current_policy_required_key_calls": 0,
+            "idempotency_current_policy_by_operation": {},
             "idempotency_optional_calls": 0,
             "idempotency_optional_key_calls": 0,
             "idempotency_auto_key_calls": 0,
@@ -296,6 +344,12 @@ class PerformanceTraceStore:
             "model_visible_bytes": 0,
             "phase_timing_samples": 0,
             "phase_timing_ms": {},
+            "localization_samples": 0,
+            "localization_queries": 0,
+            "lsp_available_samples": 0,
+            "lsp_attempted_queries": 0,
+            "lsp_handled_queries": 0,
+            "fallback_search_queries": 0,
             "execution_mode_counts": {},
             "route_resolved_counts": {},
             "orchestration_state_counts": {},
@@ -310,12 +364,18 @@ class PerformanceTraceStore:
             parsed = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return state
+        stored_policy_epoch = str(parsed.get("idempotency_policy_epoch") or "") if isinstance(parsed, dict) else ""
         if isinstance(parsed, dict):
             state.update(parsed)
         state["version"] = self.schema_version
+        if stored_policy_epoch != IDEMPOTENCY_POLICY_EPOCH:
+            state["idempotency_current_policy_required_calls"] = 0
+            state["idempotency_current_policy_required_key_calls"] = 0
+            state["idempotency_current_policy_by_operation"] = {}
+        state["idempotency_policy_epoch"] = IDEMPOTENCY_POLICY_EPOCH
         if not isinstance(state.get("recent"), list):
             state["recent"] = []
-        for key in ("execution_mode_counts", "route_resolved_counts", "orchestration_state_counts", "run_metrics", "proof_cache_miss_reasons", "error_class_counts"):
+        for key in ("execution_mode_counts", "route_resolved_counts", "orchestration_state_counts", "run_metrics", "proof_cache_miss_reasons", "error_class_counts", "idempotency_current_policy_by_operation"):
             if not isinstance(state.get(key), dict):
                 state[key] = {}
         if not isinstance(state.get("phase_timing_ms"), dict):
@@ -323,9 +383,11 @@ class PerformanceTraceStore:
         for key in (
             "idempotency_key_calls", "idempotency_eligible_calls", "idempotency_eligible_key_calls",
             "idempotency_required_calls", "idempotency_required_key_calls",
+            "idempotency_current_policy_required_calls", "idempotency_current_policy_required_key_calls",
             "idempotency_optional_calls", "idempotency_optional_key_calls", "idempotency_auto_key_calls",
             "proof_cache_eligible", "proof_cache_hits", "proof_cache_misses", "proof_cache_saved_ms",
-            "model_visible_bytes", "phase_timing_samples",
+            "model_visible_bytes", "phase_timing_samples", "localization_samples", "localization_queries",
+            "lsp_available_samples", "lsp_attempted_queries", "lsp_handled_queries", "fallback_search_queries",
         ):
             try:
                 state[key] = max(0, int(state.get(key, 0)))
@@ -333,6 +395,24 @@ class PerformanceTraceStore:
                 state[key] = 0
         state["proof_cache_miss_reasons"] = self._normalize_count_map(state["proof_cache_miss_reasons"])
         state["error_class_counts"] = self._normalize_count_map(state["error_class_counts"])
+        normalized_operations: dict[str, dict[str, Any]] = {}
+        for raw_operation, raw_bucket in list(state["idempotency_current_policy_by_operation"].items())[:50]:
+            operation = str(raw_operation or "").strip()[:120]
+            if not operation or not isinstance(raw_bucket, dict):
+                continue
+            try:
+                calls = max(0, int(raw_bucket.get("calls", 0) or 0))
+                keyed = min(calls, max(0, int(raw_bucket.get("keyed", 0) or 0)))
+                missing = min(calls, max(0, int(raw_bucket.get("missing", calls - keyed) or 0)))
+            except (TypeError, ValueError):
+                continue
+            normalized_operations[operation] = {
+                "calls": calls,
+                "keyed": keyed,
+                "missing": missing,
+                "missing_reasons": self._normalize_count_map(raw_bucket.get("missing_reasons")),
+            }
+        state["idempotency_current_policy_by_operation"] = normalized_operations
         normalized_phase_totals: dict[str, int] = {}
         for key, value in state["phase_timing_ms"].items():
             if not str(key).endswith("_ms") or isinstance(value, bool):
@@ -349,6 +429,12 @@ class PerformanceTraceStore:
                 continue
             metric.setdefault("phase_timing_samples", 0)
             metric.setdefault("phase_timing_ms", {})
+            metric.setdefault("localization_samples", 0)
+            metric.setdefault("localization_queries", 0)
+            metric.setdefault("lsp_available_samples", 0)
+            metric.setdefault("lsp_attempted_queries", 0)
+            metric.setdefault("lsp_handled_queries", 0)
+            metric.setdefault("fallback_search_queries", 0)
             metric.setdefault("proof_cache_eligible", 0)
             metric.setdefault("proof_cache_hits", 0)
             metric.setdefault("proof_cache_misses", 0)
@@ -387,6 +473,30 @@ class PerformanceTraceStore:
     def _normalize_error_class(value: Any) -> str:
         normalized = str(value or "").strip().upper()
         return normalized if normalized in ERROR_CLASSES else "UNKNOWN"
+
+    @staticmethod
+    def _normalize_localization(value: dict[str, Any] | None) -> dict[str, Any]:
+        if not isinstance(value, dict):
+            return {}
+        result = {
+            "semantic_available": value.get("semantic_available") is True,
+            "query_count": 0,
+            "semantic_attempted": 0,
+            "semantic_handled": 0,
+            "text_fallback_queries": 0,
+        }
+        for key in ("query_count", "semantic_attempted", "semantic_handled", "text_fallback_queries"):
+            raw = value.get(key)
+            if isinstance(raw, bool):
+                continue
+            try:
+                result[key] = max(0, int(raw or 0))
+            except (TypeError, ValueError):
+                result[key] = 0
+        result["semantic_attempted"] = min(result["semantic_attempted"], result["query_count"])
+        result["semantic_handled"] = min(result["semantic_handled"], result["semantic_attempted"])
+        result["text_fallback_queries"] = min(result["text_fallback_queries"], result["query_count"])
+        return result if result["query_count"] > 0 else {}
 
     @staticmethod
     def _normalize_phase_timing(value: dict[str, Any] | None) -> dict[str, Any]:

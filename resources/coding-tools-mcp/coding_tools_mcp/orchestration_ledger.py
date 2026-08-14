@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from .artifact_refs import handoff_capsule_artifact_ref, proof_artifact_ref
+
 
 SCHEMA_VERSION = 5
 _MAX_TEXT = 16_000
@@ -826,6 +828,135 @@ class OrchestrationLedger:
             for item in events
         ]
 
+    @staticmethod
+    def _route_task_class(run: dict[str, Any] | None) -> str:
+        metadata = run.get("metadata") if isinstance(run, dict) and isinstance(run.get("metadata"), dict) else {}
+        return _bounded_text(metadata.get("task_class") or metadata.get("workflow") or "", 100).lower()
+
+    @staticmethod
+    def _nearest_rank(values: list[int], percentile: int) -> int | None:
+        if not values:
+            return None
+        ordered = sorted(max(0, int(value)) for value in values)
+        rank = max(1, min(len(ordered), (len(ordered) * max(1, min(percentile, 100)) + 99) // 100))
+        return ordered[rank - 1]
+
+    def similar_accepted_route_cohorts(self, run_id: str, *, limit: int = 24) -> dict[str, Any]:
+        """Summarize accepted results from the same durable task class without prompts/transcripts."""
+        current = self.get_run(run_id)
+        task_class = self._route_task_class(current)
+        bounded_limit = max(1, min(int(limit), 50))
+        if not task_class:
+            return {
+                "schema_version": 1,
+                "task_class": None,
+                "sampled_runs": 0,
+                "cohorts": [],
+                "status": "insufficient_task_class",
+                "model_free": True,
+                "content_free": True,
+            }
+
+        matching = [
+            run for run in self.list_runs(limit=100, status="accepted")
+            if run.get("run_id") != run_id and self._route_task_class(run) == task_class
+        ][:bounded_limit]
+        groups: dict[str, dict[str, Any]] = {}
+        for run in matching:
+            economics = self.accepted_result_economics(str(run["run_id"]))
+            route = economics.get("route") if isinstance(economics.get("route"), dict) else {}
+            resolved = _bounded_text(route.get("resolved") or "unknown", 100) or "unknown"
+            group = groups.setdefault(resolved, {
+                "route": resolved,
+                "accepted_results": 0,
+                "first_pass_accepted": 0,
+                "repaired_results": 0,
+                "tta_samples_ms": [],
+                "provider_cost_complete_samples": 0,
+                "provider_cost_total": 0.0,
+                "candidate_credit_samples": 0,
+                "candidate_credits_total": 0.0,
+            })
+            group["accepted_results"] += 1
+            if economics.get("first_pass_accepted") is True:
+                group["first_pass_accepted"] += 1
+            else:
+                group["repaired_results"] += 1
+            tta = economics.get("tta_ms")
+            if isinstance(tta, (int, float)) and not isinstance(tta, bool) and tta >= 0:
+                group["tta_samples_ms"].append(int(tta))
+            provider = economics.get("provider_economics") if isinstance(economics.get("provider_economics"), dict) else {}
+            provider_cost = provider.get("provider_cost")
+            if provider.get("cost_complete") is True and isinstance(provider_cost, (int, float)) and not isinstance(provider_cost, bool) and provider_cost >= 0:
+                group["provider_cost_complete_samples"] += 1
+                group["provider_cost_total"] += float(provider_cost)
+            candidate = economics.get("candidate_economics") if isinstance(economics.get("candidate_economics"), dict) else {}
+            credits = candidate.get("estimated_credits")
+            if isinstance(credits, (int, float)) and not isinstance(credits, bool) and credits >= 0:
+                group["candidate_credit_samples"] += 1
+                group["candidate_credits_total"] += float(credits)
+
+        cohorts: list[dict[str, Any]] = []
+        for route, group in groups.items():
+            accepted_count = int(group["accepted_results"])
+            tta_samples = list(group.pop("tta_samples_ms"))
+            provider_samples = int(group["provider_cost_complete_samples"])
+            candidate_samples = int(group["candidate_credit_samples"])
+            cohorts.append({
+                "route": route,
+                "accepted_results": accepted_count,
+                "first_pass_accepted": int(group["first_pass_accepted"]),
+                "first_pass_rate": round(int(group["first_pass_accepted"]) / accepted_count, 6) if accepted_count else None,
+                "repaired_results": int(group["repaired_results"]),
+                "tta": {
+                    "samples": len(tta_samples),
+                    "p50_ms": self._nearest_rank(tta_samples, 50),
+                    "p90_ms": self._nearest_rank(tta_samples, 90),
+                    "method": "nearest_rank",
+                },
+                "provider_cost": {
+                    "complete_samples": provider_samples,
+                    "total": round(float(group["provider_cost_total"]), 9) if provider_samples else None,
+                    "measurement": "measured_complete_only" if provider_samples else "unobserved",
+                },
+                "candidate_credits": {
+                    "samples": candidate_samples,
+                    "total": round(float(group["candidate_credits_total"]), 6) if candidate_samples else None,
+                    "measurement": "estimated" if candidate_samples else "unobserved",
+                },
+            })
+        cohorts.sort(key=lambda item: (-int(item["accepted_results"]), str(item["route"])))
+        return {
+            "schema_version": 1,
+            "task_class": task_class,
+            "sampled_runs": len(matching),
+            "cohorts": cohorts,
+            "status": "observed" if matching else "no_matching_accepted_runs",
+            "model_free": True,
+            "content_free": True,
+        }
+
+    def warm_thread_health(self, run_id: str) -> dict[str, Any]:
+        lanes = self.list_agent_lanes(run_id=run_id)
+        lifecycle_counts: dict[str, int] = {}
+        reusable_lane_ids: list[str] = []
+        for lane in lanes:
+            lifecycle = _bounded_text(lane.get("lifecycle") or "unknown", 64) or "unknown"
+            lifecycle_counts[lifecycle] = lifecycle_counts.get(lifecycle, 0) + 1
+            has_thread = bool(str(lane.get("thread_id") or lane.get("session_id") or "").strip())
+            if lifecycle in {"active", "idle"} and has_thread:
+                reusable_lane_ids.append(str(lane.get("lane_id") or "")[:256])
+        return {
+            "measurement": "durable_lane_state",
+            "lane_count": len(lanes),
+            "lifecycle_counts": lifecycle_counts,
+            "reusable_lane_count": len(reusable_lane_ids),
+            "reusable_lane_ids": reusable_lane_ids[:20],
+            "automatic_reuse": False,
+            "model_free": True,
+            "content_free": True,
+        }
+
     def routing_evidence(self, run_id: str, *, limit: int = 8) -> dict[str, Any]:
         bounded_limit = max(1, min(int(limit), 50))
         actual_delegations: list[dict[str, Any]] = []
@@ -836,6 +967,8 @@ class OrchestrationLedger:
             "actual_delegations": actual_delegations[-bounded_limit:],
             "usage_events": self.list_usage_events(run_id, limit=bounded_limit),
             "accepted_result": self.accepted_result_economics(run_id),
+            "similar_accepted_cohorts": self.similar_accepted_route_cohorts(run_id, limit=max(8, bounded_limit * 3)),
+            "warm_thread_health": self.warm_thread_health(run_id),
         }
 
     def accepted_result_economics(self, run_id: str) -> dict[str, Any]:
@@ -2649,6 +2782,7 @@ class OrchestrationLedger:
                 "created_at": capsule.get("created_at"),
                 "sha256": capsule.get("sha256"),
                 "bytes": capsule.get("bytes"),
+                "artifact_ref": handoff_capsule_artifact_ref(capsule),
             }
 
         proof_view = [{
@@ -2660,6 +2794,7 @@ class OrchestrationLedger:
             "exit_code": item.get("exit_code"),
             "cache_hit": item.get("cache_hit"),
             "finished_at": item.get("finished_at"),
+            "artifact_ref": proof_artifact_ref(item),
         } for item in proofs]
         delegation_view = [{
             "delegation_id": item.get("delegation_id"),
@@ -2716,6 +2851,153 @@ class OrchestrationLedger:
             "content_free": True,
             "raw_transcript_included": False,
             "integrity": self.verify_chain(run_id),
+        }
+
+    @staticmethod
+    def _session_event_priority(event: dict[str, Any]) -> tuple[int, str]:
+        event_type = str(event.get("event_type") or "").lower()
+        state_after = str(event.get("state_after") or "").upper()
+        if any(token in event_type for token in ("failure", "replan", "reject", "blocked", "abort", "error")) or state_after in {"REPLAN", "BLOCKED", "ABORTED"}:
+            return 0, "critical"
+        if any(token in event_type for token in ("accept", "checkpoint")) or state_after in {"ACCEPTING", "CHECKPOINTED"}:
+            return 1, "acceptance"
+        if any(token in event_type for token in ("proof", "prove", "verification", "test", "build")) or state_after == "PROVING":
+            return 2, "proof"
+        if any(token in event_type for token in ("route", "delegation", "model", "provider")) or state_after in {"ROUTED", "EXECUTING"}:
+            return 3, "route"
+        if any(token in event_type for token in ("context", "prepare", "read", "search")) or state_after in {"PREFLIGHT", "READY"}:
+            return 4, "context"
+        return 5, "recent"
+
+    def session_query(
+        self,
+        run_id: str,
+        *,
+        wave_id: str = "",
+        limit: int = 12,
+    ) -> dict[str, Any]:
+        """Project the highest-value durable resume evidence under one item budget."""
+        budget = max(1, min(int(limit), 50))
+        evidence = self.evidence_query(run_id, wave_id=wave_id, limit=100)
+        candidates: list[tuple[int, int, dict[str, Any]]] = []
+
+        for event in evidence.get("events", []):
+            if not isinstance(event, dict):
+                continue
+            rank, priority = self._session_event_priority(event)
+            seq = int(event.get("seq") or 0)
+            candidates.append((rank, -seq, {
+                "kind": "event",
+                "priority": priority,
+                "seq": seq,
+                "wave_id": event.get("wave_id"),
+                "delegation_id": event.get("delegation_id"),
+                "event_type": event.get("event_type"),
+                "state_before": event.get("state_before"),
+                "state_after": event.get("state_after"),
+                "event_time": event.get("event_time"),
+                "payload": event.get("payload"),
+            }))
+
+        for index, proof in enumerate(reversed(evidence.get("proofs", []))):
+            if not isinstance(proof, dict):
+                continue
+            candidates.append((2, index, {
+                "kind": "proof",
+                "priority": "proof",
+                "proof_id": proof.get("proof_id"),
+                "wave_id": proof.get("wave_id"),
+                "stage_id": proof.get("stage_id"),
+                "status": proof.get("status"),
+                "duration_ms": proof.get("duration_ms"),
+                "exit_code": proof.get("exit_code"),
+                "cache_hit": proof.get("cache_hit"),
+                "finished_at": proof.get("finished_at"),
+                "artifact_ref": proof.get("artifact_ref"),
+            }))
+
+        for index, checkpoint in enumerate(reversed(evidence.get("checkpoints", []))):
+            if not isinstance(checkpoint, dict):
+                continue
+            candidates.append((1, index, {"kind": "checkpoint", "priority": "acceptance", **checkpoint}))
+
+        for index, delegation in enumerate(reversed(evidence.get("delegations", []))):
+            if not isinstance(delegation, dict):
+                continue
+            candidates.append((3, index, {"kind": "delegation", "priority": "route", **delegation}))
+
+        capsule = evidence.get("latest_handoff_capsule")
+        if isinstance(capsule, dict):
+            candidates.append((1, -1, {
+                "kind": "handoff",
+                "priority": "acceptance",
+                "capsule_id": capsule.get("capsule_id"),
+                "wave_id": capsule.get("wave_id"),
+                "status": capsule.get("status"),
+                "created_at": capsule.get("created_at"),
+                "artifact_ref": capsule.get("artifact_ref"),
+            }))
+
+        ordered = sorted(candidates, key=lambda item: (item[0], item[1], str(item[2].get("kind") or "")))
+        selected = [item[2] for item in ordered[:budget]]
+        priority_counts: dict[str, int] = {}
+        for item in selected:
+            priority = str(item.get("priority") or "recent")
+            priority_counts[priority] = priority_counts.get(priority, 0) + 1
+
+        economics = evidence.get("accepted_result") if isinstance(evidence.get("accepted_result"), dict) else {}
+        provider = economics.get("provider_economics") if isinstance(economics.get("provider_economics"), dict) else {}
+        candidate = economics.get("candidate_economics") if isinstance(economics.get("candidate_economics"), dict) else {}
+        run = evidence.get("run") if isinstance(evidence.get("run"), dict) else {}
+        waves = evidence.get("waves") if isinstance(evidence.get("waves"), list) else []
+        active_wave = waves[-1] if waves else None
+        return {
+            "schema_version": 1,
+            "query": {
+                "run_id": run_id,
+                "wave_id": str(wave_id or "").strip() or None,
+                "limit": budget,
+                "mode": "model_free_priority",
+            },
+            "run": {
+                "run_id": run.get("run_id"),
+                "task_id": run.get("task_id"),
+                "status": run.get("status"),
+                "started_at": run.get("started_at"),
+                "finished_at": run.get("finished_at"),
+            },
+            "wave": active_wave,
+            "items": selected,
+            "pruning": {
+                "candidate_items": len(candidates),
+                "returned_items": len(selected),
+                "omitted_items": max(0, len(candidates) - len(selected)),
+                "priority_counts": priority_counts,
+            },
+            "accepted_result": {
+                "accepted": bool(economics.get("accepted")),
+                "first_pass_accepted": bool(economics.get("first_pass_accepted")),
+                "tta_ms": economics.get("tta_ms"),
+                "route": economics.get("route"),
+                "repair": economics.get("repair"),
+                "proof": economics.get("proof"),
+                "provider_economics": {
+                    "usage_event_count": provider.get("usage_event_count", 0),
+                    "cost_complete": bool(provider.get("cost_complete")),
+                    "provider_cost": provider.get("provider_cost"),
+                    "measurement": provider.get("measurement", "unobserved"),
+                },
+                "candidate_economics": {
+                    "observations": candidate.get("observations", 0),
+                    "estimated_credits": candidate.get("estimated_credits"),
+                    "measurement": candidate.get("measurement", "unobserved"),
+                },
+            },
+            "relationships": evidence.get("relationships"),
+            "integrity": evidence.get("integrity"),
+            "model_free": True,
+            "content_free": True,
+            "raw_transcript_included": False,
         }
 
     def list_waves(self, run_id: str) -> list[dict[str, Any]]:
@@ -2790,7 +3072,20 @@ class OrchestrationLedger:
         threshold = max(60.0, float(stale_after_seconds))
         cutoff = datetime.fromtimestamp(now_ts - threshold, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         stale: list[tuple[str, str]] = []
+        terminal_repairs: list[tuple[str, str, str]] = []
         with self._lock, self._connect() as connection:
+            terminal_rows = connection.execute(
+                """SELECT r.run_id, r.status AS run_status, w.wave_id
+                   FROM runs r
+                   JOIN waves w ON w.run_id=r.run_id
+                   WHERE r.status IN ('accepted','blocked','aborted','stale')
+                     AND w.status='active'
+                   ORDER BY r.started_at, w.ordinal"""
+            ).fetchall()
+            terminal_repairs = [
+                (str(row["run_id"]), str(row["run_status"]), str(row["wave_id"]))
+                for row in terminal_rows
+            ]
             rows = connection.execute(
                 """SELECT r.run_id, r.started_at,
                           MAX(e.event_time) AS event_time,
@@ -2825,6 +3120,11 @@ class OrchestrationLedger:
                     (run_id, now_ts),
                 ).fetchone():
                     continue
+                if connection.execute(
+                    "SELECT 1 FROM controller_leases WHERE run_id=? AND status='active' AND expires_at>? LIMIT 1",
+                    (run_id, now_ts),
+                ).fetchone():
+                    continue
                 activity = max(
                     str(row[key] or "")
                     for key in (
@@ -2838,7 +3138,45 @@ class OrchestrationLedger:
                         (run_id,),
                     ).fetchone()
                     stale.append((run_id, str(latest_wave["wave_id"]) if latest_wave else ""))
+        terminal_state = {
+            "accepted": ("accepted", "CHECKPOINTED"),
+            "blocked": ("blocked", "BLOCKED"),
+            "aborted": ("aborted", "ABORTED"),
+            "stale": ("aborted", "ABORTED"),
+        }
+        for run_id, run_status, wave_id in terminal_repairs:
+            wave_status, state_after = terminal_state[run_status]
+            self.finish_wave(
+                wave_id,
+                status=wave_status,
+                metadata={"reconciled_from_run_status": run_status, "reconcile_reason": "terminal_parent"},
+            )
+            self.append_event(
+                run_id,
+                wave_id=wave_id,
+                event_type="wave_lifecycle_reconciled",
+                state_before="active",
+                state_after=state_after,
+                payload={"reason": "terminal_parent", "run_status": run_status, "wave_status": wave_status},
+            )
         for run_id, wave_id in stale:
+            for wave in self.list_waves(run_id):
+                if str(wave.get("status") or "") != "active":
+                    continue
+                active_wave_id = str(wave["wave_id"])
+                self.finish_wave(
+                    active_wave_id,
+                    status="aborted",
+                    metadata={"reconciled_from_run_status": "stale", "reconcile_reason": "inactivity_timeout"},
+                )
+                self.append_event(
+                    run_id,
+                    wave_id=active_wave_id,
+                    event_type="wave_lifecycle_reconciled",
+                    state_before="active",
+                    state_after="ABORTED",
+                    payload={"reason": "inactivity_timeout", "run_status": "stale", "wave_status": "aborted"},
+                )
             self.finish_run(
                 run_id,
                 status="stale",

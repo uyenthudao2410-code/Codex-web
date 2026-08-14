@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .artifact_refs import command_output_artifact_ref
+
 
 STATE_VERSION = 2
 MAX_EVENTS = 100
@@ -46,57 +48,6 @@ def classify_command(command: str) -> str:
 
 def _text(value: Any, limit: int = MAX_TEXT) -> str:
     return str(value or "")[:limit]
-
-
-def _command_output_artifact_ref(payload: dict[str, Any]) -> dict[str, Any] | None:
-    """Project live command retention into a compact, content-free resume handle.
-
-    Command output retention is intentionally process-scoped today.  Keep that
-    lifetime explicit so durable task state can point back to evidence without
-    pretending the bytes survive an MCP/runtime restart.
-    """
-
-    command_id = _text(payload.get("command_id") or payload.get("session_id"), 256).strip()
-    raw_refs = payload.get("output_refs")
-    refs = raw_refs if isinstance(raw_refs, dict) else {}
-    raw_retention = payload.get("output_retention")
-    retention = raw_retention if isinstance(raw_retention, dict) else {}
-    streams: dict[str, Any] = {}
-    for stream in ("stdout", "stderr"):
-        output_ref = _text(refs.get(stream), 512).strip()
-        if not output_ref.startswith("command:"):
-            continue
-        raw_metrics = retention.get(stream)
-        metrics = raw_metrics if isinstance(raw_metrics, dict) else {}
-
-        def metric(name: str) -> int:
-            value = metrics.get(name)
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                return 0
-            return max(0, int(value))
-
-        streams[stream] = {
-            "output_ref": output_ref,
-            "total_stream_bytes": metric("total_stream_bytes"),
-            "total_retained_bytes": metric("total_retained_bytes"),
-            "head_retained_bytes": metric("head_retained_bytes"),
-            "tail_retained_bytes": metric("tail_retained_bytes"),
-            "evicted_gap_bytes": metric("evicted_gap_bytes"),
-            "evicted_bytes_total": metric("evicted_bytes_total"),
-        }
-    if not command_id or not streams:
-        return None
-    return {
-        "schema_version": 1,
-        "kind": "command_output",
-        "scope": "runtime_retained",
-        "command_id": command_id,
-        "streams": streams,
-        "retrieval": {"tool": "command_control", "action": "read"},
-        "durability": "process_runtime",
-        "restart_safe": False,
-        "content_addressed": False,
-    }
 
 
 def _default_state() -> dict[str, Any]:
@@ -245,6 +196,33 @@ class TaskStateStore:
                 self._event(state, "files_modified", {"count": len(payload.get("affected_files", []))})
             elif name == "exec_command":
                 self._record_command_payload(state, _text(args.get("cmd"), 4000), payload)
+            elif name == "command_control":
+                action = str(args.get("action", "poll")).lower()
+                current = state.get("current_command")
+                if isinstance(current, dict) and action in {"poll", "write", "kill"}:
+                    current_id = str(current.get("session_id") or "")
+                    handles = {
+                        str(value)
+                        for value in (
+                            args.get("command_id"),
+                            args.get("session_id"),
+                            payload.get("command_id"),
+                            payload.get("session_id"),
+                        )
+                        if str(value or "").strip()
+                    }
+                    if current_id and current_id in handles:
+                        if action in {"poll", "write"}:
+                            self._record_command_payload(
+                                state,
+                                _text(current.get("command"), 4000),
+                                payload,
+                            )
+                        elif action == "kill":
+                            current["status"] = _text(payload.get("status", "terminated"), 100)
+                            current["finished_at"] = utc_now()
+                            state["current_command"] = None
+                            self._event(state, "command_terminated", {"session_id": current_id})
             elif name == "write_stdin":
                 current = state.get("current_command")
                 if isinstance(current, dict) and current.get("session_id") == payload.get("session_id"):
@@ -370,7 +348,7 @@ class TaskStateStore:
     def _record_command_payload(self, state: dict[str, Any], command: str, payload: dict[str, Any]) -> None:
         status = str(payload.get("status", ""))
         session_id = str(payload.get("session_id", ""))
-        artifact_ref = _command_output_artifact_ref(payload)
+        artifact_ref = command_output_artifact_ref(payload)
         current = state.get("current_command")
         if not isinstance(current, dict) or (session_id and current.get("session_id") != session_id):
             current = {

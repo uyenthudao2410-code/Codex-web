@@ -82,10 +82,16 @@ from .protocol import (
 )
 from .project_context import ProjectContext, load_project_context
 from .build_verify import verify_build as run_build_verification
+from .artifact_refs import build_file_artifact_ref
 from .codex_bridge import CodexAppServerBridge, CodexBridgeError
 from .document_tools import create_docx, create_text_document, convert_document, extract_document
 from .opencode_provider import ALLOWED_OPENCODE_MODELS, OpenCodeProviderAdapter, OpenCodeProviderError
 from .provider_routing import recommendation_id, recommend_shadow_route
+from .semantic_localization import (
+    UnavailableSemanticLocalizationProvider,
+    run_semantic_localization,
+    semantic_provider_status,
+)
 from .task_state import TaskStateStore
 from .performance_trace import PerformanceTraceStore
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class
@@ -95,6 +101,19 @@ from .proof_ledger import ProofLedger
 from .telemetry import SessionTelemetry
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head
 from .tool_results import make_tool_result, model_visible_text_bytes
+from .tool_contract import (
+    AGENT_EXECUTION_ROUTES,
+    SMART_COMPAT_TOOL_NAMES,
+    SMART_TOOL_PROFILE,
+    TOOL_CONTRACT_RUNTIME,
+    TOOL_CONTRACT_SCHEMA_VERSION,
+    TOOL_METADATA_OWNERSHIP,
+    TOOL_MODE_ALLOWLISTS,
+    TOOL_REGISTRY,
+    TOOL_RISK_CLASSES,
+    ToolSpec,
+    tool_metadata_contract,
+)
 from .usage_events import usage_event_from_provider_delegation
 from .provider_traffic import ProviderTrafficGovernor
 from .transport_http import HTTPSessionManager
@@ -104,14 +123,6 @@ from .transport_stdio import serve_stdio
 SERVER_NAME = "coding-tools-mcp"
 SERVER_TITLE = "Coding Tools MCP"
 PROCESS_INSTANCE_ID = secrets.token_urlsafe(12)
-TOOL_CONTRACT_SCHEMA_VERSION = 1
-SMART_TOOL_PROFILE = "smart-v3"
-TOOL_RISK_CLASSES = ("read_only", "project_write", "job_run", "account_manage", "unknown")
-TOOL_METADATA_OWNERSHIP = {
-    "mcp_annotation_owner": "python:ToolSpec",
-    "native_execution_risk_owner": "rust:ToolMetadata/ToolRisk",
-    "authority_owner": "EOCL+permission+write_lease",
-}
 HUB_CLIENT_ONLINE_SECONDS = 45.0
 HUB_CONTROLLER_LEASE_SECONDS = 60.0
 HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
@@ -119,25 +130,6 @@ HUB_PROVIDER_TELEMETRY_STATES = frozenset({"ROUTED", "EXECUTING", "PROVING", "AC
 HUB_PROVIDER_TELEMETRY_STATUSES = frozenset({"active", "completed", "failed"})
 SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
 SUPERVISOR_RESTART_RESPONSE_GRACE_MS = 2_000
-TOOL_MODE_ALLOWLISTS = {
-    "smart": frozenset({
-        "workspace_context", "agent_workflow", "task_control", "document_workflow",
-        "exec_command", "command_control", "request_permissions", "view_image",
-    }),
-    "readonly": frozenset({"server_info", "check_exec_environment", "task_state_get", "task_history_list", "read_file", "list_dir", "list_files", "search_text", "read_output", "git_status", "git_diff", "git_log", "git_show", "git_blame", "view_image"}),
-    "coding": frozenset({"server_info", "check_exec_environment", "task_state_get", "task_state_update", "task_state_pause", "task_state_resume", "task_history_list", "read_file", "list_dir", "list_files", "search_text", "apply_patch", "exec_command", "write_stdin", "kill_session", "read_output", "git_status", "git_diff", "git_log", "git_show", "git_blame", "request_permissions", "verify_build", "view_image"}),
-    "build": frozenset({"server_info", "check_exec_environment", "task_state_get", "task_state_update", "task_state_pause", "task_state_resume", "task_history_list", "read_file", "list_dir", "list_files", "search_text", "exec_command", "write_stdin", "kill_session", "read_output", "git_status", "git_diff", "git_log", "git_show", "git_blame", "request_permissions", "verify_build", "view_image"}),
-    "full": frozenset(),
-}
-SMART_COMPAT_TOOL_NAMES = frozenset({
-    "server_info", "check_exec_environment",
-    "task_state_get", "task_state_update", "task_state_clear", "task_state_pause",
-    "task_state_resume", "task_history_list", "read_file", "read_files", "list_dir",
-    "list_files", "search_text", "prepare_coding_context", "apply_patch",
-    "apply_changes_and_verify", "file_batch", "write_stdin", "kill_session",
-    "read_output", "git_status", "git_diff", "git_log", "git_show",
-    "git_blame", "git_inspect", "verify_build", "codex_bridge",
-})
 
 try:
     LONG_TOOL_HANDOFF_SECONDS = min(
@@ -308,22 +300,6 @@ AGENT_CANDIDATE_OUTPUT_SCHEMA = {
     },
 
     "required": ["status", "summary", "replacements", "new_files", "proof", "confidence"],
-
-}
-
-AGENT_EXECUTION_ROUTES = {
-
-    "mini": {"profile": "candidate_mini", "model": "gpt-5.4-mini", "effort": "low", "deadline_ms": 10_000, "high_cost": False},
-
-    "luna": {"profile": "candidate_luna", "model": "gpt-5.6-luna", "effort": "high", "deadline_ms": 15_000, "high_cost": False},
-
-    "terra": {"profile": "cross_file", "model": "gpt-5.6-terra", "effort": "high", "deadline_ms": 25_000, "high_cost": False},
-
-    "sol_xhigh": {"profile": "deep_code", "model": "gpt-5.6-sol", "effort": "xhigh", "deadline_ms": 30_000, "high_cost": False},
-
-    "sol_max": {"profile": "consequential", "model": "gpt-5.6-sol", "effort": "max", "deadline_ms": 30_000, "high_cost": True},
-
-    "sol_ultra": {"profile": "parallel_extreme", "model": "gpt-5.6-sol", "effort": "ultra", "deadline_ms": 30_000, "high_cost": True},
 
 }
 
@@ -881,288 +857,6 @@ def runtime_policy_from_args(args: argparse.Namespace) -> RuntimePolicy:
         fake_readonly_annotations=fake_readonly_annotations_from_args(args, permission_mode),
     )
 
-
-@dataclass(frozen=True)
-class ToolSpec:
-    """Single source of truth for one tool's title, description, and annotation hints.
-
-    Handler methods on Runtime are named exactly after the tool. Input schemas live in
-    input_schemas(), keyed by the same names. `error_status` is stamped on failure
-    payloads, and `content_builder` converts a success payload into extra MCP
-    content blocks (beyond the rendered text).
-    """
-
-    title: str
-    description: str
-    read_only: bool = False
-    destructive: bool = False
-    idempotent: bool = False
-    open_world: bool = False
-    risk_class: str = "unknown"
-    error_status: str | None = None
-    content_builder: Callable[[dict[str, Any]], list[dict[str, Any]]] | None = None
-    gated_by: str | None = None
-    """Name of a Runtime attribute that must be truthy for the tool to be exposed."""
-
-    def __post_init__(self) -> None:
-        if self.risk_class not in TOOL_RISK_CLASSES:
-            raise ValueError(f"Unsupported ToolSpec risk_class: {self.risk_class}")
-
-
-def _image_content(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    encoded = str(payload.pop("_mcp_image_data", ""))
-    return [
-        {
-            "type": "image",
-            "data": encoded,
-            "mimeType": str(payload.get("mime_type", "application/octet-stream")),
-        }
-    ]
-
-
-TOOL_REGISTRY: dict[str, ToolSpec] = {
-    "server_info": ToolSpec(
-        title="Server info",
-        description="Return server, workspace, project-context, auth, policy, and fixed-tool metadata.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "workspace_context": ToolSpec(
-        title="Inspect workspace",
-        description="Preferred read-only tool when the user asks what is in the current working directory or wants a quick project overview. Returns the active workspace, default directory, project type, root entries, Git status, and task summary in one call; do not use exec_command merely to list files.",
-        read_only=True,
-        idempotent=True,
-        risk_class="read_only",
-    ),
-    "codex_bridge": ToolSpec(
-        title="Bridge to local Codex",
-        description="Coordinate a cost-aware independent Codex App Server reviewer sidecar with packet/scoped/critical/history profiles, explicit model/effort/deadlines, bridge-owned continuation, capacity cooldowns, and token telemetry. It shares Codex Desktop auth/history but never controls a live Desktop turn; every bridge turn is approvalPolicy=never, read-only, and no-network.",
-        read_only=True,
-    ),
-    "agent_workflow": ToolSpec(
-        title="Run complete agent workflow",
-        description="Primary tool for end-to-end work. Use one call for bug diagnosis, feature development, greenfield project creation, refactoring, test-failure repair, build/release verification, document work, or task resume. It bundles context collection, file creation or patches, commands, tests, builds, artifacts, Git diff, and persistent task state so the model must not repeat environment checks or low-level tool calls.",
-        destructive=True,
-        risk_class="project_write",
-    ),
-    "prepare_coding_context": ToolSpec(
-        title="Prepare coding context",
-        description="Preferred first step for coding tasks: inspect the project, task state, instructions and Git once, batch-search multiple queries, and read the most relevant files in one cached call.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "apply_changes_and_verify": ToolSpec(
-        title="Apply changes and verify",
-        description="Preferred execution step: apply one or more patches, run multiple checks, optionally test/build, collect Git diff and update task state in one continuous call. Original low-level tools remain available as fallbacks.",
-        destructive=True,
-    ),
-    "task_control": ToolSpec(
-        title="Control persistent task",
-        description="Control persistent task/orchestration state, coordination lanes and handoffs, or enqueue an explicitly confirmed runtime restart for the owning Electron supervisor.",
-        idempotent=True,
-    ),
-    "read_files": ToolSpec(
-        title="Read multiple files",
-        description="Read one or more UTF-8 workspace files in one bounded call.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "file_batch": ToolSpec(
-        title="Batch file operations",
-        description="Create directories or copy, move, and delete multiple workspace paths in one bounded atomic-style request.",
-        destructive=True,
-    ),
-    "command_control": ToolSpec(
-        title="Control command session",
-        description="Poll, write to, terminate, or page output from a running command session.",
-        risk_class="job_run",
-    ),
-    "git_inspect": ToolSpec(
-        title="Inspect Git repository",
-        description="Run status, diff, log, show, or blame through one compact Git inspection tool.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "document_workflow": ToolSpec(
-        title="Read or create documents in one step",
-        description="Mandatory fast path for PDF, Word, Markdown, and text tasks. To create content from a PDF/DOCX, call action=inspect exactly once, reason over the returned text, then call action=create exactly once with target/content. Create supports .docx, .md, and .txt and already returns size, line count, SHA256, and preview, so never probe Python/PDF dependencies, use exec_command/apply_patch, repeat extraction, or run a separate verification command.",
-        destructive=True,
-        risk_class="project_write",
-    ),
-    "document_extract": ToolSpec(
-        title="Extract Word or PDF",
-        description="Extract text and metadata from a workspace DOCX, PDF, or supported text document.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "document_create": ToolSpec(
-        title="Create Word document",
-        description="Create a DOCX file directly in the workspace from structured plain text or Markdown-like content.",
-        destructive=True,
-    ),
-    "document_convert": ToolSpec(
-        title="Convert document to Word",
-        description="Convert a workspace PDF or supported text document into a DOCX file without Base64 round-trips.",
-        destructive=True,
-    ),
-    "check_exec_environment": ToolSpec(
-        title="Check exec environment",
-        description="Return lightweight exec_command sandbox and environment status known to the server.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "get_default_cwd": ToolSpec(
-        title="Get default cwd (deprecated)",
-        description="Deprecated compatibility stub: always returns the workspace root. Transport-level default_cwd was removed; pass explicit paths/workdir per call.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "set_default_cwd": ToolSpec(
-        title="Set default cwd (deprecated)",
-        description="Deprecated compatibility stub: transport-level default_cwd is no longer mutable. Pass explicit paths/workdir per call.",
-        idempotent=True,
-    ),
-    "task_state_get": ToolSpec(
-        title="Get task state",
-        description="Read the persistent coding-task objective, progress, commands, results, modified files, failure, and next step.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "task_state_update": ToolSpec(
-        title="Update task state",
-        description="Create or update the persistent coding-task objective, plan progress, failure, and next step.",
-        idempotent=True,
-    ),
-    "task_state_clear": ToolSpec(
-        title="Clear task state",
-        description="Clear the current workspace task state after a task is finished or deliberately abandoned.",
-        destructive=True,
-        idempotent=True,
-    ),
-    "task_state_pause": ToolSpec(title="Pause task", description="Pause the current persistent task without losing progress.", idempotent=True),
-    "task_state_resume": ToolSpec(title="Resume task", description="Resume a paused persistent task from its recorded next step.", idempotent=True),
-    "task_history_list": ToolSpec(title="List task history", description="List archived tasks for the current workspace.", read_only=True, idempotent=True),
-    "read_file": ToolSpec(
-        title="Read file",
-        description="Read a UTF-8 text file slice inside the configured workspace.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "list_dir": ToolSpec(
-        title="List directory",
-        description="List directory entries inside the configured workspace.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "list_files": ToolSpec(
-        title="List files",
-        description="List workspace files using glob filters.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "search_text": ToolSpec(
-        title="Search text",
-        description="Search UTF-8 workspace files for text or regex matches.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "apply_patch": ToolSpec(
-        title="Apply patch",
-        description="Stage, validate, and atomically replace files from a patch envelope inside the workspace.",
-        destructive=True,
-    ),
-    "exec_command": ToolSpec(
-        title="Execute command",
-        description="Fallback for a focused workspace command only when no high-level workflow can perform it. Never use this tool to list a directory, inspect or create PDF/DOCX/Markdown/text documents, probe Python or PDF dependencies, or verify a document write; workspace_context and document_workflow perform those tasks with fewer round trips.",
-        destructive=True,
-        open_world=True,
-        risk_class="job_run",
-        error_status="failed",
-    ),
-    "verify_build": ToolSpec(
-        title="Build and verify project",
-        description="Detect the project, run its tests and build under the command policy, verify artifacts, read version metadata, hash outputs, and return a build report.",
-        destructive=True,
-        open_world=True,
-        error_status="failed",
-    ),
-    "write_stdin": ToolSpec(
-        title="Write stdin",
-        description=(
-            "Poll or interact with a running command session. Pass empty chars to wait for more output; "
-            "pass non-empty chars to write to stdin."
-        ),
-    ),
-    "kill_session": ToolSpec(
-        title="Kill session",
-        description="Terminate a server-managed running command session.",
-        destructive=True,
-    ),
-    "read_output": ToolSpec(
-        title="Read output",
-        description="Read retained stdout or stderr by output_ref with per-stream byte offset pagination.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "git_status": ToolSpec(
-        title="Git status",
-        description="Return git working tree status for the workspace.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "git_diff": ToolSpec(
-        title="Git diff",
-        description="Return unified git diff for workspace changes.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "git_log": ToolSpec(
-        title="Git log",
-        description="Return recent git commits with bounded structured metadata.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "git_show": ToolSpec(
-        title="Git show",
-        description="Return bounded git show output for a revision.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "git_blame": ToolSpec(
-        title="Git blame",
-        description="Return bounded git blame metadata for a workspace file.",
-        read_only=True,
-        idempotent=True,
-    ),
-    "request_permissions": ToolSpec(
-        title="Request permissions",
-        description="Report scoped permission-request status without silently granting operations.",
-        read_only=True,
-        risk_class="read_only",
-    ),
-    "view_image": ToolSpec(
-        title="View image",
-        description="Return a workspace image as MCP image content.",
-        read_only=True,
-        idempotent=True,
-        risk_class="read_only",
-        content_builder=_image_content,
-        gated_by="enable_view_image",
-    ),
-}
-
-
-def tool_metadata_contract() -> dict[str, Any]:
-    """Project shared risk vocabulary without changing MCP tools/list annotations."""
-    return {
-        "schema_version": 1,
-        "risk_vocabulary": list(TOOL_RISK_CLASSES),
-        "ownership": dict(TOOL_METADATA_OWNERSHIP),
-        "smart_v3_risk": {
-            name: TOOL_REGISTRY[name].risk_class
-            for name in sorted(TOOL_MODE_ALLOWLISTS["smart"])
-        },
-    }
 
 LANDLOCK_CREATE_RULESET_VERSION = 1
 LANDLOCK_RULE_PATH_BENEATH = 1
@@ -1763,21 +1457,18 @@ class Runtime:
         project_context: ProjectContext | None = None,
         fake_readonly_annotations: bool = False,
         transport: str = "stdio",
+        semantic_localizer: Any | None = None,
     ) -> None:
         self.authorized_roots = configured_authorized_roots()
         self.workspace = Workspace(workspace, self.authorized_roots)
         self.tool_mode = os.environ.get(f"{ENV_PREFIX}_TOOL_MODE", "coding").strip().lower()
         if self.tool_mode not in TOOL_MODE_ALLOWLISTS:
             self.tool_mode = "coding"
-        allowed_tools = TOOL_MODE_ALLOWLISTS[self.tool_mode]
-        if self.tool_mode == "full":
-            allowed_tools = frozenset(TOOL_REGISTRY)
         self.enable_view_image = enable_view_image
-        self._exposed_tool_names = [
-            name
-            for name, spec in TOOL_REGISTRY.items()
-            if (spec.gated_by is None or getattr(self, spec.gated_by)) and name in allowed_tools
-        ]
+        self._exposed_tool_names = TOOL_CONTRACT_RUNTIME.exposed_names(
+            self.tool_mode,
+            gate_resolver=lambda attribute: bool(getattr(self, attribute)),
+        )
         self._exposed_tool_name_set = frozenset(self._exposed_tool_names)
         if permission_mode not in PERMISSION_MODE_CHOICES:
             raise ToolFailure(
@@ -1857,6 +1548,7 @@ class Runtime:
         self.project_context: ProjectContext = (
             project_context if project_context is not None else load_project_context(self.workspace.root)
         )
+        self.semantic_localizer = semantic_localizer or UnavailableSemanticLocalizationProvider()
         self.request_sessions: dict[str | int, str] = {}
         self.request_sessions_lock = threading.Lock()
         self.request_context = threading.local()
@@ -1896,6 +1588,7 @@ class Runtime:
             ):
                 self.recovered_agent_lanes += 1
         self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
+        self.reconciled_task_orchestration = self._reconcile_task_orchestration_projection()
         self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
         self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
         self._opencode_provider = OpenCodeProviderAdapter(
@@ -1913,6 +1606,35 @@ class Runtime:
         self.home_dir = self.runtime_dir / "home"
         self.tmp_dir = self.runtime_dir / "tmp"
         self.cache_dir = self.runtime_dir / "cache"
+
+    def _reconcile_task_orchestration_projection(self) -> bool:
+        state = self.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "").strip()
+        if not run_id:
+            return False
+        run = self.orchestration_ledger.get_run(run_id)
+        if not isinstance(run, dict):
+            return False
+        target_state = {
+            "accepted": "CHECKPOINTED",
+            "blocked": "BLOCKED",
+            "aborted": "ABORTED",
+            "stale": "ABORTED",
+        }.get(str(run.get("status") or "").lower())
+        if not target_state or str(projection.get("orchestration_state") or "").upper() == target_state:
+            return False
+        waves = self.orchestration_ledger.list_waves(run_id)
+        repaired = dict(projection)
+        repaired.update({
+            "run_id": run_id,
+            "wave_id": str(waves[-1].get("wave_id") or repaired.get("wave_id") or "") if waves else str(repaired.get("wave_id") or ""),
+            "orchestration_state": target_state,
+            "write_lease_id": "",
+            "write_owner": "",
+        })
+        self.task_state.set_orchestration_projection(repaired, event="orchestration_projection_reconciled")
+        return True
 
     def close(self) -> None:
         self._opencode_provider.close()
@@ -2797,6 +2519,14 @@ class Runtime:
     ) -> dict[str, Any]:
         args = dict(arguments or {})
         if not str(args.get("idempotency_key", "") or "").strip():
+            if (
+                name == "agent_workflow"
+                and self._idempotency_policy(name, args) == "required"
+            ):
+                # Auto-key derivation happens before the normal dispatch validator.
+                # Validate first so an invalid request cannot create a task epoch.
+                validate_arguments(name, args)
+                self._ensure_agent_workflow_task_epoch(args)
             derived_key = self._derive_idempotency_key(name, args)
             if derived_key:
                 args["idempotency_key"] = derived_key
@@ -3074,6 +2804,7 @@ class Runtime:
             self._record_task_tool_result(name, args, payload)
             self.emit_tool_trace(name, args, payload, started_at)
             content = spec.content_builder(payload) if spec.content_builder else None
+            payload.setdefault("presentation", TOOL_CONTRACT_RUNTIME.presentation(name, payload))
             return make_tool_result(name, payload, is_error=payload.get("ok") is False, content=content)
         except ToolFailure as exc:
             payload = {
@@ -4286,7 +4017,9 @@ class Runtime:
                 "performance_trace_version": self.performance_trace.schema_version,
                 "tool_contract": dict(self.tool_contract),
                 "tool_metadata": tool_metadata_contract(),
+                "semantic_localization": semantic_provider_status(self.semantic_localizer),
                 "stale_orchestration_runs": len(self.stale_orchestration_runs),
+                "task_orchestration_projection_reconciled": bool(self.reconciled_task_orchestration),
                 "orphaned_background_operations": int(self.orphaned_background_operations),
                 "orphaned_idempotency_records": int(self.orphaned_idempotency_records),
                 "agent_lanes_waiting_after_restart": int(self.recovered_agent_lanes),
@@ -4338,6 +4071,8 @@ class Runtime:
         max_matches = min(max(int(args.get("max_matches_per_query", 20)), 1), 100)
 
         search_workers = min(4, len(queries)) if queries else 0
+        semantic_status = semantic_provider_status(self.semantic_localizer)
+        semantic_enabled = bool(queries) and semantic_status.get("available") is True and not bool(args.get("regex", False))
         composite_plan = {
             "schema_version": 1,
             "mode": "model_free",
@@ -4350,7 +4085,15 @@ class Runtime:
             },
             "stages": [
                 {"id": "workspace", "kind": "workspace_context", "max_operations": 1, "parallel_safe": False},
-                {"id": "localize", "kind": "search_text", "max_operations": len(queries), "parallel_safe": True, "max_workers": search_workers},
+                {
+                    "id": "localize",
+                    "kind": "semantic_then_text_fallback",
+                    "max_operations": len(queries) * 2,
+                    "parallel_safe": True,
+                    "max_workers": search_workers,
+                    "semantic_available": semantic_enabled,
+                    "semantic_provider": semantic_status.get("provider"),
+                },
                 {"id": "materialize", "kind": "read_file", "max_operations": max_files, "parallel_safe": False, "byte_budget": max_total_bytes},
             ],
         }
@@ -4383,6 +4126,53 @@ class Runtime:
         }
         searches: list[dict[str, Any]] = []
         path_scores: dict[str, int] = {path: 1_000_000 - index for index, path in enumerate(requested_paths)}
+        search_results_by_index: dict[int, dict[str, Any]] = {}
+        fallback_pairs = list(enumerate(queries))
+        semantic_attempted = 0
+        semantic_handled = 0
+
+        if queries and bool(args.get("regex", False)):
+            semantic_status = dict(semantic_status)
+            semantic_status["reason"] = "REGEX_QUERY_REQUIRES_TEXT_SEARCH"
+        elif semantic_enabled:
+            semantic_batch = run_semantic_localization(
+                self.semantic_localizer,
+                workspace=self.workspace.root,
+                path=str(args.get("path", ".")),
+                queries=queries,
+                max_results=max_matches,
+            )
+            semantic_status = dict(semantic_batch.get("provider") or semantic_status)
+            fallback_pairs = []
+            for item in semantic_batch.get("results", []):
+                if not isinstance(item, dict):
+                    continue
+                index = int(item.get("query_index", -1))
+                if index < 0 or index >= len(queries):
+                    continue
+                semantic_attempted += 1
+                matches = list(item.get("matches") or [])
+                handled = item.get("handled") is True
+                composite_operations.append({
+                    "id": f"semantic:{index}",
+                    "stage": "localize",
+                    "kind": "semantic_navigation",
+                    "status": "completed" if handled else "fallback",
+                    "query_sha256": hashlib.sha256(queries[index].encode("utf-8")).hexdigest(),
+                    "match_count": len(matches),
+                    "provider": semantic_status.get("provider"),
+                })
+                if handled:
+                    semantic_handled += 1
+                    search_results_by_index[index] = {
+                        "query": queries[index],
+                        "engine": f"semantic:{semantic_status.get('provider') or 'provider'}",
+                        "total_matches": len(matches),
+                        "truncated": False,
+                        "matches": matches,
+                    }
+                else:
+                    fallback_pairs.append((index, queries[index]))
 
         def search_once(index_and_query: tuple[int, str]) -> tuple[dict[str, Any], dict[str, Any]]:
             index, query = index_and_query
@@ -4422,11 +4212,14 @@ class Runtime:
             return search_result, operation
 
         localization_started = time.monotonic()
-        if queries:
-            with ThreadPoolExecutor(max_workers=search_workers, thread_name_prefix="context-search") as pool:
-                search_pairs = list(pool.map(search_once, enumerate(queries)))
-            searches = [item[0] for item in search_pairs]
-            composite_operations.extend(item[1] for item in search_pairs)
+        fallback_search_workers = min(4, len(fallback_pairs)) if fallback_pairs else 0
+        if fallback_pairs:
+            with ThreadPoolExecutor(max_workers=fallback_search_workers, thread_name_prefix="context-search") as pool:
+                search_pairs = list(pool.map(search_once, fallback_pairs))
+            for (search_result, operation), (index, _query) in zip(search_pairs, fallback_pairs):
+                search_results_by_index[index] = search_result
+                composite_operations.append(operation)
+        searches = [search_results_by_index[index] for index in range(len(queries)) if index in search_results_by_index]
         localization_ms = max(0, int((time.monotonic() - localization_started) * 1000))
         for result in searches:
             for match in result.get("matches", []):
@@ -4482,9 +4275,16 @@ class Runtime:
                 "selected_path_count": len(ranked_paths),
                 "materialized_file_count": sum(1 for item in files if "error" not in item),
                 "content_bytes": total_bytes,
+                "localization": {
+                    "strategy": "semantic_first_text_fallback",
+                    "provider": semantic_status,
+                    "semantic_attempted": semantic_attempted,
+                    "semantic_handled": semantic_handled,
+                    "text_fallback_queries": len(fallback_pairs),
+                },
                 "parallelism": {
-                    "search_parallel": bool(search_workers > 1),
-                    "search_max_workers": search_workers,
+                    "search_parallel": bool(fallback_search_workers > 1),
+                    "search_max_workers": fallback_search_workers,
                     "materialization_parallel": False,
                 },
                 "phase_timing": {
@@ -4498,6 +4298,14 @@ class Runtime:
             "cache": {"hit": False, "age_ms": 0, "source": "live_execution"},
         }
 
+        current_task = self.task_state.get()
+        task_resume = {
+            "task_id": current_task.get("task_id"),
+            "status": current_task.get("status"),
+            "current_step": current_task.get("current_step"),
+            "next_step": current_task.get("next_step"),
+            "orchestration": dict(current_task.get("orchestration") or {}) if isinstance(current_task.get("orchestration"), dict) else {},
+        }
         payload = {
             "objective": objective,
             "workspace": workspace,
@@ -4507,7 +4315,7 @@ class Runtime:
             "selected_paths": ranked_paths,
             "total_content_bytes": total_bytes,
             "composite_read": composite_read,
-            "task_resume": self.task_state.get(),
+            "task_resume": task_resume,
             "cache_hit": False,
             "cache_ttl_seconds": CONTEXT_BUNDLE_CACHE_TTL_SECONDS,
             "recommended_next_action": "Use apply_changes_and_verify with all related patches and required checks in one call.",
@@ -5226,7 +5034,7 @@ class Runtime:
             wave_id = str(orchestration.get("wave_id") or "").strip()
             if run_id:
                 try:
-                    evidence = self.orchestration_ledger.evidence_query(run_id, wave_id=wave_id, limit=20)
+                    evidence = self.orchestration_ledger.session_query(run_id, wave_id=wave_id, limit=12)
                 except ValueError as exc:
                     evidence = {
                         "schema_version": 1,
@@ -5234,6 +5042,7 @@ class Runtime:
                         "run_id": run_id,
                         "wave_id": wave_id or None,
                         "reason": str(exc),
+                        "query": {"run_id": run_id, "wave_id": wave_id or None, "limit": 12, "mode": "model_free_priority"},
                         "model_free": True,
                         "raw_transcript_included": False,
                     }
@@ -5243,6 +5052,7 @@ class Runtime:
                     "status": "unlinked",
                     "run_id": None,
                     "wave_id": None,
+                    "query": {"run_id": None, "wave_id": None, "limit": 12, "mode": "model_free_priority"},
                     "model_free": True,
                     "raw_transcript_included": False,
                 }
@@ -6301,6 +6111,7 @@ class Runtime:
                     "orphaned_background_operations": self.orphaned_background_operations,
                     "orphaned_idempotency_records": self.orphaned_idempotency_records,
                     "stale_orchestration_runs": self.stale_orchestration_runs,
+                    "task_orchestration_projection_reconciled": bool(self.reconciled_task_orchestration),
                     "agent_lanes_waiting_after_restart": self.recovered_agent_lanes,
                 },
             }
@@ -6909,6 +6720,45 @@ class Runtime:
             return {"scope": "composite_read", **timing}
         return {}
 
+    @staticmethod
+    def _measured_localization(payload: dict[str, Any]) -> dict[str, Any]:
+        """Extract live, content-free localization counts from composite read."""
+        candidates: list[Any] = [payload]
+        for key in ("prepared", "context"):
+            nested = payload.get(key)
+            if isinstance(nested, dict):
+                candidates.append(nested)
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            composite = candidate.get("composite_read")
+            if not isinstance(composite, dict):
+                continue
+            cache = composite.get("cache") if isinstance(composite.get("cache"), dict) else {}
+            if cache.get("hit"):
+                continue
+            plan = composite.get("plan") if isinstance(composite.get("plan"), dict) else {}
+            execution = composite.get("execution") if isinstance(composite.get("execution"), dict) else {}
+            localization = execution.get("localization") if isinstance(execution.get("localization"), dict) else {}
+            provider = localization.get("provider") if isinstance(localization.get("provider"), dict) else {}
+            try:
+                query_count = max(0, int(plan.get("query_count", 0) or 0))
+                attempted = max(0, int(localization.get("semantic_attempted", 0) or 0))
+                handled = max(0, int(localization.get("semantic_handled", 0) or 0))
+                fallback = max(0, int(localization.get("text_fallback_queries", 0) or 0))
+            except (TypeError, ValueError):
+                continue
+            if query_count <= 0:
+                continue
+            return {
+                "semantic_available": provider.get("available") is True,
+                "query_count": query_count,
+                "semantic_attempted": attempted,
+                "semantic_handled": handled,
+                "text_fallback_queries": fallback,
+            }
+        return {}
+
     def emit_tool_trace(self, name: str, args: dict[str, Any], payload: dict[str, Any], started_at: float) -> None:
         raw_error = payload.get("error")
         error = raw_error if isinstance(raw_error, dict) else {}
@@ -6957,6 +6807,8 @@ class Runtime:
                 idempotency_key_present=bool(str(args.get("idempotency_key", "") or "").strip()),
                 idempotency_policy=self._idempotency_policy(name, args),
                 idempotency_key_source=self._idempotency_key_source(args),
+                idempotency_operation=self._idempotency_operation(name, args),
+                idempotency_missing_reason=self._idempotency_missing_reason(name, args),
                 error_class=self._error_class(error),
                 proof_cache_eligible=proof_cache_eligible,
                 proof_cache_hits=proof_cache_hits,
@@ -6965,6 +6817,7 @@ class Runtime:
                 proof_cache_saved_ms=proof_cache_saved_ms,
                 orchestration=trace_orchestration,
                 phase_timing=self._measured_phase_timing(payload),
+                localization=self._measured_localization(payload),
             )
         except Exception:
             pass
@@ -7015,6 +6868,43 @@ class Runtime:
         spec = TOOL_REGISTRY.get(name)
         return "optional" if spec and not spec.read_only and (spec.destructive or spec.open_world) else "none"
 
+    @staticmethod
+    def _idempotency_operation(name: str, args: dict[str, Any]) -> str:
+        if name == "agent_workflow":
+            return f"agent_workflow:{str(args.get('phase', 'prepare')).strip().lower()}"
+        if name == "task_control":
+            return f"task_control:{str(args.get('action', 'get')).strip().lower()}"
+        if name == "command_control":
+            return f"command_control:{str(args.get('action', 'poll')).strip().lower()}"
+        return name
+
+    def _idempotency_missing_reason(self, name: str, args: dict[str, Any]) -> str:
+        if self._idempotency_policy(name, args) != "required" or str(args.get("idempotency_key", "") or "").strip():
+            return ""
+        if name == "agent_workflow":
+            return "missing_task_epoch" if not str(self.task_state.get().get("task_id") or "").strip() else "missing_stable_identity"
+        if name == "task_control":
+            projection = self.task_state.get().get("orchestration", {})
+            projection = projection if isinstance(projection, dict) else {}
+            if not str(args.get("run_id") or projection.get("run_id") or "").strip():
+                return "missing_run"
+            if not str(args.get("wave_id") or projection.get("wave_id") or "").strip():
+                return "missing_wave"
+        return "missing_stable_identity"
+
+    def _ensure_agent_workflow_task_epoch(self, args: dict[str, Any]) -> str:
+        if str(args.get("phase", "prepare")).strip().lower() != "execute":
+            return ""
+        current = self.task_state.get()
+        projection = current.get("orchestration") if isinstance(current.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "").strip()
+        current_ctx = self.orchestration_control.snapshot(run_id) if run_id else None
+        if current.get("task_id") and current_ctx is not None and current_ctx.state not in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
+            return str(current["task_id"])
+        objective = str(args.get("objective") or current.get("objective") or "Complete coding workflow").strip()
+        ensured = self.task_state.ensure_started(objective, current_step="Orchestration preflight")
+        return str(ensured.get("task_id") or "")
+
     def _derive_idempotency_key(self, name: str, args: dict[str, Any]) -> str:
         if self._idempotency_policy(name, args) != "required":
             return ""
@@ -7022,23 +6912,26 @@ class Runtime:
         projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
         run_id = str(args.get("run_id") or projection.get("run_id") or "").strip()
         wave_id = str(args.get("wave_id") or projection.get("wave_id") or "").strip()
-        if not run_id or not wave_id:
-            return ""
         if name == "agent_workflow" and str(args.get("phase", "prepare")).strip().lower() == "execute":
+            task_id = str(current_task.get("task_id") or "").strip()
+            if not task_id:
+                return ""
             operation = "agent_workflow:execute"
-            authority_scope = ""
+            identity_scope = f"task={task_id}"
         elif name == "task_control" and str(args.get("action", "get")).strip().lower() in {"accept", "reject"}:
+            if not run_id or not wave_id:
+                return ""
             operation = f"task_control:{str(args.get('action')).strip().lower()}"
             identity = self._current_hub_client() or {}
             controller = self.orchestration_ledger.get_controller_lease(run_id) or {}
             caller_id = str(identity.get("client_id") or "local").strip() or "local"
             fencing_token = int(controller.get("fencing_token") or 0)
-            authority_scope = f"caller={caller_id}\0fence={fencing_token}"
+            identity_scope = f"run={run_id}\0wave={wave_id}\0caller={caller_id}\0fence={fencing_token}"
         else:
             return ""
         request_hash = self._request_hash(args)
         digest = hashlib.sha256(
-            f"{operation}\0{run_id}\0{wave_id}\0{authority_scope}\0{request_hash}".encode("utf-8", errors="replace")
+            f"{operation}\0{identity_scope}\0{request_hash}".encode("utf-8", errors="replace")
         ).hexdigest()
         return f"{AUTO_IDEMPOTENCY_KEY_PREFIX}{digest}"
 
@@ -7958,6 +7851,21 @@ class Runtime:
             return result
 
         report = run_build_verification(resolved.path, args, runner)
+        projection = self.task_state.get().get("orchestration", {})
+        owner_run = str(projection.get("run_id") or "") if isinstance(projection, dict) else ""
+        owner_wave = str(projection.get("wave_id") or "") if isinstance(projection, dict) else ""
+        hash_algorithm = str(report.get("hash_algorithm") or "sha256")
+        for artifact in report.get("artifacts", []) if isinstance(report.get("artifacts"), list) else []:
+            if not isinstance(artifact, dict):
+                continue
+            artifact_ref = build_file_artifact_ref(
+                artifact,
+                hash_algorithm=hash_algorithm,
+                owner_run=owner_run,
+                owner_wave=owner_wave,
+            )
+            if artifact_ref is not None:
+                artifact["artifact_ref"] = artifact_ref
         try:
             self.task_state.record_build_report(report)
         except Exception:
@@ -10101,16 +10009,12 @@ def schema_type_name(expected_type: str | list[str]) -> str:
 
 
 def tool_definition(name: str, *, fake_readonly: bool = False) -> dict[str, Any]:
-    schemas = input_schemas()
-    annotations = tool_annotations(name, fake_readonly=fake_readonly)
-    return {
-        "name": name,
-        "title": annotations["title"],
-        "description": TOOL_REGISTRY[name].description,
-        "inputSchema": schemas[name],
-        "outputSchema": tool_output_schema(),
-        "annotations": annotations,
-    }
+    return TOOL_CONTRACT_RUNTIME.definition(
+        name,
+        input_schema=input_schemas()[name],
+        output_schema=tool_output_schema(),
+        fake_readonly=fake_readonly,
+    )
 
 
 def tool_annotations(name: str, *, fake_readonly: bool = False) -> dict[str, Any]:
@@ -10123,22 +10027,7 @@ def tool_annotations(name: str, *, fake_readonly: bool = False) -> dict[str, Any
     `tools/list` may pass it: `server_info` and the server card must keep
     reporting the real annotations so the override stays discoverable.
     """
-    spec = TOOL_REGISTRY[name]
-    if fake_readonly:
-        return {
-            "title": spec.title,
-            "readOnlyHint": True,
-            "destructiveHint": False,
-            "idempotentHint": spec.idempotent,
-            "openWorldHint": False,
-        }
-    return {
-        "title": spec.title,
-        "readOnlyHint": spec.read_only,
-        "destructiveHint": spec.destructive,
-        "idempotentHint": spec.idempotent,
-        "openWorldHint": spec.open_world,
-    }
+    return TOOL_CONTRACT_RUNTIME.annotations(name, fake_readonly=fake_readonly)
 
 
 @functools.cache

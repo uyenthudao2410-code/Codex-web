@@ -141,6 +141,17 @@ def recommend_shadow_route(value: Any) -> dict[str, Any]:
         "feature_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
         "automatic_dispatch": False,
         "mutation_allowed": False,
+        "fallback_policy": {
+            "max_fallbacks": 1,
+            "automatic": False,
+            "requires_new_evidence": True,
+            "evidence_triggers": [
+                "proof_failure",
+                "provider_capacity",
+                "provider_timeout",
+                "controller_replan",
+            ],
+        },
     }
 
 

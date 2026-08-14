@@ -3,7 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.server import Runtime
@@ -67,6 +67,44 @@ class AgentWorkflowIdempotencyTests(unittest.TestCase):
             self.assertEqual(unknown.exception.code, "IDEMPOTENCY_OUTCOME_UNKNOWN")
             restored._agent_workflow_impl.assert_not_called()
             restored.close()
+
+    def test_auto_key_initial_execute_uses_task_epoch_and_new_task_allows_same_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+        ):
+            root = Path(temp)
+            args = {"workflow": "feature", "phase": "execute", "objective": "same semantic payload"}
+
+            first = Runtime(root)
+            first._agent_workflow_impl = MagicMock(return_value=self._result())
+            first_result = first.call_tool("agent_workflow", dict(args))["structuredContent"]
+            first_key = str((first_result.get("idempotency") or {}).get("idempotency_key") or "")
+            first_task_id = str(first.task_state.get().get("task_id") or "")
+            self.assertTrue(first_key.startswith("auto-v1:"))
+            self.assertTrue(first_task_id)
+            first._agent_workflow_impl.assert_called_once()
+            first.close()
+
+            restored = Runtime(root)
+            restored._agent_workflow_impl = MagicMock(side_effect=AssertionError("same task retry must replay"))
+            replay = restored.call_tool("agent_workflow", dict(args))["structuredContent"]
+            self.assertTrue(replay.get("deduplicated"))
+            self.assertEqual((replay.get("idempotency") or {}).get("idempotency_key"), first_key)
+            self.assertEqual(restored.task_state.get().get("task_id"), first_task_id)
+            restored._agent_workflow_impl.assert_not_called()
+            restored.task_state.update({"status": "completed"})
+            restored.close()
+
+            new_task = Runtime(root)
+            new_task._agent_workflow_impl = MagicMock(return_value=self._result())
+            second_result = new_task.call_tool("agent_workflow", dict(args))["structuredContent"]
+            second_key = str((second_result.get("idempotency") or {}).get("idempotency_key") or "")
+            second_task_id = str(new_task.task_state.get().get("task_id") or "")
+            self.assertTrue(second_key.startswith("auto-v1:"))
+            self.assertNotEqual(second_key, first_key)
+            self.assertNotEqual(second_task_id, first_task_id)
+            new_task._agent_workflow_impl.assert_called_once()
+            new_task.close()
 
     def test_admission_budget_rejects_oversized_plan_before_execution(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

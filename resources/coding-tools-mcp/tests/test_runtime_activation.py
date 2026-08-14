@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import time
 import unittest
@@ -34,6 +35,13 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
                 proof_cache_misses=1,
                 proof_cache_miss_reasons={"cold": 1},
                 proof_cache_saved_ms=900,
+                localization={
+                    "semantic_available": True,
+                    "query_count": 4,
+                    "semantic_attempted": 4,
+                    "semantic_handled": 3,
+                    "text_fallback_queries": 1,
+                },
                 orchestration={"run_id": "run-measured", "route_resolved": "deterministic", "execution_mode": "mcp_only"},
             )
             trace.record(
@@ -45,6 +53,7 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
                 idempotency_key_present=True,
                 idempotency_policy="required",
                 idempotency_key_source="derived",
+                idempotency_operation="agent_workflow:execute",
                 error_class="deadline",
                 phase_timing={"source": "monotonic_local", "queue_ms": 5, "model_wall_ms": 25, "total_ms": 40},
                 orchestration={"run_id": "run-measured", "route_resolved": "mini", "execution_mode": "bounded_candidate"},
@@ -74,11 +83,21 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
             self.assertEqual(performance["idempotency_required_calls"], 1)
             self.assertEqual(performance["idempotency_required_key_calls"], 1)
             self.assertEqual(performance["idempotency_required_coverage"], 1.0)
+            self.assertEqual(performance["idempotency_policy_epoch"], "task_epoch_v1")
+            self.assertEqual(performance["idempotency_current_policy_required_calls"], 1)
+            self.assertEqual(performance["idempotency_current_policy_required_key_calls"], 1)
+            self.assertEqual(performance["idempotency_current_policy_required_coverage"], 1.0)
+            self.assertEqual(
+                performance["idempotency_current_policy_by_operation"]["agent_workflow:execute"]["keyed"],
+                1,
+            )
             self.assertEqual(performance["idempotency_optional_calls"], 1)
             self.assertEqual(performance["idempotency_optional_key_calls"], 1)
             self.assertEqual(performance["idempotency_auto_key_calls"], 1)
             self.assertEqual(performance["idempotency_coverage"], 1.0)
-            self.assertEqual(performance["idempotency_coverage_source"], "required_v5")
+            self.assertEqual(performance["idempotency_coverage_source"], "required_current_policy")
+            self.assertEqual(performance["idempotency_coverage_target"], 0.95)
+            self.assertTrue(performance["idempotency_coverage_gate_passed"])
             self.assertEqual(performance["idempotency_v5_epoch"], "post_activation_only")
             self.assertEqual(performance["error_class_counts"], {"DEADLINE": 1})
             self.assertEqual(performance["error_classified_samples"], 1)
@@ -92,6 +111,11 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
             self.assertEqual(performance["proof_cache_misses"], 1)
             self.assertEqual(performance["proof_cache_miss_reasons"], {"cold": 1})
             self.assertEqual(performance["proof_cache_saved_ms"], 900)
+            self.assertEqual(performance["localization_samples"], 1)
+            self.assertEqual(performance["localization_queries"], 4)
+            self.assertEqual(performance["lsp_available_rate"], 1.0)
+            self.assertEqual(performance["lsp_hit_rate"], 0.75)
+            self.assertEqual(performance["fallback_search_rate"], 0.25)
             self.assertEqual(snapshot["ledger"]["accepted_run_tta"]["n"], 1)
             self.assertEqual(
                 snapshot["ledger"]["accepted_run_cohort_coverage"],
@@ -124,6 +148,48 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
             self.assertEqual(performance["idempotency_v5_epoch"], "not_active")
             self.assertIsNone(performance["error_unknown_share"])
             self.assertFalse(performance["phase_timing_available"])
+
+    def test_current_policy_epoch_preserves_cumulative_required_history_without_backfill(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state_dir = root / ".coding-tools"
+            state_dir.mkdir(parents=True)
+            (state_dir / "performance.json").write_text(
+                json.dumps({
+                    "version": 5,
+                    "tool_calls": 30,
+                    "idempotency_required_calls": 30,
+                    "idempotency_required_key_calls": 22,
+                }),
+                encoding="utf-8",
+            )
+
+            trace = PerformanceTraceStore(root)
+            migrated = trace.record(
+                tool="agent_workflow",
+                started_monotonic=1.0,
+                finished_monotonic=1.1,
+                idempotency_eligible=True,
+                idempotency_key_present=True,
+                idempotency_policy="required",
+                idempotency_key_source="derived",
+                idempotency_operation="agent_workflow:execute",
+            )
+            self.assertEqual(migrated["idempotency_required_calls"], 31)
+            self.assertEqual(migrated["idempotency_required_key_calls"], 23)
+            self.assertEqual(migrated["idempotency_current_policy_required_calls"], 1)
+            self.assertEqual(migrated["idempotency_current_policy_required_key_calls"], 1)
+            self.assertEqual(
+                migrated["idempotency_current_policy_by_operation"],
+                {"agent_workflow:execute": {"calls": 1, "keyed": 1, "missing": 0, "missing_reasons": {}}},
+            )
+
+            performance = build_snapshot(root)["performance"]
+            self.assertEqual(performance["idempotency_required_coverage"], round(23 / 31, 6))
+            self.assertEqual(performance["idempotency_current_policy_required_coverage"], 1.0)
+            self.assertEqual(performance["idempotency_coverage"], 1.0)
+            self.assertEqual(performance["idempotency_coverage_source"], "required_current_policy")
+            self.assertTrue(performance["idempotency_coverage_gate_passed"])
 
     def test_snapshot_marks_replanned_run_as_repaired_and_uses_latest_route(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

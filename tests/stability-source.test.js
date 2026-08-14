@@ -8,14 +8,16 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 test('smart mode keeps a fixed compact tool surface with hidden compatibility', () => {
   const server = read('resources/coding-tools-mcp/coding_tools_mcp/server.py');
-  const block = server.match(/"smart": frozenset\(\{([\s\S]*?)\}\),/)?.[1] || '';
+  const contract = read('resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py');
+  const block = contract.match(/"smart": frozenset\(\{([\s\S]*?)\}\),/)?.[1] || '';
   const tools = [...block.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(tools.sort(), [
     'agent_workflow', 'command_control', 'document_workflow', 'exec_command',
     'request_permissions', 'task_control', 'view_image', 'workspace_context'
   ].sort());
-  assert.match(server, /SMART_COMPAT_TOOL_NAMES/);
-  assert.match(server, /SMART_COMPAT_TOOL_NAMES[\s\S]*?"codex_bridge"/);
+  assert.match(server, /from \.tool_contract import/);
+  assert.match(contract, /SMART_COMPAT_TOOL_NAMES/);
+  assert.match(contract, /SMART_COMPAT_TOOL_NAMES[\s\S]*?"codex_bridge"/);
   assert.match(server, /compatibility_call/);
   assert.match(server, /_tools_list_payload/);
   const workflowSchema = server.match(/"agent_workflow": object_schema\(\{([\s\S]*?)\n\s*\}\),\n\s*"workspace_context"/)?.[1] || '';

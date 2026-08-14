@@ -64,6 +64,13 @@ test('control panel renders task plus multi-client authority and continuity cont
   for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'chatwebClientStatus', 'desktopClientStatus', 'opencodeClientStatus', 'opencodeCursor', 'controllerLine', 'writeAuthorityLine', 'continuityStatus', 'rotationLine', 'continuityReasons', 'contextPressureLine', 'resumeLine', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton', 'routerFabric', 'routerSummary', 'routerChatWeb', 'routerDesktop', 'routerOpenCode', 'routerHub', 'routerWriter', 'routerFast', 'routerTerra', 'routerSol', 'routerDeepSeek']) {
     assert.match(html, new RegExp(`id="${id}"`), `panel.html thiếu id ${id}`);
   }
+  assert.match(html, /Operator Control Panel/);
+  assert.match(html, /Executive Summary/);
+  assert.match(html, /Alerts &amp; Decisions/);
+  assert.match(html, /Capacity &amp; Authority/);
+  assert.match(html, /Quick Controls/);
+  assert.match(html, /Provider quota \/ billing:[\s\S]*UNKNOWN/);
+  assert.match(html, /id="advancedOperations"/);
   const js = read('renderer/panel.js');
   assert.match(js, /refreshOrchestration/);
   assert.match(js, /setInterval\(refreshOrchestration, 2000\)/);
@@ -80,6 +87,8 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(js, /transferController\('codex-desktop'\)/);
   assert.doesNotMatch(js, /transferController\('opencode'\)/);
   assert.match(js, /copyCodexConfig/);
+  assert.match(js, /document\.hidden/);
+  assert.match(js, /visibilitychange/);
   const preload = read('electron/panelPreload.js');
   assert.match(preload, /exposeInMainWorld\('panelAssistant'/);
   for (const method of ['orchestration', 'health', 'pauseTask', 'resumeTask', 'stopTask', 'handoff', 'transferController', 'copyCodexConfig', 'close']) {
@@ -93,6 +102,11 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(css, /\.continuity-callout\.safe/);
   assert.match(css, /\.continuity-callout\.unsafe/);
   assert.match(css, /\.router-fabric/);
+  assert.match(css, /\.operator-dashboard/);
+  assert.match(css, /\.executive-grid/);
+  assert.match(css, /\.quick-control-grid/);
+  assert.match(css, /\.advanced-ops/);
+  assert.match(css, /body\.is-hidden \.router-edge\.active/);
   assert.match(css, /@keyframes routerFlow/);
   assert.match(css, /prefers-reduced-motion: reduce/);
 });
