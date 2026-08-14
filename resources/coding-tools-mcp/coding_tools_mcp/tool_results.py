@@ -43,6 +43,14 @@ def render_tool_text(tool_name: str, payload: dict[str, Any], *, is_error: bool)
     return f"{tool_name}: {status or 'completed'}."
 
 
+def model_visible_text_bytes(tool_name: str, payload: dict[str, Any], *, is_error: bool) -> int:
+    """Return the exact UTF-8 bytes of bounded model-facing MCP text."""
+    text = render_tool_text(tool_name, payload, is_error=is_error)
+    if not text:
+        return 0
+    return len(_bounded_model_text(text, tool_name).encode("utf-8"))
+
+
 def _render_error(payload: dict[str, Any]) -> str:
     raw_error = payload.get("error")
     error: dict[str, Any] = raw_error if isinstance(raw_error, dict) else {}

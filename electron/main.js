@@ -528,7 +528,7 @@ function registerIpc() {
     return result.canceled ? '' : result.filePaths[0];
   }));
   secureHandle('settings:save', (_event, patch) => invokeSafely(async () => {
-    const allowed = ['permissionMode', 'toolMode', 'mcpPort', 'healthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted'];
+    const allowed = ['permissionMode', 'toolMode', 'mcpPort', 'healthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
     const clean = Object.fromEntries(Object.entries(patch || {}).filter(([key]) => allowed.includes(key)));
     const saved = settings.save(clean);
     if (Object.hasOwn(clean, 'startWithWindows')) {

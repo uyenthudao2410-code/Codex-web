@@ -33,13 +33,95 @@ class OrchestrationLedgerTests(unittest.TestCase):
                 run_id,
                 wave_id=wave_id,
                 event_type="model_dispatch_started",
-                payload={"prompt": "super secret prompt", "api_token": "secret-token", "model": "gpt-test"},
+                payload={
+                    "prompt": "super secret prompt",
+                    "api_token": "secret-token",
+                    "model": "gpt-test",
+                    "economics": {
+                        "input_tokens": 1200,
+                        "cached_input_tokens": 900,
+                        "output_tokens": 80,
+                        "reasoning_output_tokens": 12,
+                        "cached_tokens": 900,
+                        "token": "must-stay-secret",
+                        "input_tokens_string": "not-a-counter",
+                    },
+                },
             )
             payload = ledger.list_events(run_id)[0]["payload"]
             self.assertEqual(payload["api_token"], "[REDACTED]")
             self.assertTrue(payload["prompt"]["redacted"])
             self.assertEqual(payload["model"], "gpt-test")
             self.assertEqual(len(payload["prompt"]["sha256"]), 64)
+            economics = payload["economics"]
+            self.assertEqual(economics["input_tokens"], 1200)
+            self.assertEqual(economics["cached_input_tokens"], 900)
+            self.assertEqual(economics["output_tokens"], 80)
+            self.assertEqual(economics["reasoning_output_tokens"], 12)
+            self.assertEqual(economics["cached_tokens"], 900)
+            self.assertEqual(economics["token"], "[REDACTED]")
+            self.assertEqual(economics["input_tokens_string"], "[REDACTED]")
+
+    def test_external_delegation_upsert_is_idempotent_monotonic_and_terminal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="external telemetry")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            common = dict(
+                delegation_id="opencode-delegation",
+                wave_id=wave_id,
+                authority_owner="opencode",
+                route_requested="opencode",
+                route_resolved="opencode-go/deepseek-v4-flash",
+                model="opencode-go/deepseek-v4-flash",
+            )
+            first = ledger.upsert_external_delegation(**common, status="active", metadata={"economics": {"input_tokens": 10, "output_tokens": 2, "cache_read_tokens": 4}})
+            nested = ledger.upsert_external_delegation(**common, status="active", metadata={"timing": {"queue_ms": 2, "provider_ms": None, "total_ms": None}})
+            self.assertTrue(nested["changed"])
+            self.assertEqual(nested["delegation"]["metadata"]["timing"]["queue_ms"], 2)
+            self.assertTrue(first["created"])
+            duplicate = ledger.upsert_external_delegation(**common, status="active", metadata={"economics": {"input_tokens": 10, "output_tokens": 2, "cache_read_tokens": 4}})
+            self.assertFalse(duplicate["changed"])
+            completed = ledger.upsert_external_delegation(**common, status="completed", metadata={"economics": {"input_tokens": 100, "output_tokens": 20, "cache_read_tokens": 40}})
+            self.assertTrue(completed["terminal_transition"])
+            stale = ledger.upsert_external_delegation(**common, status="active", metadata={"economics": {"input_tokens": 1, "output_tokens": 1, "cache_read_tokens": 1}})
+            self.assertFalse(stale["changed"])
+            self.assertEqual(stale["delegation"]["status"], "completed")
+            self.assertEqual(stale["delegation"]["metadata"]["economics"]["input_tokens"], 100)
+            self.assertEqual(stale["delegation"]["metadata"]["economics"]["cache_read_tokens"], 40)
+
+    def test_shadow_route_record_is_idempotent_and_projects_actual_run_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="shadow routing")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            recommendation = {
+                "recommendation_id": "shadow-route-1",
+                "mode": "shadow_only",
+                "features": {"side_effect_class": "read_only", "scope": "broad"},
+                "recommendation": {"route": "opencode_read_only_flash", "model": "opencode-go/deepseek-v4-flash"},
+                "automatic_dispatch": False,
+                "mutation_allowed": False,
+            }
+            first = ledger.record_shadow_route(run_id=run_id, wave_id=wave_id, recommendation=recommendation)
+            duplicate = ledger.record_shadow_route(run_id=run_id, wave_id=wave_id, recommendation=recommendation)
+            self.assertTrue(first["recorded"])
+            self.assertFalse(duplicate["recorded"])
+            ledger.upsert_external_delegation(
+                delegation_id="actual-1",
+                wave_id=wave_id,
+                authority_owner="opencode",
+                route_requested="opencode_read_only",
+                route_resolved="opencode-go/deepseek-v4-flash",
+                model="opencode-go/deepseek-v4-flash",
+                status="completed",
+                metadata={"side_effect_class": "read_only"},
+            )
+            projected = ledger.routing_evidence(run_id)
+            self.assertEqual(len(projected["shadow_recommendations"]), 1)
+            self.assertEqual(projected["shadow_recommendations"][0]["recommendation_id"], "shadow-route-1")
+            self.assertEqual(len(projected["actual_delegations"]), 1)
+            self.assertEqual(projected["actual_delegations"][0]["delegation_id"], "actual-1")
 
     def test_export_summary_includes_checkpoint_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

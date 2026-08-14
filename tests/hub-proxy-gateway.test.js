@@ -122,6 +122,49 @@ test('gateway keeps real MCP bearer in Electron and tags Desktop requests', asyn
   assert.equal(observed[4].headers['x-coding-tools-client-id'], 'codex-desktop');
   assert.equal(observed[4].headers['x-coding-tools-client-type'], 'codex_desktop');
 
+  const telemetryPayload = {
+    schema_version: 1,
+    event_type: 'message.updated',
+    session_id: 'ses_test',
+    message_id: 'msg_test',
+    provider_dispatch_id: 'dispatch_test',
+    provider_delegation_id: 'delegation_test',
+    provider_id: 'opencode-go',
+    model_id: 'deepseek-v4-flash',
+    status: 'completed',
+    started_at_ms: 1000,
+    completed_at_ms: 1600,
+    duration_ms: 600,
+    finish: 'stop',
+    provider_cost: 0.004,
+    input_tokens: 100,
+    output_tokens: 20,
+    reasoning_output_tokens: 4,
+    cache_read_tokens: 40,
+    cache_write_tokens: 2
+  };
+  const telemetry = await post(descriptor.port, descriptor.token, telemetryPayload, {
+    'X-Coding-Tools-Proxy-Client-Id': 'opencode',
+    'X-Coding-Tools-Proxy-Client-Type': 'opencode'
+  }, '/__hub_proxy/telemetry');
+  assert.equal(telemetry.status, 200);
+  assert.equal(observed.length, 6);
+  assert.equal(observed[5].path, '/__control/hub');
+  assert.equal(observed[5].headers.authorization, `Bearer ${actualBearer}`);
+  const forwardedTelemetry = JSON.parse(observed[5].body);
+  assert.equal(forwardedTelemetry.action, 'provider_telemetry');
+  assert.equal(forwardedTelemetry.client_id, 'opencode');
+  assert.deepEqual(forwardedTelemetry.telemetry, telemetryPayload);
+  const desktopTelemetry = await post(descriptor.port, descriptor.token, telemetryPayload, {}, '/__hub_proxy/telemetry');
+  assert.equal(desktopTelemetry.status, 403);
+  assert.equal(observed.length, 6);
+  const contentLeak = await post(descriptor.port, descriptor.token, { ...telemetryPayload, prompt: 'must not pass' }, {
+    'X-Coding-Tools-Proxy-Client-Id': 'opencode',
+    'X-Coding-Tools-Proxy-Client-Type': 'opencode'
+  }, '/__hub_proxy/telemetry');
+  assert.equal(contentLeak.status, 400);
+  assert.equal(observed.length, 6);
+
   const denied = await post(descriptor.port, 'wrong-token', payload);
   assert.equal(denied.status, 401);
   await gateway.stop();

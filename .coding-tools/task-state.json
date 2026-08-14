@@ -1,55 +1,482 @@
 {
   "version": 2,
-  "task_id": "6c3b0b4e3b8e4f08867b199b77682da7",
-  "orchestration": {},
-  "objective": "Run a workspace command",
-  "status": "completed",
-  "steps": [],
-  "current_step": "Controller lease semantics inspected",
-  "current_command": null,
+  "task_id": "9367f38e81c1445880bcbe30fce2d268",
+  "orchestration": {
+    "run_id": "dba11cf58e14482bb22b52ae453840fc",
+    "wave_id": "e65b2e07912548358195734b429c7408",
+    "orchestration_state": "PROVING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "bc820986e383391e36d243e0252e23b0aef8d5b8",
+    "worktree_fp": "66280d2a361eaaef5f67689f126afaf2eae2f7314475442c0ee389ab8c2ef1fe",
+    "contract_fp": ""
+  },
+  "objective": "P-MP3 final proof replan: fix routing_evidence actual delegation collection to iterate the run's waves because list_delegations is wave-scoped; add focused Execution Hub and ledger tests proving shadow-route idempotency, snapshot evidence, supervisor-only access, and no changes to actual orchestration state/route, controller lease, write fence, task projection, or provider dispatch. Preserve all current shadow-route source behavior otherwise. Run affected routing/Hub/ledger/efficiency tests and diff check. No provider inference, UI, restart, settings, commit, push, release, or deploy.",
+  "status": "active",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-14T10:00:30.875Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "in_progress",
+      "updated_at": "2026-08-14T10:00:30.875Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-14T10:00:30.875Z"
+    }
+  ],
+  "current_step": "Running requested checks",
+  "current_command": {
+    "command": "cd resources/coding-tools-mcp && python -m unittest discover -s tests -p \"test_execution_hub.py\"",
+    "kind": "command",
+    "session_id": "rGH4mEEcdn-KkbsrOMvFEtL1",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-14T10:00:33.438Z"
+  },
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "UI implementation is proven; final EOCL accept remains blocked until a supported client-facing controller transfer/renewal targets the historical run.",
-  "created_at": "2026-08-14T07:44:32.865Z",
-  "updated_at": "2026-08-14T07:44:43.169Z",
+  "next_step": "Run all requested checks and summarize the result.",
+  "created_at": "2026-08-14T09:57:09.995Z",
+  "updated_at": "2026-08-14T10:00:33.438Z",
   "events": [
     {
-      "time": "2026-08-14T07:44:32.865Z",
+      "time": "2026-08-14T09:57:09.995Z",
       "event": "task_auto_started",
       "details": {
-        "objective": "Run a workspace command"
+        "objective": "Implement P-MP3 shadow provider routing as recommendation/evidence only, with no automatic dispatch, orchestration route transition, controller transfer, write-lease mutation, or public MCP tool change. Add a small pure provider_routing module with strict bounded task features and deterministic recommendations aligned to current policy: deterministic mutation -> MCP deterministic; broad read-only -> OpenCode Flash; broad read-only + hard reasoning -> OpenCode Pro; localized + strong oracle -> Codex Mini; localized/bounded harder leaf -> Codex Luna; bounded/cross-file with localized evidence and normal/low latency -> Terra; high/critical risk or consequential mutation -> manual controller/deep review gate rather than OpenCode auto execution. Add idempotent shadow_route_recommended audit events keyed by canonical feature hash, recent shadow-route projection, and an internal routing_evidence projection that pairs recommendations with actual delegations and canonical UsageEvents for later cohort calibration. Expose internal /__control/hub action=shadow_route restricted to electron-panel/electron and bound to the current active task-projected nonterminal run/wave, including PREFLIGHT/READY before actual route selection. Tests must prove recommendations, idempotency, and that shadow_route leaves actual orchestration route/state/controller/write fence/provider adapter untouched. Preserve Smart-v3 8 tools, current production routing thresholds, OpenCode worker-only role, UI, settings, and service state. No provider inference, restart, commit, push, release, or deploy."
       }
     },
     {
-      "time": "2026-08-14T07:44:32.914Z",
-      "event": "command_started",
+      "time": "2026-08-14T09:57:11.599Z",
+      "event": "orchestration_context_ready",
       "details": {
-        "command": "rg -n -C 4 \"data-nav\" renderer/app.js",
-        "session_id": "RN9QzDNdjZg1UU289a3N53-s"
+        "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-08-14T07:44:33.234Z",
-      "event": "command_finished",
+      "time": "2026-08-14T09:57:13.649Z",
+      "event": "orchestration_routed",
       "details": {
-        "command": "rg -n -C 4 \"data-nav\" renderer/app.js",
-        "status": "passed"
+        "state": "ROUTED"
       }
     },
     {
-      "time": "2026-08-14T07:44:43.153Z",
+      "time": "2026-08-14T09:57:14.985Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:14.996Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:16.410Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:16.421Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:16.585Z",
       "event": "task_updated",
       "details": {
         "fields": [
-          "complete_step_ids",
           "current_step",
           "failure",
           "next_step",
           "status"
         ]
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:16.815Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:35.158Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Write-Output '--- provider_routing ---'; if(Test-Path resources/coding-tools-mcp/coding_tools_mcp/provider_routing.py){Get-Content resources/coding-tools-mcp/coding_tools_mcp/provider_routing.py}else{Write-Output MISSING}; Write-Output '--- shadow symbols ---'; rg -n -C 2 -e 'record_shadow_route|list_shadow_routes|routing_evidence|shadow_route\\(' resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | Select-Object -First 160; Write-Output '",
+        "session_id": "nWm-kzSE81Gdm5vOYzoNwybT"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:36.808Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Write-Output '--- provider_routing ---'; if(Test-Path resources/coding-tools-mcp/coding_tools_mcp/provider_routing.py){Get-Content resources/coding-tools-mcp/coding_tools_mcp/provider_routing.py}else{Write-Output MISSING}; Write-Output '--- shadow symbols ---'; rg -n -C 2 -e 'record_shadow_route|list_shadow_routes|routing_evidence|shadow_route\\(' resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | Select-Object -First 160; Write-Output '",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:46.803Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $l=Get-Content $p; for($i=718;$i -le 755;$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}; Write-Output '--- server anchors ---'; $p='resources/coding-tools-mcp/coding_tools_mcp/server.py'; Select-String -Path $p -Pattern 'from \\.opencode_provider','def _provider_context','\"usage_events\": ledger.list_usage_events','if action in \\{\"provider_dispatch\"' | ForEach-Object {Write-Output ($_.LineNu",
+        "session_id": "ZUBzltbfFPCt80Vw980vmveZ"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:47.342Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $l=Get-Content $p; for($i=718;$i -le 755;$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}; Write-Output '--- server anchors ---'; $p='resources/coding-tools-mcp/coding_tools_mcp/server.py'; Select-String -Path $p -Pattern 'from \\.opencode_provider','def _provider_context','\"usage_events\": ledger.list_usage_events','if action in \\{\"provider_dispatch\"' | ForEach-Object {Write-Output ($_.LineNu",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:55.466Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/server.py'; $l=Get-Content $p; foreach($r in @(@(2250,2305),@(10420,10555))){Write-Output ('--- '+$r[0]+'-'+$r[1]+' ---'); for($i=$r[0];$i -le $r[1];$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}}\"",
+        "session_id": "OOYhCOn4aY8YwW9YGhXpY8BY"
+      }
+    },
+    {
+      "time": "2026-08-14T09:57:56.270Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/server.py'; $l=Get-Content $p; foreach($r in @(@(2250,2305),@(10420,10555))){Write-Output ('--- '+$r[0]+'-'+$r[1]+' ---'); for($i=$r[0];$i -le $r[1];$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T09:58:07.933Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Write-Output '--- routing test exists ---'; if(Test-Path resources/coding-tools-mcp/tests/test_provider_routing.py){Get-Content resources/coding-tools-mcp/tests/test_provider_routing.py}else{Write-Output MISSING}; Write-Output '--- execution hub test tail methods ---'; Select-String -Path resources/coding-tools-mcp/tests/test_execution_hub.py -Pattern '^    def test_' | Select-Object -Last 8 | ForEach-Object {Write-Output ($_.LineNumber.ToString()+':'+$_.Line)}; W",
+        "session_id": "V1iMXMwQtOxBMhhdcx6UILpQ"
+      }
+    },
+    {
+      "time": "2026-08-14T09:58:08.367Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Write-Output '--- routing test exists ---'; if(Test-Path resources/coding-tools-mcp/tests/test_provider_routing.py){Get-Content resources/coding-tools-mcp/tests/test_provider_routing.py}else{Write-Output MISSING}; Write-Output '--- execution hub test tail methods ---'; Select-String -Path resources/coding-tools-mcp/tests/test_execution_hub.py -Pattern '^    def test_' | Select-Object -Last 8 | ForEach-Object {Write-Output ($_.LineNumber.ToString()+':'+$_.Line)}; W",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T09:58:16.050Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_execution_hub.py'; $l=Get-Content $p; for($i=35;$i -le 108;$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}\"",
+        "session_id": "lMuD275WQ7TLd8e-6kjZWihb"
+      }
+    },
+    {
+      "time": "2026-08-14T09:58:16.582Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_execution_hub.py'; $l=Get-Content $p; for($i=35;$i -le 108;$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T09:58:57.248Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-14T09:58:58.785Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:00.364Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:00.441Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:02.236Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:02.528Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:02.598Z",
+      "event": "command_started",
+      "details": {
+        "command": "cd resources/coding-tools-mcp && python -m py_compile coding_tools_mcp/provider_routing.py coding_tools_mcp/orchestration_ledger.py coding_tools_mcp/server.py",
+        "session_id": "j35Mg3iP0il_bzoWXwoZ7ObN"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:03.621Z",
+      "event": "command_started",
+      "details": {
+        "command": "cd resources/coding-tools-mcp && python -m unittest discover -s tests -p \"test_provider_routing.py\"",
+        "session_id": "LbdOz9nK0Tn6Um7U6fEiay5-"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:04.871Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:04.934Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:05.399Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:05.466Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:22.343Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:22.415Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:32.126Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"rg -n -C 2 -e '^    def get_write_fence|^    def get_controller_lease' resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py\"",
+        "session_id": "3tEgLEpYsWWMTL2jTzZLFbA_"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:33.343Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"rg -n -C 2 -e '^    def get_write_fence|^    def get_controller_lease' resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:40.158Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_execution_hub.py'; $l=Get-Content $p; for($i=250;$i -le 305;$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}; Write-Output '--- ledger test 60-105 ---'; $p='resources/coding-tools-mcp/tests/test_orchestration_ledger.py'; $l=Get-Content $p; for($i=60;$i -le 108;$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}\"",
+        "session_id": "oD6r7mBXkXgOuuJNlCh6ageI"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:40.616Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_execution_hub.py'; $l=Get-Content $p; for($i=250;$i -le 305;$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}; Write-Output '--- ledger test 60-105 ---'; $p='resources/coding-tools-mcp/tests/test_orchestration_ledger.py'; $l=Get-Content $p; for($i=60;$i -le 108;$i++){Write-Output ($i.ToString()+':'+$l[$i-1])}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:49.305Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"rg -n '^    def list_delegations' resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py\"",
+        "session_id": "K3xhh0v6arRZNhyQsWqCwrJc"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:49.627Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"rg -n '^    def list_delegations' resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:57.382Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"rg -n '^    def list_waves|^    def get_waves|^    def list_delegations' resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py\"",
+        "session_id": "nj8LtNom_TZX-YfcOsZaw8Sd"
+      }
+    },
+    {
+      "time": "2026-08-14T09:59:57.718Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"rg -n '^    def list_waves|^    def get_waves|^    def list_delegations' resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:24.378Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:25.706Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:26.885Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:26.967Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:30.636Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:30.875Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:30.952Z",
+      "event": "command_started",
+      "details": {
+        "command": "cd resources/coding-tools-mcp && python -m py_compile coding_tools_mcp/provider_routing.py coding_tools_mcp/orchestration_ledger.py coding_tools_mcp/server.py",
+        "session_id": "He8n8XxcDF9FawDwNtiAhfdn"
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:32.198Z",
+      "event": "command_started",
+      "details": {
+        "command": "cd resources/coding-tools-mcp && python -m unittest discover -s tests -p \"test_provider_routing.py\"",
+        "session_id": "380UxOyOkpNo4nMthvl8GQEa"
+      }
+    },
+    {
+      "time": "2026-08-14T10:00:33.438Z",
+      "event": "command_started",
+      "details": {
+        "command": "cd resources/coding-tools-mcp && python -m unittest discover -s tests -p \"test_execution_hub.py\"",
+        "session_id": "rGH4mEEcdn-KkbsrOMvFEtL1"
       }
     }
   ]

@@ -11,6 +11,7 @@ import fnmatch
 import functools
 import http.server
 import json
+import math
 import mimetypes
 import os
 import posixpath
@@ -83,6 +84,8 @@ from .project_context import ProjectContext, load_project_context
 from .build_verify import verify_build as run_build_verification
 from .codex_bridge import CodexAppServerBridge, CodexBridgeError
 from .document_tools import create_docx, create_text_document, convert_document, extract_document
+from .opencode_provider import ALLOWED_OPENCODE_MODELS, OpenCodeProviderAdapter, OpenCodeProviderError
+from .provider_routing import recommendation_id, recommend_shadow_route
 from .task_state import TaskStateStore
 from .performance_trace import PerformanceTraceStore
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class
@@ -91,7 +94,8 @@ from .orchestration_report import OrchestrationReport
 from .proof_ledger import ProofLedger
 from .telemetry import SessionTelemetry
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head
-from .tool_results import make_tool_result
+from .tool_results import make_tool_result, model_visible_text_bytes
+from .usage_events import usage_event_from_provider_telemetry
 from .transport_http import HTTPSessionManager
 from .transport_stdio import serve_stdio
 
@@ -104,6 +108,8 @@ SMART_TOOL_PROFILE = "smart-v3"
 HUB_CLIENT_ONLINE_SECONDS = 45.0
 HUB_CONTROLLER_LEASE_SECONDS = 60.0
 HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+HUB_PROVIDER_TELEMETRY_STATES = frozenset({"ROUTED", "EXECUTING", "PROVING", "ACCEPTING"})
+HUB_PROVIDER_TELEMETRY_STATUSES = frozenset({"active", "completed", "failed"})
 SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
 SUPERVISOR_RESTART_RESPONSE_GRACE_MS = 2_000
 TOOL_MODE_ALLOWLISTS = {
@@ -647,6 +653,71 @@ def _safe_external_host(host: str) -> str:
     if not parsed.hostname or parsed.username is not None or parsed.password is not None:
         return ""
     return host
+
+
+def normalize_provider_telemetry(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("telemetry must be an object")
+    allowed = {
+        "schema_version", "event_type", "session_id", "message_id", "provider_id", "model_id",
+        "status", "started_at_ms", "completed_at_ms", "duration_ms", "finish", "error_name",
+        "provider_cost", "input_tokens", "output_tokens", "reasoning_output_tokens",
+        "cache_read_tokens", "cache_write_tokens", "provider_dispatch_id", "provider_delegation_id",
+    }
+    unexpected = sorted(set(value) - allowed)
+    if unexpected:
+        raise ValueError("unsupported provider telemetry fields: " + ", ".join(unexpected[:5]))
+    if value.get("schema_version") != 1 or value.get("event_type") != "message.updated":
+        raise ValueError("unsupported provider telemetry schema")
+
+    def text(name: str, limit: int, *, required: bool = False) -> str:
+        result = str(value.get(name) or "").strip()
+        if required and not result:
+            raise ValueError(f"{name} is required")
+        if len(result) > limit or any(ord(ch) < 32 for ch in result):
+            raise ValueError(f"invalid {name}")
+        return result
+
+    def number(name: str, *, integer: bool = False, required: bool = False) -> int | float | None:
+        raw = value.get(name)
+        if raw is None:
+            if required:
+                raise ValueError(f"{name} is required")
+            return None
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)) or not math.isfinite(float(raw)) or raw < 0:
+            raise ValueError(f"invalid {name}")
+        if integer and int(raw) != raw:
+            raise ValueError(f"invalid {name}")
+        return int(raw) if integer else raw
+
+    status = text("status", 32, required=True).lower()
+    if status not in HUB_PROVIDER_TELEMETRY_STATUSES:
+        raise ValueError("invalid provider telemetry status")
+    result: dict[str, Any] = {
+        "schema_version": 1,
+        "event_type": "message.updated",
+        "session_id": text("session_id", 256, required=True),
+        "message_id": text("message_id", 256, required=True),
+        "provider_id": text("provider_id", 160, required=True),
+        "model_id": text("model_id", 200, required=True),
+        "status": status,
+        "started_at_ms": number("started_at_ms", required=True),
+        "provider_cost": number("provider_cost", required=True),
+        "input_tokens": number("input_tokens", integer=True, required=True),
+        "output_tokens": number("output_tokens", integer=True, required=True),
+        "reasoning_output_tokens": number("reasoning_output_tokens", integer=True, required=True),
+        "cache_read_tokens": number("cache_read_tokens", integer=True, required=True),
+        "cache_write_tokens": number("cache_write_tokens", integer=True, required=True),
+    }
+    for name in ("completed_at_ms", "duration_ms"):
+        measured = number(name)
+        if measured is not None:
+            result[name] = measured
+    for name, limit in (("provider_dispatch_id", 256), ("provider_delegation_id", 256), ("finish", 100), ("error_name", 120)):
+        measured = text(name, limit)
+        if measured:
+            result[name] = measured
+    return result
 
 
 def env_pattern_matches(name: str, patterns: tuple[str, ...]) -> bool:
@@ -1794,6 +1865,10 @@ class Runtime:
         self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
         self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
         self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
+        self._opencode_provider = OpenCodeProviderAdapter(
+            lambda: self.workspace.root,
+            on_terminal=self._on_opencode_provider_terminal,
+        )
         self.workspace_switch_lock = threading.RLock()
         self.workspace_generation = 1
         self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
@@ -1806,6 +1881,7 @@ class Runtime:
         self.cache_dir = self.runtime_dir / "cache"
 
     def close(self) -> None:
+        self._opencode_provider.close()
         self._codex_bridge.close()
         with self.sessions_lock:
             if self._closed:
@@ -1875,7 +1951,17 @@ class Runtime:
                     "generation": self.workspace_generation,
                     "changed": False,
                 }
+            provider_dispatches = self._opencode_provider.active_count()
+            if provider_dispatches:
+                raise ToolFailure(
+                    "WORKSPACE_BUSY",
+                    "Cannot switch workspace while an OpenCode provider dispatch is running.",
+                    category="runtime",
+                    retryable=True,
+                    details={"active_provider_dispatches": provider_dispatches},
+                )
             old_runtime_dir = self.runtime_dir
+            self._opencode_provider.close()
             self._codex_bridge.close()
             self._invalidate_fast_cache()
             self._clear_context_bundle_cache()
@@ -1907,6 +1993,10 @@ class Runtime:
             self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
             self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
             self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
+            self._opencode_provider = OpenCodeProviderAdapter(
+                lambda: self.workspace.root,
+                on_terminal=self._on_opencode_provider_terminal,
+            )
             self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
             with self.patch_lock:
                 self.patch_baselines.clear()
@@ -2049,6 +2139,273 @@ class Runtime:
                 controller = claimed if claimed.get("acquired") else self.orchestration_ledger.get_controller_lease(run_id)
         return {"client": client, "controller": controller, "run_id": run_id}
 
+    def ingest_provider_telemetry(self, identity: dict[str, Any], value: Any) -> dict[str, Any]:
+        client_id = str(identity.get("client_id") or "").strip()
+        client_type = str(identity.get("client_type") or "").strip()
+        if (client_id, client_type) != ("opencode", "opencode"):
+            raise ToolFailure("PROVIDER_TELEMETRY_CLIENT_DENIED", "Only the allowlisted OpenCode worker may publish provider telemetry.", category="security", retryable=False)
+        telemetry = normalize_provider_telemetry(value)
+        self._touch_hub_client(identity)
+        state = self.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "").strip()
+        wave_id = str(projection.get("wave_id") or "").strip()
+        ctx = self.orchestration_control.snapshot(run_id) if run_id else None
+        run = self.orchestration_ledger.get_run(run_id) if run_id else None
+        if not ctx or not run or run.get("status") != "active" or not wave_id or ctx.wave_id != wave_id or ctx.state not in HUB_PROVIDER_TELEMETRY_STATES:
+            raise ToolFailure(
+                "PROVIDER_TELEMETRY_CONTEXT_UNAVAILABLE",
+                "Provider telemetry is not bound to a current active task-projected orchestration wave.",
+                category="runtime",
+                retryable=True,
+                details={"run_id": run_id, "wave_id": wave_id, "state": ctx.state if ctx else ""},
+            )
+        provider_id = telemetry["provider_id"]
+        model_id = telemetry["model_id"]
+        model = model_id if "/" in model_id else f"{provider_id}/{model_id}"
+        dispatch: dict[str, Any] | None = None
+        provider_dispatch_id = str(telemetry.get("provider_dispatch_id") or "").strip()
+        provider_delegation_id = str(telemetry.get("provider_delegation_id") or "").strip()
+        if bool(provider_dispatch_id) != bool(provider_delegation_id):
+            raise ToolFailure("PROVIDER_TELEMETRY_CORRELATION_INVALID", "Provider telemetry correlation identifiers must be supplied together.", category="validation", retryable=False)
+        if provider_dispatch_id:
+            try:
+                dispatch = self._opencode_provider.observe(provider_dispatch_id)
+            except OpenCodeProviderError:
+                existing = self.orchestration_ledger.get_delegation(provider_delegation_id)
+                metadata = (existing or {}).get("metadata") or {}
+                if not existing or str(metadata.get("provider_dispatch_id") or "") != provider_dispatch_id:
+                    raise ToolFailure("PROVIDER_TELEMETRY_CORRELATION_UNKNOWN", "Provider telemetry does not map to a known provider dispatch.", category="runtime", retryable=True)
+                dispatch = {
+                    "dispatch_id": provider_dispatch_id,
+                    "delegation_id": provider_delegation_id,
+                    "run_id": run_id,
+                    "wave_id": str(existing.get("wave_id") or ""),
+                    "model": str(existing.get("model") or ""),
+                }
+            if (
+                str(dispatch.get("delegation_id") or "") != provider_delegation_id
+                or str(dispatch.get("run_id") or "") != run_id
+                or str(dispatch.get("wave_id") or "") != wave_id
+                or str(dispatch.get("model") or "") != model
+            ):
+                raise ToolFailure("PROVIDER_TELEMETRY_CORRELATION_MISMATCH", "Provider telemetry correlation does not match the active run, wave, delegation, or model.", category="security", retryable=False)
+        else:
+            dispatch = self._opencode_provider.find_by_session(run_id=run_id, wave_id=wave_id, model=model, session_id=telemetry["session_id"])
+        delegation_id = str((dispatch or {}).get("delegation_id") or "") or "opencode-" + hashlib.sha256(f"{run_id}\0{telemetry['session_id']}\0{telemetry['message_id']}".encode("utf-8")).hexdigest()[:40]
+        economics = {
+            "input_tokens": telemetry["input_tokens"],
+            "cached_input_tokens": telemetry["cache_read_tokens"],
+            "output_tokens": telemetry["output_tokens"],
+            "reasoning_output_tokens": telemetry["reasoning_output_tokens"],
+            "cache_read_tokens": telemetry["cache_read_tokens"],
+            "cache_write_tokens": telemetry["cache_write_tokens"],
+            "provider_cost": telemetry["provider_cost"],
+            "measured": True,
+            "source": "opencode",
+        }
+        metadata: dict[str, Any] = {
+            "source": "opencode:message.updated",
+            "provider_id": provider_id,
+            "model_id": model_id,
+            "session_id": telemetry["session_id"],
+            "message_id": telemetry["message_id"],
+            "provider_started_at_ms": telemetry["started_at_ms"],
+            "provider_cost": telemetry["provider_cost"],
+            "economics": economics,
+        }
+        for key in ("completed_at_ms", "duration_ms", "finish", "error_name"):
+            if key in telemetry:
+                metadata["provider_completed_at_ms" if key == "completed_at_ms" else key] = telemetry[key]
+        if dispatch:
+            metadata["provider_dispatch_id"] = str(dispatch.get("dispatch_id") or "")
+            metadata["side_effect_class"] = "read_only"
+            metadata["read_only_enforced"] = True
+        projected = self.orchestration_ledger.upsert_external_delegation(
+            delegation_id=delegation_id,
+            wave_id=wave_id,
+            authority_owner="opencode",
+            route_requested="opencode",
+            route_resolved=model,
+            model=model,
+            status=telemetry["status"],
+            metadata=metadata,
+        )
+        delegation = projected["delegation"]
+        usage_event = None
+        if projected["changed"]:
+            event_type = "external_delegation_finished" if projected["terminal_transition"] else "external_delegation_started" if projected["created"] else "external_delegation_updated"
+            self.orchestration_ledger.append_event(
+                run_id,
+                wave_id=wave_id,
+                delegation_id=delegation_id,
+                event_type=event_type,
+                state_before=ctx.state,
+                state_after=ctx.state,
+                payload={"source": "opencode:message.updated", "provider_id": provider_id, "model": model, "session_id": telemetry["session_id"], "message_id": telemetry["message_id"], "status": delegation["status"], "economics": economics},
+            )
+        if telemetry["status"] in {"completed", "failed"}:
+            usage_event = usage_event_from_provider_telemetry(
+                run_id=run_id,
+                wave_id=wave_id,
+                delegation_id=delegation_id,
+                telemetry=telemetry,
+            )
+            self.orchestration_ledger.record_usage_event(
+                run_id=run_id,
+                wave_id=wave_id,
+                delegation_id=delegation_id,
+                usage_event=usage_event,
+            )
+        return {"run_id": run_id, "wave_id": wave_id, "delegation_id": delegation_id, "changed": bool(projected["changed"]), "created": bool(projected["created"]), "delegation": delegation, "usage_event": usage_event}
+
+    def _require_provider_supervisor(self, identity: dict[str, Any]) -> None:
+        if (str(identity.get("client_id") or ""), str(identity.get("client_type") or "")) != ("electron-panel", "electron"):
+            raise ToolFailure("PROVIDER_DISPATCH_CLIENT_DENIED", "Provider dispatch lifecycle is restricted to the Electron supervisor.", category="security", retryable=False)
+        self._touch_hub_client(identity)
+
+    def _provider_context(self) -> tuple[str, str, RunContext]:
+        state = self.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "").strip()
+        wave_id = str(projection.get("wave_id") or "").strip()
+        ctx = self.orchestration_control.snapshot(run_id) if run_id else None
+        run = self.orchestration_ledger.get_run(run_id) if run_id else None
+        if not ctx or not run or run.get("status") != "active" or not wave_id or ctx.wave_id != wave_id or ctx.state not in HUB_PROVIDER_TELEMETRY_STATES:
+            raise ToolFailure("PROVIDER_DISPATCH_CONTEXT_UNAVAILABLE", "Provider dispatch requires the current active task-projected orchestration wave.", category="runtime", retryable=True)
+        return run_id, wave_id, ctx
+
+    def _shadow_route_context(self) -> tuple[str, str, RunContext]:
+        state = self.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "").strip()
+        wave_id = str(projection.get("wave_id") or "").strip()
+        ctx = self.orchestration_control.snapshot(run_id) if run_id else None
+        run = self.orchestration_ledger.get_run(run_id) if run_id else None
+        allowed_states = {"PREFLIGHT", "READY", "ROUTED", "EXECUTING", "PROVING", "ACCEPTING"}
+        if not ctx or not run or run.get("status") != "active" or not wave_id or ctx.wave_id != wave_id or ctx.state not in allowed_states:
+            raise ToolFailure("SHADOW_ROUTE_CONTEXT_UNAVAILABLE", "Shadow routing requires the current active task-projected nonterminal orchestration wave.", category="runtime", retryable=True)
+        return run_id, wave_id, ctx
+
+    def shadow_route(self, identity: dict[str, Any], features: Any) -> dict[str, Any]:
+        self._require_provider_supervisor(identity)
+        run_id, wave_id, ctx = self._shadow_route_context()
+        try:
+            recommendation = recommend_shadow_route(features)
+        except ValueError as exc:
+            raise ToolFailure("SHADOW_ROUTE_INVALID", str(exc), category="validation", retryable=False) from exc
+        recommendation["run_id"] = run_id
+        recommendation["wave_id"] = wave_id
+        recommendation["recommendation_id"] = recommendation_id(
+            run_id=run_id,
+            wave_id=wave_id,
+            recommendation=recommendation,
+        )
+        recorded = self.orchestration_ledger.record_shadow_route(
+            run_id=run_id,
+            wave_id=wave_id,
+            recommendation=recommendation,
+        )
+        return {
+            "run_id": run_id,
+            "wave_id": wave_id,
+            "orchestration_state": ctx.state,
+            "recommendation": recommendation,
+            "recorded": recorded["recorded"],
+            "routing_evidence": self.orchestration_ledger.routing_evidence(run_id),
+        }
+
+    def _sync_opencode_dispatch(self, snapshot: dict[str, Any], ctx: RunContext) -> dict[str, Any]:
+        provider_status = str(snapshot.get("status") or "")
+        delegation_status = "active" if provider_status == "running" else "completed" if provider_status == "completed" else "failed"
+        metadata = {
+            "source": "opencode:provider_adapter",
+            "provider_dispatch_id": snapshot["dispatch_id"],
+            "session_id": snapshot.get("session_id") or "",
+            "side_effect_class": "read_only",
+            "read_only_enforced": True,
+            "prompt_sha256": snapshot["prompt_sha256"],
+            "prompt_bytes": snapshot["prompt_bytes"],
+            "result_chars": snapshot.get("result_chars", 0),
+            "output_truncated": bool(snapshot.get("output_truncated")),
+            "error_class": snapshot.get("error_class"),
+            "timing": snapshot.get("timing") or {},
+        }
+        projected = self.orchestration_ledger.upsert_external_delegation(
+            delegation_id=str(snapshot["delegation_id"]),
+            wave_id=str(snapshot["wave_id"]),
+            authority_owner="opencode",
+            route_requested="opencode_read_only",
+            route_resolved=str(snapshot["model"]),
+            model=str(snapshot["model"]),
+            status=delegation_status,
+            metadata=metadata,
+        )
+        if projected["changed"]:
+            event_type = "external_delegation_finished" if projected["terminal_transition"] else "external_delegation_started" if projected["created"] else "external_delegation_updated"
+            self.orchestration_ledger.append_event(
+                ctx.run_id,
+                wave_id=ctx.wave_id,
+                delegation_id=str(snapshot["delegation_id"]),
+                event_type=event_type,
+                state_before=ctx.state,
+                state_after=ctx.state,
+                payload={
+                    "source": "opencode:provider_adapter",
+                    "provider_dispatch_id": snapshot["dispatch_id"],
+                    "model": snapshot["model"],
+                    "status": delegation_status,
+                    "side_effect_class": "read_only",
+                    "read_only_enforced": True,
+                    "prompt_sha256": snapshot["prompt_sha256"],
+                    "prompt_bytes": snapshot["prompt_bytes"],
+                    "error_class": snapshot.get("error_class"),
+                    "timing": snapshot.get("timing") or {},
+                },
+            )
+        return projected["delegation"]
+
+    def _on_opencode_provider_terminal(self, snapshot: dict[str, Any]) -> None:
+        ctx = self.orchestration_control.snapshot(str(snapshot.get("run_id") or ""))
+        if ctx is None or ctx.wave_id != str(snapshot.get("wave_id") or ""):
+            return
+        try:
+            self._sync_opencode_dispatch(snapshot, ctx)
+        except (OSError, RuntimeError, ValueError):
+            return
+
+    def dispatch_opencode_provider(self, identity: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+        self._require_provider_supervisor(identity)
+        run_id, wave_id, ctx = self._provider_context()
+        model = str(payload.get("model") or "").strip()
+        if model not in ALLOWED_OPENCODE_MODELS:
+            raise ToolFailure("PROVIDER_MODEL_DENIED", "Only the allowlisted OpenCode Go Flash/Pro models may be dispatched.", category="validation", retryable=False)
+        try:
+            snapshot = self._opencode_provider.start(
+                run_id=run_id,
+                wave_id=wave_id,
+                model=model,
+                prompt=str(payload.get("prompt") or ""),
+                timeout_ms=int(payload.get("timeout_ms") or 60_000),
+                request_id=str(payload.get("request_id") or ""),
+            )
+        except OpenCodeProviderError as exc:
+            raise ToolFailure(exc.code, exc.message, category="runtime", retryable=exc.retryable, details=exc.details) from exc
+        delegation = self._sync_opencode_dispatch(snapshot, ctx)
+        return {"run_id": run_id, "wave_id": wave_id, "dispatch": snapshot, "delegation": delegation}
+
+    def observe_opencode_provider(self, identity: dict[str, Any], dispatch_id: str, *, cancel: bool = False) -> dict[str, Any]:
+        self._require_provider_supervisor(identity)
+        try:
+            snapshot = self._opencode_provider.cancel(dispatch_id) if cancel else self._opencode_provider.observe(dispatch_id)
+        except OpenCodeProviderError as exc:
+            raise ToolFailure(exc.code, exc.message, category="runtime", retryable=exc.retryable, details=exc.details) from exc
+        ctx = self.orchestration_control.snapshot(str(snapshot.get("run_id") or ""))
+        if ctx is None or ctx.wave_id != str(snapshot.get("wave_id") or ""):
+            raise ToolFailure("PROVIDER_DISPATCH_CONTEXT_UNAVAILABLE", "Provider dispatch no longer maps to a known orchestration wave.", category="runtime", retryable=False)
+        delegation = self._sync_opencode_dispatch(snapshot, ctx)
+        return {"run_id": ctx.run_id, "wave_id": ctx.wave_id, "dispatch": snapshot, "delegation": delegation}
+
     def _require_hub_controller(self, run_id: str) -> dict[str, Any] | None:
         identity = self._current_hub_client()
         if identity is None:
@@ -2056,6 +2413,25 @@ class Runtime:
         self._touch_hub_client(identity)
         controller = self.orchestration_ledger.get_controller_lease(run_id)
         client_id = str(identity.get("client_id") or "")
+        client_type = str(identity.get("client_type") or "client")
+        run = self.orchestration_ledger.get_run(run_id)
+        if run and run.get("status") == "active":
+            if controller and controller.get("status") == "active" and controller.get("owner_client_id") == client_id:
+                renewed = self.orchestration_ledger.acquire_controller_lease(
+                    run_id=run_id,
+                    owner_client_id=client_id,
+                    lease_id=str(controller.get("lease_id") or f"client:{client_id}"),
+                    ttl_seconds=HUB_CONTROLLER_LEASE_SECONDS,
+                )
+                controller = renewed if renewed.get("acquired") else controller
+            elif (not controller or controller.get("status") != "active") and client_type == "chatweb":
+                claimed = self.orchestration_ledger.acquire_controller_lease(
+                    run_id=run_id,
+                    owner_client_id=client_id,
+                    lease_id=f"client:{client_id}",
+                    ttl_seconds=HUB_CONTROLLER_LEASE_SECONDS,
+                )
+                controller = claimed if claimed.get("acquired") else self.orchestration_ledger.get_controller_lease(run_id)
         if not controller or controller.get("status") != "active" or controller.get("owner_client_id") != client_id:
             raise ToolFailure(
                 "CONTROLLER_LEASE_REQUIRED",
@@ -5875,6 +6251,27 @@ class Runtime:
         if action == "resume":
             return {"state": self.task_state.resume(str(args.get("next_step", "")))}
         if action == "stop":
+            explicit_run_id = str(args.get("run_id") or "").strip()
+            if explicit_run_id:
+                ctx = self.orchestration_control.snapshot(explicit_run_id)
+                if ctx is None:
+                    raise ToolFailure("NOT_FOUND", "Orchestration run was not found.", category="runtime", retryable=False)
+                self._require_hub_controller(explicit_run_id)
+                if ctx.state not in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
+                    try:
+                        self.orchestration_control.transition(ctx, "ABORTED", reason=str(args.get("reason") or "task_stopped"))
+                    except OrchestrationControlError as exc:
+                        raise ToolFailure("ORCHESTRATION_ABORT_FAILED", str(exc), category="runtime", retryable=False, details={"run_id": explicit_run_id, "state": ctx.state, **getattr(exc, "details", {})}) from exc
+                current_state = self.task_state.get()
+                current_projection = current_state.get("orchestration") if isinstance(current_state.get("orchestration"), dict) else {}
+                return {
+                    "state": current_state,
+                    "stopped": ctx.state == "ABORTED",
+                    "already_terminal": ctx.state != "ABORTED",
+                    "target_run_id": explicit_run_id,
+                    "detached": str(current_projection.get("run_id") or "") != explicit_run_id,
+                    "orchestration": ctx.projection(),
+                }
             previous = self.task_state.get()
             aborted_projection = self._abort_task_orchestration(previous, reason="task_stopped")
             changes = {
@@ -6177,6 +6574,11 @@ class Runtime:
                 finished_monotonic=finished_at,
                 request_bytes=len(json.dumps(args, ensure_ascii=False, default=str).encode("utf-8")),
                 response_bytes=len(json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")),
+                model_visible_bytes=model_visible_text_bytes(
+                    name,
+                    payload,
+                    is_error=bool(payload.get("ok") is False),
+                ),
                 ok=bool(payload.get("ok", False)),
                 cache_hit=bool(payload.get("cache_hit") or (isinstance(payload.get("cache"), dict) and payload["cache"].get("hit"))),
                 deduplicated=bool(payload.get("deduplicated")),
@@ -10066,6 +10468,10 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "events": compact_events,
             "proofs": proofs,
             "delegations": (summary.get("delegations") or [])[-4:],
+            "usage_events": ledger.list_usage_events(run_id, limit=8) if run_id else [],
+            "routing_evidence": ledger.routing_evidence(run_id, limit=8) if run_id else {
+                "shadow_recommendations": [], "actual_delegations": [], "usage_events": []
+            },
             "capsule": summary.get("latest_handoff_capsule"),
             "background_operations": ledger.list_background_operations(limit=8),
             "counts": {
@@ -10131,6 +10537,44 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                     client_version=str(payload.get("client_version") or ""),
                 )
                 result = self.runtime._touch_hub_client(identity)
+                self.send_json({"ok": True, "action": action, **result})
+                return
+            if action == "provider_telemetry":
+                identity = self._hub_identity_from_values(
+                    client_id=str(payload.get("client_id") or ""),
+                    client_type=str(payload.get("client_type") or "client"),
+                    client_name=str(payload.get("client_name") or ""),
+                    client_version=str(payload.get("client_version") or ""),
+                )
+                if (identity.get("client_id"), identity.get("client_type")) != ("opencode", "opencode"):
+                    raise ValueError("provider telemetry requires the OpenCode proxy identity")
+                result = self.runtime.ingest_provider_telemetry(identity, payload.get("telemetry"))
+                self.send_json({"ok": True, "action": action, **result})
+                return
+            if action in {"provider_dispatch", "provider_observe", "provider_cancel"}:
+                identity = self._hub_identity_from_values(
+                    client_id=str(payload.get("client_id") or ""),
+                    client_type=str(payload.get("client_type") or "client"),
+                    client_name=str(payload.get("client_name") or ""),
+                    client_version=str(payload.get("client_version") or ""),
+                )
+                if action == "provider_dispatch":
+                    result = self.runtime.dispatch_opencode_provider(identity, payload)
+                else:
+                    dispatch_id = str(payload.get("dispatch_id") or "").strip()
+                    if not dispatch_id:
+                        raise ValueError("dispatch_id is required")
+                    result = self.runtime.observe_opencode_provider(identity, dispatch_id, cancel=action == "provider_cancel")
+                self.send_json({"ok": True, "action": action, **result})
+                return
+            if action == "shadow_route":
+                identity = self._hub_identity_from_values(
+                    client_id=str(payload.get("client_id") or ""),
+                    client_type=str(payload.get("client_type") or "client"),
+                    client_name=str(payload.get("client_name") or ""),
+                    client_version=str(payload.get("client_version") or ""),
+                )
+                result = self.runtime.shadow_route(identity, payload.get("features"))
                 self.send_json({"ok": True, "action": action, **result})
                 return
             if action == "transfer_controller":

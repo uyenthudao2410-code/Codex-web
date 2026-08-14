@@ -25,7 +25,7 @@ class PerformanceTraceStore:
     estimate of model/network wait time, not local execution time.
     """
 
-    schema_version = 3
+    schema_version = 4
 
     def __init__(self, workspace: Path) -> None:
         self.workspace = workspace.resolve()
@@ -42,6 +42,7 @@ class PerformanceTraceStore:
         finished_monotonic: float,
         request_bytes: int = 0,
         response_bytes: int = 0,
+        model_visible_bytes: int = 0,
         ok: bool = True,
         cache_hit: bool = False,
         deduplicated: bool = False,
@@ -72,6 +73,7 @@ class PerformanceTraceStore:
                 "wait_before_ms": wait_before_ms,
                 "request_bytes": max(0, int(request_bytes)),
                 "response_bytes": max(0, int(response_bytes)),
+                "model_visible_bytes": max(0, int(model_visible_bytes)),
                 "cache_hit": bool(cache_hit),
                 "deduplicated": bool(deduplicated),
                 "idempotency_eligible": bool(idempotency_eligible),
@@ -100,6 +102,7 @@ class PerformanceTraceStore:
             state["estimated_wait_ms"] += wait_before_ms
             state["request_bytes"] += event["request_bytes"]
             state["response_bytes"] += event["response_bytes"]
+            state["model_visible_bytes"] += event["model_visible_bytes"]
             state["last_finished_at"] = event["finished_at"]
             for bucket_name, value in (
                 ("execution_mode_counts", execution_mode),
@@ -125,6 +128,7 @@ class PerformanceTraceStore:
                     "estimated_wait_ms": 0,
                     "request_bytes": 0,
                     "response_bytes": 0,
+                    "model_visible_bytes": 0,
                     "idempotency_eligible_calls": 0,
                     "idempotency_eligible_key_calls": 0,
                     "proof_cache_hits": 0,
@@ -140,6 +144,7 @@ class PerformanceTraceStore:
                 metric["estimated_wait_ms"] += wait_before_ms
                 metric["request_bytes"] += event["request_bytes"]
                 metric["response_bytes"] += event["response_bytes"]
+                metric["model_visible_bytes"] += event["model_visible_bytes"]
                 metric["idempotency_eligible_calls"] += 1 if idempotency_eligible else 0
                 metric["idempotency_eligible_key_calls"] += 1 if idempotency_eligible and idempotency_key_present else 0
                 metric["proof_cache_hits"] += event["proof_cache_hits"]
@@ -172,7 +177,7 @@ class PerformanceTraceStore:
     @staticmethod
     def _default() -> dict[str, Any]:
         return {
-            "version": 3,
+            "version": 4,
             "tool_calls": 0,
             "errors": 0,
             "cache_hits": 0,
@@ -186,6 +191,7 @@ class PerformanceTraceStore:
             "estimated_wait_ms": 0,
             "request_bytes": 0,
             "response_bytes": 0,
+            "model_visible_bytes": 0,
             "execution_mode_counts": {},
             "route_resolved_counts": {},
             "orchestration_state_counts": {},
@@ -210,7 +216,7 @@ class PerformanceTraceStore:
                 state[key] = {}
         for key in (
             "idempotency_key_calls", "idempotency_eligible_calls", "idempotency_eligible_key_calls",
-            "proof_cache_hits", "proof_cache_saved_ms",
+            "proof_cache_hits", "proof_cache_saved_ms", "model_visible_bytes",
         ):
             try:
                 state[key] = max(0, int(state.get(key, 0)))

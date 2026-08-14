@@ -190,6 +190,87 @@ class ExecutionHubFaultTests(unittest.TestCase):
         finally:
             hub.close()
 
+    def test_chatweb_accept_reclaims_expired_explicit_historical_run(self) -> None:
+        hub = HubServer(self.root, self.TOKEN)
+        try:
+            _state, historical = self.start_linked_run(hub)
+            status, _headers, initial = hub.post_rpc(
+                tool_call(1, "get"), client_id="chatweb", client_type="chatweb"
+            )
+            self.assertEqual(status, 200, initial)
+            first_controller = hub.runtime.orchestration_ledger.get_controller_lease(historical.run_id)
+            self.assertIsNotNone(first_controller)
+            self.assertEqual(first_controller["owner_client_id"], "chatweb")
+            self.assertEqual(first_controller["fencing_token"], 1)
+
+            control = hub.runtime.orchestration_control
+            control.mark_ready(historical)
+            control.select_route(historical, {"requested": "deterministic", "selected": "deterministic", "reason": "test"})
+            control.transition(historical, "EXECUTING", reason="test_execution")
+            control.transition(historical, "PROVING", reason="test_proof")
+            proof_id = hub.runtime.orchestration_ledger.record_proof(
+                run_id=historical.run_id,
+                wave_id=historical.wave_id,
+                stage_id="verify:tests",
+                stage_version="1",
+                input_fingerprint="historical-expired-controller-proof",
+                status="passed",
+            )
+            control.mark_accepting(historical, proof_summary={"proof_ids": [proof_id]})
+            with hub.runtime.orchestration_ledger._lock, hub.runtime.orchestration_ledger._connect() as connection:
+                connection.execute(
+                    "UPDATE controller_leases SET expires_at=0 WHERE run_id=?",
+                    (historical.run_id,),
+                )
+            self.assertEqual(
+                hub.runtime.orchestration_ledger.get_controller_lease(historical.run_id)["status"],
+                "expired",
+            )
+
+            _ambient_state, ambient = self.start_linked_run(hub)
+            self.assertNotEqual(ambient.run_id, historical.run_id)
+            status, _headers, accepted = hub.post_rpc(
+                tool_call(2, "accept", run_id=historical.run_id),
+                client_id="chatweb",
+                client_type="chatweb",
+            )
+            self.assertEqual(status, 200, accepted)
+            self.assertNotIn("error", accepted, accepted)
+            structured = accepted["result"]["structuredContent"]
+            self.assertTrue(structured["accepted"])
+            self.assertEqual(structured["orchestration"]["orchestration_state"], "CHECKPOINTED")
+            reclaimed = hub.runtime.orchestration_ledger.get_controller_lease(historical.run_id)
+            self.assertEqual(reclaimed["owner_client_id"], "chatweb")
+            self.assertEqual(reclaimed["status"], "active")
+            self.assertEqual(reclaimed["fencing_token"], 2)
+            self.assertEqual(hub.runtime.orchestration_ledger.get_run(historical.run_id)["status"], "accepted")
+            self.assertEqual(hub.runtime.orchestration_ledger.get_run(ambient.run_id)["status"], "active")
+        finally:
+            hub.close()
+
+    def test_explicit_stop_aborts_detached_run_without_replacing_current_projection(self) -> None:
+        hub = HubServer(self.root, self.TOKEN)
+        try:
+            _state, historical = self.start_linked_run(hub)
+            _ambient_state, ambient = self.start_linked_run(hub)
+            self.assertNotEqual(ambient.run_id, historical.run_id)
+            status, _headers, desktop_rejected = hub.post_rpc(tool_call(1, "stop", run_id=historical.run_id), client_id="codex-desktop", client_type="codex_desktop")
+            self.assertEqual(status, 200, desktop_rejected)
+            self.assertIn("CONTROLLER_LEASE_REQUIRED", json.dumps(desktop_rejected))
+            self.assertEqual(hub.runtime.orchestration_ledger.get_run(historical.run_id)["status"], "active")
+            status, _headers, stopped = hub.post_rpc(tool_call(2, "stop", run_id=historical.run_id), client_id="chatweb", client_type="chatweb")
+            self.assertEqual(status, 200, stopped)
+            self.assertNotIn("error", stopped, stopped)
+            structured = stopped["result"]["structuredContent"]
+            self.assertTrue(structured["stopped"])
+            self.assertTrue(structured["detached"])
+            self.assertEqual(structured["orchestration"]["orchestration_state"], "ABORTED")
+            self.assertEqual(structured["state"]["orchestration"]["run_id"], ambient.run_id)
+            self.assertEqual(hub.runtime.orchestration_ledger.get_run(historical.run_id)["status"], "aborted")
+            self.assertEqual(hub.runtime.orchestration_ledger.get_run(ambient.run_id)["status"], "active")
+        finally:
+            hub.close()
+
     def test_old_authenticated_session_alias_rebinds_after_runtime_restart_and_preserves_durable_truth(self) -> None:
         first = HubServer(self.root, self.TOKEN)
         try:

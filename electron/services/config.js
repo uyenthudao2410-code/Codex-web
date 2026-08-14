@@ -19,7 +19,14 @@ const DEFAULTS = Object.freeze({
   firstRunCompleted: false,
   guideProgress: {},
   recentWorkspaces: [],
-  authorizedRoots: []
+  authorizedRoots: [],
+  costPreset: 'gpt-4o-mini',
+  costRateInUsd: 0.15,
+  costRateOutUsd: 0.6,
+  costCurrency: 'USD',
+  costFxRate: 0,
+  costBytesPerToken: 4,
+  costLaneRates: '{"deepseek":{"in":0.28,"out":0.42},"fast":{"in":0.15,"out":0.6},"terra":{"in":2.5,"out":10},"sol":{"in":10,"out":40}}'
 });
 
 function normalizeWorkspacePath(value) {
@@ -84,7 +91,35 @@ function normalize(input = {}) {
     .filter((item, index, all) => all.findIndex((other) => workspaceKey(other) === workspaceKey(item)) === index)
     .filter((item) => workspaceKey(item) !== workspaceKey(merged.workspace))
     .slice(0, 32);
+  merged.costPreset = String(merged.costPreset || 'gpt-4o-mini');
+  merged.costRateInUsd = Number.isFinite(Number(merged.costRateInUsd)) && Number(merged.costRateInUsd) >= 0
+    ? Number(merged.costRateInUsd) : 0.15;
+  merged.costRateOutUsd = Number.isFinite(Number(merged.costRateOutUsd)) && Number(merged.costRateOutUsd) >= 0
+    ? Number(merged.costRateOutUsd) : 0.6;
+  merged.costCurrency = merged.costCurrency === 'VND' ? 'VND' : 'USD';
+  merged.costFxRate = Number.isFinite(Number(merged.costFxRate)) && Number(merged.costFxRate) > 0
+    ? Number(merged.costFxRate) : 0;
+  merged.costBytesPerToken = Number.isFinite(Number(merged.costBytesPerToken)) && Number(merged.costBytesPerToken) >= 1
+    ? Number(merged.costBytesPerToken) : 4;
+  merged.costLaneRates = normalizeLaneRates(merged.costLaneRates);
   return merged;
+}
+
+function normalizeLaneRates(value) {
+  const fallback = { deepseek: { in: 0.28, out: 0.42 }, fast: { in: 0.15, out: 0.6 }, terra: { in: 2.5, out: 10 }, sol: { in: 10, out: 40 } };
+  let parsed = {};
+  try { parsed = typeof value === 'string' ? JSON.parse(value) : value; } catch { return JSON.stringify(fallback); }
+  const result = {};
+  for (const lane of ['deepseek', 'fast', 'terra', 'sol']) {
+    const entry = parsed && typeof parsed === 'object' ? parsed[lane] : null;
+    const inRate = Number(entry?.in);
+    const outRate = Number(entry?.out);
+    result[lane] = {
+      in: Number.isFinite(inRate) && inRate >= 0 ? inRate : fallback[lane].in,
+      out: Number.isFinite(outRate) && outRate >= 0 ? outRate : fallback[lane].out
+    };
+  }
+  return JSON.stringify(result);
 }
 
 function validateRuntimeSettings(settings) {

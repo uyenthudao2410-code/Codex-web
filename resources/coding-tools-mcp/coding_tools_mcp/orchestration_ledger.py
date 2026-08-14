@@ -18,6 +18,16 @@ SCHEMA_VERSION = 5
 _MAX_TEXT = 16_000
 HANDOFF_CAPSULE_MAX_BYTES = 8_192
 _SECRET_KEY_RE = re.compile(r"(authorization|credential|password|passwd|secret|token|api[_-]?key|private[_-]?key)", re.I)
+_SAFE_NUMERIC_USAGE_KEYS = {
+    "input_tokens",
+    "cached_input_tokens",
+    "uncached_input_tokens",
+    "output_tokens",
+    "reasoning_output_tokens",
+    "cached_tokens",
+    "cache_read_tokens",
+    "cache_write_tokens",
+}
 _SENSITIVE_PAYLOAD_KEYS = {
     "content",
     "file_content",
@@ -44,7 +54,12 @@ def _bounded_text(value: Any, limit: int = _MAX_TEXT) -> str:
 
 
 def _sanitize(value: Any, *, key: str = "") -> Any:
-    if key.lower() != "fencing_token" and _SECRET_KEY_RE.search(key):
+    normalized_key = key.lower()
+    if normalized_key in _SAFE_NUMERIC_USAGE_KEYS:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+            return "[REDACTED]"
+        return value
+    if normalized_key != "fencing_token" and _SECRET_KEY_RE.search(key):
         return "[REDACTED]"
     if key.lower() in _SENSITIVE_PAYLOAD_KEYS:
         text = str(value or "")
@@ -486,6 +501,124 @@ class OrchestrationLedger:
                 (_bounded_text(status, 64), now, _json(existing), delegation_id),
             )
 
+    @staticmethod
+    def _delegation_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "delegation_id": row["delegation_id"],
+            "wave_id": row["wave_id"],
+            "parent_delegation_id": row["parent_delegation_id"],
+            "authority_owner": row["authority_owner"],
+            "route_requested": row["route_requested"],
+            "route_resolved": row["route_resolved"],
+            "model": row["model"],
+            "effort": row["effort"],
+            "allowed_scope": json.loads(row["allowed_scope_json"] or "[]"),
+            "status": row["status"],
+            "started_at": row["started_at"],
+            "finished_at": row["finished_at"],
+            "metadata": json.loads(row["metadata_json"] or "{}"),
+        }
+
+    def get_delegation(self, delegation_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM delegations WHERE delegation_id=?",
+                (_bounded_text(delegation_id, 256),),
+            ).fetchone()
+        return self._delegation_row(row) if row else None
+
+    def upsert_external_delegation(
+        self,
+        *,
+        delegation_id: str,
+        wave_id: str,
+        authority_owner: str,
+        route_requested: str,
+        route_resolved: str,
+        model: str,
+        status: str,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Idempotently project provider telemetry into one canonical delegation."""
+        terminal_statuses = {"completed", "failed"}
+        incoming_status = _bounded_text(status, 64).strip().lower()
+        if incoming_status not in {"active", *terminal_statuses}:
+            raise ValueError("invalid external delegation status")
+        delegation = _bounded_text(delegation_id, 256).strip()
+        wave = _bounded_text(wave_id, 256).strip()
+        owner = _bounded_text(authority_owner, 200).strip()
+        route_requested_value = _bounded_text(route_requested, 100)
+        route_resolved_value = _bounded_text(route_resolved, 100)
+        model_value = _bounded_text(model, 200)
+        if not delegation or not wave or not owner or not model_value:
+            raise ValueError("external delegation identity is incomplete")
+        safe_metadata = _sanitize(metadata or {})
+        now = utc_now()
+
+        def merge_metadata(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+            merged = dict(existing)
+            for key, value in incoming.items():
+                if key == "economics" and isinstance(value, dict):
+                    economics = dict(merged.get("economics") or {})
+                    for metric, metric_value in value.items():
+                        if metric in _SAFE_NUMERIC_USAGE_KEYS or metric == "provider_cost":
+                            if isinstance(metric_value, bool) or not isinstance(metric_value, (int, float)):
+                                continue
+                            previous = economics.get(metric)
+                            economics[metric] = max(previous, metric_value) if isinstance(previous, (int, float)) and not isinstance(previous, bool) else metric_value
+                        elif metric_value not in {None, ""}:
+                            economics[metric] = metric_value
+                    merged[key] = economics
+                elif key == "provider_started_at_ms" and isinstance(value, (int, float)) and not isinstance(value, bool):
+                    previous = merged.get(key)
+                    merged[key] = min(previous, value) if isinstance(previous, (int, float)) and previous > 0 else value
+                elif key in {"provider_completed_at_ms", "duration_ms", "provider_cost"} and isinstance(value, (int, float)) and not isinstance(value, bool):
+                    previous = merged.get(key)
+                    merged[key] = max(previous, value) if isinstance(previous, (int, float)) else value
+                elif value is not None and value != "":
+                    merged[key] = value
+            return merged
+
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM delegations WHERE delegation_id=?", (delegation,)).fetchone()
+            if row:
+                if str(row["wave_id"]) != wave:
+                    raise ValueError("external delegation cannot move between orchestration waves")
+                if str(row["authority_owner"]) != owner:
+                    raise ValueError("external delegation authority changed")
+                if str(row["model"]) and str(row["model"]) != model_value:
+                    raise ValueError("external delegation model changed")
+                merged_metadata = merge_metadata(json.loads(row["metadata_json"] or "{}"), safe_metadata)
+                current_status = str(row["status"] or "active").lower()
+                next_status = current_status if current_status in terminal_statuses else incoming_status
+                terminal_transition = current_status not in terminal_statuses and next_status in terminal_statuses
+                finished_at = row["finished_at"] or (now if terminal_transition else None)
+                metadata_json = _json(merged_metadata)
+                changed = next_status != current_status or metadata_json != str(row["metadata_json"] or "{}")
+                if changed:
+                    connection.execute(
+                        "UPDATE delegations SET status=?, finished_at=?, metadata_json=? WHERE delegation_id=?",
+                        (next_status, finished_at, metadata_json, delegation),
+                    )
+                updated = connection.execute("SELECT * FROM delegations WHERE delegation_id=?", (delegation,)).fetchone()
+                connection.commit()
+                assert updated is not None
+                return {"created": False, "changed": changed, "terminal_transition": terminal_transition, "delegation": self._delegation_row(updated)}
+
+            terminal = incoming_status in terminal_statuses
+            connection.execute(
+                """INSERT INTO delegations(
+                    delegation_id,wave_id,parent_delegation_id,authority_owner,route_requested,route_resolved,
+                    model,effort,allowed_scope_json,status,started_at,finished_at,metadata_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (delegation, wave, None, owner, route_requested_value, route_resolved_value, model_value, "", "[]", incoming_status, now, now if terminal else None, _json(safe_metadata)),
+            )
+            created = connection.execute("SELECT * FROM delegations WHERE delegation_id=?", (delegation,)).fetchone()
+            connection.commit()
+            assert created is not None
+            return {"created": True, "changed": True, "terminal_transition": terminal, "delegation": self._delegation_row(created)}
+
     def append_event(
         self,
         run_id: str,
@@ -552,6 +685,104 @@ class OrchestrationLedger:
         with self._lock, self._connect() as connection:
             rows = connection.execute(query, params).fetchall()
         return [self._event_row(row) for row in rows]
+
+    def record_usage_event(
+        self,
+        *,
+        run_id: str,
+        wave_id: str,
+        delegation_id: str,
+        usage_event: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Persist one sanitized canonical provider-usage fact in the audit chain."""
+        usage_id = _bounded_text(usage_event.get("usage_id"), 256).strip()
+        with self._lock:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    "SELECT event_id,payload_json FROM events WHERE run_id=? AND delegation_id=? AND event_type='usage_event' ORDER BY seq",
+                    (_bounded_text(run_id, 256), _bounded_text(delegation_id, 256)),
+                ).fetchall()
+            for row in rows:
+                payload = json.loads(row["payload_json"] or "{}")
+                if usage_id and str(payload.get("usage_id") or "") == usage_id:
+                    return {"recorded": False, "event_id": row["event_id"], "usage_id": usage_id}
+            event_id = self.append_event(
+                run_id,
+                wave_id=wave_id,
+                delegation_id=delegation_id,
+                event_type="usage_event",
+                payload=usage_event,
+            )
+            return {"recorded": True, "event_id": event_id, "usage_id": usage_id}
+
+    def list_usage_events(self, run_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(int(limit), 500))
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM events WHERE run_id=? AND event_type='usage_event' ORDER BY seq DESC LIMIT ?",
+                (_bounded_text(run_id, 256), bounded_limit),
+            ).fetchall()
+        events = [self._event_row(row) for row in reversed(rows)]
+        return [
+            {
+                **(item.get("payload") or {}),
+                "seq": item["seq"],
+                "event_time": item["event_time"],
+            }
+            for item in events
+        ]
+
+    def record_shadow_route(
+        self,
+        *,
+        run_id: str,
+        wave_id: str,
+        recommendation: dict[str, Any],
+    ) -> dict[str, Any]:
+        recommendation_id = _bounded_text(recommendation.get("recommendation_id"), 256).strip()
+        if not recommendation_id:
+            raise ValueError("recommendation_id is required")
+        with self._lock:
+            with self._connect() as connection:
+                rows = connection.execute(
+                    "SELECT event_id,payload_json FROM events WHERE run_id=? AND event_type='shadow_route_recommended' ORDER BY seq",
+                    (_bounded_text(run_id, 256),),
+                ).fetchall()
+            for row in rows:
+                payload = json.loads(row["payload_json"] or "{}")
+                if str(payload.get("recommendation_id") or "") == recommendation_id:
+                    return {"recorded": False, "event_id": row["event_id"], "recommendation_id": recommendation_id}
+            event_id = self.append_event(
+                run_id,
+                wave_id=wave_id,
+                event_type="shadow_route_recommended",
+                payload=recommendation,
+            )
+            return {"recorded": True, "event_id": event_id, "recommendation_id": recommendation_id}
+
+    def list_shadow_routes(self, run_id: str, *, limit: int = 50) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(int(limit), 200))
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM events WHERE run_id=? AND event_type='shadow_route_recommended' ORDER BY seq DESC LIMIT ?",
+                (_bounded_text(run_id, 256), bounded_limit),
+            ).fetchall()
+        events = [self._event_row(row) for row in reversed(rows)]
+        return [
+            {**(item.get("payload") or {}), "seq": item["seq"], "event_time": item["event_time"]}
+            for item in events
+        ]
+
+    def routing_evidence(self, run_id: str, *, limit: int = 8) -> dict[str, Any]:
+        bounded_limit = max(1, min(int(limit), 50))
+        actual_delegations: list[dict[str, Any]] = []
+        for wave in self.list_waves(run_id):
+            actual_delegations.extend(self.list_delegations(str(wave["wave_id"])))
+        return {
+            "shadow_recommendations": self.list_shadow_routes(run_id, limit=bounded_limit),
+            "actual_delegations": actual_delegations[-bounded_limit:],
+            "usage_events": self.list_usage_events(run_id, limit=bounded_limit),
+        }
 
     def list_events_since(
         self,

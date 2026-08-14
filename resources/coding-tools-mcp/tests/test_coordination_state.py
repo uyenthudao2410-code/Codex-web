@@ -91,6 +91,24 @@ class CoordinationStateTests(unittest.TestCase):
             self.assertEqual(second["fencing_token"], first["fencing_token"] + 1)
             self.assertEqual(second["owner_client_id"], "codex-desktop")
 
+    def test_controller_expiry_same_owner_reacquires_with_incremented_token(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            ledger.create_run(run_id="run-1", objective="controller same-owner expiry test")
+            ledger.upsert_hub_client(client_id="chatweb", client_type="chatweb", role="controller")
+            first = ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="client:chatweb", ttl_seconds=1
+            )
+            with ledger._lock, ledger._connect() as connection:
+                connection.execute("UPDATE controller_leases SET expires_at=0 WHERE run_id='run-1'")
+            second = ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="client:chatweb", ttl_seconds=60
+            )
+            self.assertTrue(second["acquired"])
+            self.assertFalse(second["renewed"])
+            self.assertEqual(second["fencing_token"], first["fencing_token"] + 1)
+            self.assertEqual(second["owner_client_id"], "chatweb")
+
     def test_operator_controller_transfer_requires_online_registered_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))

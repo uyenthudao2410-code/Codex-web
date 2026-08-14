@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="settings-compact.css">
   <link rel="stylesheet" href="control-center.css">
+  <link rel="stylesheet" href="dashboard.css">
 </head>
 <body class="booting"><script src="theme-bootstrap.js"></script><div class="manager-window-bar"><span>Execution Hub · Control Center</span><button id="closeManager" title="Đóng Control Center">×</button></div>
   <div class="boot-screen" id="bootScreen" role="status" aria-live="polite"><div class="boot-logo"><span></span><span></span><span></span></div><b>Đang chuẩn bị Trung tâm Quản lý</b><small>Đang đọc trạng thái không gian làm việc và dịch vụ cục bộ…</small><i></i></div>
@@ -63,6 +64,114 @@
                 <button class="secondary-button" id="ccRefreshButton">Refresh</button>
                 <button class="primary-button" id="ccRestartButton">Restart runtime</button>
               </div>
+            </div>
+          </div>
+
+          <div class="da-section">
+            <div class="da-section-head">
+              <div><h2>Phân tích Context & Chi phí</h2><p>Model-visible bytes được đo từ text MCP thực sự trả cho model. Token chỉ là ước tính theo hệ số byte/token; usage token của lane model chỉ được coi là MEASURED khi có delegation economics. Chi phí luôn là SCENARIO, không phải billing của nhà cung cấp.</p></div>
+              <div class="control-actions"><span id="daLastSync" class="cc-sync">Chưa đồng bộ</span><button class="secondary-button" id="daRefreshButton">Làm mới</button></div>
+            </div>
+
+            <div class="da-ticker" id="daTicker" aria-label="Sự kiện điều phối gần đây"><div class="da-ticker-track" id="daTickerTrack"><span class="da-ticker-item">Đang chờ sự kiện điều phối…</span></div></div>
+
+            <article class="cc-card">
+              <div class="cc-card-head"><div><h3>Bảng kiểm soát Model</h3><p>Theo dõi token & chi phí của từng model đang chạy — ChatWeb và các lane được ủy quyền — phân bổ theo bằng chứng delegation và quyền điều khiển thực tế.</p></div><span id="daModelSummary" class="cc-pill is-offline">0 model active</span></div>
+              <div class="cc-card-body">
+                <div class="da-model-table" id="daModelTable" role="table" aria-label="Token và chi phí theo model"></div>
+              </div>
+            </article>
+
+            <div class="da-grid-tiles">
+              <article class="da-tile">
+                <div class="da-tile-head"><span class="da-tile-label">Context token · recent trace</span><span class="da-tile-delta" id="daTokensDelta">—</span></div>
+                <div class="da-tile-value" id="daTokensTotal">—</div>
+                <div class="da-tile-sub"><span class="da-split in"><i></i>Model-visible</span><span id="daTokensSplit">—</span></div>
+                <div class="da-spark" id="daSpark" title="Lưu lượng 24 giờ qua"></div>
+                <div class="da-tile-sub" id="daTokensMeta">—</div>
+              </article>
+              <article class="da-tile is-cost">
+                <div class="da-tile-head"><span class="da-tile-label">Chi phí SCENARIO · recent trace</span><span class="da-tile-delta" id="daCostVnd">—</span></div>
+                <div class="da-tile-value" id="daCostTotal">—</div>
+                <div class="da-tile-sub" id="daCostSplit">—</div>
+                <div class="da-tile-sub" id="daCostMeta">—</div>
+              </article>
+              <article class="da-tile is-health">
+                <div class="da-tile-head"><span class="da-tile-label">Lượt gọi công cụ</span><span class="da-tile-delta" id="daCallsDelta">—</span></div>
+                <div class="da-tile-value" id="daCallsTotal">—</div>
+                <div class="da-tile-sub" id="daCallsMeta">—</div>
+                <svg id="daCallsRing" width="36" height="36" style="position:absolute;right:14px;bottom:12px" aria-hidden="true"></svg>
+              </article>
+              <article class="da-tile is-health">
+                <div class="da-tile-head"><span class="da-tile-label">Hiệu quả vận hành</span><span class="da-tile-delta" id="daEfficiencyDelta">—</span></div>
+                <div class="da-tile-value" id="daEfficiencyTotal">—</div>
+                <div class="da-tile-sub" id="daEfficiencyMeta">—</div>
+                <div class="da-tile-sub" id="daEfficiencySub">—</div>
+              </article>
+            </div>
+
+            <div class="da-charts">
+              <article class="cc-card">
+                <div class="cc-card-head"><div><h3>Context model-visible · recent trace</h3><p>Phân nhóm theo giờ trên các event gần nhất còn được giữ trong performance trace; không ngụ ý coverage đủ 24 giờ.</p></div><div class="da-chart-legend"><span class="is-in"><i></i>Context token eq. · ESTIMATED</span></div></div>
+                <div class="cc-card-body">
+                  <div class="da-chart-wrap" id="daChartCard">
+                    <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Context model-visible trong recent trace" role="img"></svg>
+                    <div id="daChartEmpty" class="da-chart-empty">Chưa có model-visible measurement trong recent trace.<br>Chạy một nhiệm vụ qua ChatGPT để tạo dữ liệu.</div>
+                    <div id="daChartTooltip" class="da-chart-tooltip" hidden></div>
+                  </div>
+                </div>
+              </article>
+              <article class="cc-card">
+                <div class="cc-card-head"><div><h3>Phân bổ context theo công cụ</h3><p>Top công cụ theo context-token equivalent trong recent trace.</p></div></div>
+                <div class="cc-card-body">
+                  <div class="da-donut-wrap">
+                    <svg id="daDonut" class="da-donut" width="140" height="140" viewBox="0 0 140 140" role="img" aria-label="Phân bổ context theo công cụ">
+                      <text id="daDonutTotal" class="da-donut-center" x="70" y="70" text-anchor="middle" dominant-baseline="central">0</text>
+                      <text id="daDonutSub" class="da-donut-sub" x="70" y="84" text-anchor="middle">CONTEXT EST.</text>
+                    </svg>
+                    <div class="da-legend-list" id="daLegend"></div>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div class="da-charts">
+              <article class="cc-card">
+                <div class="cc-card-head"><div><h3>Xếp hạng công cụ theo SCENARIO cost</h3><p>Chỉ áp rate cấu hình lên context-token estimate; không phải số liệu billing của nhà cung cấp.</p></div></div>
+                <div class="cc-card-body"><div class="da-bars" id="daToolBars"></div></div>
+              </article>
+              <article class="cc-card">
+                <div class="cc-card-head"><div><h3>Mô hình giá & đơn vị tính</h3><p>Hiệu chỉnh để số liệu khớp với gói ChatGPT của bạn.</p></div></div>
+                <div class="cc-card-body">
+                  <div class="da-cost-model">
+                    <div class="da-cost-form">
+                      <div class="da-field"><label>Mẫu giá (USD / 1M token)</label><select id="daPreset">
+                        <option value="gpt-4o-mini">GPT-4o mini</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="gpt-4.1">GPT-4.1</option>
+                        <option value="o3-mini">o3-mini</option>
+                        <option value="o3">o3</option>
+                        <option value="custom">Tùy chỉnh</option>
+                      </select></div>
+                      <div class="da-field"><label>Giá vào ($/1M)</label><input id="daRateIn" type="number" min="0" step="0.01" inputmode="decimal"></div>
+                      <div class="da-field"><label>Giá ra ($/1M)</label><input id="daRateOut" type="number" min="0" step="0.01" inputmode="decimal"></div>
+                      <div class="da-field"><label>Byte / context token</label><input id="daBytesPerToken" type="number" min="1" step="0.5" inputmode="decimal" title="Hệ số quy đổi model-visible text bytes thành context-token ước tính"></div>
+                      <div class="da-field"><label>Đơn vị tiền</label><select id="daCurrency"><option value="USD">USD</option><option value="VND">VND</option></select></div>
+                      <div class="da-field" id="daFxField" hidden><label>Tỷ giá VND/USD</label><input id="daFx" type="number" min="1" step="100" inputmode="decimal" placeholder="25000"></div>
+                      <button class="da-apply" id="daApply">Áp dụng</button>
+                    </div>
+                    <div class="da-lane-grid">
+                      <div class="da-lane-head"><span>Lane model</span><span>Giá vào $/1M</span><span>Giá ra $/1M</span></div>
+                      <label class="da-lane-row"><span><i class="is-chatweb"></i>ChatWeb (ChatGPT)</span><input id="daLaneChatIn" type="number" min="0" step="0.01" inputmode="decimal"><input id="daLaneChatOut" type="number" min="0" step="0.01" inputmode="decimal"></label>
+                      <label class="da-lane-row"><span><i class="is-fast"></i>Codex Fast (Mini / Luna)</span><input id="daLaneFastIn" type="number" min="0" step="0.01" inputmode="decimal"><input id="daLaneFastOut" type="number" min="0" step="0.01" inputmode="decimal"></label>
+                      <label class="da-lane-row"><span><i class="is-deepseek"></i>OpenCode Go (DeepSeek)</span><input id="daLaneDeepIn" type="number" min="0" step="0.01" inputmode="decimal"><input id="daLaneDeepOut" type="number" min="0" step="0.01" inputmode="decimal"></label>
+                      <label class="da-lane-row"><span><i class="is-terra"></i>Codex Deep (Terra)</span><input id="daLaneTerraIn" type="number" min="0" step="0.01" inputmode="decimal"><input id="daLaneTerraOut" type="number" min="0" step="0.01" inputmode="decimal"></label>
+                      <label class="da-lane-row"><span><i class="is-sol"></i>Codex Critical (Sol)</span><input id="daLaneSolIn" type="number" min="0" step="0.01" inputmode="decimal"><input id="daLaneSolOut" type="number" min="0" step="0.01" inputmode="decimal"></label>
+                    </div>
+                    <p class="da-cost-note"><b>Evidence:</b> MEASURED = usage counter số từ delegation/model hoặc model-visible byte count tại MCP projection. ESTIMATED = quy đổi model-visible bytes theo byte/token. SCENARIO = áp rate cấu hình để so sánh tương đối. Request/response transport bytes không được coi là token và không dữ liệu nào ở đây là hóa đơn nhà cung cấp.</p>
+                  </div>
+                </div>
+              </article>
             </div>
           </div>
 
@@ -328,5 +437,6 @@
   <div class="busy-overlay" id="busyOverlay"><div class="loader"></div><b>Đang xử lý</b><span>Vui lòng không nhấp liên tục vào nút thao tác</span></div>
   <script src="app.js"></script>
   <script src="control-center.js"></script>
+  <script src="dashboard.js"></script>
 </body>
 </html>

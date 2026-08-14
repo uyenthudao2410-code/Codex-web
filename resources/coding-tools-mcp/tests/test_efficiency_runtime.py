@@ -14,7 +14,7 @@ from coding_tools_mcp.server import Runtime, server_card_payload
 
 
 class EfficiencyRuntimeTests(unittest.TestCase):
-    def test_performance_trace_v3_records_eligible_idempotency_proof_savings_and_run_metrics(self) -> None:
+    def test_performance_trace_v4_records_model_visible_bytes_and_run_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             store = PerformanceTraceStore(Path(temp))
             state = store.record(
@@ -23,6 +23,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 finished_monotonic=11.0,
                 request_bytes=100,
                 response_bytes=200,
+                model_visible_bytes=80,
                 idempotency_eligible=True,
                 idempotency_key_present=True,
                 proof_cache_hits=2,
@@ -36,7 +37,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                     "orchestration_state": "ACCEPTING",
                 },
             )
-            self.assertEqual(state["version"], 3)
+            self.assertEqual(state["version"], 4)
             self.assertEqual(state["idempotency_eligible_calls"], 1)
             self.assertEqual(state["idempotency_eligible_key_calls"], 1)
             self.assertEqual(state["idempotency_key_calls"], 1)
@@ -50,11 +51,31 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             self.assertTrue(event["idempotency_key_present"])
             self.assertEqual(event["proof_cache_hits"], 2)
             self.assertEqual(event["route_resolved"], "deterministic")
+            self.assertEqual(event["model_visible_bytes"], 80)
+            self.assertEqual(state["model_visible_bytes"], 80)
             metric = state["run_metrics"]["run-1"]
             self.assertEqual(metric["tool_calls"], 1)
             self.assertEqual(metric["idempotency_eligible_calls"], 1)
             self.assertEqual(metric["idempotency_eligible_key_calls"], 1)
             self.assertEqual(metric["proof_cache_saved_ms"], 1750)
+            self.assertEqual(metric["model_visible_bytes"], 80)
+
+    def test_runtime_trace_counts_only_model_facing_text_as_model_visible_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                result = runtime.call_tool("workspace_context", {"detail": "compact"})
+                expected = sum(
+                    len(str(block.get("text") or "").encode("utf-8"))
+                    for block in result.get("content", [])
+                    if isinstance(block, dict) and block.get("type") == "text"
+                )
+                event = runtime.performance_trace.get()["recent"][-1]
+                self.assertGreater(expected, 0)
+                self.assertEqual(event["model_visible_bytes"], expected)
+                self.assertGreaterEqual(event["response_bytes"], event["model_visible_bytes"])
+            finally:
+                runtime.close()
 
     def test_idempotency_coverage_denominator_uses_only_mutating_or_expensive_calls(self) -> None:
         self.assertFalse(Runtime._idempotency_eligible_call("workspace_context", {}))
@@ -77,7 +98,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 identity = context["runtime"]
                 self.assertEqual(identity["server_instance_id"], runtime.server_instance_id)
                 self.assertEqual(identity["process_instance_id"], runtime.process_instance_id)
-                self.assertEqual(identity["performance_trace_version"], 3)
+                self.assertEqual(identity["performance_trace_version"], 4)
                 contract = identity["tool_contract"]
                 self.assertEqual(contract["schema_version"], 1)
                 self.assertEqual(contract["profile"], "smart-v3")

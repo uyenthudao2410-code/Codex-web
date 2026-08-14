@@ -13,6 +13,7 @@
     "test:all": "npm test && npm run test:mcp",
     "benchmark:routing": "cd resources/coding-tools-mcp && python -m benchmarks.routing_economics",
     "benchmark:activation": "cd resources/coding-tools-mcp && python -m benchmarks.runtime_activation",
+    "probe:execution-hub": "node scripts/execution-hub-activation-probe.js",
     "audit:prod": "npm audit --omit=dev",
     "dist": "npm run icon:build && npm test && electron-builder --win nsis",
     "dist:dir": "npm run icon:build && electron-builder --dir"
