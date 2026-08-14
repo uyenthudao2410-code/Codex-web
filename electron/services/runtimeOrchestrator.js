@@ -161,6 +161,19 @@ class RuntimeOrchestrator {
     return snapshot;
   }
 
+  recoveryStatus() {
+    return {
+      recovering: this.recovering,
+      failures: this.heartbeatFailures,
+      failureKind: this.heartbeatFailureKind,
+      recoveryAttempts: this.recoveryAttempts,
+      nextRecoveryAt: this.nextRecoveryAt,
+      recoveryBlocked: this.autoRecoveryBlocked,
+      lastStartFailure: this.lastStartFailure,
+      deferredRecoveryCount: this.deferredRecoveryCount
+    };
+  }
+
   async ensureToken() {
     let token = this.secrets.get('mcpAuthToken');
     if (!token) {
@@ -486,10 +499,7 @@ class RuntimeOrchestrator {
       nativeAlive,
       tunnelRunning,
       fullyReady: mcpRunning && tunnelRunning,
-      recovering: this.recovering,
-      failures: this.heartbeatFailures,
-      recoveryBlocked: this.autoRecoveryBlocked,
-      lastStartFailure: this.lastStartFailure
+      ...this.recoveryStatus()
     };
   }
 
@@ -525,7 +535,7 @@ class RuntimeOrchestrator {
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
       this.deferredRecoveryCount = 0;
-      return status;
+      return { ...status, ...this.recoveryStatus() };
     }
     const runtimeState = readJson(stateFile(), {});
     const expectedRunning = runtimeState.manualStop === false
@@ -546,7 +556,7 @@ class RuntimeOrchestrator {
     }
     this.heartbeatFailures += 1;
     if (this.heartbeatFailures < 3 || Date.now() < this.nextRecoveryAt) {
-      return { ...status, failures: this.heartbeatFailures };
+      return { ...status, ...this.recoveryStatus() };
     }
 
     this.recovering = true;
@@ -582,6 +592,7 @@ class RuntimeOrchestrator {
           });
           return {
             ...status,
+            ...this.recoveryStatus(),
             recovering: false,
             recoveryDeferred: true,
             deferredRecoveryCount: this.deferredRecoveryCount,
@@ -640,7 +651,8 @@ class RuntimeOrchestrator {
           sha256: connectorContract.currentSha256
         } : null,
         connectorContractAcknowledgedSha256: connectorContract.acknowledgedSha256,
-        connectorRefreshRequired: connectorContract.refreshRequired
+        connectorRefreshRequired: connectorContract.refreshRequired,
+        ...this.recoveryStatus()
       }
     }, reason);
   }

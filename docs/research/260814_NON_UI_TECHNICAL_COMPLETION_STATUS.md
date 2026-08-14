@@ -3,8 +3,8 @@
 **Date:** 2026-08-14  
 **Current workspace:** `E:\Github\Tools-Codex-web`  
 **Branch:** `main`  
-**Status:** **NON-UI SOURCE ROADMAP COMPLETE / LIVE HUB + SAFE MODE + TWO-CLIENT HANDOFF PASS / POST-FIX FLASH TERMINAL REPROOF + COHORT EVIDENCE PENDING**  
-**Public MCP contract:** `smart-v3`, 8 top-level tools, PerformanceTrace v4.
+**Status:** **NON-UI + OPERATOR OBSERVABILITY SOURCE CLOSURE COMPLETE / TRAFFIC GOVERNOR + FLIGHT RECORDER + RECOVERY UI PASS / POST-FIX FLASH TERMINAL REPROOF + COHORT EVIDENCE PENDING**
+**Public MCP contract:** `smart-v3`, 8 top-level tools; PerformanceTrace v5 source, controlled live activation pending.
 
 This document is the authoritative current-state delta for the Execution Hub / multi-provider non-UI work. Older implementation and architecture documents remain historical references; statements in them that P-MP1/P-MP2/P-MP3, Electron activation, permission cleanup, or two-client handoff are still pending are superseded by this status.
 
@@ -179,7 +179,98 @@ The native Codex host was also observed spawning the thin proxy. Its idle proces
 
 ---
 
-## 5. Remaining work
+## 5. Post-audit Traffic & Operator Observability closure
+
+The post-audit implementation closed the remaining actionable source gaps that did not require fabricated provider limits, paid inference, host-only ChatGPT telemetry, or representative production cohorts.
+
+### A. Provider Traffic & Usage Control Plane: COMPLETE
+
+Implemented and full-suite-proven:
+
+- runtime-scoped `ProviderTrafficGovernor` for already-authorized manual provider dispatch;
+- explicit configured limits only: `rpm`, `tpm`, `concurrency`;
+- configuration source: `CODING_TOOLS_MCP_PROVIDER_LIMITS_JSON`;
+- absent provider limits remain `observe_only` / unknown rather than becoming invented quota;
+- TPM admission requires an explicit request `token_budget`; prompt size or provider usage is not guessed into a token limit;
+- invalid explicit limit configuration fails closed;
+- deterministic request reservation/dedup, rolling 60-second RPM/TPM accounting, active concurrency release on terminal provider state, and reservation abort on provider-start failure;
+- retry-after is emitted only for a real RPM/TPM denial, not merely because traffic exists;
+- automatic provider routing remains explicitly `enabled=false`, `mode=evidence_gated`.
+
+The governor therefore protects manual provider dispatch without silently promoting Flash/Pro/Mini/Luna/Terra/Sol into an automatic routing policy.
+
+### B. Provider capacity/cooldown projection: COMPLETE
+
+Execution Hub now exposes bounded local capacity evidence without starting a new provider turn:
+
+- OpenCode active-request count, retained-dispatch count/limit, allowlisted models and read-only enforcement state;
+- Codex App Server model capacity cooldown rows with retry-after and observed failure count;
+- provider quota that is not configured or not reported remains unknown.
+
+### C. Bounded history / flight recorder / phase timing: COMPLETE
+
+No second orchestration database was added. Existing durable EOCL ledger evidence is projected through bounded read models:
+
+- recent run history is capped and exposes only run identity, lifecycle status and timestamps in the Hub UI projection;
+- flight-recorder event views reuse the existing sanitized ledger payloads and stable sequence cursor;
+- default/tail and `after_seq` delta reads are bounded to at most 100 events per call;
+- oversized projected event payloads are replaced by bounded byte count + SHA-256 identity;
+- phase durations are derived only from recorded EOCL transition timestamps and terminal `finished_at`;
+- the final active phase has `duration_ms=null` rather than using current wall time as fabricated measurement.
+
+The current renderer still polls the authenticated Hub snapshot. A dedicated push/event-stream transport was **not** added merely to satisfy the older 9router proposal; the durable delta primitive now exists for a later transport if operational evidence justifies it.
+
+### D. Local recovery and Control Center observability: COMPLETE for current milestone
+
+Electron supervisor state now projects its already-existing local recovery truth:
+
+- recovering flag;
+- consecutive failure count and typed failure kind;
+- recovery-attempt count and next recovery time;
+- recovery-blocked state;
+- last start failure;
+- deferred-recovery count.
+
+Control Center / Live Routing now renders:
+
+- provider policy/admission mode and capacity/cooldown evidence;
+- automatic-routing gate state;
+- bounded flight-recorder events and recent run history;
+- EOCL phase timing;
+- local runtime/tunnel recovery state;
+- explicit context-pressure provenance.
+
+The UI continues to separate OpenCode frontend connectivity from actual DeepSeek/model activity and does not fabricate streaming, provider billing, quota, or context percentage. Existing reduced-motion behavior remains intact.
+
+### E. Context-pressure and remote-monitoring boundary
+
+ChatGPT conversation context pressure is still returned as:
+
+```text
+status = unknown
+source = host_not_exposed
+```
+
+The UI states this explicitly and does **not** estimate a percentage. A separate authenticated remote-status channel for phones was not added in this closure; current recovery/health evidence remains local to the Electron/Hub control plane. Building a remote channel is a separate security/deployment feature, not a reason to invent host telemetry or expose an unauthenticated endpoint.
+
+### F. Boundary verification
+
+Canonical current-worktree verification after the implementation:
+
+```text
+npm test:             61 / 61 Node tests PASS
+npm run test:mcp:    228 / 228 Python MCP tests PASS
+total:               289 / 289 tests PASS
+git diff --check:    PASS
+```
+
+Additional focused backend proof for provider traffic / Hub / ledger / Codex / OpenCode / UsageEvent passed `43/43` before the full-suite gate.
+
+No paid provider call, runtime restart, connector refresh, commit, push, release, or deployment was performed for this post-audit source closure.
+
+---
+
+## 6. Remaining work
 
 ### A. Post-fix real Flash terminal repro
 
@@ -218,19 +309,25 @@ The following remain intentionally disabled until cohort thresholds are satisfie
 - automatic Pro/Terra/Sol escalation;
 - deep auto-routing;
 - auto-handoff;
-- Traffic Governor / RPM/TPM admission control;
+- automatic-router consumption of configured provider limits / governor state;
 - OpenCode controller promotion;
 - direct OpenCode workspace writes outside MCP.
 
 These are future optimization/evidence phases, not missing implementation required for the current non-UI source milestone.
 
-### D. UI remains deferred
+### D. External/host evidence remains unavailable by design
 
-No additional UI work is required for this non-UI completion milestone. UI/visual router work can resume separately when prioritized.
+- real ChatGPT context-pressure percentage remains unavailable because the host does not expose it;
+- a remote authenticated phone-monitoring channel is not part of the current local execution milestone;
+- push transport for the existing bounded Hub delta/flight-recorder evidence remains an optional operational optimization.
+
+### E. Proposal-only abstractions are not current blockers
+
+The research methodology proposed broader names/contracts such as generic `CompositeReadPlan`, generic `ExecutionArtifactRef`, full Python/Rust ToolSpec convergence and semantic parallel-planner metadata. The current source already has bounded output references, durable jobs/sessions, semantic navigation, proof fingerprints and structured execution primitives. Those broader abstractions remain optional benchmark-driven refactors; they were not added merely to satisfy proposal names because doing so would expand framework surface without a proven current blocker.
 
 ---
 
-## 6. Current completion assessment
+## 7. Current completion assessment
 
 ```text
 P0 Measurement Truth:                    COMPLETE
@@ -238,16 +335,77 @@ P-MP1 exact OpenCode telemetry:          COMPLETE
 P-MP2 read-only Provider Adapter:        COMPLETE
 P-MP3 shadow routing:                    COMPLETE
 Electron telemetry gateway live:         PASS
-MCP Smart-v3 / 8 tools / PT v4:          PASS
+MCP Smart-v3 / 8 tools / PT v5 source:   PASS
 Permission mode safe:                    PASS
 Codex Desktop thin-proxy topology:       PASS
 ChatWeb <-> Desktop fenced handoff:       PASS
 Real Flash provider/economics evidence:  PASS (one call)
+Provider Traffic Governor/manual gate:   COMPLETE
+Provider capacity/cooldown projection:   COMPLETE
+Hub flight recorder + sanitized history: COMPLETE
+EOCL timestamp phase timing:             COMPLETE
+Local recovery/operator UI:              COMPLETE
+Full boundary suite:                     PASS (93 Node + 240 Python; +3 subtests)
+Live PerformanceTrace v5 activation:     PENDING controlled restart
+Context pressure:                         UNKNOWN / host_not_exposed by design
 Post-fix Flash terminal repro:            PENDING external-cost proof
 P-MP4 representative cohorts:            PENDING evidence collection
 Bounded/deep auto-routing:                OFF by design
 Auto-handoff:                             OFF by design
-UI continuation:                          DEFERRED
+UI traffic/history/recovery continuation: COMPLETE for current milestone
 ```
 
-The non-UI source architecture is complete. Remaining work is evidence collection and optional production-routing promotion, plus one post-fix paid provider terminal proof if full end-to-end live closure is required.
+There is no known implementation blocker for the current non-UI + operator-observability milestone. Remaining work is external/evidence-gated or optional optimization: representative accepted cohorts before production routing promotion, one explicitly authorized post-fix paid Flash terminal proof if full provider live closure is required, host context telemetry if the product ever exposes it, and separately reviewed remote/push transports if they become operational priorities.
+
+---
+
+## 8. PerformanceTrace v5 / idempotency / attribution completion delta
+
+This section supersedes only the current-state parts above that still refer to PerformanceTrace v4 or the older boundary-test count. Historical chronology and prior live evidence remain unchanged.
+
+### Source closure completed
+
+- PerformanceTrace source schema is now `v5` with separate `required / optional / none` idempotency policy and `explicit / derived / none` key provenance. The broad v4 eligible denominator is retained for historical comparison only; v5 production evidence uses required-key coverage.
+- Deterministic auto-keys are limited to durable identities currently proven safe: `agent_workflow phase=execute` and `task_control accept/reject`. Accept/reject keys include caller identity plus controller fencing epoch; commands, stdin, restart, handoff-record and document mutations are not silently auto-deduplicated.
+- A bounded structured error taxonomy is recorded from code/category, not message text. Measured timing now accepts the broader methodology phase vocabulary without inventing missing values.
+- EOCL terminal evidence now exposes `tta_ms`, `observed_ms`, `unattributed_ms`, `tta_coverage`, a `0.90` floor and `0.95` target. EOCL `EXECUTING` remains `execution_window_ms`, not model latency.
+- Provider `queue_ms / provider_ms / total_ms` stay separate overlapping delegation evidence and are never added to EOCL observed time.
+- The Electron Hub proxy now keeps a bounded 256-sample resident loopback RTT window for MCP, heartbeat and telemetry and reports `n / p50 / p90 / p99 / max`, status classes and failures without retaining request body, headers, bearer/token or transcript content. It is explicitly gateway-to-local-MCP RTT, not provider/model latency.
+- Python `ToolSpec` now shares the Rust risk vocabulary (`read_only`, `project_write`, `job_run`, `account_manage`, `unknown`) and publishes ownership: Python owns MCP annotation/projection, Rust `ToolMetadata/ToolRisk` owns native execution-risk semantics, and EOCL + permission + write lease remain the authority boundary. Smart-v3 stays exactly **8 public tools**; mixed `task_control` deliberately remains `unknown`.
+- Runtime activation snapshot schema is now `v3`, separating legacy-v4 coverage from v5 required coverage and reporting optional/auto-key counts, error `UNKNOWN` share and measured phase-timing availability. v5 counters are a post-activation epoch and are not backfilled from historical v4 events.
+
+### Regression evidence
+
+The first complete Python run after auto-key introduction found one real multi-client regression (`1 failed, 239 passed`): a fenced ChatWeb `accept` could claim the same derived key later needed by the transferred Codex Desktop controller. The derivation was corrected to scope `accept/reject` by `client_id + fencing_token`; the direct fault oracle then passed `10/10`, followed by the full boundary suites.
+
+Final current-worktree verification:
+
+```text
+Python MCP:        240 / 240 PASS (+3 subtests PASS)
+Node / Electron:    93 / 93 PASS
+top-level total:   333 / 333 PASS
+git diff --check:  PASS
+source-root check: PASS
+```
+
+No test or security/authority guard was disabled or weakened to obtain this result.
+
+### Live activation boundary
+
+No controlled Runtime/Electron restart was performed for this v5 source closure. The currently running process and existing `.coding-tools/performance.json` therefore remain pre-v5/legacy evidence until activation. The historical live value `304 / 1291 = 23.5476%` is the old broad legacy denominator and is **not** the new required-v5 coverage result.
+
+A clean post-activation v5 epoch is required before claiming the methodology `>=95%` required-idempotency target. Resident gateway percentiles likewise become live operational evidence only after Electron loads the new source. No synthetic backfill is allowed.
+
+Operations deliberately not performed in this delta:
+
+```text
+runtime/Electron restart: no
+paid provider call:       no
+connector refresh:        no
+route threshold change:   no
+auto-handoff enablement:  no
+commit / push / release:  no
+deployment:               no
+```
+
+The post-fix paid Flash terminal repro and P-MP4 representative accepted cohorts remain pending evidence gates. Routing-v2 automatic dispatch, deep escalation and auto-handoff remain **OFF by design** until those gates are satisfied. `context_pressure` remains `unknown / host_not_exposed`; authenticated remote-phone monitoring and push transport remain separately reviewed optional product/operations work.

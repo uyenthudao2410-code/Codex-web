@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
-const { HubProxyGateway } = require('../electron/services/hubProxyGateway');
+const { HubProxyGateway, summarizeLatencySamples, LATENCY_SAMPLE_CAP } = require('../electron/services/hubProxyGateway');
 
 function listen(server) {
   return new Promise((resolve, reject) => {
@@ -30,6 +30,20 @@ function post(port, token, body, headers = {}, requestPath = '/mcp') {
     request.end(data);
   });
 }
+
+test('resident gateway latency summary uses bounded nearest-rank percentiles', () => {
+  const summary = summarizeLatencySamples([5, 1, 4, 2, 3], { '2xx': 5 }, 2);
+  assert.deepEqual(summary, {
+    n: 5,
+    p50_ms: 3,
+    p90_ms: 5,
+    p99_ms: 5,
+    max_ms: 5,
+    failures: 2,
+    status_classes: { '2xx': 5 }
+  });
+  assert.equal(LATENCY_SAMPLE_CAP, 256);
+});
 
 test('gateway keeps real MCP bearer in Electron and tags Desktop requests', async (t) => {
   const observed = [];
@@ -155,6 +169,22 @@ test('gateway keeps real MCP bearer in Electron and tags Desktop requests', asyn
   assert.equal(forwardedTelemetry.action, 'provider_telemetry');
   assert.equal(forwardedTelemetry.client_id, 'opencode');
   assert.deepEqual(forwardedTelemetry.telemetry, telemetryPayload);
+  const metrics = gateway.metrics();
+  assert.equal(metrics.measurement, 'resident_gateway_upstream_round_trip');
+  assert.equal(metrics.scope, 'electron_loopback_proxy_to_local_mcp');
+  assert.equal(metrics.sample_cap, LATENCY_SAMPLE_CAP);
+  assert.equal(metrics.by_kind.mcp.n, 3);
+  assert.equal(metrics.by_kind.heartbeat.n, 2);
+  assert.equal(metrics.by_kind.telemetry.n, 1);
+  assert.equal(metrics.by_kind.mcp.status_classes['2xx'], 3);
+  assert.equal(metrics.by_kind.heartbeat.status_classes['2xx'], 2);
+  assert.equal(metrics.by_kind.telemetry.status_classes['2xx'], 1);
+  for (const kind of ['mcp', 'heartbeat', 'telemetry']) {
+    assert.equal(Number.isFinite(metrics.by_kind[kind].p50_ms), true);
+    assert.equal(Number.isFinite(metrics.by_kind[kind].p90_ms), true);
+    assert.equal(Number.isFinite(metrics.by_kind[kind].p99_ms), true);
+    assert.equal(Number.isFinite(metrics.by_kind[kind].max_ms), true);
+  }
   const desktopTelemetry = await post(descriptor.port, descriptor.token, telemetryPayload, {}, '/__hub_proxy/telemetry');
   assert.equal(desktopTelemetry.status, 403);
   assert.equal(observed.length, 6);

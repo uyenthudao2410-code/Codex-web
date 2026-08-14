@@ -422,6 +422,19 @@ class OpenCodeProviderAdapter:
         with self._lock:
             return sum(1 for item in self._dispatches.values() if item.status == "running")
 
+    def capacity_status(self) -> dict[str, Any]:
+        with self._lock:
+            active = sum(1 for item in self._dispatches.values() if item.status == "running")
+            retained = len(self._dispatches)
+        return {
+            "provider_id": "opencode-go",
+            "active_requests": active,
+            "retained_dispatches": retained,
+            "retained_limit": MAX_RETAINED_DISPATCHES,
+            "models": sorted(ALLOWED_OPENCODE_MODELS),
+            "read_only_enforced": True,
+        }
+
     def close(self) -> None:
         self._on_terminal = None
         with self._lock:

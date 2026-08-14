@@ -34,7 +34,7 @@ test('manager Command Center and Live Routing expose the truthful nine-node topo
     }
     assert.match(html, new RegExp(`id="${prefix}RouterSummary"`));
   }
-  for (const id of ['ccKpiRuntime', 'ccKpiClients', 'ccKpiRoute', 'ccKpiProof', 'ccTaskStatus', 'ccTaskObjective', 'ccController', 'ccWriter', 'ccContinuity', 'routingDelegations', 'routingEvents', 'routingProofs']) {
+  for (const id of ['ccKpiRuntime', 'ccKpiClients', 'ccKpiRoute', 'ccKpiProof', 'ccTaskStatus', 'ccTaskObjective', 'ccActivityIndicator', 'ccActivityLabel', 'ccActivityDetail', 'ccMotionMode', 'ccController', 'ccWriter', 'ccContinuity', 'ccTrafficPolicy', 'ccTrafficMeta', 'ccRecoveryState', 'ccRecoveryMeta', 'ccContextPressure', 'ccContextMeta', 'routingDelegations', 'routingEvents', 'routingProofs', 'routingProviderTraffic', 'routingPhaseTiming', 'routingRunHistory', 'routingRecoveryState', 'routingRecoveryMeta', 'routingContextPressure']) {
     assert.match(html, new RegExp(`id="${id}"`), `missing Control Center id ${id}`);
   }
 });
@@ -58,13 +58,49 @@ test('manager router treats OpenCode connectivity and DeepSeek model activity as
   assert.match(js, /\['overview', 'routing', 'task'\]\.includes\(activePage\(\)\)/);
 });
 
+test('Control Center projects durable orchestration phases into visible activity state without fabricating model streaming', () => {
+  const js = read('renderer/control-center.js');
+  assert.match(js, /function executionActivity/);
+  assert.match(js, /resume_packet\?\.orchestration_state/);
+  assert.match(js, /PREFLIGHT:\s*\{\s*phase:\s*'thinking'/);
+  assert.match(js, /ROUTED:\s*\{\s*phase:\s*'dispatching'/);
+  assert.match(js, /EXECUTING:\s*\{\s*phase:\s*'executing'/);
+  assert.match(js, /PROVING:\s*\{\s*phase:\s*'proving'/);
+  assert.match(js, /ACCEPTING:\s*\{\s*phase:\s*'accepting'/);
+  assert.match(js, /REPLAN:\s*\{\s*phase:\s*'replanning'/);
+  assert.match(js, /\['streaming', 'responding'\]\.includes\(delegationStatus\)/);
+  assert.match(js, /fabric\.dataset\.phase = view\.activity\.phase/);
+  assert.match(js, /ccActivityIndicator/);
+  assert.match(js, /setAttribute\('aria-busy'/);
+  assert.match(js, /matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)/);
+});
+
 test('Control Center styling is responsive, accessible to reduced-motion users, and avoids hiding legacy functionality', () => {
   const css = read('renderer/control-center.css');
   assert.match(css, /\.cc-workbench/);
   assert.match(css, /\.ops-router/);
   assert.match(css, /\.system-launch-grid/);
+  assert.match(css, /\.cc-activity/);
   assert.match(css, /@keyframes ccEdgeFlow/);
+  assert.match(css, /@keyframes ccThinkingDot/);
+  assert.match(css, /@keyframes ccActivitySweep/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /@media \(max-width: 900px\)/);
   assert.match(css, /\.legacy-overview \{ display: none !important; \}/);
+});
+
+test('Control Center renders provider admission, bounded flight recorder, history and recovery without inventing quota or context pressure', () => {
+  const js = read('renderer/control-center.js');
+  assert.match(js, /function renderProviderTraffic/);
+  assert.match(js, /provider_traffic/);
+  assert.match(js, /automatic_routing/);
+  assert.match(js, /Provider quota is not configured; observe-only, no limit is invented/);
+  assert.match(js, /flight_recorder\?\.phase_timing/);
+  assert.match(js, /history\?\.runs/);
+  assert.match(js, /transcript excluded/);
+  assert.match(js, /function renderRecovery/);
+  assert.match(js, /context_pressure/);
+  assert.match(js, /host_not_exposed/);
+  assert.match(js, /does not expose conversation context pressure; UI does not estimate a percentage/);
+  assert.doesNotMatch(js, /contextPercent|context_percentage|estimatedContextPressure/);
 });

@@ -218,6 +218,43 @@ body[data-theme="dark"] {
 .cc-task-title { margin: 10px 0 0; color: var(--cc-text); font-size: 13px; line-height: 1.45; }
 .cc-detail { margin-top: 7px; color: var(--cc-muted); font-size: 10px; line-height: 1.55; overflow-wrap: anywhere; }
 .cc-mono { font-family: Consolas, ui-monospace, monospace; font-size: 9.5px; }
+.cc-activity {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  padding: 9px 10px;
+  overflow: hidden;
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  background: var(--cc-surface-soft);
+}
+.cc-activity::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, color-mix(in srgb, var(--cc-blue) 10%, transparent) 48%, transparent 66%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+.cc-activity.is-busy::after { animation: ccActivitySweep 2.4s ease-in-out infinite; }
+.cc-activity-orb { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 3px; min-width: 26px; }
+.cc-activity-orb i { width: 5px; height: 5px; border-radius: 50%; background: var(--cc-subtle); opacity: .55; }
+.cc-activity.is-busy .cc-activity-orb i { background: var(--cc-blue); animation: ccThinkingDot 1.05s ease-in-out infinite; }
+.cc-activity.is-busy .cc-activity-orb i:nth-child(2) { animation-delay: .14s; }
+.cc-activity.is-busy .cc-activity-orb i:nth-child(3) { animation-delay: .28s; }
+.cc-activity-copy { position: relative; z-index: 1; min-width: 0; }
+.cc-activity-copy b, .cc-activity-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-activity-copy b { color: var(--cc-text); font-size: 10px; }
+.cc-activity-copy small { margin-top: 2px; color: var(--cc-muted); font-size: 9px; }
+.cc-activity em { position: relative; z-index: 1; color: var(--cc-subtle); font-size: 8px; font-style: normal; font-weight: 800; letter-spacing: .45px; text-transform: uppercase; white-space: nowrap; }
+.cc-activity.is-active { border-color: color-mix(in srgb, var(--cc-blue) 38%, var(--cc-border)); background: var(--cc-blue-soft); }
+.cc-activity.is-waiting { border-color: color-mix(in srgb, var(--cc-amber) 38%, var(--cc-border)); }
+.cc-activity.is-blocked { border-color: color-mix(in srgb, var(--cc-red) 45%, var(--cc-border)); background: var(--cc-red-soft); }
+.cc-activity[data-phase="completed"] { border-color: color-mix(in srgb, var(--cc-green) 38%, var(--cc-border)); background: var(--cc-green-soft); }
+.cc-activity.motion-reduced em { color: var(--cc-amber); }
 .cc-key-values { display: grid; gap: 10px; }
 .cc-key-value { display: grid; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--cc-border); }
 .cc-key-value:last-child { padding-bottom: 0; border-bottom: 0; }
@@ -279,6 +316,14 @@ body[data-theme="dark"] {
 
 @keyframes ccEdgeFlow { to { stroke-dashoffset: -32; } }
 @keyframes ccNodePulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--cc-blue) 9%, transparent); } }
+@keyframes ccThinkingDot {
+  0%, 65%, 100% { opacity: .4; transform: translateY(0); }
+  32% { opacity: 1; transform: translateY(-3px); }
+}
+@keyframes ccActivitySweep {
+  0%, 18% { transform: translateX(-130%); }
+  70%, 100% { transform: translateX(130%); }
+}
 
 @media (max-width: 1050px) {
   .cc-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -306,5 +351,6 @@ body[data-theme="dark"] {
 
 @media (prefers-reduced-motion: reduce) {
   .ops-router-edge.is-active, .ops-router-node.is-active { animation: none !important; }
+  .cc-activity.is-busy::after, .cc-activity.is-busy .cc-activity-orb i { animation: none !important; }
   .ops-router-node, .system-launch, .nav-item { transition: none !important; }
 }

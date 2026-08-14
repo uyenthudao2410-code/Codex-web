@@ -12,6 +12,7 @@ from coding_tools_mcp.server import (
     RuntimeHTTPServer,
     STATELESS_PROTOCOL_VERSION,
 )
+from coding_tools_mcp.provider_traffic import ProviderTrafficGovernor
 
 
 class ExecutionHubHTTPTests(unittest.TestCase):
@@ -245,6 +246,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
 
         self.runtime._opencode_provider.close()
         self.runtime._opencode_provider = FakeProvider()
+        self.runtime.provider_traffic = ProviderTrafficGovernor({"opencode-go/deepseek-v4-flash": {"concurrency": 1}})
         denied_status, denied = self.post_hub({"action": "provider_dispatch", "client_id": "opencode", "client_type": "opencode", "model": "opencode-go/deepseek-v4-flash", "prompt": "inspect"})
         self.assertEqual(denied_status, 409, denied)
         self.assertEqual(denied["code"], "PROVIDER_DISPATCH_CLIENT_DENIED")
@@ -258,6 +260,11 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(started["dispatch"]["status"], "running")
         self.assertTrue(started["delegation"]["metadata"]["read_only_enforced"])
         self.assertNotIn("inspect", repr(started["delegation"]))
+        self.assertEqual(started["admission"]["reason"], "admitted")
+        blocked_status, blocked = self.post_hub({"action": "provider_dispatch", "client_id": "electron-panel", "client_type": "electron", "model": "opencode-go/deepseek-v4-flash", "prompt": "inspect another", "request_id": "req-2"})
+        self.assertEqual(blocked_status, 409, blocked)
+        self.assertEqual(blocked["code"], "PROVIDER_ADMISSION_DENIED")
+        self.assertEqual(blocked["details"]["reason"], "concurrency_exhausted")
 
         telemetry = {
             "schema_version": 1, "event_type": "message.updated", "session_id": "ses-adapter", "message_id": "msg-adapter",
@@ -416,6 +423,10 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         pre_status, pre = self.get_snapshot()
         self.assertEqual(pre_status, 200)
         self.assertEqual(pre["schema_version"], 2)
+        self.assertFalse(pre["provider_traffic"]["automatic_routing"]["enabled"])
+        self.assertEqual(pre["flight_recorder"]["run_id"], self.ctx.run_id)
+        self.assertEqual(pre["flight_recorder"]["phase_timing"]["source"], "eocl_event_timestamps")
+        self.assertTrue(any(item["run_id"] == self.ctx.run_id for item in pre["history"]["runs"]))
         self.assertFalse(pre["continuity"]["safe_to_rotate_chatweb"])
         self.assertIn("DESKTOP_OFFLINE", pre["continuity"]["reason_codes"])
 

@@ -60,6 +60,20 @@ def _tta_summary(values: list[float]) -> dict[str, Any]:
     }
 
 
+def _count_map(value: object) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, int] = {}
+    for key, raw in value.items():
+        try:
+            count = max(0, int(raw))
+        except (TypeError, ValueError):
+            continue
+        if count:
+            result[str(key)] = count
+    return result
+
+
 def _accepted_run_cohorts(connection: sqlite3.Connection) -> tuple[list[float], list[dict[str, Any]], dict[str, Any]]:
     accepted_rows = connection.execute(
         "SELECT run_id, started_at, finished_at, metadata_json "
@@ -163,25 +177,58 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
             }
         finally:
             connection.close()
+    performance_version = int(performance.get("version", 0) or 0)
     eligible = int(performance.get("idempotency_eligible_calls", 0) or 0)
     eligible_with_key = int(performance.get("idempotency_eligible_key_calls", 0) or 0)
-    coverage = round(eligible_with_key / eligible, 6) if eligible else None
+    legacy_coverage = round(eligible_with_key / eligible, 6) if eligible else None
+    required = int(performance.get("idempotency_required_calls", 0) or 0)
+    required_with_key = int(performance.get("idempotency_required_key_calls", 0) or 0)
+    required_coverage = round(required_with_key / required, 6) if required else None
+    optional = int(performance.get("idempotency_optional_calls", 0) or 0)
+    optional_with_key = int(performance.get("idempotency_optional_key_calls", 0) or 0)
+    coverage_source = "required_v5" if performance_version >= 5 else "legacy_v4"
+    decision_coverage = required_coverage if coverage_source == "required_v5" else legacy_coverage
+    error_class_counts = _count_map(performance.get("error_class_counts"))
+    classified_error_samples = sum(error_class_counts.values())
+    unknown_error_samples = int(error_class_counts.get("UNKNOWN", 0))
+    unknown_error_share = round(unknown_error_samples / classified_error_samples, 6) if classified_error_samples else None
+    phase_timing_samples = int(performance.get("phase_timing_samples", 0) or 0)
+    phase_timing_ms = _count_map(performance.get("phase_timing_ms"))
     return {
         "benchmark": "runtime activation telemetry snapshot",
         "evidence_class": "local_runtime_measurement_snapshot",
-        "schema_version": 2,
+        "schema_version": 3,
         "captured_at": utc_now(),
         "workspace": str(root),
         "performance": {
-            "version": int(performance.get("version", 0) or 0),
+            "version": performance_version,
             "tool_calls": int(performance.get("tool_calls", 0) or 0),
             "errors": int(performance.get("errors", 0) or 0),
             "local_execution_ms": int(performance.get("local_execution_ms", 0) or 0),
             "estimated_wait_ms": int(performance.get("estimated_wait_ms", 0) or 0),
             "idempotency_eligible_calls": eligible,
             "idempotency_eligible_key_calls": eligible_with_key,
-            "idempotency_coverage": coverage,
+            "idempotency_legacy_coverage": legacy_coverage,
+            "idempotency_required_calls": required,
+            "idempotency_required_key_calls": required_with_key,
+            "idempotency_required_coverage": required_coverage,
+            "idempotency_optional_calls": optional,
+            "idempotency_optional_key_calls": optional_with_key,
+            "idempotency_auto_key_calls": int(performance.get("idempotency_auto_key_calls", 0) or 0),
+            "idempotency_coverage": decision_coverage,
+            "idempotency_coverage_source": coverage_source,
+            "idempotency_v5_epoch": "post_activation_only" if performance_version >= 5 else "not_active",
+            "error_class_counts": error_class_counts,
+            "error_classified_samples": classified_error_samples,
+            "error_unknown_samples": unknown_error_samples,
+            "error_unknown_share": unknown_error_share,
+            "phase_timing_samples": phase_timing_samples,
+            "phase_timing_ms": phase_timing_ms,
+            "phase_timing_available": bool(phase_timing_samples and phase_timing_ms),
+            "proof_cache_eligible": int(performance.get("proof_cache_eligible", 0) or 0),
             "proof_cache_hits": int(performance.get("proof_cache_hits", 0) or 0),
+            "proof_cache_misses": int(performance.get("proof_cache_misses", 0) or 0),
+            "proof_cache_miss_reasons": dict(performance.get("proof_cache_miss_reasons", {}) or {}),
             "proof_cache_saved_ms": int(performance.get("proof_cache_saved_ms", 0) or 0),
             "execution_mode_counts": performance.get("execution_mode_counts", {}),
             "route_resolved_counts": performance.get("route_resolved_counts", {}),
@@ -191,7 +238,12 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
         "ledger": ledger,
         "notes": [
             "estimated_wait_ms is a runtime gap proxy, not pure network/model latency",
-            "idempotency coverage denominator includes only mutating/expensive calls marked eligible by runtime semantics",
+            "PerformanceTrace v5 routing/production gates use required-idempotency coverage; the legacy mutating/expensive denominator is retained only for historical comparability",
+            "optional idempotency covers side effects whose exact repeat can be intentional; it must not be forced into the required replay-protection gate",
+            "v5 required/optional/error/phase counters begin with the activated v5 runtime epoch and are not retroactively inferred from v4 history",
+            "error_unknown_share is measured only over v5 classified error samples, not over historical errors that predate the taxonomy",
+            "phase_timing_available reports measured phase samples only; missing provider/model timing is not estimated from EOCL execution windows",
+            "proof-cache coverage uses eligible proof stages as the denominator; miss reasons classify cold, fingerprint, or stage-version invalidation without changing reuse semantics",
             "accepted-run TTA is measured from durable run timestamps and is not a model-only latency metric",
             "accepted-run cohort dimensions are derived only from durable run metadata/events/wave state; missing dimensions remain unknown",
             "routing comparisons should use complete homogeneous accepted-run cohorts rather than raw global TTA",

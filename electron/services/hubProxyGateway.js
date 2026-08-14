@@ -7,6 +7,7 @@ const { writeJsonAtomic } = require('./jsonStore');
 const MAX_REQUEST_BYTES = 1024 * 1024;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAX_TELEMETRY_REQUEST_BYTES = 16 * 1024;
+const LATENCY_SAMPLE_CAP = 256;
 const DEFAULT_PROXY_IDENTITY = Object.freeze({
   clientId: 'codex-desktop',
   clientType: 'codex_desktop',
@@ -82,6 +83,29 @@ function normalizeProviderTelemetry(value) {
   return result;
 }
 
+function percentile(values, quantile) {
+  if (!Array.isArray(values) || values.length === 0) return null;
+  const sorted = values.slice().sort((left, right) => left - right);
+  const index = Math.max(0, Math.min(sorted.length - 1, Math.ceil(sorted.length * quantile) - 1));
+  return sorted[index];
+}
+
+function summarizeLatencySamples(values, statusCounts = {}, failures = 0) {
+  const durations = Array.isArray(values)
+    ? values.filter((value) => Number.isFinite(value) && value >= 0)
+    : [];
+  const rounded = (value) => value === null ? null : Math.round(value * 1000) / 1000;
+  return {
+    n: durations.length,
+    p50_ms: rounded(percentile(durations, 0.50)),
+    p90_ms: rounded(percentile(durations, 0.90)),
+    p99_ms: rounded(percentile(durations, 0.99)),
+    max_ms: rounded(durations.length ? Math.max(...durations) : null),
+    failures: Math.max(0, Number(failures) || 0),
+    status_classes: { ...statusCounts }
+  };
+}
+
 class HubProxyGateway {
   constructor({ settings, secrets, log, descriptorPath = hubProxyDescriptorFile() }) {
     this.settings = settings;
@@ -91,6 +115,11 @@ class HubProxyGateway {
     this.server = null;
     this.token = '';
     this.port = 0;
+    this.latency = {
+      mcp: { values: [], statusCounts: {}, failures: 0 },
+      heartbeat: { values: [], statusCounts: {}, failures: 0 },
+      telemetry: { values: [], statusCounts: {}, failures: 0 }
+    };
   }
 
   async start() {
@@ -122,6 +151,35 @@ class HubProxyGateway {
       token: this.token,
       electron_pid: process.pid,
       created_at: new Date().toISOString()
+    };
+  }
+
+  _recordLatency(kind, startedAt, statusCode) {
+    const bucket = this.latency[kind];
+    if (!bucket || typeof startedAt !== 'bigint') return;
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    if (!Number.isFinite(durationMs) || durationMs < 0) return;
+    bucket.values.push(durationMs);
+    if (bucket.values.length > LATENCY_SAMPLE_CAP) bucket.values.splice(0, bucket.values.length - LATENCY_SAMPLE_CAP);
+    const statusClass = Number.isInteger(Number(statusCode)) ? `${Math.floor(Number(statusCode) / 100)}xx` : 'unknown';
+    bucket.statusCounts[statusClass] = (bucket.statusCounts[statusClass] || 0) + 1;
+  }
+
+  _recordLatencyFailure(kind) {
+    const bucket = this.latency[kind];
+    if (bucket) bucket.failures += 1;
+  }
+
+  metrics() {
+    return {
+      measurement: 'resident_gateway_upstream_round_trip',
+      scope: 'electron_loopback_proxy_to_local_mcp',
+      sample_cap: LATENCY_SAMPLE_CAP,
+      excludes: ['client_upload_time', 'provider_model_latency_attribution'],
+      by_kind: Object.fromEntries(Object.entries(this.latency).map(([kind, bucket]) => [
+        kind,
+        summarizeLatencySamples(bucket.values, bucket.statusCounts, bucket.failures)
+      ]))
     };
   }
 
@@ -232,6 +290,8 @@ class HubProxyGateway {
           if (request.headers[name]) forwardedHeaders[name] = request.headers[name];
         }
       }
+      const latencyKind = isHeartbeat ? 'heartbeat' : isTelemetry ? 'telemetry' : 'mcp';
+      const upstreamStartedAt = process.hrtime.bigint();
       const upstream = http.request({
         host: '127.0.0.1',
         port: Number(settings.mcpPort),
@@ -249,6 +309,7 @@ class HubProxyGateway {
         upstreamResponse.on('end', () => {
           if (finished) return;
           finished = true;
+          this._recordLatency(latencyKind, upstreamStartedAt, upstreamResponse.statusCode || 502);
           if (responseBytes > MAX_RESPONSE_BYTES) {
             this.reject(response, 502, 'Upstream MCP response exceeded proxy limit');
             return;
@@ -264,7 +325,10 @@ class HubProxyGateway {
         });
       });
       upstream.on('timeout', () => upstream.destroy(new Error('upstream timeout')));
-      upstream.on('error', () => failOnce(503, 'Coding Tools MCP is not available'));
+      upstream.on('error', () => {
+        this._recordLatencyFailure(latencyKind);
+        failOnce(503, 'Coding Tools MCP is not available');
+      });
       upstream.end(body);
     });
   }
@@ -275,7 +339,9 @@ module.exports = {
   sameToken,
   proxyIdentityFromHeaders,
   normalizeProviderTelemetry,
+  summarizeLatencySamples,
   MAX_REQUEST_BYTES,
   MAX_RESPONSE_BYTES,
-  MAX_TELEMETRY_REQUEST_BYTES
+  MAX_TELEMETRY_REQUEST_BYTES,
+  LATENCY_SAMPLE_CAP
 };

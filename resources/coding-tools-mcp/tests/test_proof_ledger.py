@@ -49,7 +49,12 @@ class ProofLedgerTests(unittest.TestCase):
             )
             self.assertEqual(calls["count"], 1)
             self.assertFalse(first["cache_hit"])
+            self.assertTrue(first["proof_cache_eligible"])
+            self.assertEqual(first["proof_cache_miss_reason"], "cold")
             self.assertTrue(second["cache_hit"])
+            self.assertTrue(second["proof_cache_eligible"])
+            self.assertIsNone(second["proof_cache_miss_reason"])
+            self.assertEqual(second["proof_cache_source_proof_id"], first_id)
             self.assertEqual(first_id, second_id)
             self.assertEqual(second["summary"], "green")
 
@@ -71,7 +76,29 @@ class ProofLedgerTests(unittest.TestCase):
                 runner=runner,
             )
             self.assertFalse(third["cache_hit"])
+            self.assertEqual(third["proof_cache_miss_reason"], "input_fingerprint_changed")
+            self.assertEqual(third["proof_cache_source_proof_id"], first_id)
             self.assertEqual(calls["count"], 2)
+
+            fourth, _ = proof.run_cached(
+                run_id=run_id,
+                wave_id=wave_id,
+                stage_id="focused",
+                stage_version="2",
+                input_fingerprint=fp2,
+                command="test",
+                runner=runner,
+            )
+            self.assertFalse(fourth["cache_hit"])
+            self.assertEqual(fourth["proof_cache_miss_reason"], "stage_version_changed")
+            self.assertEqual(calls["count"], 3)
+            miss_events = [item for item in ledger.list_events(run_id) if item["event_type"] == "proof_cache_miss"]
+            self.assertEqual([item["payload"]["reason"] for item in miss_events], [
+                "cold", "input_fingerprint_changed", "stage_version_changed"
+            ])
+            self.assertIsNone(miss_events[0]["payload"]["source_proof_id"])
+            self.assertEqual(miss_events[1]["payload"]["source_proof_id"], first_id)
+            self.assertNotIn("result", miss_events[1]["payload"])
 
 
 if __name__ == "__main__":

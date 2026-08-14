@@ -835,6 +835,209 @@ class OrchestrationLedger:
             "shadow_recommendations": self.list_shadow_routes(run_id, limit=bounded_limit),
             "actual_delegations": actual_delegations[-bounded_limit:],
             "usage_events": self.list_usage_events(run_id, limit=bounded_limit),
+            "accepted_result": self.accepted_result_economics(run_id),
+        }
+
+    def accepted_result_economics(self, run_id: str) -> dict[str, Any]:
+        """Project durable evidence for cost/time per accepted result.
+
+        Provider-reported monetary cost and Codex rate-card credit estimates are
+        intentionally separate channels. Missing measurements remain unknown;
+        this projection never turns absent telemetry into zero cost or a router
+        promotion signal.
+        """
+        run = self.get_run(run_id)
+        if run is None:
+            return {
+                "schema_version": 1,
+                "run_id": run_id,
+                "status": "missing",
+                "accepted": False,
+                "first_pass_accepted": False,
+                "tta_ms": None,
+                "route": {"resolved": "unknown", "model": None, "effort": None, "profile": None},
+                "repair": {"replan_count": 0, "failure_event_count": 0},
+                "proof": {"records": 0, "passed": 0, "failed": 0},
+                "phase_timing": {
+                    "source": "eocl_event_timestamps",
+                    "complete": False,
+                    "tta_ms": None,
+                    "observed_ms": 0,
+                    "unattributed_ms": None,
+                    "tta_coverage": None,
+                    "coverage_floor": 0.90,
+                    "coverage_target": 0.95,
+                    "meets_coverage_floor": False,
+                    "meets_coverage_target": False,
+                    "by_state_ms": {},
+                    "methodology_phase_ms": {},
+                },
+                "provider_economics": {
+                    "usage_event_count": 0,
+                    "cost_measured_event_count": 0,
+                    "cost_complete": False,
+                    "provider_cost": None,
+                    "usage": {},
+                    "timing": {
+                        "measurement": "unobserved",
+                        "overlaps_eocl_windows": True,
+                        "components_ms": {"queue_ms": None, "provider_ms": None, "total_ms": None},
+                        "sample_counts": {"queue_ms": 0, "provider_ms": 0, "total_ms": 0},
+                    },
+                },
+                "candidate_economics": {"observations": 0, "estimated_credits": None, "pricing_bases": []},
+                "critical_defects": {"status": "unknown", "count": None, "source": "not_recorded"},
+            }
+
+        waves = self.list_waves(run_id)
+        events = self.list_events(run_id)
+        proofs = self.list_proofs(run_id)
+        checkpoints = self.list_checkpoints(run_id)
+        delegations: list[dict[str, Any]] = []
+        for wave in waves:
+            delegations.extend(self.list_delegations(str(wave["wave_id"])))
+
+        latest_route: dict[str, Any] = {}
+        failure_event_count = 0
+        for event in events:
+            payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+            if event.get("event_type") == "route_selected":
+                latest_route = dict(payload)
+            elif event.get("event_type") == "failure_observed":
+                failure_event_count += 1
+
+        replans = sum(1 for wave in waves if str(wave.get("status") or "") == "replanned")
+        accepted = str(run.get("status") or "") == "accepted"
+        phase_timing = self.run_phase_timing(run_id)
+        tta_ms = phase_timing.get("tta_ms")
+        observed_phase_ms = max(0, int(phase_timing.get("observed_ms") or 0))
+        tta_coverage = phase_timing.get("tta_coverage")
+
+        usage_events = self.list_usage_events(run_id, limit=500)
+        usage_totals = {
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "uncached_input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_output_tokens": 0,
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+        }
+        measured_costs: list[float] = []
+        provider_models: set[str] = set()
+        provider_ids: set[str] = set()
+        for usage_event in usage_events:
+            usage = usage_event.get("usage") if isinstance(usage_event.get("usage"), dict) else {}
+            for key in usage_totals:
+                value = usage.get(key)
+                if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                    usage_totals[key] += int(value)
+            measurement = usage_event.get("measurement") if isinstance(usage_event.get("measurement"), dict) else {}
+            cost = usage_event.get("cost") if isinstance(usage_event.get("cost"), dict) else {}
+            provider_cost = cost.get("provider_cost")
+            if measurement.get("cost") == "measured" and isinstance(provider_cost, (int, float)) and not isinstance(provider_cost, bool) and provider_cost >= 0:
+                measured_costs.append(float(provider_cost))
+            provider_id = str(usage_event.get("provider_id") or "").strip()
+            model = str(usage_event.get("model") or usage_event.get("model_id") or "").strip()
+            if provider_id:
+                provider_ids.add(provider_id)
+            if model:
+                provider_models.add(model)
+        cost_complete = bool(usage_events) and len(measured_costs) == len(usage_events)
+
+        provider_timing_values: dict[str, list[int]] = {"queue_ms": [], "provider_ms": [], "total_ms": []}
+        for delegation in delegations:
+            metadata = delegation.get("metadata") if isinstance(delegation.get("metadata"), dict) else {}
+            timing = metadata.get("timing") if isinstance(metadata.get("timing"), dict) else {}
+            for key in provider_timing_values:
+                value = timing.get(key)
+                if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                    provider_timing_values[key].append(int(value))
+        provider_timing_components = {
+            key: sum(values) if values else None
+            for key, values in provider_timing_values.items()
+        }
+        provider_timing_samples = {key: len(values) for key, values in provider_timing_values.items()}
+        provider_timing_observed = any(provider_timing_samples.values())
+
+        estimated_credits: list[float] = []
+        pricing_bases: set[str] = set()
+        candidate_models: set[str] = set()
+        for delegation in delegations:
+            metadata = delegation.get("metadata") if isinstance(delegation.get("metadata"), dict) else {}
+            economics = metadata.get("economics") if isinstance(metadata.get("economics"), dict) else {}
+            estimate = economics.get("estimated_credits")
+            if isinstance(estimate, (int, float)) and not isinstance(estimate, bool) and estimate >= 0:
+                estimated_credits.append(float(estimate))
+                model = str(delegation.get("model") or economics.get("model") or "").strip()
+                if model:
+                    candidate_models.add(model)
+                pricing_basis = str(economics.get("pricing_basis") or "").strip()
+                if pricing_basis:
+                    pricing_bases.add(pricing_basis)
+
+        proof_passed = sum(1 for proof in proofs if str(proof.get("status") or "") == "passed")
+        proof_failed = len(proofs) - proof_passed
+        accepted_checkpoints = sum(1 for checkpoint in checkpoints if str(checkpoint.get("status") or "") == "accepted")
+
+        return {
+            "schema_version": 1,
+            "run_id": run_id,
+            "status": str(run.get("status") or ""),
+            "accepted": accepted,
+            "first_pass_accepted": bool(accepted and replans == 0),
+            "tta_ms": tta_ms,
+            "route": {
+                "resolved": str(latest_route.get("resolved") or "unknown"),
+                "model": latest_route.get("model"),
+                "effort": latest_route.get("effort"),
+                "profile": latest_route.get("profile"),
+            },
+            "repair": {"replan_count": replans, "failure_event_count": failure_event_count},
+            "proof": {
+                "records": len(proofs),
+                "passed": proof_passed,
+                "failed": proof_failed,
+                "accepted_checkpoint_count": accepted_checkpoints,
+            },
+            "phase_timing": {
+                "source": phase_timing.get("source"),
+                "complete": bool(phase_timing.get("complete")),
+                "tta_ms": tta_ms,
+                "observed_ms": observed_phase_ms,
+                "unattributed_ms": phase_timing.get("unattributed_ms"),
+                "tta_coverage": tta_coverage,
+                "coverage_floor": phase_timing.get("coverage_floor"),
+                "coverage_target": phase_timing.get("coverage_target"),
+                "meets_coverage_floor": bool(phase_timing.get("meets_coverage_floor")),
+                "meets_coverage_target": bool(phase_timing.get("meets_coverage_target")),
+                "by_state_ms": dict(phase_timing.get("by_state_ms") or {}),
+                "methodology_phase_ms": dict(phase_timing.get("methodology_phase_ms") or {}),
+            },
+            "provider_economics": {
+                "usage_event_count": len(usage_events),
+                "cost_measured_event_count": len(measured_costs),
+                "cost_complete": cost_complete,
+                "provider_cost": round(sum(measured_costs), 12) if cost_complete else None,
+                "usage": usage_totals,
+                "providers": sorted(provider_ids),
+                "models": sorted(provider_models),
+                "measurement": "provider_reported" if usage_events else "unobserved",
+                "timing": {
+                    "measurement": "delegation_metadata" if provider_timing_observed else "unobserved",
+                    "overlaps_eocl_windows": True,
+                    "components_ms": provider_timing_components,
+                    "sample_counts": provider_timing_samples,
+                },
+            },
+            "candidate_economics": {
+                "observations": len(estimated_credits),
+                "estimated_credits": round(sum(estimated_credits), 6) if estimated_credits else None,
+                "pricing_bases": sorted(pricing_bases),
+                "models": sorted(candidate_models),
+                "measurement": "estimated_rate_card" if estimated_credits else "unobserved",
+            },
+            "critical_defects": {"status": "unknown", "count": None, "source": "not_recorded"},
         }
 
     def list_events_since(
@@ -962,15 +1165,55 @@ class OrchestrationLedger:
             )
         return proof_id
 
-    def find_cached_pass(self, *, stage_id: str, stage_version: str, input_fingerprint: str) -> dict[str, Any] | None:
+    def proof_cache_lookup(self, *, stage_id: str, stage_version: str, input_fingerprint: str) -> dict[str, Any]:
+        """Classify one proof-cache opportunity without changing reuse semantics."""
+        stage = _bounded_text(stage_id, 200)
+        version = _bounded_text(stage_version, 100)
+        fingerprint = _bounded_text(input_fingerprint, 128)
         with self._lock, self._connect() as connection:
-            row = connection.execute(
+            exact = connection.execute(
                 """SELECT * FROM proofs
                 WHERE stage_id=? AND stage_version=? AND input_fingerprint=? AND status='passed'
                 ORDER BY finished_at DESC LIMIT 1""",
-                (stage_id, stage_version, input_fingerprint),
+                (stage, version, fingerprint),
             ).fetchone()
-        return self._proof_row(row) if row else None
+            if exact is not None:
+                return {"eligible": True, "hit": True, "reason": "exact_fingerprint", "source_proof": self._proof_row(exact)}
+            same_version = connection.execute(
+                """SELECT * FROM proofs
+                WHERE stage_id=? AND stage_version=? AND status='passed'
+                ORDER BY finished_at DESC LIMIT 1""",
+                (stage, version),
+            ).fetchone()
+            if same_version is not None:
+                return {
+                    "eligible": True,
+                    "hit": False,
+                    "reason": "input_fingerprint_changed",
+                    "source_proof": self._proof_row(same_version),
+                }
+            same_stage = connection.execute(
+                """SELECT * FROM proofs
+                WHERE stage_id=? AND status='passed'
+                ORDER BY finished_at DESC LIMIT 1""",
+                (stage,),
+            ).fetchone()
+        if same_stage is not None:
+            return {
+                "eligible": True,
+                "hit": False,
+                "reason": "stage_version_changed",
+                "source_proof": self._proof_row(same_stage),
+            }
+        return {"eligible": True, "hit": False, "reason": "cold", "source_proof": None}
+
+    def find_cached_pass(self, *, stage_id: str, stage_version: str, input_fingerprint: str) -> dict[str, Any] | None:
+        lookup = self.proof_cache_lookup(
+            stage_id=stage_id,
+            stage_version=stage_version,
+            input_fingerprint=input_fingerprint,
+        )
+        return lookup["source_proof"] if lookup["hit"] else None
 
     def list_proofs(self, run_id: str, *, wave_id: str | None = None) -> list[dict[str, Any]]:
         query = "SELECT * FROM proofs WHERE run_id=?"
@@ -2186,6 +2429,10 @@ class OrchestrationLedger:
             row = connection.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
         if not row:
             return None
+        return self._run_row(row)
+
+    @staticmethod
+    def _run_row(row: sqlite3.Row) -> dict[str, Any]:
         return {
             "run_id": row["run_id"],
             "task_id": row["task_id"],
@@ -2194,6 +2441,281 @@ class OrchestrationLedger:
             "started_at": row["started_at"],
             "finished_at": row["finished_at"],
             "metadata": json.loads(row["metadata_json"] or "{}"),
+        }
+
+    def list_runs(self, *, limit: int = 20, status: str = "") -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(int(limit), 100))
+        query = "SELECT * FROM runs"
+        params: list[Any] = []
+        if status:
+            query += " WHERE status=?"
+            params.append(_bounded_text(status, 64))
+        query += " ORDER BY started_at DESC, run_id DESC LIMIT ?"
+        params.append(bounded_limit)
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [self._run_row(row) for row in rows]
+
+    @staticmethod
+    def _timestamp_millis(value: Any) -> int | None:
+        text = str(value or "").strip()
+        if not text:
+            return None
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return int(parsed.timestamp() * 1000)
+
+    def run_phase_timing(self, run_id: str) -> dict[str, Any]:
+        run = self.get_run(run_id)
+        if run is None:
+            return {
+                "run_id": run_id,
+                "source": "eocl_event_timestamps",
+                "segments": [],
+                "by_state_ms": {},
+                "methodology_phase_ms": {},
+                "tta_ms": None,
+                "observed_ms": 0,
+                "unattributed_ms": None,
+                "tta_coverage": None,
+                "coverage_floor": 0.90,
+                "coverage_target": 0.95,
+                "meets_coverage_floor": False,
+                "meets_coverage_target": False,
+                "complete": False,
+            }
+        points: list[dict[str, Any]] = []
+        for event in self.list_events(run_id):
+            state = str(event.get("state_after") or "").strip()
+            started_ms = self._timestamp_millis(event.get("event_time"))
+            if not state or started_ms is None:
+                continue
+            if points and points[-1]["state"] == state:
+                continue
+            points.append({"state": state, "started_at": event.get("event_time"), "started_ms": started_ms, "seq": event.get("seq")})
+        started_ms = self._timestamp_millis(run.get("started_at"))
+        finished_ms = self._timestamp_millis(run.get("finished_at"))
+        segments: list[dict[str, Any]] = []
+        by_state: dict[str, int] = {}
+        for index, point in enumerate(points):
+            end_ms = points[index + 1]["started_ms"] if index + 1 < len(points) else finished_ms
+            ended_at = points[index + 1]["started_at"] if index + 1 < len(points) else run.get("finished_at")
+            duration_ms = max(0, int(end_ms - point["started_ms"])) if end_ms is not None else None
+            segments.append({"state": point["state"], "start_seq": point["seq"], "started_at": point["started_at"], "ended_at": ended_at, "duration_ms": duration_ms})
+            if duration_ms is not None:
+                by_state[point["state"]] = by_state.get(point["state"], 0) + duration_ms
+        methodology_phase_ms = {
+            "preflight_ms": by_state.get("PREFLIGHT"),
+            "ready_wait_ms": by_state.get("READY"),
+            "dispatch_window_ms": by_state.get("ROUTED"),
+            "execution_window_ms": by_state.get("EXECUTING"),
+            "proof_ms": by_state.get("PROVING"),
+            "accept_wait_ms": by_state.get("ACCEPTING"),
+            "replan_ms": by_state.get("REPLAN"),
+        }
+        observed_ms = sum(by_state.values())
+        tta_ms = (
+            max(0, int(finished_ms - started_ms))
+            if started_ms is not None and finished_ms is not None and finished_ms >= started_ms
+            else None
+        )
+        unattributed_ms = max(0, tta_ms - observed_ms) if tta_ms is not None else None
+        tta_coverage = None
+        if tta_ms is not None and tta_ms > 0:
+            tta_coverage = round(min(1.0, observed_ms / tta_ms), 6)
+        coverage_floor = 0.90
+        coverage_target = 0.95
+        return {
+            "run_id": run_id,
+            "source": "eocl_event_timestamps",
+            "segments": segments[-64:],
+            "by_state_ms": by_state,
+            "methodology_phase_ms": methodology_phase_ms,
+            "tta_ms": tta_ms,
+            "observed_ms": observed_ms,
+            "unattributed_ms": unattributed_ms,
+            "tta_coverage": tta_coverage,
+            "coverage_floor": coverage_floor,
+            "coverage_target": coverage_target,
+            "meets_coverage_floor": bool(tta_coverage is not None and tta_coverage >= coverage_floor),
+            "meets_coverage_target": bool(tta_coverage is not None and tta_coverage >= coverage_target),
+            "complete": bool(run.get("finished_at")) and bool(points),
+        }
+
+    @staticmethod
+    def _flight_event(event: dict[str, Any]) -> dict[str, Any]:
+        payload = event.get("payload") or {}
+        encoded = _json(payload).encode("utf-8")
+        if len(encoded) > 2_000:
+            payload = {"bounded": True, "bytes": len(encoded), "sha256": hashlib.sha256(encoded).hexdigest()}
+        return {
+            "seq": int(event.get("seq") or 0),
+            "event_type": str(event.get("event_type") or ""),
+            "state_before": str(event.get("state_before") or ""),
+            "state_after": str(event.get("state_after") or ""),
+            "event_time": str(event.get("event_time") or ""),
+            "wave_id": str(event.get("wave_id") or ""),
+            "delegation_id": str(event.get("delegation_id") or ""),
+            "payload": payload,
+        }
+
+    def flight_recorder(self, run_id: str, *, after_seq: int | None = None, limit: int = 40) -> dict[str, Any]:
+        bounded_limit = max(1, min(int(limit), 100))
+        if after_seq is None:
+            all_events = self.list_events(run_id)
+            selected = all_events[-bounded_limit:]
+            has_more = len(all_events) > len(selected)
+            requested_after = int(selected[0]["seq"]) - 1 if selected else 0
+        else:
+            requested_after = max(0, int(after_seq))
+            delta = self.list_events_since(run_id, after_seq=requested_after, limit=bounded_limit)
+            selected = delta["events"]
+            has_more = bool(delta["has_more"])
+        events = [self._flight_event(item) for item in selected]
+        return {
+            "run_id": run_id,
+            "after_seq": requested_after,
+            "events": events,
+            "next_after_seq": int(events[-1]["seq"]) if events else requested_after,
+            "has_more": has_more,
+            "phase_timing": self.run_phase_timing(run_id),
+        }
+
+    def evidence_query(
+        self,
+        run_id: str,
+        *,
+        wave_id: str = "",
+        after_seq: int | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Return bounded content-free evidence for resume and filtered audit."""
+        run = self.get_run(run_id)
+        if run is None:
+            raise ValueError("orchestration run does not exist")
+        bounded_limit = max(1, min(int(limit), 100))
+        requested_wave = _bounded_text(wave_id, 256).strip()
+        all_waves = self.list_waves(run_id)
+        selected_waves = all_waves
+        if requested_wave:
+            selected_waves = [item for item in all_waves if str(item.get("wave_id") or "") == requested_wave]
+            if not selected_waves:
+                raise ValueError("orchestration wave does not belong to run")
+
+        event_query = "SELECT * FROM events WHERE run_id=?"
+        event_params: list[Any] = [_bounded_text(run_id, 256)]
+        if requested_wave:
+            event_query += " AND wave_id=?"
+            event_params.append(requested_wave)
+        if after_seq is None:
+            event_query += " ORDER BY seq DESC LIMIT ?"
+            event_params.append(bounded_limit + 1)
+            with self._lock, self._connect() as connection:
+                rows = connection.execute(event_query, event_params).fetchall()
+            has_more = len(rows) > bounded_limit
+            selected_rows = list(reversed(rows[:bounded_limit]))
+            requested_after = int(selected_rows[0]["seq"] or 0) - 1 if selected_rows else 0
+            omitted_earlier_events = has_more
+        else:
+            requested_after = max(0, int(after_seq))
+            event_query += " AND seq>? ORDER BY seq LIMIT ?"
+            event_params.extend([requested_after, bounded_limit + 1])
+            with self._lock, self._connect() as connection:
+                rows = connection.execute(event_query, event_params).fetchall()
+            has_more = len(rows) > bounded_limit
+            selected_rows = rows[:bounded_limit]
+            omitted_earlier_events = False
+
+        events = [self._flight_event(self._event_row(row)) for row in selected_rows]
+        proofs = self.list_proofs(run_id, wave_id=requested_wave or None)[-bounded_limit:]
+        checkpoints = self.list_checkpoints(run_id, wave_id=requested_wave or None)[-bounded_limit:]
+        delegations = [
+            item
+            for wave in selected_waves
+            for item in self.list_delegations(str(wave.get("wave_id") or ""))
+        ][-bounded_limit:]
+        capsule = self.latest_handoff_capsule(run_id=run_id)
+        capsule_locator = None
+        if capsule is not None:
+            capsule_locator = {
+                "capsule_id": capsule.get("capsule_id"),
+                "run_id": capsule.get("run_id"),
+                "wave_id": capsule.get("wave_id"),
+                "status": capsule.get("status"),
+                "created_at": capsule.get("created_at"),
+                "sha256": capsule.get("sha256"),
+                "bytes": capsule.get("bytes"),
+            }
+
+        proof_view = [{
+            "proof_id": item.get("proof_id"),
+            "wave_id": item.get("wave_id"),
+            "stage_id": item.get("stage_id"),
+            "status": item.get("status"),
+            "duration_ms": item.get("duration_ms"),
+            "exit_code": item.get("exit_code"),
+            "cache_hit": item.get("cache_hit"),
+            "finished_at": item.get("finished_at"),
+        } for item in proofs]
+        delegation_view = [{
+            "delegation_id": item.get("delegation_id"),
+            "wave_id": item.get("wave_id"),
+            "authority_owner": item.get("authority_owner"),
+            "route_resolved": item.get("route_resolved"),
+            "model": item.get("model"),
+            "effort": item.get("effort"),
+            "status": item.get("status"),
+            "started_at": item.get("started_at"),
+            "finished_at": item.get("finished_at"),
+        } for item in delegations]
+        checkpoint_view = [{
+            "checkpoint_id": item.get("checkpoint_id"),
+            "wave_id": item.get("wave_id"),
+            "git_head": item.get("git_head"),
+            "proof_fingerprint": item.get("proof_fingerprint"),
+            "status": item.get("status"),
+            "created_at": item.get("created_at"),
+        } for item in checkpoints]
+        wave_view = selected_waves[-bounded_limit:]
+        return {
+            "schema_version": 1,
+            "query": {
+                "run_id": run_id,
+                "wave_id": requested_wave or None,
+                "after_seq": requested_after,
+                "limit": bounded_limit,
+                "mode": "model_free",
+            },
+            "run": run,
+            "waves": wave_view,
+            "events": events,
+            "proofs": proof_view,
+            "delegations": delegation_view,
+            "checkpoints": checkpoint_view,
+            "latest_handoff_capsule": capsule_locator,
+            "phase_timing": self.run_phase_timing(run_id),
+            "accepted_result": self.accepted_result_economics(run_id),
+            "relationships": {
+                "task_id": run.get("task_id"),
+                "run_id": run_id,
+                "wave_ids": [item.get("wave_id") for item in wave_view],
+                "event_seqs": [item.get("seq") for item in events],
+                "proof_ids": [item.get("proof_id") for item in proof_view],
+                "delegation_ids": [item.get("delegation_id") for item in delegation_view],
+                "checkpoint_ids": [item.get("checkpoint_id") for item in checkpoint_view],
+                "capsule_id": capsule_locator.get("capsule_id") if capsule_locator else None,
+            },
+            "next_after_seq": int(events[-1]["seq"]) if events else requested_after,
+            "has_more": has_more,
+            "omitted_earlier_events": omitted_earlier_events,
+            "model_free": True,
+            "content_free": True,
+            "raw_transcript_included": False,
+            "integrity": self.verify_chain(run_id),
         }
 
     def list_waves(self, run_id: str) -> list[dict[str, Any]]:

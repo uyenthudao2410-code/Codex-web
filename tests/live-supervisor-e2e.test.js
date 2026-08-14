@@ -7,9 +7,15 @@ const path = require('node:path');
 const http = require('node:http');
 const runtimePaths = require('../electron/paths');
 const runtimeStatePath = path.join(os.tmpdir(), `webcodex-live-supervisor-${process.pid}.json`);
+const supervisorRequestPath = path.join(os.tmpdir(), `webcodex-live-supervisor-request-${process.pid}.json`);
 runtimePaths.stateFile = () => runtimeStatePath;
+runtimePaths.supervisorRequestFile = () => supervisorRequestPath;
 fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
-test.after(() => fs.rmSync(runtimeStatePath, { force: true }));
+test.after(() => {
+  fs.rmSync(runtimeStatePath, { force: true });
+  fs.rmSync(supervisorRequestPath, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
+});
 const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
 
 const MCP_ROOT = path.resolve(__dirname, '..', 'resources', 'coding-tools-mcp');

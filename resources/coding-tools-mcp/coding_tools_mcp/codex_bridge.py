@@ -1013,6 +1013,10 @@ class CodexAppServerBridge:
                 rows.append({"model": model, "retry_after_ms": max(1, int((float(state["open_until"]) - now) * 1000)), "failures": int(state.get("failures", 1))})
         return rows
 
+    def capacity_status(self) -> list[dict[str, Any]]:
+        """Return local cooldown evidence without starting the Codex sidecar."""
+        return self._capacity_status()
+
     def _finalize_turn(self, turn_id: str) -> dict[str, Any]:
         with self._condition:
             state = self._turn_states.get(turn_id)

@@ -56,6 +56,106 @@ class TaskStateTests(unittest.TestCase):
             self.assertEqual(restored["test_results"][-1]["status"], "passed")
             self.assertEqual(restored["modified_files"], [{"path": "src/app.js", "operation": "update", "updated_at": restored["modified_files"][0]["updated_at"]}])
 
+    def test_command_output_artifact_ref_survives_task_state_without_persisting_raw_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = TaskStateStore(root)
+            store.update({"objective": "Preserve command evidence"})
+            store.record_command_started("python -m pytest -q", "command-one", ".")
+            raw_output = "sensitive-large-output-that-must-not-enter-artifact-ref"
+            store.record_tool_result(
+                "exec_command",
+                {"cmd": "python -m pytest -q"},
+                {
+                    "ok": True,
+                    "status": "exited",
+                    "command_id": "command-one",
+                    "session_id": "command-one",
+                    "exit_code": 0,
+                    "elapsed_ms": 42,
+                    "summary": "42 tests passed",
+                    "stdout": raw_output,
+                    "output_refs": {
+                        "stdout": "command:command-one:stdout",
+                        "stderr": "command:command-one:stderr",
+                    },
+                    "output_retention": {
+                        "stdout": {
+                            "total_stream_bytes": 120000,
+                            "total_retained_bytes": 65536,
+                            "head_retained_bytes": 8192,
+                            "tail_retained_bytes": 57344,
+                            "evicted_gap_bytes": 54464,
+                            "evicted_bytes_total": 54464,
+                        },
+                        "stderr": {
+                            "total_stream_bytes": 0,
+                            "total_retained_bytes": 0,
+                            "head_retained_bytes": 0,
+                            "tail_retained_bytes": 0,
+                            "evicted_gap_bytes": 0,
+                            "evicted_bytes_total": 0,
+                        },
+                    },
+                },
+            )
+            restored = TaskStateStore(root).get()
+            result = restored["test_results"][-1]
+            artifact = result["artifact_ref"]
+            self.assertEqual(artifact["schema_version"], 1)
+            self.assertEqual(artifact["kind"], "command_output")
+            self.assertEqual(artifact["scope"], "runtime_retained")
+            self.assertEqual(artifact["command_id"], "command-one")
+            self.assertEqual(artifact["retrieval"], {"tool": "command_control", "action": "read"})
+            self.assertEqual(artifact["durability"], "process_runtime")
+            self.assertFalse(artifact["restart_safe"])
+            self.assertFalse(artifact["content_addressed"])
+            self.assertEqual(artifact["streams"]["stdout"]["output_ref"], "command:command-one:stdout")
+            self.assertEqual(artifact["streams"]["stdout"]["total_stream_bytes"], 120000)
+            self.assertEqual(artifact["streams"]["stdout"]["evicted_gap_bytes"], 54464)
+            self.assertNotIn(raw_output, json.dumps(artifact, ensure_ascii=False))
+            self.assertEqual(result["summary"], "42 tests passed")
+
+    def test_running_command_carries_artifact_ref_for_handoff(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = TaskStateStore(Path(temp))
+            store.update({"objective": "Long running proof"})
+            store.record_command_started("npm test", "command-running", ".")
+            store.record_tool_result(
+                "exec_command",
+                {"cmd": "npm test"},
+                {
+                    "ok": True,
+                    "status": "running",
+                    "command_id": "command-running",
+                    "session_id": "command-running",
+                    "output_refs": {"stdout": "command:command-running:stdout"},
+                    "output_retention": {"stdout": {"total_stream_bytes": 10, "total_retained_bytes": 10}},
+                },
+            )
+            current = TaskStateStore(Path(temp)).get()["current_command"]
+            self.assertEqual(current["artifact_ref"]["streams"]["stdout"]["output_ref"], "command:command-running:stdout")
+            self.assertFalse(current["artifact_ref"]["restart_safe"])
+            store.record_tool_result(
+                "write_stdin",
+                {"session_id": "command-running", "chars": ""},
+                {
+                    "ok": True,
+                    "status": "exited",
+                    "command_id": "command-running",
+                    "session_id": "command-running",
+                    "exit_code": 0,
+                    "elapsed_ms": 100,
+                    "summary": "tests complete",
+                },
+            )
+            terminal = TaskStateStore(Path(temp)).get()
+            self.assertIsNone(terminal["current_command"])
+            self.assertEqual(
+                terminal["test_results"][-1]["artifact_ref"]["streams"]["stdout"]["output_ref"],
+                "command:command-running:stdout",
+            )
+
     def test_command_classification(self) -> None:
         self.assertEqual(classify_command("python -m pytest -q"), "test")
         self.assertEqual(classify_command("npm run build"), "build")
@@ -353,6 +453,73 @@ class ToolModeTests(unittest.TestCase):
             self.assertTrue(second["cache_hit"])
             self.assertEqual(first["files"][0]["path"], "app.py")
             self.assertIn("hello", first["files"][0]["content"])
+
+    def test_prepare_coding_context_projects_measured_composite_read_without_duplicating_query_text(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            root = Path(temp)
+            (root / "app.py").write_text("def greet():\n    return 'hello'\n", encoding="utf-8")
+            runtime = Runtime(root)
+            first = runtime.prepare_coding_context({
+                "objective": "change greeting",
+                "queries": ["greet", "hello"],
+                "paths": ["app.py"],
+                "max_files": 4,
+                "max_total_bytes": 16384,
+            })
+            composite = first["composite_read"]
+            self.assertEqual(composite["schema_version"], 1)
+            self.assertEqual(composite["plan"]["mode"], "model_free")
+            self.assertEqual(composite["plan"]["query_count"], 2)
+            self.assertEqual(composite["plan"]["requested_path_count"], 1)
+            self.assertEqual(len(composite["plan"]["plan_sha256"]), 64)
+            operations = composite["execution"]["operations"]
+            self.assertEqual([item["id"] for item in operations[:3]], ["workspace:0", "search:0", "search:1"])
+            self.assertEqual([item["kind"] for item in operations[:3]], ["workspace_context", "search_text", "search_text"])
+            self.assertTrue(any(item["kind"] == "read_file" and item["path"] == "app.py" for item in operations))
+            self.assertEqual(composite["execution"]["content_bytes"], first["total_content_bytes"])
+            self.assertEqual(
+                sum(item.get("content_bytes", 0) for item in operations if item["kind"] == "read_file"),
+                first["total_content_bytes"],
+            )
+            timing = composite["execution"]["phase_timing"]
+            self.assertEqual(timing["source"], "monotonic_local")
+            for key in ("workspace_ms", "localization_ms", "materialization_ms", "total_ms"):
+                self.assertGreaterEqual(timing[key], 0)
+            self.assertTrue(composite["execution"]["parallelism"]["search_parallel"])
+            self.assertEqual(composite["execution"]["parallelism"]["search_max_workers"], 2)
+            self.assertNotIn("greet", json.dumps(composite, ensure_ascii=False))
+            self.assertNotIn("hello", json.dumps(composite, ensure_ascii=False))
+            self.assertFalse(composite["cache"]["hit"])
+
+            second = runtime.prepare_coding_context({
+                "objective": "change greeting",
+                "queries": ["greet", "hello"],
+                "paths": ["app.py"],
+                "max_files": 4,
+                "max_total_bytes": 16384,
+            })
+            self.assertTrue(second["cache_hit"])
+            self.assertTrue(second["composite_read"]["cache"]["hit"])
+            self.assertEqual(second["composite_read"]["cache"]["source"], "cached_previous_execution")
+            self.assertEqual(second["composite_read"]["plan"]["plan_sha256"], composite["plan"]["plan_sha256"])
+
+    def test_continuous_check_terminalizes_internal_command_bookkeeping(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                runtime.task_state.update({"objective": "Internal proof bookkeeping", "status": "active"})
+                result = runtime._run_continuous_check("python -m pytest --version", ".", 30_000)
+                self.assertEqual(result["status"], "passed")
+                state = runtime.task_state.get()
+                self.assertIsNone(state["current_command"])
+                self.assertEqual(state["events"][-1]["event"], "command_finished")
+                self.assertEqual(state["test_results"][-1]["status"], "passed")
+                artifact = state["test_results"][-1].get("artifact_ref")
+                self.assertIsInstance(artifact, dict)
+                self.assertFalse(artifact["restart_safe"])
+                self.assertTrue(artifact["streams"]["stdout"]["output_ref"].startswith("command:"))
+            finally:
+                runtime.close()
 
     def test_apply_changes_and_verify_runs_continuous_workflow(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -705,10 +872,30 @@ class ToolModeTests(unittest.TestCase):
             root = Path(temp)
             (root / "todo.py").write_text("VALUE = 1\n", encoding="utf-8")
             runtime = Runtime(root, permission_mode="dangerous")
-            runtime.task_state.update({"objective": "continue fix", "next_step": "edit todo.py"})
+            state = runtime.task_state.update({"objective": "continue fix", "next_step": "edit todo.py"})
+            run_id = runtime.orchestration_ledger.create_run(objective="continue fix", task_id=state["task_id"])
+            wave_id = runtime.orchestration_ledger.create_wave(run_id, execution_mode="mcp_only")
+            runtime.orchestration_ledger.append_event(run_id, wave_id=wave_id, event_type="ready", state_after="READY")
+            runtime.task_state.update({
+                "orchestration": {
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                    "orchestration_state": "READY",
+                }
+            })
             result = runtime.agent_workflow({"workflow": "resume", "phase": "resume", "paths": ["todo.py"]})
             self.assertEqual(result["task"]["objective"], "continue fix")
             self.assertEqual(result["context"]["files"][0]["path"], "todo.py")
+            self.assertEqual(result["evidence"]["query"]["run_id"], run_id)
+            self.assertEqual(result["evidence"]["query"]["wave_id"], wave_id)
+            self.assertTrue(result["evidence"]["model_free"])
+            compact_resume = result["context"]["task_resume"]
+            self.assertEqual(compact_resume["task_id"], state["task_id"])
+            self.assertEqual(compact_resume["next_step"], "edit todo.py")
+            self.assertNotIn("events", compact_resume)
+            self.assertNotIn("test_results", compact_resume)
+            self.assertNotIn("build_results", compact_resume)
+            runtime.close()
 
     def test_server_discover_does_not_require_initialize(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

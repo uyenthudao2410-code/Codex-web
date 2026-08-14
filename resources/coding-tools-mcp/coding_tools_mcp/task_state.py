@@ -48,6 +48,57 @@ def _text(value: Any, limit: int = MAX_TEXT) -> str:
     return str(value or "")[:limit]
 
 
+def _command_output_artifact_ref(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Project live command retention into a compact, content-free resume handle.
+
+    Command output retention is intentionally process-scoped today.  Keep that
+    lifetime explicit so durable task state can point back to evidence without
+    pretending the bytes survive an MCP/runtime restart.
+    """
+
+    command_id = _text(payload.get("command_id") or payload.get("session_id"), 256).strip()
+    raw_refs = payload.get("output_refs")
+    refs = raw_refs if isinstance(raw_refs, dict) else {}
+    raw_retention = payload.get("output_retention")
+    retention = raw_retention if isinstance(raw_retention, dict) else {}
+    streams: dict[str, Any] = {}
+    for stream in ("stdout", "stderr"):
+        output_ref = _text(refs.get(stream), 512).strip()
+        if not output_ref.startswith("command:"):
+            continue
+        raw_metrics = retention.get(stream)
+        metrics = raw_metrics if isinstance(raw_metrics, dict) else {}
+
+        def metric(name: str) -> int:
+            value = metrics.get(name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return 0
+            return max(0, int(value))
+
+        streams[stream] = {
+            "output_ref": output_ref,
+            "total_stream_bytes": metric("total_stream_bytes"),
+            "total_retained_bytes": metric("total_retained_bytes"),
+            "head_retained_bytes": metric("head_retained_bytes"),
+            "tail_retained_bytes": metric("tail_retained_bytes"),
+            "evicted_gap_bytes": metric("evicted_gap_bytes"),
+            "evicted_bytes_total": metric("evicted_bytes_total"),
+        }
+    if not command_id or not streams:
+        return None
+    return {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "command_id": command_id,
+        "streams": streams,
+        "retrieval": {"tool": "command_control", "action": "read"},
+        "durability": "process_runtime",
+        "restart_safe": False,
+        "content_addressed": False,
+    }
+
+
 def _default_state() -> dict[str, Any]:
     now = utc_now()
     return {
@@ -319,6 +370,7 @@ class TaskStateStore:
     def _record_command_payload(self, state: dict[str, Any], command: str, payload: dict[str, Any]) -> None:
         status = str(payload.get("status", ""))
         session_id = str(payload.get("session_id", ""))
+        artifact_ref = _command_output_artifact_ref(payload)
         current = state.get("current_command")
         if not isinstance(current, dict) or (session_id and current.get("session_id") != session_id):
             current = {
@@ -328,9 +380,13 @@ class TaskStateStore:
                 "status": status or "running",
                 "started_at": utc_now(),
             }
+        if artifact_ref is None and isinstance(current.get("artifact_ref"), dict):
+            artifact_ref = copy.deepcopy(current["artifact_ref"])
         current["status"] = status or ("failed" if payload.get("ok") is False else "exited")
         current["exit_code"] = payload.get("exit_code")
         current["elapsed_ms"] = payload.get("elapsed_ms")
+        if artifact_ref is not None:
+            current["artifact_ref"] = artifact_ref
         if current["status"] == "running":
             state["current_command"] = current
             return
@@ -344,6 +400,8 @@ class TaskStateStore:
             "summary": _text(payload.get("summary") or payload.get("stderr") or payload.get("stdout"), 2000),
             "finished_at": current["finished_at"],
         }
+        if artifact_ref is not None:
+            result["artifact_ref"] = artifact_ref
         if kind == "test":
             state["test_results"] = (state["test_results"] + [result])[-MAX_RESULTS:]
         elif kind == "build":

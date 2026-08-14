@@ -78,6 +78,34 @@ test('runtime state migration keeps only current native and tunnel fields', () =
   assert.deepEqual(currentRuntimeState({ nativePid: 1, tunnelPid: 2, obsoletePid: 3 }), { nativePid: 1, tunnelPid: 2 });
 });
 
+test('runtime recovery projection exposes only local typed supervisor evidence', () => {
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({}) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.recovering = true;
+  orchestrator.heartbeatFailures = 3;
+  orchestrator.heartbeatFailureKind = 'tunnel_unavailable';
+  orchestrator.recoveryAttempts = 2;
+  orchestrator.nextRecoveryAt = 123456;
+  orchestrator.autoRecoveryBlocked = true;
+  orchestrator.lastStartFailure = 'typed local failure';
+  orchestrator.deferredRecoveryCount = 1;
+  assert.deepEqual(orchestrator.recoveryStatus(), {
+    recovering: true,
+    failures: 3,
+    failureKind: 'tunnel_unavailable',
+    recoveryAttempts: 2,
+    nextRecoveryAt: 123456,
+    recoveryBlocked: true,
+    lastStartFailure: 'typed local failure',
+    deferredRecoveryCount: 1
+  });
+});
+
 test('connector contract stays pending until operator acknowledges the current hash', () => {
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ workspace: 'C:\\work\\one' }) },

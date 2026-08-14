@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import tempfile
@@ -14,7 +15,7 @@ from coding_tools_mcp.server import Runtime, server_card_payload
 
 
 class EfficiencyRuntimeTests(unittest.TestCase):
-    def test_performance_trace_v4_records_model_visible_bytes_and_run_metrics(self) -> None:
+    def test_performance_trace_v5_records_model_visible_bytes_run_metrics_and_measured_phase_timing(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             store = PerformanceTraceStore(Path(temp))
             state = store.record(
@@ -26,8 +27,23 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 model_visible_bytes=80,
                 idempotency_eligible=True,
                 idempotency_key_present=True,
+                idempotency_policy="required",
+                idempotency_key_source="derived",
+                proof_cache_eligible=3,
                 proof_cache_hits=2,
+                proof_cache_misses=1,
+                proof_cache_miss_reasons={"input_fingerprint_changed": 1, "bad": 0},
                 proof_cache_saved_ms=1750,
+                phase_timing={
+                    "scope": "composite_read",
+                    "source": "monotonic_local",
+                    "workspace_ms": 10,
+                    "localization_ms": 20.9,
+                    "materialization_ms": 30,
+                    "total_ms": 65,
+                    "packet_build_ms": 999,
+                    "negative_ms": -1,
+                },
                 orchestration={
                     "run_id": "run-1",
                     "wave_id": "wave-1",
@@ -37,11 +53,17 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                     "orchestration_state": "ACCEPTING",
                 },
             )
-            self.assertEqual(state["version"], 4)
+            self.assertEqual(state["version"], 5)
             self.assertEqual(state["idempotency_eligible_calls"], 1)
             self.assertEqual(state["idempotency_eligible_key_calls"], 1)
             self.assertEqual(state["idempotency_key_calls"], 1)
+            self.assertEqual(state["idempotency_required_calls"], 1)
+            self.assertEqual(state["idempotency_required_key_calls"], 1)
+            self.assertEqual(state["idempotency_auto_key_calls"], 1)
+            self.assertEqual(state["proof_cache_eligible"], 3)
             self.assertEqual(state["proof_cache_hits"], 2)
+            self.assertEqual(state["proof_cache_misses"], 1)
+            self.assertEqual(state["proof_cache_miss_reasons"], {"input_fingerprint_changed": 1})
             self.assertEqual(state["proof_cache_saved_ms"], 1750)
             self.assertEqual(state["execution_mode_counts"], {"mcp_only": 1})
             self.assertEqual(state["route_resolved_counts"], {"deterministic": 1})
@@ -49,16 +71,75 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             event = state["recent"][-1]
             self.assertTrue(event["idempotency_eligible"])
             self.assertTrue(event["idempotency_key_present"])
+            self.assertEqual(event["idempotency_policy"], "required")
+            self.assertEqual(event["idempotency_key_source"], "derived")
+            self.assertEqual(event["proof_cache_eligible"], 3)
             self.assertEqual(event["proof_cache_hits"], 2)
+            self.assertEqual(event["proof_cache_misses"], 1)
+            self.assertEqual(event["proof_cache_miss_reasons"], {"input_fingerprint_changed": 1})
             self.assertEqual(event["route_resolved"], "deterministic")
             self.assertEqual(event["model_visible_bytes"], 80)
+            self.assertEqual(event["phase_timing"], {
+                "scope": "composite_read",
+                "source": "monotonic_local",
+                "workspace_ms": 10,
+                "localization_ms": 20,
+                "materialization_ms": 30,
+                "total_ms": 65,
+                "packet_build_ms": 999,
+            })
             self.assertEqual(state["model_visible_bytes"], 80)
+            self.assertEqual(state["phase_timing_samples"], 1)
+            self.assertEqual(state["phase_timing_ms"], {
+                "workspace_ms": 10,
+                "localization_ms": 20,
+                "materialization_ms": 30,
+                "total_ms": 65,
+                "packet_build_ms": 999,
+            })
             metric = state["run_metrics"]["run-1"]
             self.assertEqual(metric["tool_calls"], 1)
             self.assertEqual(metric["idempotency_eligible_calls"], 1)
             self.assertEqual(metric["idempotency_eligible_key_calls"], 1)
+            self.assertEqual(metric["idempotency_required_calls"], 1)
+            self.assertEqual(metric["idempotency_required_key_calls"], 1)
+            self.assertEqual(metric["proof_cache_eligible"], 3)
+            self.assertEqual(metric["proof_cache_misses"], 1)
+            self.assertEqual(metric["proof_cache_miss_reasons"], {"input_fingerprint_changed": 1})
             self.assertEqual(metric["proof_cache_saved_ms"], 1750)
             self.assertEqual(metric["model_visible_bytes"], 80)
+            self.assertEqual(metric["phase_timing_samples"], 1)
+            self.assertEqual(metric["phase_timing_ms"]["localization_ms"], 20)
+
+    def test_runtime_phase_timing_extractor_ignores_cached_or_unmeasured_values(self) -> None:
+        live = {
+            "prepared": {
+                "composite_read": {
+                    "cache": {"hit": False},
+                    "execution": {"phase_timing": {
+                        "source": "monotonic_local",
+                        "workspace_ms": 1,
+                        "localization_ms": 2,
+                        "materialization_ms": 3,
+                        "total_ms": 6,
+                    }},
+                }
+            }
+        }
+        self.assertEqual(Runtime._measured_phase_timing(live), {
+            "scope": "composite_read",
+            "source": "monotonic_local",
+            "workspace_ms": 1,
+            "localization_ms": 2,
+            "materialization_ms": 3,
+            "total_ms": 6,
+        })
+        cached = json.loads(json.dumps(live))
+        cached["prepared"]["composite_read"]["cache"]["hit"] = True
+        self.assertEqual(Runtime._measured_phase_timing(cached), {})
+        unmeasured = json.loads(json.dumps(live))
+        unmeasured["prepared"]["composite_read"]["execution"]["phase_timing"]["source"] = "estimated"
+        self.assertEqual(Runtime._measured_phase_timing(unmeasured), {})
 
     def test_runtime_trace_counts_only_model_facing_text_as_model_visible_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
@@ -77,7 +158,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
-    def test_idempotency_coverage_denominator_uses_only_mutating_or_expensive_calls(self) -> None:
+    def test_idempotency_policy_separates_required_identity_from_optional_side_effects(self) -> None:
         self.assertFalse(Runtime._idempotency_eligible_call("workspace_context", {}))
         self.assertFalse(Runtime._idempotency_eligible_call("agent_workflow", {"phase": "prepare"}))
         self.assertTrue(Runtime._idempotency_eligible_call("agent_workflow", {"phase": "execute"}))
@@ -87,6 +168,67 @@ class EfficiencyRuntimeTests(unittest.TestCase):
         self.assertFalse(Runtime._idempotency_eligible_call("task_control", {"action": "handoff", "handoff_action": "get"}))
         self.assertTrue(Runtime._idempotency_eligible_call("task_control", {"action": "handoff", "handoff_action": "record"}))
         self.assertTrue(Runtime._idempotency_eligible_call("task_control", {"action": "restart_runtime"}))
+        self.assertEqual(Runtime._idempotency_policy("workspace_context", {}), "none")
+        self.assertEqual(Runtime._idempotency_policy("agent_workflow", {"phase": "execute"}), "required")
+        self.assertEqual(Runtime._idempotency_policy("agent_workflow", {"phase": "run"}), "optional")
+        self.assertEqual(Runtime._idempotency_policy("exec_command", {"cmd": "echo ok"}), "optional")
+        self.assertEqual(Runtime._idempotency_policy("command_control", {"action": "kill"}), "optional")
+        self.assertEqual(Runtime._idempotency_policy("task_control", {"action": "handoff", "handoff_action": "record"}), "optional")
+        self.assertEqual(Runtime._idempotency_policy("task_control", {"action": "restart_runtime"}), "optional")
+        self.assertEqual(Runtime._idempotency_policy("task_control", {"action": "accept"}), "required")
+        self.assertEqual(Runtime._idempotency_policy("task_control", {"action": "reject"}), "required")
+
+    def test_required_idempotency_key_is_derived_only_from_durable_run_wave_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                runtime.task_state.ensure_started("derive key")
+                runtime.task_state.set_orchestration_projection({
+                    "run_id": "run-a",
+                    "wave_id": "wave-a",
+                    "orchestration_state": "READY",
+                }, event="test_projection")
+                request = {"phase": "execute", "workflow": "bugfix", "objective": "fix leaf"}
+                first = runtime._derive_idempotency_key("agent_workflow", request)
+                same = runtime._derive_idempotency_key("agent_workflow", dict(request))
+                changed = runtime._derive_idempotency_key("agent_workflow", {**request, "objective": "fix other leaf"})
+                self.assertTrue(first.startswith("auto-v1:"))
+                self.assertEqual(first, same)
+                self.assertNotEqual(first, changed)
+                self.assertEqual(runtime._derive_idempotency_key("exec_command", {"cmd": "echo ok"}), "")
+                self.assertTrue(runtime._derive_idempotency_key("task_control", {"action": "accept"}).startswith("auto-v1:"))
+                with (
+                    patch.object(runtime, "_current_hub_client", return_value={"client_id": "chatweb"}),
+                    patch.object(runtime.orchestration_ledger, "get_controller_lease", return_value={"fencing_token": 2}),
+                ):
+                    chat_accept = runtime._derive_idempotency_key("task_control", {"action": "accept"})
+                with (
+                    patch.object(runtime, "_current_hub_client", return_value={"client_id": "codex-desktop"}),
+                    patch.object(runtime.orchestration_ledger, "get_controller_lease", return_value={"fencing_token": 2}),
+                ):
+                    desktop_accept = runtime._derive_idempotency_key("task_control", {"action": "accept"})
+                with (
+                    patch.object(runtime, "_current_hub_client", return_value={"client_id": "chatweb"}),
+                    patch.object(runtime.orchestration_ledger, "get_controller_lease", return_value={"fencing_token": 3}),
+                ):
+                    chat_new_fence = runtime._derive_idempotency_key("task_control", {"action": "accept"})
+                self.assertNotEqual(chat_accept, desktop_accept)
+                self.assertNotEqual(chat_accept, chat_new_fence)
+                runtime.task_state.set_orchestration_projection({
+                    "run_id": "run-a",
+                    "wave_id": "wave-b",
+                    "orchestration_state": "READY",
+                }, event="test_projection")
+                self.assertNotEqual(first, runtime._derive_idempotency_key("agent_workflow", request))
+            finally:
+                runtime.close()
+
+    def test_error_taxonomy_uses_structured_code_and_category_only(self) -> None:
+        self.assertEqual(Runtime._error_class({"code": "CANDIDATE_TARGET_MISSING", "category": "validation"}), "CONTROL_PATH")
+        self.assertEqual(Runtime._error_class({"code": "PROMPT_TOO_LARGE", "category": "runtime"}), "PROMPT_SIZE")
+        self.assertEqual(Runtime._error_class({"code": "PROVIDER_CAPACITY", "category": "runtime"}), "CAPACITY")
+        self.assertEqual(Runtime._error_class({"code": "PERMISSION_REQUIRED", "category": "permission"}), "AUTHORITY_DENIED")
+        self.assertEqual(Runtime._error_class({"code": "SOMETHING_NEW", "category": "runtime"}), "RUNTIME")
 
     def test_workspace_context_exposes_non_secret_runtime_activation_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
@@ -98,14 +240,25 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 identity = context["runtime"]
                 self.assertEqual(identity["server_instance_id"], runtime.server_instance_id)
                 self.assertEqual(identity["process_instance_id"], runtime.process_instance_id)
-                self.assertEqual(identity["performance_trace_version"], 4)
+                self.assertEqual(identity["performance_trace_version"], 5)
                 contract = identity["tool_contract"]
                 self.assertEqual(contract["schema_version"], 1)
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
+                metadata = identity["tool_metadata"]
+                self.assertEqual(metadata["risk_vocabulary"], ["read_only", "project_write", "job_run", "account_manage", "unknown"])
+                self.assertEqual(metadata["ownership"]["mcp_annotation_owner"], "python:ToolSpec")
+                self.assertEqual(metadata["ownership"]["native_execution_risk_owner"], "rust:ToolMetadata/ToolRisk")
+                self.assertEqual(metadata["ownership"]["authority_owner"], "EOCL+permission+write_lease")
+                self.assertEqual(metadata["smart_v3_risk"]["workspace_context"], "read_only")
+                self.assertEqual(metadata["smart_v3_risk"]["agent_workflow"], "project_write")
+                self.assertEqual(metadata["smart_v3_risk"]["exec_command"], "job_run")
+                self.assertEqual(metadata["smart_v3_risk"]["command_control"], "job_run")
+                self.assertEqual(metadata["smart_v3_risk"]["task_control"], "unknown")
                 card = server_card_payload(runtime)
                 self.assertEqual(card["tools"]["contractSha256"], contract["sha256"])
+                self.assertEqual(runtime.tool_contract["tool_count"], 8)
                 self.assertNotIn("auth_token", identity)
             finally:
                 runtime.close()

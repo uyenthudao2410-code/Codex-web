@@ -116,11 +116,12 @@ class ProofLedger:
         upstream_proof_ids: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], str]:
-        cached = self.cached_pass(
+        lookup = self.ledger.proof_cache_lookup(
             stage_id=stage_id,
             stage_version=stage_version,
             input_fingerprint=input_fingerprint,
         )
+        cached = lookup.get("source_proof") if lookup.get("hit") else None
         if cached is not None:
             cached_result = cached.get("metadata", {}).get("result") if isinstance(cached.get("metadata"), dict) else None
             result = dict(cached_result) if isinstance(cached_result, dict) else {}
@@ -132,6 +133,9 @@ class ProofLedger:
                 "duration_ms": 0,
                 "cache_hit": True,
                 "cache_saved_ms": max(0, int(cached.get("duration_ms") or 0)),
+                "proof_cache_eligible": True,
+                "proof_cache_miss_reason": None,
+                "proof_cache_source_proof_id": cached["proof_id"],
                 "proof_id": cached["proof_id"],
                 "input_fingerprint": input_fingerprint,
             })
@@ -148,6 +152,21 @@ class ProofLedger:
             )
             return result, str(cached["proof_id"])
 
+        source_proof = lookup.get("source_proof") if isinstance(lookup.get("source_proof"), dict) else None
+        miss_reason = str(lookup.get("reason") or "cold")
+        self.ledger.append_event(
+            run_id,
+            wave_id=wave_id,
+            event_type="proof_cache_miss",
+            payload={
+                "stage_id": stage_id,
+                "stage_version": stage_version,
+                "input_fingerprint": input_fingerprint,
+                "reason": miss_reason,
+                "source_proof_id": source_proof.get("proof_id") if source_proof else None,
+                "source_stage_version": source_proof.get("stage_version") if source_proof else None,
+            },
+        )
         started_at = utc_now()
         started = time.monotonic()
         result = runner()
@@ -172,6 +191,9 @@ class ProofLedger:
         )
         decorated = dict(result)
         decorated["cache_hit"] = False
+        decorated["proof_cache_eligible"] = True
+        decorated["proof_cache_miss_reason"] = miss_reason
+        decorated["proof_cache_source_proof_id"] = source_proof.get("proof_id") if source_proof else None
         decorated["proof_id"] = proof_id
         decorated["input_fingerprint"] = input_fingerprint
         return decorated, proof_id

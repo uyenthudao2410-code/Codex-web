@@ -636,3 +636,126 @@ auto-handoff                  -> OFF
 ```
 
 That remaining state is intentional scientific/evidence discipline rather than incomplete tool implementation.
+
+---
+
+## 14. Post-audit Traffic & Observability closure addendum
+
+This addendum supersedes older statements in this tracker that imply the post-P1.6 operator surface or provider traffic-control source work is still absent. Historical chronology above remains unchanged.
+
+Post-audit source closure completed on the current dirty worktree without changing the `smart-v3` 8-tool public contract:
+
+- added runtime-scoped provider traffic admission for explicitly configured RPM/TPM/concurrency limits;
+- unconfigured provider quota stays unknown/`observe_only`; invalid explicit configuration fails closed;
+- manual OpenCode provider dispatch is governor-gated while automatic provider routing remains `OFF` / evidence-gated;
+- OpenCode active/retained capacity and Codex model cooldown evidence are exposed through the authenticated Hub projection;
+- existing EOCL ledger now provides bounded recent-run history, stable-cursor flight-recorder/delta projection and timestamp-derived phase timing without a second store;
+- Hub run-history projection excludes objective/metadata/transcript and exposes only run id, status and lifecycle timestamps;
+- Electron supervisor exposes typed local recovery counters/state already known to the process;
+- Control Center / Live Routing renders provider traffic/capacity, automatic-routing gate, phase timing, flight-recorder evidence, sanitized run history, local recovery state and explicit `context_pressure=unknown / host_not_exposed`;
+- no context percentage, provider quota, billing or model streaming state is fabricated;
+- no remote unauthenticated status endpoint was introduced.
+
+Configuration seam for provider limits:
+
+```text
+CODING_TOOLS_MCP_PROVIDER_LIMITS_JSON
+```
+
+Example shape (illustrative configuration syntax only, not a claim about real provider limits):
+
+```json
+{
+  "opencode-go/deepseek-v4-flash": {
+    "rpm": 10,
+    "tpm": 50000,
+    "concurrency": 2
+  }
+}
+```
+
+The numbers above are examples only. Production limits must come from real operator/provider configuration; leaving a field/provider unconfigured intentionally keeps it unknown.
+
+Final current-worktree boundary verification:
+
+```text
+Node:             61/61 PASS
+Python MCP:      228/228 PASS
+Total:           289/289 PASS
+git diff --check: PASS
+```
+
+The full-suite run also caught and closed two stale test-environment issues without weakening production behavior: the Node-only live-supervisor harness now isolates the one-shot supervisor restart-ticket path, and the runtime-activation oracle now expects the canonical PerformanceTrace v4 rather than historical v3.
+
+Operations in this post-audit closure:
+
+```text
+paid provider call:     no
+runtime restart:        no
+connector refresh:      no
+commit/push/release:    no
+deployment:             no
+route threshold change: no
+auto-handoff enablement:no
+```
+
+Remaining gates are unchanged in kind: the post-fix paid Flash terminal repro requires explicit external-cost authorization; P-MP4 needs representative accepted cohorts before automatic route promotion; auto-handoff needs more real A/B evidence; ChatGPT context pressure remains unavailable until the host exposes it. Generic Composite Read / ArtifactRef / full ToolSpec convergence and a dedicated push transport remain optional benchmark-driven follow-ups rather than current source blockers.
+
+---
+
+## 15. PerformanceTrace v5 and accepted-result measurement follow-up
+
+This addendum supersedes the current-state portions of Sections 13-14 that still identify PerformanceTrace v4 or the older `61 Node + 228 Python` boundary count. Earlier records remain historical evidence.
+
+### Source status
+
+- PerformanceTrace source schema advanced to `v5` with clean required/optional idempotency semantics, key provenance, structured error attribution and broader measured phase timing.
+- The broad v4 eligible denominator remains historical. v5 decision coverage uses required replay-protection calls; optional side effects are reported separately rather than forced into automatic deduplication.
+- Durable auto-keys are limited to `agent_workflow execute` and `task_control accept/reject`; accept/reject keys are scoped by caller client id and controller fencing epoch.
+- EOCL accepted-result evidence now reports terminal TTA, observed/unattributed time and 90%/95% coverage gates. Provider queue/provider/total timing is overlapping evidence and is not double-counted.
+- Electron Hub proxy source now records bounded resident loopback gateway `p50/p90/p99/max` by MCP/heartbeat/telemetry without persisting content or credentials.
+- Python/Rust tool metadata now share a narrow risk-vocabulary/ownership seam while Smart-v3 remains 8 public tools and authority remains EOCL/permission/write-lease controlled.
+- Runtime activation snapshot schema advanced to v3 and distinguishes v5 required coverage from legacy-v4 coverage.
+
+### Regression and final proof
+
+The first full Python boundary after introducing auto-derived accept/reject keys exposed one controller-transfer regression (`1 failed, 239 passed`). A denied stale ChatWeb caller had claimed the key later needed by Codex Desktop. Scoping the derived key by `client_id + fencing_token` closed the defect without weakening fencing or idempotency fail-closed semantics.
+
+```text
+focused regression: 10 / 10 PASS
+Python MCP:         240 / 240 PASS (+3 subtests)
+Node / Electron:     93 / 93 PASS
+top-level total:    333 / 333 PASS
+git diff --check:   PASS
+source-root check:  PASS
+```
+
+### Activation/evidence boundary
+
+No Runtime/Electron restart was performed for this source closure. Existing live telemetry is therefore still pre-v5/legacy until controlled activation. In particular, the historical `304 / 1291 = 23.5476%` value is the old broad denominator and must not be used to claim success or failure of the new required-v5 gate.
+
+A clean post-activation PerformanceTrace-v5 epoch is required before claiming the methodology `>=95%` required-idempotency target or a live resident Hub percentile baseline. No historical data is synthetically reclassified into v5.
+
+```text
+post-fix paid Flash terminal repro -> PENDING explicit external-cost authorization
+P-MP4 representative cohorts      -> PENDING real accepted work
+Routing-v2 automatic dispatch      -> OFF / evidence-gated
+deep automatic escalation          -> OFF / evidence-gated
+auto-handoff                       -> OFF / evidence-gated
+OpenCode authoritative direct write-> OFF by authority design
+context pressure percentage        -> UNKNOWN / host_not_exposed
+```
+
+Operations in this follow-up:
+
+```text
+paid provider call:      no
+runtime/Electron restart:no
+connector refresh:       no
+commit/push/release:     no
+deployment:              no
+route threshold change:  no
+auto-handoff enablement: no
+```
+
+Remaining work is now primarily **controlled live activation plus representative evidence collection**, not missing source implementation for the performance/measurement issues closed here. Generic ArtifactRef/Composite Read expansion, semantic parallel proof scheduling, authenticated remote-phone status and a dedicated push transport remain benchmark/product-driven optional follow-ups unless future evidence promotes them.

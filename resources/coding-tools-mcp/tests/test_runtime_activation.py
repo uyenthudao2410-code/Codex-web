@@ -11,7 +11,7 @@ from coding_tools_mcp.performance_trace import PerformanceTraceStore
 
 
 class RuntimeActivationSnapshotTests(unittest.TestCase):
-    def test_snapshot_uses_explicit_idempotency_denominator_and_durable_tta(self) -> None:
+    def test_snapshot_uses_v5_required_idempotency_gate_and_durable_tta(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             trace = PerformanceTraceStore(root)
@@ -27,9 +27,27 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
                 finished_monotonic=2.2,
                 idempotency_eligible=True,
                 idempotency_key_present=True,
+                idempotency_policy="optional",
+                idempotency_key_source="explicit",
+                proof_cache_eligible=2,
                 proof_cache_hits=1,
+                proof_cache_misses=1,
+                proof_cache_miss_reasons={"cold": 1},
                 proof_cache_saved_ms=900,
                 orchestration={"run_id": "run-measured", "route_resolved": "deterministic", "execution_mode": "mcp_only"},
+            )
+            trace.record(
+                tool="agent_workflow",
+                started_monotonic=3.0,
+                finished_monotonic=3.2,
+                ok=False,
+                idempotency_eligible=True,
+                idempotency_key_present=True,
+                idempotency_policy="required",
+                idempotency_key_source="derived",
+                error_class="deadline",
+                phase_timing={"source": "monotonic_local", "queue_ms": 5, "model_wall_ms": 25, "total_ms": 40},
+                orchestration={"run_id": "run-measured", "route_resolved": "mini", "execution_mode": "bounded_candidate"},
             )
             ledger = OrchestrationLedger(root)
             run_id = ledger.create_run(
@@ -48,11 +66,31 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
             ledger.finish_run(run_id, status="accepted")
             snapshot = build_snapshot(root)
             performance = snapshot["performance"]
-            self.assertEqual(snapshot["schema_version"], 2)
-            self.assertEqual(performance["version"], 3)
-            self.assertEqual(performance["idempotency_eligible_calls"], 1)
-            self.assertEqual(performance["idempotency_eligible_key_calls"], 1)
+            self.assertEqual(snapshot["schema_version"], 3)
+            self.assertEqual(performance["version"], 5)
+            self.assertEqual(performance["idempotency_eligible_calls"], 2)
+            self.assertEqual(performance["idempotency_eligible_key_calls"], 2)
+            self.assertEqual(performance["idempotency_legacy_coverage"], 1.0)
+            self.assertEqual(performance["idempotency_required_calls"], 1)
+            self.assertEqual(performance["idempotency_required_key_calls"], 1)
+            self.assertEqual(performance["idempotency_required_coverage"], 1.0)
+            self.assertEqual(performance["idempotency_optional_calls"], 1)
+            self.assertEqual(performance["idempotency_optional_key_calls"], 1)
+            self.assertEqual(performance["idempotency_auto_key_calls"], 1)
             self.assertEqual(performance["idempotency_coverage"], 1.0)
+            self.assertEqual(performance["idempotency_coverage_source"], "required_v5")
+            self.assertEqual(performance["idempotency_v5_epoch"], "post_activation_only")
+            self.assertEqual(performance["error_class_counts"], {"DEADLINE": 1})
+            self.assertEqual(performance["error_classified_samples"], 1)
+            self.assertEqual(performance["error_unknown_samples"], 0)
+            self.assertEqual(performance["error_unknown_share"], 0.0)
+            self.assertEqual(performance["phase_timing_samples"], 1)
+            self.assertEqual(performance["phase_timing_ms"], {"queue_ms": 5, "model_wall_ms": 25, "total_ms": 40})
+            self.assertTrue(performance["phase_timing_available"])
+            self.assertEqual(performance["proof_cache_eligible"], 2)
+            self.assertEqual(performance["proof_cache_hits"], 1)
+            self.assertEqual(performance["proof_cache_misses"], 1)
+            self.assertEqual(performance["proof_cache_miss_reasons"], {"cold": 1})
             self.assertEqual(performance["proof_cache_saved_ms"], 900)
             self.assertEqual(snapshot["ledger"]["accepted_run_tta"]["n"], 1)
             self.assertEqual(
@@ -66,6 +104,26 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
             self.assertEqual(cohort["acceptance_status"], "accepted")
             self.assertEqual(cohort["repair_status"], "first_pass")
             self.assertEqual(snapshot["evidence_class"], "local_runtime_measurement_snapshot")
+
+    def test_snapshot_keeps_v4_legacy_coverage_separate_from_v5_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state_dir = root / ".coding-tools"
+            state_dir.mkdir(parents=True)
+            (state_dir / "performance.json").write_text(
+                '{"version":4,"tool_calls":10,"errors":2,"idempotency_eligible_calls":5,"idempotency_eligible_key_calls":2}',
+                encoding="utf-8",
+            )
+            performance = build_snapshot(root)["performance"]
+            self.assertEqual(performance["version"], 4)
+            self.assertEqual(performance["idempotency_legacy_coverage"], 0.4)
+            self.assertEqual(performance["idempotency_required_calls"], 0)
+            self.assertIsNone(performance["idempotency_required_coverage"])
+            self.assertEqual(performance["idempotency_coverage"], 0.4)
+            self.assertEqual(performance["idempotency_coverage_source"], "legacy_v4")
+            self.assertEqual(performance["idempotency_v5_epoch"], "not_active")
+            self.assertIsNone(performance["error_unknown_share"])
+            self.assertFalse(performance["phase_timing_available"])
 
     def test_snapshot_marks_replanned_run_as_repaired_and_uses_latest_route(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

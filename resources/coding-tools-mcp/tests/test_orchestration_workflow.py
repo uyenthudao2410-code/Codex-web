@@ -56,6 +56,16 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
             self.assertTrue(audit["audit"]["integrity"]["ok"])
             self.assertEqual(audit["orchestration"]["wave_id"], result["orchestration"]["wave_id"])
             self.assertEqual(audit["orchestration"]["orchestration_state"], "ACCEPTING")
+            filtered = runtime.task_control({
+                "action": "audit",
+                "run_id": result["orchestration"]["run_id"],
+                "wave_id": result["orchestration"]["wave_id"],
+                "limit": 5,
+            })
+            self.assertEqual(filtered["audit"]["query"]["wave_id"], result["orchestration"]["wave_id"])
+            self.assertEqual([item["wave_id"] for item in filtered["audit"]["waves"]], [result["orchestration"]["wave_id"]])
+            self.assertTrue(filtered["audit"]["model_free"])
+            self.assertFalse(filtered["audit"]["raw_transcript_included"])
             accepted = runtime.task_control({
                 "action": "accept",
                 "run_id": result["orchestration"]["run_id"],

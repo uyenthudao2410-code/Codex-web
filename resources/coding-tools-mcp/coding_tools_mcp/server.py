@@ -96,6 +96,7 @@ from .telemetry import SessionTelemetry
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head
 from .tool_results import make_tool_result, model_visible_text_bytes
 from .usage_events import usage_event_from_provider_delegation
+from .provider_traffic import ProviderTrafficGovernor
 from .transport_http import HTTPSessionManager
 from .transport_stdio import serve_stdio
 
@@ -105,6 +106,12 @@ SERVER_TITLE = "Coding Tools MCP"
 PROCESS_INSTANCE_ID = secrets.token_urlsafe(12)
 TOOL_CONTRACT_SCHEMA_VERSION = 1
 SMART_TOOL_PROFILE = "smart-v3"
+TOOL_RISK_CLASSES = ("read_only", "project_write", "job_run", "account_manage", "unknown")
+TOOL_METADATA_OWNERSHIP = {
+    "mcp_annotation_owner": "python:ToolSpec",
+    "native_execution_risk_owner": "rust:ToolMetadata/ToolRisk",
+    "authority_owner": "EOCL+permission+write_lease",
+}
 HUB_CLIENT_ONLINE_SECONDS = 45.0
 HUB_CONTROLLER_LEASE_SECONDS = 60.0
 HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
@@ -142,6 +149,7 @@ except (TypeError, ValueError):
 BACKGROUND_OPERATION_WAIT_MAX_MS = 60_000
 MAX_BACKGROUND_OPERATIONS = 32
 IDEMPOTENCY_RESULT_MAX_BYTES = 256 * 1024
+AUTO_IDEMPOTENCY_KEY_PREFIX = "auto-v1:"
 BACKGROUND_BUDGET_POLL_SECONDS = 1.0
 try:
     READ_RETRY_ATTEMPTS = max(
@@ -890,10 +898,15 @@ class ToolSpec:
     destructive: bool = False
     idempotent: bool = False
     open_world: bool = False
+    risk_class: str = "unknown"
     error_status: str | None = None
     content_builder: Callable[[dict[str, Any]], list[dict[str, Any]]] | None = None
     gated_by: str | None = None
     """Name of a Runtime attribute that must be truthy for the tool to be exposed."""
+
+    def __post_init__(self) -> None:
+        if self.risk_class not in TOOL_RISK_CLASSES:
+            raise ValueError(f"Unsupported ToolSpec risk_class: {self.risk_class}")
 
 
 def _image_content(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -919,6 +932,7 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         description="Preferred read-only tool when the user asks what is in the current working directory or wants a quick project overview. Returns the active workspace, default directory, project type, root entries, Git status, and task summary in one call; do not use exec_command merely to list files.",
         read_only=True,
         idempotent=True,
+        risk_class="read_only",
     ),
     "codex_bridge": ToolSpec(
         title="Bridge to local Codex",
@@ -929,6 +943,7 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         title="Run complete agent workflow",
         description="Primary tool for end-to-end work. Use one call for bug diagnosis, feature development, greenfield project creation, refactoring, test-failure repair, build/release verification, document work, or task resume. It bundles context collection, file creation or patches, commands, tests, builds, artifacts, Git diff, and persistent task state so the model must not repeat environment checks or low-level tool calls.",
         destructive=True,
+        risk_class="project_write",
     ),
     "prepare_coding_context": ToolSpec(
         title="Prepare coding context",
@@ -960,6 +975,7 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
     "command_control": ToolSpec(
         title="Control command session",
         description="Poll, write to, terminate, or page output from a running command session.",
+        risk_class="job_run",
     ),
     "git_inspect": ToolSpec(
         title="Inspect Git repository",
@@ -971,6 +987,7 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         title="Read or create documents in one step",
         description="Mandatory fast path for PDF, Word, Markdown, and text tasks. To create content from a PDF/DOCX, call action=inspect exactly once, reason over the returned text, then call action=create exactly once with target/content. Create supports .docx, .md, and .txt and already returns size, line count, SHA256, and preview, so never probe Python/PDF dependencies, use exec_command/apply_patch, repeat extraction, or run a separate verification command.",
         destructive=True,
+        risk_class="project_write",
     ),
     "document_extract": ToolSpec(
         title="Extract Word or PDF",
@@ -1059,6 +1076,7 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         description="Fallback for a focused workspace command only when no high-level workflow can perform it. Never use this tool to list a directory, inspect or create PDF/DOCX/Markdown/text documents, probe Python or PDF dependencies, or verify a document write; workspace_context and document_workflow perform those tasks with fewer round trips.",
         destructive=True,
         open_world=True,
+        risk_class="job_run",
         error_status="failed",
     ),
     "verify_build": ToolSpec(
@@ -1120,16 +1138,31 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         title="Request permissions",
         description="Report scoped permission-request status without silently granting operations.",
         read_only=True,
+        risk_class="read_only",
     ),
     "view_image": ToolSpec(
         title="View image",
         description="Return a workspace image as MCP image content.",
         read_only=True,
         idempotent=True,
+        risk_class="read_only",
         content_builder=_image_content,
         gated_by="enable_view_image",
     ),
 }
+
+
+def tool_metadata_contract() -> dict[str, Any]:
+    """Project shared risk vocabulary without changing MCP tools/list annotations."""
+    return {
+        "schema_version": 1,
+        "risk_vocabulary": list(TOOL_RISK_CLASSES),
+        "ownership": dict(TOOL_METADATA_OWNERSHIP),
+        "smart_v3_risk": {
+            name: TOOL_REGISTRY[name].risk_class
+            for name in sorted(TOOL_MODE_ALLOWLISTS["smart"])
+        },
+    }
 
 LANDLOCK_CREATE_RULESET_VERSION = 1
 LANDLOCK_RULE_PATH_BENEATH = 1
@@ -1869,6 +1902,7 @@ class Runtime:
             lambda: self.workspace.root,
             on_terminal=self._on_opencode_provider_terminal,
         )
+        self.provider_traffic = ProviderTrafficGovernor.from_env()
         self.workspace_switch_lock = threading.RLock()
         self.workspace_generation = 1
         self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
@@ -1997,6 +2031,7 @@ class Runtime:
                 lambda: self.workspace.root,
                 on_terminal=self._on_opencode_provider_terminal,
             )
+            self.provider_traffic = ProviderTrafficGovernor.from_env()
             self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
             with self.patch_lock:
                 self.patch_baselines.clear()
@@ -2292,6 +2327,33 @@ class Runtime:
             raise ToolFailure("PROVIDER_DISPATCH_CONTEXT_UNAVAILABLE", "Provider dispatch requires the current active task-projected orchestration wave.", category="runtime", retryable=True)
         return run_id, wave_id, ctx
 
+    @staticmethod
+    def _provider_traffic_key(*, run_id: str, wave_id: str, model: str, request_id: str = "", prompt_sha256: str = "") -> str:
+        identity = str(request_id or prompt_sha256 or "").strip()
+        if not identity:
+            return ""
+        return hashlib.sha256(f"{run_id}\0{wave_id}\0{model}\0{identity}".encode("utf-8")).hexdigest()
+
+    def provider_traffic_snapshot(self) -> dict[str, Any]:
+        capacity_fn = getattr(self._opencode_provider, "capacity_status", None)
+        opencode_capacity = capacity_fn() if callable(capacity_fn) else {
+            "provider_id": "opencode-go",
+            "active_requests": int(self._opencode_provider.active_count()),
+            "retained_dispatches": None,
+            "retained_limit": None,
+            "models": sorted(ALLOWED_OPENCODE_MODELS),
+            "read_only_enforced": True,
+        }
+        return {
+            "schema_version": 1,
+            "policy": self.provider_traffic.snapshot(models=ALLOWED_OPENCODE_MODELS),
+            "capacity": {
+                "opencode": opencode_capacity,
+                "codex": {"capacity_cooldowns": self._codex_bridge.capacity_status()},
+            },
+            "automatic_routing": {"enabled": False, "mode": "evidence_gated", "reason": "representative_accepted_cohorts_required"},
+        }
+
     def _shadow_route_context(self) -> tuple[str, str, RunContext]:
         state = self.task_state.get()
         projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
@@ -2334,6 +2396,14 @@ class Runtime:
 
     def _sync_opencode_dispatch(self, snapshot: dict[str, Any], ctx: RunContext) -> dict[str, Any]:
         provider_status = str(snapshot.get("status") or "")
+        if provider_status != "running":
+            self.provider_traffic.complete(self._provider_traffic_key(
+                run_id=str(snapshot.get("run_id") or ""),
+                wave_id=str(snapshot.get("wave_id") or ""),
+                model=str(snapshot.get("model") or ""),
+                request_id=str(snapshot.get("request_id") or ""),
+                prompt_sha256=str(snapshot.get("prompt_sha256") or ""),
+            ))
         delegation_status = "active" if provider_status == "running" else "completed" if provider_status == "completed" else "failed"
         metadata = {
             "source": "opencode:provider_adapter",
@@ -2414,19 +2484,41 @@ class Runtime:
         model = str(payload.get("model") or "").strip()
         if model not in ALLOWED_OPENCODE_MODELS:
             raise ToolFailure("PROVIDER_MODEL_DENIED", "Only the allowlisted OpenCode Go Flash/Pro models may be dispatched.", category="validation", retryable=False)
+        prompt = str(payload.get("prompt") or "")
+        request_id = str(payload.get("request_id") or "").strip()[:128]
+        traffic_key = self._provider_traffic_key(
+            run_id=run_id,
+            wave_id=wave_id,
+            model=model,
+            request_id=request_id,
+            prompt_sha256=hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+        )
+        raw_token_budget = payload.get("token_budget")
+        if raw_token_budget is not None and (isinstance(raw_token_budget, bool) or not isinstance(raw_token_budget, int) or raw_token_budget < 0):
+            raise ToolFailure("PROVIDER_TOKEN_BUDGET_INVALID", "token_budget must be a non-negative integer when provided.", category="validation", retryable=False)
+        admission = self.provider_traffic.admit(model, traffic_key, token_budget=raw_token_budget)
+        if not admission.get("allowed"):
+            raise ToolFailure(
+                "PROVIDER_ADMISSION_DENIED",
+                f"Provider admission denied: {admission.get('reason')}",
+                category="runtime",
+                retryable=admission.get("reason") in {"concurrency_exhausted", "rpm_exhausted", "tpm_exhausted"},
+                details=admission,
+            )
         try:
             snapshot = self._opencode_provider.start(
                 run_id=run_id,
                 wave_id=wave_id,
                 model=model,
-                prompt=str(payload.get("prompt") or ""),
+                prompt=prompt,
                 timeout_ms=int(payload.get("timeout_ms") or 60_000),
-                request_id=str(payload.get("request_id") or ""),
+                request_id=request_id,
             )
         except OpenCodeProviderError as exc:
+            self.provider_traffic.abort(traffic_key)
             raise ToolFailure(exc.code, exc.message, category="runtime", retryable=exc.retryable, details=exc.details) from exc
         delegation = self._sync_opencode_dispatch(snapshot, ctx)
-        return {"run_id": run_id, "wave_id": wave_id, "dispatch": snapshot, "delegation": delegation}
+        return {"run_id": run_id, "wave_id": wave_id, "dispatch": snapshot, "delegation": delegation, "admission": admission}
 
     def observe_opencode_provider(self, identity: dict[str, Any], dispatch_id: str, *, cancel: bool = False) -> dict[str, Any]:
         self._require_provider_supervisor(identity)
@@ -2556,6 +2648,7 @@ class Runtime:
             "tools": tools,
             "tool_count": len(tools),
             "tool_contract": dict(self.tool_contract),
+            "tool_metadata": tool_metadata_contract(),
         }
 
     def _background_operation_snapshot(self, operation: dict[str, Any], *, include_result: bool = False) -> dict[str, Any]:
@@ -2702,7 +2795,11 @@ class Runtime:
         *,
         request_id: str | int | None = None,
     ) -> dict[str, Any]:
-        args = arguments or {}
+        args = dict(arguments or {})
+        if not str(args.get("idempotency_key", "") or "").strip():
+            derived_key = self._derive_idempotency_key(name, args)
+            if derived_key:
+                args["idempotency_key"] = derived_key
         try:
             result = self._call_tool_dispatch(name, args, request_id=request_id)
         except Exception as exc:
@@ -4188,6 +4285,7 @@ class Runtime:
                 "process_instance_id": self.process_instance_id,
                 "performance_trace_version": self.performance_trace.schema_version,
                 "tool_contract": dict(self.tool_contract),
+                "tool_metadata": tool_metadata_contract(),
                 "stale_orchestration_runs": len(self.stale_orchestration_runs),
                 "orphaned_background_operations": int(self.orphaned_background_operations),
                 "orphaned_idempotency_records": int(self.orphaned_idempotency_records),
@@ -4210,6 +4308,7 @@ class Runtime:
 
     def prepare_coding_context(self, args: dict[str, Any]) -> dict[str, Any]:
         """Build the context a coding model normally gathers through many round trips."""
+        composite_started = time.monotonic()
         cache_key = self._context_bundle_cache_key(args)
         namespaced_key = hashlib.sha256(f"{self.workspace.root}\n".encode("utf-8")).hexdigest()[:12] + cache_key
         now = time.time()
@@ -4220,6 +4319,13 @@ class Runtime:
                 payload = json.loads(json.dumps(cached[1], ensure_ascii=False))
                 payload["cache_hit"] = True
                 payload["cache_age_ms"] = int((now - cached[0]) * 1000)
+                composite = payload.get("composite_read")
+                if isinstance(composite, dict):
+                    composite["cache"] = {
+                        "hit": True,
+                        "age_ms": payload["cache_age_ms"],
+                        "source": "cached_previous_execution",
+                    }
                 return payload
 
         objective = str(args.get("objective", "")).strip()
@@ -4231,7 +4337,42 @@ class Runtime:
         max_total_bytes = min(max(int(args.get("max_total_bytes", 262144)), 4096), 1048576)
         max_matches = min(max(int(args.get("max_matches_per_query", 20)), 1), 100)
 
+        search_workers = min(4, len(queries)) if queries else 0
+        composite_plan = {
+            "schema_version": 1,
+            "mode": "model_free",
+            "query_count": len(queries),
+            "requested_path_count": len(requested_paths),
+            "limits": {
+                "max_files": max_files,
+                "max_total_bytes": max_total_bytes,
+                "max_matches_per_query": max_matches,
+            },
+            "stages": [
+                {"id": "workspace", "kind": "workspace_context", "max_operations": 1, "parallel_safe": False},
+                {"id": "localize", "kind": "search_text", "max_operations": len(queries), "parallel_safe": True, "max_workers": search_workers},
+                {"id": "materialize", "kind": "read_file", "max_operations": max_files, "parallel_safe": False, "byte_budget": max_total_bytes},
+            ],
+        }
+        composite_plan_bytes = json.dumps(
+            composite_plan,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        composite_plan["plan_sha256"] = hashlib.sha256(composite_plan_bytes).hexdigest()
+        composite_operations: list[dict[str, Any]] = []
+
+        workspace_started = time.monotonic()
         workspace = self.workspace_context({"path": str(args.get("path", ".")), "max_entries": int(args.get("max_entries", 120))})
+        workspace_ms = max(0, int((time.monotonic() - workspace_started) * 1000))
+        composite_operations.append({
+            "id": "workspace:0",
+            "stage": "workspace",
+            "kind": "workspace_context",
+            "status": "completed",
+            "duration_ms": workspace_ms,
+        })
         instructions = {
             "root": [
                 {"path": item.path, "content": item.content, "truncated": item.truncated}
@@ -4243,7 +4384,9 @@ class Runtime:
         searches: list[dict[str, Any]] = []
         path_scores: dict[str, int] = {path: 1_000_000 - index for index, path in enumerate(requested_paths)}
 
-        def search_once(query: str) -> dict[str, Any]:
+        def search_once(index_and_query: tuple[int, str]) -> tuple[dict[str, Any], dict[str, Any]]:
+            index, query = index_and_query
+            started = time.monotonic()
             try:
                 result = self.search_text({
                     "query": query,
@@ -4257,7 +4400,7 @@ class Runtime:
                     "max_preview_bytes": 360,
                 })
                 matches = result.get("matches", [])
-                return {
+                search_result = {
                     "query": query,
                     "engine": result.get("engine"),
                     "total_matches": result.get("total_matches", len(matches)),
@@ -4265,11 +4408,26 @@ class Runtime:
                     "matches": matches,
                 }
             except (ToolFailure, OSError, ValueError) as exc:
-                return {"query": query, "error": str(exc), "matches": []}
+                search_result = {"query": query, "error": str(exc), "matches": []}
+            duration_ms = max(0, int((time.monotonic() - started) * 1000))
+            operation = {
+                "id": f"search:{index}",
+                "stage": "localize",
+                "kind": "search_text",
+                "status": "failed" if "error" in search_result else "completed",
+                "duration_ms": duration_ms,
+                "query_sha256": hashlib.sha256(query.encode("utf-8")).hexdigest(),
+                "match_count": len(search_result.get("matches", [])),
+            }
+            return search_result, operation
 
+        localization_started = time.monotonic()
         if queries:
-            with ThreadPoolExecutor(max_workers=min(4, len(queries)), thread_name_prefix="context-search") as pool:
-                searches = list(pool.map(search_once, queries))
+            with ThreadPoolExecutor(max_workers=search_workers, thread_name_prefix="context-search") as pool:
+                search_pairs = list(pool.map(search_once, enumerate(queries)))
+            searches = [item[0] for item in search_pairs]
+            composite_operations.extend(item[1] for item in search_pairs)
+        localization_ms = max(0, int((time.monotonic() - localization_started) * 1000))
         for result in searches:
             for match in result.get("matches", []):
                 path = str(match.get("path", ""))
@@ -4279,17 +4437,66 @@ class Runtime:
         ranked_paths = sorted(path_scores, key=lambda item: (-path_scores[item], item))[:max_files]
         files: list[dict[str, Any]] = []
         total_bytes = 0
-        for path in ranked_paths:
+        materialization_started = time.monotonic()
+        for read_index, path in enumerate(ranked_paths):
             remaining = max_total_bytes - total_bytes
             if remaining <= 0:
                 break
+            read_started = time.monotonic()
             try:
                 item = self.read_file({"path": path, "max_bytes": min(remaining, 131072), "max_lines": 2000})
             except (ToolFailure, OSError, UnicodeError) as exc:
                 files.append({"path": path, "error": str(exc)})
+                composite_operations.append({
+                    "id": f"read:{read_index}",
+                    "stage": "materialize",
+                    "kind": "read_file",
+                    "path": path,
+                    "status": "failed",
+                    "duration_ms": max(0, int((time.monotonic() - read_started) * 1000)),
+                    "content_bytes": 0,
+                })
                 continue
-            total_bytes += len(str(item.get("content", "")).encode("utf-8"))
+            content_bytes = len(str(item.get("content", "")).encode("utf-8"))
+            total_bytes += content_bytes
             files.append(item)
+            composite_operations.append({
+                "id": f"read:{read_index}",
+                "stage": "materialize",
+                "kind": "read_file",
+                "path": str(item.get("path") or path),
+                "status": "completed",
+                "duration_ms": max(0, int((time.monotonic() - read_started) * 1000)),
+                "content_bytes": content_bytes,
+                "truncated": bool(item.get("truncated", False)),
+            })
+        materialization_ms = max(0, int((time.monotonic() - materialization_started) * 1000))
+        composite_total_ms = max(0, int((time.monotonic() - composite_started) * 1000))
+        composite_read = {
+            "schema_version": 1,
+            "plan": composite_plan,
+            "execution": {
+                "status": "completed",
+                "operation_count": len(composite_operations),
+                "operations": composite_operations,
+                "selected_path_count": len(ranked_paths),
+                "materialized_file_count": sum(1 for item in files if "error" not in item),
+                "content_bytes": total_bytes,
+                "parallelism": {
+                    "search_parallel": bool(search_workers > 1),
+                    "search_max_workers": search_workers,
+                    "materialization_parallel": False,
+                },
+                "phase_timing": {
+                    "source": "monotonic_local",
+                    "workspace_ms": workspace_ms,
+                    "localization_ms": localization_ms,
+                    "materialization_ms": materialization_ms,
+                    "total_ms": composite_total_ms,
+                },
+            },
+            "cache": {"hit": False, "age_ms": 0, "source": "live_execution"},
+        }
 
         payload = {
             "objective": objective,
@@ -4299,6 +4506,7 @@ class Runtime:
             "files": files,
             "selected_paths": ranked_paths,
             "total_content_bytes": total_bytes,
+            "composite_read": composite_read,
             "task_resume": self.task_state.get(),
             "cache_hit": False,
             "cache_ttl_seconds": CONTEXT_BUNDLE_CACHE_TTL_SECONDS,
@@ -4321,14 +4529,26 @@ class Runtime:
             "max_output_bytes": 131072,
             "verbosity": "summary",
         })
+        terminal_tool = "exec_command"
+        terminal_args: dict[str, Any] = {"cmd": command}
         while payload.get("status") == "running":
-            payload = self.write_stdin({
+            terminal_args = {
                 "session_id": str(payload.get("session_id", "")),
                 "chars": "",
                 "yield_time_ms": 30000,
                 "max_output_bytes": 131072,
                 "verbosity": "summary",
-            })
+            }
+            payload = self.write_stdin(terminal_args)
+            terminal_tool = "write_stdin"
+        try:
+            # These internal calls intentionally bypass _call_tool_sync, so
+            # explicitly close the TaskState command lifecycle once with the
+            # raw terminal payload before reducing it to a compact proof row.
+            self.task_state.record_tool_result(terminal_tool, terminal_args, payload)
+        except Exception:
+            # Check truth must not depend on auxiliary task-state persistence.
+            pass
         return {
             "command": command,
             "status": "passed" if payload.get("exit_code") == 0 else str(payload.get("status") or "failed"),
@@ -4437,9 +4657,35 @@ class Runtime:
             if isinstance(item, dict) and str(item.get("path", "")).strip()
         })
         proof_ids: list[str] = []
+        proof_cache_eligible = 0
         proof_cache_hits = 0
+        proof_cache_misses = 0
+        proof_cache_miss_reasons: dict[str, int] = {}
         proof_cache_saved_ms = 0
         upstream_proof_ids: list[str] = []
+
+        def observe_proof_cache(result: dict[str, Any]) -> None:
+            nonlocal proof_cache_eligible, proof_cache_hits, proof_cache_misses, proof_cache_saved_ms
+            if not result.get("proof_cache_eligible"):
+                return
+            proof_cache_eligible += 1
+            if result.get("cache_hit"):
+                proof_cache_hits += 1
+                proof_cache_saved_ms += max(0, int(result.get("cache_saved_ms", 0) or 0))
+                return
+            proof_cache_misses += 1
+            reason = str(result.get("proof_cache_miss_reason") or "unknown")[:80]
+            proof_cache_miss_reasons[reason] = proof_cache_miss_reasons.get(reason, 0) + 1
+
+        def current_proof_summary() -> dict[str, Any]:
+            return {
+                "proof_ids": list(proof_ids),
+                "eligible": proof_cache_eligible,
+                "cache_hits": proof_cache_hits,
+                "cache_misses": proof_cache_misses,
+                "cache_miss_reasons": dict(sorted(proof_cache_miss_reasons.items())),
+                "cache_saved_ms": proof_cache_saved_ms,
+            }
 
         command_results: list[dict[str, Any]] = []
         timeout_ms = min(max(int(args.get("timeout_ms", 600000)), 1000), 600000)
@@ -4472,8 +4718,7 @@ class Runtime:
                 )
                 proof_ids.append(proof_id)
                 upstream_proof_ids.append(proof_id)
-                proof_cache_hits += 1 if result.get("cache_hit") else 0
-                proof_cache_saved_ms += max(0, int(result.get("cache_saved_ms", 0) or 0))
+                observe_proof_cache(result)
             command_results.append(result)
             if result.get("exit_code") != 0:
                 failure = f"Check failed: {command}"
@@ -4488,7 +4733,7 @@ class Runtime:
                     "affected_files": affected_files,
                     "check_results": command_results,
                     "build_report": None,
-                    "proof_summary": {"proof_ids": proof_ids, "cache_hits": proof_cache_hits, "cache_saved_ms": proof_cache_saved_ms},
+                    "proof_summary": current_proof_summary(),
                     "error": {"code": "CHECK_FAILED", "message": failure, "category": "runtime", "retryable": True, "details": {}},
                 }
 
@@ -4530,8 +4775,7 @@ class Runtime:
                 )
                 proof_ids.append(proof_id)
                 upstream_proof_ids.append(proof_id)
-                proof_cache_hits += 1 if build_report.get("cache_hit") else 0
-                proof_cache_saved_ms += max(0, int(build_report.get("cache_saved_ms", 0) or 0))
+                observe_proof_cache(build_report)
             if build_report.get("ok") is False:
                 set_stage("verify", "Verification failed", failed=True)
                 error = build_report.get("error") if isinstance(build_report.get("error"), dict) else {}
@@ -4550,7 +4794,7 @@ class Runtime:
                     "affected_files": affected_files,
                     "check_results": command_results,
                     "build_report": build_report,
-                    "proof_summary": {"proof_ids": proof_ids, "cache_hits": proof_cache_hits, "cache_saved_ms": proof_cache_saved_ms},
+                    "proof_summary": current_proof_summary(),
                     "error": build_report.get("error"),
                 }
 
@@ -4596,9 +4840,7 @@ class Runtime:
             "build_report": build_report,
             "git_diff": diff,
             "proof_summary": {
-                "proof_ids": proof_ids,
-                "cache_hits": proof_cache_hits,
-                "cache_saved_ms": proof_cache_saved_ms,
+                **current_proof_summary(),
                 "proof_fingerprint": proof_fingerprint,
                 "worktree_fp": str(proof_identity.get("worktree_fp") or ""),
             },
@@ -4962,6 +5204,7 @@ class Runtime:
         objective = str(args.get("objective", "")).strip() or str(self.task_state.get().get("objective", "")).strip()
         if workflow == "resume" or phase == "resume":
             state = self.task_state.get()
+            orchestration = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
             context_args = {
                 "objective": objective,
                 "path": args.get("path", "."),
@@ -4972,11 +5215,43 @@ class Runtime:
                 "force_refresh": True,
             }
             context = self.prepare_coding_context(context_args)
+            context["task_resume"] = {
+                "task_id": state.get("task_id"),
+                "status": state.get("status"),
+                "current_step": state.get("current_step"),
+                "next_step": state.get("next_step"),
+                "orchestration": dict(orchestration),
+            }
+            run_id = str(orchestration.get("run_id") or "").strip()
+            wave_id = str(orchestration.get("wave_id") or "").strip()
+            if run_id:
+                try:
+                    evidence = self.orchestration_ledger.evidence_query(run_id, wave_id=wave_id, limit=20)
+                except ValueError as exc:
+                    evidence = {
+                        "schema_version": 1,
+                        "status": "unavailable",
+                        "run_id": run_id,
+                        "wave_id": wave_id or None,
+                        "reason": str(exc),
+                        "model_free": True,
+                        "raw_transcript_included": False,
+                    }
+            else:
+                evidence = {
+                    "schema_version": 1,
+                    "status": "unlinked",
+                    "run_id": None,
+                    "wave_id": None,
+                    "model_free": True,
+                    "raw_transcript_included": False,
+                }
             return {
                 "workflow": workflow,
                 "phase": "resume",
                 "task": state,
                 "context": context,
+                "evidence": evidence,
                 "recommended_next_action": "Continue from task.next_step. Do not repeat completed searches, reads, commands, tests, or builds.",
             }
 
@@ -5045,6 +5320,12 @@ class Runtime:
                     "selected_paths": list(prepared.get("selected_paths") or [])[:40] if isinstance(prepared, dict) else [],
                     "total_content_bytes": int(prepared.get("total_content_bytes") or 0) if isinstance(prepared, dict) else 0,
                     "queries": len(args.get("queries", [])),
+                    "composite_read": {
+                        "plan_sha256": str((((prepared.get("composite_read") or {}).get("plan") or {}).get("plan_sha256") or "")) if isinstance(prepared, dict) else "",
+                        "operation_count": int((((prepared.get("composite_read") or {}).get("execution") or {}).get("operation_count") or 0)) if isinstance(prepared, dict) else 0,
+                        "phase_timing": dict((((prepared.get("composite_read") or {}).get("execution") or {}).get("phase_timing") or {})) if isinstance(prepared, dict) else {},
+                        "cache_hit": bool(((prepared.get("composite_read") or {}).get("cache") or {}).get("hit")) if isinstance(prepared, dict) else False,
+                    },
                 },
             )
         if not should_execute:
@@ -6140,10 +6421,27 @@ class Runtime:
                 raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "The requested orchestration run was not found.", category="not_found")
             if action == "audit":
                 reports = self.orchestration_report.write_reports(run_id)
-                summary = self.orchestration_ledger.export_summary(run_id)
                 limit = max(1, min(int(args.get("limit", 20)), 100))
-                summary["events"] = summary.get("events", [])[-limit:]
-                summary["proofs"] = summary.get("proofs", [])[-limit:]
+                wave_filter = str(args.get("wave_id") or "").strip()
+                if wave_filter or "after_seq" in args:
+                    try:
+                        summary = self.orchestration_ledger.evidence_query(
+                            run_id,
+                            wave_id=wave_filter,
+                            after_seq=max(0, int(args.get("after_seq", 0))) if "after_seq" in args else None,
+                            limit=limit,
+                        )
+                    except ValueError as exc:
+                        raise ToolFailure(
+                            "ORCHESTRATION_WAVE_NOT_FOUND",
+                            str(exc),
+                            category="not_found",
+                            details={"run_id": run_id, "wave_id": wave_filter},
+                        ) from exc
+                else:
+                    summary = self.orchestration_ledger.export_summary(run_id)
+                    summary["events"] = summary.get("events", [])[-limit:]
+                    summary["proofs"] = summary.get("proofs", [])[-limit:]
                 return {
                     "state": state,
                     "orchestration": self._orchestration_result(ctx, write_reports=False),
@@ -6582,6 +6880,35 @@ class Runtime:
     def task_history_list(self, args: dict[str, Any]) -> dict[str, Any]:
         return {"tasks": self.task_state.history(int(args.get("limit", 20)))}
 
+    @staticmethod
+    def _measured_phase_timing(payload: dict[str, Any]) -> dict[str, Any]:
+        """Extract only live measured composite-read timing from a tool result.
+
+        Cached context carries timing from the original execution; replaying it
+        into PerformanceTrace would double-count old work, so cached projections
+        deliberately return no timing sample here.
+        """
+        candidates: list[Any] = [payload]
+        for key in ("prepared", "context"):
+            nested = payload.get(key)
+            if isinstance(nested, dict):
+                candidates.append(nested)
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            composite = candidate.get("composite_read")
+            if not isinstance(composite, dict):
+                continue
+            cache = composite.get("cache") if isinstance(composite.get("cache"), dict) else {}
+            if cache.get("hit"):
+                continue
+            execution = composite.get("execution") if isinstance(composite.get("execution"), dict) else {}
+            timing = execution.get("phase_timing") if isinstance(execution.get("phase_timing"), dict) else {}
+            if str(timing.get("source") or "") != "monotonic_local":
+                continue
+            return {"scope": "composite_read", **timing}
+        return {}
+
     def emit_tool_trace(self, name: str, args: dict[str, Any], payload: dict[str, Any], started_at: float) -> None:
         raw_error = payload.get("error")
         error = raw_error if isinstance(raw_error, dict) else {}
@@ -6595,6 +6922,16 @@ class Runtime:
             proof_cache_hits = max(0, int(proof_summary.get("cache_hits", 0) or 0))
         except (TypeError, ValueError):
             proof_cache_hits = 0
+        try:
+            proof_cache_eligible = max(0, int(proof_summary.get("eligible", 0) or 0))
+        except (TypeError, ValueError):
+            proof_cache_eligible = 0
+        try:
+            proof_cache_misses = max(0, int(proof_summary.get("cache_misses", 0) or 0))
+        except (TypeError, ValueError):
+            proof_cache_misses = 0
+        raw_miss_reasons = proof_summary.get("cache_miss_reasons")
+        proof_cache_miss_reasons = raw_miss_reasons if isinstance(raw_miss_reasons, dict) else {}
         try:
             proof_cache_saved_ms = max(0, int(proof_summary.get("cache_saved_ms", 0) or 0))
         except (TypeError, ValueError):
@@ -6618,9 +6955,16 @@ class Runtime:
                 deduplicated=bool(payload.get("deduplicated")),
                 idempotency_eligible=self._idempotency_eligible_call(name, args),
                 idempotency_key_present=bool(str(args.get("idempotency_key", "") or "").strip()),
+                idempotency_policy=self._idempotency_policy(name, args),
+                idempotency_key_source=self._idempotency_key_source(args),
+                error_class=self._error_class(error),
+                proof_cache_eligible=proof_cache_eligible,
                 proof_cache_hits=proof_cache_hits,
+                proof_cache_misses=proof_cache_misses,
+                proof_cache_miss_reasons=proof_cache_miss_reasons,
                 proof_cache_saved_ms=proof_cache_saved_ms,
                 orchestration=trace_orchestration,
+                phase_timing=self._measured_phase_timing(payload),
             )
         except Exception:
             pass
@@ -6648,8 +6992,110 @@ class Runtime:
         print(json.dumps(event, sort_keys=True, separators=(",", ":")), file=sys.stderr, flush=True)
 
     @staticmethod
+    def _idempotency_policy(name: str, args: dict[str, Any]) -> str:
+        """Classify replay protection without pretending every mutation has a stable identity."""
+        if name == "agent_workflow":
+            phase = str(args.get("phase", "prepare")).strip().lower()
+            if phase == "execute":
+                return "required"
+            return "optional" if phase == "run" else "none"
+        if name == "task_control":
+            action = str(args.get("action", "get")).strip().lower()
+            if action in {"accept", "reject"}:
+                return "required"
+            if action == "handoff":
+                return "optional" if str(args.get("handoff_action", "get")).strip().lower() == "record" else "none"
+            return "optional" if action in {"start", "update", "pause", "stop", "resume", "clear", "restart_runtime"} else "none"
+        if name == "document_workflow":
+            return "optional" if str(args.get("action", "inspect")).strip().lower() in {"create", "convert", "rebuild"} else "none"
+        if name == "command_control":
+            return "optional" if str(args.get("action", "poll")).strip().lower() in {"write", "kill"} else "none"
+        if name == "write_stdin":
+            return "optional" if bool(str(args.get("chars", ""))) else "none"
+        spec = TOOL_REGISTRY.get(name)
+        return "optional" if spec and not spec.read_only and (spec.destructive or spec.open_world) else "none"
+
+    def _derive_idempotency_key(self, name: str, args: dict[str, Any]) -> str:
+        if self._idempotency_policy(name, args) != "required":
+            return ""
+        current_task = self.task_state.get()
+        projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
+        run_id = str(args.get("run_id") or projection.get("run_id") or "").strip()
+        wave_id = str(args.get("wave_id") or projection.get("wave_id") or "").strip()
+        if not run_id or not wave_id:
+            return ""
+        if name == "agent_workflow" and str(args.get("phase", "prepare")).strip().lower() == "execute":
+            operation = "agent_workflow:execute"
+            authority_scope = ""
+        elif name == "task_control" and str(args.get("action", "get")).strip().lower() in {"accept", "reject"}:
+            operation = f"task_control:{str(args.get('action')).strip().lower()}"
+            identity = self._current_hub_client() or {}
+            controller = self.orchestration_ledger.get_controller_lease(run_id) or {}
+            caller_id = str(identity.get("client_id") or "local").strip() or "local"
+            fencing_token = int(controller.get("fencing_token") or 0)
+            authority_scope = f"caller={caller_id}\0fence={fencing_token}"
+        else:
+            return ""
+        request_hash = self._request_hash(args)
+        digest = hashlib.sha256(
+            f"{operation}\0{run_id}\0{wave_id}\0{authority_scope}\0{request_hash}".encode("utf-8", errors="replace")
+        ).hexdigest()
+        return f"{AUTO_IDEMPOTENCY_KEY_PREFIX}{digest}"
+
+    @staticmethod
+    def _idempotency_key_source(args: dict[str, Any]) -> str:
+        key = str(args.get("idempotency_key", "") or "").strip()
+        if not key:
+            return "none"
+        return "derived" if key.startswith(AUTO_IDEMPOTENCY_KEY_PREFIX) else "explicit"
+
+    @staticmethod
+    def _error_class(error: dict[str, Any]) -> str:
+        code = str(error.get("code") or "").strip().upper()
+        category = str(error.get("category") or "").strip().lower()
+        if not code:
+            return ""
+        if code.startswith("CANDIDATE_TARGET_") or code == "INVALID_CANDIDATE_PATH":
+            return "CONTROL_PATH"
+        if code.startswith("PROOF_CWD"):
+            return "CONTROL_CWD"
+        if "CONNECTOR" in code:
+            return "CONTROL_CONNECTOR"
+        if code.startswith(("SCHEMA_", "CONTRACT_", "STALE_CONTRACT")) or code in {"INVALID_TOOL_SCHEMA", "CONTRACT_MISMATCH"}:
+            return "CONTROL_SCHEMA"
+        if "CAPACITY" in code or code in {"QUEUE_FULL", "RATE_LIMITED"}:
+            return "CAPACITY"
+        if "TIMEOUT" in code or "DEADLINE" in code:
+            return "DEADLINE"
+        if code in {"PROMPT_TOO_LARGE", "PROMPT_SIZE_EXCEEDED"}:
+            return "PROMPT_SIZE"
+        if code.startswith("CANDIDATE_") and code not in {"CANDIDATE_TARGET_MISSING"}:
+            return "MODEL_CANDIDATE_INVALID"
+        if "BASE_DRIFT" in code or "STALE_BASE" in code:
+            return "BASE_DRIFT"
+        if "PATCH_AMBIGU" in code:
+            return "PATCH_AMBIGUOUS"
+        if code.startswith("PROOF_") and any(token in code for token in ("INFRA", "TOOL", "UNAVAILABLE", "TIMEOUT")):
+            return "PROOF_INFRA"
+        if code.startswith("PROOF_") or code in {"TEST_FAILED", "BUILD_FAILED", "ASSERTION_FAILED"}:
+            return "PROOF_CODE_FAILURE"
+        if category in {"permission", "security"} or any(token in code for token in ("PERMISSION", "AUTHORITY", "WRITE_LEASE", "CONTROLLER_FENCE")):
+            return "AUTHORITY_DENIED"
+        if code in {"TASK_PAUSED", "TASK_STOPPED", "USER_BLOCKED", "USER_INPUT_REQUIRED"}:
+            return "USER_BLOCKED"
+        if code.startswith(("PROVIDER_", "OPENCODE_")):
+            return "PROVIDER"
+        if code.startswith("IDEMPOT"):
+            return "IDEMPOTENCY"
+        if category == "validation":
+            return "VALIDATION"
+        if category == "runtime":
+            return "RUNTIME"
+        return "UNKNOWN"
+
+    @staticmethod
     def _idempotency_eligible_call(name: str, args: dict[str, Any]) -> bool:
-        """Whether a call belongs in the durable-operation-identity denominator."""
+        """Legacy v4 denominator retained for historical trace comparability."""
         if name == "agent_workflow":
             return str(args.get("phase", "prepare")).strip().lower() in {"execute", "run"}
         if name == "document_workflow":
@@ -10450,6 +10896,10 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         elif safe_to_rotate:
             reason_codes = ["READY"]
         latest_event_seq = int(events[-1].get("seq") or 0) if events else 0
+        flight_recorder = ledger.flight_recorder(run_id, limit=40) if run_id else {
+            "run_id": "", "after_seq": 0, "events": [], "next_after_seq": 0, "has_more": False,
+            "phase_timing": {"run_id": "", "source": "eocl_event_timestamps", "segments": [], "by_state_ms": {}, "complete": False},
+        }
         pending_messages = ledger.list_coordination_messages(run_id=run_id, status="pending", limit=100) if run_id else []
         modified_paths = []
         for item in list(state.get("modified_files") or [])[:12]:
@@ -10506,6 +10956,17 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "routing_evidence": ledger.routing_evidence(run_id, limit=8) if run_id else {
                 "shadow_recommendations": [], "actual_delegations": [], "usage_events": []
             },
+            "provider_traffic": runtime.provider_traffic_snapshot(),
+            "flight_recorder": flight_recorder,
+            "history": {"runs": [
+                {
+                    "run_id": item.get("run_id"),
+                    "status": item.get("status"),
+                    "started_at": item.get("started_at"),
+                    "finished_at": item.get("finished_at"),
+                }
+                for item in ledger.list_runs(limit=12)
+            ]},
             "capsule": summary.get("latest_handoff_capsule"),
             "background_operations": ledger.list_background_operations(limit=8),
             "counts": {

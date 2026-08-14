@@ -17,6 +17,8 @@
   let performance = null;
   let refreshInFlight = false;
   let lastPerformanceRead = 0;
+  const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  let reducedMotion = motionQuery?.matches === true;
 
   const $ = (selector) => document.querySelector(selector);
   const byId = (id) => document.getElementById(id);
@@ -52,7 +54,7 @@
 
   function delegationState(status) {
     const value = String(status || '').toLowerCase();
-    if (['active', 'running', 'starting', 'executing', 'in_progress'].includes(value)) return 'active';
+    if (['active', 'running', 'starting', 'executing', 'in_progress', 'streaming', 'responding'].includes(value)) return 'active';
     if (['waiting', 'queued', 'pending', 'idle'].includes(value)) return 'waiting';
     if (['blocked', 'failed', 'replanned', 'interrupted'].includes(value)) return 'blocked';
     return 'offline';
@@ -87,6 +89,96 @@
     return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
+  function formatLimit(value) {
+    return Number.isFinite(Number(value)) && Number(value) > 0 ? String(Number(value)) : 'unknown';
+  }
+
+  function appendListRow(container, titleText, metaText, pillText = '', pillState = 'offline') {
+    const row = document.createElement('div');
+    row.className = 'cc-list-row';
+    const main = document.createElement('div');
+    const title = document.createElement('b');
+    title.textContent = titleText;
+    const meta = document.createElement('small');
+    meta.textContent = metaText;
+    main.append(title, meta);
+    row.appendChild(main);
+    if (pillText) {
+      const state = document.createElement('span');
+      state.className = `cc-pill is-${pillState}`;
+      state.textContent = pillText;
+      row.appendChild(state);
+    }
+    container.appendChild(row);
+  }
+
+  const ORCHESTRATION_ACTIVITY = {
+    PREFLIGHT: { phase: 'thinking', label: 'Đang suy nghĩ', state: 'active', busy: true },
+    ROUTED: { phase: 'dispatching', label: 'Đang điều phối', state: 'active', busy: true },
+    EXECUTING: { phase: 'executing', label: 'Đang thực thi', state: 'active', busy: true },
+    PROVING: { phase: 'proving', label: 'Đang kiểm chứng', state: 'active', busy: true },
+    ACCEPTING: { phase: 'accepting', label: 'Đang chờ chấp nhận', state: 'waiting', busy: true },
+    REPLAN: { phase: 'replanning', label: 'Đang lập lại kế hoạch', state: 'waiting', busy: true },
+    CHECKPOINTED: { phase: 'completed', label: 'Đã hoàn tất', state: 'completed', busy: false },
+    BLOCKED: { phase: 'blocked', label: 'Đang bị chặn', state: 'blocked', busy: false },
+    ABORTED: { phase: 'stopped', label: 'Đã dừng', state: 'offline', busy: false }
+  };
+
+  function currentOrchestrationState(data) {
+    return String(
+      data?.resume_packet?.orchestration_state
+      || data?.task?.orchestration?.orchestration_state
+      || data?.orchestration_state
+      || ''
+    ).trim().toUpperCase();
+  }
+
+  function executionActivity(data) {
+    const task = data?.task || {};
+    const write = data?.authority?.write || {};
+    const rawState = currentOrchestrationState(data);
+    const command = task?.current_command || {};
+    const delegations = Array.isArray(data?.delegations) ? data.delegations : [];
+    const activeDelegation = delegations.find((item) => delegationState(item?.status) === 'active') || null;
+    const delegationStatus = String(activeDelegation?.status || '').toLowerCase();
+    const step = String(task.current_step || task.next_step || '').trim();
+
+    if (rawState === 'PROVING') {
+      return { ...ORCHESTRATION_ACTIVITY.PROVING, detail: step || 'Đang chạy proof/verification từ control plane.', rawState };
+    }
+    if (rawState === 'ACCEPTING') {
+      return { ...ORCHESTRATION_ACTIVITY.ACCEPTING, detail: step || 'Proof đã xong; đang chờ bước chấp nhận cuối.', rawState };
+    }
+    if (rawState === 'REPLAN') {
+      return { ...ORCHESTRATION_ACTIVITY.REPLAN, detail: task.failure || step || 'Control plane yêu cầu kế hoạch thực thi mới.', rawState };
+    }
+    if (rawState === 'EXECUTING' && write.status === 'active') {
+      return { phase: 'writing', label: 'Đang ghi workspace', state: 'active', busy: true, detail: step || `Write fence #${write.fencing_token || 0} đang hoạt động.`, rawState };
+    }
+    if (rawState === 'EXECUTING' && ['streaming', 'responding'].includes(delegationStatus)) {
+      return { phase: 'streaming', label: 'Đang nhận kết quả', state: 'active', busy: true, detail: step || `${activeDelegation?.model || activeDelegation?.route_resolved || 'Model'} đang streaming.`, rawState };
+    }
+    if (String(command.status || '').toLowerCase() === 'running') {
+      return { phase: 'running', label: 'Đang chạy lệnh', state: 'active', busy: true, detail: String(command.command || step || 'Lệnh cục bộ đang chạy.').slice(0, 140), rawState };
+    }
+    if (ORCHESTRATION_ACTIVITY[rawState]) {
+      return { ...ORCHESTRATION_ACTIVITY[rawState], detail: step || `Orchestration ${rawState.toLowerCase()}.`, rawState };
+    }
+    if (write.status === 'active') {
+      return { phase: 'writing', label: 'Đang ghi workspace', state: 'active', busy: true, detail: step || `Write fence #${write.fencing_token || 0} đang hoạt động.`, rawState };
+    }
+    if (activeDelegation) {
+      return { phase: 'running', label: 'Model đang làm việc', state: 'active', busy: true, detail: `${activeDelegation?.model || activeDelegation?.route_resolved || 'Model'} · ${activeDelegation?.status || 'active'}`, rawState };
+    }
+    if (String(task.status || '').toLowerCase() === 'active') {
+      return { phase: 'working', label: 'Đang xử lý', state: 'active', busy: true, detail: step || 'Task đang hoạt động.', rawState };
+    }
+    if (String(task.status || '').toLowerCase() === 'waiting' && task.objective) {
+      return { phase: 'waiting', label: 'Đang chờ bước tiếp theo', state: 'waiting', busy: false, detail: step || 'Task đang chờ.', rawState };
+    }
+    return { phase: 'idle', label: 'Đang rảnh', state: 'offline', busy: false, detail: 'Không có bằng chứng thực thi đang hoạt động.', rawState };
+  }
+
   function topology(data) {
     const chatweb = clientFor(data, 'chatweb', 'chatweb');
     const desktop = clientFor(data, 'codex_desktop', 'codex-desktop');
@@ -94,6 +186,7 @@
     const controllerOwner = String(data?.authority?.controller?.owner_client_id || '');
     const write = data?.authority?.write || {};
     const taskStatus = String(data?.task?.status || 'idle').toLowerCase();
+    const activity = executionActivity(data);
     const routes = { fast: 'offline', deepseek: 'offline', terra: 'offline', sol: 'offline' };
     const details = {
       fast: 'Mini / Luna idle',
@@ -121,7 +214,7 @@
     const anyRouteActive = Object.values(routes).some((state) => state === 'active');
     const mcpRunning = Boolean(snapshot?.status?.runtimeRunning || snapshot?.status?.mcpRunning);
     const hubOnline = Boolean(mcpRunning || anyClientOnline);
-    const hubState = hubOnline && (taskStatus === 'active' || anyRouteActive || write.status === 'active')
+    const hubState = hubOnline && (activity.busy || taskStatus === 'active' || anyRouteActive || write.status === 'active')
       ? 'active' : hubOnline ? 'connected' : 'offline';
     const writerState = write.status === 'active' ? 'active' : hubOnline ? 'connected' : 'offline';
 
@@ -132,6 +225,7 @@
       taskStatus,
       routes,
       details,
+      activity,
       states: {
         chatweb: chatwebState,
         desktop: desktopState,
@@ -178,7 +272,7 @@
         ? `Codex Desktop · ${view.controllerOwner === 'codex-desktop' ? 'semantic controller' : 'worker'}` : 'Codex Desktop offline',
       opencode: view.clients.opencode?.online ? 'OpenCode frontend connected to Execution Hub' : 'OpenCode offline',
       fast: view.details.fast,
-      hub: `Execution Hub · ${view.hubOnline ? 'online' : 'offline'} · task ${view.taskStatus}`,
+      hub: `Execution Hub · ${view.hubOnline ? 'online' : 'offline'} · task ${view.taskStatus}${view.activity.busy ? ` · ${view.activity.label}` : ''}`,
       deepseek: view.details.deepseek,
       terra: view.details.terra,
       writer: view.write.status === 'active'
@@ -191,7 +285,14 @@
     }
     const onlineClients = Object.values(view.clients).filter((client) => client?.online).length;
     const activeRoutes = Object.values(view.routes).filter((state) => state === 'active').length;
-    setText(`${prefix}RouterSummary`, `${onlineClients}/3 clients · ${activeRoutes} active route${activeRoutes === 1 ? '' : 's'}`);
+    const fabric = byId(`${prefix}RouterFabric`);
+    if (fabric) {
+      fabric.dataset.phase = view.activity.phase;
+      fabric.classList.toggle('is-processing', view.activity.busy);
+      fabric.classList.toggle('motion-reduced', reducedMotion);
+    }
+    const activitySuffix = view.activity.busy ? ` · ${view.activity.label}` : '';
+    setText(`${prefix}RouterSummary`, `${onlineClients}/3 clients · ${activeRoutes} active route${activeRoutes === 1 ? '' : 's'}${activitySuffix}`);
     return view;
   }
 
@@ -202,8 +303,23 @@
     element.className = `cc-pill is-${state}`;
   }
 
+  function renderActivity(data) {
+    const activity = executionActivity(data);
+    const element = byId('ccActivityIndicator');
+    if (element) {
+      element.className = `cc-activity is-${activity.state}${activity.busy ? ' is-busy' : ''}${reducedMotion ? ' motion-reduced' : ''}`;
+      element.dataset.phase = activity.phase;
+      element.setAttribute('aria-busy', activity.busy ? 'true' : 'false');
+    }
+    setText('ccActivityLabel', activity.label);
+    setText('ccActivityDetail', activity.detail);
+    setText('ccMotionMode', reducedMotion ? 'Giảm chuyển động' : activity.busy ? 'Live' : 'Sẵn sàng');
+    return activity;
+  }
+
   function renderCommandCenter(data) {
     const view = renderRouter('cc', data);
+    renderActivity(data);
     const ready = Boolean(snapshot?.status?.fullyReady);
     const runtimeRunning = Boolean(snapshot?.status?.runtimeRunning);
     const tunnelRunning = Boolean(snapshot?.status?.tunnelRunning);
@@ -257,6 +373,8 @@
     setText('ccPerformance', performance?.tool_calls
       ? `${performance.tool_calls} tool calls · local ${formatDuration(performance.local_execution_ms)} · wait ${formatDuration(performance.estimated_wait_ms)}`
       : 'Performance telemetry not recorded yet');
+    renderProviderTraffic(data);
+    renderRecovery(data);
   }
 
   function renderClientCard(prefix, client, latestEventSeq) {
@@ -325,6 +443,112 @@
     }
   }
 
+  function renderProviderTraffic(data) {
+    const traffic = data?.provider_traffic || {};
+    const policy = traffic?.policy || {};
+    const config = policy?.configuration || {};
+    const providers = Array.isArray(policy?.providers) ? policy.providers : [];
+    const capacity = traffic?.capacity || {};
+    const opencodeCapacity = capacity?.opencode || {};
+    const codexCooldowns = Array.isArray(capacity?.codex?.capacity_cooldowns) ? capacity.codex.capacity_cooldowns : [];
+    const automatic = traffic?.automatic_routing || {};
+    const enforced = providers.filter((item) => item?.mode === 'enforced').length;
+    const invalid = providers.filter((item) => item?.mode === 'invalid').length;
+    const policyLabel = invalid ? 'Invalid · fail closed' : enforced ? `${enforced} configured` : 'Limits unknown';
+    setText('ccTrafficPolicy', policyLabel);
+    setText('ccTrafficMeta', `${Number(opencodeCapacity?.active_requests || 0)} OpenCode active · auto-route ${automatic?.enabled ? 'ON' : 'OFF'} · ${config?.status || 'unconfigured'}`);
+
+    const container = byId('routingProviderTraffic');
+    if (!container) return;
+    container.replaceChildren();
+    if (!providers.length && !codexCooldowns.length) {
+      const empty = document.createElement('div');
+      empty.className = 'cc-empty';
+      empty.textContent = 'No configured provider limits or local cooldown evidence.';
+      container.appendChild(empty);
+    }
+    for (const item of providers.slice(0, 8)) {
+      const limits = item?.limits || {};
+      const usage = item?.usage || {};
+      const meta = item?.mode === 'enforced'
+        ? `RPM ${formatLimit(limits.rpm)} · TPM ${formatLimit(limits.tpm)} · concurrency ${formatLimit(limits.concurrency)} · active ${Number(usage.active_requests || 0)}`
+        : item?.mode === 'invalid'
+          ? `Configuration invalid · ${item.configuration_error || item.reason || 'fail closed'}`
+          : 'Provider quota is not configured; observe-only, no limit is invented.';
+      appendListRow(container, item?.provider_model || 'provider', meta, item?.mode || 'unknown', item?.mode === 'invalid' ? 'blocked' : item?.mode === 'enforced' ? 'connected' : 'offline');
+    }
+    for (const item of codexCooldowns.slice(0, 4)) {
+      appendListRow(container, item?.model || 'Codex model', `Capacity cooldown · retry after ${formatDuration(item?.retry_after_ms)} · failures ${Number(item?.failures || 0)}`, 'cooldown', 'waiting');
+    }
+    appendListRow(container, 'Automatic provider routing', automatic?.enabled ? 'Enabled by explicit policy.' : `OFF · ${automatic?.reason || 'evidence gate'}`, automatic?.enabled ? 'ON' : 'OFF', automatic?.enabled ? 'active' : 'waiting');
+  }
+
+  function renderPhaseTiming(data) {
+    const timing = data?.flight_recorder?.phase_timing || {};
+    const segments = Array.isArray(timing?.segments) ? timing.segments : [];
+    const container = byId('routingPhaseTiming');
+    if (!container) return;
+    container.replaceChildren();
+    if (!segments.length) {
+      const empty = document.createElement('div');
+      empty.className = 'cc-empty';
+      empty.textContent = 'No durable EOCL phase timing evidence.';
+      container.appendChild(empty);
+      return;
+    }
+    for (const segment of segments.slice().reverse().slice(0, 8)) {
+      const duration = segment?.duration_ms == null ? 'in progress / unknown' : formatDuration(segment.duration_ms);
+      appendListRow(container, segment?.state || 'state', `${formatTime(segment?.started_at)} → ${formatTime(segment?.ended_at)} · ${timing?.source || 'unknown source'}`, duration, segment?.duration_ms == null ? 'waiting' : 'connected');
+    }
+  }
+
+  function renderRunHistory(data) {
+    const runs = Array.isArray(data?.history?.runs) ? data.history.runs : [];
+    const container = byId('routingRunHistory');
+    if (!container) return;
+    container.replaceChildren();
+    if (!runs.length) {
+      const empty = document.createElement('div');
+      empty.className = 'cc-empty';
+      empty.textContent = 'No retained run history.';
+      container.appendChild(empty);
+      return;
+    }
+    for (const run of runs.slice(0, 8)) {
+      const status = String(run?.status || 'unknown').toLowerCase();
+      const pillState = ['accepted', 'completed'].includes(status) ? 'active' : ['active', 'running'].includes(status) ? 'connected' : ['aborted', 'failed', 'blocked'].includes(status) ? 'blocked' : 'offline';
+      appendListRow(container, `Run ${shortId(run?.run_id)}`, `${formatTime(run?.started_at)} → ${formatTime(run?.finished_at)} · transcript excluded`, status, pillState);
+    }
+  }
+
+  function renderRecovery(data) {
+    const health = snapshot?.status || {};
+    const pressure = data?.continuity?.context_pressure || {};
+    const failures = Number(health.failures || 0);
+    const attempts = Number(health.recoveryAttempts || 0);
+    const deferred = Number(health.deferredRecoveryCount || 0);
+    const recoveryState = health.recovering ? 'Recovering' : health.recoveryBlocked ? 'Blocked' : failures ? 'Degraded' : 'Stable';
+    const detailParts = [];
+    if (health.failureKind) detailParts.push(health.failureKind);
+    if (failures) detailParts.push(`${failures} consecutive fail${failures === 1 ? '' : 's'}`);
+    if (attempts) detailParts.push(`${attempts} recovery attempt${attempts === 1 ? '' : 's'}`);
+    if (deferred) detailParts.push(`${deferred} deferred`);
+    if (health.lastStartFailure) detailParts.push(`start: ${String(health.lastStartFailure).slice(0, 120)}`);
+    const recoveryMeta = detailParts.join(' · ') || 'No local recovery evidence.';
+    setText('ccRecoveryState', recoveryState);
+    setText('ccRecoveryMeta', recoveryMeta);
+    setText('routingRecoveryState', recoveryState);
+    setText('routingRecoveryMeta', recoveryMeta);
+
+    const pressureUnknown = String(pressure?.status || 'unknown').toLowerCase() === 'unknown';
+    const pressureSource = String(pressure?.source || 'host_not_exposed');
+    setText('ccContextPressure', pressureUnknown ? 'Unknown' : String(pressure.status));
+    setText('ccContextMeta', pressureUnknown && pressureSource === 'host_not_exposed'
+      ? 'Host does not expose conversation context pressure; UI does not estimate a percentage.'
+      : `Source ${pressureSource}`);
+    setText('routingContextPressure', `${pressureUnknown ? 'Unknown' : pressure.status} · ${pressureSource}`);
+  }
+
   function renderRouting(data) {
     const view = renderRouter('routing', data);
     const latestEventSeq = Number(data?.resume_packet?.latest_event_seq || 0);
@@ -342,8 +566,12 @@
     setText('routingContinuityMeta', Array.isArray(continuity.reason_codes) && continuity.reason_codes.length
       ? continuity.reason_codes.join(' · ') : 'No continuity assessment available');
     renderDelegationList(data?.delegations);
-    renderEvidenceList('routingEvents', data?.events, 'event');
+    renderEvidenceList('routingEvents', data?.flight_recorder?.events || data?.events, 'event');
     renderEvidenceList('routingProofs', data?.proofs, 'proof');
+    renderProviderTraffic(data);
+    renderPhaseTiming(data);
+    renderRunHistory(data);
+    renderRecovery(data);
   }
 
   function renderAll() {
@@ -402,6 +630,10 @@
     setTimeout(() => refresh(true), 0);
   });
   document.addEventListener('visibilitychange', () => { if (shouldPoll()) refresh(true); });
+  motionQuery?.addEventListener?.('change', (event) => {
+    reducedMotion = Boolean(event.matches);
+    renderAll();
+  });
 
   api.onHeartbeat?.((health) => {
     if (!snapshot) snapshot = { status: {} };
@@ -409,6 +641,14 @@
     snapshot.status.runtimeRunning = Boolean(health?.mcpRunning);
     snapshot.status.tunnelRunning = Boolean(health?.tunnelRunning);
     snapshot.status.fullyReady = Boolean(health?.fullyReady);
+    snapshot.status.recovering = Boolean(health?.recovering);
+    snapshot.status.failures = Number(health?.failures || 0);
+    snapshot.status.failureKind = String(health?.failureKind || '');
+    snapshot.status.recoveryAttempts = Number(health?.recoveryAttempts || 0);
+    snapshot.status.nextRecoveryAt = Number(health?.nextRecoveryAt || 0);
+    snapshot.status.recoveryBlocked = Boolean(health?.recoveryBlocked);
+    snapshot.status.lastStartFailure = String(health?.lastStartFailure || '');
+    snapshot.status.deferredRecoveryCount = Number(health?.deferredRecoveryCount || 0);
     renderAll();
   });
 
