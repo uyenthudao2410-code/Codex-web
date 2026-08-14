@@ -217,6 +217,62 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertFalse(health["automatic_reuse"])
             self.assertTrue(cohorts["model_free"])
             self.assertTrue(health["content_free"])
+            self.assertFalse(projected["promotion_readiness"]["automatic_activation"])
+
+    def test_routing_promotion_readiness_excludes_benchmarks_and_unverified_samples(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            benchmark = ledger.create_run(
+                objective="Localized strong-oracle Mini benchmark only in tmp/execution-hub-benchmark/case.py",
+                metadata={"workflow": "test_failure"},
+            )
+            benchmark_wave = ledger.create_wave(benchmark, execution_mode="bounded_candidate")
+            ledger.append_event(benchmark, wave_id=benchmark_wave, event_type="route_selected", payload={"resolved": "mini"})
+            ledger.finish_wave(benchmark_wave, status="accepted")
+            ledger.finish_run(benchmark, status="accepted")
+
+            unverified = ledger.create_run(objective="ordinary bugfix", metadata={"workflow": "bugfix"})
+            unverified_wave = ledger.create_wave(unverified, execution_mode="bounded_candidate")
+            ledger.append_event(unverified, wave_id=unverified_wave, event_type="route_selected", payload={"resolved": "mini"})
+            ledger.finish_wave(unverified_wave, status="accepted")
+            ledger.finish_run(unverified, status="accepted")
+
+            readiness = ledger.routing_promotion_readiness()
+            self.assertFalse(readiness["automatic_activation"])
+            self.assertEqual(readiness["policy_status"], "advisory_not_activation_authority")
+            mini = next(item for item in readiness["routes"] if item["route"] == "mini")
+            self.assertEqual(mini["accepted_observed"], 2)
+            self.assertEqual(mini["representative_accepted"], 0)
+            self.assertEqual(mini["benchmark_or_synthetic_excluded"], 1)
+            self.assertEqual(mini["unverified_provenance"], 1)
+            self.assertEqual(mini["status"], "hold")
+            self.assertIn("insufficient_representative_accepted_results", mini["hold_reasons"])
+            self.assertIn("unverified_provenance_excluded", mini["hold_reasons"])
+
+    def test_routing_promotion_readiness_holds_sufficient_samples_without_defect_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            workflows = ("bugfix", "feature", "test_failure")
+            for index in range(10):
+                run_id = ledger.create_run(
+                    objective=f"representative project task {index}",
+                    metadata={
+                        "workflow": workflows[index % len(workflows)],
+                        "promotion_provenance": "representative",
+                    },
+                )
+                wave_id = ledger.create_wave(run_id, execution_mode="bounded_candidate")
+                ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", payload={"resolved": "luna"})
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+
+            readiness = ledger.routing_promotion_readiness()
+            luna = next(item for item in readiness["routes"] if item["route"] == "luna")
+            self.assertEqual(luna["representative_accepted"], 10)
+            self.assertEqual(luna["task_class_count"], 3)
+            self.assertEqual(luna["status"], "hold")
+            self.assertIn("critical_defect_evidence_incomplete", luna["hold_reasons"])
+            self.assertFalse(readiness["automatic_activation"])
 
     def test_accepted_result_economics_keeps_measured_provider_cost_separate_from_estimated_credits(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -1,22 +1,44 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import os
+import re
+import stat
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any
+
+from .envutils import ENV_PREFIX
 
 
 SEMANTIC_LOCALIZATION_SCHEMA_VERSION = 1
 DEFAULT_UNAVAILABLE_REASON = "NATIVE_LSP_BINDING_NOT_CONFIGURED"
+INVALID_BINDING_REASON = "NATIVE_LSP_BINDING_INVALID"
+NATIVE_LSP_PROVIDER = "webcodex_native_lsp"
+NATIVE_LSP_ENDPOINT_PATH = "/api/connector/internal/semantic/localize"
+NATIVE_LSP_URL_ENV = f"{ENV_PREFIX}_NATIVE_LSP_URL"
+NATIVE_LSP_CREDENTIAL_FILE_ENV = f"{ENV_PREFIX}_NATIVE_LSP_CREDENTIAL_FILE"
+NATIVE_LSP_TIMEOUT_SECONDS = 5.0
+NATIVE_LSP_MAX_RESPONSE_BYTES = 1024 * 1024
+_PROJECT_CREDENTIAL_RE = re.compile(r"^webcodex_[a-f0-9]{64}$")
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1"})
 
 
 class UnavailableSemanticLocalizationProvider:
     """Truthful default until an authenticated native semantic adapter is bound."""
+
+    def __init__(self, reason: str = DEFAULT_UNAVAILABLE_REASON) -> None:
+        self.reason = reason if reason in {DEFAULT_UNAVAILABLE_REASON, INVALID_BINDING_REASON} else DEFAULT_UNAVAILABLE_REASON
 
     def status(self) -> dict[str, Any]:
         return {
             "schema_version": SEMANTIC_LOCALIZATION_SCHEMA_VERSION,
             "available": False,
             "provider": None,
-            "reason": DEFAULT_UNAVAILABLE_REASON,
+            "reason": self.reason,
             "read_only": True,
         }
 
@@ -30,6 +52,167 @@ class UnavailableSemanticLocalizationProvider:
     ) -> list[dict[str, Any]]:
         del workspace, path, queries, max_results
         return []
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        del req, fp, code, msg, headers, newurl
+        return None
+
+
+def _portable_workspace_identity(path_text: str, *, windows: bool) -> str:
+    identity = path_text
+    if windows:
+        if identity.startswith("\\\\?\\UNC\\"):
+            identity = "\\\\" + identity[len("\\\\?\\UNC\\") :]
+        elif identity.startswith("\\\\?\\"):
+            identity = identity[len("\\\\?\\") :]
+        identity = identity.replace("\\", "/")
+        if len(identity) >= 2 and identity[1] == ":":
+            identity = identity[0].upper() + identity[1:]
+    return identity
+
+
+def portable_workspace_sha256(workspace: Path) -> str:
+    resolved = workspace.expanduser().resolve(strict=True)
+    identity = _portable_workspace_identity(str(resolved), windows=os.name == "nt")
+    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+
+def _validated_loopback_origin(raw: str) -> str:
+    parsed = urllib.parse.urlsplit(raw.strip())
+    if (
+        parsed.scheme.lower() != "http"
+        or (parsed.hostname or "").lower() not in _LOOPBACK_HOSTS
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+        or parsed.port is None
+    ):
+        raise ValueError("invalid native LSP origin")
+    host = parsed.hostname or ""
+    rendered_host = f"[{host}]" if ":" in host else host
+    return f"http://{rendered_host}:{parsed.port}"
+
+
+def _read_project_credential(path_text: str) -> str:
+    path = Path(path_text).expanduser()
+    if path.is_symlink():
+        raise ValueError("project credential file cannot be a symlink")
+    info = path.stat()
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError("invalid project credential file")
+    if os.name != "nt" and info.st_mode & 0o077:
+        raise ValueError("project credential file permissions are too broad")
+    credential = path.read_text(encoding="utf-8").strip()
+    if _PROJECT_CREDENTIAL_RE.fullmatch(credential) is None:
+        raise ValueError("invalid project credential")
+    return credential
+
+
+class NativeRustSemanticLocalizationProvider:
+    """Read-only semantic bridge over one authenticated loopback endpoint."""
+
+    def __init__(self, *, origin: str, credential: str) -> None:
+        self._origin = _validated_loopback_origin(origin)
+        if _PROJECT_CREDENTIAL_RE.fullmatch(credential) is None:
+            raise ValueError("invalid project credential")
+        self._credential = credential
+        self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+
+    def status(self) -> dict[str, Any]:
+        return {
+            "schema_version": SEMANTIC_LOCALIZATION_SCHEMA_VERSION,
+            "available": True,
+            "provider": NATIVE_LSP_PROVIDER,
+            "read_only": True,
+        }
+
+    def localize(
+        self,
+        *,
+        workspace: Path,
+        path: str,
+        queries: list[str],
+        max_results: int,
+    ) -> list[dict[str, Any]]:
+        if not 1 <= len(queries) <= 8:
+            raise ValueError("native semantic query count is out of bounds")
+        clean_queries = [str(query).strip() for query in queries]
+        if any(not query or len(query.encode("utf-8")) > 200 for query in clean_queries):
+            raise ValueError("native semantic query is out of bounds")
+        bounded_results = int(max_results)
+        if not 1 <= bounded_results <= 50:
+            raise ValueError("native semantic result limit is out of bounds")
+        scope = str(path or ".").strip().replace("\\", "/")
+        if (
+            scope.startswith("/")
+            or (len(scope) >= 2 and scope[1] == ":")
+            or ".." in scope.split("/")
+            or "\x00" in scope
+        ):
+            raise ValueError("native semantic scope is invalid")
+        body = json.dumps(
+            {
+                "workspace_sha256": portable_workspace_sha256(workspace),
+                "path": scope,
+                "queries": clean_queries,
+                "max_results": bounded_results,
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        request = urllib.request.Request(
+            self._origin + NATIVE_LSP_ENDPOINT_PATH,
+            data=body,
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {self._credential}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "coding-tools-mcp-native-lsp/1",
+            },
+        )
+        try:
+            with self._opener.open(request, timeout=NATIVE_LSP_TIMEOUT_SECONDS) as response:
+                raw = response.read(NATIVE_LSP_MAX_RESPONSE_BYTES + 1)
+        except (OSError, TimeoutError, urllib.error.URLError, urllib.error.HTTPError) as exc:
+            raise RuntimeError("native semantic transport failed") from exc
+        if len(raw) > NATIVE_LSP_MAX_RESPONSE_BYTES:
+            raise RuntimeError("native semantic response exceeded limit")
+        try:
+            envelope = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError("native semantic response was invalid") from exc
+        data = envelope.get("data") if isinstance(envelope, dict) else None
+        if (
+            not isinstance(envelope, dict)
+            or envelope.get("ok") is not True
+            or not isinstance(data, dict)
+            or data.get("schema_version") != 1
+            or data.get("provider") != NATIVE_LSP_PROVIDER
+            or data.get("read_only") is not True
+            or not isinstance(data.get("results"), list)
+        ):
+            raise RuntimeError("native semantic response contract mismatch")
+        return data["results"]
+
+
+def semantic_localizer_from_env() -> Any:
+    raw_origin = (os.environ.get(NATIVE_LSP_URL_ENV) or "").strip()
+    raw_credential_file = (os.environ.get(NATIVE_LSP_CREDENTIAL_FILE_ENV) or "").strip()
+    if not raw_origin and not raw_credential_file:
+        return UnavailableSemanticLocalizationProvider()
+    if not raw_origin or not raw_credential_file:
+        return UnavailableSemanticLocalizationProvider(INVALID_BINDING_REASON)
+    try:
+        origin = _validated_loopback_origin(raw_origin)
+        credential = _read_project_credential(raw_credential_file)
+        return NativeRustSemanticLocalizationProvider(origin=origin, credential=credential)
+    except (OSError, UnicodeError, ValueError):
+        return UnavailableSemanticLocalizationProvider(INVALID_BINDING_REASON)
 
 
 def semantic_provider_status(provider: Any) -> dict[str, Any]:

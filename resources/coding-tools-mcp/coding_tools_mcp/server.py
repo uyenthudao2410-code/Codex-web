@@ -88,8 +88,8 @@ from .document_tools import create_docx, create_text_document, convert_document,
 from .opencode_provider import ALLOWED_OPENCODE_MODELS, OpenCodeProviderAdapter, OpenCodeProviderError
 from .provider_routing import recommendation_id, recommend_shadow_route
 from .semantic_localization import (
-    UnavailableSemanticLocalizationProvider,
     run_semantic_localization,
+    semantic_localizer_from_env,
     semantic_provider_status,
 )
 from .task_state import TaskStateStore
@@ -1548,7 +1548,7 @@ class Runtime:
         self.project_context: ProjectContext = (
             project_context if project_context is not None else load_project_context(self.workspace.root)
         )
-        self.semantic_localizer = semantic_localizer or UnavailableSemanticLocalizationProvider()
+        self.semantic_localizer = semantic_localizer or semantic_localizer_from_env()
         self.request_sessions: dict[str | int, str] = {}
         self.request_sessions_lock = threading.Lock()
         self.request_context = threading.local()

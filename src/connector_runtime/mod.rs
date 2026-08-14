@@ -13,6 +13,7 @@ pub(crate) mod execution_tests;
 mod host_tests;
 pub(crate) mod http;
 mod projections;
+pub(crate) mod semantic_bridge;
 pub(crate) mod surface;
 mod wire_models;
 pub(crate) mod workspace;

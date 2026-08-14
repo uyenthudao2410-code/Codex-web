@@ -936,6 +936,136 @@ class OrchestrationLedger:
             "content_free": True,
         }
 
+    @staticmethod
+    def _promotion_sample_provenance(run: dict[str, Any]) -> str:
+        metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
+        explicit = _bounded_text(
+            metadata.get("promotion_provenance") or metadata.get("evidence_provenance") or "",
+            80,
+        ).strip().lower()
+        if explicit in {"representative", "representative_project_task", "organic_representative"}:
+            return "representative"
+        if explicit in {"benchmark", "synthetic", "fixture", "non_representative"}:
+            return "benchmark_or_synthetic"
+        objective = _bounded_text(run.get("objective") or "", 2000).lower()
+        synthetic_markers = (
+            "execution-hub-benchmark",
+            "benchmark fixture",
+            "benchmark only",
+            "paired benchmark",
+            "synthetic no-op",
+            "synthetic noop",
+            "not production source",
+        )
+        if any(marker in objective for marker in synthetic_markers):
+            return "benchmark_or_synthetic"
+        return "unverified"
+
+    def routing_promotion_readiness(self, *, limit: int = 100) -> dict[str, Any]:
+        """Project fail-closed promotion evidence without granting routing authority."""
+        bounded_limit = max(1, min(int(limit), 100))
+        groups: dict[str, dict[str, Any]] = {}
+        for run in self.list_runs(limit=bounded_limit, status="accepted"):
+            economics = self.accepted_result_economics(str(run["run_id"]))
+            route = economics.get("route") if isinstance(economics.get("route"), dict) else {}
+            resolved = _bounded_text(route.get("resolved") or "unknown", 100) or "unknown"
+            if resolved in {"unknown", "deterministic", "mcp_deterministic", "controller_manual"}:
+                continue
+            provenance = self._promotion_sample_provenance(run)
+            group = groups.setdefault(resolved, {
+                "route": resolved,
+                "accepted_observed": 0,
+                "representative_accepted": 0,
+                "benchmark_or_synthetic_excluded": 0,
+                "unverified_provenance": 0,
+                "task_classes": set(),
+                "first_pass_representative": 0,
+                "repaired_representative": 0,
+                "tta_representative_samples": 0,
+                "provider_cost_complete_samples": 0,
+                "candidate_credit_samples": 0,
+                "critical_defect_known_zero_samples": 0,
+                "critical_defect_unknown_samples": 0,
+            })
+            group["accepted_observed"] += 1
+            if provenance == "benchmark_or_synthetic":
+                group["benchmark_or_synthetic_excluded"] += 1
+                continue
+            if provenance != "representative":
+                group["unverified_provenance"] += 1
+                continue
+            group["representative_accepted"] += 1
+            task_class = self._route_task_class(run)
+            if task_class:
+                group["task_classes"].add(task_class)
+            if economics.get("first_pass_accepted") is True:
+                group["first_pass_representative"] += 1
+            else:
+                group["repaired_representative"] += 1
+            if isinstance(economics.get("tta_ms"), (int, float)) and not isinstance(economics.get("tta_ms"), bool):
+                group["tta_representative_samples"] += 1
+            provider = economics.get("provider_economics") if isinstance(economics.get("provider_economics"), dict) else {}
+            if provider.get("cost_complete") is True:
+                group["provider_cost_complete_samples"] += 1
+            candidate = economics.get("candidate_economics") if isinstance(economics.get("candidate_economics"), dict) else {}
+            if isinstance(candidate.get("estimated_credits"), (int, float)) and not isinstance(candidate.get("estimated_credits"), bool):
+                group["candidate_credit_samples"] += 1
+            defects = economics.get("critical_defects") if isinstance(economics.get("critical_defects"), dict) else {}
+            if defects.get("status") == "known" and defects.get("count") == 0:
+                group["critical_defect_known_zero_samples"] += 1
+            else:
+                group["critical_defect_unknown_samples"] += 1
+
+        routes: list[dict[str, Any]] = []
+        for resolved, group in groups.items():
+            representative = int(group["representative_accepted"])
+            task_classes = sorted(str(item) for item in group["task_classes"])
+            reasons: list[str] = []
+            if representative < 10:
+                reasons.append("insufficient_representative_accepted_results")
+            if len(task_classes) < 3:
+                reasons.append("insufficient_task_class_diversity")
+            if int(group["unverified_provenance"]) > 0:
+                reasons.append("unverified_provenance_excluded")
+            if representative and int(group["critical_defect_known_zero_samples"]) < representative:
+                reasons.append("critical_defect_evidence_incomplete")
+            if representative and int(group["tta_representative_samples"]) < representative:
+                reasons.append("tta_evidence_incomplete")
+            routes.append({
+                "route": resolved,
+                "status": "eligible_for_manual_review" if not reasons else "hold",
+                "hold_reasons": reasons,
+                "accepted_observed": int(group["accepted_observed"]),
+                "representative_accepted": representative,
+                "benchmark_or_synthetic_excluded": int(group["benchmark_or_synthetic_excluded"]),
+                "unverified_provenance": int(group["unverified_provenance"]),
+                "task_classes": task_classes,
+                "task_class_count": len(task_classes),
+                "first_pass_representative": int(group["first_pass_representative"]),
+                "repaired_representative": int(group["repaired_representative"]),
+                "tta_representative_samples": int(group["tta_representative_samples"]),
+                "provider_cost_complete_samples": int(group["provider_cost_complete_samples"]),
+                "candidate_credit_samples": int(group["candidate_credit_samples"]),
+                "critical_defect_known_zero_samples": int(group["critical_defect_known_zero_samples"]),
+                "critical_defect_unknown_samples": int(group["critical_defect_unknown_samples"]),
+            })
+        routes.sort(key=lambda item: str(item["route"]))
+        return {
+            "schema_version": 1,
+            "policy": "candidate_v1_advisory",
+            "policy_status": "advisory_not_activation_authority",
+            "thresholds": {"min_representative_accepted_results": 10, "min_task_classes": 3},
+            "provenance": {
+                "representative_requires_explicit_metadata": True,
+                "known_benchmark_or_synthetic_is_excluded": True,
+                "unverified_is_excluded": True,
+            },
+            "routes": routes,
+            "automatic_activation": False,
+            "model_free": True,
+            "content_free": True,
+        }
+
     def warm_thread_health(self, run_id: str) -> dict[str, Any]:
         lanes = self.list_agent_lanes(run_id=run_id)
         lifecycle_counts: dict[str, int] = {}
@@ -968,6 +1098,7 @@ class OrchestrationLedger:
             "usage_events": self.list_usage_events(run_id, limit=bounded_limit),
             "accepted_result": self.accepted_result_economics(run_id),
             "similar_accepted_cohorts": self.similar_accepted_route_cohorts(run_id, limit=max(8, bounded_limit * 3)),
+            "promotion_readiness": self.routing_promotion_readiness(),
             "warm_thread_health": self.warm_thread_health(run_id),
         }
 

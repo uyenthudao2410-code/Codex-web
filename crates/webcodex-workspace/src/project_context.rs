@@ -204,23 +204,62 @@ pub fn capture_project_context(
     capture_project_context_with_budget(project_root, target_path, ProjectContextBudget::default())
 }
 
-fn capture_project_context_with_budget(
-    project_root: &Path,
-    target_path: Option<&str>,
-    budget: ProjectContextBudget,
-) -> Result<ProjectContextFingerprint, String> {
+pub fn portable_project_root_sha256(project_root: &Path) -> Result<String, String> {
+    let canonical_root = canonical_project_root(project_root)?;
+    Ok(sha256_bytes(
+        portable_project_root_identity(&canonical_root).as_bytes(),
+    ))
+}
+
+fn portable_project_root_identity(canonical_root: &Path) -> String {
+    let identity = canonical_root.to_string_lossy().to_string();
+    #[cfg(windows)]
+    {
+        let mut normalized = if let Some(rest) = identity.strip_prefix(r"\\?\UNC\") {
+            format!(r"\\{rest}")
+        } else if let Some(rest) = identity.strip_prefix(r"\\?\") {
+            rest.to_string()
+        } else {
+            identity
+        };
+        normalized = normalized.replace('\\', "/");
+        if normalized.as_bytes().get(1) == Some(&b':') {
+            let drive = normalized[0..1].to_ascii_uppercase();
+            normalized.replace_range(0..1, &drive);
+        }
+        normalized
+    }
+    #[cfg(not(windows))]
+    {
+        identity
+    }
+}
+
+fn canonical_project_root(project_root: &Path) -> Result<PathBuf, String> {
     let canonical_root = project_root
         .canonicalize()
         .map_err(|error| format!("project root is unavailable: {error}"))?;
     if !canonical_root.is_dir() {
         return Err("project root is not a directory".to_string());
     }
+    Ok(canonical_root)
+}
+
+fn canonical_project_root_sha256(canonical_root: &Path) -> String {
+    sha256_bytes(canonical_root.to_string_lossy().as_bytes())
+}
+
+fn capture_project_context_with_budget(
+    project_root: &Path,
+    target_path: Option<&str>,
+    budget: ProjectContextBudget,
+) -> Result<ProjectContextFingerprint, String> {
+    let canonical_root = canonical_project_root(project_root)?;
     let normalized_target =
         crate::project_overview::normalize_project_overview_path(target_path.unwrap_or(""))?;
     let target_directory = target_directory(&canonical_root, &normalized_target);
 
-    let root_identity = canonical_root.to_string_lossy();
-    let project_root_sha256 = sha256_bytes(root_identity.as_bytes());
+    let project_root_sha256 = canonical_project_root_sha256(&canonical_root);
     let mut state = CaptureState::new(budget);
     let git = git_fingerprint(&canonical_root, &mut state);
     let rules = fingerprint_context_files(
