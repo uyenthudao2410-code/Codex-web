@@ -2241,11 +2241,10 @@ class Runtime:
         if reason == "completed":
             stored = record.get("summary", {}).get("tool_result")
             if isinstance(stored, dict):
-                replayed = dict(stored)
-                structured = replayed.get("structuredContent")
+                structured = stored.get("structuredContent")
                 if not isinstance(structured, dict):
                     structured = {}
-                replayed["structuredContent"] = {
+                payload = {
                     **structured,
                     "deduplicated": True,
                     "durable_idempotency": True,
@@ -2255,7 +2254,18 @@ class Runtime:
                         if key in record
                     },
                 }
-                return replayed
+                # The orchestration ledger intentionally sanitizes sensitive
+                # payload keys before persistence. That includes the MCP
+                # envelope's top-level ``content`` field, so returning the
+                # stored envelope verbatim would violate MCP's required
+                # ``content: list`` result shape. Rebuild the envelope from
+                # the durable structured payload instead; redacted fields
+                # stay redacted while transport shape remains valid.
+                return make_tool_result(
+                    name,
+                    payload,
+                    is_error=bool(stored.get("isError")),
+                )
             raise ToolFailure(
                 "IDEMPOTENT_REQUEST_FAILED",
                 "This idempotent request already completed but its result was too large to replay verbatim. Treat it as done and do not repeat the mutation.",
@@ -3567,7 +3577,11 @@ class Runtime:
             "git": git,
             "task": task,
             "tool_mode": self.tool_mode,
-            "runtime": {
+            "detail": detail,
+            "cache": {"hit": False, "age_ms": 0},
+        }
+        if detail == "full":
+            payload["runtime"] = {
                 "server_instance_id": self.server_instance_id,
                 "process_instance_id": self.process_instance_id,
                 "performance_trace_version": self.performance_trace.schema_version,
@@ -3575,10 +3589,7 @@ class Runtime:
                 "orphaned_background_operations": int(self.orphaned_background_operations),
                 "orphaned_idempotency_records": int(self.orphaned_idempotency_records),
                 "agent_lanes_waiting_after_restart": int(self.recovered_agent_lanes),
-            },
-            "detail": detail,
-            "cache": {"hit": False, "age_ms": 0},
-        }
+            }
         self._fast_cache_put(cache_key, payload)
         return payload
 

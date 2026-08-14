@@ -7,7 +7,7 @@
 - Base HEAD: `d3c6f184b8f5b2b3f603615f0e5a3abb889b9d0c`
 - Worktree fingerprint: `84760cc106c26e8741ac3bfd06c697ddab4c918659ddfa3ed1cb701f2fc46f5d`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **accepted**
 
 ## Delegations
 
@@ -32,6 +32,7 @@
 | 568 | 2026-08-13T19:35:25.465Z | state_transition | EXECUTING | PROVING | reason=execution_complete |
 | 569 | 2026-08-13T19:35:28.393Z | proof_recorded |  |  | stage_id=check:eccb9a0bb742ad82; status=passed; cache_hit=False; input_fingerprint=539e47093d7f7056f9235592ef7ed30da6df646aa246279a9c6458491a0f2589 |
 | 570 | 2026-08-13T19:35:28.679Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 571 | 2026-08-14T00:00:42.776Z | state_transition | ACCEPTING | CHECKPOINTED | reason=chatweb_sol_acceptance |
 
 ## Proof
 
@@ -43,10 +44,10 @@
 
 | Checkpoint | Status | Git HEAD | Proof fingerprint | Accepted by |
 |---|---|---|---|---|
-| - | - | - | - | - |
+| 35a98c0309fc4edbb51af4fdb7cba793 | accepted | 8deb55e72fc6a8af6ae801555e65825cb46ceff4 | 269021e497537cc1f5c6924a18a8b66658a5c8dc95388ab33fedd793e88fc81e | ChatWeb Sol |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `13`
-- Chain head: `6bfd7dff1892f02c1b20419ddde3d42c24b664cadcb1b7a682be55fd025e15c1`
+- Events checked: `14`
+- Chain head: `dae63a8e70c2198ffc49e1cc60497d85b9261d7ee926b72a3af5f4889c859128`

@@ -27,6 +27,7 @@ class UniversalIdempotencyTests(unittest.TestCase):
                 second = runtime.call_tool("exec_command", dict(args))
                 self.assertFalse(first.get("isError"))
                 self.assertFalse(second.get("isError"))
+                self.assertIsInstance(second.get("content"), list)
                 self.assertTrue(second["structuredContent"].get("deduplicated"))
                 self.assertTrue(second["structuredContent"].get("durable_idempotency"))
                 record = second["structuredContent"].get("idempotency") or {}

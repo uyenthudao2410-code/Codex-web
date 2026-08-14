@@ -1,0 +1,102 @@
+{
+  "benchmark": "runtime activation telemetry snapshot",
+  "evidence_class": "local_runtime_measurement_snapshot",
+  "schema_version": 1,
+  "captured_at": "2026-08-14T00:02:36.658Z",
+  "workspace": "E:\\Github\\Tools-Codex-web",
+  "performance": {
+    "version": 3,
+    "tool_calls": 12,
+    "errors": 0,
+    "local_execution_ms": 9263,
+    "estimated_wait_ms": 576010,
+    "idempotency_eligible_calls": 5,
+    "idempotency_eligible_key_calls": 3,
+    "idempotency_coverage": 0.6,
+    "proof_cache_hits": 0,
+    "proof_cache_saved_ms": 0,
+    "execution_mode_counts": {
+      "mcp_only": 5
+    },
+    "route_resolved_counts": {
+      "deterministic": 2
+    },
+    "orchestration_state_counts": {
+      "ACCEPTING": 1,
+      "CHECKPOINTED": 1,
+      "PREFLIGHT": 3
+    },
+    "run_metrics": {
+      "91dd8a8c0a9f447089605f040b32a12f": {
+        "tool_calls": 2,
+        "errors": 0,
+        "local_execution_ms": 640,
+        "estimated_wait_ms": 19499,
+        "request_bytes": 498,
+        "response_bytes": 17410,
+        "idempotency_eligible_calls": 1,
+        "idempotency_eligible_key_calls": 1,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 2
+        },
+        "route_resolved_counts": {
+          "deterministic": 2
+        },
+        "first_started_at": "2026-08-13T23:59:52.317Z",
+        "last_finished_at": "2026-08-14T00:00:43.142Z"
+      },
+      "89e523532d844723b23a3f31e1d0a21a": {
+        "tool_calls": 3,
+        "errors": 0,
+        "local_execution_ms": 1672,
+        "estimated_wait_ms": 29763,
+        "request_bytes": 1410,
+        "response_bytes": 348108,
+        "idempotency_eligible_calls": 2,
+        "idempotency_eligible_key_calls": 2,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 3
+        },
+        "route_resolved_counts": {},
+        "first_started_at": "2026-08-14T00:01:58.627Z",
+        "last_finished_at": "2026-08-14T00:02:20.647Z"
+      }
+    }
+  },
+  "ledger": {
+    "present": true,
+    "run_status_counts": {
+      "accepted": 15,
+      "active": 36
+    },
+    "wave_status_counts": {
+      "accepted": 15,
+      "active": 36,
+      "replanned": 6
+    },
+    "idempotency_status_counts": {
+      "completed": 3,
+      "in_progress": 1
+    },
+    "background_status_counts": {
+      "completed": 13
+    },
+    "lane_lifecycle_counts": {},
+    "proof_records": 38,
+    "handoff_capsules": 0,
+    "accepted_run_tta": {
+      "n": 15,
+      "p50_seconds": 90.694,
+      "p90_seconds": 580.301
+    }
+  },
+  "notes": [
+    "estimated_wait_ms is a runtime gap proxy, not pure network/model latency",
+    "idempotency coverage denominator includes only mutating/expensive calls marked eligible by runtime semantics",
+    "accepted-run TTA is measured from durable run timestamps and is not a model-only latency metric"
+  ]
+}

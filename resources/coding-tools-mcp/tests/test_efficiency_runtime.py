@@ -69,7 +69,9 @@ class EfficiencyRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp), permission_mode="safe")
             try:
-                context = runtime.workspace_context({"detail": "compact"})
+                compact = runtime.workspace_context({"detail": "compact"})
+                self.assertNotIn("runtime", compact)
+                context = runtime.workspace_context({"detail": "full"})
                 identity = context["runtime"]
                 self.assertEqual(identity["server_instance_id"], runtime.server_instance_id)
                 self.assertEqual(identity["process_instance_id"], runtime.process_instance_id)
