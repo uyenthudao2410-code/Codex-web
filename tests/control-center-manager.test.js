@@ -9,7 +9,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 test('manager primary navigation is operator-first while advanced tools remain reachable from System', () => {
   const html = read('renderer/index.html');
   const nav = html.match(/<nav class="nav-list"[\s\S]*?<\/nav>/)?.[0] || '';
-  for (const page of ['overview', 'routing', 'task', 'deploy', 'workspace', 'system']) {
+  for (const page of ['overview', 'routing', 'traffic', 'task', 'deploy', 'workspace', 'system']) {
     assert.match(nav, new RegExp(`data-page="${page}"`), `missing primary page ${page}`);
   }
   for (const legacy of ['build', 'health', 'guide', 'logs', 'settings']) {
@@ -20,6 +20,7 @@ test('manager primary navigation is operator-first while advanced tools remain r
   assert.match(html, /control-center\.css/);
   assert.match(html, /control-center\.js/);
   assert.match(html, /data-page-view="routing"/);
+  assert.match(html, /data-page-view="traffic"/);
   assert.match(html, /data-page-view="system"/);
 });
 
@@ -55,7 +56,45 @@ test('manager router treats OpenCode connectivity and DeepSeek model activity as
   assert.match(js, /DeepSeek activity requires explicit delegation evidence/);
   assert.doesNotMatch(js, /opencode\?\.online\s*\?\s*'active'/);
   assert.match(js, /setInterval\(\(\) => refresh\(false\), 2500\)/);
-  assert.match(js, /\['overview', 'routing', 'task'\]\.includes\(activePage\(\)\)/);
+  assert.match(js, /\['overview', 'routing', 'traffic', 'task'\]\.includes\(activePage\(\)\)/);
+});
+
+test('Traffic & Usage reuses bounded Execution Hub read models and keeps unknown quota explicit', () => {
+  const html = read('renderer/index.html');
+  const js = read('renderer/control-center.js');
+  const app = read('renderer/app.js');
+  for (const id of ['trafficLastSync', 'trafficRefreshButton', 'trafficActive', 'trafficQueued', 'trafficUsage', 'trafficLimits', 'trafficRoutes', 'trafficUsageEvents', 'trafficCapacity', 'trafficEvidence']) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing Traffic & Usage id ${id}`);
+  }
+  assert.match(app, /traffic:\s*\['TRAFFIC & USAGE'/);
+  assert.match(js, /function renderTrafficUsage/);
+  assert.match(js, /data\?\.provider_traffic/);
+  assert.match(js, /data\?\.usage_events/);
+  assert.match(js, /function measurementLabel/);
+  assert.match(js, /Provider tokens and MCP model-visible bytes are never added together/);
+  assert.match(js, /quota UNKNOWN/);
+  assert.match(js, /zero is not assumed/);
+  assert.doesNotMatch(js, /quota\s*=\s*100|remaining\s*=\s*100/);
+});
+
+test('Live Execution Fabric uses semantic SVG paths and injects directional particles only for active execution evidence', () => {
+  const html = read('renderer/index.html');
+  const js = read('renderer/control-center.js');
+  const css = read('renderer/control-center.css');
+  assert.match(html, /<path id="ccEdgeFast"/);
+  assert.match(html, /<path id="routingEdgeSol"/);
+  assert.doesNotMatch(html, /<line id="(?:cc|routing)Edge/);
+  assert.match(html, /ops-router-edge-halo/);
+  assert.match(js, /function syncEdgeParticles/);
+  assert.match(js, /createElementNS\(SVG_NS, 'animateMotion'\)/);
+  assert.match(js, /createElementNS\(SVG_NS, 'mpath'\)/);
+  assert.match(js, /\['streaming', 'responding'\]\.includes\(status\) \? 'reverse' : 'forward'/);
+  assert.match(js, /view\.activity\.rawState === 'PROVING'/);
+  assert.match(js, /Frontend connectivity\/controller ownership does not prove a provider call/);
+  assert.match(js, /document\.visibilityState === 'hidden'/);
+  assert.match(css, /\.ops-router-particle/);
+  assert.match(css, /\.ops-router-edge-group\.is-active \.ops-router-edge-halo/);
+  assert.doesNotMatch(css, /@keyframes ccEdgeFlow/);
 });
 
 test('Control Center projects durable orchestration phases into visible activity state without fabricating model streaming', () => {
@@ -81,7 +120,8 @@ test('Control Center styling is responsive, accessible to reduced-motion users, 
   assert.match(css, /\.ops-router/);
   assert.match(css, /\.system-launch-grid/);
   assert.match(css, /\.cc-activity/);
-  assert.match(css, /@keyframes ccEdgeFlow/);
+  assert.match(css, /\.ops-router-edge-halo/);
+  assert.match(css, /\.ops-router-particle/);
   assert.match(css, /@keyframes ccThinkingDot/);
   assert.match(css, /@keyframes ccActivitySweep/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);

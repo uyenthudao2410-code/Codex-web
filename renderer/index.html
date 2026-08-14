@@ -22,6 +22,7 @@
       <nav class="nav-list" aria-label="Điều hướng chính">
         <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Command Center</span></button>
         <button class="nav-item" data-page="routing"><span class="nav-icon">RT</span><span>Live Routing</span></button>
+        <button class="nav-item" data-page="traffic"><span class="nav-icon">TU</span><span>Traffic & Usage</span></button>
         <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tasks & Proof</span></button>
         <button class="nav-item" data-page="deploy"><span class="nav-icon">CN</span><span>Connections</span></button>
         <button class="nav-item" data-page="workspace"><span class="nav-icon">WS</span><span>Workspace</span></button>
@@ -188,14 +189,14 @@
               <div class="cc-card-body">
                 <div id="ccRouterFabric" class="ops-router" aria-label="Command Center live routing topology">
                   <svg class="ops-router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
-                    <line id="ccEdgeChatWeb" class="ops-router-edge is-offline" x1="50" y1="50" x2="150" y2="150"></line>
-                    <line id="ccEdgeDesktop" class="ops-router-edge is-offline" x1="150" y1="50" x2="150" y2="150"></line>
-                    <line id="ccEdgeOpenCode" class="ops-router-edge is-offline" x1="250" y1="50" x2="150" y2="150"></line>
-                    <line id="ccEdgeFast" class="ops-router-edge is-offline" x1="50" y1="150" x2="150" y2="150"></line>
-                    <line id="ccEdgeDeepSeek" class="ops-router-edge is-offline" x1="250" y1="150" x2="150" y2="150"></line>
-                    <line id="ccEdgeTerra" class="ops-router-edge is-offline" x1="50" y1="250" x2="150" y2="150"></line>
-                    <line id="ccEdgeWriter" class="ops-router-edge is-offline" x1="150" y1="250" x2="150" y2="150"></line>
-                    <line id="ccEdgeSol" class="ops-router-edge is-offline" x1="250" y1="250" x2="150" y2="150"></line>
+                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M50 50 C82 50 118 118 150 150"></path><path id="ccEdgeChatWeb" class="ops-router-edge is-offline" d="M50 50 C82 50 118 118 150 150"></path></g>
+                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 50 C150 82 150 118 150 150"></path><path id="ccEdgeDesktop" class="ops-router-edge is-offline" d="M150 50 C150 82 150 118 150 150"></path></g>
+                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M250 50 C218 50 182 118 150 150"></path><path id="ccEdgeOpenCode" class="ops-router-edge is-offline" d="M250 50 C218 50 182 118 150 150"></path></g>
+                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 150 82 150 50 150"></path><path id="ccEdgeFast" class="ops-router-edge is-offline" d="M150 150 C118 150 82 150 50 150"></path></g>
+                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 150 218 150 250 150"></path><path id="ccEdgeDeepSeek" class="ops-router-edge is-offline" d="M150 150 C182 150 218 150 250 150"></path></g>
+                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 182 82 218 50 250"></path><path id="ccEdgeTerra" class="ops-router-edge is-offline" d="M150 150 C118 182 82 218 50 250"></path></g>
+                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C150 182 150 218 150 250"></path><path id="ccEdgeWriter" class="ops-router-edge is-offline" d="M150 150 C150 182 150 218 150 250"></path></g>
+                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 182 218 218 250 250"></path><path id="ccEdgeSol" class="ops-router-edge is-offline" d="M150 150 C182 182 218 218 250 250"></path></g>
                   </svg>
                   <div id="ccRouterChatWeb" class="ops-router-node is-offline"><b>ChatWeb</b><small>semantic control</small><span data-router-state>offline</span></div>
                   <div id="ccRouterDesktop" class="ops-router-node is-offline"><b>Codex Desktop</b><small>deep frontend</small><span data-router-state>offline</span></div>
@@ -273,14 +274,14 @@
             <article class="cc-card"><div class="cc-card-head"><div><h3>Execution topology</h3><p>OpenCode connectivity does not imply Flash/Pro activity. DeepSeek activates only from explicit delegation/model evidence.</p></div><span id="routingRouterSummary" class="cc-pill is-offline">0/3 clients · 0 active routes</span></div><div class="cc-card-body">
               <div id="routingRouterFabric" class="ops-router is-large" aria-label="Detailed live routing topology">
                 <svg class="ops-router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
-                  <line id="routingEdgeChatWeb" class="ops-router-edge is-offline" x1="50" y1="50" x2="150" y2="150"></line>
-                  <line id="routingEdgeDesktop" class="ops-router-edge is-offline" x1="150" y1="50" x2="150" y2="150"></line>
-                  <line id="routingEdgeOpenCode" class="ops-router-edge is-offline" x1="250" y1="50" x2="150" y2="150"></line>
-                  <line id="routingEdgeFast" class="ops-router-edge is-offline" x1="50" y1="150" x2="150" y2="150"></line>
-                  <line id="routingEdgeDeepSeek" class="ops-router-edge is-offline" x1="250" y1="150" x2="150" y2="150"></line>
-                  <line id="routingEdgeTerra" class="ops-router-edge is-offline" x1="50" y1="250" x2="150" y2="150"></line>
-                  <line id="routingEdgeWriter" class="ops-router-edge is-offline" x1="150" y1="250" x2="150" y2="150"></line>
-                  <line id="routingEdgeSol" class="ops-router-edge is-offline" x1="250" y1="250" x2="150" y2="150"></line>
+                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M50 50 C82 50 118 118 150 150"></path><path id="routingEdgeChatWeb" class="ops-router-edge is-offline" d="M50 50 C82 50 118 118 150 150"></path></g>
+                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 50 C150 82 150 118 150 150"></path><path id="routingEdgeDesktop" class="ops-router-edge is-offline" d="M150 50 C150 82 150 118 150 150"></path></g>
+                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M250 50 C218 50 182 118 150 150"></path><path id="routingEdgeOpenCode" class="ops-router-edge is-offline" d="M250 50 C218 50 182 118 150 150"></path></g>
+                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 150 82 150 50 150"></path><path id="routingEdgeFast" class="ops-router-edge is-offline" d="M150 150 C118 150 82 150 50 150"></path></g>
+                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 150 218 150 250 150"></path><path id="routingEdgeDeepSeek" class="ops-router-edge is-offline" d="M150 150 C182 150 218 150 250 150"></path></g>
+                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 182 82 218 50 250"></path><path id="routingEdgeTerra" class="ops-router-edge is-offline" d="M150 150 C118 182 82 218 50 250"></path></g>
+                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C150 182 150 218 150 250"></path><path id="routingEdgeWriter" class="ops-router-edge is-offline" d="M150 150 C150 182 150 218 150 250"></path></g>
+                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 182 218 218 250 250"></path><path id="routingEdgeSol" class="ops-router-edge is-offline" d="M150 150 C182 182 218 218 250 250"></path></g>
                 </svg>
                 <div id="routingRouterChatWeb" class="ops-router-node is-offline"><b>ChatWeb</b><small>semantic control</small><span data-router-state>offline</span></div>
                 <div id="routingRouterDesktop" class="ops-router-node is-offline"><b>Codex Desktop</b><small>deep frontend</small><span data-router-state>offline</span></div>
@@ -303,6 +304,24 @@
           <article class="cc-card" style="margin-top:14px"><div class="cc-card-head"><div><h3>Recent orchestration events</h3><p>State transitions, not raw transcript.</p></div></div><div id="routingEvents" class="cc-card-body cc-evidence-list"><div class="cc-empty">No recent orchestration events.</div></div></article>
           <div class="cc-bottom-grid"><article class="cc-card"><div class="cc-card-head"><div><h3>Provider traffic & capacity</h3><p>Configured admission limits stay separate from provider-reported billing and unknown quota.</p></div></div><div id="routingProviderTraffic" class="cc-card-body cc-list"><div class="cc-empty">Provider limits are not configured.</div></div></article><article class="cc-card"><div class="cc-card-head"><div><h3>EOCL phase timing</h3><p>Durations are derived only from durable state-transition timestamps.</p></div></div><div id="routingPhaseTiming" class="cc-card-body cc-list"><div class="cc-empty">No phase timing evidence.</div></div></article></div>
           <div class="cc-bottom-grid"><article class="cc-card"><div class="cc-card-head"><div><h3>Recent runs</h3><p>Bounded run identity and lifecycle only; no transcript or provider prompt.</p></div></div><div id="routingRunHistory" class="cc-card-body cc-list"><div class="cc-empty">No retained run history.</div></div></article><article class="cc-card"><div class="cc-card-head"><div><h3>Runtime recovery & context</h3><p>Local supervisor truth. Conversation context pressure remains unknown unless the host exposes it.</p></div></div><div class="cc-card-body cc-key-values"><div class="cc-key-value"><span>Recovery</span><b id="routingRecoveryState">Stable</b></div><div class="cc-key-value"><span>Recovery detail</span><b id="routingRecoveryMeta">No local recovery evidence.</b></div><div class="cc-key-value"><span>Context pressure</span><b id="routingContextPressure">Unknown · host_not_exposed</b></div></div></article></div>
+        </section>
+
+        <section class="page" data-page-view="traffic">
+          <div class="section-header"><div><span class="section-kicker">TRAFFIC & USAGE</span><h2>Traffic & Usage</h2><p>Provider admission, capacity, usage provenance and bounded request evidence from the existing Execution Hub read model. Unknown quota remains UNKNOWN.</p></div><div class="inline-actions"><span id="trafficLastSync" class="cc-sync">Not synced</span><button class="secondary-button" id="trafficRefreshButton">Refresh</button></div></div>
+          <div class="cc-kpi-grid" aria-label="Traffic and usage KPIs">
+            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Provider active</span><i class="cc-kpi-mark"></i></div><strong id="trafficActive">UNKNOWN</strong><small id="trafficActiveMeta">No provider activity snapshot.</small></article>
+            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Queue depth</span><i class="cc-kpi-mark"></i></div><strong id="trafficQueued">UNKNOWN</strong><small id="trafficQueuedMeta">Queue state is shown only when exposed.</small></article>
+            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Provider usage</span><i class="cc-kpi-mark"></i></div><strong id="trafficUsage">UNKNOWN</strong><small id="trafficUsageMeta">Provider tokens are never mixed with MCP byte estimates.</small></article>
+            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Admission limits</span><i class="cc-kpi-mark"></i></div><strong id="trafficLimits">UNKNOWN</strong><small id="trafficLimitsMeta">No configured provider limits.</small></article>
+          </div>
+          <div class="cc-bottom-grid">
+            <article class="cc-card"><div class="cc-card-head"><div><h3>Routes & provider admission</h3><p>Configured limits, active requests and cooldown evidence. Quota is not invented when the provider does not expose it.</p></div></div><div id="trafficRoutes" class="cc-card-body cc-list"><div class="cc-empty">No provider traffic evidence.</div></div></article>
+            <article class="cc-card"><div class="cc-card-head"><div><h3>Recent provider usage</h3><p>Bounded canonical usage events with explicit provenance.</p></div></div><div id="trafficUsageEvents" class="cc-card-body cc-list"><div class="cc-empty">No retained provider usage event.</div></div></article>
+          </div>
+          <div class="cc-bottom-grid">
+            <article class="cc-card"><div class="cc-card-head"><div><h3>Capacity & routing policy</h3><p>Cooldown and automatic-routing state from the same runtime read model used by routing.</p></div></div><div id="trafficCapacity" class="cc-card-body cc-list"><div class="cc-empty">No capacity evidence.</div></div></article>
+            <article class="cc-card"><div class="cc-card-head"><div><h3>Evidence planes</h3><p>Provider token truth and MCP model-visible bytes remain separate measurement planes.</p></div></div><div id="trafficEvidence" class="cc-card-body cc-list"><div class="cc-empty">No usage evidence.</div></div></article>
+          </div>
         </section>
 
         <section class="page" data-page-view="system">

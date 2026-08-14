@@ -32,6 +32,7 @@ function createPreviewApi() {
 const pageMeta = {
   overview: ['EXECUTION CONTROL', 'Command Center', 'Runtime, clients, routing, authority and proof in one operational view.'],
   routing: ['EXECUTION FABRIC', 'Live Routing', 'Theo dõi frontend, provider/model delegation, controller, writer và continuity theo evidence thật.'],
+  traffic: ['TRAFFIC & USAGE', 'Traffic & Usage', 'Theo dõi admission, capacity, usage provenance và cooldown từ Execution Hub read model hiện có.'],
   deploy: ['CONNECTIONS', 'Connections', 'Quản lý Runtime API Key, OpenAI Tunnel và tuyến mạng.'],
   workspace: ['WORKSPACE ACCESS', 'Workspace', 'Quản lý workspace chính, thư mục ủy quyền bổ sung và quyền thực thi lệnh.'],
   task: ['TASKS & PROOF', 'Tasks & Proof', 'Theo dõi durable task state, kiểm thử, proof, lịch sử và hiệu năng.'],

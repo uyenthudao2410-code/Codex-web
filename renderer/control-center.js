@@ -11,6 +11,7 @@
     chatweb: 'ChatWeb', desktop: 'Desktop', opencode: 'OpenCode', fast: 'Fast', hub: 'Hub',
     deepseek: 'DeepSeek', terra: 'Terra', writer: 'Writer', sol: 'Sol'
   };
+  const SVG_NS = 'http://www.w3.org/2000/svg';
 
   let snapshot = null;
   let orchestration = null;
@@ -33,7 +34,7 @@
   }
 
   function shouldPoll() {
-    return document.visibilityState !== 'hidden' && ['overview', 'routing', 'task'].includes(activePage());
+    return document.visibilityState !== 'hidden' && ['overview', 'routing', 'traffic', 'task'].includes(activePage());
   }
 
   function clientFor(data, type, id) {
@@ -91,6 +92,52 @@
 
   function formatLimit(value) {
     return Number.isFinite(Number(value)) && Number(value) > 0 ? String(Number(value)) : 'unknown';
+  }
+
+  function finiteNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function compactNumber(value) {
+    const number = Number(value || 0);
+    if (!Number.isFinite(number) || number < 0) return '0';
+    if (number < 1000) return String(Math.round(number));
+    if (number < 1000000) return `${(number / 1000).toFixed(number < 10000 ? 1 : 0)}K`;
+    return `${(number / 1000000).toFixed(number < 10000000 ? 2 : 1)}M`;
+  }
+
+  function measurementLabel(value) {
+    const raw = value && typeof value === 'object'
+      ? String(value.source || value.kind || value.status || '')
+      : String(value || '');
+    const normalized = raw.toLowerCase();
+    if (normalized.includes('provider')) return 'PROVIDER';
+    if (normalized.includes('measured')) return 'MEASURED';
+    if (normalized.includes('estimate')) return 'ESTIMATED';
+    return 'UNKNOWN';
+  }
+
+  function normalizedUsageEvent(item) {
+    const usage = item?.tokens && typeof item.tokens === 'object'
+      ? item.tokens
+      : item?.usage && typeof item.usage === 'object' ? item.usage : {};
+    const input = Math.max(0, Number(usage.input ?? usage.input_tokens ?? usage.prompt_tokens ?? 0) || 0);
+    const cached = Math.max(0, Number(usage.cached_input ?? usage.cached_input_tokens ?? usage.cached_tokens ?? 0) || 0);
+    const output = Math.max(0, Number(usage.output ?? usage.output_tokens ?? usage.completion_tokens ?? 0) || 0);
+    const reasoning = Math.max(0, Number(usage.reasoning ?? usage.reasoning_tokens ?? 0) || 0);
+    const reportedTotal = finiteNumber(usage.total ?? usage.total_tokens);
+    return {
+      input,
+      cached,
+      output,
+      reasoning,
+      total: reportedTotal !== null && reportedTotal >= 0 ? reportedTotal : input + output,
+      measurement: measurementLabel(item?.measurement ?? item?.measurement_source ?? usage?.measurement),
+      provider: String(item?.provider || item?.provider_id || item?.principal || ''),
+      model: String(item?.model || item?.provider_model || item?.route || 'provider request')
+    };
   }
 
   function appendListRow(container, titleText, metaText, pillText = '', pillState = 'offline') {
@@ -256,11 +303,72 @@
     }
   }
 
-  function setRouterEdge(prefix, key, state) {
+  function clearEdgeParticles(group) {
+    group?.querySelectorAll?.('.ops-router-particle').forEach((node) => node.remove());
+  }
+
+  function clearRouterParticles() {
+    document.querySelectorAll('.ops-router-particle').forEach((node) => node.remove());
+  }
+
+  function syncEdgeParticles(group, edge, state, flow) {
+    if (!group || !edge) return;
+    clearEdgeParticles(group);
+    const page = group.closest('.page');
+    const pageVisible = !page || page.classList.contains('active');
+    if (state !== 'active' || flow === 'none' || reducedMotion || document.visibilityState === 'hidden' || !pageVisible) return;
+    for (let index = 0; index < 2; index += 1) {
+      const particle = document.createElementNS(SVG_NS, 'circle');
+      particle.setAttribute('class', 'ops-router-particle');
+      particle.setAttribute('r', index === 0 ? '2.6' : '1.8');
+      const motion = document.createElementNS(SVG_NS, 'animateMotion');
+      motion.setAttribute('dur', `${0.95 + index * 0.23}s`);
+      motion.setAttribute('begin', `${index * 0.34}s`);
+      motion.setAttribute('repeatCount', 'indefinite');
+      motion.setAttribute('calcMode', 'linear');
+      motion.setAttribute('keyTimes', '0;1');
+      motion.setAttribute('keyPoints', flow === 'reverse' ? '1;0' : '0;1');
+      const mpath = document.createElementNS(SVG_NS, 'mpath');
+      mpath.setAttribute('href', `#${edge.id}`);
+      motion.appendChild(mpath);
+      particle.appendChild(motion);
+      group.appendChild(particle);
+    }
+  }
+
+  function routerEdgeFlow(view, data, key) {
+    if (COMPUTE_KEYS.includes(key)) {
+      const delegation = (Array.isArray(data?.delegations) ? data.delegations : [])
+        .find((item) => delegationLane(item) === key && delegationState(item?.status) === 'active');
+      if (!delegation) return 'none';
+      const status = String(delegation?.status || '').toLowerCase();
+      return ['streaming', 'responding'].includes(status) ? 'reverse' : 'forward';
+    }
+    if (key === 'writer') {
+      if (view.activity.rawState === 'PROVING') return 'reverse';
+      if (view.write.status === 'active') return 'forward';
+    }
+    // Frontend connectivity/controller ownership does not prove a provider call.
+    return 'none';
+  }
+
+  function routerEdgeState(view, key) {
+    if (key === 'writer' && view.activity.rawState === 'PROVING') return 'active';
+    return view.states[key];
+  }
+
+  function setRouterEdge(prefix, key, state, flow = 'none') {
     const element = byId(`${prefix}Edge${NODE_SUFFIX[key]}`);
     if (!element) return;
     for (const name of ['offline', 'connected', 'waiting', 'blocked', 'active']) element.classList.remove(`is-${name}`);
     element.classList.add(`is-${state}`);
+    const group = element.closest('.ops-router-edge-group');
+    if (group) {
+      for (const name of ['offline', 'connected', 'waiting', 'blocked', 'active']) group.classList.remove(`is-${name}`);
+      group.classList.add(`is-${state}`);
+      group.dataset.flow = flow;
+      syncEdgeParticles(group, element, state, flow);
+    }
   }
 
   function renderRouter(prefix, data) {
@@ -281,7 +389,7 @@
     };
     for (const key of ROUTER_KEYS) setRouterNode(prefix, key, view.states[key], details[key]);
     for (const key of ['chatweb', 'desktop', 'opencode', 'fast', 'deepseek', 'terra', 'writer', 'sol']) {
-      setRouterEdge(prefix, key, view.states[key]);
+      setRouterEdge(prefix, key, routerEdgeState(view, key), routerEdgeFlow(view, data, key));
     }
     const onlineClients = Object.values(view.clients).filter((client) => client?.online).length;
     const activeRoutes = Object.values(view.routes).filter((state) => state === 'active').length;
@@ -483,6 +591,84 @@
     appendListRow(container, 'Automatic provider routing', automatic?.enabled ? 'Enabled by explicit policy.' : `OFF · ${automatic?.reason || 'evidence gate'}`, automatic?.enabled ? 'ON' : 'OFF', automatic?.enabled ? 'active' : 'waiting');
   }
 
+  function renderTrafficUsage(data) {
+    const traffic = data?.provider_traffic || {};
+    const policy = traffic?.policy || {};
+    const providers = Array.isArray(policy?.providers) ? policy.providers : [];
+    const opencodeCapacity = traffic?.capacity?.opencode || {};
+    const cooldowns = Array.isArray(traffic?.capacity?.codex?.capacity_cooldowns) ? traffic.capacity.codex.capacity_cooldowns : [];
+    const automatic = traffic?.automatic_routing || {};
+    const usageEvents = Array.isArray(data?.usage_events) ? data.usage_events : [];
+    const normalizedUsage = usageEvents.map(normalizedUsageEvent);
+    const providerActive = finiteNumber(opencodeCapacity?.active_requests);
+    const queueDepth = finiteNumber(traffic?.queue?.depth);
+    const enforced = providers.filter((item) => item?.mode === 'enforced').length;
+    const invalid = providers.filter((item) => item?.mode === 'invalid').length;
+    const providerTokens = normalizedUsage.reduce((sum, item) => sum + item.total, 0);
+
+    setText('trafficActive', providerActive === null ? 'UNKNOWN' : compactNumber(providerActive));
+    setText('trafficActiveMeta', providerActive === null ? 'Provider activity is not exposed by the current snapshot.' : 'Provider runtime activity from the Execution Hub read model.');
+    setText('trafficQueued', queueDepth === null ? 'UNKNOWN' : compactNumber(queueDepth));
+    setText('trafficQueuedMeta', queueDepth === null ? 'Queue depth is not exposed; zero is not assumed.' : 'Queue depth from runtime traffic state.');
+    setText('trafficUsage', usageEvents.length ? compactNumber(providerTokens) : 'UNKNOWN');
+    setText('trafficUsageMeta', usageEvents.length ? `${usageEvents.length} retained canonical event${usageEvents.length === 1 ? '' : 's'} · provider token plane` : 'No retained provider usage event; MCP bytes stay separate.');
+    setText('trafficLimits', providers.length ? `${enforced}/${providers.length}` : 'UNKNOWN');
+    setText('trafficLimitsMeta', invalid ? `${invalid} invalid · fail closed · ${cooldowns.length} cooldown` : `${enforced} enforced · ${cooldowns.length} cooldown`);
+
+    const routes = byId('trafficRoutes');
+    if (routes) {
+      routes.replaceChildren();
+      if (!providers.length) appendListRow(routes, 'Provider admission', 'No provider limit configuration. Quota UNKNOWN; observe-only state is not rendered as available quota.', 'UNKNOWN', 'offline');
+      for (const item of providers.slice(0, 10)) {
+        const limits = item?.limits || {};
+        const usage = item?.usage || {};
+        const meta = item?.mode === 'enforced'
+          ? `RPM ${formatLimit(limits.rpm)} · TPM ${formatLimit(limits.tpm)} · concurrency ${formatLimit(limits.concurrency)} · active ${Number(usage.active_requests || 0)} · quota UNKNOWN unless separately reported`
+          : item?.mode === 'invalid'
+            ? `Invalid configuration · ${item.configuration_error || item.reason || 'fail closed'}`
+            : 'Observe-only · provider quota UNKNOWN; no availability percentage is fabricated.';
+        appendListRow(routes, item?.provider_model || 'provider', meta, item?.mode || 'UNKNOWN', item?.mode === 'invalid' ? 'blocked' : item?.mode === 'enforced' ? 'connected' : 'offline');
+      }
+    }
+
+    const usageList = byId('trafficUsageEvents');
+    if (usageList) {
+      usageList.replaceChildren();
+      if (!normalizedUsage.length) appendListRow(usageList, 'Provider usage', 'No retained canonical provider usage event for the current run.', 'UNKNOWN', 'offline');
+      normalizedUsage.slice().reverse().slice(0, 8).forEach((usage) => {
+        const title = [usage.provider, usage.model].filter(Boolean).join(' · ') || 'provider request';
+        const meta = `in ${compactNumber(usage.input)} · cached ${compactNumber(usage.cached)} · out ${compactNumber(usage.output)} · total ${compactNumber(usage.total)}${usage.reasoning ? ` · reasoning ${compactNumber(usage.reasoning)}` : ''}`;
+        const pillState = usage.measurement === 'PROVIDER' || usage.measurement === 'MEASURED' ? 'connected' : usage.measurement === 'ESTIMATED' ? 'waiting' : 'offline';
+        appendListRow(usageList, title, meta, usage.measurement, pillState);
+      });
+    }
+
+    const capacity = byId('trafficCapacity');
+    if (capacity) {
+      capacity.replaceChildren();
+      if (!cooldowns.length) appendListRow(capacity, 'Codex capacity', 'No active capacity cooldown in the retained snapshot.', 'AVAILABLE', 'connected');
+      cooldowns.slice(0, 8).forEach((item) => appendListRow(capacity, item?.model || 'Codex model', `Retry after ${formatDuration(item?.retry_after_ms)} · failures ${Number(item?.failures || 0)}`, 'COOLDOWN', 'waiting'));
+      appendListRow(capacity, 'Automatic provider routing', automatic?.enabled ? 'Enabled by explicit runtime policy.' : `OFF · ${automatic?.reason || 'evidence gate'}`, automatic?.enabled ? 'ON' : 'OFF', automatic?.enabled ? 'active' : 'waiting');
+    }
+
+    const evidence = byId('trafficEvidence');
+    if (evidence) {
+      evidence.replaceChildren();
+      const counts = normalizedUsage.reduce((map, item) => {
+        map[item.measurement] = (map[item.measurement] || 0) + 1;
+        return map;
+      }, {});
+      appendListRow(evidence, 'Provider token plane', usageEvents.length ? Object.entries(counts).map(([key, value]) => `${key} ${value}`).join(' · ') : 'No provider token event retained.', usageEvents.length ? 'BOUNDED' : 'UNKNOWN', usageEvents.length ? 'connected' : 'offline');
+      const records = Array.isArray(performance?.recent) ? performance.recent : [];
+      const modelVisibleBytes = records.reduce((sum, item) => {
+        const value = finiteNumber(item?.model_visible_bytes);
+        return sum + (value !== null && value > 0 ? value : 0);
+      }, 0);
+      appendListRow(evidence, 'MCP model-visible plane', modelVisibleBytes ? `${compactNumber(modelVisibleBytes)} bytes measured in retained performance trace; token conversion remains ESTIMATED in analytics.` : 'No measured model-visible bytes in retained performance trace.', modelVisibleBytes ? 'MEASURED BYTES' : 'UNKNOWN', modelVisibleBytes ? 'connected' : 'offline');
+      appendListRow(evidence, 'Billing boundary', 'Provider tokens and MCP model-visible bytes are never added together as one total.', 'SEPARATE', 'active');
+    }
+  }
+
   function renderPhaseTiming(data) {
     const timing = data?.flight_recorder?.phase_timing || {};
     const segments = Array.isArray(timing?.segments) ? timing.segments : [];
@@ -578,6 +764,7 @@
     const data = orchestration || {};
     renderCommandCenter(data);
     renderRouting(data);
+    renderTrafficUsage(data);
   }
 
   async function refreshPerformance(force = false) {
@@ -602,6 +789,7 @@
       renderAll();
       setText('ccLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
       setText('routingLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
+      setText('trafficLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
     } finally {
       refreshInFlight = false;
     }
@@ -623,13 +811,21 @@
   byId('ccRestartButton')?.addEventListener('click', restartRuntime);
   byId('ccRefreshButton')?.addEventListener('click', () => refresh(true));
   byId('routingRefreshButton')?.addEventListener('click', () => refresh(true));
+  byId('trafficRefreshButton')?.addEventListener('click', () => refresh(true));
 
   document.addEventListener('click', (event) => {
     const target = event.target.closest('[data-page],[data-nav]');
     if (!target) return;
+    clearRouterParticles();
     setTimeout(() => refresh(true), 0);
   });
-  document.addEventListener('visibilitychange', () => { if (shouldPoll()) refresh(true); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      clearRouterParticles();
+      return;
+    }
+    if (shouldPoll()) refresh(true);
+  });
   motionQuery?.addEventListener?.('change', (event) => {
     reducedMotion = Boolean(event.matches);
     renderAll();

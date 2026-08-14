@@ -176,11 +176,15 @@ body[data-theme="dark"] {
 }
 .ops-router.is-large { min-height: 372px; grid-template-rows: repeat(3, minmax(104px, auto)); gap: 16px; }
 .ops-router-links { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.ops-router-edge { stroke: var(--cc-border-strong); stroke-width: 1.5; opacity: .55; vector-effect: non-scaling-stroke; }
+.ops-router-edge-group { pointer-events: none; }
+.ops-router-edge-halo { fill: none; stroke: var(--cc-blue); stroke-width: 8; stroke-linecap: round; opacity: 0; vector-effect: non-scaling-stroke; }
+.ops-router-edge { fill: none; stroke: var(--cc-border-strong); stroke-width: 1.5; stroke-linecap: round; opacity: .55; vector-effect: non-scaling-stroke; }
 .ops-router-edge.is-connected { stroke: var(--cc-subtle); opacity: .7; }
 .ops-router-edge.is-waiting { stroke: var(--cc-amber); stroke-dasharray: 5 6; opacity: .85; }
 .ops-router-edge.is-blocked { stroke: var(--cc-red); stroke-dasharray: 3 5; opacity: .9; }
-.ops-router-edge.is-active { stroke: var(--cc-blue); stroke-dasharray: 9 7; opacity: 1; animation: ccEdgeFlow 1.2s linear infinite; }
+.ops-router-edge.is-active { stroke: color-mix(in srgb, var(--cc-blue) 78%, white); stroke-width: 2.4; opacity: 1; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--cc-blue) 48%, transparent)); }
+.ops-router-edge-group.is-active .ops-router-edge-halo { opacity: .16; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--cc-blue) 38%, transparent)); }
+.ops-router-particle { fill: #fff; stroke: var(--cc-blue); stroke-width: .9; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 2px var(--cc-blue)); }
 .ops-router-node {
   position: relative;
   z-index: 1;
@@ -314,7 +318,6 @@ body[data-theme="dark"] {
 .system-launch > i { color: var(--cc-subtle); font-style: normal; font-size: 16px; }
 .system-note { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--cc-border); border-radius: 11px; color: var(--cc-muted); background: var(--cc-surface-soft); font-size: 10px; line-height: 1.6; }
 
-@keyframes ccEdgeFlow { to { stroke-dashoffset: -32; } }
 @keyframes ccNodePulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--cc-blue) 9%, transparent); } }
 @keyframes ccThinkingDot {
   0%, 65%, 100% { opacity: .4; transform: translateY(0); }
@@ -350,7 +353,9 @@ body[data-theme="dark"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ops-router-edge.is-active, .ops-router-node.is-active { animation: none !important; }
+  .ops-router-particle { display: none !important; }
+  .ops-router-edge.is-active, .ops-router-edge-group.is-active .ops-router-edge-halo { filter: none !important; }
+  .ops-router-node.is-active { animation: none !important; }
   .cc-activity.is-busy::after, .cc-activity.is-busy .cc-activity-orb i { animation: none !important; }
   .ops-router-node, .system-launch, .nav-item { transition: none !important; }
 }
