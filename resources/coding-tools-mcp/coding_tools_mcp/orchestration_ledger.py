@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 _MAX_TEXT = 16_000
 HANDOFF_CAPSULE_MAX_BYTES = 8_192
 _SECRET_KEY_RE = re.compile(r"(authorization|credential|password|passwd|secret|token|api[_-]?key|private[_-]?key)", re.I)
@@ -317,6 +317,41 @@ class OrchestrationLedger:
                 );
                 CREATE INDEX IF NOT EXISTS idx_idempotency_records_status
                     ON idempotency_records(status, updated_at DESC);
+                CREATE TABLE IF NOT EXISTS hub_clients (
+                    client_id TEXT PRIMARY KEY,
+                    client_type TEXT NOT NULL DEFAULT '',
+                    role TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'online',
+                    session_instance TEXT NOT NULL DEFAULT '',
+                    runtime_instance_id TEXT NOT NULL DEFAULT '',
+                    contract_sha TEXT NOT NULL DEFAULT '',
+                    connected_at TEXT NOT NULL,
+                    last_seen_at TEXT NOT NULL,
+                    capabilities_json TEXT NOT NULL DEFAULT '{}',
+                    metadata_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE INDEX IF NOT EXISTS idx_hub_clients_status_seen
+                    ON hub_clients(status, last_seen_at DESC);
+                CREATE TABLE IF NOT EXISTS hub_client_cursors (
+                    client_id TEXT NOT NULL REFERENCES hub_clients(client_id) ON DELETE CASCADE,
+                    run_id TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
+                    last_event_seq INTEGER NOT NULL DEFAULT 0,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY(client_id, run_id)
+                );
+                CREATE INDEX IF NOT EXISTS idx_hub_client_cursors_run
+                    ON hub_client_cursors(run_id, last_event_seq DESC);
+                CREATE TABLE IF NOT EXISTS controller_leases (
+                    run_id TEXT PRIMARY KEY REFERENCES runs(run_id) ON DELETE CASCADE,
+                    fencing_token INTEGER NOT NULL DEFAULT 0,
+                    lease_id TEXT NOT NULL DEFAULT '',
+                    owner_client_id TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT 'released',
+                    expires_at REAL NOT NULL DEFAULT 0,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_controller_leases_status
+                    ON controller_leases(status, expires_at);
                 """
             )
             connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
@@ -1224,6 +1259,368 @@ class OrchestrationLedger:
                 (max(1, min(int(limit), 200)),),
             ).fetchall()
         return [self._background_row(row) for row in rows]
+
+    @staticmethod
+    def _hub_client_row(row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "client_id": row["client_id"],
+            "client_type": row["client_type"],
+            "role": row["role"],
+            "status": row["status"],
+            "session_instance": row["session_instance"],
+            "runtime_instance_id": row["runtime_instance_id"],
+            "contract_sha": row["contract_sha"],
+            "connected_at": row["connected_at"],
+            "last_seen_at": row["last_seen_at"],
+            "capabilities": json.loads(row["capabilities_json"] or "{}"),
+            "metadata": json.loads(row["metadata_json"] or "{}"),
+        }
+
+    def upsert_hub_client(
+        self,
+        *,
+        client_id: str,
+        client_type: str,
+        role: str,
+        status: str = "online",
+        session_instance: str = "",
+        runtime_instance_id: str = "",
+        contract_sha: str = "",
+        capabilities: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        client = _bounded_text(client_id, 128).strip()
+        if not client:
+            raise ValueError("client_id is required")
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT connected_at, metadata_json FROM hub_clients WHERE client_id=?",
+                (client,),
+            ).fetchone()
+            connected_at = str(row["connected_at"]) if row else now
+            existing = json.loads(row["metadata_json"] or "{}") if row else {}
+            existing.update(_sanitize(metadata or {}))
+            connection.execute(
+                """INSERT INTO hub_clients(
+                    client_id,client_type,role,status,session_instance,runtime_instance_id,
+                    contract_sha,connected_at,last_seen_at,capabilities_json,metadata_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(client_id) DO UPDATE SET
+                    client_type=excluded.client_type,role=excluded.role,status=excluded.status,
+                    session_instance=excluded.session_instance,runtime_instance_id=excluded.runtime_instance_id,
+                    contract_sha=excluded.contract_sha,last_seen_at=excluded.last_seen_at,
+                    capabilities_json=excluded.capabilities_json,metadata_json=excluded.metadata_json""",
+                (
+                    client,
+                    _bounded_text(client_type, 64),
+                    _bounded_text(role, 64),
+                    _bounded_text(status, 32),
+                    _bounded_text(session_instance, 256),
+                    _bounded_text(runtime_instance_id, 256),
+                    _bounded_text(contract_sha, 128),
+                    connected_at,
+                    now,
+                    _json(_sanitize(capabilities or {})),
+                    _json(existing),
+                ),
+            )
+        result = self.get_hub_client(client)
+        assert result is not None
+        return result
+
+    def get_hub_client(self, client_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM hub_clients WHERE client_id=?",
+                (_bounded_text(client_id, 128),),
+            ).fetchone()
+        return self._hub_client_row(row) if row else None
+
+    def list_hub_clients(self, *, online_within_seconds: float = 45.0) -> list[dict[str, Any]]:
+        cutoff = datetime.fromtimestamp(
+            time.time() - max(1.0, float(online_within_seconds)), timezone.utc
+        ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM hub_clients ORDER BY last_seen_at DESC, client_id"
+            ).fetchall()
+        clients = [self._hub_client_row(row) for row in rows]
+        for client in clients:
+            client["online"] = bool(
+                client.get("status") == "online"
+                and str(client.get("last_seen_at") or "") >= cutoff
+            )
+        return clients
+
+    def set_hub_client_status(self, client_id: str, status: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            cursor = connection.execute(
+                "UPDATE hub_clients SET status=?, last_seen_at=? WHERE client_id=?",
+                (_bounded_text(status, 32), utc_now(), _bounded_text(client_id, 128)),
+            )
+            if not cursor.rowcount:
+                return None
+        return self.get_hub_client(client_id)
+
+    def advance_hub_client_cursor(self, *, client_id: str, run_id: str, last_event_seq: int) -> dict[str, Any]:
+        client = _bounded_text(client_id, 128).strip()
+        run = _bounded_text(run_id, 256).strip()
+        if not client or not run:
+            raise ValueError("client_id and run_id are required")
+        seq = max(0, int(last_event_seq))
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            if not connection.execute("SELECT 1 FROM hub_clients WHERE client_id=?", (client,)).fetchone():
+                raise ValueError("hub client is not registered")
+            if not connection.execute("SELECT 1 FROM runs WHERE run_id=?", (run,)).fetchone():
+                raise ValueError("orchestration run does not exist")
+            connection.execute(
+                """INSERT INTO hub_client_cursors(client_id,run_id,last_event_seq,updated_at)
+                VALUES(?,?,?,?)
+                ON CONFLICT(client_id,run_id) DO UPDATE SET
+                    last_event_seq=MAX(hub_client_cursors.last_event_seq, excluded.last_event_seq),
+                    updated_at=CASE
+                        WHEN excluded.last_event_seq > hub_client_cursors.last_event_seq THEN excluded.updated_at
+                        ELSE hub_client_cursors.updated_at END""",
+                (client, run, seq, now),
+            )
+            row = connection.execute(
+                "SELECT * FROM hub_client_cursors WHERE client_id=? AND run_id=?",
+                (client, run),
+            ).fetchone()
+        assert row is not None
+        return {
+            "client_id": row["client_id"],
+            "run_id": row["run_id"],
+            "last_event_seq": int(row["last_event_seq"] or 0),
+            "updated_at": row["updated_at"],
+        }
+
+    def get_hub_client_cursor(self, *, client_id: str, run_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM hub_client_cursors WHERE client_id=? AND run_id=?",
+                (_bounded_text(client_id, 128), _bounded_text(run_id, 256)),
+            ).fetchone()
+        if not row:
+            return None
+        return {
+            "client_id": row["client_id"],
+            "run_id": row["run_id"],
+            "last_event_seq": int(row["last_event_seq"] or 0),
+            "updated_at": row["updated_at"],
+        }
+
+    def list_hub_client_cursors(self, *, run_id: str = "") -> list[dict[str, Any]]:
+        query = "SELECT * FROM hub_client_cursors"
+        params: list[Any] = []
+        if run_id:
+            query += " WHERE run_id=?"
+            params.append(_bounded_text(run_id, 256))
+        query += " ORDER BY updated_at DESC, client_id"
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [
+            {
+                "client_id": row["client_id"],
+                "run_id": row["run_id"],
+                "last_event_seq": int(row["last_event_seq"] or 0),
+                "updated_at": row["updated_at"],
+            }
+            for row in rows
+        ]
+
+    @staticmethod
+    def _controller_lease_row(row: sqlite3.Row) -> dict[str, Any]:
+        status = str(row["status"])
+        expires_at = float(row["expires_at"] or 0)
+        if status == "active" and expires_at <= time.time():
+            status = "expired"
+        return {
+            "run_id": row["run_id"],
+            "fencing_token": int(row["fencing_token"] or 0),
+            "lease_id": row["lease_id"],
+            "owner_client_id": row["owner_client_id"],
+            "status": status,
+            "expires_at": expires_at,
+            "updated_at": row["updated_at"],
+        }
+
+    def get_controller_lease(self, run_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM controller_leases WHERE run_id=?",
+                (_bounded_text(run_id, 256),),
+            ).fetchone()
+        return self._controller_lease_row(row) if row else None
+
+    def acquire_controller_lease(
+        self,
+        *,
+        run_id: str,
+        owner_client_id: str,
+        lease_id: str,
+        ttl_seconds: float = 60.0,
+    ) -> dict[str, Any]:
+        run = _bounded_text(run_id, 256).strip()
+        owner = _bounded_text(owner_client_id, 128).strip()
+        lease = _bounded_text(lease_id, 256).strip()
+        if not run or not owner or not lease:
+            raise ValueError("run_id, owner_client_id and lease_id are required")
+        now = time.time()
+        expires_at = now + max(1.0, float(ttl_seconds))
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            if not connection.execute("SELECT 1 FROM runs WHERE run_id=?", (run,)).fetchone():
+                raise ValueError("orchestration run does not exist")
+            if not connection.execute("SELECT 1 FROM hub_clients WHERE client_id=?", (owner,)).fetchone():
+                raise ValueError("controller client is not registered")
+            row = connection.execute(
+                "SELECT * FROM controller_leases WHERE run_id=?", (run,)
+            ).fetchone()
+            if row and row["status"] == "active" and float(row["expires_at"] or 0) > now:
+                current = self._controller_lease_row(row)
+                if row["owner_client_id"] != owner or row["lease_id"] != lease:
+                    connection.commit()
+                    return {"acquired": False, "reason": "active_lease", "current": current}
+                connection.execute(
+                    "UPDATE controller_leases SET expires_at=?, updated_at=? WHERE run_id=?",
+                    (expires_at, utc_now(), run),
+                )
+                connection.commit()
+                current["expires_at"] = expires_at
+                current["updated_at"] = utc_now()
+                current["status"] = "active"
+                return {"acquired": True, "renewed": True, **current}
+            token = int(row["fencing_token"] or 0) + 1 if row else 1
+            updated_at = utc_now()
+            connection.execute(
+                """INSERT INTO controller_leases(
+                    run_id,fencing_token,lease_id,owner_client_id,status,expires_at,updated_at
+                ) VALUES(?,?,?,?,?,?,?)
+                ON CONFLICT(run_id) DO UPDATE SET
+                    fencing_token=excluded.fencing_token,lease_id=excluded.lease_id,
+                    owner_client_id=excluded.owner_client_id,status='active',
+                    expires_at=excluded.expires_at,updated_at=excluded.updated_at""",
+                (run, token, lease, owner, "active", expires_at, updated_at),
+            )
+            connection.commit()
+        return {
+            "acquired": True,
+            "renewed": False,
+            "run_id": run,
+            "fencing_token": token,
+            "lease_id": lease,
+            "owner_client_id": owner,
+            "status": "active",
+            "expires_at": expires_at,
+            "updated_at": updated_at,
+        }
+
+    def assert_controller_lease(
+        self,
+        *,
+        run_id: str,
+        owner_client_id: str,
+        lease_id: str,
+        fencing_token: int,
+    ) -> dict[str, Any]:
+        current = self.get_controller_lease(run_id)
+        if current is None:
+            return {"valid": False, "reason": "missing"}
+        if current["status"] != "active":
+            return {"valid": False, "reason": current["status"], "current": current}
+        if (
+            current["owner_client_id"] != owner_client_id
+            or current["lease_id"] != lease_id
+            or current["fencing_token"] != int(fencing_token)
+        ):
+            return {"valid": False, "reason": "stale", "current": current}
+        return {"valid": True, "current": current}
+
+    def release_controller_lease(
+        self,
+        *,
+        run_id: str,
+        owner_client_id: str,
+        lease_id: str,
+        fencing_token: int,
+    ) -> bool:
+        with self._lock, self._connect() as connection:
+            cursor = connection.execute(
+                """UPDATE controller_leases SET status='released', updated_at=?
+                WHERE run_id=? AND owner_client_id=? AND lease_id=? AND fencing_token=? AND status='active'""",
+                (
+                    utc_now(),
+                    _bounded_text(run_id, 256),
+                    _bounded_text(owner_client_id, 128),
+                    _bounded_text(lease_id, 256),
+                    int(fencing_token),
+                ),
+            )
+        return bool(cursor.rowcount)
+
+    def operator_transfer_controller(
+        self,
+        *,
+        run_id: str,
+        target_client_id: str,
+        lease_id: str,
+        ttl_seconds: float = 60.0,
+        online_within_seconds: float = 45.0,
+    ) -> dict[str, Any]:
+        run = _bounded_text(run_id, 256).strip()
+        target = _bounded_text(target_client_id, 128).strip()
+        lease = _bounded_text(lease_id, 256).strip()
+        if not run or not target or not lease:
+            raise ValueError("run_id, target_client_id and lease_id are required")
+        cutoff = datetime.fromtimestamp(
+            time.time() - max(1.0, float(online_within_seconds)), timezone.utc
+        ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        now = time.time()
+        expires_at = now + max(1.0, float(ttl_seconds))
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            if not connection.execute("SELECT 1 FROM runs WHERE run_id=?", (run,)).fetchone():
+                raise ValueError("orchestration run does not exist")
+            client = connection.execute(
+                "SELECT * FROM hub_clients WHERE client_id=?", (target,)
+            ).fetchone()
+            if (
+                not client
+                or client["status"] != "online"
+                or str(client["last_seen_at"] or "") < cutoff
+            ):
+                connection.commit()
+                return {"transferred": False, "reason": "target_offline", "target_client_id": target}
+            row = connection.execute(
+                "SELECT * FROM controller_leases WHERE run_id=?", (run,)
+            ).fetchone()
+            token = int(row["fencing_token"] or 0) + 1 if row else 1
+            updated_at = utc_now()
+            connection.execute(
+                """INSERT INTO controller_leases(
+                    run_id,fencing_token,lease_id,owner_client_id,status,expires_at,updated_at
+                ) VALUES(?,?,?,?,?,?,?)
+                ON CONFLICT(run_id) DO UPDATE SET
+                    fencing_token=excluded.fencing_token,lease_id=excluded.lease_id,
+                    owner_client_id=excluded.owner_client_id,status='active',
+                    expires_at=excluded.expires_at,updated_at=excluded.updated_at""",
+                (run, token, lease, target, "active", expires_at, updated_at),
+            )
+            connection.commit()
+        return {
+            "transferred": True,
+            "run_id": run,
+            "target_client_id": target,
+            "owner_client_id": target,
+            "lease_id": lease,
+            "fencing_token": token,
+            "status": "active",
+            "expires_at": expires_at,
+            "updated_at": updated_at,
+        }
 
     def acquire_write_fence(
         self,

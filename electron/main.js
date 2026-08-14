@@ -2,19 +2,22 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
 const http = require('node:http');
-const { app, BrowserWindow, dialog, ipcMain, shell, Tray, Menu, nativeImage, session, WebContentsView } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, Tray, Menu, nativeImage, session, WebContentsView, clipboard } = require('electron');
 const { SettingsStore } = require('./services/settingsStore');
 const { SecretStore } = require('./services/secretStore');
 const { LogService } = require('./services/logService');
-const { EnvironmentService } = require('./services/environmentService');
+const { EnvironmentService, pythonStatus } = require('./services/environmentService');
 const { RuntimeOrchestrator } = require('./services/runtimeOrchestrator');
 const { ChatViewController } = require('./chatViewController');
 const { run } = require('./services/commandRunner');
 const { resolveProxy, clearProxyCache } = require('./services/proxyService');
 const { BuildVerificationService } = require('./services/buildVerificationService');
 const { HealthService } = require('./services/healthService');
+const { HubProxyGateway } = require('./services/hubProxyGateway');
+const { buildCodexDesktopMcpConfig } = require('./services/codexDesktopConfig');
 const { readJson, writeJsonAtomic } = require('./services/jsonStore');
 const { panelInset, panelBounds } = require('./services/panelLayout');
+const { resourcesRoot, hubProxyDescriptorFile } = require('./paths');
 
 let chatWindow;
 let managerWindow;
@@ -24,6 +27,7 @@ let forceQuit = false;
 let tray = null;
 let buildVerification;
 let healthService;
+let hubProxyGateway;
 let panelView = null;
 let panelVisible = false;
 const TOOLBAR_HEIGHT = 112;
@@ -120,6 +124,49 @@ function httpRequestJson({ port, path: requestPath, method, token, body, headers
     if (payload) request.write(payload);
     request.end();
   });
+}
+
+async function panelTaskControl(action) {
+  const allowed = new Set(['pause', 'resume', 'stop']);
+  if (!allowed.has(action)) throw new Error('Thao tác nhiệm vụ từ bảng điều khiển không hợp lệ.');
+  const current = settings.load();
+  const token = secrets.get('mcpAuthToken');
+  if (!token) throw new Error('MCP chưa sẵn sàng để điều khiển nhiệm vụ.');
+  const request = {
+    jsonrpc: '2.0',
+    id: `panel-task-${action}-${Date.now()}`,
+    method: 'tools/call',
+    params: {
+      name: 'task_control',
+      arguments: { action },
+      _meta: {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+        'io.modelcontextprotocol/clientInfo': { name: 'web-mcp-assistant-panel', version: app.getVersion() }
+      }
+    }
+  };
+  const response = await httpRequestJson({
+    port: current.mcpPort,
+    path: '/mcp',
+    method: 'POST',
+    token,
+    body: request,
+    headers: {
+      'MCP-Protocol-Version': '2026-07-28',
+      'Mcp-Method': 'tools/call',
+      'Mcp-Name': 'task_control',
+      'X-Coding-Tools-Client-Id': 'electron-panel',
+      'X-Coding-Tools-Client-Type': 'electron'
+    },
+    timeout: 10000
+  });
+  if (response && response.error) throw new Error(response.error.message || 'MCP từ chối thao tác nhiệm vụ.');
+  if (response?.result?.isError) {
+    const message = response.result?.structuredContent?.error?.message || response.result?.content?.[0]?.text || 'MCP từ chối thao tác nhiệm vụ.';
+    throw new Error(String(message).slice(0, 400));
+  }
+  return (response && response.result) || null;
 }
 
 function layoutViews() {
@@ -403,6 +450,37 @@ function registerIpc() {
     if (!token) throw new Error('MCP chưa sẵn sàng để đọc trạng thái điều phối.');
     return httpRequestJson({ port: current.mcpPort, path: '/__control/orchestration', method: 'GET', token, timeout: 2500 });
   }));
+  secureHandle('panel:task-control', (_event, action) => invokeSafely(() => panelTaskControl(String(action || ''))));
+  secureHandle('panel:transfer-controller', (_event, payload) => invokeSafely(async () => {
+    const current = settings.load();
+    const token = secrets.get('mcpAuthToken');
+    if (!token) throw new Error('MCP chưa sẵn sàng để chuyển controller.');
+    const targetClientId = String(payload?.targetClientId || '').trim();
+    if (!['chatweb', 'codex-desktop'].includes(targetClientId)) throw new Error('Controller target không hợp lệ.');
+    const runId = String(payload?.runId || '').trim();
+    return httpRequestJson({
+      port: current.mcpPort,
+      path: '/__control/hub',
+      method: 'POST',
+      token,
+      body: { action: 'transfer_controller', target_client_id: targetClientId, ...(runId ? { run_id: runId } : {}) },
+      timeout: 5000
+    });
+  }));
+  secureHandle('panel:copy-codex-config', () => invokeSafely(async () => {
+    const python = await pythonStatus();
+    if (!python.installed) throw new Error('Không tìm thấy Python 3.11+ để tạo cấu hình Codex Desktop.');
+    const moduleRoot = path.join(resourcesRoot(), 'coding-tools-mcp');
+    const pythonPath = [path.join(moduleRoot, 'python_vendor'), moduleRoot].join(path.delimiter);
+    const config = buildCodexDesktopMcpConfig({
+      pythonCommand: python.command,
+      prefixArgs: python.prefixArgs || [],
+      pythonPath,
+      descriptorPath: hubProxyDescriptorFile()
+    });
+    clipboard.writeText(config.toml);
+    return { copied: true, mode: config.mode, descriptorPath: config.descriptorPath, containsBearer: false };
+  }));
   secureHandle('panel:handoff', (_event, payload) => invokeSafely(async () => {
     const current = settings.load();
     const token = secrets.get('mcpAuthToken');
@@ -428,7 +506,13 @@ function registerIpc() {
       method: 'POST',
       token,
       body: request,
-      headers: { 'MCP-Protocol-Version': '2026-07-28', 'Mcp-Method': 'tools/call', 'Mcp-Name': 'task_control' },
+      headers: {
+        'MCP-Protocol-Version': '2026-07-28',
+        'Mcp-Method': 'tools/call',
+        'Mcp-Name': 'task_control',
+        'X-Coding-Tools-Client-Id': 'electron-panel',
+        'X-Coding-Tools-Client-Type': 'electron'
+      },
       timeout: 10000
     });
     if (response && response.error) throw new Error(response.error.message || 'MCP từ chối thao tác handoff.');
@@ -470,6 +554,7 @@ function registerIpc() {
   secureHandle('runtime:start', () => invokeSafely(() => orchestrator.start()));
   secureHandle('runtime:stop', () => invokeSafely(() => orchestrator.stop()));
   secureHandle('runtime:restart', () => invokeSafely(() => orchestrator.restart()));
+  secureHandle('connector:ack-contract', () => invokeSafely(() => orchestrator.acknowledgeConnectorContract()));
   secureHandle('logs:read', () => invokeSafely(async () => log.read()));
   secureHandle('logs:clear', () => invokeSafely(async () => { log.clear(); return true; }));
   secureHandle('environment:install-python', () => invokeSafely(async () => {
@@ -520,6 +605,8 @@ app.whenReady().then(async () => {
     emitProgress: (payload) => sendManager('runtime:progress', payload),
     emitStatus: (payload) => sendManager('runtime:status-changed', payload)
   });
+  hubProxyGateway = new HubProxyGateway({ settings, secrets, log });
+  await hubProxyGateway.start().catch((error) => log.error(error.message, { stage: 'hub-proxy-start' }));
   buildVerification = new BuildVerificationService(log, (payload) => sendManager('build:progress', payload));
   healthService = new HealthService({ settings, secrets, environment, orchestrator });
   log.on('entry', (payload) => sendManager('logs:entry', payload));
@@ -535,7 +622,10 @@ app.whenReady().then(async () => {
   }
 });
 
-app.on('before-quit', () => { forceQuit = true; });
+app.on('before-quit', () => {
+  forceQuit = true;
+  hubProxyGateway?.stop().catch((error) => log.error(error.message, { stage: 'hub-proxy-stop' }));
+});
 app.on('window-all-closed', () => {
   if (!forceQuit && settings.load().keepRunningOnClose) return;
   if (!forceQuit) app.quit();

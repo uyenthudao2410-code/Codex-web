@@ -62,6 +62,7 @@ function renderHealth(health) {
       : health?.recoveryBlocked
         ? `Khôi phục bị chặn: ${health.lastStartFailure || ''}`
         : 'Dịch vụ chưa sẵn sàng';
+  if (lastOrchestration) renderRouterFabric(lastOrchestration);
 }
 
 function renderTask(task) {
@@ -115,6 +116,192 @@ function renderRun(data) {
   $('#capsuleLine').textContent = capsule
     ? `Capsule: ${shortTime(capsule.created_at)} · v${capsule.version} · ${capsule.status}`
     : 'Chưa có capsule handoff — ghi trước khi xoay chat mới.';
+}
+
+const continuityReasonLabels = {
+  READY: 'Đã có Desktop + capsule + controller phù hợp',
+  NO_ACTIVE_EXECUTION: 'Không có execution đang chạy',
+  LEDGER_INTEGRITY_FAILED: 'Ledger integrity chưa đạt',
+  TASK_NOT_RUNNABLE: 'Task đang pause/stop/fail',
+  DESKTOP_OFFLINE: 'Codex Desktop chưa online qua Hub',
+  CAPSULE_MISSING: 'Chưa có capsule handoff',
+  CAPSULE_STALE: 'Capsule cũ hơn execution/proof hiện tại',
+  CONTROLLER_HANDOFF_REQUIRED: 'Chưa chuyển semantic controller sang Codex Desktop'
+};
+
+function clientFor(data, type, id) {
+  const clients = Array.isArray(data?.clients) ? data.clients : [];
+  return clients.find((client) => client?.client_id === id)
+    || clients.find((client) => client?.client_type === type)
+    || null;
+}
+
+function renderClient(prefix, client, latestEventSeq) {
+  const state = $(`#${prefix}ClientStatus`);
+  const cursor = $(`#${prefix}Cursor`);
+  const online = Boolean(client?.online);
+  state.textContent = online ? 'online' : 'offline';
+  state.className = `client-state ${online ? 'online' : 'offline'}`;
+  const seq = Number(client?.cursor?.last_event_seq || 0);
+  const lag = Math.max(0, Number(latestEventSeq || 0) - seq);
+  cursor.textContent = client ? `cursor #${seq}${lag ? ` · lag ${lag}` : ''}` : 'cursor —';
+}
+
+function renderHub(data) {
+  const latestEventSeq = Number(data?.resume_packet?.latest_event_seq || 0);
+  const chatweb = clientFor(data, 'chatweb', 'chatweb');
+  const desktop = clientFor(data, 'codex_desktop', 'codex-desktop');
+  const opencode = clientFor(data, 'opencode', 'opencode');
+  renderClient('chatweb', chatweb, latestEventSeq);
+  renderClient('desktop', desktop, latestEventSeq);
+  renderClient('opencode', opencode, latestEventSeq);
+  const controller = data?.authority?.controller || {};
+  const write = data?.authority?.write || {};
+  const controllerOwner = controller.owner_client_id || 'chưa claim';
+  $('#controllerLine').textContent = `Controller: ${controllerOwner} · ${controller.status || 'unclaimed'} · fence #${controller.fencing_token || 0}`;
+  $('#writeAuthorityLine').textContent = write.status === 'active'
+    ? `Writer: ${write.owner || 'MCP'} · ACTIVE · fence #${write.fencing_token || 0}`
+    : 'Writer: Coding Tools MCP · hiện không giữ write lease';
+  const onlineClientCount = [chatweb, desktop, opencode].filter((client) => client?.online).length;
+  $('#hubStatus').textContent = onlineClientCount ? `${onlineClientCount} clients` : 'offline';
+  $('#hubStatus').className = `badge ${onlineClientCount ? 'active' : 'stopped'}`;
+  $('#toDesktopButton').disabled = !desktop?.online || controllerOwner === 'codex-desktop' || !data?.run?.run_id;
+  $('#toChatWebButton').disabled = !chatweb?.online || controllerOwner === 'chatweb' || !data?.run?.run_id;
+  const continuity = data?.continuity || {};
+  const safe = Boolean(continuity.safe_to_rotate_chatweb);
+  $('#continuityStatus').textContent = safe ? 'READY' : 'HOLD';
+  $('#continuityStatus').className = `badge ${safe ? 'active' : 'blocked'}`;
+  $('#rotationLine').textContent = safe ? 'SAFE TO ROTATE CHATWEB: YES' : 'SAFE TO ROTATE CHATWEB: NO';
+  $('#rotationLine').className = `continuity-callout ${safe ? 'safe' : 'unsafe'}`;
+  const reasons = Array.isArray(continuity.reason_codes) ? continuity.reason_codes : [];
+  $('#continuityReasons').textContent = reasons.length ? reasons.map((code) => continuityReasonLabels[code] || code).join(' · ') : 'Chưa có đánh giá continuity.';
+  const pressure = continuity.context_pressure || {};
+  $('#contextPressureLine').textContent = pressure.status === 'unknown'
+    ? 'Context ChatWeb: host không expose mức sử dụng — Hub không tự ước đoán.'
+    : `Context ChatWeb: ${pressure.status || '—'}`;
+  const resume = data?.resume_packet || {};
+  $('#resumeLine').textContent = resume.run_id
+    ? `Resume: ${resume.orchestration_state || resume.task_status || '—'} · event #${resume.latest_event_seq || 0} · ${resume.proofs?.length || 0} proof ref · ${resume.pending_message_count || 0} message chờ`
+    : 'Resume: chưa có run đang hoạt động.';
+  renderRouterFabric(data);
+}
+
+const routerNodeIds = {
+  chatweb: 'routerChatWeb',
+  desktop: 'routerDesktop',
+  opencode: 'routerOpenCode',
+  hub: 'routerHub',
+  writer: 'routerWriter',
+  fast: 'routerFast',
+  terra: 'routerTerra',
+  sol: 'routerSol',
+  deepseek: 'routerDeepSeek'
+};
+
+const routerEdgeIds = {
+  chatweb: 'routerEdgeChatWeb',
+  desktop: 'routerEdgeDesktop',
+  opencode: 'routerEdgeOpenCode',
+  writer: 'routerEdgeWriter',
+  fast: 'routerEdgeFast',
+  terra: 'routerEdgeTerra',
+  sol: 'routerEdgeSol',
+  deepseek: 'routerEdgeDeepSeek'
+};
+
+const routerStateRank = { offline: 0, connected: 1, waiting: 2, blocked: 3, active: 4 };
+
+function mergeRouterState(current, next) {
+  return routerStateRank[next] > routerStateRank[current] ? next : current;
+}
+
+function delegationRouterLane(delegation) {
+  const text = `${delegation?.route_resolved || ''} ${delegation?.model || ''}`.toLowerCase();
+  if (text.includes('deepseek')) return 'deepseek';
+  if (text.includes('terra')) return 'terra';
+  if (text.includes('sol')) return 'sol';
+  if (text.includes('mini') || text.includes('luna')) return 'fast';
+  return '';
+}
+
+function delegationRouterState(status) {
+  const value = String(status || '').toLowerCase();
+  if (['active', 'running', 'starting', 'executing', 'in_progress'].includes(value)) return 'active';
+  if (['waiting', 'queued', 'pending', 'idle'].includes(value)) return 'waiting';
+  if (['blocked', 'failed', 'replanned', 'interrupted'].includes(value)) return 'blocked';
+  return 'offline';
+}
+
+function setRouterNode(key, state, detail) {
+  const node = document.getElementById(routerNodeIds[key]);
+  if (!node) return;
+  node.classList.remove('offline', 'connected', 'active', 'waiting', 'blocked');
+  node.classList.add(state);
+  const stateLabel = node.querySelector('.router-state');
+  if (stateLabel) {
+    const idleWhenOffline = ['fast', 'terra', 'sol', 'deepseek', 'writer'].includes(key);
+    stateLabel.textContent = state === 'connected' ? 'online' : state === 'offline' && idleWhenOffline ? 'idle' : state;
+  }
+  node.title = detail || state;
+}
+
+function setRouterEdge(key, state) {
+  const edge = document.getElementById(routerEdgeIds[key]);
+  if (!edge) return;
+  edge.classList.remove('offline', 'connected', 'active', 'waiting', 'blocked');
+  edge.classList.add(state);
+}
+
+function renderRouterFabric(data) {
+  const chatweb = clientFor(data, 'chatweb', 'chatweb');
+  const desktop = clientFor(data, 'codex_desktop', 'codex-desktop');
+  const opencode = clientFor(data, 'opencode', 'opencode');
+  const controllerOwner = data?.authority?.controller?.owner_client_id || '';
+  const write = data?.authority?.write || {};
+  const taskStatus = String(data?.task?.status || '').toLowerCase();
+  const routeStates = { fast: 'offline', terra: 'offline', sol: 'offline', deepseek: 'offline' };
+  const routeDetails = {
+    fast: 'Không có delegation Mini/Luna đang chạy',
+    terra: 'Không có delegation Terra đang chạy',
+    sol: 'Không có delegation Sol đang chạy',
+    deepseek: 'Không có DeepSeek delegation được Hub quan sát'
+  };
+  const delegations = Array.isArray(data?.delegations) ? data.delegations : [];
+  delegations.forEach((delegation) => {
+    const lane = delegationRouterLane(delegation);
+    if (!lane) return;
+    const state = delegationRouterState(delegation?.status);
+    routeStates[lane] = mergeRouterState(routeStates[lane], state);
+    if (state !== 'offline') routeDetails[lane] = `${delegation?.model || delegation?.route_resolved || lane} · ${delegation?.status || state}`;
+  });
+
+  const clientState = (client, controllerId) => client?.online ? (controllerOwner === controllerId ? 'active' : 'connected') : 'offline';
+  const chatwebState = clientState(chatweb, 'chatweb');
+  const desktopState = clientState(desktop, 'codex-desktop');
+  const opencodeState = opencode?.online ? 'connected' : 'offline';
+  const anyClientOnline = Boolean(chatweb?.online || desktop?.online || opencode?.online);
+  const anyRouteActive = Object.values(routeStates).some((state) => state === 'active');
+  const hubOnline = Boolean(lastHealth?.mcpRunning || anyClientOnline);
+  const hubState = hubOnline && (taskStatus === 'active' || anyRouteActive || write.status === 'active') ? 'active' : hubOnline ? 'connected' : 'offline';
+  const writerState = write.status === 'active' ? 'active' : hubOnline ? 'connected' : 'offline';
+
+  setRouterNode('chatweb', chatwebState, chatweb?.online ? `ChatWeb · ${controllerOwner === 'chatweb' ? 'controller active' : 'observer'}` : 'ChatWeb offline');
+  setRouterNode('desktop', desktopState, desktop?.online ? `Codex Desktop · ${controllerOwner === 'codex-desktop' ? 'controller active' : 'worker'}` : 'Codex Desktop offline');
+  setRouterNode('opencode', opencodeState, opencode?.online ? 'OpenCode stdio proxy đang heartbeat vào Hub' : 'OpenCode offline');
+  setRouterNode('hub', hubState, `Runtime ${lastHealth?.mcpRunning ? 'ready' : anyClientOnline ? 'observed through clients' : 'offline'} · task ${taskStatus || 'idle'}`);
+  setRouterNode('writer', writerState, write.status === 'active' ? `Write lease active · fence #${write.fencing_token || 0}` : 'MCP proof/writer idle');
+  for (const lane of ['fast', 'terra', 'sol', 'deepseek']) setRouterNode(lane, routeStates[lane], routeDetails[lane]);
+
+  setRouterEdge('chatweb', chatwebState);
+  setRouterEdge('desktop', desktopState);
+  setRouterEdge('opencode', opencodeState);
+  setRouterEdge('writer', writerState);
+  for (const lane of ['fast', 'terra', 'sol', 'deepseek']) setRouterEdge(lane, routeStates[lane]);
+
+  const activeRoutes = Object.values(routeStates).filter((state) => state === 'active').length;
+  const onlineClients = [chatweb, desktop, opencode].filter((client) => client?.online).length;
+  $('#routerSummary').textContent = `${onlineClients}/3 clients · ${activeRoutes} route active`;
+  $('#routerSummary').className = `badge ${hubState === 'active' ? 'active' : hubOnline ? 'waiting' : 'stopped'}`;
 }
 
 function renderEvents(events) {
@@ -189,6 +376,7 @@ async function refreshOrchestration() {
     lastOrchestration = data;
     renderTask(data?.task);
     renderRun(data);
+    renderHub(data);
     renderEvents(data?.events);
     renderProofs(data?.proofs);
     renderDelegations(data?.delegations);
@@ -228,6 +416,35 @@ async function recordHandoff() {
   }
 }
 
+async function transferController(targetClientId) {
+  const label = targetClientId === 'codex-desktop' ? 'Codex Desktop' : 'ChatWeb';
+  if (!window.confirm(`Chuyển semantic controller sang ${label}? Thao tác này đổi fencing token nhưng không copy transcript hay bật auto-handoff.`)) return;
+  const button = targetClientId === 'codex-desktop' ? $('#toDesktopButton') : $('#toChatWebButton');
+  button.disabled = true;
+  try {
+    unwrap(await api.transferController({ targetClientId, runId: lastOrchestration?.run?.run_id || '' }));
+    $('#syncState').textContent = `Đã chuyển controller sang ${label}.`;
+    await refreshOrchestration();
+  } catch (error) {
+    $('#syncState').textContent = error.message;
+  }
+}
+
+async function copyCodexConfig() {
+  const button = $('#copyCodexConfigButton');
+  button.disabled = true;
+  try {
+    const result = unwrap(await api.copyCodexConfig());
+    $('#syncState').textContent = result?.copied
+      ? 'Đã copy cấu hình Codex Desktop thin proxy — không chứa MCP bearer.'
+      : 'Không thể copy cấu hình Codex Desktop.';
+  } catch (error) {
+    $('#syncState').textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function tick() {
   $('#clock').textContent = new Date().toLocaleTimeString('vi-VN');
   if (lastCommandStartedAt) {
@@ -247,6 +464,9 @@ $('#pauseTask').onclick = () => taskAction('pause');
 $('#resumeTask').onclick = () => taskAction('resume');
 $('#stopTask').onclick = () => taskAction('stop');
 $('#handoffButton').onclick = () => recordHandoff();
+$('#toDesktopButton').onclick = () => transferController('codex-desktop');
+$('#toChatWebButton').onclick = () => transferController('chatweb');
+$('#copyCodexConfigButton').onclick = () => copyCodexConfig();
 $('#refreshButton').onclick = () => { refreshOrchestration(); refreshHealth(); };
 
 refreshHealth();

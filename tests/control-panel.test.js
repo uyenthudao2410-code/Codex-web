@@ -35,13 +35,19 @@ test('chat view can be inset by the control panel without changing the toolbar h
   assert.match(main, /panelBounds\(width, height, TOOLBAR_HEIGHT, panelVisible\)/);
 });
 
-test('main process exposes panel IPC for orchestration, handoff and toggle', () => {
+test('main process exposes Execution Control Center IPC through MCP control plane', () => {
   const main = read('electron/main.js');
   assert.match(main, /secureHandle\('panel:toggle'/);
   assert.match(main, /secureHandle\('panel:orchestration'/);
   assert.match(main, /secureHandle\('panel:handoff'/);
+  assert.match(main, /secureHandle\('panel:task-control'/);
+  assert.match(main, /secureHandle\('panel:transfer-controller'/);
+  assert.match(main, /secureHandle\('panel:copy-codex-config'/);
   assert.match(main, /__control\/orchestration/);
+  assert.match(main, /__control\/hub/);
   assert.match(main, /handoff_action: 'record'/);
+  assert.match(main, /X-Coding-Tools-Client-Id': 'electron-panel'/);
+  assert.ok((main.match(/X-Coding-Tools-Client-Id': 'electron-panel'/g) || []).length >= 2, 'panel task controls and handoff must both carry electron-panel identity');
   assert.match(main, /panel:visibility/);
 });
 
@@ -53,9 +59,9 @@ test('MCP exposes an authorized orchestration snapshot endpoint', () => {
   assert.match(server, /latest_handoff_capsule/);
 });
 
-test('control panel renders task, orchestration, events, proofs and handoff controls', () => {
+test('control panel renders task plus multi-client authority and continuity controls', () => {
   const html = read('renderer/panel.html');
-  for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState']) {
+  for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'chatwebClientStatus', 'desktopClientStatus', 'opencodeClientStatus', 'opencodeCursor', 'controllerLine', 'writeAuthorityLine', 'continuityStatus', 'rotationLine', 'continuityReasons', 'contextPressureLine', 'resumeLine', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton', 'routerFabric', 'routerSummary', 'routerChatWeb', 'routerDesktop', 'routerOpenCode', 'routerHub', 'routerWriter', 'routerFast', 'routerTerra', 'routerSol', 'routerDeepSeek']) {
     assert.match(html, new RegExp(`id="${id}"`), `panel.html thiếu id ${id}`);
   }
   const js = read('renderer/panel.js');
@@ -64,11 +70,31 @@ test('control panel renders task, orchestration, events, proofs and handoff cont
   assert.match(js, /recordHandoff/);
   assert.match(js, /renderEvents/);
   assert.match(js, /renderProofs/);
+  assert.match(js, /renderHub/);
+  assert.match(js, /renderRouterFabric/);
+  assert.match(js, /delegationRouterLane/);
+  assert.match(js, /clientFor\(data, 'opencode', 'opencode'\)/);
+  assert.match(js, /SAFE TO ROTATE CHATWEB: YES/);
+  assert.match(js, /host không expose mức sử dụng/);
+  assert.match(js, /window\.confirm/);
+  assert.match(js, /transferController\('codex-desktop'\)/);
+  assert.doesNotMatch(js, /transferController\('opencode'\)/);
+  assert.match(js, /copyCodexConfig/);
   const preload = read('electron/panelPreload.js');
   assert.match(preload, /exposeInMainWorld\('panelAssistant'/);
-  for (const method of ['orchestration', 'health', 'pauseTask', 'resumeTask', 'stopTask', 'handoff', 'close']) {
+  for (const method of ['orchestration', 'health', 'pauseTask', 'resumeTask', 'stopTask', 'handoff', 'transferController', 'copyCodexConfig', 'close']) {
     assert.match(preload, new RegExp(`${method}:`));
   }
+  assert.match(preload, /panel:task-control/);
+  assert.doesNotMatch(preload, /task-state:pause/);
+  assert.doesNotMatch(preload, /task-state:stop/);
+  const css = read('renderer/panel.css');
+  assert.match(css, /\.client-grid/);
+  assert.match(css, /\.continuity-callout\.safe/);
+  assert.match(css, /\.continuity-callout\.unsafe/);
+  assert.match(css, /\.router-fabric/);
+  assert.match(css, /@keyframes routerFlow/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
 });
 
 test('browser toolbar offers the control panel toggle', () => {

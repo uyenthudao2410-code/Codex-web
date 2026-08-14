@@ -140,6 +140,74 @@ body {
 
 .counts { font-variant-numeric: tabular-nums; }
 
+.client-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 6px 0; }
+.client-card { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 7px; background: var(--panel-bg); display: grid; gap: 2px; }
+.client-card b, .client-card small { overflow-wrap: anywhere; }
+.client-card small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.client-state { font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.client-state.online { color: var(--ok); }
+.client-state.offline { color: var(--err); }
+.authority-line { font-family: Consolas, monospace; font-size: 10px; }
+.authority-controls button { flex: 1 1 120px; }
+.continuity-callout { border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; margin: 5px 0; font-weight: 700; letter-spacing: 0.02em; }
+.continuity-callout.safe { color: var(--ok); background: rgba(22, 163, 74, 0.08); }
+.continuity-callout.unsafe { color: var(--warn); background: rgba(217, 119, 6, 0.09); }
+
+.router-fabric {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(66px, auto));
+  gap: 9px;
+  margin-top: 8px;
+  min-height: 246px;
+}
+.router-links { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.router-edge { stroke: var(--line); stroke-width: 2; vector-effect: non-scaling-stroke; opacity: 0.55; }
+.router-edge.connected { stroke: var(--muted); opacity: 0.62; }
+.router-edge.waiting { stroke: var(--warn); stroke-dasharray: 5 6; opacity: 0.75; }
+.router-edge.blocked { stroke: var(--err); stroke-dasharray: 3 5; opacity: 0.78; }
+.router-edge.active { stroke: var(--accent); stroke-dasharray: 9 7; opacity: 1; animation: routerFlow 1.1s linear infinite; }
+.router-node {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 6px;
+  background: var(--panel-bg);
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.router-node b { font-size: 10px; overflow-wrap: anywhere; }
+.router-node small { color: var(--muted); font-size: 9px; overflow-wrap: anywhere; }
+.router-node .router-state { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+.router-node.offline { opacity: 0.48; }
+.router-node.connected { border-color: var(--muted); opacity: 0.88; }
+.router-node.waiting { border-color: var(--warn); }
+.router-node.waiting .router-state { color: var(--warn); }
+.router-node.blocked { border-color: var(--err); }
+.router-node.blocked .router-state { color: var(--err); }
+.router-node.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 15px rgba(15, 123, 108, 0.16); animation: routerPulse 1.5s ease-in-out infinite; }
+.router-node.active .router-state { color: var(--accent); }
+.router-node.hub { font-weight: 700; }
+.router-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; color: var(--muted); font-size: 9px; text-transform: uppercase; }
+.router-legend span::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 4px; border-radius: 50%; background: var(--muted); }
+.router-legend .active::before { background: var(--accent); }
+.router-legend .waiting::before { background: var(--warn); }
+.router-legend .blocked::before { background: var(--err); }
+
+@keyframes routerFlow { to { stroke-dashoffset: -32; } }
+@keyframes routerPulse { 50% { box-shadow: 0 0 0 1px var(--accent), 0 0 22px rgba(15, 123, 108, 0.28); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .router-edge.active, .router-node.active { animation: none; }
+  .router-node { transition: none; }
+}
+
 .progress-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
 
 .progress {

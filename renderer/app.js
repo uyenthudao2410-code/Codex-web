@@ -21,7 +21,7 @@ function createPreviewApi() {
     snapshot: () => ok(snapshot), chooseWorkspace: () => ok(snapshot.settings.workspace), switchWorkspace: (workspace) => { snapshot.settings.workspace=workspace; return ok(snapshot); }, updateAuthorizedRoots: (roots) => { snapshot.settings.authorizedRoots=roots; return ok(snapshot); }, closeManager: () => ok(true),
     saveSettings: (patch) => { Object.assign(snapshot.settings, patch); return ok(snapshot.settings); },
     saveRuntimeKey: () => ok(snapshot.secrets), removeRuntimeKey: () => ok(snapshot.secrets), regenerateMcpToken: () => ok(snapshot.secrets),
-    start: () => ok(snapshot), stop: () => ok(snapshot), restart: () => ok(snapshot),
+    start: () => ok(snapshot), stop: () => ok(snapshot), restart: () => ok(snapshot), acknowledgeConnectorContract: () => ok(snapshot),
     logs: () => ok([{ time: new Date().toISOString(), level: 'info', message: 'Chế độ xem trước giao diện tĩnh' }]), clearLogs: () => ok(true),
     taskState: () => ok({ exists: false, state: null }), clearTaskState: () => ok(true), pauseTask: () => ok({}), resumeTask: () => ok({}), stopTask: () => ok({}), taskHistory: () => ok([]), performanceTrace: () => ok(null), clearPerformanceTrace: () => ok(true),
     inspectBuild: () => ok({ type: 'electron', name: 'demo', version: '0.1.0', testCommand: 'npm test', buildCommand: 'npm run dist', artifacts: ['dist'] }), runBuild: () => ok({ overallStatus: 'passed', project: { type: 'electron', name: 'demo', version: '0.1.0' }, testResult: { status: 'passed' }, buildResult: { status: 'passed' }, artifacts: [] }), inspectHealth: () => ok({ healthy: true, checks: [] }), repairHealth: () => ok({ healthy: true, checks: [], actions: [], unresolved: [] }),
@@ -30,10 +30,12 @@ function createPreviewApi() {
 }
 
 const pageMeta = {
-  overview: ['TRUNG TÂM ĐIỀU HÀNH', 'Tổng quan Vận hành', 'Xem tập trung MCP cục bộ, OpenAI Tunnel và môi trường triển khai.'],
-  deploy: ['RUNTIME & KẾT NỐI', 'Vận hành & Kết nối', 'Quản lý môi trường portable, định danh Tunnel và môi trường mạng.'],
-  workspace: ['TRUY CẬP WORKSPACE', 'Không gian làm việc & Quyền', 'Quản lý workspace chính, thư mục ủy quyền bổ sung và quyền thực thi lệnh.'],
-  task: ['TRẠNG THÁI NHIỆM VỤ', 'Trạng thái thực thi nhiệm vụ', 'Xem mục tiêu có thể khôi phục, các bước thực thi, lệnh, kiểm thử, tệp và báo cáo build.'],
+  overview: ['EXECUTION CONTROL', 'Command Center', 'Runtime, clients, routing, authority and proof in one operational view.'],
+  routing: ['EXECUTION FABRIC', 'Live Routing', 'Theo dõi frontend, provider/model delegation, controller, writer và continuity theo evidence thật.'],
+  deploy: ['CONNECTIONS', 'Connections', 'Quản lý Runtime API Key, OpenAI Tunnel và tuyến mạng.'],
+  workspace: ['WORKSPACE ACCESS', 'Workspace', 'Quản lý workspace chính, thư mục ủy quyền bổ sung và quyền thực thi lệnh.'],
+  task: ['TASKS & PROOF', 'Tasks & Proof', 'Theo dõi durable task state, kiểm thử, proof, lịch sử và hiệu năng.'],
+  system: ['SYSTEM & DIAGNOSTICS', 'System', 'Build, health, logs, onboarding và cấu hình nâng cao.'],
   build: ['BUILD & XÁC MINH', 'Xác minh & Build', 'Tự động nhận diện dự án, thực thi kiểm thử và build, đồng thời kiểm tra sản phẩm đầu ra.'],
   health: ['CHẨN ĐOÁN & SỬA CHỮA', 'Chẩn đoán & Sửa chữa', 'Kiểm tra môi trường vận hành và tự động sửa chữa các sự cố an toàn.'],
   guide: ['HƯỚNG DẪN CẤU HÌNH', 'Hướng dẫn Kết nối', 'Hoàn thành các bước kết nối OpenAI Tunnel và ChatGPT Web.'],
@@ -90,7 +92,8 @@ function navigate(page) {
   if (!pageMeta[page]) return;
   state.currentPage = page;
   if (location.hash !== `#${page}`) history.replaceState(null, '', `#${page}`);
-  $$('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.page === page));
+  const primaryPage = ['build', 'health', 'guide', 'logs', 'settings'].includes(page) ? 'system' : page;
+  $$('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.page === primaryPage));
   $$('.page').forEach((item) => item.classList.toggle('active', item.dataset.pageView === page));
   const [eyebrow, title, subtitle] = pageMeta[page];
   $('#pageEyebrow').textContent = eyebrow;
@@ -281,6 +284,14 @@ function renderSnapshot(snapshot, options = {}) {
   $('#settingsKeyState').textContent = secrets.runtimeApiKey ? 'Đã mã hóa và lưu' : 'Chưa lưu';
   $('#guideLocalUrl').textContent = status.localMcpUrl;
   $('#guideTunnelId').textContent = settings.tunnelId || 'Chưa điền';
+  const connectorContractNotice = $('#connectorContractNotice');
+  if (connectorContractNotice) {
+    connectorContractNotice.hidden = !status.connectorRefreshRequired;
+    if (status.connectorRefreshRequired) {
+      const shortHash = status.toolContract?.sha256 ? `${status.toolContract.sha256.slice(0, 12)}…` : 'không xác định';
+      $('#connectorContractMessage').textContent = `Tool contract MCP hiện tại (${shortHash}) khác bản đã xác nhận cho ChatGPT. Hãy Refresh actions hoặc cài lại app MCP trong ChatGPT, sau đó bấm xác nhận bên dưới.`;
+    }
+  }
   renderEnvironment(environment);
   renderDeploySummary();
 }
@@ -736,6 +747,13 @@ function bindEvents() {
   $('#runBuild').addEventListener('click', runBuildVerification);
   $('#inspectHealth').addEventListener('click', inspectHealth);
   $('#repairHealth').addEventListener('click', repairHealth);
+  $('#ackConnectorContract')?.addEventListener('click', async () => {
+    try {
+      const snapshot = unwrap(await api.acknowledgeConnectorContract());
+      renderSnapshot(snapshot, { forceForms: false });
+      toast('Đã xác nhận tool contract', 'Cảnh báo sẽ xuất hiện lại khi schema/tool contract MCP thay đổi lần tiếp theo.');
+    } catch (error) { toast('Không thể xác nhận tool contract', error.message, 'error'); }
+  });
   $('#toolModeSelect')?.addEventListener('change', async () => {
     try {
       const wasRunning = Boolean(state.snapshot?.status.runtimeRunning);

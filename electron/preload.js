@@ -2,6 +2,7 @@
 
 contextBridge.exposeInMainWorld('mcpAssistant', {
   snapshot: (options) => ipcRenderer.invoke('app:snapshot', options),
+  orchestration: () => ipcRenderer.invoke('panel:orchestration'),
   chooseWorkspace: () => ipcRenderer.invoke('dialog:workspace'),
   switchWorkspace: (workspace) => ipcRenderer.invoke('workspace:switch', workspace),
   updateAuthorizedRoots: (roots) => ipcRenderer.invoke('workspace:authorized-roots', roots),
@@ -25,6 +26,7 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   start: () => ipcRenderer.invoke('runtime:start'),
   stop: () => ipcRenderer.invoke('runtime:stop'),
   restart: () => ipcRenderer.invoke('runtime:restart'),
+  acknowledgeConnectorContract: () => ipcRenderer.invoke('connector:ack-contract'),
   logs: () => ipcRenderer.invoke('logs:read'),
   clearLogs: () => ipcRenderer.invoke('logs:clear'),
   openExternal: (target) => ipcRenderer.invoke('shell:open', target),

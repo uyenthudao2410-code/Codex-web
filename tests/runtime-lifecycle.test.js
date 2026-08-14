@@ -7,9 +7,19 @@ const { runtimeFingerprint, currentRuntimeState } = require('../electron/service
 const { normalizeProxyValue } = require('../electron/services/proxyService');
 const runtimePaths = require('../electron/paths');
 const runtimeStatePath = path.join(os.tmpdir(), `webcodex-runtime-lifecycle-${process.pid}.json`);
+const supervisorRequestPath = path.join(os.tmpdir(), `webcodex-supervisor-request-${process.pid}.json`);
 runtimePaths.stateFile = () => runtimeStatePath;
+runtimePaths.supervisorRequestFile = () => supervisorRequestPath;
 fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
-test.after(() => fs.rmSync(runtimeStatePath, { force: true }));
+test.after(() => {
+  fs.rmSync(runtimeStatePath, { force: true });
+  fs.rmSync(supervisorRequestPath, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
+});
+test.beforeEach(() => {
+  fs.rmSync(supervisorRequestPath, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
+});
 const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
 
 function recoveryHarness(status) {
@@ -66,6 +76,107 @@ test('background runtime processes are hidden and never detached on Windows', ()
 
 test('runtime state migration keeps only current native and tunnel fields', () => {
   assert.deepEqual(currentRuntimeState({ nativePid: 1, tunnelPid: 2, obsoletePid: 3 }), { nativePid: 1, tunnelPid: 2 });
+});
+
+test('connector contract stays pending until operator acknowledges the current hash', () => {
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  const contract = { schema_version: 1, profile: 'smart-v3', sha256: 'a'.repeat(64) };
+  assert.equal(orchestrator.connectorContractStatus(contract).refreshRequired, true);
+  orchestrator.acknowledgeConnectorContractHash(contract);
+  const acknowledged = orchestrator.connectorContractStatus(contract);
+  assert.equal(acknowledged.refreshRequired, false);
+  assert.equal(acknowledged.acknowledgedSha256, contract.sha256);
+});
+
+test('supervisor consumes a fresh workspace-bound restart ticket exactly once', async () => {
+  const workspace = 'C:\\work\\one';
+  const calls = { restart: 0 };
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.restart = async () => { calls.restart += 1; };
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: 'ticket-1',
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  }), 'utf8');
+  const result = await orchestrator.supervise();
+  assert.equal(calls.restart, 1);
+  assert.equal(fs.existsSync(supervisorRequestPath), false);
+  assert.equal(result.supervisorRequest.ticketId, 'ticket-1');
+  assert.equal(result.supervisorRequest.status, 'completed');
+});
+
+test('supervisor rejects stale or wrong-workspace restart tickets without restarting', async () => {
+  const workspace = 'C:\\work\\one';
+  const calls = { restart: 0 };
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.restart = async () => { calls.restart += 1; };
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: 'ticket-stale',
+    workspace: 'C:\\work\\other',
+    requested_at_unix_ms: now - 120000,
+    not_before_unix_ms: now - 119000,
+    expires_at_unix_ms: now - 60000
+  }), 'utf8');
+  await orchestrator.supervise();
+  assert.equal(calls.restart, 0);
+  assert.equal(fs.existsSync(supervisorRequestPath), false);
+});
+
+test('supervisor never recovers a restart ticket from json backup', async () => {
+  const workspace = 'C:\\work\\one';
+  const calls = { restart: 0 };
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.restart = async () => { calls.restart += 1; };
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, '{invalid-json', 'utf8');
+  fs.writeFileSync(`${supervisorRequestPath}.bak`, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: 'ticket-from-backup',
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  }), 'utf8');
+  await orchestrator.supervise();
+  assert.equal(calls.restart, 0);
+  assert.equal(fs.existsSync(supervisorRequestPath), false);
+  assert.equal(fs.existsSync(`${supervisorRequestPath}.bak`), false);
 });
 
 test('supervisor recovers only the tunnel when MCP remains healthy', async () => {

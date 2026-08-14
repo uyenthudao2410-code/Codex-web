@@ -44,6 +44,94 @@ def _percentile(values: list[float], quantile: float) -> float | None:
     return round(float(ordered[index]), 3)
 
 
+def _json_object(value: object) -> dict[str, Any]:
+    try:
+        parsed = json.loads(str(value or "{}"))
+    except (TypeError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _tta_summary(values: list[float]) -> dict[str, Any]:
+    return {
+        "n": len(values),
+        "p50_seconds": round(float(statistics.median(values)), 3) if values else None,
+        "p90_seconds": _percentile(values, 0.90),
+    }
+
+
+def _accepted_run_cohorts(connection: sqlite3.Connection) -> tuple[list[float], list[dict[str, Any]], dict[str, Any]]:
+    accepted_rows = connection.execute(
+        "SELECT run_id, started_at, finished_at, metadata_json "
+        "FROM runs WHERE status='accepted' AND finished_at IS NOT NULL"
+    ).fetchall()
+
+    latest_route_by_run: dict[str, str] = {}
+    route_rows = connection.execute(
+        "SELECT run_id, payload_json FROM events WHERE event_type='route_selected' ORDER BY seq"
+    ).fetchall()
+    for run_id_raw, payload_raw in route_rows:
+        payload = _json_object(payload_raw)
+        route = str(payload.get("resolved") or "").strip()
+        if route:
+            latest_route_by_run[str(run_id_raw)] = route
+
+    replanned_runs = {
+        str(row[0])
+        for row in connection.execute("SELECT DISTINCT run_id FROM waves WHERE status='replanned'").fetchall()
+    }
+
+    tta_seconds: list[float] = []
+    grouped: dict[tuple[str, str, str, str, str], list[float]] = {}
+    complete = 0
+    for run_id_raw, started_raw, finished_raw, metadata_raw in accepted_rows:
+        started = _parse_time(str(started_raw))
+        finished = _parse_time(str(finished_raw))
+        if started is None or finished is None or finished < started:
+            continue
+        duration = (finished - started).total_seconds()
+        tta_seconds.append(duration)
+
+        run_id = str(run_id_raw)
+        metadata = _json_object(metadata_raw)
+        workflow = str(metadata.get("workflow") or "").strip()
+        phase = str(metadata.get("phase") or "").strip()
+        entry_surface = str(metadata.get("entry_surface") or "").strip()
+        if not entry_surface and workflow and phase:
+            entry_surface = "agent_workflow"
+        entry_surface = entry_surface or "unknown"
+        task_class = str(metadata.get("task_class") or workflow or "unknown").strip() or "unknown"
+        route = latest_route_by_run.get(run_id, "unknown")
+        acceptance_status = "accepted"
+        repair_status = "repaired" if run_id in replanned_runs else "first_pass"
+        if "unknown" not in {entry_surface, route, task_class}:
+            complete += 1
+        key = (entry_surface, route, task_class, acceptance_status, repair_status)
+        grouped.setdefault(key, []).append(duration)
+
+    cohorts: list[dict[str, Any]] = []
+    for key in sorted(grouped):
+        entry_surface, route, task_class, acceptance_status, repair_status = key
+        cohorts.append(
+            {
+                "entry_surface": entry_surface,
+                "route": route,
+                "task_class": task_class,
+                "acceptance_status": acceptance_status,
+                "repair_status": repair_status,
+                **_tta_summary(grouped[key]),
+            }
+        )
+    total = len(tta_seconds)
+    coverage = {
+        "total": total,
+        "complete": complete,
+        "incomplete": total - complete,
+        "complete_ratio": round(complete / total, 6) if total else None,
+    }
+    return tta_seconds, cohorts, coverage
+
+
 def build_snapshot(workspace: Path) -> dict[str, Any]:
     root = workspace.resolve()
     performance = _read_json(root / ".coding-tools" / "performance.json")
@@ -57,15 +145,7 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
             idempotency_counts = _status_counts(connection, "idempotency_records")
             background_counts = _status_counts(connection, "background_operations")
             lane_counts = _status_counts(connection, "agent_lanes", "lifecycle")
-            accepted_rows = connection.execute(
-                "SELECT started_at, finished_at FROM runs WHERE status='accepted' AND finished_at IS NOT NULL"
-            ).fetchall()
-            tta_seconds: list[float] = []
-            for started_raw, finished_raw in accepted_rows:
-                started = _parse_time(str(started_raw))
-                finished = _parse_time(str(finished_raw))
-                if started is not None and finished is not None and finished >= started:
-                    tta_seconds.append((finished - started).total_seconds())
+            tta_seconds, accepted_run_cohorts, cohort_coverage = _accepted_run_cohorts(connection)
             proof_count = int(connection.execute("SELECT COUNT(*) FROM proofs").fetchone()[0])
             handoff_count = int(connection.execute("SELECT COUNT(*) FROM handoff_capsules").fetchone()[0])
             ledger = {
@@ -77,11 +157,9 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
                 "lane_lifecycle_counts": lane_counts,
                 "proof_records": proof_count,
                 "handoff_capsules": handoff_count,
-                "accepted_run_tta": {
-                    "n": len(tta_seconds),
-                    "p50_seconds": round(float(statistics.median(tta_seconds)), 3) if tta_seconds else None,
-                    "p90_seconds": _percentile(tta_seconds, 0.90),
-                },
+                "accepted_run_tta": _tta_summary(tta_seconds),
+                "accepted_run_cohort_coverage": cohort_coverage,
+                "accepted_run_cohorts": accepted_run_cohorts,
             }
         finally:
             connection.close()
@@ -91,7 +169,7 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
     return {
         "benchmark": "runtime activation telemetry snapshot",
         "evidence_class": "local_runtime_measurement_snapshot",
-        "schema_version": 1,
+        "schema_version": 2,
         "captured_at": utc_now(),
         "workspace": str(root),
         "performance": {
@@ -115,6 +193,8 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
             "estimated_wait_ms is a runtime gap proxy, not pure network/model latency",
             "idempotency coverage denominator includes only mutating/expensive calls marked eligible by runtime semantics",
             "accepted-run TTA is measured from durable run timestamps and is not a model-only latency metric",
+            "accepted-run cohort dimensions are derived only from durable run metadata/events/wave state; missing dimensions remain unknown",
+            "routing comparisons should use complete homogeneous accepted-run cohorts rather than raw global TTA",
         ],
     }
 

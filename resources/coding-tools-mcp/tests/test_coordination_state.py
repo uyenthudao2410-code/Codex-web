@@ -11,6 +11,128 @@ from coding_tools_mcp.orchestration_ledger import (
 
 
 class CoordinationStateTests(unittest.TestCase):
+    def test_hub_clients_and_independent_cursors_survive_store_recreation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            ledger.upsert_hub_client(
+                client_id="chatweb",
+                client_type="chatweb",
+                role="controller",
+                runtime_instance_id="runtime-1",
+                contract_sha="abc",
+            )
+            ledger.upsert_hub_client(
+                client_id="codex-desktop",
+                client_type="codex_desktop",
+                role="worker",
+                runtime_instance_id="runtime-1",
+                contract_sha="abc",
+            )
+            ledger.create_run(run_id="run-1", objective="hub cursor test")
+            ledger.advance_hub_client_cursor(client_id="chatweb", run_id="run-1", last_event_seq=12)
+            ledger.advance_hub_client_cursor(client_id="codex-desktop", run_id="run-1", last_event_seq=7)
+            ledger.advance_hub_client_cursor(client_id="chatweb", run_id="run-1", last_event_seq=5)
+
+            restored = OrchestrationLedger(root)
+            clients = {row["client_id"]: row for row in restored.list_hub_clients()}
+            self.assertTrue(clients["chatweb"]["online"])
+            self.assertTrue(clients["codex-desktop"]["online"])
+            self.assertEqual(clients["chatweb"]["runtime_instance_id"], "runtime-1")
+            self.assertEqual(restored.get_hub_client_cursor(client_id="chatweb", run_id="run-1")["last_event_seq"], 12)
+            self.assertEqual(restored.get_hub_client_cursor(client_id="codex-desktop", run_id="run-1")["last_event_seq"], 7)
+
+    def test_controller_lease_is_separate_fenced_and_rejects_competing_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            ledger.create_run(run_id="run-1", objective="controller test")
+            ledger.upsert_hub_client(client_id="chatweb", client_type="chatweb", role="controller")
+            ledger.upsert_hub_client(client_id="codex-desktop", client_type="codex_desktop", role="worker")
+            first = ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="lease-chat", ttl_seconds=60
+            )
+            self.assertTrue(first["acquired"])
+            self.assertEqual(first["fencing_token"], 1)
+            renewed = ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="lease-chat", ttl_seconds=60
+            )
+            self.assertTrue(renewed["acquired"])
+            self.assertTrue(renewed["renewed"])
+            self.assertEqual(renewed["fencing_token"], 1)
+            blocked = ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="codex-desktop", lease_id="lease-desktop", ttl_seconds=60
+            )
+            self.assertFalse(blocked["acquired"])
+            self.assertEqual(blocked["reason"], "active_lease")
+            self.assertTrue(ledger.assert_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="lease-chat", fencing_token=1
+            )["valid"])
+            self.assertFalse(ledger.assert_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="lease-chat", fencing_token=0
+            )["valid"])
+
+    def test_controller_expiry_allows_new_owner_with_incremented_token(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            ledger.create_run(run_id="run-1", objective="controller expiry test")
+            ledger.upsert_hub_client(client_id="chatweb", client_type="chatweb", role="controller")
+            ledger.upsert_hub_client(client_id="codex-desktop", client_type="codex_desktop", role="worker")
+            first = ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="lease-chat", ttl_seconds=1
+            )
+            with ledger._lock, ledger._connect() as connection:
+                connection.execute(
+                    "UPDATE controller_leases SET expires_at=0 WHERE run_id='run-1'"
+                )
+            second = ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="codex-desktop", lease_id="lease-desktop", ttl_seconds=60
+            )
+            self.assertTrue(second["acquired"])
+            self.assertEqual(second["fencing_token"], first["fencing_token"] + 1)
+            self.assertEqual(second["owner_client_id"], "codex-desktop")
+
+    def test_operator_controller_transfer_requires_online_registered_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            ledger.create_run(run_id="run-1", objective="controller transfer test")
+            ledger.upsert_hub_client(client_id="chatweb", client_type="chatweb", role="controller")
+            ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="lease-chat", ttl_seconds=60
+            )
+            offline = ledger.operator_transfer_controller(
+                run_id="run-1", target_client_id="codex-desktop", lease_id="lease-desktop"
+            )
+            self.assertFalse(offline["transferred"])
+            self.assertEqual(offline["reason"], "target_offline")
+            ledger.upsert_hub_client(client_id="codex-desktop", client_type="codex_desktop", role="worker")
+            moved = ledger.operator_transfer_controller(
+                run_id="run-1", target_client_id="codex-desktop", lease_id="lease-desktop"
+            )
+            self.assertTrue(moved["transferred"])
+            self.assertEqual(moved["owner_client_id"], "codex-desktop")
+            self.assertEqual(moved["fencing_token"], 2)
+            self.assertFalse(ledger.assert_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="lease-chat", fencing_token=1
+            )["valid"])
+
+    def test_hub_authority_and_cursor_reject_unknown_references(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            ledger.upsert_hub_client(client_id="chatweb", client_type="chatweb", role="controller")
+            with self.assertRaisesRegex(ValueError, "run does not exist"):
+                ledger.advance_hub_client_cursor(client_id="chatweb", run_id="missing", last_event_seq=1)
+            ledger.create_run(run_id="run-1", objective="reference validation")
+            with self.assertRaisesRegex(ValueError, "not registered"):
+                ledger.advance_hub_client_cursor(client_id="missing", run_id="run-1", last_event_seq=1)
+            with self.assertRaisesRegex(ValueError, "not registered"):
+                ledger.acquire_controller_lease(
+                    run_id="run-1", owner_client_id="missing", lease_id="lease-missing", ttl_seconds=60
+                )
+            with self.assertRaisesRegex(ValueError, "run does not exist"):
+                ledger.acquire_controller_lease(
+                    run_id="missing", owner_client_id="chatweb", lease_id="lease-chat", ttl_seconds=60
+                )
+
     def test_only_one_live_lane_can_claim_a_semantic_workstream(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))

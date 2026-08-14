@@ -7,26 +7,24 @@
   <title>Trợ lý Web MCP</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="settings-compact.css">
+  <link rel="stylesheet" href="control-center.css">
 </head>
-<body class="booting"><script src="theme-bootstrap.js"></script><div class="manager-window-bar"><span>Trợ lý Web MCP · Cấu hình</span><button id="closeManager" title="Đóng Cấu hình">×</button></div>
+<body class="booting"><script src="theme-bootstrap.js"></script><div class="manager-window-bar"><span>Execution Hub · Control Center</span><button id="closeManager" title="Đóng Control Center">×</button></div>
   <div class="boot-screen" id="bootScreen" role="status" aria-live="polite"><div class="boot-logo"><span></span><span></span><span></span></div><b>Đang chuẩn bị Trung tâm Quản lý</b><small>Đang đọc trạng thái không gian làm việc và dịch vụ cục bộ…</small><i></i></div>
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark"><span></span><span></span><span></span></div>
-        <div><strong>Trợ lý Web MCP</strong><small>Coding workspace bridge</small></div>
+        <div><strong>Execution Hub</strong><small>Control Center</small></div>
       </div>
 
       <nav class="nav-list" aria-label="Điều hướng chính">
-        <button class="nav-item active" data-page="overview"><span class="nav-icon">⌂</span><span>Tổng quan</span></button>
-        <button class="nav-item" data-page="deploy"><span class="nav-icon">◇</span><span>Vận hành & Kết nối</span></button>
-        <button class="nav-item" data-page="workspace"><span class="nav-icon">▱</span><span>Không gian làm việc & Quyền</span></button>
-        <button class="nav-item" data-page="task"><span class="nav-icon">✓</span><span>Trạng thái Nhiệm vụ</span></button>
-        <button class="nav-item" data-page="build"><span class="nav-icon">▣</span><span>Xác minh Build</span></button>
-        <button class="nav-item" data-page="health"><span class="nav-icon">✚</span><span>Chẩn đoán & Sửa chữa</span></button>
-        <button class="nav-item" data-page="guide"><span class="nav-icon">?</span><span>Hướng dẫn Kết nối</span></button>
-        <button class="nav-item" data-page="logs"><span class="nav-icon">≡</span><span>Nhật ký Vận hành</span></button>
-        <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span><span>Tùy chọn Cấu hình</span></button>
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Command Center</span></button>
+        <button class="nav-item" data-page="routing"><span class="nav-icon">RT</span><span>Live Routing</span></button>
+        <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tasks & Proof</span></button>
+        <button class="nav-item" data-page="deploy"><span class="nav-icon">CN</span><span>Connections</span></button>
+        <button class="nav-item" data-page="workspace"><span class="nav-icon">WS</span><span>Workspace</span></button>
+        <button class="nav-item" data-page="system"><span class="nav-icon">SY</span><span>System</span></button>
       </nav>
 
       <div class="sidebar-runtime">
@@ -53,7 +51,69 @@
 
       <div class="content-viewport">
         <section class="page active" data-page-view="overview">
-          <div class="hero-card">
+          <div class="control-hero">
+            <div class="control-hero-top">
+              <div class="control-hero-copy">
+                <span id="ccHealthBadge" class="cc-pill is-offline">Checking</span>
+                <h2 id="ccHeadline">Reading Execution Hub state…</h2>
+                <p id="ccSubline">Control Center combines runtime health, multi-client authority, live routing and deterministic proof without inventing provider activity.</p>
+              </div>
+              <div class="control-actions">
+                <span id="ccLastSync" class="cc-sync">Not synced</span>
+                <button class="secondary-button" id="ccRefreshButton">Refresh</button>
+                <button class="primary-button" id="ccRestartButton">Restart runtime</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="cc-kpi-grid" aria-label="Operational KPIs">
+            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Runtime</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiRuntime">—</strong><small id="ccKpiRuntimeMeta">MCP — · Tunnel —</small></article>
+            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Frontends</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiClients">0/3</strong><small id="ccKpiClientsMeta">No frontend online</small></article>
+            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Active route</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiRoute">Idle</strong><small id="ccKpiRouteMeta">No model lane currently active</small></article>
+            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Proof</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiProof">0/0</strong><small id="ccKpiProofMeta">No proof recorded for current run</small></article>
+          </div>
+
+          <div class="cc-workbench">
+            <article class="cc-card">
+              <div class="cc-card-head"><div><h3>Live execution fabric</h3><p>9-node topology. Animated paths require live client, delegation or write-lease evidence.</p></div><span id="ccRouterSummary" class="cc-pill is-offline">0/3 clients · 0 active routes</span></div>
+              <div class="cc-card-body">
+                <div id="ccRouterFabric" class="ops-router" aria-label="Command Center live routing topology">
+                  <svg class="ops-router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
+                    <line id="ccEdgeChatWeb" class="ops-router-edge is-offline" x1="50" y1="50" x2="150" y2="150"></line>
+                    <line id="ccEdgeDesktop" class="ops-router-edge is-offline" x1="150" y1="50" x2="150" y2="150"></line>
+                    <line id="ccEdgeOpenCode" class="ops-router-edge is-offline" x1="250" y1="50" x2="150" y2="150"></line>
+                    <line id="ccEdgeFast" class="ops-router-edge is-offline" x1="50" y1="150" x2="150" y2="150"></line>
+                    <line id="ccEdgeDeepSeek" class="ops-router-edge is-offline" x1="250" y1="150" x2="150" y2="150"></line>
+                    <line id="ccEdgeTerra" class="ops-router-edge is-offline" x1="50" y1="250" x2="150" y2="150"></line>
+                    <line id="ccEdgeWriter" class="ops-router-edge is-offline" x1="150" y1="250" x2="150" y2="150"></line>
+                    <line id="ccEdgeSol" class="ops-router-edge is-offline" x1="250" y1="250" x2="150" y2="150"></line>
+                  </svg>
+                  <div id="ccRouterChatWeb" class="ops-router-node is-offline"><b>ChatWeb</b><small>semantic control</small><span data-router-state>offline</span></div>
+                  <div id="ccRouterDesktop" class="ops-router-node is-offline"><b>Codex Desktop</b><small>deep frontend</small><span data-router-state>offline</span></div>
+                  <div id="ccRouterOpenCode" class="ops-router-node is-offline"><b>OpenCode</b><small>Go frontend</small><span data-router-state>offline</span></div>
+                  <div id="ccRouterFast" class="ops-router-node is-offline"><b>Codex Fast</b><small>Mini / Luna</small><span data-router-state>idle</span></div>
+                  <div id="ccRouterHub" class="ops-router-node is-hub is-offline"><b>Execution Hub</b><small>one runtime authority</small><span data-router-state>offline</span></div>
+                  <div id="ccRouterDeepSeek" class="ops-router-node is-offline"><b>OpenCode Go</b><small>Flash / Pro</small><span data-router-state>idle</span></div>
+                  <div id="ccRouterTerra" class="ops-router-node is-offline"><b>Codex Deep</b><small>Terra</small><span data-router-state>idle</span></div>
+                  <div id="ccRouterWriter" class="ops-router-node is-offline"><b>MCP Writer</b><small>proof + fence</small><span data-router-state>idle</span></div>
+                  <div id="ccRouterSol" class="ops-router-node is-offline"><b>Codex Critical</b><small>Sol</small><span data-router-state>idle</span></div>
+                </div>
+                <div class="ops-router-legend"><span><i></i>connected</span><span class="active"><i></i>active</span><span class="waiting"><i></i>waiting</span><span class="blocked"><i></i>blocked</span></div>
+              </div>
+            </article>
+
+            <div class="cc-side-stack">
+              <article class="cc-card"><div class="cc-card-head"><div><h3>Active execution</h3><p>Durable task/run state, not chat transcript.</p></div><span id="ccTaskStatus" class="cc-pill is-idle">idle</span></div><div class="cc-card-body"><h4 id="ccTaskObjective" class="cc-task-title">No active task.</h4><div id="ccTaskStep" class="cc-detail">Waiting for work</div><div id="ccRunMeta" class="cc-detail cc-mono">No active orchestration run</div></div></article>
+              <article class="cc-card"><div class="cc-card-head"><div><h3>Authority</h3><p>Controller and writer are intentionally separate.</p></div><span id="ccContinuity" class="cc-pill is-waiting">Continuity hold</span></div><div class="cc-card-body cc-key-values"><div class="cc-key-value"><span>Controller</span><b id="ccController">Unclaimed</b></div><div class="cc-key-value"><span>Writer / fence</span><b id="ccWriter">Coding Tools MCP · idle</b></div></div></article>
+            </div>
+          </div>
+
+          <div class="cc-bottom-grid">
+            <article class="cc-card"><div class="cc-card-head"><div><h3>Proof & execution economics</h3><p>Fast operational evidence, without mixing billing planes.</p></div></div><div class="cc-card-body cc-evidence-summary"><div class="cc-evidence-stat"><span>Proof ledger</span><b id="ccProofCount">0 proof records</b><small id="ccProofLatest" class="cc-detail">No proof yet</small></div><div class="cc-evidence-stat"><span>Delegations</span><b id="ccDelegationCount">0 delegation records</b><small id="ccPerformance" class="cc-detail">Performance telemetry not recorded yet</small></div></div></article>
+            <article class="cc-card"><div class="cc-card-head"><div><h3>Operator shortcuts</h3><p>High-value destinations only. Diagnostics stay under System.</p></div></div><div class="cc-card-body cc-action-grid"><button data-nav="routing">Live Routing</button><button data-nav="task">Tasks & Proof</button><button data-nav="deploy">Connections</button><button data-nav="system">System diagnostics</button></div></article>
+          </div>
+
+          <div class="hero-card legacy-overview">
             <div class="hero-copy">
               <span class="soft-badge" id="heroBadge">Đang kiểm tra trạng thái vận hành</span>
               <h2 id="heroTitle">Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn</h2>
@@ -72,14 +132,14 @@
             </div>
           </div>
 
-          <div class="status-grid">
+          <div class="status-grid legacy-overview">
             <article class="status-card"><div class="status-head"><span class="status-symbol blue">N</span><i id="runtimeDot"></i></div><h3>Môi trường Portable</h3><strong id="runtimeStatus">Đang kiểm tra</strong><p id="runtimeMeta">Đang kiểm tra Python tích hợp</p></article>
             <article class="status-card"><div class="status-head"><span class="status-symbol violet">M</span><i id="mcpDot"></i></div><h3>Coding Tools MCP</h3><strong id="mcpStatus">Chưa khởi động</strong><p id="mcpMeta">127.0.0.1:18766</p></article>
             <article class="status-card"><div class="status-head"><span class="status-symbol cyan">T</span><i id="tunnelDot"></i></div><h3>OpenAI Tunnel</h3><strong id="tunnelStatus">Chưa kết nối</strong><p id="tunnelMeta">Chờ hoàn tất cấu hình</p></article>
             <article class="status-card"><div class="status-head"><span class="status-symbol green">W</span><i id="workspaceDot"></i></div><h3>Thư mục làm việc hiện tại</h3><strong id="workspaceStatus">Chưa chọn</strong><p id="workspaceMeta">Chỉ thư mục được chọn mới có thể được MCP truy cập</p></article>
           </div>
 
-          <div class="two-column overview-bottom">
+          <div class="two-column overview-bottom legacy-overview">
             <article class="panel quick-panel">
               <div class="panel-title"><div><span class="section-kicker">THAO TÁC NHANH</span><h3>Thao tác thường dùng</h3></div></div>
               <div class="action-list">
@@ -96,6 +156,54 @@
               <div class="compact-buttons"><button class="danger-button" id="overviewStop">Dừng dịch vụ</button><button class="secondary-button" data-nav="logs">Xem nhật ký</button></div>
             </article>
           </div>
+        </section>
+
+        <section class="page" data-page-view="routing">
+          <div class="section-header"><div><span class="section-kicker">LIVE EXECUTION FABRIC</span><h2>Live Routing</h2><p>The control plane shows what is connected, who owns semantic control, which model lane is actually delegated, and whether the MCP writer holds the write fence.</p></div><div class="inline-actions"><span id="routingLastSync" class="cc-sync">Not synced</span><button class="secondary-button" id="routingRefreshButton">Refresh</button></div></div>
+          <div class="routing-layout">
+            <article class="cc-card"><div class="cc-card-head"><div><h3>Execution topology</h3><p>OpenCode connectivity does not imply Flash/Pro activity. DeepSeek activates only from explicit delegation/model evidence.</p></div><span id="routingRouterSummary" class="cc-pill is-offline">0/3 clients · 0 active routes</span></div><div class="cc-card-body">
+              <div id="routingRouterFabric" class="ops-router is-large" aria-label="Detailed live routing topology">
+                <svg class="ops-router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
+                  <line id="routingEdgeChatWeb" class="ops-router-edge is-offline" x1="50" y1="50" x2="150" y2="150"></line>
+                  <line id="routingEdgeDesktop" class="ops-router-edge is-offline" x1="150" y1="50" x2="150" y2="150"></line>
+                  <line id="routingEdgeOpenCode" class="ops-router-edge is-offline" x1="250" y1="50" x2="150" y2="150"></line>
+                  <line id="routingEdgeFast" class="ops-router-edge is-offline" x1="50" y1="150" x2="150" y2="150"></line>
+                  <line id="routingEdgeDeepSeek" class="ops-router-edge is-offline" x1="250" y1="150" x2="150" y2="150"></line>
+                  <line id="routingEdgeTerra" class="ops-router-edge is-offline" x1="50" y1="250" x2="150" y2="150"></line>
+                  <line id="routingEdgeWriter" class="ops-router-edge is-offline" x1="150" y1="250" x2="150" y2="150"></line>
+                  <line id="routingEdgeSol" class="ops-router-edge is-offline" x1="250" y1="250" x2="150" y2="150"></line>
+                </svg>
+                <div id="routingRouterChatWeb" class="ops-router-node is-offline"><b>ChatWeb</b><small>semantic control</small><span data-router-state>offline</span></div>
+                <div id="routingRouterDesktop" class="ops-router-node is-offline"><b>Codex Desktop</b><small>deep frontend</small><span data-router-state>offline</span></div>
+                <div id="routingRouterOpenCode" class="ops-router-node is-offline"><b>OpenCode</b><small>Go frontend</small><span data-router-state>offline</span></div>
+                <div id="routingRouterFast" class="ops-router-node is-offline"><b>Codex Fast</b><small>Mini / Luna</small><span data-router-state>idle</span></div>
+                <div id="routingRouterHub" class="ops-router-node is-hub is-offline"><b>Execution Hub</b><small>one runtime authority</small><span data-router-state>offline</span></div>
+                <div id="routingRouterDeepSeek" class="ops-router-node is-offline"><b>OpenCode Go</b><small>DeepSeek Flash / Pro</small><span data-router-state>idle</span></div>
+                <div id="routingRouterTerra" class="ops-router-node is-offline"><b>Codex Deep</b><small>Terra</small><span data-router-state>idle</span></div>
+                <div id="routingRouterWriter" class="ops-router-node is-offline"><b>MCP Writer</b><small>proof + fence</small><span data-router-state>idle</span></div>
+                <div id="routingRouterSol" class="ops-router-node is-offline"><b>Codex Critical</b><small>Sol</small><span data-router-state>idle</span></div>
+              </div>
+              <div class="ops-router-legend"><span><i></i>connected</span><span class="active"><i></i>active</span><span class="waiting"><i></i>waiting</span><span class="blocked"><i></i>blocked</span></div>
+            </div></article>
+            <div class="routing-side">
+              <article class="cc-card"><div class="cc-card-head"><div><h3>Frontends</h3><p>Client cursors expose reconnect lag.</p></div></div><div class="cc-card-body cc-client-grid"><div class="cc-client-card"><b>ChatWeb</b><span id="routingChatWebState" class="cc-pill is-offline">offline</span><small id="routingChatWebMeta">No client record</small></div><div class="cc-client-card"><b>Codex Desktop</b><span id="routingDesktopState" class="cc-pill is-offline">offline</span><small id="routingDesktopMeta">No client record</small></div><div class="cc-client-card"><b>OpenCode</b><span id="routingOpenCodeState" class="cc-pill is-offline">offline</span><small id="routingOpenCodeMeta">No client record</small></div></div></article>
+              <article class="cc-card"><div class="cc-card-head"><div><h3>Authority & continuity</h3><p>Single controller, singular writer.</p></div><span id="routingContinuity" class="cc-pill is-waiting">Hold</span></div><div class="cc-card-body cc-key-values"><div class="cc-key-value"><span>Controller</span><b id="routingAuthorityController">Unclaimed</b></div><div class="cc-key-value"><span>Writer</span><b id="routingAuthorityWriter">Coding Tools MCP · idle</b></div><div class="cc-key-value"><span>Continuity</span><b id="routingContinuityMeta">No assessment available</b></div></div></article>
+            </div>
+          </div>
+          <div class="cc-bottom-grid"><article class="cc-card"><div class="cc-card-head"><div><h3>Delegations</h3><p>Provider/model execution records for the current run.</p></div></div><div id="routingDelegations" class="cc-card-body cc-list"><div class="cc-empty">No delegation is active or retained for this run.</div></div></article><article class="cc-card"><div class="cc-card-head"><div><h3>Recent proof</h3><p>Deterministic acceptance evidence.</p></div></div><div id="routingProofs" class="cc-card-body cc-evidence-list"><div class="cc-empty">No proof records.</div></div></article></div>
+          <article class="cc-card" style="margin-top:14px"><div class="cc-card-head"><div><h3>Recent orchestration events</h3><p>State transitions, not raw transcript.</p></div></div><div id="routingEvents" class="cc-card-body cc-evidence-list"><div class="cc-empty">No recent orchestration events.</div></div></article>
+        </section>
+
+        <section class="page" data-page-view="system">
+          <div class="section-header"><div><span class="section-kicker">SYSTEM & DIAGNOSTICS</span><h2>System</h2><p>Advanced build, repair, logs, onboarding and configuration stay available here without competing with the everyday operator workflow.</p></div></div>
+          <div class="system-launch-grid">
+            <button class="system-launch" data-nav="health"><span class="system-launch-icon">HL</span><span><b>Health & Repair</b><small>Inspect environment readiness and run bounded safe repairs.</small></span><i>›</i></button>
+            <button class="system-launch" data-nav="build"><span class="system-launch-icon">BV</span><span><b>Build Verification</b><small>Run project tests/build and inspect verified artifacts.</small></span><i>›</i></button>
+            <button class="system-launch" data-nav="logs"><span class="system-launch-icon">LG</span><span><b>Operational Logs</b><small>Review redacted local runtime, MCP and Tunnel diagnostics.</small></span><i>›</i></button>
+            <button class="system-launch" data-nav="settings"><span class="system-launch-icon">ST</span><span><b>Settings</b><small>Theme, startup behavior, security maintenance and local preferences.</small></span><i>›</i></button>
+            <button class="system-launch" data-nav="guide"><span class="system-launch-icon">GD</span><span><b>Connection Guide</b><small>OpenAI Tunnel and ChatGPT connector onboarding steps.</small></span><i>›</i></button>
+          </div>
+          <div class="system-note"><b>Operational principle:</b> Command Center shows current truth; System contains setup and diagnostics. Advanced pages remain unchanged so existing workflows and IDs continue to work.</div>
         </section>
 
         <section class="page" data-page-view="deploy">
@@ -163,7 +271,7 @@
               <article class="guide-step" data-guide-step="tunnel"><div class="step-number">1</div><div class="step-content"><div class="step-heading"><h3>Tạo Tunnel trên OpenAI Platform</h3><label><input type="checkbox" data-guide-check="tunnel">Đã hoàn thành</label></div><p>Mở trang quản lý Tunnels, tạo Tunnel dành riêng cho Coding Tools MCP, sau đó sao chép mã định danh <code>tunnel_...</code>.</p><div class="mock-browser"><div class="mock-bar"><i></i><i></i><i></i><span>platform.openai.com / Tunnels</span></div><div class="mock-content"><span class="mock-label">Tunnel name</span><div class="mock-row"><b>Coding Tools MCP</b><em>Active</em></div><span class="mock-label">Tunnel ID</span><code>tunnel_••••••••••••</code></div></div><button class="secondary-button" data-open="openai-tunnels">Mở trang Tunnels</button></div></article>
               <article class="guide-step" data-guide-step="key"><div class="step-number">2</div><div class="step-content"><div class="step-heading"><h3>Tạo Runtime API Key</h3><label><input type="checkbox" data-guide-check="key">Đã hoàn thành</label></div><p>Tạo API Key riêng cho môi trường chạy. Không dùng khóa quản trị và không gửi khóa cho bất kỳ ai.</p><div class="notice"><b>Cách làm đúng</b><p>Dán vào trang "Triển khai nhanh" của trợ lý này, sau khi lưu sẽ được Windows mã hóa, nhật ký sẽ không có văn bản thuần.</p></div><button class="secondary-button" data-open="openai-runtime-keys">Mở trang Runtime Keys</button></div></article>
               <article class="guide-step" data-guide-step="deploy"><div class="step-number">3</div><div class="step-content"><div class="step-heading"><h3>Quay lại trợ lý để hoàn tất triển khai</h3><label><input type="checkbox" data-guide-check="deploy">Đã hoàn thành</label></div><p>Chọn thư mục làm việc, điền Tunnel ID và Runtime Key, nhấp "Lưu và bắt đầu triển khai". Chờ tất cả trạng thái chuyển sang xanh lá trước khi tiếp tục.</p><div class="mini-flow"><span>Thư mục làm việc</span><i>→</i><span>MCP</span><i>→</i><span>Tunnel</span><i>→</i><span class="green-text">Đã kết nối</span></div><button class="secondary-button" data-nav="deploy">Quay lại Triển khai nhanh</button></div></article>
-              <article class="guide-step" data-guide-step="connector"><div class="step-number">4</div><div class="step-content"><div class="step-heading"><h3>Tạo Trình kết nối Tùy chỉnh trong ChatGPT</h3><label><input type="checkbox" data-guide-check="connector">Đã hoàn thành</label></div><p>Vào "Cài đặt → Trình kết nối/Apps", bật chế độ nhà phát triển và tạo MCP tùy chỉnh. Chọn Tunnel vừa tạo và hoàn tất xác nhận tài khoản.</p><div class="connector-fields"><div><span>Tên</span><b>Coding Tools MCP</b><button data-copy="Coding Tools MCP">Sao chép</button></div><div><span>Dịch vụ cục bộ</span><b id="guideLocalUrl">http://127.0.0.1:18766/mcp</b><button id="copyLocalUrl">Sao chép</button></div><div><span>Tunnel ID</span><b id="guideTunnelId">Chưa điền</b><button id="copyTunnelId">Sao chép</button></div></div><button class="primary-button" data-open="chatgpt-connectors">Mở Cài đặt ChatGPT</button></div></article>
+              <article class="guide-step" data-guide-step="connector"><div class="step-number">4</div><div class="step-content"><div class="step-heading"><h3>Tạo Trình kết nối Tùy chỉnh trong ChatGPT</h3><label><input type="checkbox" data-guide-check="connector">Đã hoàn thành</label></div><p>Vào "Cài đặt → Trình kết nối/Apps", bật chế độ nhà phát triển và tạo MCP tùy chỉnh. Chọn Tunnel vừa tạo và hoàn tất xác nhận tài khoản.</p><div class="connector-fields"><div><span>Tên</span><b>Coding Tools MCP</b><button data-copy="Coding Tools MCP">Sao chép</button></div><div><span>Dịch vụ cục bộ</span><b id="guideLocalUrl">http://127.0.0.1:18766/mcp</b><button id="copyLocalUrl">Sao chép</button></div><div><span>Tunnel ID</span><b id="guideTunnelId">Chưa điền</b><button id="copyTunnelId">Sao chép</button></div></div><div class="notice warning" id="connectorContractNotice" hidden><b>Tool contract đã thay đổi</b><p id="connectorContractMessage">Hãy Refresh action hoặc cài lại Coding Tools MCP trong ChatGPT trước khi tiếp tục.</p><button class="secondary-button" id="ackConnectorContract">Tôi đã làm mới ChatGPT MCP</button></div><button class="primary-button" data-open="chatgpt-connectors">Mở Cài đặt ChatGPT</button></div></article>
               <article class="guide-step" data-guide-step="test"><div class="step-number">5</div><div class="step-content"><div class="step-heading"><h3>Thực hiện bài kiểm tra công cụ đầu tiên</h3><label><input type="checkbox" data-guide-check="test">Đã hoàn thành</label></div><p>Trong cuộc trò chuyện trên web, chọn MCP đó và gửi câu văn dưới đây. Lần đầu tiên ghi hoặc thực thi lệnh, hãy kiểm tra cẩn thận gợi ý ủy quyền.</p><div class="prompt-box"><span>Câu kiểm tra đề xuất</span><p>Hãy liệt kê các tệp ở tầng đầu tiên của thư mục làm việc hiện tại, và cho tôi biết đây là dự án gì. Không được sửa đổi bất kỳ tệp nào.</p><button data-copy="Hãy liệt kê các tệp ở tầng đầu tiên của thư mục làm việc hiện tại, và cho tôi biết đây là dự án gì. Không được sửa đổi bất kỳ tệp nào.">Sao chép câu kiểm tra</button></div></div></article>
             </div>
             <aside class="guide-aside panel"><span class="section-kicker">DANH SÁCH KIỂM TRA</span><h3>Tiến độ kết nối</h3><div class="guide-progress-number"><b id="guideProgressPercent">0%</b><span>Đã hoàn thành</span></div><div class="progress-track"><i id="guideProgressBar"></i></div><ul id="guideChecklist"><li>Tạo Tunnel</li><li>Chuẩn bị Runtime Key</li><li>Triển khai dịch vụ cục bộ</li><li>Tạo ChatGPT MCP</li><li>Hoàn tất kiểm tra chỉ đọc</li></ul><div class="notice warning"><b>Chú ý</b><p>Việc tạo trình kết nối trong ChatGPT thuộc thao tác tài khoản người dùng, trợ lý sẽ không giả lập nhấp chuột hoặc đọc thông tin đăng nhập web của bạn.</p></div></aside>
@@ -219,5 +327,6 @@
   <div class="toast-stack" id="toastStack"></div>
   <div class="busy-overlay" id="busyOverlay"><div class="loader"></div><b>Đang xử lý</b><span>Vui lòng không nhấp liên tục vào nút thao tác</span></div>
   <script src="app.js"></script>
+  <script src="control-center.js"></script>
 </body>
 </html>

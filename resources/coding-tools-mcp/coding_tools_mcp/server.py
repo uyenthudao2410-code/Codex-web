@@ -99,6 +99,13 @@ from .transport_stdio import serve_stdio
 SERVER_NAME = "coding-tools-mcp"
 SERVER_TITLE = "Coding Tools MCP"
 PROCESS_INSTANCE_ID = secrets.token_urlsafe(12)
+TOOL_CONTRACT_SCHEMA_VERSION = 1
+SMART_TOOL_PROFILE = "smart-v3"
+HUB_CLIENT_ONLINE_SECONDS = 45.0
+HUB_CONTROLLER_LEASE_SECONDS = 60.0
+HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
+SUPERVISOR_RESTART_RESPONSE_GRACE_MS = 2_000
 TOOL_MODE_ALLOWLISTS = {
     "smart": frozenset({
         "workspace_context", "agent_workflow", "task_control", "document_workflow",
@@ -201,6 +208,10 @@ COORDINATION_LANE_OUTPUT_SCHEMA = {
     ],
 }
 AGENT_CANDIDATE_PACKET_MAX_CHARS = 14_000
+AGENT_CANDIDATE_SNIPPET_BUDGET_CHARS = 6_000
+AGENT_CANDIDATE_SNIPPET_MAX_CHARS = 1_500
+AGENT_CANDIDATE_SNIPPET_MAX_COUNT = 4
+AGENT_CANDIDATE_SNIPPET_RADIUS_LINES = 12
 
 AGENT_CANDIDATE_OUTPUT_SCHEMA = {
 
@@ -861,7 +872,7 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
     ),
     "task_control": ToolSpec(
         title="Control persistent task",
-        description="Start, inspect, update, pause, stop, resume, clear, or list history for the current workspace task.",
+        description="Control persistent task/orchestration state, coordination lanes and handoffs, or enqueue an explicitly confirmed runtime restart for the owning Electron supervisor.",
         idempotent=True,
     ),
     "read_files": ToolSpec(
@@ -1694,6 +1705,18 @@ class Runtime:
                 for name in self._exposed_tool_names
             ]
         }
+        contract_bytes = json.dumps(
+            self._tools_list_payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        self.tool_contract = {
+            "schema_version": TOOL_CONTRACT_SCHEMA_VERSION,
+            "profile": SMART_TOOL_PROFILE if self.tool_mode == "smart" else self.tool_mode,
+            "sha256": hashlib.sha256(contract_bytes).hexdigest(),
+            "tool_count": len(self._exposed_tool_names),
+        }
         self.shell_env_policy = shell_env_policy or ShellEnvPolicy()
         if self.shell_env_policy.inherit not in SHELL_ENV_INHERIT_CHOICES:
             raise ToolFailure(
@@ -1713,6 +1736,7 @@ class Runtime:
         self.sessions: dict[str, ExecSession] = {}
         self.output_sessions: dict[str, ExecSession] = {}
         self.sessions_lock = threading.Lock()
+        self.supervisor_request_lock = threading.Lock()
         self.session_principals: dict[str, str] = {}
         self.principal_active_counts: dict[str, int] = {}
         self.legacy_session_alias_uses = 0
@@ -1977,6 +2001,79 @@ class Runtime:
     def list_tools(self) -> dict[str, Any]:
         return self._tools_list_payload
 
+    def _current_hub_client(self) -> dict[str, Any] | None:
+        value = getattr(self.request_context, "hub_client", None)
+        return value if isinstance(value, dict) and value.get("client_id") else None
+
+    def _projected_hub_run_id(self) -> str:
+        state = self.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "").strip()
+        return run_id if run_id and self.orchestration_ledger.get_run(run_id) else ""
+
+    def _touch_hub_client(self, identity: dict[str, Any]) -> dict[str, Any]:
+        client_id = str(identity.get("client_id") or "").strip()
+        client_type = str(identity.get("client_type") or "client").strip()
+        role = str(identity.get("role") or "client").strip()
+        if not HUB_CLIENT_ID_RE.fullmatch(client_id):
+            raise ValueError("invalid Execution Hub client id")
+        client = self.orchestration_ledger.upsert_hub_client(
+            client_id=client_id,
+            client_type=client_type,
+            role=role,
+            status="online",
+            session_instance=str(identity.get("session_instance") or ""),
+            runtime_instance_id=self.process_instance_id,
+            contract_sha=str(self.tool_contract.get("sha256") or ""),
+            capabilities=identity.get("capabilities") if isinstance(identity.get("capabilities"), dict) else {},
+        )
+        run_id = self._projected_hub_run_id()
+        controller = self.orchestration_ledger.get_controller_lease(run_id) if run_id else None
+        run = self.orchestration_ledger.get_run(run_id) if run_id else None
+        if run and run.get("status") == "active":
+            if controller and controller.get("status") == "active" and controller.get("owner_client_id") == client_id:
+                renewed = self.orchestration_ledger.acquire_controller_lease(
+                    run_id=run_id,
+                    owner_client_id=client_id,
+                    lease_id=str(controller.get("lease_id") or f"client:{client_id}"),
+                    ttl_seconds=HUB_CONTROLLER_LEASE_SECONDS,
+                )
+                controller = renewed if renewed.get("acquired") else controller
+            elif (not controller or controller.get("status") != "active") and client_type == "chatweb":
+                claimed = self.orchestration_ledger.acquire_controller_lease(
+                    run_id=run_id,
+                    owner_client_id=client_id,
+                    lease_id=f"client:{client_id}",
+                    ttl_seconds=HUB_CONTROLLER_LEASE_SECONDS,
+                )
+                controller = claimed if claimed.get("acquired") else self.orchestration_ledger.get_controller_lease(run_id)
+        return {"client": client, "controller": controller, "run_id": run_id}
+
+    def _require_hub_controller(self, run_id: str) -> dict[str, Any] | None:
+        identity = self._current_hub_client()
+        if identity is None:
+            return None
+        self._touch_hub_client(identity)
+        controller = self.orchestration_ledger.get_controller_lease(run_id)
+        client_id = str(identity.get("client_id") or "")
+        if not controller or controller.get("status") != "active" or controller.get("owner_client_id") != client_id:
+            raise ToolFailure(
+                "CONTROLLER_LEASE_REQUIRED",
+                "This client is not the active semantic controller for the orchestration run.",
+                category="security",
+                retryable=True,
+                details={
+                    "run_id": run_id,
+                    "client_id": client_id,
+                    "controller": {
+                        "owner_client_id": (controller or {}).get("owner_client_id"),
+                        "status": (controller or {}).get("status", "missing"),
+                        "fencing_token": (controller or {}).get("fencing_token"),
+                    },
+                },
+            )
+        return controller
+
     def exposed_tool_names(self) -> list[str]:
         return list(self._exposed_tool_names)
 
@@ -2048,6 +2145,7 @@ class Runtime:
             },
             "tools": tools,
             "tool_count": len(tools),
+            "tool_contract": dict(self.tool_contract),
         }
 
     def _background_operation_snapshot(self, operation: dict[str, Any], *, include_result: bool = False) -> dict[str, Any]:
@@ -2900,6 +2998,98 @@ class Runtime:
 
         remaining = AGENT_CANDIDATE_PACKET_MAX_CHARS
 
+        snippets: list[dict[str, Any]] = []
+
+        snippet_remaining = min(AGENT_CANDIDATE_SNIPPET_BUDGET_CHARS, remaining)
+
+        seen_snippets: set[tuple[str, int]] = set()
+
+        for result in list(prepared.get("searches") or [])[:6]:
+
+            if len(snippets) >= AGENT_CANDIDATE_SNIPPET_MAX_COUNT:
+
+                break
+
+            if not isinstance(result, dict):
+
+                continue
+
+            query = str(result.get("query") or "")
+
+            for match in list(result.get("matches") or [])[:3]:
+
+                if not isinstance(match, dict) or snippet_remaining <= 0:
+
+                    continue
+
+                try:
+
+                    path = self._normalize_candidate_path(match.get("path"))
+
+                    line = int(match.get("line") or 0)
+
+                except (ToolFailure, TypeError, ValueError):
+
+                    continue
+
+                if path not in allowed_paths or line < 1 or (path, line) in seen_snippets:
+
+                    continue
+
+                seen_snippets.add((path, line))
+
+                start_line = max(1, line - AGENT_CANDIDATE_SNIPPET_RADIUS_LINES)
+
+                max_lines = AGENT_CANDIDATE_SNIPPET_RADIUS_LINES * 2 + 1
+
+                max_chars = min(AGENT_CANDIDATE_SNIPPET_MAX_CHARS, snippet_remaining)
+
+                try:
+
+                    local = self.read_file({
+
+                        "path": path,
+
+                        "start_line": start_line,
+
+                        "max_lines": max_lines,
+
+                        "max_bytes": max_chars,
+
+                    })
+
+                except (ToolFailure, OSError, UnicodeError):
+
+                    continue
+
+                content = str(local.get("content") or "")[:max_chars]
+
+                if not content:
+
+                    continue
+
+                snippets.append({
+
+                    "query": query,
+
+                    "path": path,
+
+                    "match_line": line,
+
+                    "start_line": int(local.get("start_line") or start_line),
+
+                    "end_line": int(local.get("end_line") or line),
+
+                    "content": content,
+
+                })
+
+                consumed = len(content)
+
+                snippet_remaining -= consumed
+
+                remaining -= consumed
+
         for item in list(prepared.get("files") or []):
 
             if not isinstance(item, dict):
@@ -2971,6 +3161,8 @@ class Runtime:
             "proof": proof,
 
             "searches": searches,
+
+            "snippets": snippets,
 
             "files": files,
 
@@ -3585,6 +3777,7 @@ class Runtime:
                 "server_instance_id": self.server_instance_id,
                 "process_instance_id": self.process_instance_id,
                 "performance_trace_version": self.performance_trace.schema_version,
+                "tool_contract": dict(self.tool_contract),
                 "stale_orchestration_runs": len(self.stale_orchestration_runs),
                 "orphaned_background_operations": int(self.orphaned_background_operations),
                 "orphaned_idempotency_records": int(self.orphaned_idempotency_records),
@@ -5243,8 +5436,157 @@ class Runtime:
             }
         return {"status": "continued", **self._record_coordination_lane_outcome(lane, bridge_result)}
 
+    def _supervisor_restart_request_path(self) -> Path:
+        raw = os.environ.get(f"{ENV_PREFIX}_SUPERVISOR_REQUEST_FILE", "").strip()
+        if not raw:
+            raise ToolFailure(
+                "SUPERVISOR_UNAVAILABLE",
+                "This MCP runtime is not attached to an Electron supervisor restart channel.",
+                category="runtime",
+                retryable=False,
+            )
+        request_path = Path(raw).expanduser().resolve(strict=False)
+        if is_relative_to(request_path, self.workspace.root):
+            raise ToolFailure(
+                "UNSAFE_SUPERVISOR_CHANNEL",
+                "Supervisor restart requests must be stored outside the project workspace.",
+                category="permission",
+                retryable=False,
+            )
+        if not request_path.parent.is_dir():
+            raise ToolFailure(
+                "SUPERVISOR_UNAVAILABLE",
+                "The Electron supervisor request directory is unavailable.",
+                category="runtime",
+                retryable=True,
+            )
+        return request_path
+
+    def _enqueue_runtime_restart(self, args: dict[str, Any]) -> dict[str, Any]:
+        if args.get("confirm_restart") is not True:
+            raise ToolFailure(
+                "RESTART_CONFIRMATION_REQUIRED",
+                "Set confirm_restart=true only after the user explicitly requests a runtime restart.",
+                category="permission",
+                retryable=False,
+            )
+        with self.sessions_lock:
+            active_commands = sum(1 for session in self.sessions.values() if session.process.poll() is None)
+            starting_commands = int(self.starting_sessions)
+        with self.background_operations_lock:
+            active_background = sum(
+                1
+                for item in self.background_operations.values()
+                if item.get("workspace") == str(self.workspace.root) and not item["event"].is_set()
+            )
+        if active_commands or starting_commands or active_background:
+            raise ToolFailure(
+                "RUNTIME_BUSY",
+                "Refusing to restart while commands or background workflows are still active.",
+                category="runtime",
+                retryable=True,
+                details={
+                    "active_commands": active_commands,
+                    "starting_commands": starting_commands,
+                    "active_background_operations": active_background,
+                },
+            )
+
+        request_path = self._supervisor_restart_request_path()
+        with self.supervisor_request_lock:
+            now_ms = int(time.time() * 1000)
+            if request_path.is_file():
+                try:
+                    existing = json.loads(request_path.read_text(encoding="utf-8"))
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                    existing = {}
+                if (
+                    isinstance(existing, dict)
+                    and existing.get("action") == "restart"
+                    and str(existing.get("workspace") or "").casefold() == str(self.workspace.root).casefold()
+                    and int(existing.get("expires_at_unix_ms") or 0) > now_ms
+                    and str(existing.get("ticket_id") or "").strip()
+                ):
+                    return {
+                        "accepted": True,
+                        "already_pending": True,
+                        "restart_ticket": str(existing["ticket_id"]),
+                        "expected_disconnect": True,
+                        "supervisor": "electron",
+                        "not_before_unix_ms": int(existing.get("not_before_unix_ms") or 0),
+                        "expires_at_unix_ms": int(existing.get("expires_at_unix_ms") or 0),
+                        "recommended_next_action": "Allow the Electron supervisor to consume the pending ticket, then reconnect and verify runtime instance ids changed.",
+                    }
+
+            ticket_id = secrets.token_urlsafe(12)
+            ticket = {
+                "version": 1,
+                "action": "restart",
+                "ticket_id": ticket_id,
+                "requested_at": datetime.now(timezone.utc).isoformat(),
+                "requested_at_unix_ms": now_ms,
+                "not_before_unix_ms": now_ms + SUPERVISOR_RESTART_RESPONSE_GRACE_MS,
+                "expires_at_unix_ms": now_ms + SUPERVISOR_RESTART_TICKET_TTL_MS,
+                "workspace": str(self.workspace.root),
+                "process_instance_id": self.process_instance_id,
+                "server_instance_id": self.server_instance_id,
+                "tool_contract_sha256": self.tool_contract["sha256"],
+                "reason": str(args.get("reason") or "User requested runtime restart")[:500],
+            }
+            temporary = request_path.with_name(f".{request_path.name}.{ticket_id}.tmp")
+            try:
+                temporary.write_text(json.dumps(ticket, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+                os.replace(temporary, request_path)
+            except OSError as exc:
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise ToolFailure(
+                    "SUPERVISOR_REQUEST_FAILED",
+                    "Could not enqueue the Electron supervisor restart request.",
+                    category="runtime",
+                    retryable=True,
+                    details={"error": str(exc)},
+                ) from exc
+            return {
+                "accepted": True,
+                "already_pending": False,
+                "restart_ticket": ticket_id,
+                "expected_disconnect": True,
+                "supervisor": "electron",
+                "not_before_unix_ms": ticket["not_before_unix_ms"],
+                "expires_at_unix_ms": ticket["expires_at_unix_ms"],
+                "recommended_next_action": "The Electron supervisor will restart after this tool response has time to flush. Reconnect, then verify process_instance_id and server_instance_id changed.",
+            }
+
+    def _abort_task_orchestration(self, state: dict[str, Any], *, reason: str) -> dict[str, Any] | None:
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "").strip()
+        if not run_id:
+            return None
+        ctx = self.orchestration_control.snapshot(run_id)
+        if ctx is None:
+            return None
+        if ctx.state in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
+            return ctx.projection()
+        try:
+            self.orchestration_control.transition(ctx, "ABORTED", reason=reason)
+        except OrchestrationControlError as exc:
+            raise ToolFailure(
+                "ORCHESTRATION_ABORT_FAILED",
+                str(exc),
+                category="runtime",
+                retryable=False,
+                details={"run_id": run_id, "state": ctx.state, "reason": reason, **getattr(exc, "details", {})},
+            ) from exc
+        self._project_orchestration(ctx, event="task_orchestration_aborted")
+        return ctx.projection()
+
     def task_control(self, args: dict[str, Any]) -> dict[str, Any]:
         action = str(args.get("action", "get")).lower()
+        if action == "restart_runtime":
+            return self._enqueue_runtime_restart(args)
         if action == "get":
             with self.background_operations_lock:
                 memory_operations = {
@@ -5287,6 +5629,14 @@ class Runtime:
                 if replay.get("has_more")
                 else "Event replay is current; continue from task state, pending messages, and the latest handoff capsule."
             )
+            identity = self._current_hub_client()
+            observed = replay.get("events") or []
+            if identity and observed:
+                replay["client_cursor"] = self.orchestration_ledger.advance_hub_client_cursor(
+                    client_id=str(identity["client_id"]),
+                    run_id=run_id,
+                    last_event_seq=int(observed[-1].get("seq") or 0),
+                )
             return replay
         if action == "messages":
             _state, _projection, run_id, _wave_id = self._coordination_ids(args)
@@ -5391,6 +5741,7 @@ class Runtime:
                     "reports": reports,
                 }
             if action == "accept":
+                controller = self._require_hub_controller(run_id)
                 if ctx.state != "ACCEPTING":
                     raise ToolFailure(
                         "FINAL_ACCEPTANCE_NOT_READY",
@@ -5404,14 +5755,15 @@ class Runtime:
                     "|".join(f"{item['proof_id']}:{item['input_fingerprint']}" for item in proofs).encode("utf-8")
                 ).hexdigest() if proofs else ""
                 identity = self._orchestration_workspace_identity(".")
-                self.orchestration_control.checkpoint(ctx, reason="chatweb_sol_acceptance")
+                accepted_by = str((self._current_hub_client() or {}).get("client_id") or "ChatWeb Sol")
+                self.orchestration_control.checkpoint(ctx, reason="controller_acceptance" if controller else "chatweb_sol_acceptance")
                 self.orchestration_ledger.record_checkpoint(
                     run_id=run_id,
                     wave_id=ctx.wave_id,
                     git_head=str(identity.get("base_head") or ""),
                     proof_fingerprint=proof_fp,
                     status="accepted",
-                    metadata={"accepted_by": "ChatWeb Sol", "worktree_fp": identity.get("worktree_fp")},
+                    metadata={"accepted_by": accepted_by, "worktree_fp": identity.get("worktree_fp")},
                 )
                 self._project_orchestration(ctx, event="final_acceptance_recorded")
                 accepted_state = self.task_state.update({
@@ -5437,6 +5789,7 @@ class Runtime:
                     retryable=True,
                     details={"run_id": run_id, "wave_id": ctx.wave_id, "state": ctx.state},
                 )
+            self._require_hub_controller(run_id)
             self.orchestration_control.record_failure(ctx, "SOL_REJECTED", payload={"reason": reason})
             self._project_orchestration(ctx, event="final_acceptance_rejected")
             rejected_state = self.task_state.update({
@@ -5490,11 +5843,13 @@ class Runtime:
         if action == "history":
             return {"tasks": self.task_state.history(int(args.get("limit", 20)))}
         if action == "clear":
+            self._abort_task_orchestration(self.task_state.get(), reason="task_cleared")
             return {"state": self.task_state.clear(), "cleared": True}
         if action == "start":
             objective = str(args.get("objective", "")).strip()
             if not objective:
                 raise ToolFailure("INVALID_ARGUMENT", "objective is required when action=start.", category="validation")
+            self._abort_task_orchestration(self.task_state.get(), reason="task_replaced")
             changes = {
                 "objective": objective,
                 "steps": args.get("steps", []),
@@ -5520,7 +5875,16 @@ class Runtime:
         if action == "resume":
             return {"state": self.task_state.resume(str(args.get("next_step", "")))}
         if action == "stop":
-            state = self.task_state.update({"status": "stopped", "failure": str(args.get("reason", "Stopped by user")), "next_step": str(args.get("next_step", "Resume or start a new task."))}, event="task_stopped")
+            previous = self.task_state.get()
+            aborted_projection = self._abort_task_orchestration(previous, reason="task_stopped")
+            changes = {
+                "status": "stopped",
+                "failure": str(args.get("reason", "Stopped by user")),
+                "next_step": str(args.get("next_step", "Resume or start a new task.")),
+            }
+            if aborted_projection is not None:
+                changes["orchestration"] = aborted_projection
+            state = self.task_state.update(changes, event="task_stopped")
             current = state.get("current_command") if isinstance(state, dict) else None
             if isinstance(current, dict) and current.get("session_id"):
                 try:
@@ -5858,7 +6222,7 @@ class Runtime:
             action = str(args.get("action", "get")).strip().lower()
             if action == "handoff":
                 return str(args.get("handoff_action", "get")).strip().lower() == "record"
-            return action in {"start", "update", "pause", "stop", "resume", "clear", "accept", "reject"}
+            return action in {"start", "update", "pause", "stop", "resume", "clear", "accept", "reject", "restart_runtime"}
         if name == "command_control":
             return str(args.get("action", "poll")).strip().lower() in {"write", "kill"}
         if name == "write_stdin":
@@ -7707,15 +8071,24 @@ class Runtime:
                 "warnings": [
                     "dangerously-skip-all-permissions is enabled; permission-gated operations are auto-granted"
                 ],
+                "elicitation": {"supported": False, "required": False},
             }
         return {
-            "ok": False,
+            "ok": True,
             "status": "unsupported",
             "grant_id": None,
             "expires_at": None,
+            "elicitation": {"supported": False, "required": False},
+            "fallback": {
+                "mode": "server_policy",
+                "permission_mode": self.permission_mode,
+                "granted": False,
+                "fail_closed": True,
+                "recommended_next_action": "Use an operation already allowed by the current server policy, or change the permission mode in the Electron app. Do not retry permission elicitation unchanged on this client.",
+            },
             "error": {
                 "code": "ELICITATION_UNSUPPORTED",
-                "message": "Permission elicitation is not available for this client.",
+                "message": "Permission elicitation is not available for this client; no permission was granted.",
                 "category": "permission",
                 "retryable": False,
                 "details": {"requested": args},
@@ -8983,7 +9356,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "dry_run": {**boolean, "default": False},
         }),
         "task_control": object_schema({
-            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "events", "messages", "ack", "handoff"], "default": "get"},
+            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "events", "messages", "ack", "handoff", "restart_runtime"], "default": "get"},
             "run_id": {**string, "description": "Optional orchestration run id; defaults to the current task projection."},
             "wave_id": {**string, "description": "Optional orchestration wave id; defaults to the current task projection."},
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
@@ -9011,6 +9384,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "handoff_action": {**string, "enum": ["get", "record"], "default": "get"},
             "conversation_epoch": {**integer, "minimum": 1, "default": 1},
             "payload": {"type": "object", "additionalProperties": True, "description": "Bounded handoff capsule payload. Raw transcript, source files and command output must not be included."},
+            "confirm_restart": {**boolean, "default": False, "description": "Required true for action=restart_runtime. Set only after an explicit user request; the MCP only enqueues a delayed one-shot ticket for the owning Electron supervisor."},
             "objective": string,
             "status": {**string, "enum": ["idle", "active", "waiting", "paused", "stopped", "completed", "failed"]},
             "steps": {"type": "array", "items": {"type": "object", "additionalProperties": True}},
@@ -9356,6 +9730,9 @@ def server_card_payload(runtime: Runtime, *, oauth_base_url: str | None = None) 
             "readOnlyHintTrue": read_only,
             "readOnlyHintFalse": mutating,
             "annotationOverride": ("fake_readonly" if runtime.fake_readonly_annotations else None),
+            "contractVersion": runtime.tool_contract["schema_version"],
+            "contractProfile": runtime.tool_contract["profile"],
+            "contractSha256": runtime.tool_contract["sha256"],
         },
         "capabilities": {
             "tools": {"listChanged": False},
@@ -9486,8 +9863,9 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "default_cwd": runtime.default_cwd_display(),
                 "authorized_roots": [str(item) for item in runtime.workspace.authorized_roots if item != runtime.workspace.root],
                 "tool_mode": runtime.tool_mode,
-                "tool_profile": "smart-v2" if runtime.tool_mode == "smart" else runtime.tool_mode,
+                "tool_profile": runtime.tool_contract["profile"],
                 "tool_count": len(runtime.exposed_tool_names()),
+                "tool_contract": dict(runtime.tool_contract),
                 "workspace_generation": runtime.workspace_generation,
                 "active_commands": active_commands,
                 "retained_outputs": retained_outputs,
@@ -9568,7 +9946,109 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         command = state.get("current_command")
         if isinstance(command, dict):
             command = {key: command.get(key) for key in ("kind", "command", "status", "started_at")}
+        clients = ledger.list_hub_clients(online_within_seconds=HUB_CLIENT_ONLINE_SECONDS)
+        cursors = ledger.list_hub_client_cursors(run_id=run_id) if run_id else []
+        cursor_by_client = {str(item.get("client_id") or ""): item for item in cursors}
+        client_view = []
+        for client in clients[:16]:
+            client_id = str(client.get("client_id") or "")
+            client_view.append({
+                "client_id": client_id,
+                "client_type": client.get("client_type"),
+                "role": client.get("role"),
+                "status": client.get("status"),
+                "online": bool(client.get("online")),
+                "last_seen_at": client.get("last_seen_at"),
+                "runtime_instance_id": client.get("runtime_instance_id"),
+                "contract_sha": client.get("contract_sha"),
+                "cursor": cursor_by_client.get(client_id),
+            })
+        controller = ledger.get_controller_lease(run_id) if run_id else None
+        controller_view = {
+            "owner_client_id": (controller or {}).get("owner_client_id", ""),
+            "status": (controller or {}).get("status", "unclaimed"),
+            "fencing_token": (controller or {}).get("fencing_token", 0),
+            "expires_at": (controller or {}).get("expires_at", 0),
+            "updated_at": (controller or {}).get("updated_at", ""),
+        }
+        ctx = runtime.orchestration_control.snapshot(run_id) if run_id else None
+        write_lease = ctx.write_lease if ctx else None
+        write_view = {
+            "owner": write_lease.owner if write_lease else "",
+            "status": "active" if write_lease else "released",
+            "fencing_token": write_lease.fencing_token if write_lease else 0,
+            "expires_at": write_lease.expires_at if write_lease else 0,
+        }
+        capsule = summary.get("latest_handoff_capsule")
+        run = summary.get("run") or {}
+        run_active = bool(run_id and run.get("status") == "active")
+        desktop_online = any(client.get("client_type") == "codex_desktop" and client.get("online") for client in client_view)
+        reason_codes: list[str] = []
+        capsule_status = "missing"
+        if capsule:
+            capsule_status = "current"
+            capsule_created_at = str(capsule.get("created_at") or "")
+            control_only_events = {"controller_transferred", "write_lease_renewed"}
+            if any(
+                str(event.get("event_time") or "") > capsule_created_at
+                and str(event.get("event_type") or "") not in control_only_events
+                for event in events
+            ):
+                capsule_status = "stale"
+        if run_active:
+            if not (summary.get("integrity") or {}).get("ok", False):
+                reason_codes.append("LEDGER_INTEGRITY_FAILED")
+            if state.get("status") in {"paused", "stopped", "failed"}:
+                reason_codes.append("TASK_NOT_RUNNABLE")
+            if not desktop_online:
+                reason_codes.append("DESKTOP_OFFLINE")
+            if capsule_status == "missing":
+                reason_codes.append("CAPSULE_MISSING")
+            elif capsule_status == "stale":
+                reason_codes.append("CAPSULE_STALE")
+            if controller_view["status"] != "active" or controller_view["owner_client_id"] != "codex-desktop":
+                reason_codes.append("CONTROLLER_HANDOFF_REQUIRED")
+        safe_to_rotate = not run_active or not reason_codes
+        if not run_active:
+            reason_codes = ["NO_ACTIVE_EXECUTION"]
+        elif safe_to_rotate:
+            reason_codes = ["READY"]
+        latest_event_seq = int(events[-1].get("seq") or 0) if events else 0
+        pending_messages = ledger.list_coordination_messages(run_id=run_id, status="pending", limit=100) if run_id else []
+        modified_paths = []
+        for item in list(state.get("modified_files") or [])[:12]:
+            path = item.get("path") if isinstance(item, dict) else item
+            if str(path or "").strip():
+                modified_paths.append(str(path))
+        resume_packet = {
+            "version": 1,
+            "run_id": run_id,
+            "wave_id": str(projection.get("wave_id") or ""),
+            "objective": str(state.get("objective") or "")[:600],
+            "task_status": state.get("status"),
+            "orchestration_state": projection.get("orchestration_state"),
+            "current_step": str(state.get("current_step") or "")[:300],
+            "next_step": str(state.get("next_step") or "")[:500],
+            "latest_event_seq": latest_event_seq,
+            "modified_paths": modified_paths,
+            "proofs": [{
+                "proof_id": item.get("proof_id"),
+                "stage_id": item.get("stage_id"),
+                "status": item.get("status"),
+                "finished_at": item.get("finished_at"),
+            } for item in (summary.get("proofs") or [])[-6:]],
+            "capsule": ({
+                "capsule_id": capsule.get("capsule_id"),
+                "sha256": capsule.get("sha256"),
+                "bytes": capsule.get("bytes"),
+                "conversation_epoch": capsule.get("conversation_epoch"),
+                "created_at": capsule.get("created_at"),
+            } if capsule else None),
+            "controller": controller_view,
+            "pending_message_count": len(pending_messages),
+        }
         return {
+            "schema_version": 2,
             "task": {
                 "task_id": state.get("task_id"),
                 "objective": str(state.get("objective") or "")[:400],
@@ -9594,7 +10074,102 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "checkpoints": len(summary.get("checkpoints") or []),
             },
             "integrity": summary.get("integrity"),
+            "runtime": {
+                "process_instance_id": runtime.process_instance_id,
+                "server_instance_id": runtime.server_instance_id,
+                "tool_contract": runtime.tool_contract,
+            },
+            "clients": client_view,
+            "authority": {"controller": controller_view, "write": write_view},
+            "cursors": cursors,
+            "continuity": {
+                "safe_to_rotate_chatweb": safe_to_rotate,
+                "reason_codes": reason_codes,
+                "capsule_status": capsule_status,
+                "desktop_online": desktop_online,
+                "context_pressure": {"status": "unknown", "source": "host_not_exposed"},
+            },
+            "resume_packet": resume_packet,
         }
+
+    def _read_control_json(self) -> dict[str, Any] | None:
+        if self.headers.get_content_type().lower() != "application/json":
+            self.send_json({"error": "Content-Type must be application/json"}, status=415)
+            return None
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self.send_json({"error": "Invalid Content-Length"}, status=400)
+            return None
+        if length <= 0 or length > 65536:
+            self.send_json({"error": "Invalid request size"}, status=413)
+            return None
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, status=400)
+            return None
+        if not isinstance(payload, dict):
+            self.send_json({"error": "JSON body must be an object"}, status=400)
+            return None
+        return payload
+
+    def handle_control_hub(self) -> None:
+        if not self.is_authorized():
+            self.send_unauthorized()
+            return
+        payload = self._read_control_json()
+        if payload is None:
+            return
+        action = str(payload.get("action") or "heartbeat").strip().lower()
+        try:
+            if action == "heartbeat":
+                identity = self._hub_identity_from_values(
+                    client_id=str(payload.get("client_id") or ""),
+                    client_type=str(payload.get("client_type") or "client"),
+                    client_name=str(payload.get("client_name") or ""),
+                    client_version=str(payload.get("client_version") or ""),
+                )
+                result = self.runtime._touch_hub_client(identity)
+                self.send_json({"ok": True, "action": action, **result})
+                return
+            if action == "transfer_controller":
+                target = str(payload.get("target_client_id") or "").strip()
+                if not HUB_CLIENT_ID_RE.fullmatch(target):
+                    raise ValueError("valid target_client_id is required")
+                run_id = str(payload.get("run_id") or self.runtime._projected_hub_run_id() or "").strip()
+                if not run_id:
+                    raise ValueError("run_id is required when no task orchestration is active")
+                before = self.runtime.orchestration_ledger.get_controller_lease(run_id)
+                result = self.runtime.orchestration_ledger.operator_transfer_controller(
+                    run_id=run_id,
+                    target_client_id=target,
+                    lease_id=f"client:{target}",
+                    ttl_seconds=HUB_CONTROLLER_LEASE_SECONDS,
+                    online_within_seconds=HUB_CLIENT_ONLINE_SECONDS,
+                )
+                if result.get("transferred"):
+                    ctx = self.runtime.orchestration_control.snapshot(run_id)
+                    state_name = ctx.state if ctx else ""
+                    self.runtime.orchestration_ledger.append_event(
+                        run_id,
+                        wave_id=ctx.wave_id if ctx else None,
+                        event_type="controller_transferred",
+                        state_before=state_name,
+                        state_after=state_name,
+                        payload={
+                            "from_client_id": (before or {}).get("owner_client_id", ""),
+                            "to_client_id": target,
+                            "fencing_token": result.get("fencing_token"),
+                        },
+                    )
+                self.send_json({"ok": bool(result.get("transferred")), "action": action, **result}, status=200 if result.get("transferred") else 409)
+                return
+            raise ValueError(f"unsupported hub action: {action}")
+        except ValueError as exc:
+            self.send_json({"error": str(exc), "code": "INVALID_HUB_REQUEST"}, status=400)
+        except ToolFailure as exc:
+            self.send_json({"error": exc.message, "code": exc.code, "details": exc.details}, status=409)
 
     def handle_control_workspace(self) -> None:
         if not self.is_authorized():
@@ -9662,6 +10237,9 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             return
         if normalized == "/__control/roots":
             self.handle_control_roots()
+            return
+        if normalized == "/__control/hub":
+            self.handle_control_hub()
             return
         if normalized == "/oauth/authorize":
             self.handle_oauth_authorize_post()
@@ -9830,6 +10408,14 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             else:
                 self._runtime = runtime
                 self._send_session_header = True
+                if not runtime.initialized:
+                    # Authenticated proxy/tunnel clients can retain a session alias
+                    # across a Runtime recreation. The alias is intentionally mapped
+                    # to the new shared Runtime by HTTPSessionManager; initialize that
+                    # fresh Runtime with the caller's protocol before dispatch so the
+                    # reconnect does not fail as "Server not initialized".
+                    runtime.initialized = True
+                    runtime.protocol_version = protocol_version or PROTOCOL_VERSION
             if protocol_version and protocol_version != runtime.protocol_version:
                 self.send_rpc_error(
                     -32600,
@@ -9875,10 +10461,63 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         *,
         stateless_2026: bool = False,
     ) -> dict[str, Any] | None:
+        runtime = self.runtime
         try:
-            return dispatch_rpc(self.runtime, request, stateless_2026=stateless_2026)
+            identity = self._hub_identity_from_request(request)
+            runtime.request_context.hub_client = identity
+            runtime._touch_hub_client(identity)
+            return dispatch_rpc(runtime, request, stateless_2026=stateless_2026)
+        except ValueError as exc:
+            return jsonrpc_error(response_id(request), -32602, str(exc))
         except Exception as exc:  # noqa: BLE001 - HTTP must always answer with JSON-RPC
             return jsonrpc_error(response_id(request), -32603, str(exc))
+        finally:
+            if hasattr(runtime.request_context, "hub_client"):
+                delattr(runtime.request_context, "hub_client")
+
+    def _hub_identity_from_values(
+        self,
+        *,
+        client_id: str,
+        client_type: str,
+        client_name: str = "",
+        client_version: str = "",
+        session_instance: str = "",
+    ) -> dict[str, Any]:
+        client_id = client_id.strip()
+        client_type = client_type.strip().lower().replace("-", "_") or "client"
+        if not HUB_CLIENT_ID_RE.fullmatch(client_id):
+            raise ValueError("Execution Hub client id must match [A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
+        if not re.fullmatch(r"[a-z][a-z0-9_]{0,31}", client_type):
+            raise ValueError("invalid Execution Hub client type")
+        role = "controller" if client_type == "chatweb" else "worker" if client_type in {"codex_desktop", "opencode"} else "supervisor" if client_type == "electron" else "client"
+        return {
+            "client_id": client_id,
+            "client_type": client_type,
+            "role": role,
+            "session_instance": session_instance,
+            "capabilities": {"client_name": client_name[:100], "client_version": client_version[:50]},
+        }
+
+    def _hub_identity_from_request(self, request: dict[str, Any]) -> dict[str, Any]:
+        raw_client_id = str(self.headers.get("X-Coding-Tools-Client-Id") or "").strip()
+        raw_client_type = str(self.headers.get("X-Coding-Tools-Client-Type") or "").strip()
+        client_id = raw_client_id or "chatweb"
+        client_type = raw_client_type or ("chatweb" if not raw_client_id else "client")
+        params = request.get("params") if isinstance(request.get("params"), dict) else {}
+        meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
+        client_info = meta.get("io.modelcontextprotocol/clientInfo") if isinstance(meta.get("io.modelcontextprotocol/clientInfo"), dict) else {}
+        if request.get("method") == "initialize" and isinstance(params.get("clientInfo"), dict):
+            client_info = params.get("clientInfo")
+        raw_session = str(self.headers.get("Mcp-Session-Id") or "")
+        session_instance = hashlib.sha256(raw_session.encode("utf-8")).hexdigest()[:16] if raw_session else ""
+        return self._hub_identity_from_values(
+            client_id=client_id,
+            client_type=client_type,
+            client_name=str(client_info.get("name") or ""),
+            client_version=str(client_info.get("version") or ""),
+            session_instance=session_instance,
+        )
 
     def is_authorized(self) -> bool:
         if not self.runtime.auth_enabled():

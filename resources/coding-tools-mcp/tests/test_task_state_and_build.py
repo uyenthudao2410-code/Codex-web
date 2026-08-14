@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
+import threading
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 from pathlib import Path
 
@@ -159,6 +161,108 @@ class ToolModeTests(unittest.TestCase):
             self.assertLessEqual(len(tools), 8)
             self.assertEqual(tools, {"workspace_context", "agent_workflow", "task_control", "document_workflow", "exec_command", "command_control", "request_permissions", "view_image"})
             self.assertNotIn("document_extract", tools)
+            task_schema = server_module.input_schemas()["task_control"]
+            self.assertIn("restart_runtime", task_schema["properties"]["action"]["enum"])
+            self.assertIn("confirm_restart", task_schema["properties"])
+
+    def test_permission_elicitation_fallback_is_explicit_and_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                runtime.task_state.update({"objective": "permission status probe", "status": "active"})
+                result = runtime.call_tool("request_permissions", {
+                    "tool_name": "exec_command",
+                    "permission": "long_timeout",
+                    "reason": "test",
+                    "arguments": {"cmd": "echo ok"},
+                })
+                structured = result["structuredContent"]
+                self.assertFalse(result["isError"])
+                self.assertTrue(structured["ok"])
+                self.assertEqual(structured["status"], "unsupported")
+                self.assertIsNone(structured["grant_id"])
+                self.assertEqual(structured["error"]["code"], "ELICITATION_UNSUPPORTED")
+                self.assertFalse(structured["fallback"]["granted"])
+                self.assertTrue(structured["fallback"]["fail_closed"])
+                self.assertEqual(structured["fallback"]["mode"], "server_policy")
+                self.assertIsNone(runtime.task_state.get()["failure"])
+            finally:
+                runtime.close()
+
+    def test_restart_runtime_requires_confirmation_and_enqueues_supervisor_ticket(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            workspace = root / "workspace"
+            control = root / "control"
+            workspace.mkdir()
+            control.mkdir()
+            ticket_path = control / "runtime-supervisor-request.json"
+            with patch.dict("os.environ", {"CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE": str(ticket_path)}):
+                runtime = Runtime(workspace, permission_mode="safe")
+                try:
+                    with self.assertRaises(ToolFailure) as missing_confirmation:
+                        runtime.task_control({"action": "restart_runtime"})
+                    self.assertEqual(missing_confirmation.exception.code, "RESTART_CONFIRMATION_REQUIRED")
+                    result = runtime.task_control({
+                        "action": "restart_runtime",
+                        "confirm_restart": True,
+                        "reason": "focused test",
+                    })
+                    self.assertTrue(result["accepted"])
+                    self.assertTrue(result["expected_disconnect"])
+                    self.assertTrue(ticket_path.is_file())
+                    ticket = json.loads(ticket_path.read_text(encoding="utf-8"))
+                    self.assertEqual(ticket["action"], "restart")
+                    self.assertEqual(ticket["workspace"], str(workspace.resolve()))
+                    self.assertEqual(ticket["ticket_id"], result["restart_ticket"])
+                    self.assertGreater(ticket["not_before_unix_ms"], ticket["requested_at_unix_ms"])
+                    self.assertGreater(ticket["expires_at_unix_ms"], ticket["not_before_unix_ms"])
+                    replay = runtime.task_control({"action": "restart_runtime", "confirm_restart": True})
+                    self.assertTrue(replay["already_pending"])
+                    self.assertEqual(replay["restart_ticket"], result["restart_ticket"])
+                finally:
+                    runtime.close()
+
+    def test_concurrent_restart_requests_collapse_to_one_pending_ticket(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            workspace = root / "workspace"
+            control = root / "control"
+            workspace.mkdir()
+            control.mkdir()
+            ticket_path = control / "runtime-supervisor-request.json"
+            with patch.dict("os.environ", {"CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE": str(ticket_path)}):
+                runtime = Runtime(workspace, permission_mode="safe")
+                original_replace = server_module.os.replace
+                active_replace = 0
+                max_active_replace = 0
+                replace_lock = threading.Lock()
+
+                def delayed_replace(source, target):
+                    nonlocal active_replace, max_active_replace
+                    with replace_lock:
+                        active_replace += 1
+                        max_active_replace = max(max_active_replace, active_replace)
+                    try:
+                        time.sleep(0.05)
+                        return original_replace(source, target)
+                    finally:
+                        with replace_lock:
+                            active_replace -= 1
+
+                try:
+                    with patch.object(server_module.os, "replace", side_effect=delayed_replace):
+                        with ThreadPoolExecutor(max_workers=4) as pool:
+                            results = list(pool.map(
+                                lambda _: runtime._enqueue_runtime_restart({"confirm_restart": True}),
+                                range(4),
+                            ))
+                    ticket_ids = {result["restart_ticket"] for result in results}
+                    self.assertEqual(ticket_ids, {json.loads(ticket_path.read_text(encoding="utf-8"))["ticket_id"]})
+                    self.assertEqual(max_active_replace, 1)
+                    self.assertEqual(sum(not result["already_pending"] for result in results), 1)
+                finally:
+                    runtime.close()
 
     def test_workspace_context_is_compact_and_cached(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
@@ -294,6 +398,57 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(result["context"]["files"][0]["path"], "app.py")
             self.assertEqual(len(result["context"]["searches"]), 2)
 
+    def test_task_lifecycle_aborts_only_linked_nonterminal_orchestration(self) -> None:
+        def link_run(runtime: Runtime, label: str):
+            state = runtime.task_state.get()
+            ctx = runtime.orchestration_control.begin(
+                objective=label,
+                task_id=str(state["task_id"]),
+                execution_mode="mcp_only",
+                base_head="test-head",
+                worktree_fp=f"fp-{label}",
+            )
+            runtime.task_state.set_orchestration_projection(ctx.projection(), event="test_orchestration_linked")
+            return ctx
+
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                runtime.task_control({"action": "start", "objective": "stop case"})
+                linked = link_run(runtime, "linked-stop")
+                unrelated = runtime.orchestration_control.begin(
+                    objective="unrelated",
+                    task_id="unrelated-task",
+                    execution_mode="mcp_only",
+                    base_head="test-head",
+                    worktree_fp="fp-unrelated",
+                )
+                stopped = runtime.task_control({"action": "stop", "reason": "operator stop"})
+                self.assertEqual(stopped["state"]["status"], "stopped")
+                self.assertEqual(stopped["state"]["orchestration"]["orchestration_state"], "ABORTED")
+                self.assertEqual(runtime.orchestration_ledger.get_run(linked.run_id)["status"], "aborted")
+                self.assertEqual(runtime.orchestration_ledger.get_run(unrelated.run_id)["status"], "active")
+
+                runtime.task_control({"action": "start", "objective": "pause case"})
+                paused_run = link_run(runtime, "linked-pause")
+                runtime.task_control({"action": "pause", "reason": "temporary pause"})
+                self.assertEqual(runtime.orchestration_ledger.get_run(paused_run.run_id)["status"], "active")
+
+                runtime.task_control({"action": "start", "objective": "replacement case"})
+                self.assertEqual(runtime.orchestration_ledger.get_run(paused_run.run_id)["status"], "aborted")
+                replaced_run = link_run(runtime, "linked-replaced")
+                runtime.task_control({"action": "start", "objective": "new replacement"})
+                self.assertEqual(runtime.orchestration_ledger.get_run(replaced_run.run_id)["status"], "aborted")
+
+                clear_run = link_run(runtime, "linked-clear")
+                cleared = runtime.task_control({"action": "clear"})
+                self.assertTrue(cleared["cleared"])
+                self.assertEqual(runtime.orchestration_ledger.get_run(clear_run.run_id)["status"], "aborted")
+                self.assertEqual(runtime.orchestration_ledger.get_run(unrelated.run_id)["status"], "active")
+            finally:
+                runtime.orchestration_control.transition(unrelated, "ABORTED", reason="test_cleanup")
+                runtime.close()
+
     def test_agent_workflow_creates_greenfield_project_and_verifies(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -384,6 +539,44 @@ class ToolModeTests(unittest.TestCase):
                 runtime._candidate_payload_to_patches(payload, allowed_paths=["app.py"])
             self.assertEqual(raised.exception.code, "CANDIDATE_SCOPE_VIOLATION")
             self.assertEqual((root / "other.py").read_text(encoding="utf-8"), "OTHER = 1\n")
+            runtime.close()
+
+    def test_candidate_packet_includes_deep_query_centered_snippet(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lines = [f"LINE_{index:04d} = {index}\n" for index in range(1, 2506)]
+            lines[2399] = "def deeply_nested_target():\n"
+            lines[2400] = "    VALUE = 1\n"
+            lines[2299] = "QUERY_TARGET_2 = True\n"
+            lines[2199] = "QUERY_TARGET_3 = True\n"
+            lines[2099] = "QUERY_TARGET_4 = True\n"
+            lines[2049] = "QUERY_TARGET_5 = True\n"
+            (root / "large.py").write_text("".join(lines), encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            prepared = runtime.prepare_coding_context({
+                "objective": "change deep target",
+                "paths": ["large.py"],
+                "queries": ["deeply_nested_target", "QUERY_TARGET_2", "QUERY_TARGET_3", "QUERY_TARGET_4", "QUERY_TARGET_5"],
+                "max_files": 4,
+            })
+            self.assertTrue(prepared["files"][0]["truncated"])
+            self.assertNotIn("deeply_nested_target", prepared["files"][0]["content"])
+            packet, allowed_paths = runtime._agent_candidate_packet(
+                workflow="bugfix",
+                objective="change deep target",
+                prepared=prepared,
+                proof={},
+                selected_route="mini",
+            )
+            self.assertEqual(allowed_paths, ["large.py"])
+            deep_snippets = [item for item in packet["snippets"] if "deeply_nested_target" in item["content"]]
+            self.assertEqual(len(deep_snippets), 1)
+            self.assertEqual(len(packet["snippets"]), server_module.AGENT_CANDIDATE_SNIPPET_MAX_COUNT)
+            self.assertEqual(deep_snippets[0]["match_line"], 2400)
+            self.assertIn("VALUE = 1", deep_snippets[0]["content"])
+            evidence_chars = sum(len(item["content"]) for item in packet["snippets"])
+            evidence_chars += sum(len(item["content"]) for item in packet["files"])
+            self.assertLessEqual(evidence_chars, server_module.AGENT_CANDIDATE_PACKET_MAX_CHARS)
             runtime.close()
 
     def test_agent_workflow_run_auto_uses_mini_candidate_then_mcp_writer(self) -> None:

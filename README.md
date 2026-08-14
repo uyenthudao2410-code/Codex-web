@@ -26,7 +26,7 @@ Khi được kết nối qua MCP, ChatGPT có thể:
 - dùng Codex App Server như một reviewer/worker độc lập ở chế độ chỉ đọc;
 - giữ các thao tác nguy hiểm trong ranh giới workspace và policy đã cấu hình.
 
-Đây là bản tùy biến phát triển từ WebCodex, nhưng trọng tâm hiện tại của desktop app là **Coding Tools MCP + tunnel + ChatGPT + adaptive model routing**.
+Đây là bản tùy biến phát triển từ WebCodex, nhưng trọng tâm hiện tại của desktop app là **Execution Hub + Coding Tools MCP + ChatGPT/Codex Desktop + adaptive model routing**.
 
 ---
 
@@ -77,26 +77,59 @@ Khi được kết nối qua MCP, ChatGPT có thể:
 
 Desktop có thể đổi workspace mà không cần khởi động lại toàn bộ MCP + tunnel khi runtime cho phép.
 
+### Execution Hub — một Runtime, hai client
+
+Kiến trúc multi-client hiện tại không cho ChatWeb và Codex Desktop tự spawn hai Coding Tools Runtime ngang hàng cùng ghi một ledger. Electron giữ **một Runtime authority**; ChatWeb đi qua tunnel, còn Codex Desktop dùng một stdio proxy mỏng đi qua loopback gateway của Electron:
+
+```text
+ChatWeb ── Tunnel/MCP ───────┐
+                             ▼
+                      ONE Coding Tools Runtime ──> Repository
+                             ▲
+Codex Desktop ─ stdio proxy ─┘
+
+Electron = supervisor + secret owner + Execution Control Center
+```
+
+Runtime giữ durable client registry, per-client event cursor, controller lease/fencing, task/run/proof/capsule và repository write authority. Controller semantic và write lease là hai khái niệm riêng; chuyển controller không tự trao quyền mutation checkout.
+
+Không đồng bộ transcript giữa ChatWeb và Desktop. Continuity được rebuild từ ledger/task/proof/capsule + bounded resume packet.
+
 ---
 
 ## 3. Smart Mode — 8 công cụ chính
 
 Chế độ `smart` cố ý giữ tool surface nhỏ để ChatGPT chọn công cụ ổn định hơn và giảm số vòng gọi tool không cần thiết.
 
-Hiện tại `smart` mode chỉ public đúng **8 tool**:
+Profile contract hiện tại là **`smart-v3`** và chỉ public đúng **8 tool**:
 
 | Tool | Mục đích |
 |---|---|
-| `workspace_context` | Xem nhanh workspace, project, thư mục gốc, Git và task hiện tại. |
+| `workspace_context` | Xem nhanh workspace, project, thư mục gốc, Git, task hiện tại và diagnostics runtime khi dùng `detail=full`. |
 | `agent_workflow` | Công cụ chính cho công việc coding end-to-end: phân tích, sửa code, test, build, release verification và resume. |
-| `task_control` | Bắt đầu, xem, cập nhật, tạm dừng, dừng, tiếp tục hoặc xem lịch sử task. |
+| `task_control` | Quản lý task/EOCL, background operation, audit/acceptance, coordination lane, handoff và restart runtime có xác nhận. |
 | `exec_command` | Chạy một command tập trung khi high-level workflow không phù hợp. |
 | `command_control` | Poll, gửi stdin, đọc thêm output hoặc dừng command session đang chạy. |
 | `document_workflow` | Đọc/tạo/chuyển đổi PDF, DOCX, Markdown và text bằng workflow chuyên dụng. |
-| `request_permissions` | Báo trạng thái yêu cầu quyền theo scope, không tự âm thầm cấp quyền. |
+| `request_permissions` | Báo trạng thái yêu cầu quyền theo scope; không bao giờ tự biến host không hỗ trợ elicitation thành một permission grant. |
 | `view_image` | Trả ảnh trong workspace về MCP client để model có thể xem. |
 
 Một số tool cũ vẫn được giữ dưới lớp **compatibility** để client cache cũ không bị gãy, nhưng agent mới không nên chủ động tìm hoặc gọi các tên legacy này.
+
+### Tool contract fingerprint và connector refresh
+
+Runtime tính một SHA-256 deterministic từ đúng tool contract đang expose và công bố cùng:
+
+```text
+schema_version
+profile = smart-v3
+sha256
+tool_count = 8
+```
+
+Electron so fingerprint hiện tại với fingerprint mà operator đã xác nhận cho ChatGPT. Khi contract thay đổi, app hiện cảnh báo cần **Refresh actions / làm mới MCP app trong ChatGPT**. Sau khi đã refresh thành công, operator bấm **“Tôi đã làm mới ChatGPT MCP”** để ghi nhận hash hiện tại.
+
+Cơ chế này là **stale-schema detection**, không giả định ChatGPT sẽ tự động nhận schema mới. Việc refresh/re-publish phía ChatGPT vẫn phụ thuộc khả năng của workspace/host.
 
 ### Vì sao chỉ giữ 8 tool?
 
@@ -153,6 +186,18 @@ Cách này giảm round-trip, giảm thao tác lặp, hạn chế context dư th
 - model routing;
 - external review khi có giá trị.
 
+### Bounded candidate packet
+
+Khi Mini/Luna được dùng như candidate lane, MCP vẫn là writer/oracle owner. Candidate chỉ nhận bounded evidence packet. Với file lớn, packet hiện ưu tiên thêm các snippet quanh exact search matches để symbol nằm sâu trong file không bị mất chỉ vì phần đầu file đã chạm giới hạn đọc.
+
+Các invariant hiện tại:
+
+- tổng source evidence vẫn nằm trong budget candidate hiện có;
+- tối đa 4 query-centered deep snippets;
+- snippet chỉ đọc từ path nằm trong allowed candidate scope;
+- candidate không có quyền tự mutation checkout chính;
+- proof cuối vẫn do MCP chạy và ChatWeb/Sol quyết định acceptance.
+
 ---
 
 ## 5. Adaptive Model Routing
@@ -191,6 +236,10 @@ Nếu phạm vi nhỏ nhưng không có oracle đủ mạnh, router có thể n�
 `sol_max` và `sol_ultra` bị chặn mặc định. Muốn gọi trực tiếp phải truyền xác nhận `allow_high_cost=true`.
 
 Điều này tránh việc một tác vụ bình thường vô tình chạy route đắt nhất.
+
+### Production routing calibration
+
+Router có telemetry/cohort support, nhưng production threshold **không nên được mở rộng chỉ từ vài sample nhỏ hoặc scenario simulation**. Calibration phải dựa trên các real accepted task cùng class với route, first-pass/repair status, cost, TTA và defect evidence đủ đại diện.
 
 ---
 
@@ -251,9 +300,9 @@ Mục tiêu là **độ tin cậy của kết quả**, không phải gọi càng
 
 ---
 
-## 8. Task state và công việc chạy lâu
+## 8. Task state, EOCL và công việc chạy lâu
 
-Coding Tools MCP có persistent task state theo workspace.
+Coding Tools MCP có persistent task state theo workspace và một enforced orchestration control loop (EOCL) cho các workflow có mutation/proof.
 
 Task có thể lưu:
 
@@ -266,21 +315,60 @@ Task có thể lưu:
 - lỗi;
 - lịch sử task.
 
-`task_control` hỗ trợ:
+`task_control` hiện hỗ trợ các nhóm action:
 
-- `start`;
-- `get`;
-- `update`;
-- `pause`;
-- `stop`;
-- `resume`;
-- `clear`;
-- `history`;
-- poll background operation.
+- task lifecycle: `get`, `start`, `update`, `pause`, `stop`, `resume`, `clear`, `history`;
+- background operation: `operation`;
+- EOCL: `audit`, `accept`, `reject`;
+- coordination: `lane`, `events`, `messages`, `ack`;
+- durable state transfer: `handoff`;
+- runtime control: `restart_runtime`.
+
+EOCL bình thường đi qua:
+
+```text
+PREFLIGHT → READY → ROUTED → EXECUTING → PROVING → ACCEPTING → CHECKPOINTED
+```
+
+`REPLAN`, `BLOCKED` và `ABORTED` là các nhánh fail-closed. Một wave ở `ACCEPTING` phải được ChatWeb/Sol accept hoặc reject thay vì tự coi test xanh là final acceptance.
 
 ### Long-running workflow
 
 `agent_workflow` có thể hand-off thành background operation nếu chạy lâu. Agent nhận `operation_id` rồi tiếp tục poll bằng `task_control` mà không phải chạy lại từ đầu.
+
+### Durable handoff capsule
+
+`task_control(handoff)` có thể ghi/đọc capsule bounded để chuyển sang chat/window mới mà không cần replay toàn transcript. Capsule dùng cho rollover/recovery; auto-handoff không nên bật chỉ từ một vài sample nhỏ.
+
+### Production-safe runtime restart
+
+`task_control(action="restart_runtime")` là control-plane operation, không phải `taskkill` trực tiếp từ MCP.
+
+Yêu cầu:
+
+```text
+confirm_restart = true
+```
+
+Flow:
+
+```text
+ChatGPT / MCP call
+      ↓
+MCP kiểm tra explicit confirmation + runtime idle
+      ↓
+ghi delayed, short-lived, workspace-bound one-shot ticket
+      ↓
+trả response với expected_disconnect=true
+      ↓
+Electron supervisor consume ticket
+      ↓
+RuntimeOrchestrator.restart()
+      ↓
+reconnect → workspace_context(full) → xác minh instance id mới
+```
+
+Ticket hiện được collapse khi có concurrent request, hết hạn nhanh và không được replay từ JSON backup. Electron là owner của service lifecycle; MCP không tự kill process phục vụ chính request của nó.
 
 ### Command session
 
@@ -289,7 +377,7 @@ Command dài được quản lý bằng session riêng:
 ```text
 exec_command
     ↓
-session_id / output_ref
+command_id / output_ref
     ↓
 command_control
     ├─ poll
@@ -353,6 +441,23 @@ Ngoài permission mode, runtime còn có:
 - giới hạn output/session;
 - kiểm tra path trước khi đọc/ghi.
 
+### Khi MCP host không hỗ trợ permission elicitation
+
+`request_permissions` là **status-reporting tool**, không phải cơ chế bypass server policy.
+
+Nếu client/host hiện tại không hỗ trợ interactive elicitation, runtime trả một kết quả thành công ở cấp MCP với semantics:
+
+```text
+status = unsupported
+grant_id = null
+error.code = ELICITATION_UNSUPPORTED
+fallback.mode = server_policy
+fallback.granted = false
+fallback.fail_closed = true
+```
+
+Điều này có nghĩa: tool đã báo trạng thái thành công, **permission vẫn không được cấp**. Client không nên retry y hệt vô hạn và server không được biến `ELICITATION_UNSUPPORTED` thành implicit grant.
+
 > Landlock chỉ có ý nghĩa trên Linux khi kernel/host hỗ trợ. Trên Windows, runtime vẫn áp dụng các policy/path guard tương ứng nhưng không có Linux Landlock sandbox.
 
 ---
@@ -363,7 +468,7 @@ Ngoài `smart`, server còn có các tool mode khác:
 
 | Mode | Mục đích |
 |---|---|
-| `smart` | Surface nhỏ 8 tool, khuyến nghị cho ChatGPT hiện tại. |
+| `smart` | Surface nhỏ 8 tool (`smart-v3`), khuyến nghị cho ChatGPT hiện tại. |
 | `readonly` | Chỉ inspection/Git/read tools. |
 | `coding` | Đọc + sửa code + command + build verification. |
 | `build` | Tập trung inspection/command/build, không expose patch write như coding mode. |
@@ -402,20 +507,58 @@ Script hiện tại chạy:
 electron .
 ```
 
-Trên thanh công cụ có nút **Bảng điều khiển**: mở panel giám sát ngay bên cạnh ChatGPT, hiển thị theo thời gian thực:
+Trên thanh công cụ có nút **Bảng điều khiển** để mở **Execution Control Center** ngay bên cạnh ChatGPT. Panel hiển thị theo thời gian thực:
 
 - trạng thái nhiệm vụ (objective, bước hiện tại, tiến độ, command đang chạy kèm thời gian);
 - trình tự điều phối (run/wave, execution mode, base HEAD, số sự kiện/wave/checkpoint);
 - luồng sự kiện audit mới nhất, bằng chứng (proofs), ủy quyền model (delegations);
 - trạng thái MCP + Tunnel và cảnh báo khi đang tự khôi phục;
-- điều khiển: tạm dừng / tiếp tục / dừng nhiệm vụ, **Ghi capsule handoff** (≤8 KB) để xoay chat mới rồi tiếp tục từ capsule — không cần copy transcript cũ.
+- ChatWeb/Codex Desktop online state, per-client cursor/lag, controller lease/fencing và write authority;
+- `SAFE TO ROTATE CHATWEB: YES/NO` cùng reason codes; context pressure chỉ hiện khi có nguồn thật, nếu host không expose thì ghi `unknown`;
+- bounded resume summary;
+- điều khiển: tạm dừng / tiếp tục / dừng nhiệm vụ qua MCP/EOCL, **Ghi capsule handoff** (≤8 KB), và manual controller transfer có xác nhận;
+- **Copy Codex MCP config** để lấy cấu hình thin-proxy không chứa bearer.
 
-Dữ liệu panel lấy từ endpoint mới `GET /__control/orchestration` của Coding Tools MCP (yêu cầu Bearer token).
+Dữ liệu panel lấy từ endpoint `GET /__control/orchestration` của Coding Tools MCP (yêu cầu Bearer token).
+
+### Kết nối Codex Desktop vào cùng Execution Hub
+
+Không khuyến nghị cấu hình Codex Desktop chạy trực tiếp `python -m coding_tools_mcp --stdio` trên cùng workspace, vì cách đó tạo một Runtime authority thứ hai.
+
+Luồng khuyến nghị:
+
+1. chạy Electron app để Execution Hub/gateway sẵn sàng;
+2. mở **Execution Control Center** và bấm **Copy Codex MCP config**;
+3. review đoạn TOML vừa copy rồi tự paste/replace block `[mcp_servers.coding-tools]` trong cấu hình Codex Desktop;
+4. restart/mở session Codex Desktop mới;
+5. kiểm tra card **Codex Desktop** chuyển thành `online` trong Hub.
+
+Config được sinh từ Python mà Electron đã verify, bundled `resources/coding-tools-mcp` và descriptor trong app `userData`. Descriptor chỉ có loopback port + gateway-scoped token của process Electron; **real MCP bearer vẫn nằm trong Electron SecretStore**. App không tự sửa `~/.codex/config.toml`.
+
+Desktop proxy gửi heartbeat định kỳ khi stdio còn attach, nhưng không mở workspace/ledger và không tự claim controller khi ChatWeb đang giữ lease. Chuyển controller vẫn là thao tác manual có xác nhận; auto-handoff hiện OFF.
+
+### Khởi động lại dịch vụ
+
+Trong desktop app, dùng nút **“Khởi động lại toàn bộ dịch vụ”** để Electron restart MCP và Tunnel theo đúng ownership/order.
+
+Nếu MCP tool contract thay đổi, sau restart app có thể hiện cảnh báo connector stale. Khi đó refresh/recreate MCP app phía ChatGPT theo khả năng workspace, mở chat mới nếu cần, xác minh schema mới rồi mới xác nhận contract trong desktop app.
 
 ### Chạy test của desktop app
 
 ```powershell
 npm test
+```
+
+### Chạy test Coding Tools MCP từ repository root
+
+```powershell
+npm run test:mcp
+```
+
+Script này tự chuyển vào `resources/coding-tools-mcp` trước khi chạy pytest để import path ổn định. Có thể chạy cả hai suite chính bằng:
+
+```powershell
+npm run test:all
 ```
 
 ### Build installer Windows
@@ -583,6 +726,7 @@ Các tài liệu hữu ích cho kiến trúc hiện tại:
 - [`docs/agent/permission-model.md`](docs/agent/permission-model.md) — authority/safety model của WebCodex core;
 - [`docs/research/EXECUTOR_ROUTING_BENCHMARK_2026-08-12.md`](docs/research/EXECUTOR_ROUTING_BENCHMARK_2026-08-12.md) — benchmark executor routing;
 - [`docs/research/MODEL_ORCHESTRATION_RESEARCH_PHASE2_2026-08-12.md`](docs/research/MODEL_ORCHESTRATION_RESEARCH_PHASE2_2026-08-12.md) — nghiên cứu orchestration/model routing;
+- [`docs/research/2026-08-14_POST_P1_FOLLOWUP_TRACKER.md`](docs/research/2026-08-14_POST_P1_FOLLOWUP_TRACKER.md) — trạng thái proof-cache, handoff, runtime activation và routing evidence hiện tại;
 - [`AGENTS.md`](AGENTS.md) — hướng dẫn cho coding agent trong repository.
 
 ---
@@ -632,8 +776,9 @@ Xem file [`LICENSE`](LICENSE) và [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES
 
 ### Tóm tắt
 
-Nếu chỉ cần nhớ ba điểm về bản hiện tại:
+Nếu chỉ cần nhớ bốn điểm về bản hiện tại:
 
-> **1. `smart` mode chỉ public 8 tool.**  
-> **2. `agent_workflow` là đường chính cho coding và có adaptive Mini → Luna → Terra → Sol routing.**  
-> **3. Codex sidecar chỉ đọc; Coding Tools MCP mới là nơi kiểm soát thay đổi, verification và workspace.**
+> **1. `smart-v3` chỉ public 8 tool và có contract fingerprint để phát hiện connector stale.**
+> **2. `agent_workflow` là đường chính cho coding; MCP giữ mutation/proof, route rẻ chỉ được dùng khi evidence đủ mạnh.**
+> **3. `task_control` quản lý EOCL/handoff và có production-safe `restart_runtime` qua Electron supervisor.**
+> **4. `request_permissions` fail-closed: host không hỗ trợ elicitation không bao giờ đồng nghĩa permission được cấp.**

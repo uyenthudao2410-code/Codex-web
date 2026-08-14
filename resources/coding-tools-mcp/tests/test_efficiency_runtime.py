@@ -6,10 +6,11 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.performance_trace import PerformanceTraceStore
-from coding_tools_mcp.server import Runtime
+from coding_tools_mcp.server import Runtime, server_card_payload
 
 
 class EfficiencyRuntimeTests(unittest.TestCase):
@@ -64,9 +65,10 @@ class EfficiencyRuntimeTests(unittest.TestCase):
         self.assertTrue(Runtime._idempotency_eligible_call("command_control", {"action": "kill"}))
         self.assertFalse(Runtime._idempotency_eligible_call("task_control", {"action": "handoff", "handoff_action": "get"}))
         self.assertTrue(Runtime._idempotency_eligible_call("task_control", {"action": "handoff", "handoff_action": "record"}))
+        self.assertTrue(Runtime._idempotency_eligible_call("task_control", {"action": "restart_runtime"}))
 
     def test_workspace_context_exposes_non_secret_runtime_activation_identity(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(temp), permission_mode="safe")
             try:
                 compact = runtime.workspace_context({"detail": "compact"})
@@ -76,6 +78,13 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(identity["server_instance_id"], runtime.server_instance_id)
                 self.assertEqual(identity["process_instance_id"], runtime.process_instance_id)
                 self.assertEqual(identity["performance_trace_version"], 3)
+                contract = identity["tool_contract"]
+                self.assertEqual(contract["schema_version"], 1)
+                self.assertEqual(contract["profile"], "smart-v3")
+                self.assertEqual(contract["tool_count"], 8)
+                self.assertEqual(len(contract["sha256"]), 64)
+                card = server_card_payload(runtime)
+                self.assertEqual(card["tools"]["contractSha256"], contract["sha256"])
                 self.assertNotIn("auth_token", identity)
             finally:
                 runtime.close()

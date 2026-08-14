@@ -7,14 +7,15 @@ const { TunnelService } = require('./tunnelService');
 const { validateRuntimeSettings, mergeRecentWorkspaces, workspaceKey } = require('./config');
 const { canConnect } = require('./environmentService');
 const { resolveProxy } = require('./proxyService');
-const { stateFile } = require('../paths');
+const { stateFile, supervisorRequestFile } = require('../paths');
 const { readJson, updateJsonAtomic } = require('./jsonStore');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 const MAX_DEFERRED_RECOVERIES = 6;
+const MAX_SUPERVISOR_REQUEST_AGE_MS = 60_000;
 
-function probeMcp(port, token, expectedWorkspace = '') {
+function readMcpHealth(port, token, expectedWorkspace = '') {
   return new Promise((resolve) => {
     const request = http.request({
       host: '127.0.0.1',
@@ -28,21 +29,25 @@ function probeMcp(port, token, expectedWorkspace = '') {
       response.setEncoding('utf8');
       response.on('data', (chunk) => { if (body.length < 65536) body += chunk; });
       response.on('end', () => {
-        if (response.statusCode !== 200) { resolve(false); return; }
+        if (response.statusCode !== 200) { resolve(null); return; }
         try {
           const payload = JSON.parse(body);
           const workspaceMatches = !expectedWorkspace
             || workspaceKey(payload.workspace) === workspaceKey(expectedWorkspace);
-          resolve(payload.ready === true && workspaceMatches);
+          resolve(payload.ready === true && workspaceMatches ? payload : null);
         } catch {
-          resolve(false);
+          resolve(null);
         }
       });
     });
-    request.on('timeout', () => { request.destroy(); resolve(false); });
-    request.on('error', () => resolve(false));
+    request.on('timeout', () => { request.destroy(); resolve(null); });
+    request.on('error', () => resolve(null));
     request.end();
   });
+}
+
+async function probeMcp(port, token, expectedWorkspace = '') {
+  return Boolean(await readMcpHealth(port, token, expectedWorkspace));
 }
 
 
@@ -175,6 +180,96 @@ class RuntimeOrchestrator {
       manualStop: Boolean(value),
       intentChangedAt: new Date().toISOString()
     }));
+  }
+
+  connectorContractStatus(toolContract) {
+    const currentSha256 = String(toolContract?.sha256 || '').trim();
+    const runtimeState = readJson(stateFile(), {});
+    const acknowledgedSha256 = String(runtimeState.chatgptToolContractSha256 || '').trim();
+    return {
+      available: Boolean(currentSha256),
+      schemaVersion: Number(toolContract?.schema_version || 0),
+      profile: String(toolContract?.profile || ''),
+      currentSha256,
+      acknowledgedSha256,
+      refreshRequired: Boolean(currentSha256 && currentSha256 !== acknowledgedSha256)
+    };
+  }
+
+  acknowledgeConnectorContractHash(toolContract) {
+    const status = this.connectorContractStatus(toolContract);
+    if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
+    updateJsonAtomic(stateFile(), (state) => ({
+      ...state,
+      chatgptToolContractSha256: status.currentSha256,
+      chatgptToolContractAcknowledgedAt: new Date().toISOString()
+    }));
+    return this.connectorContractStatus(toolContract);
+  }
+
+  async acknowledgeConnectorContract() {
+    const settings = this.settingsStore.load();
+    const token = this.secrets.get('mcpAuthToken');
+    const health = token ? await readMcpHealth(settings.mcpPort, token, settings.workspace) : null;
+    if (!health?.tool_contract) throw new Error('Coding Tools MCP chưa chạy hoặc chưa cung cấp tool contract fingerprint.');
+    this.acknowledgeConnectorContractHash(health.tool_contract);
+    this.invalidateSnapshot();
+    return this.snapshot({ force: true, reason: 'connector-contract-acknowledged' });
+  }
+
+  pendingSupervisorRestartRequest() {
+    if (this.busy || this.recovering) return null;
+    const file = supervisorRequestFile();
+    if (!fs.existsSync(file)) return null;
+    let request = null;
+    try {
+      request = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+      request = null;
+    }
+    const settings = this.settingsStore.load();
+    const now = Date.now();
+    const requestedAt = Number(request?.requested_at_unix_ms || 0);
+    const notBefore = Number(request?.not_before_unix_ms || requestedAt);
+    const expiresAt = Number(request?.expires_at_unix_ms || 0);
+    const valid = Boolean(
+      request
+      && request.version === 1
+      && request.action === 'restart'
+      && String(request.ticket_id || '').trim()
+      && workspaceKey(request.workspace) === workspaceKey(settings.workspace)
+      && requestedAt > 0
+      && requestedAt <= now + 5000
+      && now - requestedAt <= MAX_SUPERVISOR_REQUEST_AGE_MS
+      && expiresAt >= now
+    );
+    if (!valid) {
+      fs.rmSync(file, { force: true });
+      fs.rmSync(`${file}.bak`, { force: true });
+      this.log.warn('Đã loại bỏ yêu cầu restart supervisor không hợp lệ hoặc đã hết hạn', {
+        ticketId: request?.ticket_id || '',
+        workspace: request?.workspace || ''
+      });
+      return null;
+    }
+    if (now < notBefore) return null;
+    return { file, request };
+  }
+
+  async serviceSupervisorRestartRequest() {
+    const pending = this.pendingSupervisorRestartRequest();
+    if (!pending) return null;
+    fs.rmSync(pending.file, { force: true });
+    fs.rmSync(`${pending.file}.bak`, { force: true });
+    const ticketId = String(pending.request.ticket_id);
+    this.log.info('Electron supervisor đã nhận yêu cầu restart từ Coding Tools MCP', { ticketId });
+    try {
+      await this.restart({ automatic: true });
+      return { ticketId, status: 'completed' };
+    } catch (error) {
+      this.log.error(error.message, { stage: 'supervisor-restart-request', ticketId });
+      return { ticketId, status: 'failed', error: error.message };
+    }
   }
 
   validate(settings) {
@@ -419,6 +514,10 @@ class RuntimeOrchestrator {
   }
 
   async supervise() {
+    const supervisorRequest = await this.serviceSupervisorRestartRequest();
+    if (supervisorRequest) {
+      return { ...(await this.lightweightSnapshot()), supervisorRequest };
+    }
     const status = await this.lightweightSnapshot();
     if (status.fullyReady) {
       this.heartbeatFailures = 0;
@@ -517,9 +616,11 @@ class RuntimeOrchestrator {
     const settings = this.settingsStore.load();
     const environment = await this.environment.inspect(settings);
     const token = this.secrets.get('mcpAuthToken');
-    const runtimeRunning = token
-      ? await probeMcp(settings.mcpPort, token, settings.workspace)
-      : false;
+    const health = token
+      ? await readMcpHealth(settings.mcpPort, token, settings.workspace)
+      : null;
+    const runtimeRunning = Boolean(health);
+    const connectorContract = this.connectorContractStatus(health?.tool_contract || null);
     const tunnelRunning = await this.tunnel.status(settings).catch(() => false);
     return this.publishSnapshot({
       settings,
@@ -532,10 +633,17 @@ class RuntimeOrchestrator {
         fullyReady: runtimeRunning && tunnelRunning,
         localMcpUrl: `http://127.0.0.1:${settings.mcpPort}/mcp`,
         tunnelUiUrl: `http://127.0.0.1:${settings.healthPort}/ui`,
-        manuallyStopped: this.isManuallyStopped()
+        manuallyStopped: this.isManuallyStopped(),
+        toolContract: connectorContract.available ? {
+          schemaVersion: connectorContract.schemaVersion,
+          profile: connectorContract.profile,
+          sha256: connectorContract.currentSha256
+        } : null,
+        connectorContractAcknowledgedSha256: connectorContract.acknowledgedSha256,
+        connectorRefreshRequired: connectorContract.refreshRequired
       }
     }, reason);
   }
 }
 
-module.exports = { RuntimeOrchestrator, probeMcp, setMcpAuthorizedRoots };
+module.exports = { RuntimeOrchestrator, probeMcp, readMcpHealth, setMcpAuthorizedRoots };

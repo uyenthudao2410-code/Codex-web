@@ -3,7 +3,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { pythonStatus } = require('./environmentService');
-const { stateFile, mcpLogFile, resourcesRoot } = require('../paths');
+const { stateFile, supervisorRequestFile, mcpLogFile, resourcesRoot } = require('../paths');
 const { readJson, updateJsonAtomic, ensureParent } = require('./jsonStore');
 const { rotateLog } = require('./logService');
 
@@ -26,7 +26,8 @@ function currentRuntimeState(input = {}) {
   const allowed = new Set([
     'manualStop', 'tunnelPid', 'tunnelStartedAt',
     'nativePid', 'nativeFingerprint', 'nativeWorkspace', 'nativePort',
-    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'startedAt'
+    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'startedAt',
+    'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt'
   ]);
   return Object.fromEntries(Object.entries(input).filter(([key]) => allowed.has(key)));
 }
@@ -63,7 +64,8 @@ class NativeService {
       CODING_TOOLS_MCP_TELEMETRY: 'off',
       CODING_TOOLS_MCP_TOOL_MODE: 'smart',
       CODING_TOOLS_MCP_AUTHORIZED_ROOTS: JSON.stringify(settings.authorizedRoots || []),
-      CODING_TOOLS_MCP_LONG_TOOL_HANDOFF_SECONDS: String(settings.progressReportSeconds || 90)
+      CODING_TOOLS_MCP_LONG_TOOL_HANDOFF_SECONDS: String(settings.progressReportSeconds || 90),
+      CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: supervisorRequestFile()
     };
     const bundledTools = path.join(resourcesRoot(), 'tools');
     const vendoredPython = path.join(resourcesRoot(), 'coding-tools-mcp', 'python_vendor');

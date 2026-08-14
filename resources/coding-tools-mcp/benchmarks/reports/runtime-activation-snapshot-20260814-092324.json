@@ -1,0 +1,284 @@
+{
+  "benchmark": "runtime activation telemetry snapshot",
+  "evidence_class": "local_runtime_measurement_snapshot",
+  "schema_version": 1,
+  "captured_at": "2026-08-14T02:23:24.596Z",
+  "workspace": "E:\\DEV\\Tools-Codex-web",
+  "performance": {
+    "version": 3,
+    "tool_calls": 99,
+    "errors": 9,
+    "local_execution_ms": 103220,
+    "estimated_wait_ms": 2029993,
+    "idempotency_eligible_calls": 58,
+    "idempotency_eligible_key_calls": 54,
+    "idempotency_coverage": 0.931034,
+    "proof_cache_hits": 1,
+    "proof_cache_saved_ms": 999,
+    "execution_mode_counts": {
+      "mcp_only": 57
+    },
+    "route_resolved_counts": {
+      "deterministic": 42
+    },
+    "orchestration_state_counts": {
+      "ACCEPTING": 18,
+      "CHECKPOINTED": 24,
+      "PREFLIGHT": 15
+    },
+    "run_metrics": {
+      "91dd8a8c0a9f447089605f040b32a12f": {
+        "tool_calls": 2,
+        "errors": 0,
+        "local_execution_ms": 640,
+        "estimated_wait_ms": 19499,
+        "request_bytes": 498,
+        "response_bytes": 17410,
+        "idempotency_eligible_calls": 1,
+        "idempotency_eligible_key_calls": 1,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 2
+        },
+        "route_resolved_counts": {
+          "deterministic": 2
+        },
+        "first_started_at": "2026-08-13T23:59:52.317Z",
+        "last_finished_at": "2026-08-14T00:00:43.142Z"
+      },
+      "89e523532d844723b23a3f31e1d0a21a": {
+        "tool_calls": 6,
+        "errors": 1,
+        "local_execution_ms": 2388,
+        "estimated_wait_ms": 59122,
+        "request_bytes": 2153,
+        "response_bytes": 371645,
+        "idempotency_eligible_calls": 5,
+        "idempotency_eligible_key_calls": 5,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 6
+        },
+        "route_resolved_counts": {},
+        "first_started_at": "2026-08-14T00:01:58.627Z",
+        "last_finished_at": "2026-08-14T00:02:50.716Z"
+      },
+      "b1983e11288743fd9388d4ee6c217cf1": {
+        "tool_calls": 3,
+        "errors": 0,
+        "local_execution_ms": 7875,
+        "estimated_wait_ms": 27075,
+        "request_bytes": 4022,
+        "response_bytes": 65528,
+        "idempotency_eligible_calls": 2,
+        "idempotency_eligible_key_calls": 2,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 3
+        },
+        "route_resolved_counts": {
+          "deterministic": 3
+        },
+        "first_started_at": "2026-08-14T00:05:22.949Z",
+        "last_finished_at": "2026-08-14T00:05:34.946Z"
+      },
+      "977736b8dcd84fa580f86202af174a6f": {
+        "tool_calls": 14,
+        "errors": 5,
+        "local_execution_ms": 17464,
+        "estimated_wait_ms": 373215,
+        "request_bytes": 5658,
+        "response_bytes": 123367,
+        "idempotency_eligible_calls": 2,
+        "idempotency_eligible_key_calls": 2,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 14
+        },
+        "route_resolved_counts": {
+          "deterministic": 14
+        },
+        "first_started_at": "2026-08-14T00:06:56.189Z",
+        "last_finished_at": "2026-08-14T00:14:21.094Z"
+      },
+      "16066fc1213f4547b3a9c8c45cd1239c": {
+        "tool_calls": 8,
+        "errors": 0,
+        "local_execution_ms": 6297,
+        "estimated_wait_ms": 145853,
+        "request_bytes": 3887,
+        "response_bytes": 442337,
+        "idempotency_eligible_calls": 5,
+        "idempotency_eligible_key_calls": 5,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 8
+        },
+        "route_resolved_counts": {
+          "deterministic": 3
+        },
+        "first_started_at": "2026-08-14T00:15:38.685Z",
+        "last_finished_at": "2026-08-14T00:17:59.232Z"
+      },
+      "b609d40619fd4907847de66edfeb1396": {
+        "tool_calls": 4,
+        "errors": 0,
+        "local_execution_ms": 3997,
+        "estimated_wait_ms": 40170,
+        "request_bytes": 1574,
+        "response_bytes": 56551,
+        "idempotency_eligible_calls": 2,
+        "idempotency_eligible_key_calls": 2,
+        "proof_cache_hits": 1,
+        "proof_cache_saved_ms": 999,
+        "execution_mode_counts": {
+          "mcp_only": 4
+        },
+        "route_resolved_counts": {
+          "deterministic": 4
+        },
+        "first_started_at": "2026-08-14T00:18:11.816Z",
+        "last_finished_at": "2026-08-14T00:18:43.403Z"
+      },
+      "50ac86ab90af42efa367c8dc317015c2": {
+        "tool_calls": 3,
+        "errors": 0,
+        "local_execution_ms": 3982,
+        "estimated_wait_ms": 34312,
+        "request_bytes": 1707,
+        "response_bytes": 36333,
+        "idempotency_eligible_calls": 3,
+        "idempotency_eligible_key_calls": 3,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 3
+        },
+        "route_resolved_counts": {
+          "deterministic": 3
+        },
+        "first_started_at": "2026-08-14T00:19:13.182Z",
+        "last_finished_at": "2026-08-14T00:19:25.339Z"
+      },
+      "6496bfac04de471087ad596fd8f47197": {
+        "tool_calls": 3,
+        "errors": 0,
+        "local_execution_ms": 4736,
+        "estimated_wait_ms": 21920,
+        "request_bytes": 1497,
+        "response_bytes": 49747,
+        "idempotency_eligible_calls": 2,
+        "idempotency_eligible_key_calls": 2,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 3
+        },
+        "route_resolved_counts": {
+          "deterministic": 3
+        },
+        "first_started_at": "2026-08-14T00:19:34.163Z",
+        "last_finished_at": "2026-08-14T00:19:51.988Z"
+      },
+      "de7ade545daa4806bd498d6942179892": {
+        "tool_calls": 2,
+        "errors": 0,
+        "local_execution_ms": 3874,
+        "estimated_wait_ms": 13389,
+        "request_bytes": 1215,
+        "response_bytes": 34266,
+        "idempotency_eligible_calls": 2,
+        "idempotency_eligible_key_calls": 2,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 2
+        },
+        "route_resolved_counts": {
+          "deterministic": 2
+        },
+        "first_started_at": "2026-08-14T00:20:01.244Z",
+        "last_finished_at": "2026-08-14T00:20:09.263Z"
+      },
+      "69d0eeffbf1f4dbb93ec8ac5479256d3": {
+        "tool_calls": 4,
+        "errors": 0,
+        "local_execution_ms": 7747,
+        "estimated_wait_ms": 67890,
+        "request_bytes": 2286,
+        "response_bytes": 705726,
+        "idempotency_eligible_calls": 1,
+        "idempotency_eligible_key_calls": 0,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 4
+        },
+        "route_resolved_counts": {},
+        "first_started_at": "2026-08-14T02:19:21.273Z",
+        "last_finished_at": "2026-08-14T02:20:23.318Z"
+      },
+      "b2bca65d7d454fae8e84c2fa63183fd1": {
+        "tool_calls": 8,
+        "errors": 0,
+        "local_execution_ms": 29372,
+        "estimated_wait_ms": 67732,
+        "request_bytes": 6895,
+        "response_bytes": 62386,
+        "idempotency_eligible_calls": 3,
+        "idempotency_eligible_key_calls": 3,
+        "proof_cache_hits": 0,
+        "proof_cache_saved_ms": 0,
+        "execution_mode_counts": {
+          "mcp_only": 8
+        },
+        "route_resolved_counts": {
+          "deterministic": 8
+        },
+        "first_started_at": "2026-08-14T02:21:40.143Z",
+        "last_finished_at": "2026-08-14T02:23:05.408Z"
+      }
+    }
+  },
+  "ledger": {
+    "present": true,
+    "run_status_counts": {
+      "accepted": 23,
+      "active": 38
+    },
+    "wave_status_counts": {
+      "accepted": 23,
+      "active": 38,
+      "replanned": 6
+    },
+    "idempotency_status_counts": {
+      "completed": 58,
+      "failed": 2,
+      "in_progress": 1
+    },
+    "background_status_counts": {
+      "completed": 21,
+      "running": 1
+    },
+    "lane_lifecycle_counts": {
+      "idle": 2
+    },
+    "proof_records": 45,
+    "handoff_capsules": 1,
+    "accepted_run_tta": {
+      "n": 23,
+      "p50_seconds": 57.87,
+      "p90_seconds": 339.099
+    }
+  },
+  "notes": [
+    "estimated_wait_ms is a runtime gap proxy, not pure network/model latency",
+    "idempotency coverage denominator includes only mutating/expensive calls marked eligible by runtime semantics",
+    "accepted-run TTA is measured from durable run timestamps and is not a model-only latency metric"
+  ]
+}

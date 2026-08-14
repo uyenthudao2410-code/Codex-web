@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self';style-src 'self';script-src 'self';">
-  <title>Bảng điều khiển</title>
+  <title>Execution Control Center</title>
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
   <header class="panel-header">
-    <b>Bảng điều khiển</b>
+    <b>Execution Control Center</b>
     <span id="serviceDots" class="service-dots">
       <span id="mcpDot" title="Coding Tools MCP"><i></i>MCP</span>
       <span id="tunnelDot" title="OpenAI Tunnel"><i></i>Tunnel</span>
@@ -41,6 +41,57 @@
       <button id="handoffButton" title="Ghi capsule trạng thái ≤8KB để mở chat mới và tiếp tục từ capsule">Ghi capsule handoff</button>
       <button id="refreshButton">Làm mới</button>
     </div>
+  </section>
+
+  <section class="panel-section" id="hubSection">
+    <h2>Clients & Authority <span id="hubStatus" class="badge">—</span></h2>
+    <div class="client-grid">
+      <div class="client-card" id="chatwebClient"><b>ChatWeb</b><span id="chatwebClientStatus" class="client-state">offline</span><small id="chatwebCursor">cursor —</small></div>
+      <div class="client-card" id="desktopClient"><b>Codex Desktop</b><span id="desktopClientStatus" class="client-state">offline</span><small id="desktopCursor">cursor —</small></div>
+      <div class="client-card" id="opencodeClient"><b>OpenCode</b><span id="opencodeClientStatus" class="client-state">offline</span><small id="opencodeCursor">cursor —</small></div>
+    </div>
+    <div id="controllerLine" class="detail authority-line">Controller: —</div>
+    <div id="writeAuthorityLine" class="detail authority-line">Writer: —</div>
+    <div class="controls authority-controls">
+      <button id="toChatWebButton">Control → ChatWeb</button>
+      <button id="toDesktopButton">Control → Codex</button>
+      <button id="copyCodexConfigButton">Copy Codex MCP config</button>
+    </div>
+  </section>
+
+  <section class="panel-section" id="routerSection">
+    <h2>Live Router Fabric <span id="routerSummary" class="badge">0 active</span></h2>
+    <p class="detail">9 node · trạng thái lấy từ client, authority, runtime và delegation thật; chỉ đường active mới chạy animation.</p>
+    <div id="routerFabric" class="router-fabric" aria-label="Execution Hub live routing topology">
+      <svg class="router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
+        <line id="routerEdgeChatWeb" class="router-edge offline" x1="50" y1="50" x2="150" y2="150"></line>
+        <line id="routerEdgeDesktop" class="router-edge offline" x1="150" y1="50" x2="150" y2="150"></line>
+        <line id="routerEdgeOpenCode" class="router-edge offline" x1="250" y1="50" x2="150" y2="150"></line>
+        <line id="routerEdgeFast" class="router-edge offline" x1="50" y1="150" x2="150" y2="150"></line>
+        <line id="routerEdgeDeepSeek" class="router-edge offline" x1="250" y1="150" x2="150" y2="150"></line>
+        <line id="routerEdgeTerra" class="router-edge offline" x1="50" y1="250" x2="150" y2="150"></line>
+        <line id="routerEdgeWriter" class="router-edge offline" x1="150" y1="250" x2="150" y2="150"></line>
+        <line id="routerEdgeSol" class="router-edge offline" x1="250" y1="250" x2="150" y2="150"></line>
+      </svg>
+      <div id="routerChatWeb" class="router-node offline"><b>ChatWeb</b><small>semantic controller</small><span class="router-state">offline</span></div>
+      <div id="routerDesktop" class="router-node offline"><b>Codex Desktop</b><small>deep frontend</small><span class="router-state">offline</span></div>
+      <div id="routerOpenCode" class="router-node offline"><b>OpenCode</b><small>Go frontend</small><span class="router-state">offline</span></div>
+      <div id="routerFast" class="router-node offline"><b>Codex Fast</b><small>Mini / Luna</small><span class="router-state">idle</span></div>
+      <div id="routerHub" class="router-node hub offline"><b>Execution Hub</b><small>one runtime authority</small><span class="router-state">offline</span></div>
+      <div id="routerDeepSeek" class="router-node offline"><b>OpenCode Go</b><small>DeepSeek Flash / Pro</small><span class="router-state">idle</span></div>
+      <div id="routerTerra" class="router-node offline"><b>Codex Deep</b><small>Terra</small><span class="router-state">idle</span></div>
+      <div id="routerWriter" class="router-node offline"><b>MCP Writer</b><small>proof + fence</small><span class="router-state">idle</span></div>
+      <div id="routerSol" class="router-node offline"><b>Codex Critical</b><small>Sol</small><span class="router-state">idle</span></div>
+    </div>
+    <div class="router-legend" aria-hidden="true"><span class="connected">connected</span><span class="active">active</span><span class="waiting">waiting</span><span class="blocked">blocked</span></div>
+  </section>
+
+  <section class="panel-section continuity-section" id="continuitySection">
+    <h2>Continuity <span id="continuityStatus" class="badge">—</span></h2>
+    <div id="rotationLine" class="continuity-callout">Đang đánh giá khả năng xoay ChatWeb…</div>
+    <div id="continuityReasons" class="detail"></div>
+    <div id="contextPressureLine" class="detail"></div>
+    <div id="resumeLine" class="detail"></div>
   </section>
 
   <section class="panel-section" id="eventsSection">
