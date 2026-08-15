@@ -3,21 +3,34 @@
   "task_id": "c130b844830046ec9f78596239fa4b65",
   "orchestration": {
     "run_id": "b5fd168a97b345c0948486b81accad47",
-    "wave_id": "d20798799a894afcaf872584b55657aa",
-    "orchestration_state": "PREFLIGHT",
+    "wave_id": "4f3c13230c35462782d634f3c3475e96",
+    "orchestration_state": "REPLAN",
     "execution_mode": "mcp_only",
-    "route_requested": "",
-    "route_resolved": "",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "fda89e480bcc50cf216309821a8cf26b96e9c111",
-    "worktree_fp": "df8deca08e1ca3e7a292066c194d77fa9f6a0fef7b8d075696270ab7c4c2d84f",
+    "base_head": "2dcdd90a0b14ac720afc1550d3d643829373e89b",
+    "worktree_fp": "edda4b97d9f2a7cebe0bca9e96da753c7f6eafe199392a341b53dd014bd369cd",
     "contract_fp": ""
   },
-  "objective": "Run a workspace command",
+  "objective": "Run focused Git diagnostics for .coding-tools/orchestration/ledger.sqlite3 only. Do not commit, push, reset, restore, or modify files.",
   "status": "waiting",
-  "steps": [],
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-08-15T11:06:38.921Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-15T11:06:38.921Z"
+    }
+  ],
   "current_step": "Waiting for model",
   "current_command": null,
   "test_results": [],
@@ -25,9 +38,9 @@
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "",
+  "next_step": "Replan from the failed check; do not retry unchanged.",
   "created_at": "2026-08-15T11:03:36.839Z",
-  "updated_at": "2026-08-15T11:05:55.271Z",
+  "updated_at": "2026-08-15T11:07:09.758Z",
   "events": [
     {
       "time": "2026-08-15T11:03:36.839Z",
@@ -175,6 +188,290 @@
       "event": "command_finished",
       "details": {
         "command": "rg -n \"proof_cache|proof cache|cache_saved_ms|proof_cache_miss_reason|run_cached\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:02.829Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"rg -n 'def run_cached|proof_cache_eligible|proof_cache_miss_reason|cache_saved_ms|proof_cache_opportunity|proof_cache' resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/benchmarks/runtime_activation.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py resources/coding-tools-mcp/tests/test_runtime_",
+        "session_id": "HPcR43Ecje5cP4wggmAQ1VGC"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:03.304Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"rg -n 'def run_cached|proof_cache_eligible|proof_cache_miss_reason|cache_saved_ms|proof_cache_opportunity|proof_cache' resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/benchmarks/runtime_activation.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py resources/coding-tools-mcp/tests/test_runtime_",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:09.979Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py'; $a=Get-Content $p; $a[95..205]; Write-Output '--- performance trace proof cache ---'; $q='resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py'; $b=Get-Content $q; $hits=(Select-String -Path $q -Pattern 'proof_cache_eligible|def record|def snapshot').LineNumber; foreach($n in $hits | Select-Object -First 12){ $s=[Math]::Max(0,$n-8); $e=[Math]::Min($b.Length-1,$n+18); Write-Output ('-",
+        "session_id": "ZkG_iD1Jcosc1DpHzB4jkS_Y"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:10.725Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py'; $a=Get-Content $p; $a[95..205]; Write-Output '--- performance trace proof cache ---'; $q='resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py'; $b=Get-Content $q; $hits=(Select-String -Path $q -Pattern 'proof_cache_eligible|def record|def snapshot').LineNumber; foreach($n in $hits | Select-Object -First 12){ $s=[Math]::Max(0,$n-8); $e=[Math]::Min($b.Length-1,$n+18); Write-Output ('-",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:16.545Z",
+      "event": "orchestration_drift_detected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:16.547Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "REPLAN_REASON_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:17.657Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py'; $a=Get-Content $p; for($i=105;$i -le 205;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }; Write-Output '--- ledger proof cache lookup ---'; $q='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $b=Get-Content $q; $m=Select-String -Path $q -Pattern 'def proof_cache_lookup'; foreach($x in $m){$s=$x.LineNumber-1; $e=[Math]::Min($b.Length-1,$s+95); for($i=$s;$i -le $e;$i++){ '{0}: {1}' -f (",
+        "session_id": "asYD3jTGgME_vndD--HnCfxl"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:18.294Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py'; $a=Get-Content $p; for($i=105;$i -le 205;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }; Write-Output '--- ledger proof cache lookup ---'; $q='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $b=Get-Content $q; $m=Select-String -Path $q -Pattern 'def proof_cache_lookup'; foreach($x in $m){$s=$x.LineNumber-1; $e=[Math]::Min($b.Length-1,$s+95); for($i=$s;$i -le $e;$i++){ '{0}: {1}' -f (",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:25.005Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:25.812Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:25.998Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py'; $a=Get-Content $p; for($i=140;$i -le 205;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }; Write-Output '--- lookup method ---'; $q='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $b=Get-Content $q; $m=(Select-String -Path $q -Pattern '^    def proof_cache_lookup').LineNumber; for($i=$m-1;$i -le [Math]::Min($b.Length-1,$m+70);$i++){ '{0}: {1}' -f ($i+1),$b[$i] }\"",
+        "session_id": "_D_gaxxSedVz1qbPGn1nN_JQ"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:26.927Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py'; $a=Get-Content $p; for($i=140;$i -le 205;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }; Write-Output '--- lookup method ---'; $q='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $b=Get-Content $q; $m=(Select-String -Path $q -Pattern '^    def proof_cache_lookup').LineNumber; for($i=$m-1;$i -le [Math]::Min($b.Length-1,$m+70);$i++){ '{0}: {1}' -f ($i+1),$b[$i] }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:33.072Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:33.225Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"proof_cache|opportunity\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/benchmarks resources/coding-tools-mcp/coding_tools_mcp/evaluation_report.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+        "session_id": "aLnMTPdVRRcOfskTOuDkYHvq"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:33.318Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"proof_cache|opportunity\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/benchmarks resources/coding-tools-mcp/coding_tools_mcp/evaluation_report.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:34.306Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:35.213Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:35.213Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:36.190Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:36.392Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:36.927Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short --branch",
+        "session_id": "4JEmFCrEtpzh7oZsMmUXdsBU"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:37.021Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short --branch",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:38.336Z",
+      "event": "command_started",
+      "details": {
+        "command": "git check-ignore -v -- .coding-tools/orchestration/ledger.sqlite3",
+        "session_id": "A_VVvMgDh16bs4L7yiMtlYcI"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:38.451Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git check-ignore -v -- .coding-tools/orchestration/ledger.sqlite3",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:38.921Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:39.339Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:39.342Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:39.345Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:40.865Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/benchmarks/runtime_activation.py'; $a=Get-Content $p; for($i=210;$i -le 290;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }; Write-Output '--- start imports and ledger ---'; $a[0..80]\"",
+        "session_id": "b6ObKVr6nibWai5IObQm1R9d"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:41.451Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/benchmarks/runtime_activation.py'; $a=Get-Content $p; for($i=210;$i -le 290;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }; Write-Output '--- start imports and ledger ---'; $a[0..80]\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:46.543Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:53.146Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short --branch && git ls-files -v -- .coding-tools/orchestration/ledger.sqlite3 && git ls-files --debug -- .coding-tools/orchestration/ledger.sqlite3 && git diff --numstat -- .coding-tools/orchestration/ledger.sqlite3 && git diff --cached --numstat -- .coding-tools/orchestration/ledger.sqlite3",
+        "session_id": "OPS6LPxhpE_JDQ7WVcIOz5fa"
+      }
+    },
+    {
+      "time": "2026-08-15T11:06:53.470Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short --branch && git ls-files -v -- .coding-tools/orchestration/ledger.sqlite3 && git ls-files --debug -- .coding-tools/orchestration/ledger.sqlite3 && git diff --numstat -- .coding-tools/orchestration/ledger.sqlite3 && git diff --cached --numstat -- .coding-tools/orchestration/ledger.sqlite3",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T11:07:09.543Z",
+      "event": "command_started",
+      "details": {
+        "command": "git add --dry-run -- .coding-tools/orchestration/ledger.sqlite3 && git show --name-status --format=oneline -1 HEAD -- .coding-tools/orchestration/ledger.sqlite3 && git log -5 --oneline -- .coding-tools/orchestration/ledger.sqlite3",
+        "session_id": "0tSKVfaTI8I-PtuUP-FIznLZ"
+      }
+    },
+    {
+      "time": "2026-08-15T11:07:09.758Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git add --dry-run -- .coding-tools/orchestration/ledger.sqlite3 && git show --name-status --format=oneline -1 HEAD -- .coding-tools/orchestration/ledger.sqlite3 && git log -5 --oneline -- .coding-tools/orchestration/ledger.sqlite3",
         "status": "passed"
       }
     }
