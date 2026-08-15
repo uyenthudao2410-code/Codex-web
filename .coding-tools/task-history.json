@@ -1,337 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "06b364a0ef184585b25a7fb2a6852dd0",
-    "orchestration": {
-      "run_id": "73bd80d2f2bf4d42ab3099caddaffdb6",
-      "wave_id": "ccf64528621a4a3ebe0dc19cb1fa1135",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "62ff046711503260b079e53a85c66e5b9af01e32",
-      "worktree_fp": "40d9dc33148a630e706d207683073d8592b35d459e7db3f2aab514dbf40ee2ef",
-      "contract_fp": ""
-    },
-    "objective": "Audit the CURRENT implementation against the methodology's phase-level measurement requirement after the accepted bounded-evidence slice. Determine whether composite-read phase timing and EOCL phase timing are persisted as first-class PerformanceTrace fields or only returned in response payloads. Inspect PerformanceTraceStore, tool-call recording path, tests, and benchmark consumers. Identify the smallest backward-compatible implementation that exposes measured phase timing without changing Smart-v3 public tool schema, fabricating timings, or duplicating raw content. Also verify current concurrent provider traffic/flight recorder tests are present; do not modify source yet.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-14T15:37:59.528Z"
-      },
-      {
-        "id": "checks",
-        "text": "Run requested checks",
-        "status": "completed",
-        "updated_at": "2026-08-14T15:37:59.528Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-14T15:37:59.528Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": {
-      "command": "git diff --check -- coding_tools_mcp/performance_trace.py coding_tools_mcp/server.py tests/test_efficiency_runtime.py",
-      "kind": "command",
-      "session_id": "JuC3ZpFQx3WF579lf_qqqhFi",
-      "workdir": "resources/coding-tools-mcp",
-      "status": "running",
-      "started_at": "2026-08-14T15:37:59.010Z"
-    },
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-14T15:34:55.409Z",
-    "updated_at": "2026-08-14T15:38:18.898Z",
-    "events": [
-      {
-        "time": "2026-08-14T15:34:55.409Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Audit the CURRENT implementation against the methodology's phase-level measurement requirement after the accepted bounded-evidence slice. Determine whether composite-read phase timing and EOCL phase timing are persisted as first-class PerformanceTrace fields or only returned in response payloads. Inspect PerformanceTraceStore, tool-call recording path, tests, and benchmark consumers. Identify the smallest backward-compatible implementation that exposes measured phase timing without changing Smart-v3 public tool schema, fabricating timings, or duplicating raw content. Also verify current concurrent provider traffic/flight recorder tests are present; do not modify source yet."
-        }
-      },
-      {
-        "time": "2026-08-14T15:34:55.959Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-14T15:34:56.575Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:04.223Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/server.py'; $c=Get-Content $p; $c[6785..6875]\"",
-          "session_id": "63z64eH04Klz56YDmNxi8ynQ"
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:04.549Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/server.py'; $c=Get-Content $p; $c[6785..6875]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:49.959Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:50.482Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:51.032Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:51.046Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:51.690Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:51.875Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:36:51.891Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_task_state_and_build.py tests/test_execution_hub.py tests/test_orchestration_ledger.py -q",
-          "session_id": "lkijEg17NAkydXTa3V5y3tiW"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:10.070Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:10.325Z",
-        "event": "orchestration_failure_projected",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:10.345Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:10.357Z",
-        "event": "execution_failed",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:20.010Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "command_control",
-          "code": "INVALID_ARGUMENT"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:38.580Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:39.116Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:39.643Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:39.667Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:40.209Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:40.391Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:40.408Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_task_state_and_build.py tests/test_execution_hub.py tests/test_orchestration_ledger.py -q",
-          "session_id": "7zevgfFCNoig4-MyAYNakqtV"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:59.010Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --check -- coding_tools_mcp/performance_trace.py coding_tools_mcp/server.py tests/test_efficiency_runtime.py",
-          "session_id": "JuC3ZpFQx3WF579lf_qqqhFi"
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:59.514Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:37:59.528Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:38:07.909Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-14T15:38:07.932Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-14T15:38:18.851Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-14T15:38:18.868Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-14T15:38:34.189Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "c6195358b4a44511ac63d69e6c5fcd02",
     "orchestration": {
       "run_id": "e232900106084133ba055a60415e6bc9",
@@ -77901,6 +77570,67 @@
       }
     ],
     "archived_at": "2026-08-15T00:07:12.089Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "49a13da3ac3e4b58a2e167c4da862517",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-15T00:07:12.204Z",
+    "updated_at": "2026-08-15T00:07:29.684Z",
+    "events": [
+      {
+        "time": "2026-08-15T00:07:12.204Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-15T00:07:12.243Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$code='using System; using System.Runtime.InteropServices; using System.Security.Principal; public static class LR { [StructLayout(LayoutKind.Sequential)] public struct OA { public int Length; public IntPtr RootDirectory; public IntPtr ObjectName; public uint Attributes; public IntPtr SecurityDescriptor; public IntPtr SecurityQualityOfService; } [StructLayout(LayoutKind.Sequential)] public struct US { public ushort Length; public ushort",
+          "session_id": "B0QFWNFhW8KLxaWz6ZB9mcJy"
+        }
+      },
+      {
+        "time": "2026-08-15T00:07:13.273Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$code='using System; using System.Runtime.InteropServices; using System.Security.Principal; public static class LR { [StructLayout(LayoutKind.Sequential)] public struct OA { public int Length; public IntPtr RootDirectory; public IntPtr ObjectName; public uint Attributes; public IntPtr SecurityDescriptor; public IntPtr SecurityQualityOfService; } [StructLayout(LayoutKind.Sequential)] public struct US { public ushort Length; public ushort",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T00:07:29.281Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== ACTIVE NETWORK ==='; Get-NetConnectionProfile | Select-Object InterfaceAlias,NetworkCategory,IPv4Connectivity,IPv6Connectivity | Format-Table -AutoSize; Write-Output '=== REMOTE SHUTDOWN RULE DETAILS ==='; $rs=Get-NetFirewallRule -PolicyStore ActiveStore | Where-Object {$_.DisplayGroup -eq 'Remote Shutdown'}; foreach($r in $rs){$pf=$r | Get-NetFirewallPortFilter; $sf=$r | Get-",
+          "session_id": "HVR08y5mQOjmORU8f5wsPCYP"
+        }
+      },
+      {
+        "time": "2026-08-15T00:07:29.684Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== ACTIVE NETWORK ==='; Get-NetConnectionProfile | Select-Object InterfaceAlias,NetworkCategory,IPv4Connectivity,IPv6Connectivity | Format-Table -AutoSize; Write-Output '=== REMOTE SHUTDOWN RULE DETAILS ==='; $rs=Get-NetFirewallRule -PolicyStore ActiveStore | Where-Object {$_.DisplayGroup -eq 'Remote Shutdown'}; foreach($r in $rs){$pf=$r | Get-NetFirewallPortFilter; $sf=$r | Get-",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-15T00:07:36.073Z",
     "archive_reason": "finished"
   }
 ]
