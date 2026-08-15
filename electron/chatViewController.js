@@ -1,5 +1,6 @@
 const { shell, session, WebContentsView } = require('electron');
 const { DownloadService } = require('./services/downloadService');
+const { buildChatEvaluationObserverScript, chatEvaluationDrainScript } = require('./services/chatEvaluationJournal');
 
 const CHAT_HOME = 'https://chatgpt.com/';
 const CHAT_PARTITION = 'persist:chatgpt-session';
@@ -35,17 +36,20 @@ function isChatGptNavigation(value) {
 }
 
 class ChatViewController {
-  constructor({ window, log, settings, toolbarHeight = 64, onState = () => {}, onDownload = () => {} }) {
+  constructor({ window, log, settings, toolbarHeight = 64, onState = () => {}, onDownload = () => {}, onEvaluation = () => {} }) {
     this.window = window;
     this.log = log;
     this.toolbarHeight = toolbarHeight;
     this.onState = onState;
     this.settings = settings;
     this.onDownload = onDownload;
+    this.onEvaluation = onEvaluation;
     this.view = null;
     this.loading = false;
     this.lastError = '';
     this.rightInset = 0;
+    this.navigationEpoch = 0;
+    this.evaluationDrainTimer = null;
     this.boundResize = () => this.resize();
   }
 
@@ -81,6 +85,7 @@ class ChatViewController {
     this.window.on('resize', this.boundResize);
     this.resize();
     this.bindWebContents();
+    this.startEvaluationDrain();
     this.loadHome();
   }
 
@@ -127,11 +132,14 @@ class ChatViewController {
       this.emitState();
     });
     contents.on('dom-ready', () => {
+      this.navigationEpoch += 1;
+      this.installEvaluationObserver();
       this.scheduleChatUiEnhancements();
     });
     contents.on('did-stop-loading', () => {
       this.loading = false;
       this.emitState();
+      this.installEvaluationObserver();
       this.scheduleChatUiEnhancements();
     });
     contents.on('did-navigate', () => {
@@ -336,6 +344,26 @@ class ChatViewController {
     }, delay));
   }
 
+  installEvaluationObserver() {
+    const contents = this.view?.webContents;
+    if (!contents || contents.isDestroyed()) return;
+    const clockDomain = `electron-chatgpt-renderer:${contents.id}:${this.navigationEpoch}`;
+    contents.executeJavaScript(buildChatEvaluationObserverScript({ navigationEpoch: this.navigationEpoch, clockDomain }), true).catch(() => false);
+  }
+
+  startEvaluationDrain() {
+    if (this.evaluationDrainTimer) return;
+    this.evaluationDrainTimer = setInterval(() => {
+      const contents = this.view?.webContents;
+      if (!contents || contents.isDestroyed()) return;
+      contents.executeJavaScript(chatEvaluationDrainScript(), true).then((events) => {
+        if (Array.isArray(events) && events.length) return this.onEvaluation(events);
+        return null;
+      }).catch(() => null);
+    }, 150);
+    this.evaluationDrainTimer.unref?.();
+  }
+
   resize() {
     if (!this.view || !this.window || this.window.isDestroyed()) return;
     const [width, height] = this.window.getContentSize();
@@ -421,6 +449,8 @@ class ChatViewController {
   }
 
   dispose() {
+    if (this.evaluationDrainTimer) clearInterval(this.evaluationDrainTimer);
+    this.evaluationDrainTimer = null;
     if (this.window && !this.window.isDestroyed()) this.window.removeListener('resize', this.boundResize);
     if (this.view && this.window && !this.window.isDestroyed()) {
       try { this.window.contentView.removeChildView(this.view); } catch { /* already detached */ }

@@ -887,14 +887,72 @@ class ToolModeTests(unittest.TestCase):
         )
         self.assertIn("allow_high_cost", schemas["agent_workflow"]["properties"])
         evaluation_schema = schemas["agent_workflow"]["properties"]["evaluation"]
-        self.assertEqual(evaluation_schema["properties"]["policy"]["enum"], ["chatweb_mcp", "mini", "luna"])
+        self.assertEqual(evaluation_schema["properties"]["cache_stratum"]["enum"], ["cold", "warm", "unknown"])
+        self.assertIn("policy_version", evaluation_schema["properties"])
+        self.assertIn("topology_id", evaluation_schema["properties"])
+        self.assertIn("router_id", evaluation_schema["properties"])
+        self.assertIn("environment_id", evaluation_schema["properties"])
         self.assertIn("controller", evaluation_schema["properties"])
+        self.assertIn("quality", schemas["task_control"]["properties"]["action"]["enum"])
+        self.assertIn("quality_outcome", schemas["task_control"]["properties"])
+        self.assertIn("observation", schemas["task_control"]["properties"]["action"]["enum"])
+        observation_schema = schemas["task_control"]["properties"]["observation_span"]
+        self.assertEqual(observation_schema["required"], ["span_id", "stage", "source", "measurement", "clock_domain", "start_ms", "end_ms"])
         bridge_profiles = schemas["codex_bridge"]["properties"]["profile"]["enum"]
         self.assertIn("deep_code", bridge_profiles)
         self.assertIn("parallel_extreme", bridge_profiles)
         smart_names = set(server_module.TOOL_MODE_ALLOWLISTS["smart"])
         self.assertEqual(len(smart_names), 8)
         self.assertNotIn("codex_bridge", smart_names)
+
+    def test_task_control_records_delayed_quality_outcome(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                run_id = runtime.orchestration_ledger.create_run(objective="quality observation")
+                wave_id = runtime.orchestration_ledger.create_wave(run_id, execution_mode="mcp_only")
+                result = runtime.task_control({
+                    "action": "quality",
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                    "quality_outcome": {
+                        "oracle_pass": True,
+                        "critical_defect_count": 0,
+                        "source": "test_observation",
+                    },
+                })
+                self.assertTrue(result["recorded"])
+                latest = runtime.orchestration_ledger.latest_quality_outcome(run_id)
+                self.assertEqual(latest["source"], "test_observation")
+                self.assertEqual(latest["critical_defect_count"], 0)
+            finally:
+                runtime.close()
+
+    def test_task_control_records_content_free_observation_span(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                run_id = runtime.orchestration_ledger.create_run(objective="host observation")
+                result = runtime.task_control({
+                    "action": "observation",
+                    "run_id": run_id,
+                    "observation_span": {
+                        "span_id": "host-visible",
+                        "stage": "assistant_response_visible",
+                        "source": "electron_chatgpt_dom",
+                        "measurement": "observed_host_visible",
+                        "clock_domain": "electron-renderer:1",
+                        "start_ms": 100.0,
+                        "end_ms": 125.5,
+                        "observer_plane": "electron_chatgpt_dom",
+                    },
+                })
+                self.assertTrue(result["recorded"])
+                self.assertTrue(result["critical_path"]["complete"])
+                self.assertEqual(result["critical_path"]["critical_path_ms"], 25.5)
+                self.assertEqual(runtime.orchestration_ledger.list_observation_spans(run_id)[0]["measurement"], "observed_host_visible")
+            finally:
+                runtime.close()
 
     def test_execution_router_keeps_expensive_and_experimental_routes_gated(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -1282,6 +1340,14 @@ class SourceFencedContinuationTests(unittest.TestCase):
                 with self.assertRaises(ToolFailure) as scope_error:
                     runtime.git_diff({"continuation": token, "paths": ["other.py"]})
                 self.assertEqual(scope_error.exception.code, "CONTINUATION_SCOPE_MISMATCH")
+                with self.assertRaises(ToolFailure) as workflow_scope_error:
+                    runtime.agent_workflow({
+                        "workflow": "resume",
+                        "phase": "resume",
+                        "continuation": token,
+                        "paths": ["other.py"],
+                    })
+                self.assertEqual(workflow_scope_error.exception.code, "CONTINUATION_SCOPE_MISMATCH")
                 with self.assertRaises(ToolFailure) as signature_error:
                     runtime.agent_workflow({"workflow": "resume", "phase": "resume", "continuation": token[:-1] + ("A" if token[-1] != "A" else "B")})
                 self.assertEqual(signature_error.exception.code, "INVALID_CONTINUATION")

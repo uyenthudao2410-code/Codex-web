@@ -9,6 +9,7 @@ const { LogService } = require('./services/logService');
 const { EnvironmentService, pythonStatus } = require('./services/environmentService');
 const { RuntimeOrchestrator } = require('./services/runtimeOrchestrator');
 const { ChatViewController } = require('./chatViewController');
+const { ChatEvaluationJournal } = require('./services/chatEvaluationJournal');
 const { run } = require('./services/commandRunner');
 const { resolveProxy, clearProxyCache } = require('./services/proxyService');
 const { BuildVerificationService } = require('./services/buildVerificationService');
@@ -36,6 +37,7 @@ const settings = new SettingsStore();
 const secrets = new SecretStore();
 const log = new LogService();
 const environment = new EnvironmentService();
+const chatEvaluationJournal = new ChatEvaluationJournal();
 
 function appIconPath() {
   return path.join(__dirname, 'app-icon.png');
@@ -170,6 +172,60 @@ async function panelTaskControl(action) {
   return (response && response.result) || null;
 }
 
+async function recordHostObservationSpan(event) {
+  if (!event || event.event_type !== 'host_turn_span' || !event.run_id || !event.wave_id || !event.trace_id || !event.turn_id) return false;
+  const current = settings.load();
+  const token = secrets.get('mcpAuthToken');
+  if (!token) return false;
+  const request = {
+    jsonrpc: '2.0',
+    id: `host-observation-${Date.now()}`,
+    method: 'tools/call',
+    params: {
+      name: 'task_control',
+      arguments: {
+        action: 'observation',
+        run_id: event.run_id,
+        wave_id: event.wave_id,
+        observation_span: {
+          span_id: event.span_id,
+          stage: 'host_turn_span',
+          source: 'electron_chatgpt_dom',
+          measurement: event.measurement,
+          clock_domain: event.clock_domain,
+          start_ms: event.start_ms,
+          end_ms: event.end_ms,
+          observer_plane: 'electron_chatgpt_dom',
+          trace_id: event.trace_id,
+          turn_id: event.turn_id
+        }
+      },
+      _meta: {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+        'io.modelcontextprotocol/clientInfo': { name: 'web-mcp-assistant-host-observer', version: app.getVersion() }
+      }
+    }
+  };
+  const response = await httpRequestJson({
+    port: current.mcpPort,
+    path: '/mcp',
+    method: 'POST',
+    token,
+    body: request,
+    headers: {
+      'MCP-Protocol-Version': '2026-07-28',
+      'Mcp-Method': 'tools/call',
+      'Mcp-Name': 'task_control',
+      'X-Coding-Tools-Client-Id': 'electron-host-observer',
+      'X-Coding-Tools-Client-Type': 'electron'
+    },
+    timeout: 5000
+  });
+  if (response?.error || response?.result?.isError) throw new Error(response?.error?.message || response?.result?.structuredContent?.error?.message || 'MCP rejected host observation.');
+  return true;
+}
+
 function layoutViews() {
   if (!chatWindow || chatWindow.isDestroyed()) return;
   const [width, height] = chatWindow.getContentSize();
@@ -268,6 +324,29 @@ function createChatWindow() {
     },
     onDownload: (payload) => {
       if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('chat:download', payload);
+    },
+    onEvaluation: async (events) => {
+      const workspace = String(settings.load().workspace || '').trim();
+      if (!workspace) return;
+      let correlated = [];
+      try {
+        chatEvaluationJournal.stagePendingTurns(workspace, events);
+        correlated = chatEvaluationJournal.attachExplicitBindings(workspace, events);
+        chatEvaluationJournal.append(workspace, correlated);
+      } catch (error) {
+        log.warn('Không thể ghi host-visible evaluation telemetry', { error: safeMessage(error) });
+        return;
+      }
+      for (const event of correlated.filter((item) => item?.event_type === 'host_turn_span')) {
+        try {
+          if (event.run_id && event.wave_id) await recordHostObservationSpan(event);
+        } catch (error) {
+          log.warn('Không thể ghi explicit host observation vào EOCL ledger', { error: safeMessage(error) });
+        } finally {
+          chatEvaluationJournal.clearPendingTurn(workspace, event);
+          if (event.run_id && event.wave_id) chatEvaluationJournal.consumeBinding(workspace, event);
+        }
+      }
     }
   });
   chatController.mount();

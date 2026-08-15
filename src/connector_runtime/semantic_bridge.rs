@@ -4,7 +4,9 @@
 use super::projections::validate_path;
 use super::{ConnectorCallOutcome, ConnectorRuntime};
 use crate::auth::{AuthContext, SCOPE_PROJECT_READ};
-use crate::tool_runtime::kernel::{ToolCallContext, ToolCallRequest as KernelToolCallRequest, ToolTransport};
+use crate::tool_runtime::kernel::{
+    ToolCallContext, ToolCallRequest as KernelToolCallRequest, ToolTransport,
+};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::path::Path;
@@ -49,7 +51,9 @@ impl ConnectorRuntime {
             return ConnectorCallOutcome::scope_denied(SCOPE_PROJECT_READ);
         }
         if !valid_sha256(&input.workspace_sha256) {
-            return invalid_semantic_input("workspace_sha256 must be 64 lowercase hexadecimal characters");
+            return invalid_semantic_input(
+                "workspace_sha256 must be 64 lowercase hexadecimal characters",
+            );
         }
         if input.queries.is_empty() || input.queries.len() > MAX_SEMANTIC_QUERIES {
             return invalid_semantic_input("queries must contain 1..=8 entries");
@@ -323,15 +327,23 @@ mod tests {
         let (_temp, connector) = connector();
         let input = valid_input(&connector);
 
-        let wrong_grant = connector.semantic_localize(&auth("u2"), input.clone()).await;
+        let wrong_grant = connector
+            .semantic_localize(&auth("u2"), input.clone())
+            .await;
         assert_eq!(wrong_grant.http_status, 403);
-        assert_eq!(wrong_grant.body["error"]["code"], "project_credential_required");
+        assert_eq!(
+            wrong_grant.body["error"]["code"],
+            "project_credential_required"
+        );
 
         let mut bootstrap = AuthContext::new(AuthKind::Bootstrap);
         bootstrap.is_bootstrap = true;
         let bootstrap = connector.semantic_localize(&bootstrap, input.clone()).await;
         assert_eq!(bootstrap.http_status, 403);
-        assert_eq!(bootstrap.body["error"]["code"], "project_credential_required");
+        assert_eq!(
+            bootstrap.body["error"]["code"],
+            "project_credential_required"
+        );
 
         let mut wrong_workspace = input;
         wrong_workspace.workspace_sha256 = "0".repeat(64);
@@ -339,15 +351,23 @@ mod tests {
             .semantic_localize(&auth("u1"), wrong_workspace)
             .await;
         assert_eq!(wrong_workspace.http_status, 403);
-        assert_eq!(wrong_workspace.body["error"]["code"], "semantic_workspace_mismatch");
-        assert!(!wrong_workspace.body.to_string().contains(&connector.context.executor_root));
+        assert_eq!(
+            wrong_workspace.body["error"]["code"],
+            "semantic_workspace_mismatch"
+        );
+        assert!(!wrong_workspace
+            .body
+            .to_string()
+            .contains(&connector.context.executor_root));
     }
 
     #[tokio::test]
     async fn native_semantic_bridge_fails_closed_when_lsp_capability_is_unavailable() {
         let (_temp, connector) = connector();
         register_semantic_agent(&connector, false).await;
-        let outcome = connector.semantic_localize(&auth("u1"), valid_input(&connector)).await;
+        let outcome = connector
+            .semantic_localize(&auth("u1"), valid_input(&connector))
+            .await;
         assert_eq!(outcome.http_status, 409);
         assert_eq!(outcome.body["error"]["code"], "native_lsp_unavailable");
     }
@@ -423,12 +443,16 @@ mod tests {
                 .unwrap();
         });
 
-        let outcome = connector.semantic_localize(&auth("u1"), valid_input(&connector)).await;
+        let outcome = connector
+            .semantic_localize(&auth("u1"), valid_input(&connector))
+            .await;
         responder.await.unwrap();
         assert!(outcome.ok, "{}", outcome.body);
         assert_eq!(outcome.body["data"]["provider"], "webcodex_native_lsp");
         assert_eq!(outcome.body["data"]["results"][0]["handled"], true);
-        let matches = outcome.body["data"]["results"][0]["matches"].as_array().unwrap();
+        let matches = outcome.body["data"]["results"][0]["matches"]
+            .as_array()
+            .unwrap();
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0]["path"], "src/tool_runtime/mod.rs");
         assert_eq!(matches[0]["symbol"], "ToolRuntime");

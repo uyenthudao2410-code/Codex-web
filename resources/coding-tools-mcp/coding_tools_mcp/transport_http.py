@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+import base64
+import os
 import threading
 import time
+import urllib.parse
+from dataclasses import dataclass
+from typing import Any
+
+from .envutils import ENV_PREFIX, truthy_env
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -96,3 +104,82 @@ class HTTPSessionManager:
         with self._lock:
             self._closed = True
             self._sessions.clear()
+
+STATELESS_HTTP_2026_ENV = f"{ENV_PREFIX}_STATELESS_HTTP_2026"
+
+
+def _http_base_for_bind_host(host: str, port: int) -> str:
+    if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+    return f"http://{host}:{port}"
+
+
+def _first_header_value(value: str | None) -> str:
+    return (value or "").split(",", 1)[0].strip()
+
+
+def _first_form_value(params: dict[str, list[str]], key: str) -> str:
+    values = params.get(key)
+    return values[0] if values else ""
+
+
+def stateless_http_2026_enabled() -> bool:
+    """Both MCP eras are served by default on every transport, matching upstream.
+
+    Legacy 2025-11-25/2025-06-18 clients are unaffected: they never send a
+    modern MCP-Protocol-Version header or params._meta protocolVersion.
+    Operators can explicitly disable the modern era with
+    CODING_TOOLS_MCP_STATELESS_HTTP_2026=0.
+    """
+
+    raw = os.environ.get(STATELESS_HTTP_2026_ENV)
+    if raw is None:
+        return True
+    return truthy_env(raw)
+
+
+def _decode_mcp_name_header(value: str) -> str | None:
+    if not (value.startswith("=?base64?") and value.endswith("?=")):
+        return value
+    try:
+        raw = base64.b64decode(value[len("=?base64?") : -2], validate=True)
+        return raw.decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
+def _request_mcp_name(request: dict[str, Any]) -> str | None:
+    params = request.get("params")
+    if not isinstance(params, dict):
+        return None
+    method = str(request.get("method") or "")
+    if method in {"tools/call", "prompts/get"}:
+        value = params.get("name")
+        return value if isinstance(value, str) else None
+    if method == "resources/read":
+        value = params.get("uri")
+        return value if isinstance(value, str) else None
+    return None
+
+
+def _forwarded_header_param(value: str | None, name: str) -> str:
+    first = _first_header_value(value)
+    for part in first.split(";"):
+        key, sep, raw = part.strip().partition("=")
+        if sep and key.lower() == name:
+            return raw.strip().strip('"')
+    return ""
+
+
+def _safe_external_host(host: str) -> str:
+    host = host.strip()
+    if not host or any(ch.isspace() or ch in "/\\@?#" for ch in host):
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(f"//{host}")
+        _ = parsed.port
+    except ValueError:
+        return ""
+    if not parsed.hostname or parsed.username is not None or parsed.password is not None:
+        return ""
+    return host

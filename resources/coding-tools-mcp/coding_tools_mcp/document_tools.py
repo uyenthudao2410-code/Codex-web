@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import html
+import json
 import hashlib
 import io
 import re
 import zipfile
 from pathlib import Path
 from typing import Any
+
+from .errors import ToolFailure
 from xml.etree import ElementTree as ET
 
 
@@ -203,3 +206,153 @@ def convert_document(source: Path, target: Path, *, overwrite: bool = False) -> 
     extracted = extract_document(source)
     created = create_docx(target, source.stem, str(extracted.get("content", "")), overwrite=overwrite)
     return {"source": str(source), "target": created["path"], "source_format": extracted["format"], "size": created["size"]}
+
+
+class DocumentToolsMixin:
+    def document_workflow(self, args: dict[str, Any]) -> dict[str, Any]:
+        action = str(args.get("action", "inspect")).lower()
+        detail = str(args.get("detail", "compact")).lower()
+        capabilities = {
+            "runtime_ready": True,
+            "dependency_check_required": False,
+            "supported_inputs": ["pdf", "docx", "txt", "md", "csv", "json", "xml", "html"],
+            "supported_output": ["docx", "md", "txt"],
+            "extracts_pdf_page_sizes": True,
+            "detects_embedded_images": True,
+            "editable_layout_fidelity": "basic",
+            "note": "Text and embedded-media structure are inspected locally. Pixel-perfect editable PDF-to-Word reconstruction is not guaranteed.",
+        }
+        if action == "capabilities":
+            return {"capabilities": capabilities}
+        if action == "inspect":
+            raw_paths = args.get("paths", [])
+            single = str(args.get("path", "")).strip()
+            paths = [single] if single else []
+            paths.extend(str(item).strip() for item in raw_paths if str(item).strip())
+            paths = list(dict.fromkeys(paths))[:20]
+            if not paths:
+                raise ToolFailure("INVALID_ARGUMENT", "path or paths is required for document inspection.", category="validation")
+            resolved_paths = [self.resolve_existing(raw_path).path for raw_path in paths]
+            cache_key = self._fast_cache_key(
+                "document_workflow_inspect",
+                {"paths": paths, "max_chars": int(args.get("max_chars", 200000)), "detail": detail},
+                file_paths=resolved_paths,
+            )
+            cached = self._fast_cache_get(cache_key, 300)
+            if cached is not None:
+                return cached
+            documents: list[dict[str, Any]] = []
+            for raw_path in paths:
+                try:
+                    document = self.document_extract({"path": raw_path, "max_chars": int(args.get("max_chars", 200000))})
+                    if detail != "layout":
+                        document = {key: document.get(key) for key in (
+                            "path", "format", "suffix", "size", "page_count", "content", "truncated"
+                        ) if key in document}
+                    documents.append(document)
+                except ToolFailure as exc:
+                    documents.append({"path": raw_path, "ok": False, "error": {"code": exc.code, "message": exc.message}})
+            payload = {
+                "action": action,
+                "documents": documents,
+                "count": len(documents),
+                "detail": detail,
+                "recommended_next_action": "Reason over this content once, then call document_workflow action=create once. Do not inspect dependencies, repeat extraction, use exec_command/apply_patch, or run a separate verification command.",
+                "cache": {"hit": False, "age_ms": 0},
+            }
+            if detail == "layout":
+                payload["capabilities"] = capabilities
+            self._fast_cache_put(cache_key, payload)
+            return payload
+        if action == "create":
+            dedup_key = self._fast_cache_key("document_workflow_create", args)
+            cached_create = self._fast_cache_get(dedup_key, 30)
+            if cached_create is not None:
+                cached_create["deduplicated"] = True
+                return cached_create
+            target = self.resolve_for_write(str(args.get("target", args.get("path", ""))))
+            if target.path.suffix.lower() in {".md", ".txt"}:
+                try:
+                    result = create_text_document(
+                        target.path,
+                        str(args.get("content", "")),
+                        overwrite=bool(args.get("overwrite", False)),
+                    )
+                except (OSError, ValueError) as exc:
+                    raise ToolFailure("DOCUMENT_WRITE_FAILED", str(exc), category="runtime", retryable=True) from exc
+                result["path"] = target.display
+                result["affected_files"] = [{"path": target.display, "operation": "create"}]
+            else:
+                result = self.document_create({
+                    "path": target.display,
+                    "title": args.get("title", ""),
+                    "content": args.get("content", ""),
+                    "overwrite": args.get("overwrite", False),
+                })
+            self._invalidate_fast_cache()
+            payload = {"action": action, "result": result, "affected_files": result.get("affected_files", [])}
+            self._fast_cache_put(dedup_key, payload)
+            return payload
+        if action == "convert":
+            result = self.document_convert({
+                "source": args.get("source", ""),
+                "target": args.get("target", ""),
+                "overwrite": args.get("overwrite", False),
+            })
+            self._invalidate_fast_cache()
+            return {"action": action, "result": result, "affected_files": result.get("affected_files", [])}
+        if action == "rebuild":
+            source = self.resolve_existing(str(args.get("source", "")))
+            target = self.resolve_for_write(str(args.get("target", "")))
+            analysis = extract_document(source.path, min(int(args.get("max_chars", 200000)), 1000000))
+            content = str(args.get("content", ""))
+            if not content:
+                content = str(analysis.get("content", ""))
+            title = str(args.get("title", "")).strip() or source.path.stem
+            result = create_docx(target.path, title, content, overwrite=bool(args.get("overwrite", False)))
+            result["path"] = target.display
+            affected = [{"path": target.display, "operation": "create"}]
+            self._invalidate_fast_cache()
+            return {
+                "action": action,
+                "source_analysis": analysis,
+                "result": result,
+                "affected_files": affected,
+                "capabilities": capabilities,
+                "fidelity_warning": capabilities["note"],
+            }
+        raise ToolFailure("INVALID_ARGUMENT", f"Unknown document workflow action: {action}", category="validation")
+
+    def document_extract(self, args: dict[str, Any]) -> dict[str, Any]:
+        resolved = self.resolve_existing(str(args.get("path", "")))
+        if not resolved.path.is_file():
+            raise ToolFailure("NOT_A_FILE", "Document path must be a file.", category="validation")
+        try:
+            return extract_document(resolved.path, min(int(args.get("max_chars", 200000)), 1000000))
+        except (OSError, ValueError, RuntimeError, zipfile.BadZipFile) as exc:
+            raise ToolFailure("DOCUMENT_READ_FAILED", str(exc), category="runtime", retryable=True) from exc
+
+    def document_create(self, args: dict[str, Any]) -> dict[str, Any]:
+        resolved = self.resolve_for_write(str(args.get("path", "")))
+        if resolved.path.suffix.lower() != ".docx":
+            raise ToolFailure("INVALID_ARGUMENT", "document_create target must end with .docx.", category="validation")
+        try:
+            result = create_docx(resolved.path, str(args.get("title", "")), str(args.get("content", "")), overwrite=bool(args.get("overwrite", False)))
+        except (OSError, ValueError) as exc:
+            raise ToolFailure("DOCUMENT_WRITE_FAILED", str(exc), category="runtime", retryable=True) from exc
+        result["path"] = resolved.display
+        result["affected_files"] = [{"path": resolved.display, "operation": "create"}]
+        return result
+
+    def document_convert(self, args: dict[str, Any]) -> dict[str, Any]:
+        source = self.resolve_existing(str(args.get("source", "")))
+        target = self.resolve_for_write(str(args.get("target", "")))
+        try:
+            result = convert_document(source.path, target.path, overwrite=bool(args.get("overwrite", False)))
+        except (OSError, ValueError, RuntimeError, zipfile.BadZipFile) as exc:
+            raise ToolFailure("DOCUMENT_CONVERT_FAILED", str(exc), category="runtime", retryable=True) from exc
+        result["source"] = source.display
+        result["target"] = target.display
+        result["affected_files"] = [{"path": target.display, "operation": "create"}]
+        return result
+

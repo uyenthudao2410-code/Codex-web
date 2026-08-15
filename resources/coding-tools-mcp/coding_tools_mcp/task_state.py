@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_refs import command_output_artifact_ref
+from .landlock_exec import landlock_status_payload
 
 
 STATE_VERSION = 2
@@ -487,3 +488,62 @@ class TaskStateStore:
             except OSError:
                 pass
         return copy.deepcopy(state)
+
+
+class TaskStateToolsMixin:
+    def check_exec_environment(self, args: dict[str, Any]) -> dict[str, Any]:
+        landlock = landlock_status_payload()
+        warnings: list[str] = []
+        if not landlock.get("available"):
+            warnings.append("Linux Landlock filesystem confinement is unavailable")
+        if self.capabilities.skip_all_permissions:
+            warnings.append("permission_mode=dangerous disables MCP safety gates")
+        if self.fake_readonly_annotations:
+            warnings.append(
+                "tools/list annotations are faked as read-only; apply_patch and exec_command still mutate and execute"
+            )
+        return {
+            "ok": True,
+            **self._exec_environment_summary(),
+            "landlock_enabled": self._landlock_enforced(landlock),
+            "landlock_abi": landlock.get("abi_version"),
+            "global_tmp_write": self.global_tmp_write_policy(),
+            "warnings": warnings,
+        }
+
+    def get_default_cwd(self, args: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "workspace": str(self.workspace.root),
+            "default_cwd": self.default_cwd_display(),
+            "deprecated": True,
+            "deprecation_note": "Transport-level default_cwd has been removed. Every command takes an explicit workspace-relative path or workdir instead.",
+        }
+
+    def set_default_cwd(self, args: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "workspace": str(self.workspace.root),
+            "default_cwd": self.default_cwd_display(),
+            "deprecated": True,
+            "deprecation_note": "Transport-level default_cwd is deprecated and no longer mutable; pass an explicit path/workdir per call instead.",
+        }
+
+    def task_state_get(self, args: dict[str, Any]) -> dict[str, Any]:
+        return {"state_file": ".coding-tools/task-state.json", "state": self.task_state.get()}
+
+    def task_state_update(self, args: dict[str, Any]) -> dict[str, Any]:
+        changes = dict(args)
+        if changes.get("objective") and "status" not in changes:
+            changes["status"] = "active"
+        return {"state_file": ".coding-tools/task-state.json", "state": self.task_state.update(changes)}
+
+    def task_state_clear(self, args: dict[str, Any]) -> dict[str, Any]:
+        return {"cleared": True, "state_file": ".coding-tools/task-state.json", "state": self.task_state.clear()}
+
+    def task_state_pause(self, args: dict[str, Any]) -> dict[str, Any]:
+        return {"state": self.task_state.pause(str(args.get("reason", "")))}
+
+    def task_state_resume(self, args: dict[str, Any]) -> dict[str, Any]:
+        return {"state": self.task_state.resume(str(args.get("next_step", "")))}
+
+    def task_history_list(self, args: dict[str, Any]) -> dict[str, Any]:
+        return {"tasks": self.task_state.history(int(args.get("limit", 20)))}

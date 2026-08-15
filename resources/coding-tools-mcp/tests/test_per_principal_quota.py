@@ -29,7 +29,7 @@ class PrincipalSessionQuotaTests(unittest.TestCase):
             )
             runtime = Runtime(root)
             try:
-                with patch("coding_tools_mcp.server.PRINCIPAL_MAX_ACTIVE_SESSIONS", 2):
+                with patch("coding_tools_mcp.processes.PRINCIPAL_MAX_ACTIVE_SESSIONS", 2):
                     first = self._spawn_sleeper(runtime, "chatweb")
                     self.assertEqual(first["status"], "running")
                     second = self._spawn_sleeper(runtime, "chatweb")
@@ -50,7 +50,7 @@ class PrincipalSessionQuotaTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp))
             try:
-                with patch("coding_tools_mcp.server.PRINCIPAL_MAX_ACTIVE_SESSIONS", 1):
+                with patch("coding_tools_mcp.processes.PRINCIPAL_MAX_ACTIVE_SESSIONS", 1):
                     first = runtime.exec_command({
                         "cmd": "echo done",
                         "yield_time_ms": 2000,
@@ -86,7 +86,7 @@ class PrincipalOutputEvictionTests(unittest.TestCase):
                 runtime.output_sessions = {"a": session_a, "b": session_b}
                 runtime.session_principals = {"a": "chatweb", "b": "desktop"}
                 with patch(
-                    "coding_tools_mcp.server.PRINCIPAL_MAX_RETAINED_OUTPUT_BYTES", 50
+                    "coding_tools_mcp.processes.PRINCIPAL_MAX_RETAINED_OUTPUT_BYTES", 50
                 ):
                     with runtime.sessions_lock:
                         runtime._evict_principal_overflow_locked()

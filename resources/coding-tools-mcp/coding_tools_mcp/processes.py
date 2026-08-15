@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO
 
+from .envutils import ENV_PREFIX
 from .errors import ToolFailure
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_tail
 
@@ -16,6 +17,35 @@ SESSION_BUFFER_BYTES = 524_288
 SESSION_HEAD_DIVISOR = 8
 MAX_CONSUMER_CURSORS = 16
 HARD_KILL_SIGNAL = getattr(signal, "SIGKILL", signal.SIGTERM)
+
+
+EXEC_PREVIEW_BYTES = 4096
+MAX_ACTIVE_EXEC_SESSIONS = 16
+MAX_RETAINED_OUTPUT_SESSIONS = 32
+COMPLETED_SESSION_TTL_SECONDS = 300
+MAX_RUNTIME_OUTPUT_BYTES = 16 * 1024 * 1024
+try:
+    PRINCIPAL_MAX_ACTIVE_SESSIONS = max(
+        1,
+        min(
+            MAX_ACTIVE_EXEC_SESSIONS,
+            int(os.environ.get(f"{ENV_PREFIX}_PRINCIPAL_MAX_SESSIONS", "8")),
+        ),
+    )
+except (TypeError, ValueError):
+    PRINCIPAL_MAX_ACTIVE_SESSIONS = 8
+PRINCIPAL_MAX_RETAINED_OUTPUT_BYTES = 4 * 1024 * 1024
+ECOSYSTEM_CACHE_ENV_NAMES = {
+    "MAVEN_USER_HOME",
+    "GRADLE_USER_HOME",
+    "NPM_CONFIG_CACHE",
+    "npm_config_cache",
+    "PIP_CACHE_DIR",
+    "GOCACHE",
+    "GOMODCACHE",
+    "CARGO_HOME",
+    "RUSTUP_HOME",
+}
 WINDOWS_JOB_OBJECT_ENV = "CODING_TOOLS_MCP_WINDOWS_JOB_OBJECT"
 
 _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
@@ -715,3 +745,23 @@ def truncate_output_bytes_tail(data: bytes, max_bytes: int, max_lines: int = DEF
         max_lines=max_lines,
         max_bytes=max_bytes,
     )
+
+
+def hidden_process_popen_kwargs() -> dict[str, Any]:
+    """Prevent console helper processes from flashing a window on Windows."""
+    if os.name != "nt":
+        return {}
+    creation_flag = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return {"creationflags": creation_flag} if creation_flag else {}
+
+def process_group_popen_kwargs() -> dict[str, Any]:
+    if hasattr(os, "setsid"):
+        return {"start_new_session": True}
+    if os.name == "nt":
+        creation_flags = (
+            getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        )
+        if creation_flags:
+            return {"creationflags": creation_flags}
+    return {}

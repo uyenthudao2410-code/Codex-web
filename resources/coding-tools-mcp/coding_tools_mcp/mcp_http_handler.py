@@ -1,0 +1,1417 @@
+from __future__ import annotations
+
+import base64
+import functools
+import hashlib
+import html
+import http.server
+import json
+import os
+import posixpath
+import re
+import secrets
+import sys
+import time
+import urllib.parse
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
+
+from . import __version__
+from .envutils import ENV_PREFIX, truthy_env
+from .errors import JsonRpcError, ToolFailure
+from .oauth import (
+    MAX_PENDING_CODES,
+    OAUTH_CODE_TTL_SECONDS,
+    OAUTH_MAX_BODY_BYTES,
+    create_access_token,
+    valid_pkce_challenge,
+    validate_access_token,
+    verify_pkce,
+)
+from .protocol import (
+    LEGACY_PROTOCOL_VERSIONS,
+    PROTOCOL_VERSION,
+    STATELESS_PROTOCOL_VERSION,
+    SUPPORTED_PROTOCOL_VERSIONS,
+    dispatch_rpc,
+    jsonrpc_error,
+    protocol_version_is_supported,
+    request_protocol_version,
+    response_id,
+    validate_rpc_envelope,
+)
+from .tool_schema import tool_annotations, tool_definition
+from .transport_http import (
+    STATELESS_HTTP_2026_ENV,
+    HTTPSessionManager,
+    _decode_mcp_name_header,
+    _first_form_value,
+    _first_header_value,
+    _forwarded_header_param,
+    _http_base_for_bind_host,
+    _request_mcp_name,
+    _safe_external_host,
+    stateless_http_2026_enabled,
+)
+
+SERVER_NAME = "coding-tools-mcp"
+SERVER_TITLE = "Coding Tools MCP"
+
+if TYPE_CHECKING:
+    from .server import Runtime
+
+
+HUB_CLIENT_ONLINE_SECONDS = 45.0
+
+HUB_CONTROLLER_LEASE_SECONDS = 60.0
+
+HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
+
+MCP_ENDPOINT_PATH = "/mcp"
+
+MAX_HTTP_REQUEST_BYTES = 1_048_576
+
+OAUTH_TOKEN_AUTH_METHODS = ("client_secret_basic", "client_secret_post", "none")
+
+
+def json_response_payload(payload: Any) -> bytes:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+
+def _configured_allowed_origins(raw: str) -> frozenset[str]:
+    return frozenset(item.strip().rstrip("/") for item in raw.split(",") if item.strip())
+
+
+
+def is_allowed_origin(origin: str) -> bool:
+    # Authentication does not replace browser Origin validation.
+    try:
+        parsed = urllib.parse.urlparse(origin)
+    except ValueError:
+        return False
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        return False
+    try:
+        _ = parsed.port
+    except ValueError:
+        return False
+    normalized = origin.rstrip("/")
+    configured = _configured_allowed_origins(os.environ.get(f"{ENV_PREFIX}_ALLOWED_ORIGINS", ""))
+    return parsed.hostname in {"localhost", "127.0.0.1", "::1"} or normalized in configured
+
+
+def is_loopback_bind_host(host: str) -> bool:
+    return host in {"localhost", "127.0.0.1", "::1", ""}
+
+
+def _server_card_auth(runtime: Runtime, *, oauth_base_url: str | None = None) -> dict[str, Any]:
+    if runtime.oauth_enabled():
+        cfg = runtime.oauth_config
+        assert cfg is not None
+        base = (oauth_base_url or cfg.server_url or "").rstrip("/")
+        return {
+            "type": "oauth2",
+            "scheme": "Bearer",
+            "header": "Authorization",
+            "authorizationUrl": f"{base}/oauth/authorize",
+            "tokenUrl": f"{base}/oauth/token",
+        }
+    if runtime.auth_token is not None:
+        return {"type": "bearer", "scheme": "Bearer", "header": "Authorization"}
+    return {"type": "none", "scheme": None, "header": None}
+
+
+def server_card_payload(runtime: Runtime, *, oauth_base_url: str | None = None) -> dict[str, Any]:
+    names = runtime.exposed_tool_names()
+    # Always the real annotations, never the tools/list override: this card is
+    # what an operator fetches to find out what the endpoint actually does.
+    annotations = {name: tool_annotations(name, fake_readonly=False) for name in names}
+    read_only = [name for name in names if annotations[name].get("readOnlyHint") is True]
+    mutating = [name for name in names if annotations[name].get("readOnlyHint") is not True]
+    payload = {
+        "protocolVersion": PROTOCOL_VERSION,
+        "server": {
+            "name": SERVER_NAME,
+            "title": SERVER_TITLE,
+            "version": __version__,
+        },
+        "transport": {
+            "type": "streamable_http",
+            "endpoint": MCP_ENDPOINT_PATH,
+            "methods": ["POST", "DELETE", "OPTIONS"],
+        },
+        "auth": _server_card_auth(runtime, oauth_base_url=oauth_base_url),
+        "tools": {
+            "count": len(names),
+            "names": names,
+            "readOnlyHintTrue": read_only,
+            "readOnlyHintFalse": mutating,
+            "annotationOverride": ("fake_readonly" if runtime.fake_readonly_annotations else None),
+            "contractVersion": runtime.tool_contract["schema_version"],
+            "contractProfile": runtime.tool_contract["profile"],
+            "contractSha256": runtime.tool_contract["sha256"],
+        },
+        "capabilities": {
+            "tools": {"listChanged": False},
+        },
+    }
+    return payload
+
+
+
+class MCPHandler(http.server.BaseHTTPRequestHandler):
+    server_version = f"CodingToolsMCP/{__version__}"
+
+    @property
+    def runtime(self) -> Runtime:
+        return cast(Any, getattr(self, "_runtime", self.server.control_runtime))  # type: ignore[attr-defined]
+
+    def log_message(self, format: str, *args: Any) -> None:
+        print(format % args, file=sys.stderr)
+
+    def send_rpc_error(
+        self,
+        code: int,
+        message: str,
+        *,
+        status: int = 400,
+        request_id: str | int | None = None,
+        data: Any = None,
+        extra_headers: dict[str, str] | None = None,
+        head_only: bool = False,
+    ) -> None:
+        self.send_json(
+            jsonrpc_error(request_id, code, message, data),
+            status=status,
+            extra_headers=extra_headers,
+            head_only=head_only,
+        )
+
+    def do_GET(self) -> None:
+        if (
+            posixpath.normpath(self.path.split("?", 1)[0]) == MCP_ENDPOINT_PATH
+            and self.headers.get("MCP-Protocol-Version") == STATELESS_PROTOCOL_VERSION
+            and stateless_http_2026_enabled()
+        ):
+            self.send_rpc_error(-32601, "GET is not supported by stateless MCP 2026-07-28", status=405)
+            return
+        self.handle_metadata_request(head_only=False)
+
+    def do_HEAD(self) -> None:
+        if (
+            posixpath.normpath(self.path.split("?", 1)[0]) == MCP_ENDPOINT_PATH
+            and self.headers.get("MCP-Protocol-Version") == STATELESS_PROTOCOL_VERSION
+            and stateless_http_2026_enabled()
+        ):
+            self.send_rpc_error(
+                -32601,
+                "HEAD is not supported by stateless MCP 2026-07-28",
+                status=405,
+                head_only=True,
+            )
+            return
+        self.handle_metadata_request(head_only=True)
+
+    def do_DELETE(self) -> None:
+        request_path = self.path.split("?", 1)[0]
+        if posixpath.normpath(request_path) != MCP_ENDPOINT_PATH:
+            self.send_json({"error": "Unknown endpoint"}, status=404)
+            return
+        if not self.is_authorized():
+            self.send_unauthorized()
+            return
+        if (
+            self.headers.get("MCP-Protocol-Version") == STATELESS_PROTOCOL_VERSION
+            and stateless_http_2026_enabled()
+        ):
+            self.send_rpc_error(-32601, "DELETE is not supported by stateless MCP 2026-07-28", status=405)
+            return
+        session_id = self.headers.get("Mcp-Session-Id")
+        if not session_id or not self.server.sessions.delete(session_id):  # type: ignore[attr-defined]
+            self.send_rpc_error(-32001, "Unknown MCP session", status=404)
+            return
+        self.send_response(200)
+        self.send_header("Content-Length", "0")
+        self.send_cors_headers()
+        self.end_headers()
+
+    def do_OPTIONS(self) -> None:
+        request_path = self.path.split("?", 1)[0]
+        if posixpath.normpath(request_path) not in {
+            MCP_ENDPOINT_PATH,
+            "/.well-known/mcp.json",
+            "/.well-known/mcp/server-card.json",
+            "/__control/health",
+            "/__control/workspace",
+            "/__control/roots",
+            "/__control/orchestration",
+            "/.well-known/oauth-authorization-server",
+            "/.well-known/oauth-protected-resource",
+            "/oauth/authorize",
+            "/oauth/token",
+            "/oauth/register",
+        }:
+            self.send_json({"error": "Unknown endpoint"}, status=404)
+            return
+        origin = self.headers.get("Origin")
+        if origin and not is_allowed_origin(origin):
+            self.send_json({"error": "Origin denied"}, status=403)
+            return
+        self.send_response(204)
+        self.send_header("Allow", "GET, HEAD, POST, DELETE, OPTIONS")
+        self.send_cors_headers()
+        self.end_headers()
+
+    def handle_metadata_request(self, *, head_only: bool) -> None:
+        request_path = self.path.split("?", 1)[0]
+        normalized = posixpath.normpath(request_path)
+        if normalized == "/__control/health":
+            if not self.is_authorized():
+                self.send_unauthorized(head_only=head_only)
+                return
+            runtime = self.runtime
+            with runtime.sessions_lock:
+                active_commands = len(runtime.sessions)
+                retained_outputs = len(runtime.output_sessions)
+            self.send_json({
+                "ready": not runtime._closed,
+                "version": __version__,
+                "instance_id": runtime.server_instance_id,
+                "workspace": str(runtime.workspace.root),
+                "default_cwd": runtime.default_cwd_display(),
+                "authorized_roots": [str(item) for item in runtime.workspace.authorized_roots if item != runtime.workspace.root],
+                "tool_mode": runtime.tool_mode,
+                "tool_profile": runtime.tool_contract["profile"],
+                "tool_count": len(runtime.exposed_tool_names()),
+                "tool_contract": dict(runtime.tool_contract),
+                "workspace_generation": runtime.workspace_generation,
+                "active_commands": active_commands,
+                "retained_outputs": retained_outputs,
+                "legacy_session_alias_uses": runtime.legacy_session_alias_uses,
+                "http_sessions": self.server.sessions.stats(),
+            }, head_only=head_only)
+            return
+        if normalized == "/__control/orchestration":
+            if not self.is_authorized():
+                self.send_unauthorized(head_only=head_only)
+                return
+            self.send_json(self.control_orchestration_snapshot(), head_only=head_only)
+            return
+        if normalized == "/.well-known/oauth-authorization-server":
+            self.handle_oauth_as_metadata(head_only=head_only)
+            return
+        if normalized in {"/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"}:
+            self.handle_oauth_resource_metadata(head_only=head_only)
+            return
+        if normalized == "/oauth/authorize" and not head_only:
+            self.handle_oauth_authorize_get()
+            return
+        if normalized == MCP_ENDPOINT_PATH:
+            origin = self.headers.get("Origin")
+            if origin and not is_allowed_origin(origin):
+                self.send_json({"error": "Origin denied"}, status=403, head_only=head_only)
+                return
+            if not self.is_authorized():
+                self.send_unauthorized(head_only=head_only)
+                return
+            self.send_rpc_error(
+                -32000,
+                "SSE GET stream is not supported",
+                status=405,
+                extra_headers={"Allow": "POST, DELETE"},
+                head_only=head_only,
+            )
+            return
+        if normalized in {"/.well-known/mcp.json", "/.well-known/mcp/server-card.json"}:
+            self.send_json(server_card_payload(self.runtime, oauth_base_url=self.oauth_base_url()), head_only=head_only)
+            return
+        self.send_json({"error": "Unknown endpoint"}, status=404, head_only=head_only)
+
+    def control_orchestration_snapshot(self) -> dict[str, Any]:
+        runtime = self.runtime
+        state = runtime.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        ledger = runtime.orchestration_ledger
+        run_id = str(projection.get("run_id") or "").strip()
+        if not run_id:
+            active = ledger.current_active_run()
+            if active:
+                run_id = str(active.get("run_id") or "").strip()
+        summary = ledger.export_summary(run_id) if run_id else {}
+        events = summary.get("events") or []
+        compact_events = [
+            {
+                "seq": int(event.get("seq") or 0),
+                "event_type": str(event.get("event_type") or ""),
+                "state_before": str(event.get("state_before") or ""),
+                "state_after": str(event.get("state_after") or ""),
+                "event_time": str(event.get("event_time") or ""),
+                "payload": json.dumps(event.get("payload") or {}, ensure_ascii=False)[:400],
+                "wave_id": str(event.get("wave_id") or "")[:16],
+            }
+            for event in events[-15:]
+        ]
+        proofs = [
+            {
+                "stage_id": str(item.get("stage_id") or ""),
+                "status": item.get("status"),
+                "duration_ms": item.get("duration_ms"),
+                "cache_hit": bool(item.get("cache_hit")),
+                "finished_at": str(item.get("finished_at") or ""),
+            }
+            for item in (summary.get("proofs") or [])[-6:]
+        ]
+        command = state.get("current_command")
+        if isinstance(command, dict):
+            command = {key: command.get(key) for key in ("kind", "command", "status", "started_at")}
+        clients = ledger.list_hub_clients(online_within_seconds=HUB_CLIENT_ONLINE_SECONDS)
+        cursors = ledger.list_hub_client_cursors(run_id=run_id) if run_id else []
+        cursor_by_client = {str(item.get("client_id") or ""): item for item in cursors}
+        client_view = []
+        for client in clients[:16]:
+            client_id = str(client.get("client_id") or "")
+            client_view.append({
+                "client_id": client_id,
+                "client_type": client.get("client_type"),
+                "role": client.get("role"),
+                "status": client.get("status"),
+                "online": bool(client.get("online")),
+                "last_seen_at": client.get("last_seen_at"),
+                "runtime_instance_id": client.get("runtime_instance_id"),
+                "contract_sha": client.get("contract_sha"),
+                "cursor": cursor_by_client.get(client_id),
+            })
+        controller = ledger.get_controller_lease(run_id) if run_id else None
+        controller_view = {
+            "owner_client_id": (controller or {}).get("owner_client_id", ""),
+            "status": (controller or {}).get("status", "unclaimed"),
+            "fencing_token": (controller or {}).get("fencing_token", 0),
+            "expires_at": (controller or {}).get("expires_at", 0),
+            "updated_at": (controller or {}).get("updated_at", ""),
+        }
+        ctx = runtime.orchestration_control.snapshot(run_id) if run_id else None
+        write_lease = ctx.write_lease if ctx else None
+        write_view = {
+            "owner": write_lease.owner if write_lease else "",
+            "status": "active" if write_lease else "released",
+            "fencing_token": write_lease.fencing_token if write_lease else 0,
+            "expires_at": write_lease.expires_at if write_lease else 0,
+        }
+        capsule = summary.get("latest_handoff_capsule")
+        run = summary.get("run") or {}
+        run_active = bool(run_id and run.get("status") == "active")
+        desktop_online = any(client.get("client_type") == "codex_desktop" and client.get("online") for client in client_view)
+        reason_codes: list[str] = []
+        capsule_status = "missing"
+        if capsule:
+            capsule_status = "current"
+            capsule_created_at = str(capsule.get("created_at") or "")
+            control_only_events = {"controller_transferred", "write_lease_renewed"}
+            if any(
+                str(event.get("event_time") or "") > capsule_created_at
+                and str(event.get("event_type") or "") not in control_only_events
+                for event in events
+            ):
+                capsule_status = "stale"
+        if run_active:
+            if not (summary.get("integrity") or {}).get("ok", False):
+                reason_codes.append("LEDGER_INTEGRITY_FAILED")
+            if state.get("status") in {"paused", "stopped", "failed"}:
+                reason_codes.append("TASK_NOT_RUNNABLE")
+            if not desktop_online:
+                reason_codes.append("DESKTOP_OFFLINE")
+            if capsule_status == "missing":
+                reason_codes.append("CAPSULE_MISSING")
+            elif capsule_status == "stale":
+                reason_codes.append("CAPSULE_STALE")
+            if controller_view["status"] != "active" or controller_view["owner_client_id"] != "codex-desktop":
+                reason_codes.append("CONTROLLER_HANDOFF_REQUIRED")
+        safe_to_rotate = not run_active or not reason_codes
+        if not run_active:
+            reason_codes = ["NO_ACTIVE_EXECUTION"]
+        elif safe_to_rotate:
+            reason_codes = ["READY"]
+        latest_event_seq = int(events[-1].get("seq") or 0) if events else 0
+        flight_recorder = ledger.flight_recorder(run_id, limit=40) if run_id else {
+            "run_id": "", "after_seq": 0, "events": [], "next_after_seq": 0, "has_more": False,
+            "phase_timing": {"run_id": "", "source": "eocl_event_timestamps", "segments": [], "by_state_ms": {}, "complete": False},
+        }
+        pending_messages = ledger.list_coordination_messages(run_id=run_id, status="pending", limit=100) if run_id else []
+        modified_paths = []
+        for item in list(state.get("modified_files") or [])[:12]:
+            path = item.get("path") if isinstance(item, dict) else item
+            if str(path or "").strip():
+                modified_paths.append(str(path))
+        resume_packet = {
+            "version": 1,
+            "run_id": run_id,
+            "wave_id": str(projection.get("wave_id") or ""),
+            "objective": str(state.get("objective") or "")[:600],
+            "task_status": state.get("status"),
+            "orchestration_state": projection.get("orchestration_state"),
+            "current_step": str(state.get("current_step") or "")[:300],
+            "next_step": str(state.get("next_step") or "")[:500],
+            "latest_event_seq": latest_event_seq,
+            "modified_paths": modified_paths,
+            "proofs": [{
+                "proof_id": item.get("proof_id"),
+                "stage_id": item.get("stage_id"),
+                "status": item.get("status"),
+                "finished_at": item.get("finished_at"),
+            } for item in (summary.get("proofs") or [])[-6:]],
+            "capsule": ({
+                "capsule_id": capsule.get("capsule_id"),
+                "sha256": capsule.get("sha256"),
+                "bytes": capsule.get("bytes"),
+                "conversation_epoch": capsule.get("conversation_epoch"),
+                "created_at": capsule.get("created_at"),
+            } if capsule else None),
+            "controller": controller_view,
+            "pending_message_count": len(pending_messages),
+        }
+        return {
+            "schema_version": 2,
+            "task": {
+                "task_id": state.get("task_id"),
+                "objective": str(state.get("objective") or "")[:400],
+                "status": state.get("status"),
+                "current_step": str(state.get("current_step") or "")[:300],
+                "next_step": str(state.get("next_step") or "")[:300],
+                "modified_files": [str(item) for item in list(state.get("modified_files") or [])[:10]],
+                "current_command": command,
+                "updated_at": state.get("updated_at"),
+                "pause_reason": str(state.get("pause_reason") or ""),
+            },
+            "run_id": run_id,
+            "run": summary.get("run"),
+            "waves": (summary.get("waves") or [])[-3:],
+            "events": compact_events,
+            "proofs": proofs,
+            "delegations": (summary.get("delegations") or [])[-4:],
+            "usage_events": ledger.list_usage_events(run_id, limit=8) if run_id else [],
+            "routing_evidence": ledger.routing_evidence(run_id, limit=8) if run_id else {
+                "shadow_recommendations": [], "actual_delegations": [], "usage_events": []
+            },
+            "provider_traffic": runtime.provider_traffic_snapshot(),
+            "flight_recorder": flight_recorder,
+            "history": {"runs": [
+                {
+                    "run_id": item.get("run_id"),
+                    "status": item.get("status"),
+                    "started_at": item.get("started_at"),
+                    "finished_at": item.get("finished_at"),
+                }
+                for item in ledger.list_runs(limit=12)
+            ]},
+            "capsule": summary.get("latest_handoff_capsule"),
+            "background_operations": ledger.list_background_operations(limit=8),
+            "counts": {
+                "events": len(events),
+                "waves": len(summary.get("waves") or []),
+                "checkpoints": len(summary.get("checkpoints") or []),
+            },
+            "integrity": summary.get("integrity"),
+            "runtime": {
+                "process_instance_id": runtime.process_instance_id,
+                "server_instance_id": runtime.server_instance_id,
+                "tool_contract": runtime.tool_contract,
+            },
+            "clients": client_view,
+            "authority": {"controller": controller_view, "write": write_view},
+            "cursors": cursors,
+            "continuity": {
+                "safe_to_rotate_chatweb": safe_to_rotate,
+                "reason_codes": reason_codes,
+                "capsule_status": capsule_status,
+                "desktop_online": desktop_online,
+                "context_pressure": {"status": "unknown", "source": "host_not_exposed"},
+            },
+            "resume_packet": resume_packet,
+        }
+
+    def _read_control_json(self) -> dict[str, Any] | None:
+        if self.headers.get_content_type().lower() != "application/json":
+            self.send_json({"error": "Content-Type must be application/json"}, status=415)
+            return None
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self.send_json({"error": "Invalid Content-Length"}, status=400)
+            return None
+        if length <= 0 or length > 65536:
+            self.send_json({"error": "Invalid request size"}, status=413)
+            return None
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, status=400)
+            return None
+        if not isinstance(payload, dict):
+            self.send_json({"error": "JSON body must be an object"}, status=400)
+            return None
+        return payload
+
+    def handle_control_hub(self) -> None:
+        if not self.is_authorized():
+            self.send_unauthorized()
+            return
+        payload = self._read_control_json()
+        if payload is None:
+            return
+        action = str(payload.get("action") or "heartbeat").strip().lower()
+        try:
+            if action == "heartbeat":
+                identity = self._hub_identity_from_values(
+                    client_id=str(payload.get("client_id") or ""),
+                    client_type=str(payload.get("client_type") or "client"),
+                    client_name=str(payload.get("client_name") or ""),
+                    client_version=str(payload.get("client_version") or ""),
+                )
+                result = self.runtime._touch_hub_client(identity)
+                self.send_json({"ok": True, "action": action, **result})
+                return
+            if action == "provider_telemetry":
+                identity = self._hub_identity_from_values(
+                    client_id=str(payload.get("client_id") or ""),
+                    client_type=str(payload.get("client_type") or "client"),
+                    client_name=str(payload.get("client_name") or ""),
+                    client_version=str(payload.get("client_version") or ""),
+                )
+                if (identity.get("client_id"), identity.get("client_type")) != ("opencode", "opencode"):
+                    raise ValueError("provider telemetry requires the OpenCode proxy identity")
+                result = self.runtime.ingest_provider_telemetry(identity, payload.get("telemetry"))
+                self.send_json({"ok": True, "action": action, **result})
+                return
+            if action in {"provider_dispatch", "provider_observe", "provider_cancel"}:
+                identity = self._hub_identity_from_values(
+                    client_id=str(payload.get("client_id") or ""),
+                    client_type=str(payload.get("client_type") or "client"),
+                    client_name=str(payload.get("client_name") or ""),
+                    client_version=str(payload.get("client_version") or ""),
+                )
+                if action == "provider_dispatch":
+                    result = self.runtime.dispatch_opencode_provider(identity, payload)
+                else:
+                    dispatch_id = str(payload.get("dispatch_id") or "").strip()
+                    if not dispatch_id:
+                        raise ValueError("dispatch_id is required")
+                    result = self.runtime.observe_opencode_provider(identity, dispatch_id, cancel=action == "provider_cancel")
+                self.send_json({"ok": True, "action": action, **result})
+                return
+            if action == "shadow_route":
+                identity = self._hub_identity_from_values(
+                    client_id=str(payload.get("client_id") or ""),
+                    client_type=str(payload.get("client_type") or "client"),
+                    client_name=str(payload.get("client_name") or ""),
+                    client_version=str(payload.get("client_version") or ""),
+                )
+                result = self.runtime.shadow_route(identity, payload.get("features"))
+                self.send_json({"ok": True, "action": action, **result})
+                return
+            if action == "transfer_controller":
+                target = str(payload.get("target_client_id") or "").strip()
+                if not HUB_CLIENT_ID_RE.fullmatch(target):
+                    raise ValueError("valid target_client_id is required")
+                run_id = str(payload.get("run_id") or self.runtime._projected_hub_run_id() or "").strip()
+                if not run_id:
+                    raise ValueError("run_id is required when no task orchestration is active")
+                before = self.runtime.orchestration_ledger.get_controller_lease(run_id)
+                result = self.runtime.orchestration_ledger.operator_transfer_controller(
+                    run_id=run_id,
+                    target_client_id=target,
+                    lease_id=f"client:{target}",
+                    ttl_seconds=HUB_CONTROLLER_LEASE_SECONDS,
+                    online_within_seconds=HUB_CLIENT_ONLINE_SECONDS,
+                )
+                if result.get("transferred"):
+                    ctx = self.runtime.orchestration_control.snapshot(run_id)
+                    state_name = ctx.state if ctx else ""
+                    self.runtime.orchestration_ledger.append_event(
+                        run_id,
+                        wave_id=ctx.wave_id if ctx else None,
+                        event_type="controller_transferred",
+                        state_before=state_name,
+                        state_after=state_name,
+                        payload={
+                            "from_client_id": (before or {}).get("owner_client_id", ""),
+                            "to_client_id": target,
+                            "fencing_token": result.get("fencing_token"),
+                        },
+                    )
+                self.send_json({"ok": bool(result.get("transferred")), "action": action, **result}, status=200 if result.get("transferred") else 409)
+                return
+            raise ValueError(f"unsupported hub action: {action}")
+        except ValueError as exc:
+            self.send_json({"error": str(exc), "code": "INVALID_HUB_REQUEST"}, status=400)
+        except ToolFailure as exc:
+            self.send_json({"error": exc.message, "code": exc.code, "details": exc.details}, status=409)
+
+    def handle_control_workspace(self) -> None:
+        if not self.is_authorized():
+            self.send_unauthorized()
+            return
+        if self.headers.get_content_type().lower() != "application/json":
+            self.send_json({"error": "Content-Type must be application/json"}, status=415)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self.send_json({"error": "Invalid Content-Length"}, status=400)
+            return
+        if length <= 0 or length > 65536:
+            self.send_json({"error": "Invalid request size"}, status=413)
+            return
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            workspace = str(payload.get("workspace", "")).strip()
+            if not workspace:
+                raise ValueError("workspace is required")
+            result = self.runtime.switch_workspace(Path(workspace))
+        except ToolFailure as exc:
+            self.send_json({"error": exc.message, "code": exc.code, "details": exc.details}, status=409)
+            return
+        except (OSError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, status=400)
+            return
+        self.send_json(result)
+
+    def handle_control_roots(self) -> None:
+        if not self.is_authorized():
+            self.send_unauthorized()
+            return
+        if self.headers.get_content_type().lower() != "application/json":
+            self.send_json({"error": "Content-Type must be application/json"}, status=415)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self.send_json({"error": "Invalid Content-Length"}, status=400)
+            return
+        if length <= 0 or length > 65536:
+            self.send_json({"error": "Invalid request size"}, status=413)
+            return
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            roots = payload.get("roots", [])
+            if not isinstance(roots, list):
+                raise ValueError("roots must be an array")
+            result = self.runtime.set_authorized_roots([str(item) for item in roots])
+        except ToolFailure as exc:
+            self.send_json({"error": exc.message, "code": exc.code, "details": exc.details}, status=409)
+            return
+        except (OSError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json({"error": str(exc)}, status=400)
+            return
+        self.send_json(result)
+
+    def do_POST(self) -> None:
+        request_path = self.path.split("?", 1)[0]
+        normalized = posixpath.normpath(request_path)
+        if normalized == "/__control/workspace":
+            self.handle_control_workspace()
+            return
+        if normalized == "/__control/roots":
+            self.handle_control_roots()
+            return
+        if normalized == "/__control/hub":
+            self.handle_control_hub()
+            return
+        if normalized == "/oauth/authorize":
+            self.handle_oauth_authorize_post()
+            return
+        if normalized == "/oauth/token":
+            self.handle_oauth_token()
+            return
+        if normalized == "/oauth/register":
+            self.handle_oauth_register()
+            return
+        if normalized != MCP_ENDPOINT_PATH:
+            self.send_rpc_error(-32601, "Unknown endpoint", status=404)
+            return
+        origin = self.headers.get("Origin")
+        if origin and not is_allowed_origin(origin):
+            self.send_rpc_error(-32600, "Origin denied", status=403)
+            return
+        if not self.is_authorized():
+            self.send_unauthorized()
+            return
+        if self.headers.get_content_type().lower() != "application/json":
+            self.send_rpc_error(-32600, "Content-Type must be application/json", status=415)
+            return
+        protocol_version = self.headers.get("MCP-Protocol-Version")
+        if protocol_version and not protocol_version_is_supported(protocol_version):
+            self.send_rpc_error(
+                -32600,
+                "Unsupported MCP protocol version",
+                data={"supported": list(SUPPORTED_PROTOCOL_VERSIONS), "received": protocol_version},
+            )
+            return
+        raw_length = self.headers.get("Content-Length")
+        if raw_length is None:
+            self.send_rpc_error(-32600, "Content-Length is required", status=411)
+            return
+        try:
+            length = int(raw_length)
+        except ValueError:
+            self.send_rpc_error(-32600, "Content-Length must be a non-negative integer")
+            return
+        if length < 0:
+            self.send_rpc_error(-32600, "Content-Length must be a non-negative integer")
+            return
+        if length > MAX_HTTP_REQUEST_BYTES:
+            self.close_connection = True
+            self.send_rpc_error(
+                -32600,
+                "Request body exceeds maximum size",
+                status=413,
+                data={"max_bytes": MAX_HTTP_REQUEST_BYTES},
+            )
+            return
+        body = self.rfile.read(length)
+        try:
+            request = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.send_rpc_error(-32700, "Parse error")
+            return
+        if isinstance(request, list):
+            self.send_rpc_error(-32600, "JSON-RPC batch requests are not supported by Streamable HTTP")
+            return
+        if not isinstance(request, dict):
+            self.send_rpc_error(-32600, "Invalid Request")
+            return
+        try:
+            validate_rpc_envelope(request)
+        except JsonRpcError as exc:
+            self.send_rpc_error(
+                exc.code, exc.message, status=200, request_id=response_id(request), data=exc.data
+            )
+            return
+        method = request.get("method")
+        body_protocol_version = request_protocol_version(request)
+        modern_marker = (
+            protocol_version == STATELESS_PROTOCOL_VERSION
+            or body_protocol_version == STATELESS_PROTOCOL_VERSION
+        )
+        if modern_marker and not stateless_http_2026_enabled():
+            self.send_rpc_error(
+                -32022,
+                "MCP 2026-07-28 stateless HTTP is disabled for this deployment",
+                status=400,
+                request_id=request.get("id"),
+                data={
+                    "supported": list(LEGACY_PROTOCOL_VERSIONS),
+                    "requested": STATELESS_PROTOCOL_VERSION,
+                    "disable_with": STATELESS_HTTP_2026_ENV,
+                },
+            )
+            return
+        if modern_marker:
+            if protocol_version != STATELESS_PROTOCOL_VERSION or body_protocol_version != STATELESS_PROTOCOL_VERSION:
+                self.send_rpc_error(
+                    -32020,
+                    "Header mismatch: MCP-Protocol-Version must match params._meta protocolVersion",
+                    status=400,
+                    request_id=request.get("id"),
+                )
+                return
+            header_method = self.headers.get("Mcp-Method")
+            if header_method != method:
+                self.send_rpc_error(
+                    -32020,
+                    "Header mismatch: required Mcp-Method must match the JSON-RPC method",
+                    status=400,
+                    request_id=request.get("id"),
+                    data={"header": header_method, "body": method},
+                )
+                return
+            body_name = _request_mcp_name(request)
+            if method in {"tools/call", "prompts/get", "resources/read"}:
+                header_name_raw = self.headers.get("Mcp-Name")
+                header_name = _decode_mcp_name_header(header_name_raw) if header_name_raw else None
+                if not body_name or header_name != body_name:
+                    self.send_rpc_error(
+                        -32020,
+                        "Header mismatch: required Mcp-Name must match the named request",
+                        status=400,
+                        request_id=request.get("id"),
+                        data={"header": header_name, "body": body_name},
+                    )
+                    return
+            self._runtime = self.server.control_runtime  # type: ignore[attr-defined]
+            self._send_session_header = False
+            response = self.handle_rpc(request, stateless_2026=True)
+            if response is None:
+                self.send_response(202)
+                self.send_cors_headers()
+                self.end_headers()
+                return
+            error = response.get("error") if isinstance(response, dict) else None
+            status = 404 if isinstance(error, dict) and error.get("code") == -32601 else 200
+            self.send_json(response, status=status)
+            return
+        session_id = self.headers.get("Mcp-Session-Id")
+        created_session = False
+        if method == "initialize":
+            if session_id:
+                self.send_rpc_error(
+                    -32600, "initialize must not include Mcp-Session-Id", request_id=request.get("id")
+                )
+                return
+            try:
+                self._runtime = self.server.sessions.create()  # type: ignore[attr-defined]
+            except RuntimeError as exc:
+                self.send_rpc_error(-32000, str(exc), status=503, request_id=request.get("id"))
+                return
+            self._send_session_header = True
+            created_session = True
+        elif session_id:
+            runtime = self.server.sessions.get(session_id)  # type: ignore[attr-defined]
+            if runtime is None:
+                # Tunnel clients can retain an expired session id while reconnecting.
+                # Recreate a compatible initialized session instead of returning a
+                # hard 404 that causes an aggressive reconnect loop.
+                try:
+                    runtime = self.server.sessions.create()  # type: ignore[attr-defined]
+                    runtime.initialized = True
+                    runtime.protocol_version = protocol_version or PROTOCOL_VERSION
+                    self._runtime = runtime
+                    self._send_session_header = True
+                    created_session = True
+                except RuntimeError as exc:
+                    self.send_rpc_error(-32000, str(exc), status=503, request_id=request.get("id"))
+                    return
+            else:
+                self._runtime = runtime
+                self._send_session_header = True
+                if not runtime.initialized:
+                    # Authenticated proxy/tunnel clients can retain a session alias
+                    # across a Runtime recreation. The alias is intentionally mapped
+                    # to the new shared Runtime by HTTPSessionManager; initialize that
+                    # fresh Runtime with the caller's protocol before dispatch so the
+                    # reconnect does not fail as "Server not initialized".
+                    runtime.initialized = True
+                    runtime.protocol_version = protocol_version or PROTOCOL_VERSION
+            if protocol_version and protocol_version != runtime.protocol_version:
+                self.send_rpc_error(
+                    -32600,
+                    "MCP-Protocol-Version does not match the initialized session",
+                    request_id=request.get("id"),
+                    data={"expected": runtime.protocol_version, "received": protocol_version},
+                )
+                return
+        elif method == "ping":
+            self._runtime = self.server.control_runtime  # type: ignore[attr-defined]
+        elif method in {"server/discover", "tools/list", "tools/call"}:
+            # Compatibility path for stateless/proxying MCP clients. The response
+            # includes Mcp-Session-Id so capable clients become stateful after the
+            # first request, while discovery no longer fails before initialize.
+            try:
+                self._runtime = self.server.sessions.create()  # type: ignore[attr-defined]
+            except RuntimeError as exc:
+                self.send_rpc_error(-32000, str(exc), status=503, request_id=request.get("id"))
+                return
+            self._runtime.initialized = True
+            self._runtime.protocol_version = protocol_version or PROTOCOL_VERSION
+            self._send_session_header = True
+            created_session = True
+        else:
+            self.send_rpc_error(-32002, "Server not initialized", request_id=request.get("id"))
+            return
+        response = self.handle_rpc(request)
+        if created_session and response is not None and "error" in response:
+            self.server.sessions.delete(self.runtime.http_session_id)  # type: ignore[attr-defined]
+            self._send_session_header = False
+        if response is None:
+            self.send_response(202)
+            if getattr(self, "_send_session_header", False):
+                self.send_header("Mcp-Session-Id", self.runtime.http_session_id)
+            self.send_cors_headers()
+            self.end_headers()
+            return
+        self.send_json(response)
+
+    def handle_rpc(
+        self,
+        request: dict[str, Any],
+        *,
+        stateless_2026: bool = False,
+    ) -> dict[str, Any] | None:
+        runtime = self.runtime
+        try:
+            identity = self._hub_identity_from_request(request)
+            runtime.request_context.hub_client = identity
+            runtime._touch_hub_client(identity)
+            return dispatch_rpc(runtime, request, stateless_2026=stateless_2026)
+        except ValueError as exc:
+            return jsonrpc_error(response_id(request), -32602, str(exc))
+        except Exception as exc:  # noqa: BLE001 - HTTP must always answer with JSON-RPC
+            return jsonrpc_error(response_id(request), -32603, str(exc))
+        finally:
+            if hasattr(runtime.request_context, "hub_client"):
+                delattr(runtime.request_context, "hub_client")
+
+    def _hub_identity_from_values(
+        self,
+        *,
+        client_id: str,
+        client_type: str,
+        client_name: str = "",
+        client_version: str = "",
+        session_instance: str = "",
+    ) -> dict[str, Any]:
+        client_id = client_id.strip()
+        client_type = client_type.strip().lower().replace("-", "_") or "client"
+        if not HUB_CLIENT_ID_RE.fullmatch(client_id):
+            raise ValueError("Execution Hub client id must match [A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
+        if not re.fullmatch(r"[a-z][a-z0-9_]{0,31}", client_type):
+            raise ValueError("invalid Execution Hub client type")
+        role = "controller" if client_type == "chatweb" else "worker" if client_type in {"codex_desktop", "opencode"} else "supervisor" if client_type == "electron" else "client"
+        return {
+            "client_id": client_id,
+            "client_type": client_type,
+            "role": role,
+            "session_instance": session_instance,
+            "capabilities": {"client_name": client_name[:100], "client_version": client_version[:50]},
+        }
+
+    def _hub_identity_from_request(self, request: dict[str, Any]) -> dict[str, Any]:
+        raw_client_id = str(self.headers.get("X-Coding-Tools-Client-Id") or "").strip()
+        raw_client_type = str(self.headers.get("X-Coding-Tools-Client-Type") or "").strip()
+        client_id = raw_client_id or "chatweb"
+        client_type = raw_client_type or ("chatweb" if not raw_client_id else "client")
+        params = request.get("params") if isinstance(request.get("params"), dict) else {}
+        meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
+        client_info = meta.get("io.modelcontextprotocol/clientInfo") if isinstance(meta.get("io.modelcontextprotocol/clientInfo"), dict) else {}
+        if request.get("method") == "initialize" and isinstance(params.get("clientInfo"), dict):
+            client_info = params.get("clientInfo")
+        raw_session = str(self.headers.get("Mcp-Session-Id") or "")
+        session_instance = hashlib.sha256(raw_session.encode("utf-8")).hexdigest()[:16] if raw_session else ""
+        return self._hub_identity_from_values(
+            client_id=client_id,
+            client_type=client_type,
+            client_name=str(client_info.get("name") or ""),
+            client_version=str(client_info.get("version") or ""),
+            session_instance=session_instance,
+        )
+
+    def is_authorized(self) -> bool:
+        if not self.runtime.auth_enabled():
+            return True
+        header = self.headers.get("Authorization", "").strip()
+        if self.runtime.auth_token is not None:
+            if secrets.compare_digest(header, f"Bearer {self.runtime.auth_token}"):
+                return True
+        if self.runtime.oauth_config is not None and header.startswith("Bearer "):
+            token = header[len("Bearer "):]
+            if validate_access_token(token, self.runtime.oauth_config, self.oauth_base_url()):
+                return True
+        return False
+
+    def oauth_base_url(self) -> str:
+        cfg = self.runtime.oauth_config
+        if cfg is not None and cfg.server_url:
+            return cfg.server_url.rstrip("/")
+        trust_proxy = truthy_env(os.environ.get(f"{ENV_PREFIX}_TRUST_PROXY_HEADERS"))
+        proto = _first_header_value(self.headers.get("X-Forwarded-Proto")) if trust_proxy else ""
+        if trust_proxy and not proto:
+            proto = _forwarded_header_param(self.headers.get("Forwarded"), "proto")
+        host = _safe_external_host(_first_header_value(self.headers.get("X-Forwarded-Host"))) if trust_proxy else ""
+        if trust_proxy and not host:
+            host = _safe_external_host(_forwarded_header_param(self.headers.get("Forwarded"), "host"))
+        if not host:
+            host = _safe_external_host(self.headers.get("Host", ""))
+        if not host:
+            server_address = cast(tuple[Any, ...], self.server.server_address)  # type: ignore[attr-defined]
+            bind_host = server_address[0]
+            bind_port = server_address[1]
+            host = _http_base_for_bind_host(str(bind_host), int(bind_port)).removeprefix("http://")
+        if proto not in {"http", "https"}:
+            host_without_port = host.rsplit(":", 1)[0].strip("[]")
+            proto = "http" if is_loopback_bind_host(host_without_port) else "https"
+        return f"{proto}://{host}".rstrip("/")
+
+    def send_unauthorized(self, *, head_only: bool = False) -> None:
+        if self.runtime.oauth_config is not None:
+            base = self.oauth_base_url()
+            www_auth = f'Bearer realm="coding-tools-mcp", resource_metadata="{base}/.well-known/oauth-protected-resource"'
+        else:
+            www_auth = 'Bearer realm="coding-tools-mcp"'
+        self.send_rpc_error(
+            -32000,
+            "Unauthorized",
+            status=401,
+            extra_headers={"WWW-Authenticate": www_auth},
+            head_only=head_only,
+        )
+
+    def handle_oauth_as_metadata(self, *, head_only: bool = False) -> None:
+        cfg = self.runtime.oauth_config
+        if cfg is None:
+            self.send_json({"error": "OAuth not configured"}, status=404, head_only=head_only)
+            return
+        base = self.oauth_base_url()
+        self.send_json(
+            {
+                "issuer": base,
+                "authorization_endpoint": f"{base}/oauth/authorize",
+                "token_endpoint": f"{base}/oauth/token",
+                "registration_endpoint": f"{base}/oauth/register",
+                "response_types_supported": ["code"],
+                "grant_types_supported": ["authorization_code"],
+                "code_challenge_methods_supported": ["S256"],
+                "token_endpoint_auth_methods_supported": list(OAUTH_TOKEN_AUTH_METHODS),
+            },
+            head_only=head_only,
+        )
+
+    def handle_oauth_resource_metadata(self, *, head_only: bool = False) -> None:
+        cfg = self.runtime.oauth_config
+        if cfg is None:
+            self.send_json({"error": "OAuth not configured"}, status=404, head_only=head_only)
+            return
+        base = self.oauth_base_url()
+        self.send_json(
+            {"resource": f"{base}{MCP_ENDPOINT_PATH}", "authorization_servers": [base], "bearer_methods_supported": ["header"]},
+            head_only=head_only,
+        )
+
+    def _send_html(self, body: str, *, status: int = 200) -> None:
+        data = body.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _oauth_login_page(
+        self,
+        *,
+        client_id: str,
+        redirect_uri: str,
+        code_challenge: str,
+        code_challenge_method: str,
+        state: str,
+        resource: str,
+        error: str = "",
+    ) -> str:
+        def esc(v: str) -> str:
+            return html.escape(v, quote=True)
+        error_block = f'<p style="color:red">{html.escape(error)}</p>' if error else ""
+        return (
+            "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'>"
+            "<title>Authorize MCP Server</title>"
+            "<style>body{font-family:sans-serif;max-width:380px;margin:4rem auto;padding:1rem}"
+            "input{width:100%;padding:.5rem;margin:.4rem 0;box-sizing:border-box}"
+            "button{width:100%;padding:.7rem;background:#0066cc;color:#fff;border:none;cursor:pointer}</style>"
+            "</head><body>"
+            f"<h2>Authorize Coding Tools MCP</h2>"
+            f"<p>Client: <strong>{esc(client_id)}</strong></p>"
+            f"<p>Redirect URI: <code>{esc(redirect_uri)}</code></p>"
+            f"{error_block}"
+            "<form method='POST' action='/oauth/authorize'>"
+            f"<input type='hidden' name='client_id' value='{esc(client_id)}'>"
+            f"<input type='hidden' name='redirect_uri' value='{esc(redirect_uri)}'>"
+            f"<input type='hidden' name='code_challenge' value='{esc(code_challenge)}'>"
+            f"<input type='hidden' name='code_challenge_method' value='{esc(code_challenge_method)}'>"
+            f"<input type='hidden' name='state' value='{esc(state)}'>"
+            f"<input type='hidden' name='resource' value='{esc(resource)}'>"
+            "<label>Password<input type='password' name='password' autocomplete='current-password' required></label>"
+            "<button type='submit'>Authorize</button>"
+            "</form></body></html>"
+        )
+
+    def _read_oauth_body(self) -> bytes | None:
+        raw_len = self.headers.get("Content-Length")
+        if raw_len is None:
+            self.send_json({"error": "Content-Length required"}, status=411)
+            return None
+        try:
+            length = int(raw_len)
+        except ValueError:
+            self.send_json({"error": "Invalid Content-Length"}, status=400)
+            return None
+        if not (0 <= length <= OAUTH_MAX_BODY_BYTES):
+            self.send_json({"error": "Request body too large"}, status=413)
+            return None
+        return self.rfile.read(length)
+
+    def handle_oauth_authorize_get(self) -> None:
+        cfg = self.runtime.oauth_config
+        if cfg is None:
+            self.send_json({"error": "OAuth not configured"}, status=404)
+            return
+        params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query, keep_blank_values=True)
+        _p = functools.partial(_first_form_value, params)
+        client_id = _p("client_id")
+        redirect_uri = _p("redirect_uri")
+        code_challenge = _p("code_challenge")
+        code_challenge_method = _p("code_challenge_method")
+        state = _p("state")
+        resource = _p("resource")
+
+        if _p("response_type") != "code":
+            self._send_html("<h2>Error</h2><p>response_type must be 'code'</p>", status=400)
+            return
+        if cfg.registry.get(client_id) is None:
+            self._send_html("<h2>Error</h2><p>Unknown client_id</p>", status=400)
+            return
+        if not cfg.registry.accepts_redirect(client_id, redirect_uri):
+            self._send_html("<h2>Error</h2><p>redirect_uri is not registered for this client</p>", status=400)
+            return
+        if code_challenge_method != "S256" or not valid_pkce_challenge(code_challenge):
+            self._send_html("<h2>Error</h2><p>code_challenge_method must be S256 and code_challenge is required</p>", status=400)
+            return
+        if resource.rstrip("/") != self.oauth_base_url():
+            self._send_html("<h2>Error</h2><p>resource must identify this MCP server</p>", status=400)
+            return
+
+        self._send_html(self._oauth_login_page(
+            client_id=client_id, redirect_uri=redirect_uri, code_challenge=code_challenge,
+            code_challenge_method=code_challenge_method, state=state, resource=resource,
+        ))
+
+    def handle_oauth_authorize_post(self) -> None:
+        cfg = self.runtime.oauth_config
+        if cfg is None:
+            self.send_json({"error": "OAuth not configured"}, status=404)
+            return
+        body = self._read_oauth_body()
+        if body is None:
+            return
+        if self.headers.get_content_type().lower() != "application/x-www-form-urlencoded":
+            self.send_json({"error": "invalid_request", "error_description": "Content-Type must be application/x-www-form-urlencoded"}, status=400)
+            return
+        params = urllib.parse.parse_qs(body.decode("utf-8", errors="replace"), keep_blank_values=True)
+        _p = functools.partial(_first_form_value, params)
+        client_id = _p("client_id")
+        redirect_uri = _p("redirect_uri")
+        code_challenge = _p("code_challenge")
+        code_challenge_method = _p("code_challenge_method")
+        state = _p("state")
+        resource = _p("resource")
+        password = _p("password")
+
+        def fail(error: str, status: int = 400) -> None:
+            self._send_html(self._oauth_login_page(
+                client_id=client_id, redirect_uri=redirect_uri, code_challenge=code_challenge,
+                code_challenge_method=code_challenge_method, state=state, resource=resource,
+                error=error,
+            ), status=status)
+
+        if cfg.registry.get(client_id) is None or not cfg.registry.accepts_redirect(client_id, redirect_uri):
+            fail("Invalid client or redirect URI")
+            return
+        if code_challenge_method != "S256" or not valid_pkce_challenge(code_challenge):
+            fail("Invalid PKCE parameters")
+            return
+        if resource.rstrip("/") != self.oauth_base_url():
+            fail("Invalid resource")
+            return
+        if not secrets.compare_digest(password, cfg.password):
+            fail("Invalid password", status=401)
+            return
+
+        code = secrets.token_urlsafe(32)
+        now = time.time()
+        with cfg.pending_codes_lock:
+            expired = [k for k, v in cfg.pending_codes.items() if v["expires_at"] < now]
+            for k in expired:
+                del cfg.pending_codes[k]
+            while len(cfg.pending_codes) >= MAX_PENDING_CODES:
+                cfg.pending_codes.pop(next(iter(cfg.pending_codes)))
+            cfg.pending_codes[code] = {
+                "code_challenge": code_challenge,
+                "client_id": client_id,
+                "redirect_uri": redirect_uri,
+                "state": state,
+                "expires_at": now + OAUTH_CODE_TTL_SECONDS,
+                "server_url": self.oauth_base_url(),
+                "resource": resource.rstrip("/"),
+            }
+
+        qs = urllib.parse.urlencode({"code": code, **({"state": state} if state else {})})
+        sep = "&" if "?" in redirect_uri else "?"
+        location = redirect_uri + sep + qs
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def handle_oauth_token(self) -> None:
+        cfg = self.runtime.oauth_config
+        if cfg is None:
+            self.send_json({"error": "unsupported_grant_type"}, status=400)
+            return
+
+        def _err(error: str, description: str) -> None:
+            self.log_message("OAuth token error: %s - %s", error, description)
+            self.send_json({"error": error, "error_description": description}, status=400)
+
+        body = self._read_oauth_body()
+        if body is None:
+            return
+        content_type = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+        if content_type != "application/x-www-form-urlencoded":
+            _err("invalid_request", "Content-Type must be application/x-www-form-urlencoded")
+            return
+        params = urllib.parse.parse_qs(body.decode("utf-8", errors="replace"), keep_blank_values=True)
+        _p = functools.partial(_first_form_value, params)
+        grant_type = _p("grant_type")
+        code = _p("code")
+        redirect_uri = _p("redirect_uri")
+        code_verifier = _p("code_verifier")
+        client_id = _p("client_id")
+        client_secret = _p("client_secret")
+        resource = _p("resource").rstrip("/")
+        presented_auth_method = "client_secret_post" if client_secret else "none"
+
+        # Also accept HTTP Basic auth for client credentials.
+        auth_header = self.headers.get("Authorization", "")
+        if auth_header.startswith("Basic ") and (not client_id or not client_secret):
+            try:
+                decoded = base64.b64decode(auth_header[6:]).decode("utf-8")
+                basic_id, _, basic_secret = decoded.partition(":")
+                if not client_id:
+                    client_id = urllib.parse.unquote(basic_id)
+                if not client_secret:
+                    client_secret = urllib.parse.unquote(basic_secret)
+                presented_auth_method = "client_secret_basic"
+            except Exception:  # noqa: BLE001
+                pass
+
+        if grant_type != "authorization_code":
+            _err("unsupported_grant_type", "Only authorization_code is supported")
+            return
+        if cfg.registry.get(client_id) is None:
+            _err("invalid_client", "Unknown client_id")
+            return
+        if not cfg.registry.authenticates(client_id, client_secret, presented_auth_method):
+            _err("invalid_client", "Invalid client_secret")
+            return
+        if not code:
+            _err("invalid_grant", "code is required")
+            return
+        if not code_verifier or not (43 <= len(code_verifier) <= 128) or not re.fullmatch(r"[A-Za-z0-9\-._~]+", code_verifier):
+            _err("invalid_grant", "Invalid code_verifier")
+            return
+
+        with cfg.pending_codes_lock:
+            code_data = cfg.pending_codes.pop(code, None)
+
+        if code_data is None:
+            _err("invalid_grant", "Unknown or already-used authorization code")
+            return
+        if time.time() > code_data["expires_at"]:
+            _err("invalid_grant", "Authorization code expired")
+            return
+        if not secrets.compare_digest(code_data["client_id"], client_id):
+            _err("invalid_grant", "client_id mismatch")
+            return
+        if not secrets.compare_digest(code_data["redirect_uri"], redirect_uri):
+            _err("invalid_grant", "redirect_uri mismatch")
+            return
+        if not resource or not secrets.compare_digest(str(code_data.get("resource") or ""), resource):
+            _err("invalid_target", "resource mismatch")
+            return
+        if not verify_pkce(code_verifier, code_data["code_challenge"]):
+            _err("invalid_grant", "PKCE verification failed")
+            return
+
+        server_url = resource
+        access_token = create_access_token(cfg, server_url, client_id=client_id)
+        self.send_json({"access_token": access_token, "token_type": "Bearer", "expires_in": cfg.token_ttl})
+
+    def handle_oauth_register(self) -> None:
+        cfg = self.runtime.oauth_config
+        if cfg is None:
+            self.send_json({"error": "OAuth not configured"}, status=404)
+            return
+        body = self._read_oauth_body()
+        if body is None:
+            return
+        if self.headers.get_content_type().lower() != "application/json":
+            self.send_json({"error": "invalid_client_metadata", "error_description": "Content-Type must be application/json"}, status=400)
+            return
+        try:
+            metadata = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.send_json({"error": "invalid_client_metadata", "error_description": "Body must be valid JSON"}, status=400)
+            return
+        if not isinstance(metadata, dict):
+            self.send_json({"error": "invalid_client_metadata", "error_description": "Metadata must be an object"}, status=400)
+            return
+        try:
+            registered = cfg.registry.register(metadata)
+        except ValueError as exc:
+            self.send_json({"error": "invalid_client_metadata", "error_description": str(exc)}, status=400)
+            return
+        self.send_json(registered, status=201)
+
+    def send_cors_headers(self) -> None:
+        origin = self.headers.get("Origin")
+        if origin and is_allowed_origin(origin):
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS")
+            self.send_header(
+                "Access-Control-Allow-Headers",
+                "Accept, Authorization, Content-Type, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id",
+            )
+
+    def send_json(
+        self,
+        payload: Any,
+        *,
+        status: int = 200,
+        extra_headers: dict[str, str] | None = None,
+        head_only: bool = False,
+    ) -> None:
+        body = json_response_payload(payload)
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        if getattr(self, "_send_session_header", False):
+            self.send_header("Mcp-Session-Id", self.runtime.http_session_id)
+        self.send_cors_headers()
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
+        self.end_headers()
+        if not head_only:
+            self.wfile.write(body)
+
+
+
+
+class RuntimeHTTPServer(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(
+        self,
+        address: tuple[str, int],
+        handler: type[MCPHandler],
+        control_runtime: Runtime,
+        runtime_factory: Any,
+    ) -> None:
+        super().__init__(address, handler)
+        self.control_runtime = control_runtime
+        self.sessions = HTTPSessionManager(control_runtime)
+
+    def server_close(self) -> None:
+        self.sessions.close()
+        self.control_runtime.close()
+        super().server_close()
+
+

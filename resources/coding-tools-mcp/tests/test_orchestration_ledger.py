@@ -23,10 +23,22 @@ class OrchestrationLedgerTests(unittest.TestCase):
                         "task_class": "localized_bug",
                         "oracle_id": "oracle-1",
                         "provenance": "representative",
+                        "task_spec_fp": "task-spec-1",
+                        "environment_fp": "env-1",
+                        "tool_contract_fp": "tool-1",
+                        "evaluation_schema_fp": "eval-1",
+                        "runtime_version": "0.4.3",
+                        "cache_stratum": "cold",
                     },
                 },
             )
-            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", base_head="head-1", worktree_fp="tree-1")
+            wave_id = ledger.create_wave(
+                run_id,
+                execution_mode="mcp_only",
+                base_head="head-1",
+                worktree_fp="tree-1",
+                contract_fp="contract-1",
+            )
             ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", state_after="READY", payload={"requested": "deterministic", "resolved": "deterministic"})
             ledger.append_event(run_id, wave_id=wave_id, event_type="write_lease_acquired", state_after="ROUTED")
             ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="tests", stage_version="1", input_fingerprint="proof-1", status="passed", duration_ms=125)
@@ -65,11 +77,23 @@ class OrchestrationLedgerTests(unittest.TestCase):
                             "task_class": "localized_bug",
                             "oracle_id": "oracle-roi-1",
                             "provenance": "representative",
+                            "task_spec_fp": "task-roi-1",
+                            "environment_fp": "env-roi-1",
+                            "tool_contract_fp": "tool-roi-1",
+                            "evaluation_schema_fp": "eval-roi-1",
+                            "runtime_version": "0.4.3",
+                            "cache_stratum": "cold",
                         },
                     },
                 )
                 mode = "mcp_only" if route == "deterministic" else "bounded_candidate"
-                wave_id = ledger.create_wave(run_id, execution_mode=mode, base_head="same-head", worktree_fp=f"tree-{policy}")
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode=mode,
+                    base_head="same-head",
+                    worktree_fp="same-tree",
+                    contract_fp="same-contract",
+                )
                 ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", state_after="READY", payload={"requested": route, "resolved": route})
                 ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="tests", stage_version="1", input_fingerprint=f"proof-{policy}", status="passed", duration_ms=10)
                 ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="same-head", proof_fingerprint=f"proof-{policy}", metadata={"accepted_by": "chatweb"})
@@ -103,10 +127,22 @@ class OrchestrationLedgerTests(unittest.TestCase):
                             "task_class": "localized_bug",
                             "oracle_id": "older-oracle",
                             "provenance": "representative",
+                            "task_spec_fp": "older-task",
+                            "environment_fp": "older-env",
+                            "tool_contract_fp": "older-tool",
+                            "evaluation_schema_fp": "older-eval",
+                            "runtime_version": "0.4.3",
+                            "cache_stratum": "cold",
                         },
                     },
                 )
-                wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", base_head="older-head", worktree_fp=f"tree-{policy}")
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only",
+                    base_head="older-head",
+                    worktree_fp="older-tree",
+                    contract_fp="older-contract",
+                )
                 ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="older-head", proof_fingerprint=f"proof-{policy}", metadata={"accepted_by": "chatweb"})
                 ledger.finish_wave(wave_id, status="accepted")
                 ledger.finish_run(run_id, status="accepted")
@@ -131,6 +167,154 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(result["pair_count"], 0)
             self.assertEqual(result["pareto_status"], "indeterminate_no_pairs")
 
+    def test_paired_policy_evaluation_rejects_worktree_identity_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            def accepted(policy: str, worktree_fp: str) -> None:
+                run_id = ledger.create_run(
+                    objective="same causal task",
+                    metadata={
+                        "workflow": "bugfix",
+                        "evaluation": {
+                            "pair_id": "pair-drift",
+                            "policy": policy,
+                            "task_class": "localized_bug",
+                            "oracle_id": "oracle-drift",
+                            "provenance": "representative",
+                            "task_spec_fp": "task-drift",
+                            "environment_fp": "env-drift",
+                            "tool_contract_fp": "tool-drift",
+                            "evaluation_schema_fp": "eval-drift",
+                            "runtime_version": "0.4.3",
+                            "cache_stratum": "cold",
+                        },
+                    },
+                )
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only",
+                    base_head="same-head",
+                    worktree_fp=worktree_fp,
+                    contract_fp="same-contract",
+                )
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+
+            accepted("chatweb_mcp", "tree-a")
+            accepted("mini", "tree-b")
+            comparison = ledger.paired_policy_evaluation(candidate_policies=("mini",), min_pairs=1, min_task_classes=1)
+            self.assertEqual(comparison["results"][0]["pair_count"], 0)
+            self.assertEqual(comparison["excluded"]["identity_mismatch"], 1)
+            self.assertEqual(comparison["identity_mismatch_reasons"]["worktree_fp"], 1)
+            self.assertEqual(comparison["identity_mismatch_reasons"]["pair_fingerprint"], 1)
+
+    def test_quality_outcome_projects_known_defects_and_proof_readiness(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(
+                objective="representative Mini quality",
+                metadata={"workflow": "bugfix", "promotion_provenance": "representative"},
+            )
+            wave_id = ledger.create_wave(run_id, execution_mode="bounded_candidate")
+            ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", payload={"resolved": "mini"})
+            ledger.record_proof(
+                run_id=run_id,
+                wave_id=wave_id,
+                stage_id="focused",
+                stage_version="1",
+                input_fingerprint="quality-proof",
+                status="passed",
+            )
+            recorded = ledger.record_quality_outcome(
+                run_id=run_id,
+                wave_id=wave_id,
+                outcome={
+                    "oracle_pass": True,
+                    "critical_defect_count": 0,
+                    "source": "delayed_project_observation",
+                },
+            )
+            self.assertEqual(recorded["critical_defect_count"], 0)
+            ledger.finish_wave(wave_id, status="accepted")
+            ledger.finish_run(run_id, status="accepted")
+
+            economics = ledger.accepted_result_economics(run_id)
+            self.assertEqual(
+                economics["critical_defects"],
+                {"status": "known", "count": 0, "source": "delayed_project_observation"},
+            )
+            mini = next(item for item in ledger.routing_promotion_readiness()["routes"] if item["route"] == "mini")
+            self.assertEqual(mini["critical_defect_known_zero_samples"], 1)
+            self.assertEqual(mini["proof_or_oracle_complete_samples"], 1)
+            self.assertNotIn("critical_defect_evidence_incomplete", mini["hold_reasons"])
+            self.assertNotIn("proof_or_oracle_evidence_incomplete", mini["hold_reasons"])
+
+    def test_external_candidate_credit_delta_is_not_total_system_cost(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            def accepted(policy: str, route: str, credits: float | None) -> None:
+                run_id = ledger.create_run(
+                    objective="paired credit semantics",
+                    metadata={
+                        "workflow": "bugfix",
+                        "evaluation": {
+                            "pair_id": "pair-credit",
+                            "policy": policy,
+                            "task_class": "localized_bug",
+                            "oracle_id": "oracle-credit",
+                            "provenance": "representative",
+                            "task_spec_fp": "task-credit",
+                            "environment_fp": "env-credit",
+                            "tool_contract_fp": "tool-credit",
+                            "evaluation_schema_fp": "eval-credit",
+                            "runtime_version": "0.4.3",
+                            "cache_stratum": "cold",
+                        },
+                    },
+                )
+                mode = "mcp_only" if route == "deterministic" else "bounded_candidate"
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode=mode,
+                    base_head="head-credit",
+                    worktree_fp="tree-credit",
+                    contract_fp="contract-credit",
+                )
+                ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", payload={"resolved": route})
+                if credits is not None:
+                    delegation = ledger.create_delegation(
+                        wave_id,
+                        authority_owner="candidate",
+                        route_requested=route,
+                        route_resolved=route,
+                        model="model",
+                        metadata={"economics": {"estimated_credits": credits}},
+                    )
+                    ledger.finish_delegation(delegation, status="completed")
+                ledger.record_quality_outcome(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    outcome={"critical_defect_count": 0, "oracle_pass": True, "source": "test"},
+                )
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+
+            accepted("chatweb_mcp", "deterministic", None)
+            accepted("mini", "mini", 0.125)
+            result = ledger.paired_policy_evaluation(
+                candidate_policies=("mini",),
+                min_pairs=1,
+                min_task_classes=1,
+            )["results"][0]
+            self.assertEqual(
+                result["external_candidate_credit_delta"]["measurement"],
+                "estimated_external_candidate_credits_only_not_total_system_cost",
+            )
+            self.assertEqual(result["external_candidate_credit_delta"]["p50"], 0.125)
+            self.assertFalse(result["total_monetary_cost"]["complete"])
+
     def test_events_survive_restart_and_hash_chain_verifies(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -146,6 +330,61 @@ class OrchestrationLedgerTests(unittest.TestCase):
             integrity = restored.verify_chain(run_id)
             self.assertTrue(integrity["ok"])
             self.assertEqual(integrity["checked"], 2)
+
+    def test_observation_spans_reconstruct_explicit_critical_path_without_parallel_double_count(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="critical path")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            spans = [
+                {"span_id": "controller", "stage": "controller", "source": "chatweb", "measurement": "observed", "clock_domain": "chatweb", "start_ms": 10, "end_ms": 110},
+                {"span_id": "tool", "stage": "tool", "source": "mcp", "measurement": "observed", "clock_domain": "mcp", "start_ms": 1, "end_ms": 51, "depends_on": ["controller"]},
+                {"span_id": "provider", "stage": "provider", "source": "provider", "measurement": "observed", "clock_domain": "provider", "start_ms": 5, "end_ms": 85, "depends_on": ["controller"]},
+                {"span_id": "accept", "stage": "accept", "source": "chatweb", "measurement": "observed", "clock_domain": "chatweb", "start_ms": 120, "end_ms": 140, "depends_on": ["tool", "provider"]},
+            ]
+            for span in spans:
+                ledger.record_observation_span(run_id=run_id, wave_id=wave_id, span=span)
+
+            analysis = ledger.critical_path_analysis(run_id)
+            self.assertTrue(analysis["complete"])
+            self.assertEqual(analysis["critical_path_ms"], 200.0)
+            self.assertEqual(analysis["path_span_ids"], ["controller", "provider", "accept"])
+            self.assertEqual(analysis["span_count"], 4)
+            self.assertEqual(analysis["cross_clock_edges"], 4)
+
+    def test_observation_span_analysis_fails_closed_on_missing_dependency(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="incomplete critical path")
+            ledger.record_observation_span(
+                run_id=run_id,
+                span={
+                    "span_id": "visible",
+                    "stage": "assistant_response_visible",
+                    "source": "electron",
+                    "measurement": "observed_host_visible",
+                    "clock_domain": "electron-renderer",
+                    "start_ms": 10,
+                    "end_ms": 20,
+                    "depends_on": ["unknown-controller-span"],
+                },
+            )
+            analysis = ledger.critical_path_analysis(run_id)
+            self.assertFalse(analysis["complete"])
+            self.assertIn("missing_dependency_spans", analysis["reasons"])
+            self.assertEqual(analysis["missing_dependency_span_ids"], ["unknown-controller-span"])
+
+    def test_observation_span_id_is_idempotent_but_conflicts_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="span identity")
+            span = {"span_id": "same", "stage": "tool", "source": "mcp", "measurement": "observed", "clock_domain": "mcp", "start_ms": 1, "end_ms": 2}
+            first = ledger.record_observation_span(run_id=run_id, span=span)
+            second = ledger.record_observation_span(run_id=run_id, span=span)
+            self.assertTrue(first["recorded"])
+            self.assertFalse(second["recorded"])
+            with self.assertRaisesRegex(ValueError, "different evidence"):
+                ledger.record_observation_span(run_id=run_id, span={**span, "end_ms": 3})
 
     def test_sensitive_payload_is_redacted_but_identity_remains(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

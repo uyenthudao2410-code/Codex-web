@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from contextlib import contextmanager
 import json
+import math
 import os
 import re
 import sqlite3
@@ -787,6 +788,215 @@ class OrchestrationLedger:
             for item in events
         ]
 
+    def record_quality_outcome(self, *, run_id: str, outcome: dict[str, Any], wave_id: str = "") -> dict[str, Any]:
+        """Append one bounded immediate/delayed quality observation."""
+        if self.get_run(run_id) is None:
+            raise ValueError("quality outcome run was not found")
+        if wave_id and not any(str(item.get("wave_id") or "") == wave_id for item in self.list_waves(run_id)):
+            raise ValueError("quality outcome wave does not belong to the run")
+        source = _bounded_text(outcome.get("source") or "", 128).strip()
+        if not source:
+            raise ValueError("quality outcome source is required")
+        payload: dict[str, Any] = {"source": source}
+        for key in ("oracle_pass", "regression_escape", "rollback_required", "manual_fix_required", "reviewer_blinded"):
+            value = outcome.get(key)
+            if isinstance(value, bool):
+                payload[key] = value
+        for key in ("critical_defect_count", "noncritical_defect_count"):
+            value = outcome.get(key)
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"{key} must be a non-negative integer")
+            payload[key] = value
+        maintainability = _bounded_text(outcome.get("maintainability_gate") or "", 32).strip().lower()
+        if maintainability:
+            if maintainability not in {"pass", "fail", "not_applicable", "unknown"}:
+                raise ValueError("maintainability_gate is invalid")
+            payload["maintainability_gate"] = maintainability
+        observation_window_end = _bounded_text(outcome.get("observation_window_end") or "", 128).strip()
+        if observation_window_end:
+            payload["observation_window_end"] = observation_window_end
+        event = self.append_event(run_id, wave_id=wave_id or None, event_type="quality_outcome_recorded", payload=payload)
+        return {**payload, "seq": event["seq"], "event_time": event["event_time"]}
+
+    def latest_quality_outcome(self, run_id: str) -> dict[str, Any] | None:
+        for event in reversed(self.list_events(run_id)):
+            if str(event.get("event_type") or "") == "quality_outcome_recorded":
+                payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+                return {**payload, "seq": event["seq"], "event_time": event["event_time"]}
+        return None
+
+    def record_observation_span(self, *, run_id: str, span: dict[str, Any], wave_id: str = "") -> dict[str, Any]:
+        """Append one content-free timing span supplied by a trusted observation plane."""
+        if self.get_run(run_id) is None:
+            raise ValueError("observation span run was not found")
+        if wave_id and not any(str(item.get("wave_id") or "") == wave_id for item in self.list_waves(run_id)):
+            raise ValueError("observation span wave does not belong to the run")
+
+        span_id = _bounded_text(span.get("span_id") or "", 128).strip()
+        stage = _bounded_text(span.get("stage") or "", 100).strip().lower()
+        source = _bounded_text(span.get("source") or "", 128).strip()
+        measurement = _bounded_text(span.get("measurement") or "", 100).strip().lower()
+        clock_domain = _bounded_text(span.get("clock_domain") or "", 160).strip()
+        if not span_id or not stage or not source or not measurement or not clock_domain:
+            raise ValueError("span_id, stage, source, measurement and clock_domain are required")
+
+        def finite_number(name: str) -> float:
+            value = span.get(name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+                raise ValueError(f"{name} must be a finite non-negative number")
+            return float(value)
+
+        start_ms = finite_number("start_ms")
+        end_ms = finite_number("end_ms")
+        if end_ms < start_ms:
+            raise ValueError("end_ms must be greater than or equal to start_ms")
+
+        parent_span_id = _bounded_text(span.get("parent_span_id") or "", 128).strip()
+        raw_dependencies = span.get("depends_on") if isinstance(span.get("depends_on"), list) else []
+        depends_on = list(dict.fromkeys(
+            _bounded_text(item, 128).strip() for item in raw_dependencies[:32] if _bounded_text(item, 128).strip()
+        ))
+        payload: dict[str, Any] = {
+            "span_id": span_id,
+            "stage": stage,
+            "source": source,
+            "measurement": measurement,
+            "clock_domain": clock_domain,
+            "start_ms": round(start_ms, 6),
+            "end_ms": round(end_ms, 6),
+            "duration_ms": round(end_ms - start_ms, 6),
+            "depends_on": depends_on,
+        }
+        if parent_span_id:
+            payload["parent_span_id"] = parent_span_id
+        for key, limit in (("trace_id", 128), ("turn_id", 128), ("observer_plane", 100)):
+            value = _bounded_text(span.get(key) or "", limit).strip()
+            if value:
+                payload[key] = value
+
+        existing = next((item for item in self.list_observation_spans(run_id) if item.get("span_id") == span_id), None)
+        if existing is not None:
+            comparable = {key: value for key, value in existing.items() if key not in {"seq", "event_time"}}
+            if comparable != payload:
+                raise ValueError("observation span_id already exists with different evidence")
+            return {**existing, "recorded": False}
+
+        event = self.append_event(run_id, wave_id=wave_id or None, event_type="observation_span_recorded", payload=payload)
+        return {**payload, "recorded": True, "seq": event["seq"], "event_time": event["event_time"]}
+
+    def list_observation_spans(self, run_id: str, *, limit: int = 500) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(int(limit), 1000))
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM events WHERE run_id=? AND event_type='observation_span_recorded' ORDER BY seq LIMIT ?",
+                (_bounded_text(run_id, 256), bounded_limit),
+            ).fetchall()
+        events = [self._event_row(row) for row in rows]
+        return [
+            {**(item.get("payload") or {}), "seq": item["seq"], "event_time": item["event_time"]}
+            for item in events
+        ]
+
+    def critical_path_analysis(self, run_id: str) -> dict[str, Any]:
+        """Reconstruct the longest explicit dependency path without summing parallel lanes."""
+        spans = self.list_observation_spans(run_id, limit=1000)
+        if not spans:
+            return {
+                "schema_version": 1,
+                "status": "incomplete",
+                "complete": False,
+                "reasons": ["no_observation_spans"],
+                "critical_path_ms": None,
+                "path_span_ids": [],
+                "span_count": 0,
+                "cross_clock_edges": 0,
+                "timestamp_policy": "durations_within_declared_clock_domain_only",
+            }
+
+        nodes = {str(item.get("span_id") or ""): item for item in spans if str(item.get("span_id") or "")}
+        dependencies: dict[str, list[str]] = {}
+        missing_dependencies: set[str] = set()
+        children: dict[str, list[str]] = {span_id: [] for span_id in nodes}
+        indegree: dict[str, int] = {span_id: 0 for span_id in nodes}
+        cross_clock_edges = 0
+        for span_id, item in nodes.items():
+            refs = []
+            parent = str(item.get("parent_span_id") or "").strip()
+            if parent:
+                refs.append(parent)
+            refs.extend(str(value or "").strip() for value in (item.get("depends_on") or []) if str(value or "").strip())
+            refs = list(dict.fromkeys(refs))
+            dependencies[span_id] = refs
+            for dependency in refs:
+                if dependency not in nodes:
+                    missing_dependencies.add(dependency)
+                    continue
+                indegree[span_id] += 1
+                children.setdefault(dependency, []).append(span_id)
+                if str(nodes[dependency].get("clock_domain") or "") != str(item.get("clock_domain") or ""):
+                    cross_clock_edges += 1
+
+        queue = sorted(span_id for span_id, degree in indegree.items() if degree == 0)
+        longest: dict[str, float] = {}
+        predecessor: dict[str, str | None] = {}
+        processed: list[str] = []
+        while queue:
+            span_id = queue.pop(0)
+            processed.append(span_id)
+            duration = float(nodes[span_id].get("duration_ms") or 0.0)
+            available_dependencies = [item for item in dependencies.get(span_id, []) if item in longest]
+            if available_dependencies:
+                best = max(available_dependencies, key=lambda item: longest[item])
+                longest[span_id] = longest[best] + duration
+                predecessor[span_id] = best
+            else:
+                longest[span_id] = duration
+                predecessor[span_id] = None
+            for child in sorted(children.get(span_id, [])):
+                indegree[child] -= 1
+                if indegree[child] == 0:
+                    queue.append(child)
+                    queue.sort()
+
+        reasons: list[str] = []
+        if missing_dependencies:
+            reasons.append("missing_dependency_spans")
+        if len(processed) != len(nodes):
+            reasons.append("dependency_cycle")
+        if not longest or "dependency_cycle" in reasons:
+            path_ids: list[str] = []
+            critical_path_ms: float | None = None
+        else:
+            end_span = max(longest, key=lambda item: longest[item])
+            critical_path_ms = round(longest[end_span], 6)
+            path_ids = []
+            cursor: str | None = end_span
+            while cursor:
+                path_ids.append(cursor)
+                cursor = predecessor.get(cursor)
+            path_ids.reverse()
+
+        by_stage_ms: dict[str, float] = {}
+        for span_id in path_ids:
+            stage = str(nodes[span_id].get("stage") or "unknown")
+            by_stage_ms[stage] = round(by_stage_ms.get(stage, 0.0) + float(nodes[span_id].get("duration_ms") or 0.0), 6)
+        return {
+            "schema_version": 1,
+            "status": "complete" if not reasons else "incomplete",
+            "complete": not reasons,
+            "reasons": reasons,
+            "critical_path_ms": critical_path_ms,
+            "path_span_ids": path_ids,
+            "by_stage_ms": by_stage_ms,
+            "span_count": len(nodes),
+            "clock_domains": sorted({str(item.get("clock_domain") or "") for item in nodes.values() if str(item.get("clock_domain") or "")}),
+            "cross_clock_edges": cross_clock_edges,
+            "missing_dependency_span_ids": sorted(missing_dependencies),
+            "timestamp_policy": "durations_within_declared_clock_domain_only; cross_clock_order_requires_explicit_dependency_identity",
+        }
+
     def record_shadow_route(
         self,
         *,
@@ -987,7 +1197,9 @@ class OrchestrationLedger:
                 "provider_cost_complete_samples": 0,
                 "candidate_credit_samples": 0,
                 "critical_defect_known_zero_samples": 0,
+                "critical_defect_nonzero_samples": 0,
                 "critical_defect_unknown_samples": 0,
+                "proof_or_oracle_complete_samples": 0,
             })
             group["accepted_observed"] += 1
             if provenance == "benchmark_or_synthetic":
@@ -1015,8 +1227,14 @@ class OrchestrationLedger:
             defects = economics.get("critical_defects") if isinstance(economics.get("critical_defects"), dict) else {}
             if defects.get("status") == "known" and defects.get("count") == 0:
                 group["critical_defect_known_zero_samples"] += 1
+            elif defects.get("status") == "known" and isinstance(defects.get("count"), int) and defects.get("count") > 0:
+                group["critical_defect_nonzero_samples"] += 1
             else:
                 group["critical_defect_unknown_samples"] += 1
+            proof = economics.get("proof") if isinstance(economics.get("proof"), dict) else {}
+            quality = economics.get("quality_outcome") if isinstance(economics.get("quality_outcome"), dict) else {}
+            if int(proof.get("passed") or 0) > 0 or (quality.get("oracle_pass") is True and bool(str(quality.get("source") or "").strip())):
+                group["proof_or_oracle_complete_samples"] += 1
 
         routes: list[dict[str, Any]] = []
         for resolved, group in groups.items():
@@ -1029,8 +1247,12 @@ class OrchestrationLedger:
                 reasons.append("insufficient_task_class_diversity")
             if int(group["unverified_provenance"]) > 0:
                 reasons.append("unverified_provenance_excluded")
-            if representative and int(group["critical_defect_known_zero_samples"]) < representative:
+            if int(group["critical_defect_nonzero_samples"]) > 0:
+                reasons.append("critical_defect_observed")
+            elif representative and int(group["critical_defect_known_zero_samples"]) < representative:
                 reasons.append("critical_defect_evidence_incomplete")
+            if representative and int(group["proof_or_oracle_complete_samples"]) < representative:
+                reasons.append("proof_or_oracle_evidence_incomplete")
             if representative and int(group["tta_representative_samples"]) < representative:
                 reasons.append("tta_evidence_incomplete")
             routes.append({
@@ -1049,7 +1271,9 @@ class OrchestrationLedger:
                 "provider_cost_complete_samples": int(group["provider_cost_complete_samples"]),
                 "candidate_credit_samples": int(group["candidate_credit_samples"]),
                 "critical_defect_known_zero_samples": int(group["critical_defect_known_zero_samples"]),
+                "critical_defect_nonzero_samples": int(group["critical_defect_nonzero_samples"]),
                 "critical_defect_unknown_samples": int(group["critical_defect_unknown_samples"]),
+                "proof_or_oracle_complete_samples": int(group["proof_or_oracle_complete_samples"]),
             })
         routes.sort(key=lambda item: str(item["route"]))
         return {
@@ -1182,6 +1406,7 @@ class OrchestrationLedger:
         observed_phase_ms = max(0, int(phase_timing.get("observed_ms") or 0))
         tta_coverage = phase_timing.get("tta_coverage")
 
+        quality_outcome = self.latest_quality_outcome(run_id)
         usage_events = self.list_usage_events(run_id, limit=500)
         usage_totals = {
             "input_tokens": 0,
@@ -1258,6 +1483,12 @@ class OrchestrationLedger:
         proof_passed = sum(1 for proof in proofs if str(proof.get("status") or "") == "passed")
         proof_failed = len(proofs) - proof_passed
         accepted_checkpoints = sum(1 for checkpoint in checkpoints if str(checkpoint.get("status") or "") == "accepted")
+        critical_count = quality_outcome.get("critical_defect_count") if isinstance(quality_outcome, dict) else None
+        critical_defects = (
+            {"status": "known", "count": int(critical_count), "source": str(quality_outcome.get("source") or "quality_outcome_recorded")}
+            if isinstance(critical_count, int) and not isinstance(critical_count, bool) and critical_count >= 0
+            else {"status": "unknown", "count": None, "source": "not_recorded"}
+        )
 
         return {
             "schema_version": 1,
@@ -1319,7 +1550,8 @@ class OrchestrationLedger:
                 "models": sorted(candidate_models),
                 "measurement": "estimated_rate_card" if estimated_credits else "unobserved",
             },
-            "critical_defects": {"status": "unknown", "count": None, "source": "not_recorded"},
+            "quality_outcome": dict(quality_outcome or {}),
+            "critical_defects": critical_defects,
         }
 
     def accepted_result_evaluation(self, run_id: str) -> dict[str, Any]:
@@ -1425,17 +1657,52 @@ class OrchestrationLedger:
         evaluation_identity = {
             "pair_id": _bounded_text(evaluation.get("pair_id") or "", 128) or None,
             "policy": _bounded_text(evaluation.get("policy") or "", 64).lower() or None,
+            "policy_version": _bounded_text(evaluation.get("policy_version") or "", 64) or None,
+            "topology_id": _bounded_text(evaluation.get("topology_id") or "", 100) or None,
+            "router_id": _bounded_text(evaluation.get("router_id") or "", 100) or None,
+            "router_version": _bounded_text(evaluation.get("router_version") or "", 64) or None,
             "task_class": self._route_task_class(run) or None,
             "oracle_id": _bounded_text(evaluation.get("oracle_id") or "", 128) or None,
             "provenance": self._promotion_sample_provenance(run),
+            "task_spec_fp": _bounded_text(evaluation.get("task_spec_fp") or "", 128) or None,
+            "environment_fp": _bounded_text(evaluation.get("environment_fp") or "", 128) or None,
+            "tool_contract_fp": _bounded_text(evaluation.get("tool_contract_fp") or "", 128) or None,
+            "evaluation_schema_fp": _bounded_text(evaluation.get("evaluation_schema_fp") or "", 128) or None,
+            "runtime_version": _bounded_text(evaluation.get("runtime_version") or "", 80) or None,
+            "cache_stratum": _bounded_text(evaluation.get("cache_stratum") or "", 32).lower() or None,
+            "trace_id": _bounded_text(evaluation.get("trace_id") or "", 128) or None,
+            "turn_id": _bounded_text(evaluation.get("turn_id") or "", 128) or None,
+            "replicate_id": _bounded_text(evaluation.get("replicate_id") or "", 128) or None,
+            "session_id": _bounded_text(evaluation.get("session_id") or "", 128) or None,
+            "order_index": evaluation.get("order_index") if isinstance(evaluation.get("order_index"), int) and not isinstance(evaluation.get("order_index"), bool) else None,
+            "schema_version": evaluation.get("schema_version") if isinstance(evaluation.get("schema_version"), int) and not isinstance(evaluation.get("schema_version"), bool) else None,
         }
+        source_identity = {
+            "base_head": str(first_wave.get("base_head") or "") or None,
+            "worktree_fp": str(first_wave.get("worktree_fp") or "") or None,
+            "contract_fp": str(first_wave.get("contract_fp") or "") or None,
+        }
+        pair_basis = {
+            "task_spec_fp": evaluation_identity["task_spec_fp"],
+            "base_head": source_identity["base_head"],
+            "worktree_fp": source_identity["worktree_fp"],
+            "contract_fp": source_identity["contract_fp"],
+            "oracle_id": evaluation_identity["oracle_id"],
+            "task_class": evaluation_identity["task_class"],
+            "environment_fp": evaluation_identity["environment_fp"],
+            "tool_contract_fp": evaluation_identity["tool_contract_fp"],
+            "evaluation_schema_fp": evaluation_identity["evaluation_schema_fp"],
+            "runtime_version": evaluation_identity["runtime_version"],
+            "cache_stratum": evaluation_identity["cache_stratum"] if evaluation_identity["cache_stratum"] in {"cold", "warm"} else None,
+        }
+        pair_identity_complete = all(bool(value) for value in pair_basis.values())
+        pair_fingerprint = hashlib.sha256(_json(pair_basis).encode("utf-8")).hexdigest() if pair_identity_complete else None
+        evaluation_identity["pair_fingerprint"] = pair_fingerprint
         pairing_eligible = bool(
             evaluation_identity["pair_id"]
             and evaluation_identity["policy"]
-            and evaluation_identity["task_class"]
-            and evaluation_identity["oracle_id"]
             and evaluation_identity["provenance"] == "representative"
-            and str(first_wave.get("base_head") or "")
+            and pair_identity_complete
         )
         return {
             "schema_version": 1,
@@ -1446,11 +1713,7 @@ class OrchestrationLedger:
             "first_pass_accepted": bool(economics.get("first_pass_accepted")),
             "pairing_eligible": pairing_eligible,
             "evaluation": evaluation_identity,
-            "source": {
-                "base_head": str(first_wave.get("base_head") or "") or None,
-                "worktree_fp": str(first_wave.get("worktree_fp") or "") or None,
-                "contract_fp": str(first_wave.get("contract_fp") or "") or None,
-            },
+            "source": source_identity,
             "route": dict(economics.get("route") or {}),
             "milestones": {
                 "run_started_at": run_started_at,
@@ -1488,6 +1751,7 @@ class OrchestrationLedger:
                 "accepted": bool(economics.get("accepted")),
                 "first_pass_accepted": bool(economics.get("first_pass_accepted")),
                 "critical_defects": dict(economics.get("critical_defects") or {}),
+                "outcome": dict(economics.get("quality_outcome") or {}),
             },
             "total_monetary_cost": {
                 "value": total_cost_value,
@@ -1510,7 +1774,8 @@ class OrchestrationLedger:
         candidates = tuple(dict.fromkeys(_bounded_text(item, 64).lower() for item in candidate_policies if _bounded_text(item, 64)))
         bounded_limit = max(1, min(int(limit), 500))
         groups: dict[str, dict[str, list[dict[str, Any]]]] = {}
-        excluded = {"not_pair_tagged": 0, "non_representative": 0, "identity_mismatch": 0, "duplicate_policy_run": 0}
+        excluded = {"not_pair_tagged": 0, "non_representative": 0, "identity_incomplete": 0, "identity_mismatch": 0, "duplicate_policy_run": 0}
+        identity_mismatch_reasons: dict[str, int] = {}
         policy_names = (baseline, *candidates)
         placeholders = ",".join("?" for _ in policy_names)
         with self._lock, self._connect() as connection:
@@ -1535,6 +1800,9 @@ class OrchestrationLedger:
             if evaluation.get("provenance") != "representative":
                 excluded["non_representative"] += 1
                 continue
+            if record.get("pairing_eligible") is not True:
+                excluded["identity_incomplete"] += 1
+                continue
             groups.setdefault(pair_id, {}).setdefault(policy, []).append(record)
 
         def metric_percentile(values: list[float], percentile: int) -> float | None:
@@ -1558,13 +1826,25 @@ class OrchestrationLedger:
                 candidate = candidate_rows[0]
                 base_eval = base["evaluation"]
                 candidate_eval = candidate["evaluation"]
-                if (
-                    base["source"].get("base_head") != candidate["source"].get("base_head")
-                    or not base_eval.get("oracle_id")
-                    or base_eval.get("oracle_id") != candidate_eval.get("oracle_id")
-                    or base_eval.get("task_class") != candidate_eval.get("task_class")
-                ):
+                identity_fields = {
+                    "base_head": (base["source"].get("base_head"), candidate["source"].get("base_head")),
+                    "worktree_fp": (base["source"].get("worktree_fp"), candidate["source"].get("worktree_fp")),
+                    "contract_fp": (base["source"].get("contract_fp"), candidate["source"].get("contract_fp")),
+                    "oracle_id": (base_eval.get("oracle_id"), candidate_eval.get("oracle_id")),
+                    "task_class": (base_eval.get("task_class"), candidate_eval.get("task_class")),
+                    "task_spec_fp": (base_eval.get("task_spec_fp"), candidate_eval.get("task_spec_fp")),
+                    "environment_fp": (base_eval.get("environment_fp"), candidate_eval.get("environment_fp")),
+                    "tool_contract_fp": (base_eval.get("tool_contract_fp"), candidate_eval.get("tool_contract_fp")),
+                    "evaluation_schema_fp": (base_eval.get("evaluation_schema_fp"), candidate_eval.get("evaluation_schema_fp")),
+                    "runtime_version": (base_eval.get("runtime_version"), candidate_eval.get("runtime_version")),
+                    "cache_stratum": (base_eval.get("cache_stratum"), candidate_eval.get("cache_stratum")),
+                    "pair_fingerprint": (base_eval.get("pair_fingerprint"), candidate_eval.get("pair_fingerprint")),
+                }
+                mismatches = [key for key, values in identity_fields.items() if not values[0] or values[0] != values[1]]
+                if mismatches:
                     excluded["identity_mismatch"] += 1
+                    for field in mismatches:
+                        identity_mismatch_reasons[field] = identity_mismatch_reasons.get(field, 0) + 1
                     continue
                 base_tta = base.get("milestones", {}).get("time_to_accepted_ms")
                 candidate_tta = candidate.get("milestones", {}).get("time_to_accepted_ms")
@@ -1588,13 +1868,15 @@ class OrchestrationLedger:
                     ),
                     "baseline_controller_cost": (base.get("controller") or {}).get("monetary_cost"),
                     "candidate_controller_cost": (candidate.get("controller") or {}).get("monetary_cost"),
-                    "baseline_candidate_credits": base_credits,
-                    "candidate_candidate_credits": candidate_credits,
-                    "extra_candidate_credits": (
+                    "baseline_external_candidate_credits": base_credits,
+                    "candidate_external_candidate_credits": candidate_credits,
+                    "external_candidate_credit_delta": (
                         round(float(candidate_credits) - float(base_credits), 6)
                         if isinstance(candidate_credits, (int, float)) and isinstance(base_credits, (int, float))
                         else None
                     ),
+                    "baseline_critical_defects": (base.get("quality") or {}).get("critical_defects"),
+                    "candidate_critical_defects": (candidate.get("quality") or {}).get("critical_defects"),
                     "baseline_total_cost": (base.get("total_monetary_cost") or {}).get("value"),
                     "candidate_total_cost": (candidate.get("total_monetary_cost") or {}).get("value"),
                 })
@@ -1604,7 +1886,7 @@ class OrchestrationLedger:
             tta_deltas = [float(row["tta_delta_ms"]) for row in accepted_pairs if isinstance(row.get("tta_delta_ms"), (int, float))]
             baseline_ttas = [float(row["baseline_tta_ms"]) for row in accepted_pairs if isinstance(row.get("baseline_tta_ms"), (int, float))]
             candidate_ttas = [float(row["candidate_tta_ms"]) for row in accepted_pairs if isinstance(row.get("candidate_tta_ms"), (int, float))]
-            extra_credits = [float(row["extra_candidate_credits"]) for row in pair_rows if isinstance(row.get("extra_candidate_credits"), (int, float))]
+            external_credit_deltas = [float(row["external_candidate_credit_delta"]) for row in pair_rows if isinstance(row.get("external_candidate_credit_delta"), (int, float))]
             total_cost_pairs = [row for row in accepted_pairs if isinstance(row.get("baseline_total_cost"), (int, float)) and isinstance(row.get("candidate_total_cost"), (int, float))]
             reasons: list[str] = []
             if len(pair_rows) < max(1, int(min_pairs)):
@@ -1612,6 +1894,21 @@ class OrchestrationLedger:
             if len(task_classes) < max(1, int(min_task_classes)):
                 reasons.append("insufficient_task_class_diversity")
             if any(not row["baseline_accepted"] or not row["candidate_accepted"] for row in pair_rows):
+                reasons.append("quality_floor_non_regression_not_proven")
+            if any(
+                not isinstance(row.get("baseline_critical_defects"), dict)
+                or row["baseline_critical_defects"].get("status") != "known"
+                or not isinstance(row.get("candidate_critical_defects"), dict)
+                or row["candidate_critical_defects"].get("status") != "known"
+                for row in pair_rows
+            ):
+                reasons.append("critical_defect_evidence_incomplete")
+            if any(
+                isinstance(row.get("candidate_critical_defects"), dict)
+                and isinstance(row["candidate_critical_defects"].get("count"), int)
+                and row["candidate_critical_defects"].get("count") > 0
+                for row in pair_rows
+            ):
                 reasons.append("quality_floor_non_regression_not_proven")
             if len(total_cost_pairs) < len(accepted_pairs):
                 reasons.append("controller_cost_unobserved")
@@ -1641,10 +1938,11 @@ class OrchestrationLedger:
                     "delta_p50": metric_percentile(tta_deltas, 50),
                     "delta_p90": metric_percentile(tta_deltas, 90),
                 },
-                "candidate_extra_credits": {
-                    "samples": len(extra_credits),
-                    "p50": metric_percentile(extra_credits, 50),
-                    "p90": metric_percentile(extra_credits, 90),
+                "external_candidate_credit_delta": {
+                    "samples": len(external_credit_deltas),
+                    "p50": metric_percentile(external_credit_deltas, 50),
+                    "p90": metric_percentile(external_credit_deltas, 90),
+                    "measurement": "estimated_external_candidate_credits_only_not_total_system_cost",
                 },
                 "total_monetary_cost": {
                     "comparable_pairs": len(total_cost_pairs),
@@ -1668,6 +1966,7 @@ class OrchestrationLedger:
                 "savings_threshold": "learn_from_representative_paired_data",
             },
             "excluded": excluded,
+            "identity_mismatch_reasons": identity_mismatch_reasons,
             "results": results,
             "automatic_activation": False,
             "controller_cost_policy": "unknown_is_not_zero",

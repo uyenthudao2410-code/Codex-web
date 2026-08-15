@@ -12,7 +12,7 @@ from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.tool_contract import tool_metadata_contract
 
 
-SMART_CONTRACT_SHA256 = "cf1eab62a466b2fb1c8d80f997ac61ef28255d891f13ad2f245d33015d701e86"
+SMART_CONTRACT_SHA256 = "32c4f0eacfa2743afdb556337483e758a57a666e4c4b3b0f56dde9b6f521362c"
 
 
 class _SemanticProvider:

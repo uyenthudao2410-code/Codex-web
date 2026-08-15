@@ -759,3 +759,47 @@ auto-handoff enablement: no
 ```
 
 Remaining work is now primarily **controlled live activation plus representative evidence collection**, not missing source implementation for the performance/measurement issues closed here. Generic ArtifactRef/Composite Read expansion, semantic parallel proof scheduling, authenticated remote-phone status and a dedicated push transport remain benchmark/product-driven optional follow-ups unless future evidence promotes them.
+
+---
+
+## 16. P1 organic host-turn → exact EOCL run correlation source closure
+
+This addendum closes the remaining **source implementation** gap in the P1 measurement bridge without changing the `smart-v3` public tool surface or routing/handoff policy.
+
+Implemented boundary:
+
+- Electron host-observation schema advanced to v5 and assigns one opaque, content-free `turn_id` + `trace_id` to the visible user turn, first visible assistant response and the resulting host-turn span.
+- The host stages only that identity in a bounded one-shot workspace-local pending record; prompt/response text is never copied into correlation state.
+- A **new** EOCL run may atomically claim that pending identity exactly once and persists it in `metadata.evaluation`; an already-existing run never claims a later pending turn.
+- Caller-supplied controlled-evaluation `trace_id`/`turn_id` takes precedence and discards the organic pending marker so it cannot leak onto a later run.
+- Successful run creation publishes an exact content-free `turn_id/trace_id → run_id/wave_id` binding. Run-creation failure restores the claimed pending marker when safe; stale/invalid markers fail closed.
+- Electron resolves only an exact identity match, journals the explicit run binding and submits `task_control action=observation` with explicit `run_id` and `wave_id`; it never relies on current-run fallback or timestamp/thread/session proximity.
+- The evaluator now labels host evidence explicit-linked only when the current-schema journal span and the EOCL observation on the requested run agree on `span_id + turn_id + trace_id` and the journal carries that exact `run_id`.
+
+Focused source proof on the current dirty worktree:
+
+```text
+Node syntax (journal/controller/main): PASS
+Node host-evaluation tests:            PASS
+Python evaluation report tests:        7 / 7 PASS
+smart-v3 compact-surface focused test: PASS
+content-free observation focused test: PASS
+P1-scoped git diff --check:             PASS
+```
+
+The repository-wide `git diff --check` still reports a pre-existing unrelated blank line at EOF in `resources/coding-tools-mcp/coding_tools_mcp/document_tools.py` plus an unrelated line-ending warning; neither file belongs to this P1 change set. The P1-scoped diff is clean.
+
+Activation boundary:
+
+```text
+P1 correlation source implementation:   SOURCE PASS
+Electron/runtime live activation:        PENDING controlled restart
+organic ChatWeb → exact EOCL live canary: PENDING activation
+runtime restart performed here:          no
+Electron restart performed here:         no
+public tool-count/schema expansion:       no
+routing threshold change:                 no
+auto-handoff enablement:                   no
+```
+
+Therefore P1 has no remaining known source-code blocker. It must not be called **FULL LIVE PASS** until a controlled Electron/runtime activation produces at least one organic v5 host-turn span that the evaluation report classifies as `explicit_host_run_identity_present` for the exact EOCL run.
