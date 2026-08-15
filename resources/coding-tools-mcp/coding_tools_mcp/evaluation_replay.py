@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .orchestration_ledger import OrchestrationLedger
+
 
 REPLAY_SCHEMA_VERSION = 1
 REQUIRED_IDENTITY_FIELDS = (
@@ -216,6 +218,112 @@ def _format_command(argv: list[str], *, trial: dict[str, Any], workspace: Path) 
     return formatted
 
 
+def _expected_routes_for_policy(policy: str) -> set[str] | None:
+    normalized = str(policy or "").strip().lower()
+    if normalized == "chatweb_mcp":
+        return {"deterministic", "mcp_deterministic"}
+    if normalized in {"mini", "luna"}:
+        return {normalized}
+    return None
+
+
+def _attest_trial_accepted_result(
+    workspace: Path,
+    validated: dict[str, Any],
+    trial: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str]:
+    ledger_path = workspace / ".coding-tools" / "orchestration" / "ledger.sqlite3"
+    if not ledger_path.is_file():
+        return None, "orchestration_ledger_not_found"
+    try:
+        ledger = OrchestrationLedger(workspace)
+        tagged: list[dict[str, Any]] = []
+        for run in ledger.list_runs(limit=100, status="accepted"):
+            record = ledger.accepted_result_evaluation(str(run.get("run_id") or ""))
+            evaluation = record.get("evaluation") if isinstance(record.get("evaluation"), dict) else {}
+            if (
+                evaluation.get("pair_id") == trial.get("pair_id")
+                and evaluation.get("policy") == trial.get("policy")
+                and evaluation.get("replicate_id") == trial.get("replicate_id")
+                and evaluation.get("order_index") == trial.get("order_index")
+            ):
+                tagged.append(record)
+    except Exception:
+        return None, "orchestration_ledger_unreadable"
+
+    if not tagged:
+        return None, "accepted_eocl_run_not_found"
+    if len(tagged) != 1:
+        return None, "ambiguous_accepted_eocl_runs"
+
+    record = tagged[0]
+    evaluation = record.get("evaluation") if isinstance(record.get("evaluation"), dict) else {}
+    source = record.get("source") if isinstance(record.get("source"), dict) else {}
+    expected = validated["identity"]
+    expected_provenance = "representative" if validated["provenance"] == "representative" else "benchmark_or_synthetic"
+    identity_checks = {
+        "task_spec_fp": (evaluation.get("task_spec_fp"), expected["task_spec_fp"]),
+        "base_head": (source.get("base_head"), expected["base_head"]),
+        "contract_fp": (source.get("contract_fp"), expected["contract_fp"]),
+        "oracle_id": (evaluation.get("oracle_id"), expected["oracle_id"]),
+        "task_class": (evaluation.get("task_class"), expected["task_class"]),
+        "environment_fp": (evaluation.get("environment_fp"), expected["environment_fp"]),
+        "tool_contract_fp": (evaluation.get("tool_contract_fp"), expected["tool_contract_fp"]),
+        "evaluation_schema_fp": (evaluation.get("evaluation_schema_fp"), expected["evaluation_schema_fp"]),
+        "runtime_version": (evaluation.get("runtime_version"), expected["runtime_version"]),
+        "cache_stratum": (evaluation.get("cache_stratum"), expected["cache_stratum"]),
+        "provenance": (evaluation.get("provenance"), expected_provenance),
+    }
+    mismatches = sorted(name for name, values in identity_checks.items() if not values[0] or values[0] != values[1])
+    if not source.get("worktree_fp"):
+        mismatches.append("worktree_fp")
+    if mismatches:
+        return None, "accepted_eocl_identity_mismatch:" + ",".join(mismatches)
+
+    resolved_route = str((record.get("route") or {}).get("resolved") or "").strip().lower()
+    expected_routes = _expected_routes_for_policy(str(trial.get("policy") or ""))
+    if expected_routes is not None and resolved_route not in expected_routes:
+        return None, "accepted_eocl_route_policy_mismatch"
+
+    try:
+        economics = ledger.accepted_result_economics(str(record.get("run_id") or ""))
+    except Exception:
+        return None, "accepted_eocl_evidence_unreadable"
+    proof = economics.get("proof") if isinstance(economics.get("proof"), dict) else {}
+    quality = economics.get("quality_outcome") if isinstance(economics.get("quality_outcome"), dict) else {}
+    if int(proof.get("accepted_checkpoint_count") or 0) < 1:
+        return None, "accepted_eocl_checkpoint_missing"
+    if int(proof.get("passed") or 0) < 1 and quality.get("oracle_pass") is not True:
+        return None, "accepted_eocl_oracle_evidence_missing"
+
+    return {
+        "run_id": record.get("run_id"),
+        "accepted": True,
+        "pairing_eligible": bool(record.get("pairing_eligible")),
+        "pair_fingerprint": evaluation.get("pair_fingerprint"),
+        "route_resolved": resolved_route,
+        "accepted_checkpoint_count": int(proof.get("accepted_checkpoint_count") or 0),
+        "proof_passed": int(proof.get("passed") or 0),
+        "oracle_pass": quality.get("oracle_pass") if isinstance(quality.get("oracle_pass"), bool) else None,
+    }, "accepted_eocl_run_attested"
+
+
+def _paired_eocl_identity_complete(trials: list[dict[str, Any]]) -> bool:
+    if not trials:
+        return False
+    fingerprints_by_pair: dict[str, set[str]] = {}
+    for trial in trials:
+        accepted = trial.get("accepted_result") if isinstance(trial.get("accepted_result"), dict) else None
+        if accepted is None:
+            return False
+        pair_id = str(trial.get("pair_id") or "").strip()
+        pair_fingerprint = str(accepted.get("pair_fingerprint") or "").strip()
+        if not pair_id or not pair_fingerprint:
+            return False
+        fingerprints_by_pair.setdefault(pair_id, set()).add(pair_fingerprint)
+    return bool(fingerprints_by_pair) and all(len(values) == 1 for values in fingerprints_by_pair.values())
+
+
 def execute_controlled_replay(manifest: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:
     validated = validate_replay_manifest(manifest)
     source_repo_text = validated["source_repo"]
@@ -243,6 +351,8 @@ def execute_controlled_replay(manifest: dict[str, Any], plan: dict[str, Any]) ->
             start_head_verified = False
             clean_start_verified = False
             cleanup_ok = False
+            accepted_result: dict[str, Any] | None = None
+            accepted_result_evidence_reason = "trial_not_executed"
             try:
                 if setup.returncode != 0:
                     infrastructure_error = "git_worktree_add_failed"
@@ -277,6 +387,11 @@ def execute_controlled_replay(manifest: dict[str, Any], plan: dict[str, Any]) ->
                         except subprocess.TimeoutExpired as exc:
                             command_result = subprocess.CompletedProcess(argv, 124, exc.stdout or b"", exc.stderr or b"")
                         duration_ms = round((time.monotonic_ns() - started) / 1_000_000, 6)
+                        accepted_result, accepted_result_evidence_reason = _attest_trial_accepted_result(
+                            workspace,
+                            validated,
+                            trial,
+                        )
             finally:
                 if workspace.exists():
                     removed = _run_git(source_repo, "worktree", "remove", "--force", str(workspace), timeout=120)
@@ -302,7 +417,8 @@ def execute_controlled_replay(manifest: dict[str, Any], plan: dict[str, Any]) ->
                 "stdout_sha256": hashlib.sha256(stdout).hexdigest() if command_result is not None else None,
                 "stderr_sha256": hashlib.sha256(stderr).hexdigest() if command_result is not None else None,
                 "cleanup_ok": cleanup_ok,
-                "accepted_result": None,
+                "accepted_result": accepted_result,
+                "accepted_result_evidence_reason": accepted_result_evidence_reason,
                 "acceptance_policy": "never_infer_acceptance_from_process_exit_code",
             })
     finally:
@@ -310,6 +426,9 @@ def execute_controlled_replay(manifest: dict[str, Any], plan: dict[str, Any]) ->
         _run_git(source_repo, "worktree", "prune")
 
     infrastructure_complete = all(item["infrastructure_error"] is None and item["cleanup_ok"] for item in trial_results)
+    individually_attested = bool(trial_results) and all(item["accepted_result"] is not None for item in trial_results)
+    paired_identity_complete = _paired_eocl_identity_complete(trial_results) if individually_attested else False
+    accepted_result_evidence_complete = individually_attested and paired_identity_complete
     return {
         "schema_version": REPLAY_SCHEMA_VERSION,
         "study_id": validated["study_id"],
@@ -318,7 +437,15 @@ def execute_controlled_replay(manifest: dict[str, Any], plan: dict[str, Any]) ->
         "infrastructure_complete": infrastructure_complete,
         "trial_count": len(trial_results),
         "trials": trial_results,
-        "accepted_result_evidence_complete": False,
-        "accepted_result_evidence_reason": "caller_oracle_and_causal_route_attestation_required",
+        "accepted_result_evidence_complete": accepted_result_evidence_complete,
+        "accepted_result_evidence_reason": (
+            "all_trials_attested_by_eocl_ledger"
+            if accepted_result_evidence_complete
+            else (
+                "paired_eocl_identity_mismatch"
+                if individually_attested
+                else "one_or_more_trials_missing_eocl_acceptance_attestation"
+            )
+        ),
         "automatic_activation": False,
     }

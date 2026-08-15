@@ -7,7 +7,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from coding_tools_mcp.evaluation_replay import build_counterbalanced_plan, execute_controlled_replay, validate_replay_manifest
+from coding_tools_mcp.evaluation_replay import (
+    _attest_trial_accepted_result,
+    _paired_eocl_identity_complete,
+    build_counterbalanced_plan,
+    execute_controlled_replay,
+    validate_replay_manifest,
+)
+from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 
 
 class EvaluationReplayTests(unittest.TestCase):
@@ -135,10 +142,119 @@ class EvaluationReplayTests(unittest.TestCase):
                 self.assertTrue(trial["cleanup_ok"])
                 self.assertEqual(trial["command_exit_code"], 0)
                 self.assertIsNone(trial["accepted_result"])
+                self.assertEqual(trial["accepted_result_evidence_reason"], "orchestration_ledger_not_found")
                 self.assertEqual(trial["acceptance_policy"], "never_infer_acceptance_from_process_exit_code")
                 self.assertEqual(len(trial["stdout_sha256"]), 64)
                 self.assertEqual(len(trial["stderr_sha256"]), 64)
             self.assertEqual(git("worktree", "list", "--porcelain").stdout.count("worktree "), 1)
+
+    def test_explicit_executor_attests_trial_local_eocl_acceptance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp) / "repo"
+            repo.mkdir()
+
+            def git(*args: str) -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    ["git", "-C", str(repo), *args],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                )
+
+            git("init")
+            package_root = Path(__file__).resolve().parents[1]
+            driver = repo / "trial_driver.py"
+            driver.write_text(
+                "\n".join([
+                    "import os, subprocess, sys",
+                    f"sys.path.insert(0, {str(package_root)!r})",
+                    "from coding_tools_mcp.orchestration_ledger import OrchestrationLedger",
+                    "from pathlib import Path",
+                    "root = Path.cwd()",
+                    "head = subprocess.run(['git', 'rev-parse', 'HEAD'], check=True, capture_output=True, text=True).stdout.strip()",
+                    "policy = os.environ['CODING_TOOLS_EVAL_POLICY']",
+                    "route = 'deterministic' if policy == 'chatweb_mcp' else policy",
+                    "ledger = OrchestrationLedger(root)",
+                    "run_id = ledger.create_run(objective='representative replay trial', metadata={'evaluation': {",
+                    "    'pair_id': os.environ['CODING_TOOLS_EVAL_PAIR_ID'], 'policy': policy,",
+                    "    'replicate_id': os.environ['CODING_TOOLS_EVAL_REPLICATE_ID'], 'order_index': int(os.environ['CODING_TOOLS_EVAL_ORDER_INDEX']),",
+                    "    'provenance': 'representative', 'task_spec_fp': 'task-fp', 'oracle_id': 'oracle-1',",
+                    "    'task_class': 'localized_bug', 'environment_fp': 'environment-fp', 'tool_contract_fp': 'tool-fp',",
+                    "    'evaluation_schema_fp': 'evaluation-fp', 'runtime_version': '0.4.3', 'cache_stratum': 'cold',",
+                    "}})",
+                    "wave_id = ledger.create_wave(run_id, execution_mode='mcp_only' if route == 'deterministic' else 'bounded_candidate', base_head=head, worktree_fp='clean-source', contract_fp='contract-fp')",
+                    "ledger.append_event(run_id, wave_id=wave_id, event_type='route_selected', payload={'requested': policy, 'resolved': route})",
+                    "ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id='oracle', stage_version='1', input_fingerprint='trial-proof', status='passed', duration_ms=1)",
+                    "ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head=head, proof_fingerprint='trial-proof')",
+                    "ledger.finish_wave(wave_id, status='accepted')",
+                    "ledger.finish_run(run_id, status='accepted')",
+                ]) + "\n",
+                encoding="utf-8",
+            )
+            (repo / "input.txt").write_text("controlled replay fixture\n", encoding="utf-8")
+            git("add", "input.txt", "trial_driver.py")
+            subprocess.run(
+                ["git", "-C", str(repo), "-c", "user.email=replay-test@example.invalid", "-c", "user.name=Replay Test", "commit", "-m", "fixture"],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            head = git("rev-parse", "HEAD").stdout.strip()
+            manifest = self.manifest()
+            manifest["pair_count"] = 2
+            manifest["identity"]["base_head"] = head
+            manifest["source_repo"] = str(repo)
+            manifest["command"] = [sys.executable, "trial_driver.py"]
+            result = execute_controlled_replay(manifest, build_counterbalanced_plan(manifest))
+            self.assertTrue(result["infrastructure_complete"])
+            self.assertTrue(result["accepted_result_evidence_complete"])
+            self.assertEqual(result["accepted_result_evidence_reason"], "all_trials_attested_by_eocl_ledger")
+            for trial in result["trials"]:
+                self.assertTrue(trial["accepted_result"]["accepted"])
+                self.assertEqual(trial["accepted_result_evidence_reason"], "accepted_eocl_run_attested")
+                self.assertEqual(trial["accepted_result"]["route_resolved"], "deterministic" if trial["policy"] == "chatweb_mcp" else trial["policy"])
+
+    def test_trial_attestation_rejects_route_policy_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            workspace = Path(temp)
+            manifest = self.manifest()
+            ledger = OrchestrationLedger(workspace)
+            trial = {
+                "pair_id": "route-study-pair-001",
+                "replicate_id": "route-study-replicate-001",
+                "policy": "mini",
+                "order_index": 0,
+            }
+            run_id = ledger.create_run(objective="wrong route", metadata={"evaluation": {
+                "pair_id": trial["pair_id"], "policy": trial["policy"], "replicate_id": trial["replicate_id"], "order_index": 0,
+                "provenance": "representative", "task_spec_fp": "task-fp", "oracle_id": "oracle-1", "task_class": "localized_bug",
+                "environment_fp": "environment-fp", "tool_contract_fp": "tool-fp", "evaluation_schema_fp": "evaluation-fp",
+                "runtime_version": "0.4.3", "cache_stratum": "cold",
+            }})
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", base_head="a" * 40, worktree_fp="clean-source", contract_fp="contract-fp")
+            ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", payload={"requested": "mini", "resolved": "deterministic"})
+            ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="oracle", stage_version="1", input_fingerprint="proof", status="passed")
+            ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="a" * 40, proof_fingerprint="proof")
+            ledger.finish_wave(wave_id, status="accepted")
+            ledger.finish_run(run_id, status="accepted")
+            accepted, reason = _attest_trial_accepted_result(workspace, validate_replay_manifest(manifest), trial)
+            self.assertIsNone(accepted)
+            self.assertEqual(reason, "accepted_eocl_route_policy_mismatch")
+
+    def test_paired_eocl_identity_requires_matching_pair_fingerprint(self) -> None:
+        matching = [
+            {"pair_id": "pair-1", "accepted_result": {"pair_fingerprint": "same"}},
+            {"pair_id": "pair-1", "accepted_result": {"pair_fingerprint": "same"}},
+        ]
+        mismatched = [
+            {"pair_id": "pair-1", "accepted_result": {"pair_fingerprint": "first"}},
+            {"pair_id": "pair-1", "accepted_result": {"pair_fingerprint": "second"}},
+        ]
+        self.assertTrue(_paired_eocl_identity_complete(matching))
+        self.assertFalse(_paired_eocl_identity_complete(mismatched))
+        self.assertFalse(_paired_eocl_identity_complete([{"pair_id": "pair-1", "accepted_result": None}]))
 
 
 if __name__ == "__main__":
