@@ -93,7 +93,7 @@ from .semantic_localization import (
     semantic_provider_status,
 )
 from .task_state import TaskStateStore
-from .performance_trace import PerformanceTraceStore
+from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, utc_now
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths
 from .orchestration_report import OrchestrationReport
@@ -1573,8 +1573,9 @@ class Runtime:
         except ValueError:
             stale_run_seconds = 24 * 60 * 60
         stale_run_seconds = max(60 * 60, min(stale_run_seconds, 30 * 24 * 60 * 60))
+        self.stale_run_seconds = stale_run_seconds
         self.stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
-            stale_after_seconds=stale_run_seconds
+            stale_after_seconds=self.stale_run_seconds
         )
         self.recovered_agent_lanes = 0
         for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
@@ -1735,6 +1736,9 @@ class Runtime:
             self.orphaned_idempotency_records = self.orchestration_ledger.mark_orphaned_idempotency(
                 current_process_instance_id=self.process_instance_id
             )
+            self.stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
+                stale_after_seconds=self.stale_run_seconds
+            )
             self.recovered_agent_lanes = 0
             for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
                 owner_process = str((lane.get("metadata") or {}).get("owner_process_instance_id") or "")
@@ -1747,6 +1751,7 @@ class Runtime:
                 ):
                     self.recovered_agent_lanes += 1
             self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
+            self.reconciled_task_orchestration = self._reconcile_task_orchestration_projection()
             self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
             self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
             self._opencode_provider = OpenCodeProviderAdapter(
@@ -2750,6 +2755,7 @@ class Runtime:
         *,
         request_id: str | int | None = None,
     ) -> dict[str, Any]:
+        started_wall_utc = utc_now()
         started_at = time.monotonic()
         args = arguments or {}
         compatibility_call = self.tool_mode == "smart" and name in SMART_COMPAT_TOOL_NAMES
@@ -2802,7 +2808,7 @@ class Runtime:
             if spec.read_only is not True and name not in {"agent_workflow", "document_workflow"} and not task_read_only and not payload.get("deduplicated"):
                 self._invalidate_fast_cache()
             self._record_task_tool_result(name, args, payload)
-            self.emit_tool_trace(name, args, payload, started_at)
+            self.emit_tool_trace(name, args, payload, started_at, started_wall_utc=started_wall_utc)
             content = spec.content_builder(payload) if spec.content_builder else None
             payload.setdefault("presentation", TOOL_CONTRACT_RUNTIME.presentation(name, payload))
             return make_tool_result(name, payload, is_error=payload.get("ok") is False, content=content)
@@ -2833,7 +2839,7 @@ class Runtime:
             if exc.code == "ELICITATION_UNSUPPORTED":
                 payload["status"] = "unsupported"
             self._record_task_tool_result(name, args, payload)
-            self.emit_tool_trace(name, args, payload, started_at)
+            self.emit_tool_trace(name, args, payload, started_at, started_wall_utc=started_wall_utc)
             return make_tool_result(name, payload, is_error=True)
         except Exception as exc:  # noqa: BLE001 - tool failures must stay structured
             payload = {
@@ -2849,7 +2855,7 @@ class Runtime:
             if spec.error_status:
                 payload["status"] = spec.error_status
             self._record_task_tool_result(name, args, payload)
-            self.emit_tool_trace(name, args, payload, started_at)
+            self.emit_tool_trace(name, args, payload, started_at, started_wall_utc=started_wall_utc)
             return make_tool_result(name, payload, is_error=True)
 
     def _record_task_tool_result(self, name: str, args: dict[str, Any], payload: dict[str, Any]) -> None:
@@ -2916,6 +2922,7 @@ class Runtime:
             _WORKSPACE_PREHEAT_STARTED.add(namespace)
 
         def preheat() -> None:
+            started_wall_utc = utc_now()
             started = time.monotonic()
             try:
                 payload = self.workspace_context({"path": ".", "max_entries": 40, "detail": "compact"})
@@ -2924,9 +2931,11 @@ class Runtime:
             except Exception:
                 ok = False
             finished = time.monotonic()
+            finished_wall_utc = utc_now()
             try:
                 self.performance_trace.record(
                     tool="workspace_preheat", started_monotonic=started, finished_monotonic=finished, ok=ok,
+                    started_wall_utc=started_wall_utc, finished_wall_utc=finished_wall_utc,
                     orchestration=self.task_state.get().get("orchestration", {}),
                 )
             except Exception:
@@ -4011,14 +4020,25 @@ class Runtime:
             "cache": {"hit": False, "age_ms": 0},
         }
         if detail == "full":
+            source = self._orchestration_workspace_identity(args.get("path", "."))
             payload["runtime"] = {
+                "runtime_version": __version__,
                 "server_instance_id": self.server_instance_id,
                 "process_instance_id": self.process_instance_id,
                 "performance_trace_version": self.performance_trace.schema_version,
+                "idempotency_policy_epoch": IDEMPOTENCY_POLICY_EPOCH,
+                "source": {
+                    "is_repo": bool(source.get("is_repo")),
+                    "git_head": str(source.get("base_head") or ""),
+                    "branch": str(source.get("branch") or ""),
+                    "worktree_fp": str(source.get("worktree_fp") or ""),
+                    "dirty": bool(source.get("dirty_paths")),
+                },
                 "tool_contract": dict(self.tool_contract),
                 "tool_metadata": tool_metadata_contract(),
                 "semantic_localization": semantic_provider_status(self.semantic_localizer),
                 "stale_orchestration_runs": len(self.stale_orchestration_runs),
+                "stale_run_threshold_seconds": int(self.stale_run_seconds),
                 "task_orchestration_projection_reconciled": bool(self.reconciled_task_orchestration),
                 "orphaned_background_operations": int(self.orphaned_background_operations),
                 "orphaned_idempotency_records": int(self.orphaned_idempotency_records),
@@ -6759,10 +6779,19 @@ class Runtime:
             }
         return {}
 
-    def emit_tool_trace(self, name: str, args: dict[str, Any], payload: dict[str, Any], started_at: float) -> None:
+    def emit_tool_trace(
+        self,
+        name: str,
+        args: dict[str, Any],
+        payload: dict[str, Any],
+        started_at: float,
+        *,
+        started_wall_utc: str = "",
+    ) -> None:
         raw_error = payload.get("error")
         error = raw_error if isinstance(raw_error, dict) else {}
         finished_at = time.monotonic()
+        finished_wall_utc = utc_now()
         duration_ms = int((finished_at - started_at) * 1000)
         execution = payload.get("execution") if isinstance(payload.get("execution"), dict) else {}
         proof_summary = execution.get("proof_summary") if isinstance(execution.get("proof_summary"), dict) else {}
@@ -6793,6 +6822,8 @@ class Runtime:
                 tool=name,
                 started_monotonic=started_at,
                 finished_monotonic=finished_at,
+                started_wall_utc=started_wall_utc,
+                finished_wall_utc=finished_wall_utc,
                 request_bytes=len(json.dumps(args, ensure_ascii=False, default=str).encode("utf-8")),
                 response_bytes=len(json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")),
                 model_visible_bytes=model_visible_text_bytes(

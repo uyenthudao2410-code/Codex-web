@@ -24,6 +24,8 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 tool="agent_workflow",
                 started_monotonic=10.0,
                 finished_monotonic=11.0,
+                started_wall_utc="2026-08-15T00:00:00.000Z",
+                finished_wall_utc="2026-08-15T00:00:01.000Z",
                 request_bytes=100,
                 response_bytes=200,
                 model_visible_bytes=80,
@@ -83,6 +85,9 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             self.assertEqual(state["route_resolved_counts"], {"deterministic": 1})
             self.assertEqual(state["orchestration_state_counts"], {"ACCEPTING": 1})
             event = state["recent"][-1]
+            self.assertEqual(event["started_at"], "2026-08-15T00:00:00.000Z")
+            self.assertEqual(event["finished_at"], "2026-08-15T00:00:01.000Z")
+            self.assertEqual(event["wall_time_source"], "operation_boundary")
             self.assertTrue(event["idempotency_eligible"])
             self.assertTrue(event["idempotency_key_present"])
             self.assertEqual(event["idempotency_policy"], "required")
@@ -204,6 +209,8 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertGreater(expected, 0)
                 self.assertEqual(event["model_visible_bytes"], expected)
                 self.assertGreaterEqual(event["response_bytes"], event["model_visible_bytes"])
+                self.assertEqual(event["wall_time_source"], "operation_boundary")
+                self.assertLessEqual(event["started_at"], event["finished_at"])
             finally:
                 runtime.close()
 
@@ -297,14 +304,20 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertNotIn("runtime", compact)
                 context = runtime.workspace_context({"detail": "full"})
                 identity = context["runtime"]
+                self.assertTrue(identity["runtime_version"])
                 self.assertEqual(identity["server_instance_id"], runtime.server_instance_id)
                 self.assertEqual(identity["process_instance_id"], runtime.process_instance_id)
                 self.assertEqual(identity["performance_trace_version"], 5)
+                self.assertEqual(identity["idempotency_policy_epoch"], "task_epoch_v1")
+                self.assertIn("git_head", identity["source"])
+                self.assertIn("worktree_fp", identity["source"])
+                self.assertEqual(identity["stale_run_threshold_seconds"], runtime.stale_run_seconds)
                 contract = identity["tool_contract"]
                 self.assertEqual(contract["schema_version"], 1)
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
+                self.assertEqual(contract["sha256"], "4283e098c315d015c457ce2ab781257491ef70607c6c577f7699969fb8c3f754")
                 metadata = identity["tool_metadata"]
                 self.assertEqual(metadata["schema_version"], 2)
                 self.assertEqual(metadata["risk_vocabulary"], ["read_only", "project_write", "job_run", "account_manage", "unknown"])
@@ -472,6 +485,12 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             runtime = Runtime(root, permission_mode="safe")
             try:
                 first = runtime._orchestration_workspace_identity(".")
+                runtime._invalidate_fast_cache()
+                runtime_identity = runtime.workspace_context({"detail": "full"})["runtime"]["source"]
+                self.assertTrue(runtime_identity["is_repo"])
+                self.assertEqual(runtime_identity["git_head"], first["base_head"])
+                self.assertEqual(runtime_identity["worktree_fp"], first["worktree_fp"])
+                self.assertFalse(runtime_identity["dirty"])
                 runtime_state = root / ".coding-tools" / "volatile.json"
                 runtime_state.parent.mkdir(parents=True, exist_ok=True)
                 runtime_state.write_text('{"tick": 1}\n', encoding="utf-8")

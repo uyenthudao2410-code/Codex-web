@@ -45,7 +45,11 @@
     "extraResources": [
       {
         "from": "resources",
-        "to": "resources"
+        "to": "resources",
+        "filter": [
+          "**/*",
+          "!coding-tools-mcp/benchmarks/reports/**"
+        ]
       }
     ],
     "win": {

@@ -57,6 +57,8 @@ class PerformanceTraceStore:
         tool: str,
         started_monotonic: float,
         finished_monotonic: float,
+        started_wall_utc: str = "",
+        finished_wall_utc: str = "",
         request_bytes: int = 0,
         response_bytes: int = 0,
         model_visible_bytes: int = 0,
@@ -106,10 +108,18 @@ class PerformanceTraceStore:
             if measured_policy != "required" or idempotency_key_present:
                 measured_missing_reason = ""
             measured_error_class = self._normalize_error_class(error_class) if not ok else ""
+            recorded_wall_utc = utc_now()
+            measured_started_wall = str(started_wall_utc or "").strip() or recorded_wall_utc
+            measured_finished_wall = str(finished_wall_utc or "").strip() or recorded_wall_utc
             event = {
                 "tool": tool,
-                "started_at": utc_now(),
-                "finished_at": utc_now(),
+                "started_at": measured_started_wall,
+                "finished_at": measured_finished_wall,
+                "wall_time_source": (
+                    "operation_boundary"
+                    if str(started_wall_utc or "").strip() and str(finished_wall_utc or "").strip()
+                    else "record_time_fallback"
+                ),
                 "duration_ms": duration_ms,
                 "wait_before_ms": wait_before_ms,
                 "request_bytes": max(0, int(request_bytes)),

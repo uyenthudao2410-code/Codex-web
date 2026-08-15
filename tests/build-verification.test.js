@@ -32,3 +32,11 @@ test('artifact collection rejects paths outside workspace and hashes files', asy
 test('workspace is required before build verification', () => {
   assert.throws(() => requireWorkspace(''), /Vui lòng chọn thư mục làm việc/i);
 });
+
+test('electron packaging excludes raw benchmark reports from resources', () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  const resources = packageJson.build?.extraResources || [];
+  const codingResources = resources.find((entry) => entry.from === 'resources' && entry.to === 'resources');
+  assert.ok(codingResources, 'resources extraResources entry is required');
+  assert.ok(codingResources.filter?.includes('!coding-tools-mcp/benchmarks/reports/**'));
+});

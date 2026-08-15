@@ -48,6 +48,17 @@ Validation is evidence, not ceremony.
 
 Testing guidance: [`docs/TESTING.md`](docs/TESTING.md).
 
+### Runtime evidence for research and evaluation
+
+When producing repository-local research, benchmarking, postmortems, scientific evaluation, or routing/cost analysis, treat the following `.coding-tools` artifacts as first-class evidence sources when they exist and are relevant:
+
+1. `.coding-tools/orchestration/ledger.sqlite3` — **canonical causal audit source** for runs, waves, state transitions, delegation/authority, proof lineage, replans, acceptance, and timing relationships.
+2. `.coding-tools/performance.json` — dynamic performance/usage projection for tool calls, errors, cache/dedup, routing counts, bytes, and timing aggregates; snapshot it with an observation timestamp and do not present internal credit estimates as provider billing.
+3. `.coding-tools/task-history.json` — archived task-level continuity/outcome records; useful for longitudinal task-class and acceptance analysis, but not a replacement for the orchestration ledger.
+4. `.coding-tools/task-state.json` — current task/run/wave projection for operator/UI state; useful for present-state evidence, not full forensic history.
+
+These files are **volatile runtime evidence, not source-code inputs**. For research claims, record the observed Git HEAD, capture time/evidence window, sample size where relevant, and distinguish measured/provider-reported facts from derived estimates and scenario assumptions. If projections disagree on causal history, prefer the orchestration ledger and explain the discrepancy. Do not manually edit runtime evidence to make a report look cleaner, and do not let `.coding-tools` volatility participate in source/worktree fingerprints or invalidate otherwise matching code proof.
+
 ## 5. Protect work and keep delivery explicit
 
 - Never print, commit, or expose credentials, authorization headers, private keys, tokens, secret files, or sensitive command output.
