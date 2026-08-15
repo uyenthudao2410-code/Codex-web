@@ -1,195 +1,345 @@
 # Tools-Codex-web — Current Implementation Delta
 
 **Observed date:** 2026-08-15  
-**Companion audit:** `docs/research/260815_TOOLS_CODEX_WEB_PRACTICAL_FIT_AUDIT_OF_ADVISORY_RECOMMENDATIONS.md`  
-**Subsystem role contract:** `docs/RUST_PYTHON_PRODUCT_ROLES.md`  
-**Purpose:** current-status delta only. This companion does not rewrite historical audit snapshots. When an older “current status” statement conflicts with this file, use this file for the latest source/worktree status described below.
+**Repository:** `uyenthudao2410-code/Tools-Codex-web`  
+**Branch:** `main`  
+**Exact pushed HEAD:** `2592b7b0fed7aabd04260ceb3bcbf53f82f81399`  
+**Desktop:** `web-mcp-assistant 0.3.4`  
+**Public MCP profile:** `smart-v3`, exactly 8 public tools  
+**Purpose:** authoritative current-status delta only. Historical audit snapshots remain historical evidence and are not rewritten by this document.
 
-## Current source baseline
+---
+
+## 1. Executive status
+
+The current repository no longer has a known small P0/P1 source implementation blocker that can be responsibly closed without an external prerequisite or representative accepted-work evidence.
+
+The correct current state is:
 
 ```text
-workspace: E:\DEV\Tools-Codex-web
-branch:    main
-HEAD:      dff81e251836666fc825c40bf86e4167afd29c39
-smart-v3:  8 public tools
-contract:  8fbee29c8de9788bedb09caf1b2fc4317f26ba7ab85ef35ebc4a7288558940d4
+core reliability / measurement source work    source-complete + locally proven
+exact-current-HEAD GitHub CI                   externally blocked before runner allocation
+native semantic live activation                blocked by real binding prerequisite
+routing / auto-handoff promotion               representative evidence pending
+proof-cache policy simplification              representative window pending
+Call Hierarchy                                 blocked behind semantic activation/workload
+Code Mode arbitrary generated-code execution   fail-closed HOLD pending a qualifying isolation backend
+optional convenience features                  demand-driven / deferred
 ```
 
-The worktree is intentionally dirty with accepted P0/P1/P5/semantic/CI/Code-Mode prerequisite changes, volatile `.coding-tools/*` state, and unrelated/concurrent UI work. No reset/clean/rebase is implied by this delta.
+Do not create synthetic workload, weaken proof identities, invent provider/semantic credentials, or add public tools merely to make roadmap counters nonzero.
 
-## Source-complete + regression-proven
+---
 
-- Source-fenced continuation is implemented inside the existing `agent_workflow`; no ninth public tool was added.
-- Continuation binds source/worktree, scope/options and byte position; stale or mismatched state fails closed. Canonical Base64URL validation rejects equivalent-encoding token tampering.
-- Result-tail telemetry records truncation, continuation offered/read/re-read and stale continuation events.
-- Required idempotency uses the `task_epoch_v1` current-policy view and has focused fault proof for workflow execution plus `task_control accept/reject`: exact duplicate replay is at-most-once, conflicting key fails closed, and previous-process unknown outcome is not replayed as a fresh side effect.
-- Windows exact-source provenance separates `exact_source` from `publishable`; development smoke cannot label itself publishable.
-- Product packaging excludes `coding-tools-mcp/benchmarks/reports/**`; source-bundle tests also protect private runtime state.
-- PerformanceTrace captures operation-entry/exit wall timestamps while monotonic duration remains authoritative.
-- Runtime identity exposes non-secret runtime/process/server identity, Git source identity when available, PerformanceTrace version, Smart-v3 contract identity, semantic status and idempotency policy epoch.
-- Stale-orchestration health separates currently unresolved stale active runs from runs reconciled during startup/switch. Reconciliation and read-only health reuse the same live-ownership predicate; ledger history is retained.
-- Native semantic activation readiness is self-diagnosing without exposing secrets: status keeps existing reason codes and adds only allowlisted binding state, configuration booleans, safe missing-component names and an allowlisted invalid component name. URL/port, credential path/content, project identifiers, env values and raw errors are not projected.
-- Rust/Python product roles are source-grounded in `docs/RUST_PYTHON_PRODUCT_ROLES.md`. All Rust workspace packages remain in the dependency closure of shipped native binaries or the real Linux Server runtime; no package has evidence for blind removal.
-- Windows selected Rust CI directly tests `webcodex-workspace`, because it owns a real `cfg(windows)` portable project-root identity used by the authenticated Python <-> Rust semantic bridge. Focused Windows drive and extended-UNC normalization tests exist; the root Server suite remains Linux-only.
-- Code Mode now has an **internal, model-hidden host-binding proxy prerequisite** with exactly four read-only operations: `read_text`, `list_files`, `search_text`, and `semantic_search`. The proxy is not a generic Runtime/tool dispatcher and is not a ninth Smart/MCP tool.
-- Code Mode binding requests use schema v1 with exact operation/argument allowlists plus hard serialized request/response caps. Paths are restricted to the primary workspace, not `authorized_roots`; absolute, drive, UNC, home, parent traversal, NUL, symlink escape, NTFS ADS/colon syntax and Windows reserved device names fail closed.
-- Code Mode semantic matches are revalidated as primary-workspace-relative before return. Provider configuration details are not projected through this binding.
-- The Code Mode isolation feasibility audit is now encoded as a fail-closed source-owned readiness contract. The worker backend remains `null`/blocked until one implementation proves every required guarantee; current process-control or write-confinement primitives are explicitly not promoted to a security boundary.
+## 2. Exact source and delivery baseline
 
-## Verification evidence
-
-Current broad Python MCP regression after the Code Mode binding addition:
+Current exact source baseline:
 
 ```text
-Python Coding Tools MCP full pytest            274 passed, 1 skipped, 16 subtests passed
-git diff --check                               PASS
+HEAD:   2592b7b0fed7aabd04260ceb3bcbf53f82f81399
+branch: main
+remote: origin/main contains the same pushed commit
 ```
 
-Focused/adjacent proofs:
+Recent accepted/pushed closures in this continuation:
 
 ```text
-CodeModeHostBindingTests                       6/6 PASS
-Code Mode isolation-readiness + identity       PASS
-workspace_context non-secret identity test     PASS
-Code Mode Windows namespace hardening          PASS
-NativeSemanticLocalizationTests                PASS (host-dependent symlink test may skip)
-cargo check -p webcodex-workspace --tests      PASS on Windows host
-Windows provenance/CI contract Node test       PASS
-root npm test baseline                         99/99 PASS before latest Python-only Code Mode changes
+fda89e48  Attest EOCL results in controlled replay
+9262ff6a  Report proof-cache opportunity from EOCL
+2592b7b0  Harden packaged resource sanitation
 ```
 
-The Code Mode changes do not modify the JavaScript/renderer path or public tool definitions; Smart-v3 remains 8 tools with contract SHA `8fbee29c8de9788bedb09caf1b2fc4317f26ba7ab85ef35ebc4a7288558940d4` in focused proof.
+No public Smart-v3 expansion was introduced; the model-facing surface remains exactly 8 tools.
 
-These local proofs do not constitute independent GitHub CI proof.
+---
 
-## Current-policy idempotency activation — PASS
+## 3. P1 organic host-turn → exact EOCL correlation — LIVE PASS
 
-Persisted `task_epoch_v1` snapshot observed during this continuation:
+The remaining source/runtime measurement bridge is closed and organically proven:
+
+- Electron host observation schema v5 carries content-free `turn_id` + `trace_id` across user-visible turn, first assistant-visible response and host span.
+- A new EOCL run can claim that identity exactly once; correlation does not use timestamp proximity, “latest run”, current-thread inference, prompt text or response text.
+- The exact host span is submitted as `task_control observation` with explicit run/wave identity.
+- Evaluation reports explicit host↔run linkage only when journal and EOCL observation identities agree.
+- Organic live evidence has produced `explicit_host_span_count >= 1` with a complete causal run.
+
+Host-visible duration remains host-visible evidence; it is not re-labeled as model inference latency.
+
+---
+
+## 4. Reliability / transport closures
+
+### 4.1 Current-policy idempotency — LIVE CANARY PASS
+
+A same-key mutation-safe canary demonstrated durable replay rather than re-execution:
 
 ```text
-current-policy required calls        41
-current-policy required keyed        41
-coverage                         100.0%
-target                             95.0%
+same idempotency key + same request -> deduplicated=true
+run_id / wave_id                    -> preserved
+new source mutation                 -> none
 ```
 
-Historical cumulative audit view at the same observation point:
+The observed post-restart current-policy sample reached full required-key coverage for the small live sample used in the canary. This does not authorize weakening idempotency semantics or backfilling historical counters.
+
+### 4.2 Source-fenced continuation — PASS
+
+The internal continuation path is source/worktree and scope/options fenced. Correct continuation works; mismatched/stale scope fails closed. The capability remains internal to `agent_workflow`; no ninth public tool was added.
+
+Representative large-result ROI remains a measurement question, not an implementation blocker.
+
+### 4.3 Controlled replay causal acceptance — PASS
+
+Controlled replay now refuses to call a trial accepted merely because its process exited successfully. A trial is attestable only when its isolated EOCL ledger contains exactly one matching accepted run with:
+
+- matching pair/policy/replicate/order identity;
+- matching task/source/oracle/runtime identity;
+- the expected resolved route for the policy;
+- accepted checkpoint plus proof/oracle evidence.
+
+A paired study reports complete accepted-result evidence only when both arms also share the same EOCL pair fingerprint/source identity.
+
+Synthetic/no-op trials are not promoted into representative routing evidence.
+
+---
+
+## 5. Wave 2C proof-cache opportunity truth — SOURCE + PROOF COMPLETE
+
+Commit `9262ff6a` adds a canonical, bounded, content-free EOCL projection for proof-cache opportunity analysis.
+
+It reports:
 
 ```text
-historical required calls           121
-historical required keyed           102
+eligible / hits / misses / hit-rate
+stage_id + stage_version grouping
+miss-reason / fingerprint-change class
+saved_ms + saved_ms completeness
+accepted-run relation
+accepted-checkpoint relation
+bounded stage rows
 ```
 
-The historical ratio is retained for audit only and is not the current-policy gate. Combined with the duplicate/conflict/unknown-outcome fault suite, the current-policy activation coverage gate is satisfied for the observed sample. Future semantic changes to required operations must declare an appropriate new policy epoch instead of backfilling this one.
+It deliberately does **not** project raw input fingerprints, source proof IDs, objectives, prompts, source content or credentials.
 
-## Result-tail continuation — IMPLEMENTED, REPRESENTATIVE ROI STILL UNPROVEN
-
-Persisted counters observed during this continuation:
+Validation boundary:
 
 ```text
-result-tail samples                   6
-truncated calls                       0
-continuation offered                  0
-continuation reads                    0
-continuation re-reads                 0
-stale continuation                    0
+focused proof-cache / ledger / runtime tests   37 / 37 PASS
+direct runtime_activation CLI                 PASS
+full Python MCP suite                         314 PASS, 1 skipped, 20 subtests PASS
+git diff --check                              PASS
 ```
 
-Instrumentation is active, but the observed workload still contains no real truncation/continuation use. Do not manufacture a large-diff corpus merely to make counters nonzero. Keep the implementation and wait for representative large-result tasks.
-
-## Proof-cache opportunity — HOLD
-
-Persisted opportunity counters observed during this continuation:
+A live mixed historical ledger observation after the projection was introduced showed:
 
 ```text
-proof-cache eligible                 93
-observed hits                         1
-observed misses                      93
-saved ms                            999
-miss reason: cold                    41
-miss reason: input fingerprint       52
+eligible opportunities  196
+hits                       3
+misses                   193
+hit rate               ~1.53%
+known saved_ms           8814
+saved_ms completeness    complete for observed hits
 ```
 
-One observed hit / 999 ms remains insufficient justification for broader cache machinery or weaker fingerprints. Exact proof identity remains a hard invariant; performance promotion stays **HOLD**.
+These numbers are **opportunity truth, not causal promotion evidence**. The window is not proven representative-only, so it must not be used to broaden fingerprints, auto-promote cache policy, or market proof-cache as a performance winner.
 
-## Rust / Python product-role decision
-
-The role audit used Cargo metadata, current release scripts, npm package contract, Electron runtime startup and CI configuration.
+Current decision:
 
 ```text
-Desktop mutation authority       Electron + one Python Coding Tools MCP runtime
-Rust Server / ToolRuntime        real Linux/server product + optional native capability provider
-npm native contract              webcodex + webcodex-server + webcodex-runner
-canonical Linux Rust proof       full workspace remains justified
-Windows Rust proof               selected packages, not full Server workspace
+exact reuse semantics          KEEP
+performance-policy promotion   HOLD
+simplification/demotion choice AFTER representative window
 ```
 
-Direct Windows package tests:
+---
+
+## 6. PerformanceTrace wall-time truth — SOURCE COMPLETE
+
+The older audit statement that PerformanceTrace materializes both wall timestamps at record-time is stale for the current source.
+
+Current implementation captures:
 
 ```text
-webcodex-agent-config
-webcodex-process
-webcodex-persistent-shell
-webcodex-workspace
-webcodex-cli
-webcodex-runner
+operation entry -> started_wall_utc + monotonic start
+operation exit  -> finished_wall_utc + monotonic end
 ```
 
-`webcodex-admin`, `webcodex-core`, and `webcodex-sandbox` continue to compile transitively on Windows. The current audit found no separate Windows implementation requiring a direct package-test gate: `core` Windows-form checks are platform-independent string logic, `sandbox` has Linux Landlock code, and `admin` has no Windows branch observed. Revisit the selected list when evidence changes, not by convention.
+Monotonic duration remains authoritative. Existing tests assert `wall_time_source = operation_boundary`.
 
-## Operational stale-state — CURRENTLY GREEN
+Do not re-open this as a P0 source defect unless new evidence demonstrates regression.
 
-During this continuation, obsolete historical authorities were audited and terminalized without deleting ledger history, including a superseded Code Mode REPLAN lineage and older prepare-only runtime-schema diagnostics. Latest verified live recovery projection before this document update:
+---
+
+## 7. Exact-source Windows release provenance — SOURCE COMPLETE
+
+Current Windows release/provenance flow has exact-source guards and sidecar identity sufficient to distinguish development smoke from publishable release evidence, including source/build identity and content hashes.
+
+Release policy still requires independent exact-SHA proof before calling a candidate release-proven. A local successful build is not a substitute for GitHub/canonical independent CI when that gate is required.
+
+---
+
+## 8. Windows packaged-resource sanitation — SOURCE + ACTUAL PACK PROOF COMPLETE
+
+Commit `2592b7b0` closes the broad `extraResources` contamination risk with two layers:
+
+1. pre-copy exclusions for known volatile/raw artefacts;
+2. a Windows `afterPack` fail-closed validator over the actual packaged resources tree.
+
+The package excludes:
 
 ```text
-stale_orchestration_runs             0
-unresolved_stale_orchestration_runs  0
-reconciled_stale_orchestration_runs  2
+coding-tools-mcp/benchmarks/reports/**
+**/__pycache__/**
+**/.pytest_cache/**
+**/*.egg-info/**
+**/.coding-tools/**
+**/*.pyc
+**/*.pyo
 ```
 
-No live write lease/lane/proof authority was discarded. Terminalization used explicit `ABORTED` history for superseded runs.
+The afterPack validator rejects any forbidden path that survives filtering and reads path metadata only; it does not inspect user/source file contents.
 
-## Exact-HEAD CI truth — BLOCKED EXTERNALLY
-
-GitHub Actions run `31852696347` is bound to HEAD `dff81e251836666fc825c40bf86e4167afd29c39`, but it is **not green CI proof**.
+Evidence on exact source before commit/push:
 
 ```text
-Linux job:   94931355344
-Windows job: 94931355365
+focused packaging/config validator tests     PASS
+actual Windows unpacked electron-builder      PASS
+afterPack hook                                executed without violation
+independent packaged-tree scan               258 entries scanned
+forbidden packaged paths                       0
+tracked egg-info in packaged tree              absent
+pytest cache in packaged tree                  absent
+raw benchmark reports in packaged tree         absent
+Node / Electron full suite                    105 / 105 PASS
+source-root-clean check                        PASS
+Python MCP full suite                         314 PASS, 1 skipped
+git diff --check                              PASS
+```
+
+The local dependency tree needed repair after an interrupted `npm ci` encountered a running-Electron file lock; no runtime/Electron process was killed or restarted to bypass that lock, and no dependency repair was committed as source.
+
+---
+
+## 9. Exact-HEAD GitHub Actions truth — EXTERNALLY BLOCKED, NOT SOURCE FAILURE
+
+GitHub Actions run `31882079363` is bound exactly to:
+
+```text
+2592b7b0fed7aabd04260ceb3bcbf53f82f81399
+```
+
+The workflow has two required jobs:
+
+```text
+test          ubuntu-latest
+test-windows  windows-latest
+```
+
+Both jobs completed as `failure`, but the runner evidence is:
+
+```text
 runner_id:   0
+runner_name: empty
 steps:       []
-classification: pre-run external billing/account gate
 ```
 
-The jobs did not start because the account/spending prerequisite blocked runner allocation. With no runner and no test step, this is an external CI/account blocker, not evidence of a source regression. Local PASS is not a substitute for independent exact-SHA CI when release policy requires it.
+GitHub's check annotation states that the jobs were **not started** because recent account payments failed or the spending limit needs to be increased.
 
-## Intentionally open gates
+Therefore:
 
-### Native semantic live activation — BLOCKED BY REAL PREREQUISITE
+```text
+classification = external account/billing pre-run gate
+source test regression evidence = none from this workflow run
+independent exact-SHA green CI  = still unavailable
+```
 
-The Python <-> Rust semantic boundary is source-ready, authenticated/project-scoped, read-only, bounded and fail-closed in focused tests. The live provider remains unavailable with the existing reason:
+Do **not** rerun repeatedly while the billing/spending prerequisite is unchanged. Do **not** call local PASS equivalent to independent GitHub CI. Once the account prerequisite is corrected, rerun or allow the next exact-SHA workflow to execute real steps and classify its result normally.
+
+---
+
+## 10. Native semantic live activation — BLOCKED BY REAL PREREQUISITE
+
+The Python ↔ Rust semantic boundary is source-ready, read-only, bounded, workspace/project scoped and fail-closed in focused tests.
+
+Live activation remains unavailable with:
 
 ```text
 NATIVE_LSP_BINDING_NOT_CONFIGURED
 ```
 
-Do not infer or fabricate endpoint URL, project credential, grant or token. Activate only against a real Rust Connector instance bound to the correct project/trust boundary with explicit configuration. The sanitized binding diagnostics are source-complete; an already-running Python process must load that source before those added details can be claimed live.
+The current runtime is missing the trusted native semantic origin/credential binding required by the existing design.
 
-### Code Mode worker isolation — HOLD / FAIL-CLOSED
+Rules:
 
-The host-binding side is source-ready and fail-closed. The source-owned isolation readiness contract now reports:
+- do not invent endpoint URL, project credential, grant or token;
+- do not weaken loopback/project/workspace authorization;
+- do not treat text fallback as live semantic evidence;
+- no runtime/Electron restart is justified until a real binding exists and activation is explicitly authorized.
+
+Call Hierarchy remains downstream of this gate.
+
+---
+
+## 11. Routing calibration — REPRESENTATIVE EVIDENCE PENDING
+
+The source now contains the machinery required to collect paired route evidence safely, including isolated replay, EOCL acceptance attestation and pair-source identity checks.
+
+What is still missing is not another harness; it is real accepted work with:
 
 ```text
-host binding proxy      ready
-binding schema          1
-operations              read_text, list_files, search_text, semantic_search
-worker status           blocked
-worker reason           verified_binding_only_backend_unavailable
-worker backend          null
-Code Mode enabled       false
+same task semantics
+same exact base/source
+same environment
+same acceptance oracle
+actual baseline route
+actual candidate route
+representative provenance
 ```
 
-A qualifying backend must prove all five guarantees:
+Current policy remains:
+
+```text
+deterministic-first
+automatic_activation = false
+Mini/Luna             bounded explicit candidates
+Terra                 shadow / explicit
+synthetic/no-op pair inflation = forbidden
+```
+
+Do not lower thresholds merely because the harness is now capable of producing valid pairs.
+
+---
+
+## 12. Auto-handoff — MECHANISM COMPLETE, A/B EVIDENCE PENDING
+
+Durable capsule/resume, controller fencing and current handoff mechanics are source/fault proven.
+
+The remaining gate is representative operational comparison:
+
+```text
+healthy same-thread continuation
+vs
+fresh durable-capsule resume
+```
+
+Measure accepted-result quality, missing/duplicate work, TTA, cost/cache and visible bytes where observable.
+
+Current policy remains:
+
+```text
+healthy thread      -> continue same thread
+rollover/recovery   -> durable capsule
+auto handoff        -> OFF
+```
+
+Adding another synthetic handoff simulator would not close this gate.
+
+---
+
+## 13. Code Mode arbitrary generated-code execution — HOLD / FAIL-CLOSED
+
+The model-hidden host-binding proxy prerequisite is source-ready and bounded to read-only operations, but no current worker backend proves the complete isolation contract required for arbitrary generated-code execution.
+
+A qualifying backend must prove all of:
 
 ```text
 no_direct_filesystem
@@ -199,26 +349,84 @@ no_unrestricted_subprocess
 bounded_framed_host_binding_only_ipc
 ```
 
-Repository evidence currently contains only nonqualifying controls:
+Current Job Object / existing Landlock controls are not sufficient as that complete security boundary.
+
+Do not enable Code Mode with Python `exec/eval`, Node VM/worker threads, unrestricted subprocesses, Job Object alone, or the current partial sandbox controls.
+
+This is a deliberately fail-closed security prerequisite, not a small missing feature to implement opportunistically.
+
+---
+
+## 14. Optional / demand-driven follow-ups
+
+The following remain intentionally off the critical path until real product/benchmark demand appears:
 
 ```text
-Windows Job Object      process_lifecycle_only
-Linux Landlock          write_confinement_only
-embedded capability runtime / WASM sandbox    not configured
+focused Go validation
+structured file delete
+webcodex disconnect
+generic ArtifactRef / Composite Read expansion
+semantic parallel-proof scheduling
+dedicated push transport
+authenticated remote-phone status
+other upstream convenience capabilities
 ```
 
-Windows Job Objects provide process-tree ownership/kill-on-close, not a restricted token or AppContainer capability boundary. The current Linux Landlock policy intentionally permits reads, environment and network while restricting writes. The repository has no seccomp/namespaces isolation layer and no Wasmtime/Wasmer execution runtime. Therefore no existing primitive is sufficient for arbitrary generated-code execution.
+Do not build these merely to reduce a roadmap checklist.
 
-Do not enable Code Mode using Python `exec/eval`, Node VM/worker threads, the current Rust sandbox, Job Objects alone, or an unrestricted subprocess. Promotion requires a real isolated worker that receives only the serialized host-binding protocol and proves every guarantee above with attack-oriented tests.
+---
 
-### Call Hierarchy — HOLD
+## 15. Current completion assessment
 
-Do not implement/promote Call Hierarchy until the live semantic path has representative nonzero `semantic_attempted` / `semantic_handled` evidence and qualified cross-file workloads demonstrate accepted-work ROI.
+```text
+P1 host-turn ↔ EOCL correlation                  LIVE PASS
+current-policy idempotency canary                LIVE PASS
+controlled replay EOCL attestation               PASS
+source-fenced continuation                       PASS
+proof-cache opportunity projection               SOURCE + PROOF COMPLETE
+PerformanceTrace operation-boundary wall time    SOURCE COMPLETE
+exact-source Windows provenance                  SOURCE COMPLETE
+Windows packaged-resource sanitation             SOURCE + ACTUAL PACK PASS
+local full Node/Electron boundary                 105 / 105 PASS
+local full Python MCP boundary                    314 PASS, 1 skipped
+exact-HEAD GitHub CI                              EXTERNAL BILLING GATE / NO RUNNER
+native semantic live activation                  BLOCKED / REAL BINDING REQUIRED
+Call Hierarchy                                    HOLD behind semantic activation
+paired routing promotion                          REPRESENTATIVE EVIDENCE PENDING
+auto-handoff                                      REPRESENTATIVE A/B PENDING
+proof-cache performance policy                    REPRESENTATIVE WINDOW PENDING
+Code Mode isolated arbitrary execution            HOLD / SECURITY BACKEND REQUIRED
+public Smart-v3 tool count                        8 / UNCHANGED
+```
 
-### Routing-v2 / Terra — HOLD / SHADOW / EXPLICIT
+There is currently no known critical source implementation defect that should be filled with speculative code before those external/evidence gates move.
 
-Do not promote from benchmark fixtures, synthetic cohorts or tiny samples. Automatic dispatch/activation stays off until representative paired accepted-task cohorts satisfy promotion readiness.
+---
 
-## Operations performed in this continuation
+## 16. Next-action policy
 
-No commit, push, release, deploy, tag, external-provider paid call, or ChatGPT-initiated runtime restart was performed while producing this current-status delta.
+When external state changes, resume in this order:
+
+1. **GitHub billing/account prerequisite corrected** → obtain exact-SHA Linux + Windows CI where runners allocate and steps actually execute.
+2. **Trusted native semantic binding available + activation authorized** → controlled live semantic activation and security/fallback canary; only then collect semantic workload.
+3. **Representative real tasks naturally arrive** → collect source-matched Mini/Luna routing pairs and handoff A/B evidence; do not manufacture samples.
+4. **Representative proof-cache window becomes large enough** → decide `KEEP`, `KEEP BUT DEMOTE CLAIM`, `FIX`, `REMOVE`, or `DEFER`; exact fingerprint truth remains invariant.
+5. **Qualified semantic cross-file workloads exist** → run bounded Call Hierarchy experiment.
+6. **A product requirement justifies optional P3 work** → select the smallest demand-backed item rather than expanding framework surface generically.
+
+---
+
+## 17. Operations in this continuation
+
+```text
+source commits pushed:      yes
+latest pushed HEAD:         2592b7b0fed7aabd04260ceb3bcbf53f82f81399
+runtime/Electron restart:   no
+provider paid call:         no
+route threshold change:     no
+auto-handoff enablement:    no
+public tool expansion:      no
+release/tag/deploy:         no
+```
+
+The correct next constraint is no longer “find another source feature.” It is to wait for the specific external or representative evidence required by the remaining gates, while keeping the already-proven source boundaries stable.
