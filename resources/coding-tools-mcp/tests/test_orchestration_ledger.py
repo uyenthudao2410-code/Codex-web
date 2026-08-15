@@ -9,6 +9,128 @@ from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 
 
 class OrchestrationLedgerTests(unittest.TestCase):
+    def test_accepted_result_evaluation_keeps_unobserved_controller_cost_unknown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(
+                objective="representative paired task",
+                task_id="task-eval",
+                metadata={
+                    "workflow": "bugfix",
+                    "evaluation": {
+                        "pair_id": "pair-1",
+                        "policy": "chatweb_mcp",
+                        "task_class": "localized_bug",
+                        "oracle_id": "oracle-1",
+                        "provenance": "representative",
+                    },
+                },
+            )
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", base_head="head-1", worktree_fp="tree-1")
+            ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", state_after="READY", payload={"requested": "deterministic", "resolved": "deterministic"})
+            ledger.append_event(run_id, wave_id=wave_id, event_type="write_lease_acquired", state_after="ROUTED")
+            ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="tests", stage_version="1", input_fingerprint="proof-1", status="passed", duration_ms=125)
+            ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="head-1", proof_fingerprint="proof-1", metadata={"accepted_by": "chatweb"})
+            ledger.finish_wave(wave_id, status="accepted")
+            ledger.finish_run(run_id, status="accepted")
+
+            record = ledger.accepted_result_evaluation(run_id)
+            self.assertTrue(record["accepted"])
+            self.assertTrue(record["pairing_eligible"])
+            self.assertEqual(record["evaluation"]["task_class"], "localized_bug")
+            self.assertEqual(record["source"]["base_head"], "head-1")
+            self.assertIsNotNone(record["milestones"]["time_to_first_route_ms"])
+            self.assertIsNotNone(record["milestones"]["time_to_first_write_ms"])
+            self.assertIsNotNone(record["milestones"]["time_to_first_green_ms"])
+            self.assertIsNotNone(record["milestones"]["time_to_accepted_ms"])
+            self.assertEqual(record["mcp"]["proof_duration_ms"], 125)
+            self.assertEqual(record["controller"]["measurement"], "unobserved_outside_mcp")
+            self.assertIsNone(record["controller"]["pre_mcp_ms"])
+            self.assertIsNone(record["controller"]["monetary_cost"])
+            self.assertFalse(record["total_monetary_cost"]["complete"])
+            self.assertEqual(record["total_monetary_cost"]["reason"], "controller_cost_unobserved")
+
+    def test_paired_policy_evaluation_is_fail_closed_without_total_controller_cost(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            def accepted(policy: str, route: str) -> str:
+                run_id = ledger.create_run(
+                    objective="same representative task",
+                    metadata={
+                        "workflow": "bugfix",
+                        "evaluation": {
+                            "pair_id": "pair-roi-1",
+                            "policy": policy,
+                            "task_class": "localized_bug",
+                            "oracle_id": "oracle-roi-1",
+                            "provenance": "representative",
+                        },
+                    },
+                )
+                mode = "mcp_only" if route == "deterministic" else "bounded_candidate"
+                wave_id = ledger.create_wave(run_id, execution_mode=mode, base_head="same-head", worktree_fp=f"tree-{policy}")
+                ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", state_after="READY", payload={"requested": route, "resolved": route})
+                ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="tests", stage_version="1", input_fingerprint=f"proof-{policy}", status="passed", duration_ms=10)
+                ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="same-head", proof_fingerprint=f"proof-{policy}", metadata={"accepted_by": "chatweb"})
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+                return run_id
+
+            accepted("chatweb_mcp", "deterministic")
+            accepted("mini", "mini")
+            comparison = ledger.paired_policy_evaluation(candidate_policies=("mini",), min_pairs=1, min_task_classes=1)
+            result = comparison["results"][0]
+            self.assertEqual(result["pair_count"], 1)
+            self.assertEqual(result["accepted_pair_count"], 1)
+            self.assertEqual(result["status"], "hold")
+            self.assertIn("controller_cost_unobserved", result["hold_reasons"])
+            self.assertEqual(result["pareto_status"], "indeterminate_total_cost")
+            self.assertFalse(result["automatic_activation"])
+
+    def test_paired_policy_evaluation_scans_beyond_history_ui_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            def tagged(policy: str) -> None:
+                run_id = ledger.create_run(
+                    objective="older representative pair",
+                    metadata={
+                        "workflow": "bugfix",
+                        "evaluation": {
+                            "pair_id": "older-pair",
+                            "policy": policy,
+                            "task_class": "localized_bug",
+                            "oracle_id": "older-oracle",
+                            "provenance": "representative",
+                        },
+                    },
+                )
+                wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", base_head="older-head", worktree_fp=f"tree-{policy}")
+                ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="older-head", proof_fingerprint=f"proof-{policy}", metadata={"accepted_by": "chatweb"})
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+
+            tagged("chatweb_mcp")
+            tagged("mini")
+            for index in range(101):
+                ledger.create_run(objective=f"newer decoy {index}", metadata={"workflow": "diagnose"})
+
+            comparison = ledger.paired_policy_evaluation(candidate_policies=("mini",), limit=500, min_pairs=1, min_task_classes=1)
+            self.assertGreater(comparison["ledger_run_count"], 100)
+            self.assertEqual(comparison["tagged_runs_scanned"], 2)
+            self.assertEqual(comparison["results"][0]["pair_count"], 1)
+
+    def test_paired_policy_evaluation_zero_pairs_is_indeterminate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            comparison = ledger.paired_policy_evaluation(candidate_policies=("mini",), min_pairs=1, min_task_classes=1)
+            result = comparison["results"][0]
+            self.assertEqual(comparison["ledger_run_count"], 0)
+            self.assertEqual(comparison["tagged_runs_scanned"], 0)
+            self.assertEqual(result["pair_count"], 0)
+            self.assertEqual(result["pareto_status"], "indeterminate_no_pairs")
+
     def test_events_survive_restart_and_hash_chain_verifies(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -336,6 +458,7 @@ class OrchestrationLedgerTests(unittest.TestCase):
                     "model_id": "deepseek-v4-flash",
                     "model": "opencode-go/deepseek-v4-flash",
                     "status": "completed",
+                    "provenance": {"source": "opencode:provider_dispatch"},
                     "measurement": {"usage": "measured", "cost": "measured"},
                     "usage": {"input_tokens": 100, "cached_input_tokens": 40, "uncached_input_tokens": 60, "output_tokens": 12, "reasoning_output_tokens": 2, "cache_read_tokens": 40, "cache_write_tokens": 1},
                     "cost": {"provider_cost": 0.003, "kind": "provider_reported"},
@@ -378,6 +501,8 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(evidence["provider_economics"]["usage_event_count"], 1)
             self.assertTrue(evidence["provider_economics"]["cost_complete"])
             self.assertAlmostEqual(evidence["provider_economics"]["provider_cost"], 0.003)
+            self.assertTrue(evidence["provider_economics"]["attribution_complete"])
+            self.assertAlmostEqual(evidence["provider_economics"]["attributed_provider_cost"], 0.003)
             self.assertEqual(evidence["provider_economics"]["usage"]["input_tokens"], 100)
             self.assertEqual(evidence["provider_economics"]["usage"]["cached_input_tokens"], 40)
             self.assertEqual(evidence["provider_economics"]["timing"]["measurement"], "delegation_metadata")
@@ -389,6 +514,9 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(evidence["critical_defects"], {"status": "unknown", "count": None, "source": "not_recorded"})
             self.assertIsNotNone(evidence["tta_ms"])
             self.assertEqual(ledger.routing_evidence(run_id)["accepted_result"], evidence)
+            session_provider = ledger.session_query(run_id)["accepted_result"]["provider_economics"]
+            self.assertTrue(session_provider["attribution_complete"])
+            self.assertAlmostEqual(session_provider["attributed_provider_cost"], 0.003)
 
     def test_accepted_result_provider_cost_is_unknown_when_cost_coverage_is_incomplete(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -425,6 +553,40 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertFalse(provider["cost_complete"])
             self.assertIsNone(provider["provider_cost"])
             self.assertEqual(provider["usage"]["input_tokens"], 20)
+
+    def test_total_cost_rejects_measured_but_uncorrelated_provider_usage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(
+                objective="provider attribution guard",
+                metadata={"evaluation": {"controller": {"source": "client_reported", "monetary_cost": 0.01}}},
+            )
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", base_head="head")
+            ledger.record_usage_event(
+                run_id=run_id,
+                wave_id=wave_id,
+                delegation_id="uncorrelated",
+                usage_event={
+                    "schema_version": 1, "usage_id": "usage-uncorrelated", "run_id": run_id, "wave_id": wave_id,
+                    "delegation_id": "uncorrelated", "provider_id": "opencode-go", "model_id": "deepseek-v4-pro",
+                    "model": "opencode-go/deepseek-v4-pro", "status": "completed",
+                    "provenance": {"source": "opencode:message.updated"},
+                    "measurement": {"usage": "measured", "cost": "measured"},
+                    "usage": {"input_tokens": 10, "cached_input_tokens": 0, "uncached_input_tokens": 10, "output_tokens": 1, "reasoning_output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0},
+                    "cost": {"provider_cost": 0.002, "kind": "provider_reported"},
+                },
+            )
+            ledger.finish_wave(wave_id, status="accepted")
+            ledger.finish_run(run_id, status="accepted")
+            provider = ledger.accepted_result_economics(run_id)["provider_economics"]
+            self.assertTrue(provider["cost_complete"])
+            self.assertFalse(provider["attribution_complete"])
+            self.assertAlmostEqual(provider["provider_cost"], 0.002)
+            self.assertIsNone(provider["attributed_provider_cost"])
+            total = ledger.accepted_result_evaluation(run_id)["total_monetary_cost"]
+            self.assertFalse(total["complete"])
+            self.assertIsNone(total["value"])
+            self.assertEqual(total["reason"], "provider_cost_attribution_incomplete")
 
     def test_export_summary_includes_checkpoint_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -708,6 +870,66 @@ class OrchestrationLedgerTests(unittest.TestCase):
             record = ledger.get_idempotency("workflow-crash")
             self.assertEqual(record["status"], "unknown")
             self.assertEqual(record["summary"]["outcome_unknown_reason"], "mcp_process_restarted")
+
+    def test_organic_rework_summary_excludes_candidate_routes_and_counts_preflight_avoids(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            first_pass = ledger.create_run(objective="organic first pass")
+            first_wave = ledger.create_wave(first_pass, execution_mode="mcp_only")
+            ledger.finish_wave(first_wave, status="accepted")
+            ledger.finish_run(first_pass, status="accepted")
+
+            repaired = ledger.create_run(objective="organic repaired")
+            repaired_wave = ledger.create_wave(repaired, execution_mode="mcp_only")
+            ledger.finish_wave(repaired_wave, status="replanned")
+            repaired_wave_2 = ledger.create_wave(repaired, execution_mode="mcp_only")
+            ledger.finish_wave(repaired_wave_2, status="accepted")
+            ledger.finish_run(repaired, status="accepted")
+
+            candidate = ledger.create_run(objective="explicit mini candidate")
+            candidate_wave = ledger.create_wave(candidate, execution_mode="bounded_candidate")
+            ledger.create_delegation(
+                candidate_wave,
+                authority_owner="CODEX:mini",
+                route_requested="mini",
+                route_resolved="mini",
+                model="gpt-5.4-mini",
+                effort="low",
+            )
+            ledger.finish_wave(candidate_wave, status="accepted")
+            ledger.finish_run(candidate, status="accepted")
+
+            ledger.claim_idempotency(
+                idempotency_key="preflight-avoid",
+                operation="agent_workflow",
+                request_hash="preflight-hash",
+                process_instance_id="process",
+            )
+            ledger.finish_idempotency(
+                "preflight-avoid",
+                request_hash="preflight-hash",
+                status="failed",
+                summary={
+                    "error_code": "PATCH_CONTEXT_AMBIGUOUS",
+                    "outcome_unknown": False,
+                    "workflow_patch_preflight": True,
+                },
+            )
+
+            summary = ledger.organic_rework_summary()
+            self.assertEqual(summary["accepted_runs"], 2)
+            self.assertEqual(summary["first_pass_accepted"], 1)
+            self.assertEqual(summary["repaired_accepted"], 1)
+            self.assertEqual(summary["repair"]["replan_count"], 1)
+            self.assertEqual(summary["excluded"]["explicit_model_route"], 1)
+            self.assertEqual(summary["preflight_avoided"]["count"], 1)
+            self.assertEqual(
+                summary["preflight_avoided"]["error_codes"],
+                {"PATCH_CONTEXT_AMBIGUOUS": 1},
+            )
+            self.assertTrue(summary["model_free"])
+            self.assertTrue(summary["content_free"])
 
 
 if __name__ == "__main__":

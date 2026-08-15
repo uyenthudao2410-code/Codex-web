@@ -80,6 +80,7 @@ class PerformanceTraceStore:
         orchestration: dict[str, Any] | None = None,
         phase_timing: dict[str, Any] | None = None,
         localization: dict[str, Any] | None = None,
+        result_tail: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         with self._lock:
             wait_before_ms = 0
@@ -96,6 +97,7 @@ class PerformanceTraceStore:
             orchestration_state = str(orchestration.get("orchestration_state") or "")
             measured_phase_timing = self._normalize_phase_timing(phase_timing)
             measured_localization = self._normalize_localization(localization)
+            measured_result_tail = self._normalize_result_tail(result_tail)
             measured_miss_reasons = self._normalize_count_map(proof_cache_miss_reasons)
             measured_policy = str(idempotency_policy or "none").strip().lower()
             if measured_policy not in IDEMPOTENCY_POLICIES:
@@ -149,6 +151,7 @@ class PerformanceTraceStore:
                 "orchestration_state": orchestration_state,
                 "phase_timing": measured_phase_timing,
                 "localization": measured_localization,
+                "result_tail": measured_result_tail,
             }
             state["tool_calls"] += 1
             state["errors"] += 0 if ok else 1
@@ -203,6 +206,16 @@ class PerformanceTraceStore:
                 state["lsp_attempted_queries"] += measured_localization["semantic_attempted"]
                 state["lsp_handled_queries"] += measured_localization["semantic_handled"]
                 state["fallback_search_queries"] += measured_localization["text_fallback_queries"]
+            if measured_result_tail:
+                state["result_tail_samples"] += 1
+                state["result_tail_source_bytes"] += measured_result_tail["source_total_bytes"]
+                state["result_tail_page_bytes"] += measured_result_tail["page_output_bytes"]
+                state["result_tail_remaining_bytes"] += measured_result_tail["remaining_bytes"]
+                state["result_truncated_calls"] += 1 if measured_result_tail["truncated"] else 0
+                state["result_continuation_offered"] += 1 if measured_result_tail["continuation_offered"] else 0
+                state["result_continuation_reads"] += 1 if measured_result_tail["continuation_read"] else 0
+                state["result_continuation_rereads"] += 1 if measured_result_tail["continuation_reread"] else 0
+                state["result_continuation_stale"] += 1 if measured_result_tail["continuation_stale"] else 0
             state["last_finished_at"] = event["finished_at"]
             for bucket_name, value in (
                 ("execution_mode_counts", execution_mode),
@@ -250,6 +263,15 @@ class PerformanceTraceStore:
                     "lsp_attempted_queries": 0,
                     "lsp_handled_queries": 0,
                     "fallback_search_queries": 0,
+                    "result_tail_samples": 0,
+                    "result_tail_source_bytes": 0,
+                    "result_tail_page_bytes": 0,
+                    "result_tail_remaining_bytes": 0,
+                    "result_truncated_calls": 0,
+                    "result_continuation_offered": 0,
+                    "result_continuation_reads": 0,
+                    "result_continuation_rereads": 0,
+                    "result_continuation_stale": 0,
                     "execution_mode_counts": {},
                     "route_resolved_counts": {},
                     "first_started_at": event["started_at"],
@@ -296,6 +318,16 @@ class PerformanceTraceStore:
                     metric["lsp_attempted_queries"] += measured_localization["semantic_attempted"]
                     metric["lsp_handled_queries"] += measured_localization["semantic_handled"]
                     metric["fallback_search_queries"] += measured_localization["text_fallback_queries"]
+                if measured_result_tail:
+                    metric["result_tail_samples"] += 1
+                    metric["result_tail_source_bytes"] += measured_result_tail["source_total_bytes"]
+                    metric["result_tail_page_bytes"] += measured_result_tail["page_output_bytes"]
+                    metric["result_tail_remaining_bytes"] += measured_result_tail["remaining_bytes"]
+                    metric["result_truncated_calls"] += 1 if measured_result_tail["truncated"] else 0
+                    metric["result_continuation_offered"] += 1 if measured_result_tail["continuation_offered"] else 0
+                    metric["result_continuation_reads"] += 1 if measured_result_tail["continuation_read"] else 0
+                    metric["result_continuation_rereads"] += 1 if measured_result_tail["continuation_reread"] else 0
+                    metric["result_continuation_stale"] += 1 if measured_result_tail["continuation_stale"] else 0
                 metric["last_finished_at"] = event["finished_at"]
                 for bucket_name, value in (
                     ("execution_mode_counts", execution_mode),
@@ -360,6 +392,15 @@ class PerformanceTraceStore:
             "lsp_attempted_queries": 0,
             "lsp_handled_queries": 0,
             "fallback_search_queries": 0,
+            "result_tail_samples": 0,
+            "result_tail_source_bytes": 0,
+            "result_tail_page_bytes": 0,
+            "result_tail_remaining_bytes": 0,
+            "result_truncated_calls": 0,
+            "result_continuation_offered": 0,
+            "result_continuation_reads": 0,
+            "result_continuation_rereads": 0,
+            "result_continuation_stale": 0,
             "execution_mode_counts": {},
             "route_resolved_counts": {},
             "orchestration_state_counts": {},
@@ -398,6 +439,9 @@ class PerformanceTraceStore:
             "proof_cache_eligible", "proof_cache_hits", "proof_cache_misses", "proof_cache_saved_ms",
             "model_visible_bytes", "phase_timing_samples", "localization_samples", "localization_queries",
             "lsp_available_samples", "lsp_attempted_queries", "lsp_handled_queries", "fallback_search_queries",
+            "result_tail_samples", "result_tail_source_bytes", "result_tail_page_bytes", "result_tail_remaining_bytes",
+            "result_truncated_calls", "result_continuation_offered", "result_continuation_reads",
+            "result_continuation_rereads", "result_continuation_stale",
         ):
             try:
                 state[key] = max(0, int(state.get(key, 0)))
@@ -445,6 +489,15 @@ class PerformanceTraceStore:
             metric.setdefault("lsp_attempted_queries", 0)
             metric.setdefault("lsp_handled_queries", 0)
             metric.setdefault("fallback_search_queries", 0)
+            metric.setdefault("result_tail_samples", 0)
+            metric.setdefault("result_tail_source_bytes", 0)
+            metric.setdefault("result_tail_page_bytes", 0)
+            metric.setdefault("result_tail_remaining_bytes", 0)
+            metric.setdefault("result_truncated_calls", 0)
+            metric.setdefault("result_continuation_offered", 0)
+            metric.setdefault("result_continuation_reads", 0)
+            metric.setdefault("result_continuation_rereads", 0)
+            metric.setdefault("result_continuation_stale", 0)
             metric.setdefault("proof_cache_eligible", 0)
             metric.setdefault("proof_cache_hits", 0)
             metric.setdefault("proof_cache_misses", 0)
@@ -507,6 +560,26 @@ class PerformanceTraceStore:
         result["semantic_handled"] = min(result["semantic_handled"], result["semantic_attempted"])
         result["text_fallback_queries"] = min(result["text_fallback_queries"], result["query_count"])
         return result if result["query_count"] > 0 else {}
+
+    @staticmethod
+    def _normalize_result_tail(value: dict[str, Any] | None) -> dict[str, Any]:
+        if not isinstance(value, dict) or not value:
+            return {}
+        result: dict[str, Any] = {}
+        for key in ("source_total_bytes", "page_output_bytes", "remaining_bytes"):
+            raw = value.get(key, 0)
+            if isinstance(raw, bool):
+                raw = 0
+            try:
+                result[key] = max(0, int(raw or 0))
+            except (TypeError, ValueError):
+                result[key] = 0
+        for key in (
+            "truncated", "continuation_offered", "continuation_read",
+            "continuation_reread", "continuation_stale",
+        ):
+            result[key] = value.get(key) is True
+        return result
 
     @staticmethod
     def _normalize_phase_timing(value: dict[str, Any] | None) -> dict[str, Any]:

@@ -42,7 +42,27 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
     def test_env_factory_defaults_off_and_fails_closed_for_invalid_binding(self) -> None:
         with patch.dict(os.environ, {NATIVE_LSP_URL_ENV: "", NATIVE_LSP_CREDENTIAL_FILE_ENV: ""}):
             provider = semantic_localizer_from_env()
-            self.assertEqual(semantic_provider_status(provider)["reason"], DEFAULT_UNAVAILABLE_REASON)
+            status = semantic_provider_status(provider)
+            self.assertEqual(status["reason"], DEFAULT_UNAVAILABLE_REASON)
+            self.assertEqual(status["binding"], {
+                "state": "unconfigured",
+                "origin_configured": False,
+                "credential_file_configured": False,
+                "missing": ["origin", "credential_file"],
+            })
+
+        with patch.dict(
+            os.environ,
+            {NATIVE_LSP_URL_ENV: "http://127.0.0.1:45819", NATIVE_LSP_CREDENTIAL_FILE_ENV: ""},
+        ):
+            status = semantic_provider_status(semantic_localizer_from_env())
+        self.assertEqual(status["reason"], INVALID_BINDING_REASON)
+        self.assertEqual(status["binding"], {
+            "state": "partial",
+            "origin_configured": True,
+            "credential_file_configured": False,
+            "missing": ["credential_file"],
+        })
 
         with tempfile.TemporaryDirectory() as temp:
             credential_file = Path(temp) / "credential"
@@ -59,8 +79,31 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
                 status = semantic_provider_status(semantic_localizer_from_env())
             self.assertFalse(status["available"])
             self.assertEqual(status["reason"], INVALID_BINDING_REASON)
+            self.assertEqual(status["binding"], {
+                "state": "invalid",
+                "origin_configured": True,
+                "credential_file_configured": True,
+                "invalid_component": "origin",
+            })
             self.assertNotIn(str(credential_file), json.dumps(status))
             self.assertNotIn(VALID_CREDENTIAL, json.dumps(status))
+
+            credential_file.write_text("not-a-project-credential\n", encoding="utf-8")
+            with patch.dict(
+                os.environ,
+                {
+                    NATIVE_LSP_URL_ENV: "http://127.0.0.1:45819",
+                    NATIVE_LSP_CREDENTIAL_FILE_ENV: str(credential_file),
+                },
+            ):
+                status = semantic_provider_status(semantic_localizer_from_env())
+            self.assertEqual(status["binding"], {
+                "state": "invalid",
+                "origin_configured": True,
+                "credential_file_configured": True,
+                "invalid_component": "credential_file",
+            })
+            self.assertNotIn(str(credential_file), json.dumps(status))
 
     def test_portable_workspace_identity_matches_rust_windows_contract(self) -> None:
         self.assertEqual(_portable_workspace_identity(r"\\?\E:\Repo\Src", windows=True), "E:/Repo/Src")
@@ -118,6 +161,11 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
             status_text = json.dumps(semantic_provider_status(provider))
             self.assertNotIn("45819", status_text)
             self.assertNotIn(VALID_CREDENTIAL, status_text)
+            self.assertEqual(semantic_provider_status(provider)["binding"], {
+                "state": "configured",
+                "origin_configured": True,
+                "credential_file_configured": True,
+            })
 
     def test_transport_failure_falls_back_without_secret_or_path_leak(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

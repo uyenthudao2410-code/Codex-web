@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import threading
@@ -15,15 +16,83 @@ if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 import coding_tools_mcp.server as server_module
+import coding_tools_mcp.task_state as task_state_module
 from coding_tools_mcp.build_verify import collect_artifacts, detect_project
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.task_state import TaskStateStore, classify_command
 from coding_tools_mcp.server import Runtime
+from coding_tools_mcp.textutils import DEFAULT_MAX_LINES, truncate_text_head
 from coding_tools_mcp.protocol import dispatch_rpc
 from coding_tools_mcp.document_tools import create_docx, extract_docx
 
 
 class TaskStateTests(unittest.TestCase):
+    def test_atomic_state_replace_retries_transient_windows_access_denial(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = TaskStateStore(root)
+            original_replace = task_state_module.os.replace
+            attempts = 0
+
+            def transient_replace(source, target):
+                nonlocal attempts
+                attempts += 1
+                if attempts < 3:
+                    raise PermissionError(13, "transient sharing violation")
+                return original_replace(source, target)
+
+            with (
+                patch.object(task_state_module.os, "name", "nt"),
+                patch.object(task_state_module.os, "replace", side_effect=transient_replace),
+                patch.object(task_state_module.time, "sleep") as sleep,
+            ):
+                state = store.update({"objective": "Retry transient state replace"})
+
+            self.assertEqual(attempts, 3)
+            self.assertEqual([call.args[0] for call in sleep.call_args_list], [0.025, 0.05])
+            self.assertEqual(state["objective"], "Retry transient state replace")
+            self.assertEqual(TaskStateStore(root).get()["objective"], "Retry transient state replace")
+
+    def test_atomic_state_replace_does_not_retry_nonretryable_error_and_cleans_temp(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = TaskStateStore(root)
+            failure = FileNotFoundError(2, "non-retryable replace failure")
+            with (
+                patch.object(task_state_module.os, "name", "nt"),
+                patch.object(task_state_module.os, "replace", side_effect=failure) as replace,
+                patch.object(task_state_module.time, "sleep") as sleep,
+            ):
+                with self.assertRaises(FileNotFoundError):
+                    store.update({"objective": "Fail closed"})
+
+            self.assertEqual(replace.call_count, 1)
+            sleep.assert_not_called()
+            self.assertEqual(list(store.state_dir.glob(".task-state.json.*.tmp")), [])
+
+    def test_atomic_state_replace_exhausts_bounded_windows_retry_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = TaskStateStore(root)
+            failure = PermissionError(13, "persistent sharing violation")
+            with (
+                patch.object(task_state_module.os, "name", "nt"),
+                patch.object(task_state_module.os, "replace", side_effect=failure) as replace,
+                patch.object(task_state_module.time, "sleep") as sleep,
+            ):
+                with self.assertRaises(PermissionError):
+                    store.update({"objective": "Exhaust retry budget"})
+
+            self.assertEqual(replace.call_count, task_state_module.WINDOWS_ATOMIC_REPLACE_ATTEMPTS)
+            self.assertEqual(
+                [call.args[0] for call in sleep.call_args_list],
+                [
+                    task_state_module.WINDOWS_ATOMIC_REPLACE_BASE_DELAY_SECONDS * attempt
+                    for attempt in range(1, task_state_module.WINDOWS_ATOMIC_REPLACE_ATTEMPTS)
+                ],
+            )
+            self.assertEqual(list(store.state_dir.glob(".task-state.json.*.tmp")), [])
+
     def test_anonymous_tool_calls_do_not_create_a_task_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -670,6 +739,56 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(git_diff.call_args.args[0]["paths"], ["app.py"])
             self.assertNotIn("path", git_diff.call_args.args[0])
             runtime.close()
+
+    def test_agent_workflow_preflights_ambiguous_disjoint_patch_batch_before_orchestration(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "a.py").write_text("A = 1\n", encoding="utf-8")
+            (root / "b.py").write_text("VALUE = 1\nVALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                with self.assertRaises(ToolFailure) as caught:
+                    runtime.agent_workflow({
+                        "workflow": "bugfix",
+                        "phase": "execute",
+                        "execution_route": "deterministic",
+                        "patches": [
+                            "*** Begin Patch\n*** Update File: a.py\n@@\n-A = 1\n+A = 2\n*** End Patch",
+                            "*** Begin Patch\n*** Update File: b.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                        ],
+                        "verification": "none",
+                    })
+                self.assertEqual(caught.exception.code, "PATCH_CONTEXT_AMBIGUOUS")
+                self.assertEqual(caught.exception.details["candidate_lines"], [1, 2])
+                self.assertFalse(caught.exception.details["candidate_lines_truncated"])
+                self.assertEqual((root / "a.py").read_text(encoding="utf-8"), "A = 1\n")
+                self.assertEqual((root / "b.py").read_text(encoding="utf-8"), "VALUE = 1\nVALUE = 1\n")
+                self.assertEqual(runtime.orchestration_ledger.list_runs(limit=10), [])
+            finally:
+                runtime.close()
+
+    def test_verify_build_runs_commands_from_explicit_workdir(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "nested").mkdir()
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                command = (
+                    "python -c \"import os,sys; "
+                    "sys.exit(0 if os.path.basename(os.getcwd()) == 'nested' else 7)\""
+                )
+                result = runtime.verify_build({
+                    "path": ".",
+                    "workdir": "nested",
+                    "run_tests": True,
+                    "run_build": False,
+                    "test_command": command,
+                })
+                self.assertTrue(result["ok"], result)
+                self.assertEqual(result["test_result"]["exit_code"], 0)
+            finally:
+                runtime.close()
+
     def test_agent_workflow_prepares_bug_context_in_one_call(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -767,6 +886,9 @@ class ToolModeTests(unittest.TestCase):
             ["auto", "deterministic", "mini", "luna", "terra", "sol_xhigh", "sol_max", "sol_ultra"],
         )
         self.assertIn("allow_high_cost", schemas["agent_workflow"]["properties"])
+        evaluation_schema = schemas["agent_workflow"]["properties"]["evaluation"]
+        self.assertEqual(evaluation_schema["properties"]["policy"]["enum"], ["chatweb_mcp", "mini", "luna"])
+        self.assertIn("controller", evaluation_schema["properties"])
         bridge_profiles = schemas["codex_bridge"]["properties"]["profile"]["enum"]
         self.assertIn("deep_code", bridge_profiles)
         self.assertIn("parallel_extreme", bridge_profiles)
@@ -780,10 +902,24 @@ class ToolModeTests(unittest.TestCase):
             small = {"selected_paths": ["app.py"], "total_content_bytes": 4_000}
             medium = {"selected_paths": ["a.py", "b.py", "c.py"], "total_content_bytes": 30_000}
             broad = {"selected_paths": [f"f{i}.py" for i in range(8)], "total_content_bytes": 90_000}
-            self.assertEqual(runtime._select_agent_execution_route(workflow="bugfix", prepared=small, requested="auto", allow_high_cost=False, strong_oracle=True)["selected"], "mini")
-            self.assertEqual(runtime._select_agent_execution_route(workflow="bugfix", prepared=small, requested="auto", allow_high_cost=False, strong_oracle=False)["selected"], "luna")
-            self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=medium, requested="auto", allow_high_cost=False)["selected"], "luna")
-            self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="auto", allow_high_cost=False)["selected"], "sol_xhigh")
+            for workflow, prepared, strong_oracle in (
+                ("bugfix", small, True),
+                ("bugfix", small, False),
+                ("feature", medium, False),
+                ("feature", broad, False),
+            ):
+                automatic = runtime._select_agent_execution_route(
+                    workflow=workflow,
+                    prepared=prepared,
+                    requested="auto",
+                    allow_high_cost=False,
+                    strong_oracle=strong_oracle,
+                )
+                self.assertEqual(automatic["selected"], "deterministic")
+                self.assertEqual(automatic["reason"], "roi_gate_hold_insufficient_paired_evidence")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="bugfix", prepared=small, requested="mini", allow_high_cost=False)["selected"], "mini")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=medium, requested="luna", allow_high_cost=False)["selected"], "luna")
+            self.assertEqual(runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="sol_xhigh", allow_high_cost=False)["selected"], "sol_xhigh")
             terra = runtime._select_agent_execution_route(workflow="feature", prepared=broad, requested="terra", allow_high_cost=False)
             self.assertEqual((terra["model"], terra["effort"]), ("gpt-5.6-terra", "high"))
             with self.assertRaises(ToolFailure) as max_error:
@@ -866,7 +1002,7 @@ class ToolModeTests(unittest.TestCase):
             self.assertLessEqual(evidence_chars, server_module.AGENT_CANDIDATE_PACKET_MAX_CHARS)
             runtime.close()
 
-    def test_agent_workflow_run_auto_uses_mini_candidate_then_mcp_writer(self) -> None:
+    def test_agent_workflow_explicit_mini_uses_candidate_then_mcp_writer(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
@@ -896,6 +1032,7 @@ class ToolModeTests(unittest.TestCase):
                 result = runtime.agent_workflow({
                     "workflow": "bugfix",
                     "phase": "run",
+                    "execution_route": "mini",
                     "objective": "change VALUE",
                                         "paths": ["app.py"],
                     "verification": "tests",
@@ -911,7 +1048,7 @@ class ToolModeTests(unittest.TestCase):
             self.assertIn("expected VALUE = 2", bridge_run.call_args.args[0])
             runtime.close()
 
-    def test_agent_workflow_auto_packet_review_uses_hidden_bridge(self) -> None:
+    def test_agent_workflow_explicit_packet_review_uses_hidden_bridge(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp), permission_mode="dangerous")
             execution = {
@@ -941,7 +1078,7 @@ class ToolModeTests(unittest.TestCase):
             }
             with patch.object(runtime, "apply_changes_and_verify", return_value=execution), patch.object(
                 runtime._codex_bridge, "run", return_value=bridge_result
-            ) as bridge_run:
+            ) as bridge_run, patch.dict(server_module.os.environ, {server_module.AGENT_EXTERNAL_REVIEW_ENV: "packet"}):
                 result = runtime.agent_workflow({
                     "workflow": "feature",
                     "phase": "execute",
@@ -955,6 +1092,33 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(result["external_review"]["plane"], "external_mcp")
             self.assertEqual(result["external_review"]["verdict"], "accept")
             self.assertFalse(result["external_review"]["attention_required"])
+            runtime.close()
+
+    def test_agent_workflow_external_review_defaults_off(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            execution = {
+                "ok": True,
+                "status": "passed",
+                "affected_files": [{"path": "src/app.py", "operation": "update"}],
+                "check_results": [],
+                "build_report": {"overall_status": "passed", "test_result": {"status": "passed"}, "build_result": None, "artifacts": []},
+                "git_diff": {"diff": "diff --git a/src/app.py b/src/app.py\n-old\n+new\n", "truncated": False},
+            }
+            with patch.object(runtime, "apply_changes_and_verify", return_value=execution), patch.object(
+                runtime._codex_bridge, "run"
+            ) as bridge_run, patch.dict(server_module.os.environ, {}, clear=False):
+                server_module.os.environ.pop(server_module.AGENT_EXTERNAL_REVIEW_ENV, None)
+                result = runtime.agent_workflow({
+                    "workflow": "feature",
+                    "phase": "execute",
+                    "objective": "change app behavior",
+                    "patch": "*** Begin Patch\n*** End Patch",
+                    "verification": "tests",
+                })
+            bridge_run.assert_not_called()
+            self.assertEqual(result["external_review"]["plane"], "none")
+            self.assertEqual(result["external_review"]["reason"], "external_review_disabled")
             runtime.close()
 
     def test_agent_workflow_skips_review_for_localized_bug_with_strong_oracle(self) -> None:
@@ -975,7 +1139,7 @@ class ToolModeTests(unittest.TestCase):
             }
             with patch.object(runtime, "apply_changes_and_verify", return_value=execution), patch.object(
                 runtime._codex_bridge, "run"
-            ) as bridge_run:
+            ) as bridge_run, patch.dict(server_module.os.environ, {server_module.AGENT_EXTERNAL_REVIEW_ENV: "auto"}):
                 result = runtime.agent_workflow({
                     "workflow": "bugfix",
                     "phase": "execute",
@@ -1056,6 +1220,79 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(result["total_matches"], 1)
             self.assertIn("中文文件.txt", result["matches"][0]["path"])
             runtime.close()
+
+
+class SourceFencedContinuationTests(unittest.TestCase):
+    def _large_git_diff_runtime(self, root: Path) -> Runtime:
+        subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+        source = root / "app.py"
+        source.write_text("".join(f"VALUE_{index:04d} = {index}\n" for index in range(500)), encoding="utf-8")
+        subprocess.run(["git", "add", "app.py"], cwd=root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "base"],
+            cwd=root, check=True, capture_output=True,
+        )
+        source.write_text("".join(f"VALUE_{index:04d} = {index + 1}\n" for index in range(500)), encoding="utf-8")
+        return Runtime(root, permission_mode="dangerous")
+
+    def test_large_diff_continuation_is_exact_backward_compatible_and_detects_rereads(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = self._large_git_diff_runtime(Path(temp))
+            try:
+                full = runtime.git_diff({"paths": ["app.py"], "max_bytes": 1024 * 1024})
+                self.assertFalse(full["truncated"])
+                first = runtime.git_diff({"paths": ["app.py"], "max_bytes": 1024})
+                self.assertTrue(first["truncated"])
+                expected_first = truncate_text_head(full["diff"], max_lines=DEFAULT_MAX_LINES, max_bytes=1024)
+                self.assertEqual(first["diff"], expected_first.content)
+                token = first["continuation"]
+                self.assertTrue(token)
+                peer = Runtime(Path(temp), permission_mode="dangerous")
+                try:
+                    second = peer.agent_workflow({"workflow": "resume", "phase": "resume", "continuation": token})["git_diff"]
+                    repeated = runtime.agent_workflow({"workflow": "resume", "phase": "resume", "continuation": token})["git_diff"]
+                    self.assertEqual(second["diff"], repeated["diff"])
+                    self.assertFalse(second["result_tail"]["continuation_reread"])
+                    self.assertTrue(repeated["result_tail"]["continuation_reread"])
+                finally:
+                    peer.close()
+                pages = [first["diff"], second["diff"]]
+                token = second["continuation"]
+                page_count = 2
+                while token:
+                    page = runtime.agent_workflow({"workflow": "resume", "phase": "resume", "continuation": token})["git_diff"]
+                    pages.append(page["diff"])
+                    token = page["continuation"]
+                    page_count += 1
+                    self.assertLess(page_count, 100)
+                self.assertEqual("".join(pages), full["diff"])
+            finally:
+                runtime.close()
+
+    def test_diff_continuation_fails_closed_on_source_scope_option_or_signature_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = self._large_git_diff_runtime(root)
+            try:
+                first = runtime.git_diff({"paths": ["app.py"], "max_bytes": 1024})
+                token = first["continuation"]
+                with self.assertRaises(ToolFailure) as option_error:
+                    runtime.git_diff({"continuation": token, "max_bytes": 2048})
+                self.assertEqual(option_error.exception.code, "CONTINUATION_OPTIONS_MISMATCH")
+                with self.assertRaises(ToolFailure) as scope_error:
+                    runtime.git_diff({"continuation": token, "paths": ["other.py"]})
+                self.assertEqual(scope_error.exception.code, "CONTINUATION_SCOPE_MISMATCH")
+                with self.assertRaises(ToolFailure) as signature_error:
+                    runtime.agent_workflow({"workflow": "resume", "phase": "resume", "continuation": token[:-1] + ("A" if token[-1] != "A" else "B")})
+                self.assertEqual(signature_error.exception.code, "INVALID_CONTINUATION")
+                source = root / "app.py"
+                source.write_text(source.read_text(encoding="utf-8") + "EXTRA = True\n", encoding="utf-8")
+                with self.assertRaises(ToolFailure) as stale_error:
+                    runtime.agent_workflow({"workflow": "resume", "phase": "resume", "continuation": token})
+                self.assertEqual(stale_error.exception.code, "STALE_CONTINUATION")
+                self.assertTrue(stale_error.exception.details["result_tail"]["continuation_stale"])
+            finally:
+                runtime.close()
 
 
 class DocumentToolTests(unittest.TestCase):

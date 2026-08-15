@@ -1238,6 +1238,24 @@ mod tests {
         temp
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn portable_project_root_identity_normalizes_extended_drive_paths() {
+        assert_eq!(
+            portable_project_root_identity(Path::new(r"\\?\e:\Repo\Src")),
+            "E:/Repo/Src"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn portable_project_root_identity_normalizes_extended_unc_paths() {
+        assert_eq!(
+            portable_project_root_identity(Path::new(r"\\?\UNC\server\share\repo")),
+            "//server/share/repo"
+        );
+    }
+
     #[test]
     fn unchanged_context_is_fully_reused() {
         let repo = repo("context-reuse");

@@ -5,6 +5,8 @@ let lastOrchestration = null;
 let lastHealth = null;
 let lastCommandStartedAt = 0;
 let lastSyncAt = 0;
+let orchestrationInFlight = null;
+let orchestrationError = '';
 
 function unwrap(result) {
   if (!result?.ok) throw new Error(result?.error || 'Thao tác thất bại');
@@ -46,6 +48,21 @@ function taskProgress(task, status) {
   return status === 'active' ? 18 : 0;
 }
 
+function renderSyncState() {
+  if (orchestrationError) {
+    $('#syncState').textContent = `Điều phối lỗi: ${orchestrationError}`;
+    return;
+  }
+  const health = lastHealth;
+  $('#syncState').textContent = health?.fullyReady
+    ? 'MCP + Tunnel sẵn sàng'
+    : health?.recovering
+      ? `Đang khôi phục · ${health.failures || 0} lần fail`
+      : health?.recoveryBlocked
+        ? `Khôi phục bị chặn: ${health.lastStartFailure || ''}`
+        : 'Dịch vụ chưa sẵn sàng';
+}
+
 function renderHealth(health) {
   lastHealth = health;
   [['#mcpDot', health?.mcpRunning], ['#tunnelDot', health?.tunnelRunning]].forEach(([selector, value]) => {
@@ -55,13 +72,7 @@ function renderHealth(health) {
   if (health?.recovering) {
     $('#mcpDot').title = `Đang khôi phục (lần ${health.failures || 0})`;
   }
-  $('#syncState').textContent = health?.fullyReady
-    ? 'MCP + Tunnel sẵn sàng'
-    : health?.recovering
-      ? `Đang khôi phục · ${health.failures || 0} lần fail`
-      : health?.recoveryBlocked
-        ? `Khôi phục bị chặn: ${health.lastStartFailure || ''}`
-        : 'Dịch vụ chưa sẵn sàng';
+  renderSyncState();
   if (lastOrchestration) renderRouterFabric(lastOrchestration);
 }
 
@@ -372,19 +383,28 @@ function renderDelegations(delegations) {
 
 async function refreshOrchestration(force = false) {
   if (document.hidden && !force) return;
-  try {
-    const data = unwrap(await api.orchestration());
-    lastOrchestration = data;
-    renderTask(data?.task);
-    renderRun(data);
-    renderHub(data);
-    renderEvents(data?.events);
-    renderProofs(data?.proofs);
-    renderDelegations(data?.delegations);
-    lastSyncAt = Date.now();
-  } catch (error) {
-    $('#syncState').textContent = error.message;
-  }
+  if (orchestrationInFlight) return orchestrationInFlight;
+  orchestrationInFlight = (async () => {
+    try {
+      const data = unwrap(await api.orchestration());
+      lastOrchestration = data;
+      renderTask(data?.task);
+      renderRun(data);
+      renderHub(data);
+      renderEvents(data?.events);
+      renderProofs(data?.proofs);
+      renderDelegations(data?.delegations);
+      orchestrationError = '';
+      lastSyncAt = Date.now();
+      renderSyncState();
+    } catch (error) {
+      orchestrationError = error?.message || String(error);
+      renderSyncState();
+    } finally {
+      orchestrationInFlight = null;
+    }
+  })();
+  return orchestrationInFlight;
 }
 
 async function refreshHealth(force = false) {
@@ -456,7 +476,7 @@ function tick() {
       $('#taskCommand').textContent = `${kind}: ${String(command.command || '').slice(0, 120)} (${formatDuration(Date.now() - lastCommandStartedAt)})`;
     }
   }
-  if (lastSyncAt && Date.now() - lastSyncAt > 8000) {
+  if (!orchestrationError && lastSyncAt && Date.now() - lastSyncAt > 8000) {
     $('#syncState').textContent = `Dữ liệu cũ hơn ${Math.round((Date.now() - lastSyncAt) / 1000)}s — kiểm tra MCP`;
   }
 }

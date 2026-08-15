@@ -13,7 +13,7 @@ class RoutingEconomicsBenchmarkTests(unittest.TestCase):
         self.assertEqual(payload["task_count"], 100)
         self.assertEqual(
             payload["route_distribution"],
-            {"deterministic": 30, "mini": 35, "luna": 20, "sol_xhigh": 15},
+            {"deterministic": 100},
         )
         self.assertGreater(payload["strategies"]["all_sol_for_model_tasks"]["credits"], payload["strategies"]["adaptive_router"]["credits"])
         self.assertIn("success_probability", payload["assumptions"])

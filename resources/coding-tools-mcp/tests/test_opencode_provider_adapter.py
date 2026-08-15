@@ -147,7 +147,9 @@ class OpenCodeProviderAdapterTests(unittest.TestCase):
                 model="opencode-go/deepseek-v4-flash",
                 prompt="TOOLCALL_HANG",
                 request_id="toolcall-timeout",
-                timeout_ms=100,
+                # Give the stub enough startup time under broad-suite load to emit
+                # its completed tool-call lifecycle before the intentional hang.
+                timeout_ms=500,
             )
             toolcall_result = self.wait_terminal(toolcall_timeout["dispatch_id"])
             self.assertEqual(toolcall_result["status"], "timed_out")

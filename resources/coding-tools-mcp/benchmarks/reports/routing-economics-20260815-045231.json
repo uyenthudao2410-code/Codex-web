@@ -1,0 +1,94 @@
+{
+  "benchmark": "routing economics scenario",
+  "scenario_version": 1,
+  "evidence_class": "scenario_simulation_not_production_ab",
+  "task_count": 100,
+  "production_router_invoked": true,
+  "route_distribution": {
+    "deterministic": 100
+  },
+  "decisions": [
+    {
+      "class": "deterministic",
+      "count": 30,
+      "selected": "deterministic",
+      "reason": "explicit_request",
+      "model": null,
+      "effort": null
+    },
+    {
+      "class": "localized_strong_oracle",
+      "count": 35,
+      "selected": "deterministic",
+      "reason": "roi_gate_hold_insufficient_paired_evidence",
+      "model": null,
+      "effort": null
+    },
+    {
+      "class": "bounded_leaf",
+      "count": 20,
+      "selected": "deterministic",
+      "reason": "roi_gate_hold_insufficient_paired_evidence",
+      "model": null,
+      "effort": null
+    },
+    {
+      "class": "broad_deep",
+      "count": 15,
+      "selected": "deterministic",
+      "reason": "roi_gate_hold_insufficient_paired_evidence",
+      "model": null,
+      "effort": null
+    }
+  ],
+  "assumptions": {
+    "credits_per_attempt": {
+      "mini": 0.138,
+      "luna": 0.26,
+      "sol_xhigh": 1.317,
+      "deterministic": 0.0
+    },
+    "tta_seconds": {
+      "mini": 10.2,
+      "luna": 10.1,
+      "sol_xhigh": 11.2,
+      "deterministic": 3.3
+    },
+    "success_probability": {
+      "localized_strong_oracle": {
+        "mini": 0.75,
+        "sol_xhigh": 0.97
+      },
+      "bounded_leaf": {
+        "luna": 0.85,
+        "sol_xhigh": 0.95
+      },
+      "broad_deep": {
+        "sol_xhigh": 0.92
+      },
+      "deterministic": {
+        "deterministic": 1.0
+      }
+    },
+    "serial_fallback_penalty_seconds": 22.8,
+    "policy": "deterministic lane stays model-free; Mini/Luna receive at most one Sol xhigh fallback; Sol xhigh has no model fallback"
+  },
+  "strategies": {
+    "adaptive_router": {
+      "credits": 0.0,
+      "accepted": 100.0,
+      "credits_per_accepted": 0.0,
+      "tta_hours": 0.0917,
+      "wasted_attempts": 0.0
+    },
+    "all_sol_for_model_tasks": {
+      "credits": 92.19,
+      "accepted": 96.75,
+      "credits_per_accepted": 0.9529,
+      "tta_hours": 0.2453,
+      "wasted_attempts": 0.0
+    }
+  },
+  "adaptive_credit_saving_vs_all_sol_percent": 100.0,
+  "note": "Costs/probabilities are explicit scenario assumptions anchored to prior local research. Use route ledger observations for production calibration; do not read this as an A/B measurement."
+}

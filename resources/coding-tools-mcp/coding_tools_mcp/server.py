@@ -9,8 +9,10 @@ import html
 import difflib
 import fnmatch
 import functools
+import hmac
 import http.server
 import json
+import marshal
 import math
 import mimetypes
 import os
@@ -84,6 +86,7 @@ from .project_context import ProjectContext, load_project_context
 from .build_verify import verify_build as run_build_verification
 from .artifact_refs import build_file_artifact_ref
 from .codex_bridge import CodexAppServerBridge, CodexBridgeError
+from .code_mode import CodeModeHostBindingProxy
 from .document_tools import create_docx, create_text_document, convert_document, extract_document
 from .opencode_provider import ALLOWED_OPENCODE_MODELS, OpenCodeProviderAdapter, OpenCodeProviderError
 from .provider_routing import recommendation_id, recommend_shadow_route
@@ -143,6 +146,13 @@ MAX_BACKGROUND_OPERATIONS = 32
 IDEMPOTENCY_RESULT_MAX_BYTES = 256 * 1024
 AUTO_IDEMPOTENCY_KEY_PREFIX = "auto-v1:"
 BACKGROUND_BUDGET_POLL_SECONDS = 1.0
+DIFF_CONTINUATION_SCHEMA_VERSION = 1
+DIFF_CONTINUATION_OPERATION = "git_diff"
+DIFF_CONTINUATION_TOKEN_MAX_CHARS = 8192
+DIFF_CONTINUATION_READ_TRACK_LIMIT = 1024
+PROCESS_DIFF_CONTINUATION_SECRET = secrets.token_bytes(32)
+PROCESS_DIFF_CONTINUATION_READS: set[str] = set()
+PROCESS_DIFF_CONTINUATION_READS_LOCK = threading.Lock()
 try:
     READ_RETRY_ATTEMPTS = max(
         1,
@@ -1549,6 +1559,11 @@ class Runtime:
             project_context if project_context is not None else load_project_context(self.workspace.root)
         )
         self.semantic_localizer = semantic_localizer or semantic_localizer_from_env()
+        # Internal prerequisite for a future isolated Code Mode worker. This
+        # proxy is intentionally not model-facing and is not itself an
+        # isolation boundary; Code Mode remains disabled until such a worker
+        # exists.
+        self.code_mode_bindings = CodeModeHostBindingProxy(self)
         self.request_sessions: dict[str | int, str] = {}
         self.request_sessions_lock = threading.Lock()
         self.request_context = threading.local()
@@ -1574,8 +1589,9 @@ class Runtime:
             stale_run_seconds = 24 * 60 * 60
         stale_run_seconds = max(60 * 60, min(stale_run_seconds, 30 * 24 * 60 * 60))
         self.stale_run_seconds = stale_run_seconds
-        self.stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
-            stale_after_seconds=self.stale_run_seconds
+        self.reconciled_stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
+            stale_after_seconds=self.stale_run_seconds,
+            close_stale_active=False,
         )
         self.recovered_agent_lanes = 0
         for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
@@ -1736,8 +1752,9 @@ class Runtime:
             self.orphaned_idempotency_records = self.orchestration_ledger.mark_orphaned_idempotency(
                 current_process_instance_id=self.process_instance_id
             )
-            self.stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
-                stale_after_seconds=self.stale_run_seconds
+            self.reconciled_stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
+                stale_after_seconds=self.stale_run_seconds,
+                close_stale_active=False,
             )
             self.recovered_agent_lanes = 0
             for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
@@ -1954,6 +1971,14 @@ class Runtime:
                 raise ToolFailure("PROVIDER_TELEMETRY_CORRELATION_MISMATCH", "Provider telemetry correlation does not match the active run, wave, delegation, or model.", category="security", retryable=False)
         else:
             dispatch = self._opencode_provider.find_by_session(run_id=run_id, wave_id=wave_id, model=model, session_id=telemetry["session_id"])
+            if dispatch is None and str(ctx.route_resolved or "").strip().lower() not in {"opencode", model.lower()}:
+                raise ToolFailure(
+                    "PROVIDER_TELEMETRY_ATTRIBUTION_UNAVAILABLE",
+                    "Uncorrelated OpenCode telemetry may only attach to a wave explicitly routed to OpenCode.",
+                    category="runtime",
+                    retryable=True,
+                    details={"run_id": run_id, "wave_id": wave_id, "route_resolved": ctx.route_resolved},
+                )
         delegation_id = str((dispatch or {}).get("delegation_id") or "") or "opencode-" + hashlib.sha256(f"{run_id}\0{telemetry['session_id']}\0{telemetry['message_id']}".encode("utf-8")).hexdigest()[:40]
         economics = {
             "input_tokens": telemetry["input_tokens"],
@@ -1989,6 +2014,7 @@ class Runtime:
             "economics": economics,
             "message_economics": message_economics,
             "provider_message_status": telemetry["status"],
+            "attribution": "correlated_dispatch" if dispatch else "task_projected_opencode_route",
         }
         for key in ("completed_at_ms", "duration_ms", "finish", "error_name"):
             if key in telemetry:
@@ -3143,33 +3169,14 @@ class Runtime:
 
         else:
 
-            selected_paths = list((prepared or {}).get("selected_paths") or [])
+            # Cost/time-to-accepted-result is the routing objective. Until the
+            # paired representative evaluator has enough quality-preserving ROI
+            # evidence, `auto` must not create a model bill merely because a task
+            # matches a capability heuristic. Mini/Luna remain explicit paired
+            # study routes; Sol/Terra remain explicit escalation/experiments.
+            selected = "deterministic"
 
-            total_bytes = int((prepared or {}).get("total_content_bytes") or 0)
-
-            if workflow in {"diagnose", "document", "resume", "build_release", "greenfield"}:
-
-                selected = "deterministic"
-
-                reason = "workflow_prefers_local_tools"
-
-            elif strong_oracle and workflow in {"bugfix", "test_failure"} and 0 < len(selected_paths) <= 2 and total_bytes <= 24_000:
-
-                selected = "mini"
-
-                reason = "localized_strong_oracle_candidate"
-
-            elif 0 < len(selected_paths) <= 4 and total_bytes <= 60_000:
-
-                selected = "luna"
-
-                reason = "harder_bounded_leaf"
-
-            else:
-
-                selected = "sol_xhigh"
-
-                reason = "deep_or_broad_context"
+            reason = "roi_gate_hold_insufficient_paired_evidence"
 
         if selected == "deterministic":
 
@@ -3848,7 +3855,7 @@ class Runtime:
         execution: dict[str, Any],
         dry_run: bool,
     ) -> dict[str, Any]:
-        raw_mode = str(os.environ.get(AGENT_EXTERNAL_REVIEW_ENV, "auto")).strip().lower()
+        raw_mode = str(os.environ.get(AGENT_EXTERNAL_REVIEW_ENV, "off")).strip().lower()
         if raw_mode in {"0", "false", "off", "none", "disabled"}:
             return {"plane": "none", "status": "skipped", "reason": "external_review_disabled"}
         force_packet = raw_mode in {"1", "true", "on", "packet", "always"}
@@ -3963,6 +3970,31 @@ class Runtime:
         else:
             review.update({"verdict": "blocked", "reviewer_text": reviewer_text[:4_000], "attention_required": True})
         return review
+    @staticmethod
+    def _loaded_behavior_identity() -> dict[str, Any]:
+        """Fingerprint loaded code objects so restart activation can be proven."""
+        targets = {
+            "provider_cost_attribution": Runtime.ingest_provider_telemetry,
+            "patch_preflight": Runtime._preflight_patch_sequence,
+            "verification_workdir": Runtime.verify_build,
+            "verification_runner": run_build_verification,
+            "stale_reconciliation": OrchestrationLedger.reconcile_stale_runs,
+            "routing_policy": Runtime._select_agent_execution_route,
+            "external_review_policy": Runtime._maybe_agent_workflow_external_review,
+        }
+        components = {
+            name: hashlib.sha256(marshal.dumps(target.__code__)).hexdigest()
+            for name, target in targets.items()
+        }
+        encoded = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return {
+            "schema_version": 1,
+            "algorithm": "sha256_python_marshal_code",
+            "python": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+            "fingerprint": hashlib.sha256(encoded).hexdigest(),
+            "components": components,
+        }
+
     def workspace_context(self, args: dict[str, Any]) -> dict[str, Any]:
         detail = str(args.get("detail", "compact")).lower()
         cache_args = {"path": str(args.get("path", ".")), "max_entries": int(args.get("max_entries", 40)), "detail": detail}
@@ -4021,12 +4053,16 @@ class Runtime:
         }
         if detail == "full":
             source = self._orchestration_workspace_identity(args.get("path", "."))
+            unresolved_stale_runs = self.orchestration_ledger.stale_run_candidates(
+                stale_after_seconds=self.stale_run_seconds
+            )
             payload["runtime"] = {
                 "runtime_version": __version__,
                 "server_instance_id": self.server_instance_id,
                 "process_instance_id": self.process_instance_id,
                 "performance_trace_version": self.performance_trace.schema_version,
                 "idempotency_policy_epoch": IDEMPOTENCY_POLICY_EPOCH,
+                "loaded_behavior": self._loaded_behavior_identity(),
                 "source": {
                     "is_repo": bool(source.get("is_repo")),
                     "git_head": str(source.get("base_head") or ""),
@@ -4037,7 +4073,9 @@ class Runtime:
                 "tool_contract": dict(self.tool_contract),
                 "tool_metadata": tool_metadata_contract(),
                 "semantic_localization": semantic_provider_status(self.semantic_localizer),
-                "stale_orchestration_runs": len(self.stale_orchestration_runs),
+                "stale_orchestration_runs": len(unresolved_stale_runs),
+                "unresolved_stale_orchestration_runs": len(unresolved_stale_runs),
+                "reconciled_stale_orchestration_runs": len(self.reconciled_stale_orchestration_runs),
                 "stale_run_threshold_seconds": int(self.stale_run_seconds),
                 "task_orchestration_projection_reconciled": bool(self.reconciled_task_orchestration),
                 "orphaned_background_operations": int(self.orphaned_background_operations),
@@ -4570,6 +4608,7 @@ class Runtime:
             set_stage("verify", "Testing and building")
             verify_args = {
                 "path": str(args.get("path", ".")),
+                "workdir": workdir,
                 "run_tests": verification in {"tests", "all"},
                 "run_build": verification in {"build", "all"},
                 "test_command": args.get("test_command", ""),
@@ -4674,6 +4713,46 @@ class Runtime:
             },
             "next_step": final_next,
         }
+
+    def _agent_patch_inputs(self, args: dict[str, Any]) -> tuple[list[str], list[str]]:
+        directories = [str(item).strip() for item in args.get("directories", []) if str(item).strip()]
+        patches = [str(item) for item in args.get("patches", []) if str(item).strip()]
+        if str(args.get("patch", "")).strip():
+            patches.insert(0, str(args["patch"]))
+        new_file_patch = self._new_files_patch(list(args.get("files", [])))
+        if new_file_patch:
+            patches.insert(0, new_file_patch)
+        return directories, patches
+
+    def _preflight_patch_sequence(self, patches: list[str]) -> dict[str, Any]:
+        """Reject predictable disjoint-patch failures before EOCL or workspace writes."""
+        parsed: list[tuple[str, set[str]]] = []
+        seen_paths: set[str] = set()
+        overlapping_paths: set[str] = set()
+        operation_count = 0
+        for patch_text in patches:
+            operations = parse_patch(patch_text)
+            touched: set[str] = set()
+            for operation in operations:
+                operation_count += 1
+                touched.add(str(operation.path).replace("\\", "/"))
+                if operation.move_to:
+                    touched.add(str(operation.move_to).replace("\\", "/"))
+            overlapping_paths.update(seen_paths.intersection(touched))
+            seen_paths.update(touched)
+            parsed.append((patch_text, touched))
+        if operation_count == 0:
+            return {"checked": False, "reason": "empty_patch_sequence", "patch_count": len(patches)}
+        if overlapping_paths:
+            return {
+                "checked": False,
+                "reason": "cross_patch_path_dependency",
+                "patch_count": len(patches),
+                "overlap_count": len(overlapping_paths),
+            }
+        for patch_text, _touched in parsed:
+            self.apply_patch({"patch": patch_text, "dry_run": True})
+        return {"checked": True, "patch_count": len(patches), "operation_count": operation_count}
 
     @staticmethod
     def _new_files_patch(files: list[Any]) -> str:
@@ -4804,6 +4883,13 @@ class Runtime:
                     {"objective": objective, "status": "active", "failure": None, "current_step": "Orchestration preflight", "new_task": True},
                     event="task_started",
                 )
+            run_metadata: dict[str, Any] = {
+                "workflow": str(args.get("workflow", "custom")),
+                "phase": str(args.get("phase", "prepare")),
+                "branch": identity.get("branch"),
+            }
+            if isinstance(args.get("evaluation"), dict) and args.get("evaluation"):
+                run_metadata["evaluation"] = dict(args["evaluation"])
             current_ctx = self.orchestration_control.begin(
                 objective=objective,
                 task_id=str(current_task.get("task_id") or ""),
@@ -4811,7 +4897,7 @@ class Runtime:
                 base_head=str(identity.get("base_head") or ""),
                 worktree_fp=str(identity.get("worktree_fp") or ""),
                 contract_fp=contract_fp,
-                metadata={"workflow": str(args.get("workflow", "custom")), "phase": str(args.get("phase", "prepare")), "branch": identity.get("branch")},
+                metadata=run_metadata,
             )
 
         self._project_orchestration(current_ctx, event="orchestration_context_ready")
@@ -4858,7 +4944,8 @@ class Runtime:
         files = len(args.get("files", []) if isinstance(args.get("files"), list) else [])
         directories = len(args.get("directories", []) if isinstance(args.get("directories"), list) else [])
         commands = len(args.get("commands", []) if isinstance(args.get("commands"), list) else [])
-        candidate = 1 if str(args.get("execution_route", "auto")) not in {"deterministic"} and not patches else 0
+        requested_route = str(args.get("execution_route", "auto")).strip().lower() or "auto"
+        candidate = 1 if requested_route in AGENT_EXECUTION_ROUTES and not patches else 0
         planned_auto_steps = 2 + patches + files + directories + commands + candidate
         if str(args.get("test_command", "")).strip():
             planned_auto_steps += 1
@@ -4983,9 +5070,14 @@ class Runtime:
         try:
             result = self._agent_workflow_impl(normalized)
         except Exception as exc:
-            known_terminal = isinstance(exc, ToolFailure) and exc.code in {
+            preflight_known_terminal = bool(
+                isinstance(exc, ToolFailure)
+                and isinstance(exc.details, dict)
+                and exc.details.get("workflow_patch_preflight") is True
+            )
+            known_terminal = preflight_known_terminal or (isinstance(exc, ToolFailure) and exc.code in {
                 "WORKFLOW_BUDGET_EXCEEDED", "WORKFLOW_CREDIT_BUDGET_EXCEEDED", "INVALID_ARGUMENT", "MODE_ROUTE_MISMATCH"
-            }
+            })
             self.orchestration_ledger.finish_idempotency(
                 idempotency_key,
                 request_hash=request_hash,
@@ -4994,6 +5086,7 @@ class Runtime:
                     "error_code": getattr(exc, "code", type(exc).__name__),
                     "category": getattr(exc, "category", "runtime"),
                     "outcome_unknown": not known_terminal,
+                    "workflow_patch_preflight": preflight_known_terminal,
                 },
             )
             raise
@@ -5028,6 +5121,28 @@ class Runtime:
             raise ToolFailure("INVALID_ARGUMENT", f"Unknown workflow: {workflow}", category="validation")
         if phase not in {"prepare", "execute", "run", "resume"}:
             raise ToolFailure("INVALID_ARGUMENT", f"Unknown workflow phase: {phase}", category="validation")
+
+        continuation = str(args.get("continuation", "") or "").strip()
+        if continuation:
+            if phase != "resume":
+                raise ToolFailure(
+                    "INVALID_ARGUMENT",
+                    "agent_workflow continuation is only valid with phase=resume.",
+                    category="validation",
+                )
+            page = self.git_diff({"continuation": continuation})
+            return {
+                "workflow": workflow,
+                "phase": "resume",
+                "continuation_kind": DIFF_CONTINUATION_OPERATION,
+                "git_diff": page,
+                "task": self.task_state.get(),
+                "recommended_next_action": (
+                    "Continue with the returned continuation while truncated=true; do not repeat the original broad diff read."
+                    if page.get("truncated")
+                    else "The source-fenced diff continuation is complete."
+                ),
+            }
 
         objective = str(args.get("objective", "")).strip() or str(self.task_state.get().get("objective", "")).strip()
         if workflow == "resume" or phase == "resume":
@@ -5093,6 +5208,13 @@ class Runtime:
             return {"workflow": workflow, "phase": phase, "result": result, "task": self.task_state.get()}
 
         objective = objective or f"Complete {workflow} workflow"
+        directories, explicit_patches = self._agent_patch_inputs(args)
+        if phase in {"execute", "run"} and explicit_patches:
+            try:
+                self._preflight_patch_sequence(explicit_patches)
+            except ToolFailure as exc:
+                exc.details = {**exc.details, "workflow_patch_preflight": True}
+                raise
         ctx, initial_identity = self._agent_orchestration_context(args, objective=objective)
         requested_mode = str(args.get("execution_mode", "auto")).strip().lower() or "auto"
         requested_execution_route = str(args.get("execution_route", "auto")).strip().lower() or "auto"
@@ -5168,13 +5290,7 @@ class Runtime:
                 "recommended_next_action": "Reason once over this bundle, then call agent_workflow phase=execute with the complete change set and verification plan.",
             }
 
-        directories = [str(item).strip() for item in args.get("directories", []) if str(item).strip()]
-        patches = [str(item) for item in args.get("patches", []) if str(item).strip()]
-        if str(args.get("patch", "")).strip():
-            patches.insert(0, str(args["patch"]))
-        new_file_patch = self._new_files_patch(list(args.get("files", [])))
-        if new_file_patch:
-            patches.insert(0, new_file_patch)
+        patches = list(explicit_patches)
         default_verification = {
             "bugfix": "tests", "feature": "tests", "greenfield": "all", "refactor": "tests",
             "test_failure": "tests", "build_release": "all", "diagnose": "none", "custom": "tests",
@@ -6124,13 +6240,18 @@ class Runtime:
                 durable_operations.values(),
                 key=lambda item: str(item.get("updated_at") or item.get("started_at") or ""),
             )
+            unresolved_stale_runs = self.orchestration_ledger.stale_run_candidates(
+                stale_after_seconds=self.stale_run_seconds
+            )
             return {
                 "state": self.task_state.get(),
                 "operations": operations[-8:],
                 "recovery": {
                     "orphaned_background_operations": self.orphaned_background_operations,
                     "orphaned_idempotency_records": self.orphaned_idempotency_records,
-                    "stale_orchestration_runs": self.stale_orchestration_runs,
+                    "stale_orchestration_runs": unresolved_stale_runs,
+                    "unresolved_stale_orchestration_runs": unresolved_stale_runs,
+                    "reconciled_stale_orchestration_runs": list(self.reconciled_stale_orchestration_runs),
                     "task_orchestration_projection_reconciled": bool(self.reconciled_task_orchestration),
                     "agent_lanes_waiting_after_restart": self.recovered_agent_lanes,
                 },
@@ -6779,6 +6900,27 @@ class Runtime:
             }
         return {}
 
+    @staticmethod
+    def _measured_result_tail(payload: dict[str, Any]) -> dict[str, Any]:
+        """Extract content-free large-result paging measurements."""
+        candidates: list[Any] = [payload]
+        execution = payload.get("execution")
+        if isinstance(execution, dict):
+            candidates.append(execution)
+        error = payload.get("error")
+        if isinstance(error, dict) and isinstance(error.get("details"), dict):
+            candidates.append(error["details"])
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            direct = candidate.get("result_tail")
+            if isinstance(direct, dict):
+                return dict(direct)
+            diff = candidate.get("git_diff")
+            if isinstance(diff, dict) and isinstance(diff.get("result_tail"), dict):
+                return dict(diff["result_tail"])
+        return {}
+
     def emit_tool_trace(
         self,
         name: str,
@@ -6849,6 +6991,7 @@ class Runtime:
                 orchestration=trace_orchestration,
                 phase_timing=self._measured_phase_timing(payload),
                 localization=self._measured_localization(payload),
+                result_tail=self._measured_result_tail(payload),
             )
         except Exception:
             pass
@@ -7852,6 +7995,9 @@ class Runtime:
         resolved = self.resolve_existing(str(args.get("path", ".")))
         if not resolved.path.is_dir():
             raise ToolFailure("NOT_A_DIRECTORY", "Build verification path must be a directory.", category="validation")
+        command_root = self.resolve_existing(str(args.get("workdir", args.get("path", "."))))
+        if not command_root.path.is_dir():
+            raise ToolFailure("NOT_A_DIRECTORY", "Build verification workdir must be a directory.", category="validation")
 
         def runner(command: str, workdir: Path, timeout_seconds: int) -> dict[str, Any]:
             relative = workdir.relative_to(self.workspace.root).as_posix() or "."
@@ -7881,7 +8027,7 @@ class Runtime:
             }
             return result
 
-        report = run_build_verification(resolved.path, args, runner)
+        report = run_build_verification(resolved.path, args, runner, command_root=command_root.path)
         projection = self.task_state.get().get("orchestration", {})
         owner_run = str(projection.get("run_id") or "") if isinstance(projection, dict) else ""
         owner_wave = str(projection.get("wave_id") or "") if isinstance(projection, dict) else ""
@@ -8624,15 +8770,185 @@ class Runtime:
             "truncated": len(entries) >= max_entries and len(lines) > max_entries + 1,
         }
 
+    @staticmethod
+    def _diff_fingerprint(value: dict[str, Any]) -> str:
+        encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _encode_diff_continuation(self, payload: dict[str, Any]) -> str:
+        raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        signature = hmac.new(PROCESS_DIFF_CONTINUATION_SECRET, raw, hashlib.sha256).digest()
+        body = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+        proof = base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=")
+        return f"{body}.{proof}"
+
+    def _decode_diff_continuation(self, token: str) -> dict[str, Any]:
+        if not token or len(token) > DIFF_CONTINUATION_TOKEN_MAX_CHARS or token.count(".") != 1:
+            raise ToolFailure("INVALID_CONTINUATION", "Invalid diff continuation token.", category="validation")
+        body, proof = token.split(".", 1)
+        try:
+            raw = base64.urlsafe_b64decode(body + "=" * (-len(body) % 4))
+            signature = base64.urlsafe_b64decode(proof + "=" * (-len(proof) % 4))
+            canonical_body = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+            canonical_proof = base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=")
+            if body != canonical_body or proof != canonical_proof:
+                raise ValueError("non-canonical base64url encoding")
+            expected = hmac.new(PROCESS_DIFF_CONTINUATION_SECRET, raw, hashlib.sha256).digest()
+            if not hmac.compare_digest(signature, expected):
+                raise ValueError("signature mismatch")
+            payload = json.loads(raw.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ToolFailure("INVALID_CONTINUATION", "Invalid diff continuation token.", category="validation") from exc
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema_version") != DIFF_CONTINUATION_SCHEMA_VERSION
+            or payload.get("operation_kind") != DIFF_CONTINUATION_OPERATION
+            or not isinstance(payload.get("options"), dict)
+            or isinstance(payload.get("position"), bool)
+        ):
+            raise ToolFailure("INVALID_CONTINUATION", "Unsupported diff continuation token.", category="validation")
+        try:
+            position = int(payload.get("position", -1))
+        except (TypeError, ValueError) as exc:
+            raise ToolFailure("INVALID_CONTINUATION", "Invalid diff continuation position.", category="validation") from exc
+        if position < 0:
+            raise ToolFailure("INVALID_CONTINUATION", "Invalid diff continuation position.", category="validation")
+        payload["position"] = position
+        return payload
+
+    def _mark_diff_continuation_read(self, token: str) -> bool:
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        with PROCESS_DIFF_CONTINUATION_READS_LOCK:
+            reread = token_hash in PROCESS_DIFF_CONTINUATION_READS
+            if not reread:
+                if len(PROCESS_DIFF_CONTINUATION_READS) >= DIFF_CONTINUATION_READ_TRACK_LIMIT:
+                    PROCESS_DIFF_CONTINUATION_READS.pop()
+                PROCESS_DIFF_CONTINUATION_READS.add(token_hash)
+        return reread
+
+    def _diff_identity(
+        self,
+        combined: bytes,
+        *,
+        path_filters: list[str],
+        staged: bool,
+        unstaged: bool,
+        context: int,
+        max_bytes: int,
+    ) -> tuple[str, str, str, dict[str, Any]]:
+        workspace_identity = self._orchestration_workspace_identity(".")
+        raw_sha256 = hashlib.sha256(combined).hexdigest()
+        scope_fingerprint = self._diff_fingerprint({"paths": path_filters})
+        options = {
+            "paths": path_filters,
+            "staged": bool(staged),
+            "unstaged": bool(unstaged),
+            "context_lines": int(context),
+            "max_bytes": max(1, int(max_bytes)),
+            "max_lines": DEFAULT_MAX_LINES,
+        }
+        options_fingerprint = self._diff_fingerprint(options)
+        source_fingerprint = self._diff_fingerprint({
+            "base_head": workspace_identity.get("base_head"),
+            "worktree_fp": workspace_identity.get("worktree_fp"),
+            "diff_sha256": raw_sha256,
+        })
+        return source_fingerprint, scope_fingerprint, options_fingerprint, options
+
+    def _diff_page(
+        self,
+        combined: bytes,
+        *,
+        source_fingerprint: str,
+        scope_fingerprint: str,
+        options_fingerprint: str,
+        options: dict[str, Any],
+        position: int = 0,
+        continuation_read: bool = False,
+        continuation_reread: bool = False,
+    ) -> dict[str, Any]:
+        rendered = combined.decode("utf-8", errors="replace")
+        rendered_bytes = rendered.encode("utf-8")
+        if position > len(rendered_bytes):
+            raise ToolFailure("STALE_CONTINUATION", "Diff continuation position no longer matches the source.", category="runtime")
+        remaining = rendered_bytes[position:].decode("utf-8")
+        truncation = truncate_text_head(remaining, max_lines=int(options["max_lines"]), max_bytes=int(options["max_bytes"]))
+        next_position = position + truncation.output_bytes
+        truncated = next_position < len(rendered_bytes)
+        if truncated and next_position <= position:
+            raise ToolFailure("CONTINUATION_PAGE_EMPTY", "Diff page limit could not make forward progress.", category="runtime")
+        continuation = None
+        if truncated:
+            continuation = self._encode_diff_continuation({
+                "schema_version": DIFF_CONTINUATION_SCHEMA_VERSION,
+                "operation_kind": DIFF_CONTINUATION_OPERATION,
+                "source_fingerprint": source_fingerprint,
+                "scope_fingerprint": scope_fingerprint,
+                "options_fingerprint": options_fingerprint,
+                "options": options,
+                "position": next_position,
+            })
+        diff_text = truncation.content
+        return {
+            "diff": diff_text,
+            "files": parse_diff_files(diff_text),
+            **truncation_fields(truncation),
+            "truncated": truncated,
+            "continuation": continuation,
+            "source_fingerprint": source_fingerprint,
+            "scope_fingerprint": scope_fingerprint,
+            "options_fingerprint": options_fingerprint,
+            "page": {
+                "schema_version": DIFF_CONTINUATION_SCHEMA_VERSION,
+                "start_byte": position,
+                "next_byte": next_position,
+                "total_bytes": len(rendered_bytes),
+                "max_bytes": int(options["max_bytes"]),
+                "max_lines": int(options["max_lines"]),
+            },
+            "result_tail": {
+                "source_total_bytes": len(rendered_bytes),
+                "page_output_bytes": truncation.output_bytes,
+                "remaining_bytes": max(0, len(rendered_bytes) - next_position),
+                "truncated": truncated,
+                "continuation_offered": bool(continuation),
+                "continuation_read": continuation_read,
+                "continuation_reread": continuation_reread,
+                "continuation_stale": False,
+            },
+            "warnings": ["diff truncated"] if truncated else [],
+        }
+
     def git_diff(self, args: dict[str, Any]) -> dict[str, Any]:
         git = require_git()
         git_env = self._git_env()
-        staged = bool(args.get("staged", False))
-        unstaged = bool(args.get("unstaged", True))
-        context = int(args.get("context_lines", 3))
-        max_bytes = int(args.get("max_bytes", 262144))
-        path_filters = self._git_path_filters(args)
+        continuation_token = str(args.get("continuation", "") or "").strip()
+        if continuation_token:
+            payload = self._decode_diff_continuation(continuation_token)
+            options = payload["options"]
+            expected_paths = [str(item) for item in options.get("paths", [])]
+            if "path" in args or "paths" in args:
+                if self._git_path_filters(args) != expected_paths:
+                    raise ToolFailure("CONTINUATION_SCOPE_MISMATCH", "Diff continuation scope cannot be changed between pages.", category="validation")
+            for key in ("staged", "unstaged", "context_lines", "max_bytes"):
+                if key in args:
+                    requested = int(args[key]) if key in {"context_lines", "max_bytes"} else bool(args[key])
+                    if requested != options.get(key):
+                        raise ToolFailure("CONTINUATION_OPTIONS_MISMATCH", "Diff continuation options cannot be changed between pages.", category="validation")
+            staged = bool(options.get("staged", False))
+            unstaged = bool(options.get("unstaged", True))
+            context = int(options.get("context_lines", 3))
+            max_bytes = max(1, int(options.get("max_bytes", 262144)))
+            path_filters = expected_paths
+        else:
+            staged = bool(args.get("staged", False))
+            unstaged = bool(args.get("unstaged", True))
+            context = int(args.get("context_lines", 3))
+            max_bytes = max(1, int(args.get("max_bytes", 262144)))
+            path_filters = self._git_path_filters(args)
         if not self._is_git_repo(self.workspace.root, env=git_env):
+            if continuation_token:
+                raise ToolFailure("INVALID_CONTINUATION", "Diff continuation requires a Git workspace.", category="runtime")
             return self._fallback_diff(path_filters, max_bytes)
         chunks: list[bytes] = []
         if unstaged:
@@ -8644,15 +8960,41 @@ class Runtime:
             if combined and chunk and not combined.endswith(b"\n"):
                 combined += b"\n"
             combined += chunk
-        diff_truncation = truncate_text_head(combined.decode("utf-8", errors="replace"), max_lines=DEFAULT_MAX_LINES, max_bytes=max_bytes)
-        diff_text = diff_truncation.content
-        truncated = diff_truncation.truncated
-        return {
-            "diff": diff_text,
-            "files": parse_diff_files(diff_text),
-            **truncation_fields(diff_truncation),
-            "warnings": ["diff truncated"] if truncated else [],
-        }
+        source_fingerprint, scope_fingerprint, options_fingerprint, normalized_options = self._diff_identity(
+            combined,
+            path_filters=path_filters,
+            staged=staged,
+            unstaged=unstaged,
+            context=context,
+            max_bytes=max_bytes,
+        )
+        if continuation_token:
+            if (
+                payload.get("source_fingerprint") != source_fingerprint
+                or payload.get("scope_fingerprint") != scope_fingerprint
+                or payload.get("options_fingerprint") != options_fingerprint
+            ):
+                raise ToolFailure(
+                    "STALE_CONTINUATION",
+                    "Diff source changed after the continuation was issued; restart from the first page.",
+                    category="runtime",
+                    details={"result_tail": {"continuation_stale": True}},
+                )
+            reread = self._mark_diff_continuation_read(continuation_token)
+            position = int(payload["position"])
+        else:
+            reread = False
+            position = 0
+        return self._diff_page(
+            combined,
+            source_fingerprint=source_fingerprint,
+            scope_fingerprint=scope_fingerprint,
+            options_fingerprint=options_fingerprint,
+            options=normalized_options,
+            position=position,
+            continuation_read=bool(continuation_token),
+            continuation_reread=reread,
+        )
 
     def _run_git_diff(
         self, git: str, context: int, path_filters: list[str], *, cached: bool, env: dict[str, str] | None = None
@@ -10074,17 +10416,43 @@ def input_schemas() -> dict[str, dict[str, Any]]:
         "agent_workflow": object_schema({
             "workflow": {**string, "enum": ["bugfix", "feature", "greenfield", "refactor", "test_failure", "build_release", "diagnose", "document", "resume", "custom"], "default": "custom", "description": "End-to-end task family. Select the closest intent instead of assembling low-level tools."},
             "phase": {**string, "enum": ["prepare", "execute", "run", "resume"], "default": "prepare", "description": "prepare gathers all context; execute applies a complete plan; run does both when changes are already known; resume restores persisted state and only missing context."},
-            "execution_route": {**string, "enum": ["auto", "deterministic", "mini", "luna", "terra", "sol_xhigh", "sol_max", "sol_ultra"], "default": "auto", "description": "Primary implementation route. auto uses Mini for localized bug/test leaves, Luna for harder bounded leaves, otherwise Sol xhigh. Terra is explicit experimental cross-file routing. Sol max/ultra require allow_high_cost=true and are never selected automatically."},
+            "execution_route": {**string, "enum": ["auto", "deterministic", "mini", "luna", "terra", "sol_xhigh", "sol_max", "sol_ultra"], "default": "auto", "description": "Primary implementation route. During ROI measurement, auto is fail-closed to deterministic so it cannot create model cost without representative paired evidence. Mini/Luna are explicit paired-study routes; Terra/Sol are explicit escalation or experiments. Sol max/ultra additionally require allow_high_cost=true."},
             "allow_high_cost": {**boolean, "default": False, "description": "Explicit acknowledgement required for sol_max or sol_ultra. This never makes those routes automatic."},
             "execution_mode": {**string, "enum": ["auto", "mcp_only", "bounded_candidate", "deep_single_lane", "coordinated_multi_worktree"], "default": "auto", "description": "EOCL execution mode. auto derives the mode from the resolved route. coordinated_multi_worktree is rejected unless runtime coordination readiness is proven."},
             "replan_reason": {**string, "description": "Required when continuing an active orchestration run from REPLAN; creates a new wave instead of silently changing route/authority."},
             "contract_fingerprint": {**string, "maxLength": 512, "description": "Optional settled-contract identity. Non-hash values are deterministically hashed before entering the audit ledger."},
             "idempotency_key": {**string, "maxLength": 128, "description": "Optional durable mutation identity for execute/run. Reusing the same key+request deduplicates across MCP reconnect/restart; conflicting reuse fails closed."},
+            "continuation": {**string, "maxLength": DIFF_CONTINUATION_TOKEN_MAX_CHARS, "description": "Opaque source-fenced continuation returned by a prior large agent_workflow diff. Use only with phase=resume; source/scope/options drift fails closed."},
             "max_auto_steps": {**integer, "minimum": 1, "maximum": 256, "default": 64, "description": "Deterministic admission cap for planned workflow steps; no automatic retry loop is created."},
             "max_tool_hops": {**integer, "minimum": 1, "maximum": 512, "default": 96, "description": "Deterministic admission cap for planned internal tool hops."},
             "max_attempts": {**integer, "minimum": 1, "maximum": 10, "default": 1, "description": "Attempt budget. Current mutation policy remains manual-replan-only; unsafe side effects are never auto-replayed."},
             "max_runtime_seconds": {**integer, "minimum": 1, "maximum": 600, "default": 600, "description": "Upper bound applied to the workflow timeout budget."},
             "max_estimated_credits": {"type": "number", "minimum": 0, "default": 0, "description": "Optional candidate-model estimated-credit ceiling; 0 disables the credit cap. Enforced before mutation when usage economics are available."},
+            "evaluation": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "pair_id": {**string, "maxLength": 128, "description": "Explicit paired-evaluation identity. Use the same value only for runs sharing source, task semantics and oracle."},
+                    "policy": {**string, "enum": ["chatweb_mcp", "mini", "luna"], "description": "Measured execution policy. This tag never grants routing authority."},
+                    "task_class": {**string, "maxLength": 100, "description": "Representative task class used for stratified paired analysis."},
+                    "oracle_id": {**string, "maxLength": 128, "description": "Stable identity of the exact acceptance oracle shared by a pair."},
+                    "provenance": {**string, "enum": ["representative", "benchmark", "synthetic"], "description": "Evidence provenance. Benchmark/synthetic rows are excluded from promotion evidence."},
+                    "controller": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "source": {**string, "enum": ["client_reported", "provider_reported"]},
+                            "started_at": {**string, "description": "Optional controller wall-clock start in ISO-8601. Omit when the client cannot measure it."},
+                            "monetary_cost": {"type": "number", "minimum": 0},
+                            "input_tokens": {**integer, "minimum": 0},
+                            "cached_input_tokens": {**integer, "minimum": 0},
+                            "output_tokens": {**integer, "minimum": 0},
+                            "reasoning_output_tokens": {**integer, "minimum": 0},
+                        },
+                    },
+                },
+                "description": "Optional measurement tags for controlled paired evaluation. Missing controller usage/cost remains unknown rather than zero.",
+            },
             "objective": {**string, "description": "Concrete task objective, for example 'find and fix the login crash' or 'create a React dashboard from zero'."},
             "path": {**string, "default": ".", "description": "Project path relative to the configured workspace."},
             "workdir": {**string, "description": "Command working directory relative to the workspace; defaults to path."},

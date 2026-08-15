@@ -1,4 +1,4 @@
-const PANEL_WIDTH = 340;
+const PANEL_WIDTH = 510;
 const MIN_CHAT_WIDTH = 560;
 
 function panelInset(width, visible, options = {}) {

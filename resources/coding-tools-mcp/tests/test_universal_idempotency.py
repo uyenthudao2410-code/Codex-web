@@ -10,6 +10,133 @@ from coding_tools_mcp.server import Runtime, validate_arguments
 
 
 class UniversalIdempotencyTests(unittest.TestCase):
+    @staticmethod
+    def _accepting_run(runtime: Runtime):
+        state = runtime.task_state.ensure_started("idempotency acceptance fixture")
+        identity = runtime._orchestration_workspace_identity(".")
+        ctx = runtime.orchestration_control.begin(
+            objective="idempotency acceptance fixture",
+            task_id=str(state.get("task_id") or ""),
+            execution_mode="mcp_only",
+            base_head=str(identity.get("base_head") or ""),
+            worktree_fp=str(identity.get("worktree_fp") or ""),
+        )
+        runtime.orchestration_control.mark_ready(ctx)
+        runtime.orchestration_control.select_route(
+            ctx,
+            {"requested": "deterministic", "selected": "deterministic", "reason": "test_fixture"},
+        )
+        runtime.orchestration_control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only")
+        runtime.orchestration_control.begin_proof(ctx)
+        runtime.orchestration_control.mark_accepting(ctx, proof_summary={"proof": "green"})
+        runtime.task_state.set_orchestration_projection(ctx.projection(), event="test_accepting_projection")
+        return ctx
+
+    def test_required_task_control_accept_duplicate_replays_without_second_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+        ):
+            runtime = Runtime(Path(temp))
+            try:
+                ctx = self._accepting_run(runtime)
+                args = {"action": "accept", "run_id": ctx.run_id}
+                first = runtime.call_tool("task_control", dict(args))
+                second = runtime.call_tool("task_control", dict(args))
+                self.assertFalse(first.get("isError"))
+                self.assertTrue(first["structuredContent"]["accepted"])
+                self.assertFalse(second.get("isError"))
+                self.assertTrue(second["structuredContent"]["deduplicated"])
+                self.assertTrue(second["structuredContent"]["durable_idempotency"])
+                self.assertEqual(len(runtime.orchestration_ledger.list_checkpoints(ctx.run_id)), 1)
+                self.assertEqual(runtime.orchestration_control.snapshot(ctx.run_id).state, "CHECKPOINTED")
+            finally:
+                runtime.close()
+
+    def test_required_task_control_reject_duplicate_replays_without_second_failure_event(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+        ):
+            runtime = Runtime(Path(temp))
+            try:
+                ctx = self._accepting_run(runtime)
+                args = {"action": "reject", "run_id": ctx.run_id, "reason": "fixture rejection"}
+                first = runtime.call_tool("task_control", dict(args))
+                second = runtime.call_tool("task_control", dict(args))
+                self.assertFalse(first.get("isError"))
+                self.assertTrue(first["structuredContent"]["rejected"])
+                self.assertFalse(second.get("isError"))
+                self.assertTrue(second["structuredContent"]["deduplicated"])
+                events = runtime.orchestration_ledger.list_events_since(ctx.run_id, after_seq=0, limit=100)["events"]
+                failures = [item for item in events if item.get("event_type") == "failure_observed"]
+                self.assertEqual(len(failures), 1)
+                self.assertEqual(runtime.orchestration_control.snapshot(ctx.run_id).state, "REPLAN")
+            finally:
+                runtime.close()
+
+    def test_required_task_control_conflicting_reuse_fails_before_opposite_action(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+        ):
+            runtime = Runtime(Path(temp))
+            try:
+                ctx = self._accepting_run(runtime)
+                shared_key = "task-control-conflict"
+                accepted = runtime.call_tool(
+                    "task_control",
+                    {"action": "accept", "run_id": ctx.run_id, "idempotency_key": shared_key},
+                )
+                self.assertFalse(accepted.get("isError"))
+                rejected = runtime.call_tool(
+                    "task_control",
+                    {
+                        "action": "reject",
+                        "run_id": ctx.run_id,
+                        "reason": "must not execute",
+                        "idempotency_key": shared_key,
+                    },
+                )
+                self.assertTrue(rejected.get("isError"))
+                self.assertEqual(rejected["structuredContent"]["error"]["code"], "IDEMPOTENCY_CONFLICT")
+                events = runtime.orchestration_ledger.list_events_since(ctx.run_id, after_seq=0, limit=100)["events"]
+                self.assertEqual([item for item in events if item.get("event_type") == "failure_observed"], [])
+                self.assertEqual(len(runtime.orchestration_ledger.list_checkpoints(ctx.run_id)), 1)
+            finally:
+                runtime.close()
+
+    def test_required_task_control_prior_process_unknown_outcome_fails_closed(self) -> None:
+        for action in ("accept", "reject"):
+            with self.subTest(action=action), tempfile.TemporaryDirectory() as temp, patch.dict(
+                "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+            ):
+                root = Path(temp)
+                first = Runtime(root)
+                ctx = self._accepting_run(first)
+                args = {"action": action, "run_id": ctx.run_id, "idempotency_key": f"unknown-{action}"}
+                if action == "reject":
+                    args["reason"] = "unknown prior outcome"
+                request_hash = first._request_hash(args)
+                first.orchestration_ledger.claim_idempotency(
+                    idempotency_key=str(args["idempotency_key"]),
+                    operation="task_control",
+                    request_hash=request_hash,
+                    process_instance_id="prior-mcp-process",
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                )
+                first.close()
+
+                restored = Runtime(root)
+                try:
+                    result = restored.call_tool("task_control", dict(args))
+                    self.assertTrue(result.get("isError"))
+                    self.assertEqual(result["structuredContent"]["error"]["code"], "IDEMPOTENCY_OUTCOME_UNKNOWN")
+                    self.assertEqual(restored.orchestration_control.snapshot(ctx.run_id).state, "ACCEPTING")
+                    self.assertEqual(restored.orchestration_ledger.list_checkpoints(ctx.run_id), [])
+                    events = restored.orchestration_ledger.list_events_since(ctx.run_id, after_seq=0, limit=100)["events"]
+                    self.assertEqual([item for item in events if item.get("event_type") == "failure_observed"], [])
+                finally:
+                    restored.close()
+
     def test_duplicate_delivery_replays_without_second_side_effect(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

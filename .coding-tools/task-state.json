@@ -1,20 +1,7 @@
 {
   "version": 2,
-  "task_id": "a8b953b9e49c43d8881f1865d6e55cf7",
-  "orchestration": {
-    "run_id": "628450bec80c4b5f94876959b67568f9",
-    "wave_id": "f2c45d0ffecb4517b17b4397c4504bdc",
-    "orchestration_state": "PREFLIGHT",
-    "execution_mode": "mcp_only",
-    "route_requested": "",
-    "route_resolved": "",
-    "write_owner": "",
-    "write_lease_id": "",
-    "delegation_id": "",
-    "base_head": "c8633e717312a53083755a220f7845316c73478a",
-    "worktree_fp": "9843b00d49929cca8c38fe346da61b6520ea8819bbfd02805c318fa9c837c483",
-    "contract_fp": ""
-  },
+  "task_id": "9e3c308699a648ecaf77c34eedbe00d5",
+  "orchestration": {},
   "objective": "Run a workspace command",
   "status": "waiting",
   "steps": [],
@@ -26,44 +13,62 @@
   "modified_files": [],
   "failure": null,
   "next_step": "",
-  "created_at": "2026-08-15T00:07:36.208Z",
-  "updated_at": "2026-08-15T00:08:06.502Z",
+  "created_at": "2026-08-15T07:14:12.901Z",
+  "updated_at": "2026-08-15T07:14:30.625Z",
   "events": [
     {
-      "time": "2026-08-15T00:07:36.209Z",
+      "time": "2026-08-15T07:14:12.901Z",
       "event": "task_auto_started",
       "details": {
         "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-15T00:07:36.233Z",
+      "time": "2026-08-15T07:14:12.937Z",
       "event": "command_started",
       "details": {
-        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== ACTIVE NETWORK ==='; Get-NetConnectionProfile | Select-Object InterfaceAlias,NetworkCategory,IPv4Connectivity,IPv6Connectivity | Format-Table -AutoSize; Write-Output '=== REMOTE SHUTDOWN RULE DETAILS ==='; $out=@(); $rs=Get-NetFirewallRule -PolicyStore ActiveStore | Where-Object {$_.DisplayGroup -eq 'Remote Shutdown'}; foreach($r in $rs){$pf=$r|Get-NetFirewallPortFilter; $sf=$",
-        "session_id": "FAjZNNmJbE_fa0t_1WglukKW"
+        "command": "python -c \"import sqlite3; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); print(c.execute('select count(*) from runs').fetchone()[0])\"",
+        "session_id": "vFiGz8e__-i-OPEiNP9ZabgY"
       }
     },
     {
-      "time": "2026-08-15T00:07:45.667Z",
+      "time": "2026-08-15T07:14:13.151Z",
       "event": "command_finished",
       "details": {
-        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== ACTIVE NETWORK ==='; Get-NetConnectionProfile | Select-Object InterfaceAlias,NetworkCategory,IPv4Connectivity,IPv6Connectivity | Format-Table -AutoSize; Write-Output '=== REMOTE SHUTDOWN RULE DETAILS ==='; $out=@(); $rs=Get-NetFirewallRule -PolicyStore ActiveStore | Where-Object {$_.DisplayGroup -eq 'Remote Shutdown'}; foreach($r in $rs){$pf=$r|Get-NetFirewallPortFilter; $sf=$",
+        "command": "python -c \"import sqlite3; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); print(c.execute('select count(*) from runs').fetchone()[0])\"",
         "status": "passed"
       }
     },
     {
-      "time": "2026-08-15T00:07:48.068Z",
-      "event": "orchestration_context_ready",
+      "time": "2026-08-15T07:14:21.420Z",
+      "event": "command_started",
       "details": {
-        "state": "PREFLIGHT"
+        "command": "python -c \"import sqlite3,json; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); c.row_factory=sqlite3.Row; ts=['runs','waves','delegations','events','proofs','checkpoints','agent_lanes','coordination_messages','handoff_capsules','background_operations','idempotency_records']; out={'user_version':c.execute('PRAGMA user_version').fetchone()[0],'integrity':c.execute('PRAGMA integrity_check').fetchone()[0],'counts':{t:c.execute('SELECT COUNT(*) FROM '+t).fetchone()[0] for t in ts},",
+        "session_id": "KUqFqfOLpQCjnM3x6n4r4CuS"
       }
     },
     {
-      "time": "2026-08-15T00:07:49.012Z",
-      "event": "orchestration_prepared",
+      "time": "2026-08-15T07:14:21.772Z",
+      "event": "command_finished",
       "details": {
-        "state": "PREFLIGHT"
+        "command": "python -c \"import sqlite3,json; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); c.row_factory=sqlite3.Row; ts=['runs','waves','delegations','events','proofs','checkpoints','agent_lanes','coordination_messages','handoff_capsules','background_operations','idempotency_records']; out={'user_version':c.execute('PRAGMA user_version').fetchone()[0],'integrity':c.execute('PRAGMA integrity_check').fetchone()[0],'counts':{t:c.execute('SELECT COUNT(*) FROM '+t).fetchone()[0] for t in ts},",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-15T07:14:30.207Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -c \"import sqlite3,json; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); s=lambda q:c.execute(q).fetchone()[0]; out={'pair_tagged_runs':s(\\\"SELECT COUNT(*) FROM runs WHERE json_extract(metadata_json,'$.evaluation.pair_id') IS NOT NULL\\\"),'representative_runs':s(\\\"SELECT COUNT(*) FROM runs WHERE lower(COALESCE(json_extract(metadata_json,'$.evaluation.provenance'),'')) IN ('representative','representative_project_task','organic_representative')\\\"),'controller_started_at':s",
+        "session_id": "SaeSoIJbK8XsaENPKK42VdP-"
+      }
+    },
+    {
+      "time": "2026-08-15T07:14:30.625Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -c \"import sqlite3,json; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); s=lambda q:c.execute(q).fetchone()[0]; out={'pair_tagged_runs':s(\\\"SELECT COUNT(*) FROM runs WHERE json_extract(metadata_json,'$.evaluation.pair_id') IS NOT NULL\\\"),'representative_runs':s(\\\"SELECT COUNT(*) FROM runs WHERE lower(COALESCE(json_extract(metadata_json,'$.evaluation.provenance'),'')) IN ('representative','representative_project_task','organic_representative')\\\"),'controller_started_at':s",
+        "status": "passed"
       }
     }
   ]

@@ -1,0 +1,30 @@
+{
+  "benchmark": "serialized tool-result bytes",
+  "runs": 10,
+  "task_completion": "10/10",
+  "tool_calls_per_run": 9,
+  "serialized_result_bytes": {
+    "total": 66290,
+    "median": 640.0,
+    "mean": 736.6,
+    "min": 347,
+    "max": 1881,
+    "per_run_totals": [
+      6629,
+      6629,
+      6629,
+      6629,
+      6629,
+      6629,
+      6629,
+      6629,
+      6629,
+      6629
+    ]
+  },
+  "elapsed_seconds": {
+    "total": 8.812,
+    "median": 0.882
+  },
+  "note": "Elapsed time is reported for completeness only; smaller results are meaningful only while task completion stays identical."
+}

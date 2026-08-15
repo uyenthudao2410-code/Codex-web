@@ -1,0 +1,43 @@
+baseline_id=baseline-chatweb-mcp-20260815-114314-bkk
+captured_utc=2026-08-15T04:45:45.042246+00:00
+captured_bangkok=2026-08-15T11:45:45.042246+07:00
+note=Captured after post-restart policy probe and before representative baseline tasks. Cumulative counters are diagnostic deltas only; estimated_wait_ms is not model latency.
+
+{
+  "tool_calls": 3203,
+  "errors": 249,
+  "local_execution_ms": 6681615,
+  "estimated_wait_ms": 56993667,
+  "request_bytes": 4653404,
+  "response_bytes": 95301477,
+  "model_visible_bytes": 8932208,
+  "cache_hits": 12,
+  "deduplicated_calls": 0,
+  "proof_cache_hits": 1,
+  "proof_cache_misses": 105,
+  "proof_cache_saved_ms": 999,
+  "idempotency_current_policy_required_calls": 64,
+  "idempotency_current_policy_required_key_calls": 64,
+  "result_tail_samples": 12,
+  "result_truncated_calls": 0,
+  "result_continuation_offered": 0,
+  "result_continuation_reads": 0,
+  "route_resolved_counts": {
+    "deterministic": 961,
+    "mini": 11,
+    "luna": 12,
+    "sol_xhigh": 37,
+    "terra": 8
+  },
+  "execution_mode_counts": {
+    "auto": 38,
+    "bounded_candidate": 25,
+    "deep_single_lane": 90,
+    "mcp_only": 1343
+  },
+  "ledger_run_count_at_pair_snapshot": 265,
+  "tagged_runs_scanned": 0,
+  "mini_valid_pairs": 0,
+  "luna_valid_pairs": 0,
+  "automatic_activation": false
+}

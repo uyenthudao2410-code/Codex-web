@@ -94,9 +94,10 @@ jobs:
   test-windows:
     # Windows release gate: the desktop runtime tests, the crates that must run
     # natively on Windows 11 (CLI, Runner, persistent-shell's fail-closed gate,
-    # and the cross-platform libraries they depend on), the npm distribution
-    # checks, and the full Windows artifact -> npm install smoke. The Server
-    # and its Unix-only runtime stay Linux-only.
+    # process control, agent config, and webcodex-workspace's portable project
+    # identity used by the native semantic bridge), the npm distribution checks,
+    # and the full Windows artifact -> npm install smoke. The Server and its
+    # Unix-only runtime stay Linux-only.
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -138,7 +139,7 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run tests
-        run: cargo test --locked -p webcodex-agent-config -p webcodex-process -p webcodex-persistent-shell -p webcodex-cli -p webcodex-runner
+        run: cargo test --locked -p webcodex-agent-config -p webcodex-process -p webcodex-persistent-shell -p webcodex-workspace -p webcodex-cli -p webcodex-runner
       - name: Test npm installer and release manifest natively
         run: npm --prefix npm/webcodex test
       - name: Windows artifact to npm install smoke
@@ -148,4 +149,11 @@ jobs:
         # --version/--help and the failure-preserves-old-binaries path. Never
         # touches the npm registry.
         shell: pwsh
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/npm_install_windows_smoke.ps1
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/npm_install_windows_smoke.ps1 -RequireExactSource -ProvenanceOut "$env:RUNNER_TEMP\windows-release-provenance.json"
+      - name: Upload Windows exact-source provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-provenance-${{ github.sha }}
+          path: ${{ runner.temp }}/windows-release-provenance.json
+          if-no-files-found: error
+          retention-days: 7

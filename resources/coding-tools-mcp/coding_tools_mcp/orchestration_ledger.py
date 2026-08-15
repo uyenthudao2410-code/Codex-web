@@ -831,7 +831,8 @@ class OrchestrationLedger:
     @staticmethod
     def _route_task_class(run: dict[str, Any] | None) -> str:
         metadata = run.get("metadata") if isinstance(run, dict) and isinstance(run.get("metadata"), dict) else {}
-        return _bounded_text(metadata.get("task_class") or metadata.get("workflow") or "", 100).lower()
+        evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+        return _bounded_text(evaluation.get("task_class") or metadata.get("task_class") or metadata.get("workflow") or "", 100).lower()
 
     @staticmethod
     def _nearest_rank(values: list[int], percentile: int) -> int | None:
@@ -939,8 +940,9 @@ class OrchestrationLedger:
     @staticmethod
     def _promotion_sample_provenance(run: dict[str, Any]) -> str:
         metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
+        evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
         explicit = _bounded_text(
-            metadata.get("promotion_provenance") or metadata.get("evidence_provenance") or "",
+            evaluation.get("provenance") or metadata.get("promotion_provenance") or metadata.get("evidence_provenance") or "",
             80,
         ).strip().lower()
         if explicit in {"representative", "representative_project_task", "organic_representative"}:
@@ -1141,6 +1143,9 @@ class OrchestrationLedger:
                     "cost_measured_event_count": 0,
                     "cost_complete": False,
                     "provider_cost": None,
+                    "attribution_complete": False,
+                    "attributed_provider_cost": None,
+                    "attribution_sources": [],
                     "usage": {},
                     "timing": {
                         "measurement": "unobserved",
@@ -1188,6 +1193,7 @@ class OrchestrationLedger:
             "cache_write_tokens": 0,
         }
         measured_costs: list[float] = []
+        attribution_sources: set[str] = set()
         provider_models: set[str] = set()
         provider_ids: set[str] = set()
         for usage_event in usage_events:
@@ -1197,6 +1203,10 @@ class OrchestrationLedger:
                 if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
                     usage_totals[key] += int(value)
             measurement = usage_event.get("measurement") if isinstance(usage_event.get("measurement"), dict) else {}
+            provenance = usage_event.get("provenance") if isinstance(usage_event.get("provenance"), dict) else {}
+            source = str(provenance.get("source") or "").strip()
+            if source:
+                attribution_sources.add(source)
             cost = usage_event.get("cost") if isinstance(usage_event.get("cost"), dict) else {}
             provider_cost = cost.get("provider_cost")
             if measurement.get("cost") == "measured" and isinstance(provider_cost, (int, float)) and not isinstance(provider_cost, bool) and provider_cost >= 0:
@@ -1208,6 +1218,11 @@ class OrchestrationLedger:
             if model:
                 provider_models.add(model)
         cost_complete = bool(usage_events) and len(measured_costs) == len(usage_events)
+        attribution_complete = bool(usage_events) and all(
+            str((item.get("provenance") or {}).get("source") or "").strip() == "opencode:provider_dispatch"
+            for item in usage_events
+            if isinstance(item, dict)
+        )
 
         provider_timing_values: dict[str, list[int]] = {"queue_ms": [], "provider_ms": [], "total_ms": []}
         for delegation in delegations:
@@ -1283,6 +1298,9 @@ class OrchestrationLedger:
                 "cost_measured_event_count": len(measured_costs),
                 "cost_complete": cost_complete,
                 "provider_cost": round(sum(measured_costs), 12) if cost_complete else None,
+                "attribution_complete": attribution_complete,
+                "attributed_provider_cost": round(sum(measured_costs), 12) if cost_complete and attribution_complete else None,
+                "attribution_sources": sorted(attribution_sources),
                 "usage": usage_totals,
                 "providers": sorted(provider_ids),
                 "models": sorted(provider_models),
@@ -1302,6 +1320,359 @@ class OrchestrationLedger:
                 "measurement": "estimated_rate_card" if estimated_credits else "unobserved",
             },
             "critical_defects": {"status": "unknown", "count": None, "source": "not_recorded"},
+        }
+
+    def accepted_result_evaluation(self, run_id: str) -> dict[str, Any]:
+        """Return one normalized task/run row for accepted-result economics.
+
+        The MCP cannot observe ChatWeb time or token/cost usage before the first MCP
+        call unless a trusted client explicitly reports it in ``metadata.evaluation``.
+        Missing controller telemetry therefore remains ``None`` rather than becoming
+        zero. This projection is content-free and derived from durable ledger facts.
+        """
+        run = self.get_run(run_id)
+        economics = self.accepted_result_economics(run_id)
+        if run is None:
+            return {
+                "schema_version": 1,
+                "run_id": run_id,
+                "status": "missing",
+                "accepted": False,
+                "pairing_eligible": False,
+                "controller": {"measurement": "unobserved_outside_mcp", "pre_mcp_ms": None, "monetary_cost": None, "usage": {}},
+                "total_monetary_cost": {"value": None, "complete": False, "reason": "controller_cost_unobserved"},
+            }
+
+        metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
+        evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+        controller = evaluation.get("controller") if isinstance(evaluation.get("controller"), dict) else {}
+        waves = self.list_waves(run_id)
+        events = self.list_events(run_id)
+        proofs = self.list_proofs(run_id)
+        checkpoints = self.list_checkpoints(run_id)
+        first_wave = waves[0] if waves else {}
+        run_started_at = str(run.get("started_at") or "") or None
+        run_started_ms = self._timestamp_millis(run_started_at)
+
+        def first_event_time(event_types: set[str]) -> str | None:
+            for event in events:
+                if str(event.get("event_type") or "") in event_types:
+                    value = str(event.get("event_time") or "")
+                    if value:
+                        return value
+            return None
+
+        def elapsed_from_start(value: str | None) -> int | None:
+            value_ms = self._timestamp_millis(value)
+            if run_started_ms is None or value_ms is None:
+                return None
+            return max(0, int(value_ms - run_started_ms))
+
+        first_route_at = first_event_time({"route_selected"})
+        first_external_dispatch_at = first_event_time({"delegation_started", "external_delegation_started", "model_dispatch_started"})
+        first_write_at = first_event_time({"write_lease_acquired"})
+        passed_proofs = [item for item in proofs if str(item.get("status") or "") == "passed" and str(item.get("finished_at") or "")]
+        first_green_at = str(passed_proofs[0].get("finished_at") or "") if passed_proofs else None
+        accepted_checkpoints = [item for item in checkpoints if str(item.get("status") or "") == "accepted"]
+        accepted_at = (
+            str(accepted_checkpoints[0].get("created_at") or "")
+            if accepted_checkpoints
+            else (str(run.get("finished_at") or "") if economics.get("accepted") else None)
+        )
+
+        controller_started_at = str(controller.get("started_at") or "") or None
+        controller_started_ms = self._timestamp_millis(controller_started_at)
+        pre_mcp_ms = (
+            max(0, int(run_started_ms - controller_started_ms))
+            if run_started_ms is not None and controller_started_ms is not None and run_started_ms >= controller_started_ms
+            else None
+        )
+        controller_usage: dict[str, int | None] = {}
+        for key in ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens"):
+            value = controller.get(key)
+            controller_usage[key] = int(value) if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+        controller_cost = controller.get("monetary_cost")
+        controller_cost_value = (
+            float(controller_cost)
+            if isinstance(controller_cost, (int, float)) and not isinstance(controller_cost, bool) and controller_cost >= 0
+            else None
+        )
+        controller_observed = bool(controller_started_at or controller_cost_value is not None or any(value is not None for value in controller_usage.values()))
+
+        provider = economics.get("provider_economics") if isinstance(economics.get("provider_economics"), dict) else {}
+        provider_cost = provider.get("provider_cost")
+        provider_usage_count = int(provider.get("usage_event_count") or 0)
+        provider_cost_value = (
+            float(provider_cost)
+            if provider.get("cost_complete") is True
+            and provider.get("attribution_complete") is True
+            and isinstance(provider_cost, (int, float))
+            else None
+        )
+        total_cost_complete = controller_cost_value is not None and (provider_cost_value is not None or provider_usage_count == 0)
+        total_cost_value = None
+        if total_cost_complete:
+            total_cost_value = round(controller_cost_value + (provider_cost_value or 0.0), 12)
+        if controller_cost_value is None:
+            total_cost_reason = "controller_cost_unobserved"
+        elif provider_usage_count and provider.get("attribution_complete") is not True:
+            total_cost_reason = "provider_cost_attribution_incomplete"
+        elif provider_usage_count and provider.get("cost_complete") is not True:
+            total_cost_reason = "provider_cost_measurement_incomplete"
+        else:
+            total_cost_reason = None
+
+        evaluation_identity = {
+            "pair_id": _bounded_text(evaluation.get("pair_id") or "", 128) or None,
+            "policy": _bounded_text(evaluation.get("policy") or "", 64).lower() or None,
+            "task_class": self._route_task_class(run) or None,
+            "oracle_id": _bounded_text(evaluation.get("oracle_id") or "", 128) or None,
+            "provenance": self._promotion_sample_provenance(run),
+        }
+        pairing_eligible = bool(
+            evaluation_identity["pair_id"]
+            and evaluation_identity["policy"]
+            and evaluation_identity["task_class"]
+            and evaluation_identity["oracle_id"]
+            and evaluation_identity["provenance"] == "representative"
+            and str(first_wave.get("base_head") or "")
+        )
+        return {
+            "schema_version": 1,
+            "run_id": run_id,
+            "task_id": str(run.get("task_id") or ""),
+            "status": str(run.get("status") or ""),
+            "accepted": bool(economics.get("accepted")),
+            "first_pass_accepted": bool(economics.get("first_pass_accepted")),
+            "pairing_eligible": pairing_eligible,
+            "evaluation": evaluation_identity,
+            "source": {
+                "base_head": str(first_wave.get("base_head") or "") or None,
+                "worktree_fp": str(first_wave.get("worktree_fp") or "") or None,
+                "contract_fp": str(first_wave.get("contract_fp") or "") or None,
+            },
+            "route": dict(economics.get("route") or {}),
+            "milestones": {
+                "run_started_at": run_started_at,
+                "first_route_at": first_route_at,
+                "first_external_dispatch_at": first_external_dispatch_at,
+                "first_write_at": first_write_at,
+                "first_green_at": first_green_at,
+                "accepted_at": accepted_at,
+                "time_to_first_route_ms": elapsed_from_start(first_route_at),
+                "time_to_first_external_dispatch_ms": elapsed_from_start(first_external_dispatch_at),
+                "time_to_first_write_ms": elapsed_from_start(first_write_at),
+                "time_to_first_green_ms": elapsed_from_start(first_green_at),
+                "time_to_accepted_ms": elapsed_from_start(accepted_at),
+            },
+            "controller": {
+                "measurement": str(controller.get("source") or "client_reported") if controller_observed else "unobserved_outside_mcp",
+                "started_at": controller_started_at,
+                "pre_mcp_ms": pre_mcp_ms,
+                "usage": controller_usage,
+                "monetary_cost": controller_cost_value,
+            },
+            "mcp": {
+                "orchestration_tta_ms": economics.get("tta_ms"),
+                "phase_timing": dict(economics.get("phase_timing") or {}),
+                "proof_duration_ms": sum(max(0, int(item.get("duration_ms") or 0)) for item in proofs),
+                "proof_records": len(proofs),
+                "replan_count": int((economics.get("repair") or {}).get("replan_count") or 0),
+                "failure_event_count": int((economics.get("repair") or {}).get("failure_event_count") or 0),
+            },
+            "external": {
+                "provider_economics": dict(provider),
+                "candidate_economics": dict(economics.get("candidate_economics") or {}),
+            },
+            "quality": {
+                "accepted": bool(economics.get("accepted")),
+                "first_pass_accepted": bool(economics.get("first_pass_accepted")),
+                "critical_defects": dict(economics.get("critical_defects") or {}),
+            },
+            "total_monetary_cost": {
+                "value": total_cost_value,
+                "complete": total_cost_complete,
+                "reason": total_cost_reason,
+            },
+        }
+
+    def paired_policy_evaluation(
+        self,
+        *,
+        baseline_policy: str = "chatweb_mcp",
+        candidate_policies: Iterable[str] = ("mini", "luna"),
+        limit: int = 500,
+        min_pairs: int = 10,
+        min_task_classes: int = 3,
+    ) -> dict[str, Any]:
+        """Compare explicitly paired representative runs without survivor bias."""
+        baseline = _bounded_text(baseline_policy, 64).lower() or "chatweb_mcp"
+        candidates = tuple(dict.fromkeys(_bounded_text(item, 64).lower() for item in candidate_policies if _bounded_text(item, 64)))
+        bounded_limit = max(1, min(int(limit), 500))
+        groups: dict[str, dict[str, list[dict[str, Any]]]] = {}
+        excluded = {"not_pair_tagged": 0, "non_representative": 0, "identity_mismatch": 0, "duplicate_policy_run": 0}
+        policy_names = (baseline, *candidates)
+        placeholders = ",".join("?" for _ in policy_names)
+        with self._lock, self._connect() as connection:
+            ledger_run_count = int(connection.execute("SELECT COUNT(*) FROM runs").fetchone()[0])
+            rows = connection.execute(
+                f"""SELECT * FROM runs
+                    WHERE json_extract(metadata_json, '$.evaluation.pair_id') IS NOT NULL
+                      AND lower(json_extract(metadata_json, '$.evaluation.policy')) IN ({placeholders})
+                    ORDER BY started_at DESC, run_id DESC
+                    LIMIT ?""",
+                (*policy_names, bounded_limit),
+            ).fetchall()
+        tagged_runs = [self._run_row(row) for row in rows]
+        for run in tagged_runs:
+            record = self.accepted_result_evaluation(str(run.get("run_id") or ""))
+            evaluation = record.get("evaluation") if isinstance(record.get("evaluation"), dict) else {}
+            pair_id = str(evaluation.get("pair_id") or "")
+            policy = str(evaluation.get("policy") or "")
+            if not pair_id or policy not in {baseline, *candidates}:
+                excluded["not_pair_tagged"] += 1
+                continue
+            if evaluation.get("provenance") != "representative":
+                excluded["non_representative"] += 1
+                continue
+            groups.setdefault(pair_id, {}).setdefault(policy, []).append(record)
+
+        def metric_percentile(values: list[float], percentile: int) -> float | None:
+            if not values:
+                return None
+            ordered = sorted(values)
+            rank = max(1, min(len(ordered), (len(ordered) * percentile + 99) // 100))
+            return round(float(ordered[rank - 1]), 6)
+
+        results: list[dict[str, Any]] = []
+        for policy in candidates:
+            pair_rows: list[dict[str, Any]] = []
+            for pair_id, policy_rows in groups.items():
+                baselines = policy_rows.get(baseline, [])
+                candidate_rows = policy_rows.get(policy, [])
+                if len(baselines) != 1 or len(candidate_rows) != 1:
+                    if baselines or candidate_rows:
+                        excluded["duplicate_policy_run"] += 1
+                    continue
+                base = baselines[0]
+                candidate = candidate_rows[0]
+                base_eval = base["evaluation"]
+                candidate_eval = candidate["evaluation"]
+                if (
+                    base["source"].get("base_head") != candidate["source"].get("base_head")
+                    or not base_eval.get("oracle_id")
+                    or base_eval.get("oracle_id") != candidate_eval.get("oracle_id")
+                    or base_eval.get("task_class") != candidate_eval.get("task_class")
+                ):
+                    excluded["identity_mismatch"] += 1
+                    continue
+                base_tta = base.get("milestones", {}).get("time_to_accepted_ms")
+                candidate_tta = candidate.get("milestones", {}).get("time_to_accepted_ms")
+                base_credits = (base.get("external", {}).get("candidate_economics") or {}).get("estimated_credits")
+                candidate_credits = (candidate.get("external", {}).get("candidate_economics") or {}).get("estimated_credits")
+                if base_credits is None and str((base.get("route") or {}).get("resolved") or "") in {"deterministic", "mcp_deterministic", "unknown"}:
+                    base_credits = 0.0
+                pair_rows.append({
+                    "pair_id": pair_id,
+                    "task_class": base_eval.get("task_class"),
+                    "baseline_accepted": bool(base.get("accepted")),
+                    "candidate_accepted": bool(candidate.get("accepted")),
+                    "baseline_first_pass": bool(base.get("first_pass_accepted")),
+                    "candidate_first_pass": bool(candidate.get("first_pass_accepted")),
+                    "baseline_tta_ms": base_tta,
+                    "candidate_tta_ms": candidate_tta,
+                    "tta_delta_ms": (
+                        int(candidate_tta) - int(base_tta)
+                        if base.get("accepted") and candidate.get("accepted") and isinstance(base_tta, (int, float)) and isinstance(candidate_tta, (int, float))
+                        else None
+                    ),
+                    "baseline_controller_cost": (base.get("controller") or {}).get("monetary_cost"),
+                    "candidate_controller_cost": (candidate.get("controller") or {}).get("monetary_cost"),
+                    "baseline_candidate_credits": base_credits,
+                    "candidate_candidate_credits": candidate_credits,
+                    "extra_candidate_credits": (
+                        round(float(candidate_credits) - float(base_credits), 6)
+                        if isinstance(candidate_credits, (int, float)) and isinstance(base_credits, (int, float))
+                        else None
+                    ),
+                    "baseline_total_cost": (base.get("total_monetary_cost") or {}).get("value"),
+                    "candidate_total_cost": (candidate.get("total_monetary_cost") or {}).get("value"),
+                })
+
+            task_classes = sorted({str(row["task_class"]) for row in pair_rows if row.get("task_class")})
+            accepted_pairs = [row for row in pair_rows if row["baseline_accepted"] and row["candidate_accepted"]]
+            tta_deltas = [float(row["tta_delta_ms"]) for row in accepted_pairs if isinstance(row.get("tta_delta_ms"), (int, float))]
+            baseline_ttas = [float(row["baseline_tta_ms"]) for row in accepted_pairs if isinstance(row.get("baseline_tta_ms"), (int, float))]
+            candidate_ttas = [float(row["candidate_tta_ms"]) for row in accepted_pairs if isinstance(row.get("candidate_tta_ms"), (int, float))]
+            extra_credits = [float(row["extra_candidate_credits"]) for row in pair_rows if isinstance(row.get("extra_candidate_credits"), (int, float))]
+            total_cost_pairs = [row for row in accepted_pairs if isinstance(row.get("baseline_total_cost"), (int, float)) and isinstance(row.get("candidate_total_cost"), (int, float))]
+            reasons: list[str] = []
+            if len(pair_rows) < max(1, int(min_pairs)):
+                reasons.append("insufficient_paired_results")
+            if len(task_classes) < max(1, int(min_task_classes)):
+                reasons.append("insufficient_task_class_diversity")
+            if any(not row["baseline_accepted"] or not row["candidate_accepted"] for row in pair_rows):
+                reasons.append("quality_floor_non_regression_not_proven")
+            if len(total_cost_pairs) < len(accepted_pairs):
+                reasons.append("controller_cost_unobserved")
+            if len(accepted_pairs) != len(pair_rows):
+                reasons.append("accepted_result_tta_incomplete")
+            if not pair_rows:
+                pareto_status = "indeterminate_no_pairs"
+            elif len(total_cost_pairs) < len(accepted_pairs):
+                pareto_status = "indeterminate_total_cost"
+            else:
+                pareto_status = "manual_review_required"
+            results.append({
+                "candidate_policy": policy,
+                "status": "eligible_for_manual_roi_review" if not reasons else "hold",
+                "hold_reasons": list(dict.fromkeys(reasons)),
+                "pair_count": len(pair_rows),
+                "accepted_pair_count": len(accepted_pairs),
+                "candidate_acceptance_rate": round(sum(1 for row in pair_rows if row["candidate_accepted"]) / len(pair_rows), 6) if pair_rows else None,
+                "candidate_first_pass_rate": round(sum(1 for row in pair_rows if row["candidate_first_pass"]) / len(pair_rows), 6) if pair_rows else None,
+                "task_classes": task_classes,
+                "task_class_count": len(task_classes),
+                "tta_ms": {
+                    "baseline_p50": metric_percentile(baseline_ttas, 50),
+                    "baseline_p90": metric_percentile(baseline_ttas, 90),
+                    "candidate_p50": metric_percentile(candidate_ttas, 50),
+                    "candidate_p90": metric_percentile(candidate_ttas, 90),
+                    "delta_p50": metric_percentile(tta_deltas, 50),
+                    "delta_p90": metric_percentile(tta_deltas, 90),
+                },
+                "candidate_extra_credits": {
+                    "samples": len(extra_credits),
+                    "p50": metric_percentile(extra_credits, 50),
+                    "p90": metric_percentile(extra_credits, 90),
+                },
+                "total_monetary_cost": {
+                    "comparable_pairs": len(total_cost_pairs),
+                    "complete": bool(pair_rows) and len(total_cost_pairs) == len(accepted_pairs) == len(pair_rows),
+                    "reason": None if bool(pair_rows) and len(total_cost_pairs) == len(accepted_pairs) == len(pair_rows) else "controller_cost_unobserved",
+                },
+                "pareto_status": pareto_status,
+                "automatic_activation": False,
+                "pairs": pair_rows[:100],
+            })
+        return {
+            "schema_version": 1,
+            "north_star": "quality_floor_then_cost_and_time_to_accepted_result",
+            "baseline_policy": baseline,
+            "candidate_policies": list(candidates),
+            "ledger_run_count": ledger_run_count,
+            "tagged_runs_scanned": len(tagged_runs),
+            "thresholds": {
+                "min_pairs": max(1, int(min_pairs)),
+                "min_task_classes": max(1, int(min_task_classes)),
+                "savings_threshold": "learn_from_representative_paired_data",
+            },
+            "excluded": excluded,
+            "results": results,
+            "automatic_activation": False,
+            "controller_cost_policy": "unknown_is_not_zero",
+            "model_free": True,
+            "content_free": True,
         }
 
     def list_events_since(
@@ -2720,6 +3091,150 @@ class OrchestrationLedger:
             rows = connection.execute(query, params).fetchall()
         return [self._run_row(row) for row in rows]
 
+    def organic_rework_summary(
+        self,
+        *,
+        since: str = "",
+        until: str = "",
+        limit: int = 500,
+    ) -> dict[str, Any]:
+        """Summarize organic ChatWeb+MCP accepted-result rework without synthetic load."""
+        bounded_limit = max(1, min(int(limit), 5000))
+        since_value = _bounded_text(since, 64).strip()
+        until_value = _bounded_text(until, 64).strip()
+        clauses = [
+            "status='accepted'",
+            "(json_extract(metadata_json, '$.evaluation.provenance') IS NULL OR lower(json_extract(metadata_json, '$.evaluation.provenance'))='representative')",
+            "(json_extract(metadata_json, '$.evaluation.policy') IS NULL OR lower(json_extract(metadata_json, '$.evaluation.policy'))='chatweb_mcp')",
+        ]
+        params: list[Any] = []
+        if since_value:
+            clauses.append("started_at>=?")
+            params.append(since_value)
+        if until_value:
+            clauses.append("started_at<=?")
+            params.append(until_value)
+        query = f"SELECT * FROM runs WHERE {' AND '.join(clauses)} ORDER BY started_at, run_id LIMIT ?"
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(query, [*params, bounded_limit + 1]).fetchall()
+        truncated = len(rows) > bounded_limit
+        selected = rows[:bounded_limit]
+
+        first_pass_tta: list[int] = []
+        repaired_tta: list[int] = []
+        first_pass = 0
+        repaired = 0
+        total_replans = 0
+        included = 0
+        explicit_model_route = 0
+        for row in selected:
+            run_id = str(row["run_id"])
+            actual_routes = {
+                str(delegation.get("route_resolved") or "").strip().lower()
+                for wave in self.list_waves(run_id)
+                for delegation in self.list_delegations(str(wave["wave_id"]))
+                if str(delegation.get("route_resolved") or "").strip()
+            }
+            if any(route not in {"unknown", "deterministic", "mcp_deterministic"} for route in actual_routes):
+                explicit_model_route += 1
+                continue
+            economics = self.accepted_result_economics(run_id)
+            route = str((economics.get("route") or {}).get("resolved") or "unknown").strip().lower()
+            if route not in {"", "unknown", "deterministic", "mcp_deterministic"}:
+                explicit_model_route += 1
+                continue
+            included += 1
+            replan_count = int((economics.get("repair") or {}).get("replan_count") or 0)
+            total_replans += replan_count
+            tta = economics.get("tta_ms")
+            if replan_count:
+                repaired += 1
+                if isinstance(tta, int) and not isinstance(tta, bool) and tta >= 0:
+                    repaired_tta.append(tta)
+            else:
+                first_pass += 1
+                if isinstance(tta, int) and not isinstance(tta, bool) and tta >= 0:
+                    first_pass_tta.append(tta)
+
+        preflight_clauses = [
+            "operation='agent_workflow'",
+            "status='failed'",
+            "json_extract(summary_json, '$.workflow_patch_preflight')=1",
+        ]
+        preflight_params: list[Any] = []
+        if since_value:
+            preflight_clauses.append("started_at>=?")
+            preflight_params.append(since_value)
+        if until_value:
+            preflight_clauses.append("started_at<=?")
+            preflight_params.append(until_value)
+        with self._lock, self._connect() as connection:
+            preflight_rows = connection.execute(
+                f"""SELECT COALESCE(json_extract(summary_json, '$.error_code'), 'unknown') AS error_code,
+                            COUNT(*) AS count
+                    FROM idempotency_records
+                    WHERE {' AND '.join(preflight_clauses)}
+                    GROUP BY error_code
+                    ORDER BY count DESC, error_code""",
+                preflight_params,
+            ).fetchall()
+        preflight_errors = {str(row["error_code"]): int(row["count"]) for row in preflight_rows}
+
+        def percentile(values: list[int], percentile_value: int) -> int | None:
+            if not values:
+                return None
+            ordered = sorted(values)
+            rank = max(1, min(len(ordered), (len(ordered) * percentile_value + 99) // 100))
+            return int(ordered[rank - 1])
+
+        first_p50 = percentile(first_pass_tta, 50)
+        first_p90 = percentile(first_pass_tta, 90)
+        repaired_p50 = percentile(repaired_tta, 50)
+        repaired_p90 = percentile(repaired_tta, 90)
+        return {
+            "schema_version": 1,
+            "baseline_policy": "chatweb_mcp",
+            "window": {
+                "since": since_value or None,
+                "until": until_value or None,
+                "basis": "run_started_at",
+            },
+            "accepted_runs_scanned": len(selected),
+            "accepted_runs": included,
+            "accepted_runs_truncated": truncated,
+            "excluded": {"explicit_model_route": explicit_model_route},
+            "first_pass_accepted": first_pass,
+            "repaired_accepted": repaired,
+            "first_pass_rate": round(first_pass / included, 6) if included else None,
+            "repaired_rate": round(repaired / included, 6) if included else None,
+            "repair": {"replan_count": total_replans},
+            "preflight_avoided": {
+                "count": sum(preflight_errors.values()),
+                "error_codes": preflight_errors,
+                "meaning": "known no-write patch failures stopped before orchestration run creation",
+            },
+            "tta_ms": {
+                "first_pass_p50": first_p50,
+                "first_pass_p90": first_p90,
+                "repaired_p50": repaired_p50,
+                "repaired_p90": repaired_p90,
+                "repaired_to_first_pass_p50_multiplier": (
+                    round(repaired_p50 / first_p50, 6)
+                    if isinstance(repaired_p50, int) and isinstance(first_p50, int) and first_p50 > 0
+                    else None
+                ),
+                "repaired_to_first_pass_p90_multiplier": (
+                    round(repaired_p90 / first_p90, 6)
+                    if isinstance(repaired_p90, int) and isinstance(first_p90, int) and first_p90 > 0
+                    else None
+                ),
+            },
+            "cost_roi_policy": "use only causally attributed complete accepted-result cost; unknown is not zero",
+            "provenance_filter": "exclude benchmark/synthetic and explicit model-routed accepted runs",
+            "model_free": True,
+            "content_free": True,
+        }
+
     @staticmethod
     def _timestamp_millis(value: Any) -> int | None:
         text = str(value or "").strip()
@@ -3116,6 +3631,8 @@ class OrchestrationLedger:
                     "usage_event_count": provider.get("usage_event_count", 0),
                     "cost_complete": bool(provider.get("cost_complete")),
                     "provider_cost": provider.get("provider_cost"),
+                    "attribution_complete": bool(provider.get("attribution_complete")),
+                    "attributed_provider_cost": provider.get("attributed_provider_cost"),
                     "measurement": provider.get("measurement", "unobserved"),
                 },
                 "candidate_economics": {
@@ -3185,24 +3702,105 @@ class OrchestrationLedger:
             return None
         return self.get_run(str(row["run_id"]))
 
-    def reconcile_stale_runs(
+    def _stale_active_run_candidates(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        now_ts: float,
+        cutoff: str,
+    ) -> list[tuple[str, str]]:
+        """Return inactive active runs that currently have no live ownership."""
+        stale: list[tuple[str, str]] = []
+        rows = connection.execute(
+            """SELECT r.run_id, r.started_at,
+                      MAX(e.event_time) AS event_time,
+                      MAX(w.started_at) AS wave_started_at,
+                      MAX(w.finished_at) AS wave_finished_at,
+                      MAX(b.updated_at) AS background_updated_at,
+                      MAX(l.updated_at) AS lane_updated_at,
+                      MAX(h.created_at) AS handoff_created_at
+               FROM runs r
+               LEFT JOIN events e ON e.run_id=r.run_id
+               LEFT JOIN waves w ON w.run_id=r.run_id
+               LEFT JOIN background_operations b ON b.run_id=r.run_id
+               LEFT JOIN agent_lanes l ON l.run_id=r.run_id
+               LEFT JOIN handoff_capsules h ON h.run_id=r.run_id
+               WHERE r.status='active'
+               GROUP BY r.run_id, r.started_at"""
+        ).fetchall()
+        for row in rows:
+            run_id = str(row["run_id"])
+            if connection.execute(
+                "SELECT 1 FROM background_operations WHERE run_id=? AND status='running' LIMIT 1",
+                (run_id,),
+            ).fetchone():
+                continue
+            if connection.execute(
+                "SELECT 1 FROM agent_lanes WHERE run_id=? AND lifecycle IN ('active','waiting','idle') LIMIT 1",
+                (run_id,),
+            ).fetchone():
+                continue
+            if connection.execute(
+                "SELECT 1 FROM write_fences WHERE run_id=? AND status='active' AND expires_at>? LIMIT 1",
+                (run_id, now_ts),
+            ).fetchone():
+                continue
+            if connection.execute(
+                "SELECT 1 FROM controller_leases WHERE run_id=? AND status='active' AND expires_at>? LIMIT 1",
+                (run_id, now_ts),
+            ).fetchone():
+                continue
+            activity = max(
+                str(row[key] or "")
+                for key in (
+                    "started_at", "event_time", "wave_started_at", "wave_finished_at",
+                    "background_updated_at", "lane_updated_at", "handoff_created_at",
+                )
+            )
+            if activity and activity < cutoff:
+                latest_wave = connection.execute(
+                    "SELECT wave_id FROM waves WHERE run_id=? ORDER BY ordinal DESC LIMIT 1",
+                    (run_id,),
+                ).fetchone()
+                stale.append((run_id, str(latest_wave["wave_id"]) if latest_wave else ""))
+        return stale
+
+    def stale_run_candidates(
         self,
         *,
         stale_after_seconds: float = 24 * 60 * 60,
         now: float | None = None,
     ) -> list[str]:
+        """Read-only current health view of stale active runs with no live ownership."""
+        now_ts = time.time() if now is None else float(now)
+        threshold = max(60.0, float(stale_after_seconds))
+        cutoff = datetime.fromtimestamp(now_ts - threshold, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        with self._lock, self._connect() as connection:
+            candidates = self._stale_active_run_candidates(connection, now_ts=now_ts, cutoff=cutoff)
+        return [run_id for run_id, _wave_id in candidates]
+
+    def reconcile_stale_runs(
+        self,
+        *,
+        stale_after_seconds: float = 24 * 60 * 60,
+        now: float | None = None,
+        close_stale_active: bool = True,
+    ) -> list[str]:
         """Close abandoned active runs without touching work that still has live ownership.
 
         This is lifecycle hygiene, not garbage collection: rows and evidence are retained.
         A run is protected while it owns a live background operation, an active/waiting
-        agent lane, or a non-expired write fence. Only inactivity older than the bounded
-        threshold becomes ``stale``.
+        agent lane, or a non-expired write/controller fence. Only inactivity older than
+        the bounded threshold becomes ``stale`` when ``close_stale_active`` is true.
+        Runtime startup uses false so unrelated stale candidates remain read-only health
+        signals until an operator explicitly reconciles them. Terminal-parent wave
+        contradictions are always repaired. The return value is the set of active stale
+        runs closed by this call; use ``stale_run_candidates`` for current health.
         """
 
         now_ts = time.time() if now is None else float(now)
         threshold = max(60.0, float(stale_after_seconds))
         cutoff = datetime.fromtimestamp(now_ts - threshold, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-        stale: list[tuple[str, str]] = []
         terminal_repairs: list[tuple[str, str, str]] = []
         with self._lock, self._connect() as connection:
             terminal_rows = connection.execute(
@@ -3217,58 +3815,11 @@ class OrchestrationLedger:
                 (str(row["run_id"]), str(row["run_status"]), str(row["wave_id"]))
                 for row in terminal_rows
             ]
-            rows = connection.execute(
-                """SELECT r.run_id, r.started_at,
-                          MAX(e.event_time) AS event_time,
-                          MAX(w.started_at) AS wave_started_at,
-                          MAX(w.finished_at) AS wave_finished_at,
-                          MAX(b.updated_at) AS background_updated_at,
-                          MAX(l.updated_at) AS lane_updated_at,
-                          MAX(h.created_at) AS handoff_created_at
-                   FROM runs r
-                   LEFT JOIN events e ON e.run_id=r.run_id
-                   LEFT JOIN waves w ON w.run_id=r.run_id
-                   LEFT JOIN background_operations b ON b.run_id=r.run_id
-                   LEFT JOIN agent_lanes l ON l.run_id=r.run_id
-                   LEFT JOIN handoff_capsules h ON h.run_id=r.run_id
-                   WHERE r.status='active'
-                   GROUP BY r.run_id, r.started_at"""
-            ).fetchall()
-            for row in rows:
-                run_id = str(row["run_id"])
-                if connection.execute(
-                    "SELECT 1 FROM background_operations WHERE run_id=? AND status='running' LIMIT 1",
-                    (run_id,),
-                ).fetchone():
-                    continue
-                if connection.execute(
-                    "SELECT 1 FROM agent_lanes WHERE run_id=? AND lifecycle IN ('active','waiting','idle') LIMIT 1",
-                    (run_id,),
-                ).fetchone():
-                    continue
-                if connection.execute(
-                    "SELECT 1 FROM write_fences WHERE run_id=? AND status='active' AND expires_at>? LIMIT 1",
-                    (run_id, now_ts),
-                ).fetchone():
-                    continue
-                if connection.execute(
-                    "SELECT 1 FROM controller_leases WHERE run_id=? AND status='active' AND expires_at>? LIMIT 1",
-                    (run_id, now_ts),
-                ).fetchone():
-                    continue
-                activity = max(
-                    str(row[key] or "")
-                    for key in (
-                        "started_at", "event_time", "wave_started_at", "wave_finished_at",
-                        "background_updated_at", "lane_updated_at", "handoff_created_at",
-                    )
-                )
-                if activity and activity < cutoff:
-                    latest_wave = connection.execute(
-                        "SELECT wave_id FROM waves WHERE run_id=? ORDER BY ordinal DESC LIMIT 1",
-                        (run_id,),
-                    ).fetchone()
-                    stale.append((run_id, str(latest_wave["wave_id"]) if latest_wave else ""))
+            stale = (
+                self._stale_active_run_candidates(connection, now_ts=now_ts, cutoff=cutoff)
+                if close_stale_active
+                else []
+            )
         terminal_state = {
             "accepted": ("accepted", "CHECKPOINTED"),
             "blocked": ("blocked", "BLOCKED"),

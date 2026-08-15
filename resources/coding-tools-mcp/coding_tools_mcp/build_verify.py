@@ -101,8 +101,15 @@ def collect_artifacts(root: Path, patterns: list[str], algorithm: str, started_n
     return artifacts
 
 
-def verify_build(root: Path, args: dict[str, Any], runner: CommandRunner) -> dict[str, Any]:
+def verify_build(
+    root: Path,
+    args: dict[str, Any],
+    runner: CommandRunner,
+    *,
+    command_root: Path | None = None,
+) -> dict[str, Any]:
     root = root.resolve()
+    command_root = command_root.resolve() if command_root is not None else root
     project = detect_project(root)
     test_command = str(args.get("test_command") or project["test_command"])
     build_command = str(args.get("build_command") or project["build_command"])
@@ -120,7 +127,7 @@ def verify_build(root: Path, args: dict[str, Any], runner: CommandRunner) -> dic
         if not test_command:
             test_result = {"status": "skipped", "command": "", "summary": "No test command was detected."}
         else:
-            test_result = runner(test_command, root, timeout)
+            test_result = runner(test_command, command_root, timeout)
             if test_result.get("status") != "passed":
                 failure = "Tests failed."
     if run_build and not failure:
@@ -128,7 +135,7 @@ def verify_build(root: Path, args: dict[str, Any], runner: CommandRunner) -> dic
             build_result = {"status": "skipped", "command": "", "summary": "No build command was detected."}
             failure = "No build command was detected."
         else:
-            build_result = runner(build_command, root, timeout)
+            build_result = runner(build_command, command_root, timeout)
             if build_result.get("status") != "passed":
                 failure = "Build failed."
     patterns = [str(item) for item in args.get("artifact_paths", [])] or list(project["artifact_paths"])

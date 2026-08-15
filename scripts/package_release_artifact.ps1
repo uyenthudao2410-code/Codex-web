@@ -34,7 +34,8 @@ param(
     [string]$BinDir,
     [string]$OutDir,
     [string]$Version,
-    [switch]$AllowDevelopmentBuild
+    [switch]$AllowDevelopmentBuild,
+    [string]$ProvenanceOut
 )
 
 $ErrorActionPreference = "Stop"
@@ -73,6 +74,7 @@ $BinaryNames = @("webcodex", "webcodex-server", "webcodex-runner")
 $ArchiveName = "webcodex-v$Version-win32-x64.tar.gz"
 $Archive = Join-Path $OutDir $ArchiveName
 $ArchiveTmp = "$Archive.tmp"
+$Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 if ((Test-Path -LiteralPath $Archive) -and -not $AllowDevelopmentBuild) {
     throw "refusing to overwrite existing release artifact $Archive; remove it explicitly after verifying its provenance"
 }
@@ -86,9 +88,27 @@ if (-not (Test-Path -LiteralPath $Tar -PathType Leaf)) {
     throw "tar.exe was not found at $Tar. Windows 11 ships tar.exe in System32; restore it (Windows Features). Git Bash tar is not supported for Windows release artifacts."
 }
 
+$git = Get-Command git -ErrorAction SilentlyContinue
+$HeadCommit = $null
+$HeadTree = $null
+$WorktreeClean = $false
+if ($git) {
+    $headCommitOutput = & $git.Source -C $Root rev-parse HEAD 2>$null
+    if ($LASTEXITCODE -eq 0 -and $headCommitOutput) {
+        $HeadCommit = @($headCommitOutput)[0].Trim().ToLowerInvariant()
+    }
+    $headTreeOutput = & $git.Source -C $Root rev-parse "HEAD^{tree}" 2>$null
+    if ($LASTEXITCODE -eq 0 -and $headTreeOutput) {
+        $HeadTree = @($headTreeOutput)[0].Trim().ToLowerInvariant()
+    }
+    $worktreeStatus = @(& $git.Source -C $Root status --porcelain --untracked-files=all)
+    if ($LASTEXITCODE -eq 0) {
+        $WorktreeClean = $worktreeStatus.Count -eq 0
+    }
+}
+
 $ReleaseTagCommit = $null
 if (-not $AllowDevelopmentBuild) {
-    $git = Get-Command git -ErrorAction SilentlyContinue
     if (-not $git) {
         throw "git is required to verify release artifact provenance against tag v$Version"
     }
@@ -97,19 +117,13 @@ if (-not $AllowDevelopmentBuild) {
         throw "release tag v$Version was not found; create the immutable release tag before packaging, or use -AllowDevelopmentBuild for local smoke only"
     }
     $ReleaseTagCommit = @($tagCommitOutput)[0].Trim()
-    $headCommitOutput = & $git.Source -C $Root rev-parse HEAD 2>$null
-    if ($LASTEXITCODE -ne 0 -or -not $headCommitOutput) {
+    if (-not $HeadCommit) {
         throw "failed to resolve the packaging worktree HEAD while verifying v$Version"
     }
-    $headCommit = @($headCommitOutput)[0].Trim()
-    if (-not $headCommit.Equals($ReleaseTagCommit, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "packaging worktree HEAD $headCommit is not release tag v$Version ($ReleaseTagCommit)"
+    if (-not $HeadCommit.Equals($ReleaseTagCommit, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "packaging worktree HEAD $HeadCommit is not release tag v$Version ($ReleaseTagCommit)"
     }
-    $worktreeStatus = @(& $git.Source -C $Root status --porcelain --untracked-files=all)
-    if ($LASTEXITCODE -ne 0) {
-        throw "failed to inspect packaging worktree cleanliness for v$Version"
-    }
-    if ($worktreeStatus.Count -ne 0) {
+    if (-not $WorktreeClean) {
         throw "packaging worktree is not clean; release artifacts require a clean v$Version checkout"
     }
 }
@@ -156,19 +170,27 @@ try {
     # can opt out explicitly, but a release artifact must identify one clean
     # commit and that commit must be the immutable v<VERSION> tag.
     $identity = @($identities)[0]
+    $commitMatch = [regex]::Match($identity, '\(commit ([0-9A-Fa-f]{12,40})(?:,|\))')
+    $BinaryCommit = if ($commitMatch.Success) { $commitMatch.Groups[1].Value.ToLowerInvariant() } else { $null }
+    $BinaryClean = $identity -match ', dirty=false(?:,|\))'
+    $ExactSource = [bool](
+        $HeadCommit -and $HeadTree -and $WorktreeClean -and $BinaryCommit -and $BinaryClean -and
+        $HeadCommit.StartsWith($BinaryCommit, [System.StringComparison]::OrdinalIgnoreCase)
+    )
     if ($AllowDevelopmentBuild) {
         Write-Warning "development artifact mode: release provenance checks are disabled; do not publish this archive"
     } else {
-        $commitMatch = [regex]::Match($identity, '\(commit ([0-9A-Fa-f]{12,40})(?:,|\))')
         if (-not $commitMatch.Success) {
             throw "release build identity must contain a concrete git commit, got '$identity'. Use -AllowDevelopmentBuild only for local smoke artifacts."
         }
-        if ($identity -notmatch ', dirty=false(?:,|\))') {
+        if (-not $BinaryClean) {
             throw "release build identity must report dirty=false, got '$identity'"
         }
-        $binaryCommit = $commitMatch.Groups[1].Value
-        if (-not $ReleaseTagCommit.StartsWith($binaryCommit, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "release binary commit $binaryCommit does not match tag v$Version ($ReleaseTagCommit)"
+        if (-not $ReleaseTagCommit.StartsWith($BinaryCommit, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "release binary commit $BinaryCommit does not match tag v$Version ($ReleaseTagCommit)"
+        }
+        if (-not $ExactSource) {
+            throw "release artifact did not resolve to one exact clean source identity"
         }
     }
 
@@ -187,6 +209,55 @@ try {
     # final name is only ever created from a fully verified archive.
     $Hash = Get-FileHash -LiteralPath $ArchiveTmp -Algorithm SHA256
     Move-Item -LiteralPath $ArchiveTmp -Destination $Archive
+    if ($ProvenanceOut) {
+        if (-not $HeadCommit -or -not $HeadTree) {
+            throw "cannot write native provenance without full Git commit/tree identity"
+        }
+        $binaryEvidence = [ordered]@{}
+        foreach ($name in $BinaryNames) {
+            $binaryPath = Join-Path $Staging "package\$name.exe"
+            $binaryHash = Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256
+            $binaryInfo = Get-Item -LiteralPath $binaryPath
+            $binaryEvidence["$name.exe"] = [ordered]@{
+                size_bytes = [long]$binaryInfo.Length
+                sha256 = $binaryHash.Hash.ToLowerInvariant()
+            }
+        }
+        $archiveInfo = Get-Item -LiteralPath $Archive
+        $nativeProvenance = [ordered]@{
+            schema_version = 1
+            kind = "webcodex.windows_native_artifact_provenance"
+            generated_at_utc = [DateTime]::UtcNow.ToString("o")
+            source = [ordered]@{
+                git_sha = $HeadCommit
+                git_tree = $HeadTree
+                worktree_clean = [bool]$WorktreeClean
+                exact_source = [bool]$ExactSource
+            }
+            version = $Version
+            platform = "win32-x64"
+            build_identity = $identity
+            binaries = $binaryEvidence
+            archive = [ordered]@{
+                name = $ArchiveName
+                size_bytes = [long]$archiveInfo.Length
+                sha256 = $Hash.Hash.ToLowerInvariant()
+            }
+            release = [ordered]@{
+                mode = if ($AllowDevelopmentBuild) { "development" } else { "release" }
+                publishable = [bool](-not $AllowDevelopmentBuild -and $ExactSource)
+                tag = if ($AllowDevelopmentBuild) { $null } else { "v$Version" }
+            }
+        }
+        $ProvenanceOut = [System.IO.Path]::GetFullPath($ProvenanceOut)
+        $provenanceParent = Split-Path -Parent $ProvenanceOut
+        if ($provenanceParent) {
+            New-Item -ItemType Directory -Force -Path $provenanceParent | Out-Null
+        }
+        $provenanceTmp = "$ProvenanceOut.tmp"
+        [System.IO.File]::WriteAllText($provenanceTmp, ($nativeProvenance | ConvertTo-Json -Depth 8), $Utf8NoBom)
+        Move-Item -LiteralPath $provenanceTmp -Destination $ProvenanceOut -Force
+    }
     Write-Output "$($Hash.Hash.ToLower())  $ArchiveName"
     Write-Output $Archive
 } finally {

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import copy
+import errno
 import json
 import os
 import re
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +21,10 @@ MAX_RESULTS = 20
 MAX_FILES = 500
 MAX_TEXT = 16_000
 STALE_ACTIVE_SECONDS = 90
+WINDOWS_ATOMIC_REPLACE_ATTEMPTS = 5
+WINDOWS_ATOMIC_REPLACE_BASE_DELAY_SECONDS = 0.025
+WINDOWS_ATOMIC_REPLACE_WINERRORS = frozenset({5, 32})
+WINDOWS_ATOMIC_REPLACE_ERRNOS = frozenset({errno.EACCES, errno.EPERM, errno.EBUSY})
 
 TEST_COMMAND_RE = re.compile(
     r"(?:^|\s)(?:pytest|python\s+-m\s+pytest|npm\s+(?:run\s+)?test|pnpm\s+(?:run\s+)?test|"
@@ -71,6 +77,25 @@ def _default_state() -> dict[str, Any]:
         "updated_at": now,
         "events": [],
     }
+
+
+def _replace_atomic(source: Path, target: Path) -> None:
+    """Retry only transient Windows sharing/access failures around atomic replace."""
+    for attempt in range(WINDOWS_ATOMIC_REPLACE_ATTEMPTS):
+        try:
+            os.replace(source, target)
+            return
+        except OSError as exc:
+            retryable = bool(
+                os.name == "nt"
+                and (
+                    getattr(exc, "winerror", None) in WINDOWS_ATOMIC_REPLACE_WINERRORS
+                    or exc.errno in WINDOWS_ATOMIC_REPLACE_ERRNOS
+                )
+            )
+            if not retryable or attempt + 1 >= WINDOWS_ATOMIC_REPLACE_ATTEMPTS:
+                raise
+            time.sleep(WINDOWS_ATOMIC_REPLACE_BASE_DELAY_SECONDS * (attempt + 1))
 
 
 class TaskStateStore:
@@ -324,7 +349,7 @@ class TaskStateStore:
         temp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
         try:
             temp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
-            os.replace(temp, path)
+            _replace_atomic(temp, path)
         finally:
             temp.unlink(missing_ok=True)
 
@@ -455,7 +480,7 @@ class TaskStateStore:
         temp = self.path.with_name(f".{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
         try:
             temp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
-            os.replace(temp, self.path)
+            _replace_atomic(temp, self.path)
         finally:
             try:
                 temp.unlink(missing_ok=True)

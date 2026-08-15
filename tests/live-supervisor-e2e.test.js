@@ -104,7 +104,7 @@ function makeHarness(mcpProcess, mcpPortSetting, tunnelStatus, failureKind) {
     calls.restart += 1;
     if (mcpProcess.exitCode === null && mcpProcess.signalCode === null) {
       mcpProcess.kill();
-      await new Promise((resolve) => mcpProcess.once('exit', resolve));
+      await new Promise((resolve) => mcpProcess.once('close', resolve));
     }
   };
   orchestrator.isManuallyStopped = () => false;

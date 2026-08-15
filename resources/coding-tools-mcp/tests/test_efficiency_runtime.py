@@ -17,6 +17,37 @@ from coding_tools_mcp.tool_contract import CAPABILITY_PROFILES, TOOL_CONTRACT_RU
 
 
 class EfficiencyRuntimeTests(unittest.TestCase):
+    def test_result_tail_telemetry_counts_continuation_rereads_and_stale_events(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = PerformanceTraceStore(Path(temp))
+            tail = {
+                "source_total_bytes": 10_000,
+                "page_output_bytes": 1_000,
+                "remaining_bytes": 9_000,
+                "truncated": True,
+                "continuation_offered": True,
+                "continuation_read": True,
+                "continuation_reread": True,
+                "continuation_stale": False,
+            }
+            state = store.record(
+                tool="agent_workflow", started_monotonic=1.0, finished_monotonic=1.1,
+                result_tail=tail, orchestration={"run_id": "run-tail"},
+            )
+            self.assertEqual(state["result_tail_samples"], 1)
+            self.assertEqual(state["result_tail_source_bytes"], 10_000)
+            self.assertEqual(state["result_tail_page_bytes"], 1_000)
+            self.assertEqual(state["result_tail_remaining_bytes"], 9_000)
+            self.assertEqual(state["result_truncated_calls"], 1)
+            self.assertEqual(state["result_continuation_offered"], 1)
+            self.assertEqual(state["result_continuation_reads"], 1)
+            self.assertEqual(state["result_continuation_rereads"], 1)
+            self.assertEqual(state["result_continuation_stale"], 0)
+            self.assertEqual(state["run_metrics"]["run-tail"]["result_continuation_reads"], 1)
+            self.assertEqual(Runtime._measured_result_tail({"execution": {"git_diff": {"result_tail": tail}}}), tail)
+            stale = Runtime._measured_result_tail({"error": {"details": {"result_tail": {"continuation_stale": True}}}})
+            self.assertTrue(stale["continuation_stale"])
+
     def test_performance_trace_v5_records_model_visible_bytes_run_metrics_and_measured_phase_timing(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             store = PerformanceTraceStore(Path(temp))
@@ -317,7 +348,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "4283e098c315d015c457ce2ab781257491ef70607c6c577f7699969fb8c3f754")
+                self.assertEqual(contract["sha256"], "cf1eab62a466b2fb1c8d80f997ac61ef28255d891f13ad2f245d33015d701e86")
                 metadata = identity["tool_metadata"]
                 self.assertEqual(metadata["schema_version"], 2)
                 self.assertEqual(metadata["risk_vocabulary"], ["read_only", "project_write", "job_run", "account_manage", "unknown"])
@@ -386,10 +417,15 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 lease_id="lease-live",
                 ttl_seconds=10_000,
             )
+            candidates = ledger.stale_run_candidates(stale_after_seconds=3600, now=now + 7200)
+            self.assertIn(stale_run, candidates)
+            self.assertNotIn(protected_run, candidates)
+            self.assertNotIn(controller_run, candidates)
             reconciled = ledger.reconcile_stale_runs(stale_after_seconds=3600, now=now + 7200)
             self.assertIn(stale_run, reconciled)
             self.assertNotIn(protected_run, reconciled)
             self.assertNotIn(controller_run, reconciled)
+            self.assertEqual(ledger.stale_run_candidates(stale_after_seconds=3600, now=now + 7200), [])
             self.assertEqual(ledger.get_run(stale_run)["status"], "stale")
             self.assertEqual(ledger.get_run(protected_run)["status"], "active")
             self.assertEqual(ledger.get_run(controller_run)["status"], "active")
@@ -467,6 +503,47 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertTrue(identity["task_orchestration_projection_reconciled"])
             finally:
                 runtime.close()
+
+    def test_runtime_startup_preserves_stale_candidates_until_explicit_reconcile(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = ledger.create_run(objective="abandoned runtime")
+            ledger.create_wave(run_id, execution_mode="mcp_only")
+            future = time.time() + 7200
+            with (
+                patch.dict("os.environ", {"CODING_TOOLS_MCP_STALE_RUN_SECONDS": "3600"}),
+                patch("coding_tools_mcp.orchestration_ledger.time.time", return_value=future),
+            ):
+                runtime = Runtime(root, permission_mode="safe")
+                try:
+                    identity = runtime.workspace_context({"detail": "full"})["runtime"]
+                    recovery = runtime.task_control({"action": "get"})["recovery"]
+                finally:
+                    runtime.close()
+            self.assertEqual(ledger.get_run(run_id)["status"], "active")
+            self.assertEqual(identity["stale_orchestration_runs"], 1)
+            self.assertEqual(identity["unresolved_stale_orchestration_runs"], 1)
+            self.assertEqual(identity["reconciled_stale_orchestration_runs"], 0)
+            self.assertEqual(recovery["stale_orchestration_runs"], [run_id])
+            self.assertEqual(recovery["unresolved_stale_orchestration_runs"], [run_id])
+            self.assertEqual(recovery["reconciled_stale_orchestration_runs"], [])
+            loaded = identity["loaded_behavior"]
+            self.assertEqual(len(loaded["fingerprint"]), 64)
+            self.assertEqual(
+                set(loaded["components"]),
+                {
+                    "provider_cost_attribution",
+                    "patch_preflight",
+                    "verification_workdir",
+                    "verification_runner",
+                    "stale_reconciliation",
+                    "routing_policy",
+                    "external_review_policy",
+                },
+            )
+            self.assertEqual(ledger.reconcile_stale_runs(stale_after_seconds=3600, now=future), [run_id])
+            self.assertEqual(ledger.get_run(run_id)["status"], "stale")
 
     @unittest.skipUnless(shutil.which("git"), "git is required")
     def test_orchestration_identity_ignores_runtime_state_but_detects_source_drift(self) -> None:

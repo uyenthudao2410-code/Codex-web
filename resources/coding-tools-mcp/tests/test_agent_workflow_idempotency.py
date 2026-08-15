@@ -68,6 +68,54 @@ class AgentWorkflowIdempotencyTests(unittest.TestCase):
             restored._agent_workflow_impl.assert_not_called()
             restored.close()
 
+    def test_patch_preflight_failure_is_known_terminal_without_run_or_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "a.py").write_text("A = 1\n", encoding="utf-8")
+            (root / "b.py").write_text("VALUE = 1\nVALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            args = {
+                "workflow": "bugfix",
+                "phase": "execute",
+                "execution_route": "deterministic",
+                "idempotency_key": "known-preflight-failure",
+                "patches": [
+                    "*** Begin Patch\n*** Update File: a.py\n@@\n-A = 1\n+A = 2\n*** End Patch",
+                    "*** Begin Patch\n*** Update File: b.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                ],
+                "verification": "none",
+            }
+            try:
+                with self.assertRaises(ToolFailure) as caught:
+                    runtime.agent_workflow(args)
+                self.assertEqual(caught.exception.code, "PATCH_CONTEXT_AMBIGUOUS")
+                record = runtime.orchestration_ledger.get_idempotency("known-preflight-failure")
+                self.assertEqual(record["status"], "failed")
+                self.assertFalse(record["summary"]["outcome_unknown"])
+                self.assertTrue(record["summary"]["workflow_patch_preflight"])
+                self.assertEqual(runtime.orchestration_ledger.list_runs(limit=10), [])
+                self.assertEqual((root / "a.py").read_text(encoding="utf-8"), "A = 1\n")
+                self.assertEqual((root / "b.py").read_text(encoding="utf-8"), "VALUE = 1\nVALUE = 1\n")
+
+                malformed = {
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "execution_route": "deterministic",
+                    "idempotency_key": "known-preflight-parse-failure",
+                    "patch": "not a patch envelope",
+                    "verification": "none",
+                }
+                with self.assertRaises(ToolFailure) as malformed_error:
+                    runtime.agent_workflow(malformed)
+                self.assertEqual(malformed_error.exception.code, "PATCH_FAILED")
+                parse_record = runtime.orchestration_ledger.get_idempotency("known-preflight-parse-failure")
+                self.assertEqual(parse_record["status"], "failed")
+                self.assertFalse(parse_record["summary"]["outcome_unknown"])
+                self.assertTrue(parse_record["summary"]["workflow_patch_preflight"])
+                self.assertEqual(runtime.orchestration_ledger.list_runs(limit=10), [])
+            finally:
+                runtime.close()
+
     def test_auto_key_initial_execute_uses_task_epoch_and_new_task_allows_same_payload(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict(
             "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}

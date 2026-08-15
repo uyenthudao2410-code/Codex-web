@@ -31,6 +31,7 @@ let hubProxyGateway;
 let panelView = null;
 let panelVisible = false;
 const TOOLBAR_HEIGHT = 112;
+const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
 const settings = new SettingsStore();
 const secrets = new SecretStore();
 const log = new LogService();
@@ -448,7 +449,13 @@ function registerIpc() {
     const current = settings.load();
     const token = secrets.get('mcpAuthToken');
     if (!token) throw new Error('MCP chưa sẵn sàng để đọc trạng thái điều phối.');
-    return httpRequestJson({ port: current.mcpPort, path: '/__control/orchestration', method: 'GET', token, timeout: 2500 });
+    return httpRequestJson({
+      port: current.mcpPort,
+      path: '/__control/orchestration',
+      method: 'GET',
+      token,
+      timeout: PANEL_ORCHESTRATION_TIMEOUT_MS
+    });
   }));
   secureHandle('panel:task-control', (_event, action) => invokeSafely(() => panelTaskControl(String(action || ''))));
   secureHandle('panel:transfer-controller', (_event, payload) => invokeSafely(async () => {

@@ -210,6 +210,23 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(len(snapshot["usage_events"]), 1)
         self.assertEqual(snapshot["usage_events"][0]["usage_id"], usage["usage_id"])
 
+    def test_uncorrelated_opencode_telemetry_cannot_contaminate_deterministic_wave(self) -> None:
+        control = self.runtime.orchestration_control
+        control.mark_ready(self.ctx)
+        control.select_route(self.ctx, {"requested": "deterministic", "selected": "deterministic", "reason": "measurement_hold"})
+        control.transition(self.ctx, "EXECUTING", reason="deterministic_work")
+        telemetry = {
+            "schema_version": 1, "event_type": "message.updated", "session_id": "ses-unrelated", "message_id": "msg-unrelated",
+            "provider_id": "opencode-go", "model_id": "deepseek-v4-pro", "status": "completed", "started_at_ms": 1000,
+            "completed_at_ms": 1600, "duration_ms": 600, "provider_cost": 0.25, "input_tokens": 100,
+            "output_tokens": 20, "reasoning_output_tokens": 4, "cache_read_tokens": 40, "cache_write_tokens": 0,
+        }
+        status, rejected = self.post_hub({"action": "provider_telemetry", "client_id": "opencode", "client_type": "opencode", "telemetry": telemetry})
+        self.assertEqual(status, 409, rejected)
+        self.assertEqual(rejected["code"], "PROVIDER_TELEMETRY_ATTRIBUTION_UNAVAILABLE")
+        self.assertEqual(self.runtime.orchestration_ledger.list_delegations(self.ctx.wave_id), [])
+        self.assertEqual(self.runtime.orchestration_ledger.list_usage_events(self.ctx.run_id), [])
+
     def test_provider_dispatch_is_supervisor_only_and_telemetry_correlates_to_adapter_delegation(self) -> None:
         class FakeProvider:
             def __init__(self):

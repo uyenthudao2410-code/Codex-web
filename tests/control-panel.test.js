@@ -8,6 +8,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const { panelInset, panelBounds, chatBounds, PANEL_WIDTH, MIN_CHAT_WIDTH } = require('../electron/services/panelLayout');
 
 test('panel layout keeps chat usable and shrinks gracefully on narrow windows', () => {
+  assert.equal(PANEL_WIDTH, 510);
   assert.equal(panelInset(1360, false), 0);
   assert.equal(panelInset(1360, true), PANEL_WIDTH);
   assert.equal(panelInset(900, true), 900 - MIN_CHAT_WIDTH);
@@ -44,6 +45,8 @@ test('main process exposes Execution Control Center IPC through MCP control plan
   assert.match(main, /secureHandle\('panel:transfer-controller'/);
   assert.match(main, /secureHandle\('panel:copy-codex-config'/);
   assert.match(main, /__control\/orchestration/);
+  assert.match(main, /const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;/);
+  assert.match(main, /timeout: PANEL_ORCHESTRATION_TIMEOUT_MS/);
   assert.match(main, /__control\/hub/);
   assert.match(main, /handoff_action: 'record'/);
   assert.match(main, /X-Coding-Tools-Client-Id': 'electron-panel'/);
@@ -70,10 +73,25 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(html, /Capacity &amp; Authority/);
   assert.match(html, /Quick Controls/);
   assert.match(html, /Provider quota \/ billing:[\s\S]*UNKNOWN/);
+  const routingIndex = html.indexOf('id="routerSection"');
+  assert.ok(routingIndex > html.indexOf('Executive Summary'), 'Live Routing phải nằm sau phần tóm tắt đầu trang');
+  assert.ok(routingIndex < html.indexOf('id="continuitySection"'), 'Live Routing phải được đẩy lên trước Alerts & Decisions');
+  assert.ok(routingIndex < html.indexOf('Quick Controls'), 'Live Routing không được nằm gần cuối panel');
   assert.match(html, /id="advancedOperations"/);
   const js = read('renderer/panel.js');
   assert.match(js, /refreshOrchestration/);
   assert.match(js, /setInterval\(refreshOrchestration, 2000\)/);
+  assert.match(js, /let orchestrationInFlight = null;/);
+  assert.match(js, /let orchestrationError = '';/);
+  assert.match(js, /function renderSyncState\(\)/);
+  assert.match(js, /if \(orchestrationError\)/);
+  assert.match(js, /if \(orchestrationInFlight\) return orchestrationInFlight;/);
+  assert.match(js, /orchestrationError = error\?\.message \|\| String\(error\)/);
+  assert.match(js, /finally \{[\s\S]*?orchestrationInFlight = null;/);
+  assert.match(js, /if \(!orchestrationError && lastSyncAt && Date\.now\(\) - lastSyncAt > 8000\)/);
+  const renderHealthBlock = js.slice(js.indexOf('function renderHealth(health)'), js.indexOf('function renderTask(task)'));
+  assert.match(renderHealthBlock, /renderSyncState\(\);/);
+  assert.doesNotMatch(renderHealthBlock, /#syncState/);
   assert.match(js, /recordHandoff/);
   assert.match(js, /renderEvents/);
   assert.match(js, /renderProofs/);

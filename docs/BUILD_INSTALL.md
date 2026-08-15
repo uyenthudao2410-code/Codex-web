@@ -80,6 +80,8 @@ Not supported on Windows: a long-running local WebCodex Server (`webcodex server
 
 Windows x64 is a published client + Runner platform starting with v0.3.3. Each future Windows release artifact is still built natively from the exact immutable tag with `scripts/package_release_artifact.ps1`; the default mode requires a concrete commit, `dirty=false`, a clean tag worktree, and matching binary provenance. `-AllowDevelopmentBuild` remains local/CI smoke only and must never produce an uploaded artifact. Native Windows validation includes `npm --prefix npm/webcodex test` and `scripts/npm_install_windows_smoke.ps1`.
 
+The Windows CI smoke additionally emits `windows-release-provenance.json`. The record distinguishes exact-source evidence from publication authority: a clean CI candidate may prove `exact_source=true`, but it remains `publishable=false` because the smoke intentionally packages with `-AllowDevelopmentBuild`. The sidecar fingerprints the source commit/tree, desktop/Coding Tools MCP/npm versions, packaged binaries and archive, the tracked npm source snapshot, and the exact npm tarball installed by the smoke; `scripts/windows-release-provenance.js` verifies the record and derives its content-bound `proof_id`.
+
 The npm package is a thin wrapper around native release artifacts. During install it downloads the matching GitHub Release artifact and verifies the SHA-256 checksum from the generated release manifest. Release publication is staged on OE after all native archives exist:
 
 ```bash

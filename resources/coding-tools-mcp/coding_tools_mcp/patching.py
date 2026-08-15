@@ -376,6 +376,8 @@ def apply_update_hunks(content: str, hunks: list[list[str]], path: str = "<patch
                     "path": path,
                     "hunk_index": index,
                     "match_count": len(matches),
+                    "candidate_lines": [start + 1 for start in matches[:8]],
+                    "candidate_lines_truncated": len(matches) > 8,
                     "retry_hint": "Include additional unchanged context lines to make this hunk unique.",
                 },
             )

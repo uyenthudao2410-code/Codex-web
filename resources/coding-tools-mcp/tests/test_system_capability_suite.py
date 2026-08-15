@@ -69,22 +69,24 @@ class RoutingMatrixTests(unittest.TestCase):
             self.assertEqual(result["selected"], "deterministic", workflow)
             self.assertIsNone(result["profile"])
 
-    def test_mini_gate_requires_oracle_and_tight_scope(self) -> None:
-        # full conditions met
-        self.assertEqual(self.route("bugfix", 2, 24_000, strong_oracle=True)["selected"], "mini")
-        # each condition removed flips the route
-        self.assertEqual(self.route("bugfix", 2, 24_000, strong_oracle=False)["selected"], "luna")
-        self.assertEqual(self.route("bugfix", 3, 24_000, strong_oracle=True)["selected"], "luna")
-        self.assertEqual(self.route("bugfix", 2, 24_001, strong_oracle=True)["selected"], "luna")
-        self.assertEqual(self.route("test_failure", 1, 10_000, strong_oracle=True)["selected"], "mini")
-        self.assertEqual(self.route("feature", 1, 10_000, strong_oracle=True)["selected"], "luna")
+    def test_auto_holds_deterministic_until_paired_roi_evidence(self) -> None:
+        for workflow, n_paths, n_bytes, oracle in (
+            ("bugfix", 2, 24_000, True),
+            ("bugfix", 2, 24_000, False),
+            ("bugfix", 3, 24_000, True),
+            ("test_failure", 1, 10_000, True),
+            ("feature", 1, 10_000, True),
+            ("feature", 8, 200_000, False),
+        ):
+            result = self.route(workflow, n_paths, n_bytes, strong_oracle=oracle)
+            self.assertEqual(result["selected"], "deterministic")
+            self.assertEqual(result["reason"], "roi_gate_hold_insufficient_paired_evidence")
 
-    def test_luna_boundaries_are_exact(self) -> None:
-        self.assertEqual(self.route("feature", 4, 60_000)["selected"], "luna")
-        self.assertEqual(self.route("feature", 5, 60_000)["selected"], "sol_xhigh")
-        self.assertEqual(self.route("feature", 4, 60_001)["selected"], "sol_xhigh")
-        self.assertEqual(self.route("feature", 0, 0)["selected"], "sol_xhigh")
-        self.assertEqual(self.route("feature", 8, 200_000)["selected"], "sol_xhigh")
+    def test_explicit_study_and_escalation_routes_remain_available(self) -> None:
+        self.assertEqual(self.route("bugfix", 2, 24_000, strong_oracle=True, requested="mini")["selected"], "mini")
+        self.assertEqual(self.route("feature", 4, 60_000, requested="luna")["selected"], "luna")
+        self.assertEqual(self.route("feature", 8, 200_000, requested="sol_xhigh")["selected"], "sol_xhigh")
+        self.assertEqual(self.route("feature", 8, 200_000, requested="terra")["selected"], "terra")
 
     def test_high_cost_gate_blocks_max_and_ultra(self) -> None:
         for name in ("sol_max", "sol_ultra"):
@@ -102,12 +104,12 @@ class RoutingMatrixTests(unittest.TestCase):
         self.assertEqual(self.route("feature", 50, 500_000, requested="mini")["selected"], "mini")
         self.assertEqual(self.route("bugfix", 1, 100, requested="deterministic")["selected"], "deterministic")
 
-    def test_auto_never_selects_max_or_ultra(self) -> None:
+    def test_auto_is_always_deterministic_during_roi_measurement(self) -> None:
         for workflow in ("bugfix", "feature", "refactor", "test_failure"):
             for n_paths in (1, 2, 4, 8, 50):
                 for n_bytes in (100, 24_000, 60_000, 500_000):
                     selected = self.route(workflow, n_paths, n_bytes, strong_oracle=True)["selected"]
-                    self.assertNotIn(selected, ("sol_max", "sol_ultra"))
+                    self.assertEqual(selected, "deterministic")
 
     def test_decision_is_deterministic(self) -> None:
         inputs = [

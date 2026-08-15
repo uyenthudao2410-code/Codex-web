@@ -254,10 +254,14 @@ class CommandCancellationFaultInjectionTests(unittest.TestCase):
                 self.assertEqual(command["status"], "running")
                 command_id = command["command_id"]
                 deadline = time.monotonic() + 3
-                while not child_pid_file.exists() and time.monotonic() < deadline:
+                while child_process_id is None and time.monotonic() < deadline:
+                    if child_pid_file.exists():
+                        raw_pid = child_pid_file.read_text(encoding="ascii").strip()
+                        if raw_pid.isdecimal() and int(raw_pid) > 0:
+                            child_process_id = int(raw_pid)
+                            break
                     time.sleep(0.05)
-                self.assertTrue(child_pid_file.exists(), "child process did not publish its PID")
-                child_process_id = int(child_pid_file.read_text(encoding="ascii"))
+                self.assertIsNotNone(child_process_id, "child process did not publish a parseable PID")
                 self.assertTrue(process_is_alive(child_process_id))
                 killed = runtime.command_control(
                     {

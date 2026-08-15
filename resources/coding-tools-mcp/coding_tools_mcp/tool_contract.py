@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from .code_mode import (
+    CODE_MODE_BINDING_OPERATIONS,
+    CODE_MODE_BINDING_SCHEMA_VERSION,
+    code_mode_worker_isolation_status,
+)
+
 
 TOOL_CONTRACT_SCHEMA_VERSION = 1
 SMART_TOOL_PROFILE = "smart-v3"
@@ -321,12 +327,19 @@ class ToolContractRuntime:
             "experimental_code_mode": {
                 "enabled": False,
                 "status": "gated",
-                "reason": "isolated_binding_proxy_not_implemented",
+                "reason": "isolated_worker_runtime_not_implemented",
                 "required_boundary": "isolated_worker_with_host_bindings_only",
                 "direct_filesystem": False,
                 "network": False,
                 "environment_secrets": False,
                 "subprocess": False,
+                "host_binding_proxy": {
+                    "status": "ready",
+                    "schema_version": CODE_MODE_BINDING_SCHEMA_VERSION,
+                    "read_only": True,
+                    "operations": list(CODE_MODE_BINDING_OPERATIONS),
+                },
+                "worker_isolation": code_mode_worker_isolation_status(),
             },
         }
 

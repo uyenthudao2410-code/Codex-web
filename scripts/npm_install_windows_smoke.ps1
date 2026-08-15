@@ -27,13 +27,37 @@
 param(
     # Directory containing webcodex.exe / webcodex-server.exe / webcodex-runner.exe.
     # Defaults to the debug build, which this script builds first.
-    [string]$BinDir
+    [string]$BinDir,
+    [switch]$RequireExactSource,
+    [string]$ProvenanceOut
 )
 
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $PSScriptRoot
 $Version = (Get-Content -LiteralPath (Join-Path $Root "npm\webcodex\package.json") -Raw | ConvertFrom-Json).version
+$DesktopVersion = (Get-Content -LiteralPath (Join-Path $Root "package.json") -Raw | ConvertFrom-Json).version
+$McpPyproject = Get-Content -LiteralPath (Join-Path $Root "resources\coding-tools-mcp\pyproject.toml") -Raw
+$McpVersionMatch = [regex]::Match($McpPyproject, '(?ms)^\[project\]\s*.*?^version\s*=\s*"([^"]+)"')
+if (-not $McpVersionMatch.Success) {
+    throw "cannot read Coding Tools MCP version from pyproject.toml"
+}
+$McpVersion = $McpVersionMatch.Groups[1].Value
+if ($ProvenanceOut) {
+    $ProvenanceOut = [System.IO.Path]::GetFullPath($ProvenanceOut)
+}
+
+$InitialHead = @(& git -C $Root rev-parse HEAD)[0].Trim().ToLowerInvariant()
+$InitialTree = @(& git -C $Root rev-parse "HEAD^{tree}")[0].Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $InitialHead -notmatch '^[a-f0-9]{40}$' -or $InitialTree -notmatch '^[a-f0-9]{40}$') {
+    throw "cannot resolve exact Git commit/tree identity for Windows smoke"
+}
+if ($RequireExactSource) {
+    $initialStatus = @(& git -C $Root status --porcelain --untracked-files=all)
+    if ($LASTEXITCODE -ne 0 -or $initialStatus.Count -ne 0) {
+        throw "-RequireExactSource requires a clean Git worktree before building the Windows candidate"
+    }
+}
 
 # ---------------------------------------------------------------------------
 # 0. Build the three Windows binaries unless an explicit BIN_DIR was given.
@@ -71,6 +95,7 @@ $Prefix = Join-Path $TempRoot "install-prefix"
 $ManifestPath = Join-Path $TempRoot "local-manifest.json"
 $PackageStage = Join-Path $TempRoot "npm-package"
 $PackageSourceArchive = Join-Path $TempRoot "npm-package-source.zip"
+$NativeProvenancePath = Join-Path $TempRoot "native-provenance.json"
 New-Item -ItemType Directory -Force -Path $ArtifactOut | Out-Null
 $env:npm_config_registry = "http://127.0.0.1:9"
 try {
@@ -79,7 +104,7 @@ try {
     # -----------------------------------------------------------------------
     Write-Host "creating Windows release artifact..."
     $artifactOutput = & (Join-Path $PSScriptRoot "package_release_artifact.ps1") `
-        -BinDir $BinDir -OutDir $ArtifactOut -AllowDevelopmentBuild
+        -BinDir $BinDir -OutDir $ArtifactOut -AllowDevelopmentBuild -ProvenanceOut $NativeProvenancePath
     if ($LASTEXITCODE -ne 0) {
         throw "package_release_artifact.ps1 failed with exit code $LASTEXITCODE"
     }
@@ -95,6 +120,19 @@ try {
     $ExpectedArchiveName = "webcodex-v$Version-win32-x64.tar.gz"
     if ((Split-Path -Leaf $Archive) -ne $ExpectedArchiveName) {
         throw "unexpected artifact name: $(Split-Path -Leaf $Archive) (expected $ExpectedArchiveName)"
+    }
+    if (-not (Test-Path -LiteralPath $NativeProvenancePath -PathType Leaf)) {
+        throw "native packager did not produce provenance"
+    }
+    $NativeProvenance = Get-Content -LiteralPath $NativeProvenancePath -Raw | ConvertFrom-Json
+    if ($NativeProvenance.archive.sha256 -ne $sha256) {
+        throw "native provenance archive digest does not match the packaged artifact"
+    }
+    if ($NativeProvenance.source.git_sha -ne $InitialHead -or $NativeProvenance.source.git_tree -ne $InitialTree) {
+        throw "native artifact source identity drifted during the Windows smoke"
+    }
+    if ($RequireExactSource -and -not $NativeProvenance.source.exact_source) {
+        throw "native artifact does not prove exact clean source identity"
     }
 
     # -----------------------------------------------------------------------
@@ -161,6 +199,8 @@ try {
         throw "git archive failed with exit code $LASTEXITCODE"
     }
     Expand-Archive -LiteralPath $PackageSourceArchive -DestinationPath $PackageStage
+    $PackageSourceArchiveHash = (Get-FileHash -LiteralPath $PackageSourceArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+    $PackageSourceArchiveInfo = Get-Item -LiteralPath $PackageSourceArchive
     $PackageManifestPath = Join-Path $PackageStage "manifest.json"
     [System.IO.File]::WriteAllText(
         $PackageManifestPath,
@@ -186,6 +226,8 @@ try {
     if (-not $Tarball) {
         throw "npm pack produced no tarball"
     }
+    $TarballHashBefore = (Get-FileHash -LiteralPath $Tarball -Algorithm SHA256).Hash.ToLowerInvariant()
+    $TarballInfo = Get-Item -LiteralPath $Tarball
 
     Write-Host "installing from local artifact via npm installer..."
     $env:WEBCODEX_MANIFEST = $ManifestPath
@@ -279,10 +321,93 @@ try {
         throw "installer left staging/temp files behind: $($leftovers + $stagingLeftovers -join '; ')"
     }
 
+    $ArtifactHashAfter = (Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant()
+    $TarballHashAfter = (Get-FileHash -LiteralPath $Tarball -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($ArtifactHashAfter -ne $sha256) {
+        throw "Windows artifact bytes changed during the npm install smoke"
+    }
+    if ($TarballHashAfter -ne $TarballHashBefore) {
+        throw "npm tarball bytes changed during the npm install smoke"
+    }
+    $FinalHead = @(& git -C $Root rev-parse HEAD)[0].Trim().ToLowerInvariant()
+    $FinalTree = @(& git -C $Root rev-parse "HEAD^{tree}")[0].Trim().ToLowerInvariant()
+    if ($FinalHead -ne $InitialHead -or $FinalTree -ne $InitialTree) {
+        throw "Git source identity changed during the Windows smoke"
+    }
+    if ($RequireExactSource) {
+        $finalStatus = @(& git -C $Root status --porcelain --untracked-files=all)
+        if ($LASTEXITCODE -ne 0 -or $finalStatus.Count -ne 0) {
+            throw "exact-source Windows smoke ended with a dirty Git worktree"
+        }
+    }
+
+    if ($ProvenanceOut) {
+        $provenance = [ordered]@{
+            schema_version = 1
+            kind = "tools-codex-web.windows_release_candidate_provenance"
+            generated_at_utc = [DateTime]::UtcNow.ToString("o")
+            source = [ordered]@{
+                git_sha = $InitialHead
+                git_tree = $InitialTree
+                worktree_clean = [bool]$NativeProvenance.source.worktree_clean
+                exact_source = [bool]$NativeProvenance.source.exact_source
+            }
+            versions = [ordered]@{
+                desktop_app = $DesktopVersion
+                coding_tools_mcp = $McpVersion
+                webcodex_npm = $Version
+            }
+            native = [ordered]@{
+                platform = "win32-x64"
+                build_identity = [string]$NativeProvenance.build_identity
+                archive = $NativeProvenance.archive
+                binaries = $NativeProvenance.binaries
+            }
+            package = [ordered]@{
+                source_archive = [ordered]@{
+                    name = (Split-Path -Leaf $PackageSourceArchive)
+                    size_bytes = [long]$PackageSourceArchiveInfo.Length
+                    sha256 = $PackageSourceArchiveHash
+                }
+                npm_tarball = [ordered]@{
+                    name = (Split-Path -Leaf $Tarball)
+                    size_bytes = [long]$TarballInfo.Length
+                    sha256 = $TarballHashBefore
+                }
+            }
+            release = [ordered]@{
+                native_packaging_mode = [string]$NativeProvenance.release.mode
+                publishable = [bool]$NativeProvenance.release.publishable
+            }
+            proof = [ordered]@{
+                name = "windows_artifact_to_npm_install_smoke"
+                status = "passed"
+                artifact_rehash_sha256 = $ArtifactHashAfter
+                npm_tarball_rehash_sha256 = $TarballHashAfter
+            }
+        }
+        $provenanceParent = Split-Path -Parent $ProvenanceOut
+        if ($provenanceParent) {
+            New-Item -ItemType Directory -Force -Path $provenanceParent | Out-Null
+        }
+        [System.IO.File]::WriteAllText($ProvenanceOut, ($provenance | ConvertTo-Json -Depth 10), $Utf8NoBom)
+        $finalizeArgs = @((Join-Path $PSScriptRoot "windows-release-provenance.js"), "finalize", $ProvenanceOut)
+        if ($RequireExactSource) {
+            $finalizeArgs += "--require-exact-source"
+        }
+        & node @finalizeArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Windows provenance finalization failed with exit code $LASTEXITCODE"
+        }
+    }
+
     Write-Host "Windows artifact -> npm install smoke passed"
     Write-Host "  artifact:  $Archive"
     Write-Host "  sha256:    $sha256"
     Write-Host "  installed: $VendorBin"
+    if ($ProvenanceOut) {
+        Write-Host "  provenance: $ProvenanceOut"
+    }
 } finally {
     Remove-Item Env:npm_config_registry -ErrorAction SilentlyContinue
     Remove-Item Env:WEBCODEX_MANIFEST -ErrorAction SilentlyContinue
