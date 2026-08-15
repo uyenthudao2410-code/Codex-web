@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from coding_tools_mcp.orchestration_ledger import _proof_cache_opportunity_summary
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
@@ -162,6 +164,7 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
             tta_seconds, accepted_run_cohorts, cohort_coverage = _accepted_run_cohorts(connection)
             proof_count = int(connection.execute("SELECT COUNT(*) FROM proofs").fetchone()[0])
             handoff_count = int(connection.execute("SELECT COUNT(*) FROM handoff_capsules").fetchone()[0])
+            proof_cache_opportunity = _proof_cache_opportunity_summary(connection)
             ledger = {
                 "present": True,
                 "run_status_counts": run_counts,
@@ -174,6 +177,7 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
                 "accepted_run_tta": _tta_summary(tta_seconds),
                 "accepted_run_cohort_coverage": cohort_coverage,
                 "accepted_run_cohorts": accepted_run_cohorts,
+                "proof_cache_opportunity": proof_cache_opportunity,
             }
         finally:
             connection.close()

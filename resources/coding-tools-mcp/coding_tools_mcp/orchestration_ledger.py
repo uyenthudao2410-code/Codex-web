@@ -93,6 +93,177 @@ def _sanitize(value: Any, *, key: str = "") -> Any:
     return _bounded_text(value)
 
 
+def _proof_cache_opportunity_summary(
+    connection: sqlite3.Connection,
+    *,
+    stage_limit: int = 100,
+) -> dict[str, Any]:
+    """Aggregate content-free proof-cache opportunity evidence from the EOCL ledger."""
+    bounded_stage_limit = max(1, min(int(stage_limit), 100))
+    opportunity_cte = """
+        WITH opportunities AS (
+            SELECT
+                e.run_id AS run_id,
+                e.event_type AS event_type,
+                e.event_time AS event_time,
+                COALESCE(NULLIF(CAST(json_extract(e.payload_json, '$.stage_id') AS TEXT), ''), 'unknown') AS stage_id,
+                COALESCE(NULLIF(CAST(json_extract(e.payload_json, '$.stage_version') AS TEXT), ''), 'unknown') AS stage_version,
+                CASE WHEN e.event_type='proof_cache_hit' THEN 1 ELSE 0 END AS is_hit,
+                CASE WHEN e.event_type='proof_cache_miss' THEN 1 ELSE 0 END AS is_miss,
+                CASE
+                    WHEN json_extract(e.payload_json, '$.reason') IN ('cold', 'input_fingerprint_changed', 'stage_version_changed')
+                    THEN CAST(json_extract(e.payload_json, '$.reason') AS TEXT)
+                    ELSE 'other'
+                END AS miss_class,
+                CASE WHEN r.status='accepted' THEN 1 ELSE 0 END AS accepted_run,
+                CASE WHEN EXISTS(
+                    SELECT 1 FROM checkpoints c
+                    WHERE c.run_id=e.run_id AND c.status='accepted'
+                ) THEN 1 ELSE 0 END AS accepted_checkpoint,
+                CASE
+                    WHEN e.event_type='proof_cache_hit' AND p.proof_id IS NOT NULL
+                    THEN MAX(0, CAST(p.duration_ms AS INTEGER))
+                    ELSE NULL
+                END AS source_duration_ms
+            FROM events e
+            JOIN runs r ON r.run_id=e.run_id
+            LEFT JOIN proofs p
+              ON e.event_type='proof_cache_hit'
+             AND p.proof_id=CAST(json_extract(e.payload_json, '$.source_proof_id') AS TEXT)
+            WHERE e.event_type IN ('proof_cache_hit', 'proof_cache_miss')
+        )
+    """
+    overall = connection.execute(
+        opportunity_cte
+        + """
+        SELECT
+            COUNT(*),
+            COALESCE(SUM(is_hit), 0),
+            COALESCE(SUM(is_miss), 0),
+            COALESCE(SUM(CASE WHEN is_hit=1 AND source_duration_ms IS NOT NULL THEN 1 ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN is_hit=1 AND source_duration_ms IS NOT NULL THEN source_duration_ms ELSE 0 END), 0),
+            COUNT(DISTINCT run_id),
+            COUNT(DISTINCT CASE WHEN accepted_run=1 THEN run_id END),
+            COUNT(DISTINCT CASE WHEN accepted_checkpoint=1 THEN run_id END),
+            COALESCE(SUM(accepted_run), 0),
+            COALESCE(SUM(CASE WHEN accepted_run=1 THEN is_hit ELSE 0 END), 0),
+            COALESCE(SUM(accepted_checkpoint), 0),
+            COALESCE(SUM(CASE WHEN accepted_checkpoint=1 THEN is_hit ELSE 0 END), 0),
+            MIN(event_time),
+            MAX(event_time)
+        FROM opportunities
+        """
+    ).fetchone()
+    eligible = int(overall[0] or 0)
+    hits = int(overall[1] or 0)
+    misses = int(overall[2] or 0)
+    known_saved_hits = int(overall[3] or 0)
+    known_saved_ms = int(overall[4] or 0)
+
+    miss_rows = connection.execute(
+        opportunity_cte
+        + """
+        SELECT miss_class, COUNT(*)
+        FROM opportunities
+        WHERE is_miss=1
+        GROUP BY miss_class
+        ORDER BY COUNT(*) DESC, miss_class
+        """
+    ).fetchall()
+    miss_reasons = {str(row[0]): int(row[1]) for row in miss_rows if int(row[1] or 0) > 0}
+
+    stage_rows = connection.execute(
+        opportunity_cte
+        + """
+        SELECT
+            stage_id,
+            stage_version,
+            COUNT(*) AS eligible,
+            COALESCE(SUM(is_hit), 0) AS hits,
+            COALESCE(SUM(is_miss), 0) AS misses,
+            COALESCE(SUM(CASE WHEN is_hit=1 AND source_duration_ms IS NOT NULL THEN 1 ELSE 0 END), 0) AS known_saved_hits,
+            COALESCE(SUM(CASE WHEN is_hit=1 AND source_duration_ms IS NOT NULL THEN source_duration_ms ELSE 0 END), 0) AS known_saved_ms,
+            COALESCE(SUM(accepted_run), 0) AS accepted_run_opportunities,
+            COALESCE(SUM(CASE WHEN accepted_run=1 THEN is_hit ELSE 0 END), 0) AS accepted_run_hits,
+            COALESCE(SUM(accepted_checkpoint), 0) AS accepted_checkpoint_opportunities,
+            COALESCE(SUM(CASE WHEN accepted_checkpoint=1 THEN is_hit ELSE 0 END), 0) AS accepted_checkpoint_hits
+        FROM opportunities
+        GROUP BY stage_id, stage_version
+        ORDER BY eligible DESC, stage_id, stage_version
+        LIMIT ?
+        """,
+        (bounded_stage_limit,),
+    ).fetchall()
+    stages: list[dict[str, Any]] = []
+    for row in stage_rows:
+        stage_eligible = int(row[2] or 0)
+        stage_hits = int(row[3] or 0)
+        stage_known_saved_hits = int(row[5] or 0)
+        stage_known_saved_ms = int(row[6] or 0)
+        stage_saved_complete = stage_known_saved_hits == stage_hits
+        stages.append({
+            "stage_id": str(row[0]),
+            "stage_version": str(row[1]),
+            "eligible": stage_eligible,
+            "hits": stage_hits,
+            "misses": int(row[4] or 0),
+            "hit_rate": round(stage_hits / stage_eligible, 6) if stage_eligible else None,
+            "saved_ms": stage_known_saved_ms if stage_saved_complete else None,
+            "saved_ms_known": stage_known_saved_ms,
+            "saved_ms_known_hits": stage_known_saved_hits,
+            "saved_ms_complete": stage_saved_complete,
+            "accepted_run_opportunities": int(row[7] or 0),
+            "accepted_run_hits": int(row[8] or 0),
+            "accepted_checkpoint_opportunities": int(row[9] or 0),
+            "accepted_checkpoint_hits": int(row[10] or 0),
+        })
+
+    saved_complete = known_saved_hits == hits
+    accepted_run_opportunities = int(overall[8] or 0)
+    accepted_checkpoint_opportunities = int(overall[10] or 0)
+    fingerprint_classes = {
+        "exact_reuse": hits,
+        "cold": int(miss_reasons.get("cold", 0)),
+        "input_fingerprint_changed": int(miss_reasons.get("input_fingerprint_changed", 0)),
+        "stage_version_changed": int(miss_reasons.get("stage_version_changed", 0)),
+        "other_miss": int(miss_reasons.get("other", 0)),
+    }
+    stage_group_count = int(connection.execute(
+        opportunity_cte + "SELECT COUNT(*) FROM (SELECT 1 FROM opportunities GROUP BY stage_id, stage_version)"
+    ).fetchone()[0] or 0)
+    return {
+        "schema_version": 1,
+        "source": "eocl_proof_cache_events_and_proofs",
+        "eligible": eligible,
+        "hits": hits,
+        "misses": misses,
+        "hit_rate": round(hits / eligible, 6) if eligible else None,
+        "miss_reasons": miss_reasons,
+        "fingerprint_classes": fingerprint_classes,
+        "saved_ms": known_saved_ms if saved_complete else None,
+        "saved_ms_known": known_saved_ms,
+        "saved_ms_known_hits": known_saved_hits,
+        "saved_ms_complete": saved_complete,
+        "run_relation": {
+            "runs_with_opportunities": int(overall[5] or 0),
+            "accepted_runs_with_opportunities": int(overall[6] or 0),
+            "accepted_checkpoint_runs_with_opportunities": int(overall[7] or 0),
+            "accepted_run_opportunities": accepted_run_opportunities,
+            "accepted_run_hits": int(overall[9] or 0),
+            "unaccepted_run_opportunities": max(0, eligible - accepted_run_opportunities),
+            "accepted_checkpoint_opportunities": accepted_checkpoint_opportunities,
+            "accepted_checkpoint_hits": int(overall[11] or 0),
+        },
+        "evidence_window": {"first_event_at": overall[12], "last_event_at": overall[13]},
+        "stages": stages,
+        "stage_limit": bounded_stage_limit,
+        "stage_rows_truncated": stage_group_count > bounded_stage_limit,
+        "model_free": True,
+        "content_free": True,
+        "raw_input_fingerprints_included": False,
+    }
+
+
 def fingerprint_paths(root: Path, paths: Iterable[str], *, extra: dict[str, Any] | None = None) -> str:
     """Content fingerprint for the selected workspace paths plus stable metadata."""
     digest = hashlib.sha256()
@@ -2140,6 +2311,11 @@ class OrchestrationLedger:
                 "source_proof": self._proof_row(same_stage),
             }
         return {"eligible": True, "hit": False, "reason": "cold", "source_proof": None}
+
+    def proof_cache_opportunity_summary(self, *, stage_limit: int = 100) -> dict[str, Any]:
+        """Project bounded proof-cache opportunity evidence without exposing fingerprints."""
+        with self._lock, self._connect() as connection:
+            return _proof_cache_opportunity_summary(connection, stage_limit=stage_limit)
 
     def find_cached_pass(self, *, stage_id: str, stage_version: str, input_fingerprint: str) -> dict[str, Any] | None:
         lookup = self.proof_cache_lookup(

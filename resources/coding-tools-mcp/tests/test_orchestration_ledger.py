@@ -9,6 +9,103 @@ from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 
 
 class OrchestrationLedgerTests(unittest.TestCase):
+    def test_proof_cache_opportunity_summary_is_content_free_and_acceptance_aware(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            accepted = ledger.create_run(objective="accepted cache opportunity")
+            accepted_wave = ledger.create_wave(accepted, execution_mode="mcp_only")
+            ledger.append_event(
+                accepted,
+                wave_id=accepted_wave,
+                event_type="proof_cache_miss",
+                payload={
+                    "stage_id": "verify:tests",
+                    "stage_version": "1",
+                    "input_fingerprint": "secret-fingerprint-cold",
+                    "reason": "cold",
+                },
+            )
+            source_proof = ledger.record_proof(
+                run_id=accepted,
+                wave_id=accepted_wave,
+                stage_id="verify:tests",
+                stage_version="1",
+                input_fingerprint="secret-fingerprint-cold",
+                status="passed",
+                duration_ms=125,
+            )
+            ledger.append_event(
+                accepted,
+                wave_id=accepted_wave,
+                event_type="proof_cache_hit",
+                payload={
+                    "stage_id": "verify:tests",
+                    "stage_version": "1",
+                    "input_fingerprint": "secret-fingerprint-cold",
+                    "source_proof_id": source_proof,
+                },
+            )
+            ledger.record_checkpoint(
+                run_id=accepted,
+                wave_id=accepted_wave,
+                git_head="head",
+                proof_fingerprint="proof",
+                status="accepted",
+            )
+            ledger.finish_wave(accepted_wave, status="accepted")
+            ledger.finish_run(accepted, status="accepted")
+
+            active = ledger.create_run(objective="unaccepted cache opportunity")
+            active_wave = ledger.create_wave(active, execution_mode="mcp_only")
+            ledger.append_event(
+                active,
+                wave_id=active_wave,
+                event_type="proof_cache_miss",
+                payload={
+                    "stage_id": "verify:tests",
+                    "stage_version": "2",
+                    "input_fingerprint": "secret-fingerprint-changed",
+                    "reason": "input_fingerprint_changed",
+                },
+            )
+            ledger.append_event(
+                active,
+                wave_id=active_wave,
+                event_type="proof_cache_hit",
+                payload={
+                    "stage_id": "verify:tests",
+                    "stage_version": "2",
+                    "input_fingerprint": "secret-fingerprint-missing-source",
+                    "source_proof_id": "missing-source-proof",
+                },
+            )
+
+            summary = ledger.proof_cache_opportunity_summary()
+            self.assertEqual((summary["eligible"], summary["hits"], summary["misses"]), (4, 2, 2))
+            self.assertEqual(summary["hit_rate"], 0.5)
+            self.assertEqual(summary["miss_reasons"], {"cold": 1, "input_fingerprint_changed": 1})
+            self.assertEqual(summary["fingerprint_classes"]["exact_reuse"], 2)
+            self.assertEqual(summary["fingerprint_classes"]["cold"], 1)
+            self.assertEqual(summary["fingerprint_classes"]["input_fingerprint_changed"], 1)
+            self.assertEqual(summary["saved_ms_known"], 125)
+            self.assertEqual(summary["saved_ms_known_hits"], 1)
+            self.assertFalse(summary["saved_ms_complete"])
+            self.assertIsNone(summary["saved_ms"])
+            self.assertEqual(summary["run_relation"]["runs_with_opportunities"], 2)
+            self.assertEqual(summary["run_relation"]["accepted_runs_with_opportunities"], 1)
+            self.assertEqual(summary["run_relation"]["accepted_checkpoint_runs_with_opportunities"], 1)
+            self.assertEqual(summary["run_relation"]["accepted_run_opportunities"], 2)
+            self.assertEqual(summary["run_relation"]["accepted_run_hits"], 1)
+            self.assertEqual(summary["run_relation"]["unaccepted_run_opportunities"], 2)
+            self.assertEqual(len(summary["stages"]), 2)
+            self.assertEqual({item["stage_version"] for item in summary["stages"]}, {"1", "2"})
+            serialized = json.dumps(summary, ensure_ascii=False)
+            self.assertNotIn("secret-fingerprint", serialized)
+            self.assertNotIn(source_proof, serialized)
+            self.assertTrue(summary["model_free"])
+            self.assertTrue(summary["content_free"])
+            self.assertFalse(summary["raw_input_fingerprints_included"])
+
     def test_accepted_result_evaluation_keeps_unobserved_controller_cost_unknown(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))

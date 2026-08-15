@@ -70,6 +70,33 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
                 event_type="route_selected",
                 payload={"requested": "deterministic", "resolved": "deterministic"},
             )
+            source_proof = ledger.record_proof(
+                run_id=run_id,
+                wave_id=wave_id,
+                stage_id="verify:tests",
+                stage_version="1",
+                input_fingerprint="runtime-snapshot-fingerprint",
+                status="passed",
+                duration_ms=321,
+            )
+            ledger.append_event(
+                run_id,
+                wave_id=wave_id,
+                event_type="proof_cache_hit",
+                payload={
+                    "stage_id": "verify:tests",
+                    "stage_version": "1",
+                    "input_fingerprint": "runtime-snapshot-fingerprint",
+                    "source_proof_id": source_proof,
+                },
+            )
+            ledger.record_checkpoint(
+                run_id=run_id,
+                wave_id=wave_id,
+                git_head="head",
+                proof_fingerprint="runtime-proof",
+                status="accepted",
+            )
             time.sleep(0.01)
             ledger.finish_wave(wave_id, status="accepted")
             ledger.finish_run(run_id, status="accepted")
@@ -127,6 +154,14 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
             self.assertEqual(cohort["task_class"], "diagnose")
             self.assertEqual(cohort["acceptance_status"], "accepted")
             self.assertEqual(cohort["repair_status"], "first_pass")
+            opportunity = snapshot["ledger"]["proof_cache_opportunity"]
+            self.assertEqual(opportunity["eligible"], 1)
+            self.assertEqual(opportunity["hits"], 1)
+            self.assertEqual(opportunity["saved_ms"], 321)
+            self.assertTrue(opportunity["saved_ms_complete"])
+            self.assertEqual(opportunity["run_relation"]["accepted_run_opportunities"], 1)
+            self.assertEqual(opportunity["run_relation"]["accepted_checkpoint_opportunities"], 1)
+            self.assertFalse(opportunity["raw_input_fingerprints_included"])
             self.assertEqual(snapshot["evidence_class"], "local_runtime_measurement_snapshot")
 
     def test_snapshot_keeps_v4_legacy_coverage_separate_from_v5_gate(self) -> None:
