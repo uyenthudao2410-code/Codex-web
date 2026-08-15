@@ -48,10 +48,17 @@
         "to": "resources",
         "filter": [
           "**/*",
-          "!coding-tools-mcp/benchmarks/reports/**"
+          "!coding-tools-mcp/benchmarks/reports/**",
+          "!**/__pycache__/**",
+          "!**/.pytest_cache/**",
+          "!**/*.egg-info/**",
+          "!**/.coding-tools/**",
+          "!**/*.pyc",
+          "!**/*.pyo"
         ]
       }
     ],
+    "afterPack": "scripts/verify-packaged-resources.js",
     "win": {
       "icon": "electron/app-icon.ico",
       "target": [
