@@ -3,10 +3,10 @@
 **Observed date:** 2026-08-15  
 **Repository:** `uyenthudao2410-code/Tools-Codex-web`  
 **Branch:** `main`  
-**Exact pushed HEAD:** `2592b7b0fed7aabd04260ceb3bcbf53f82f81399`  
+**Implementation evidence baseline:** `2592b7b0fed7aabd04260ceb3bcbf53f82f81399`  
 **Desktop:** `web-mcp-assistant 0.3.4`  
 **Public MCP profile:** `smart-v3`, exactly 8 public tools  
-**Purpose:** authoritative current-status delta only. Historical audit snapshots remain historical evidence and are not rewritten by this document.
+**Purpose:** authoritative current-status delta only. Historical audit snapshots remain historical evidence and are not rewritten by this document. Documentation-only synchronization commits may advance the branch beyond the implementation evidence baseline without changing the product behavior described here.
 
 ---
 
@@ -18,7 +18,7 @@ The correct current state is:
 
 ```text
 core reliability / measurement source work    source-complete + locally proven
-exact-current-HEAD GitHub CI                   externally blocked before runner allocation
+exact-implementation-SHA GitHub CI             externally blocked before runner allocation
 native semantic live activation                blocked by real binding prerequisite
 routing / auto-handoff promotion               representative evidence pending
 proof-cache policy simplification              representative window pending
@@ -31,17 +31,19 @@ Do not create synthetic workload, weaken proof identities, invent provider/seman
 
 ---
 
-## 2. Exact source and delivery baseline
+## 2. Exact implementation and delivery baseline
 
-Current exact source baseline:
+The product implementation evidence in this document is bound to:
 
 ```text
-HEAD:   2592b7b0fed7aabd04260ceb3bcbf53f82f81399
-branch: main
-remote: origin/main contains the same pushed commit
+implementation SHA: 2592b7b0fed7aabd04260ceb3bcbf53f82f81399
+branch:             main
+remote history:     origin/main contains this implementation commit
 ```
 
-Recent accepted/pushed closures in this continuation:
+Documentation-only synchronization commits after this SHA do not alter the implementation evidence, runtime behavior, public tool contract, or validation results recorded below. When a later product/source commit changes implementation behavior, this baseline must be advanced explicitly rather than inferred from the latest documentation commit.
+
+Recent accepted/pushed implementation closures in this continuation:
 
 ```text
 fda89e48  Attest EOCL results in controlled replay
@@ -198,7 +200,7 @@ coding-tools-mcp/benchmarks/reports/**
 
 The afterPack validator rejects any forbidden path that survives filtering and reads path metadata only; it does not inspect user/source file contents.
 
-Evidence on exact source before commit/push:
+Evidence on exact implementation source before commit/push:
 
 ```text
 focused packaging/config validator tests     PASS
@@ -219,9 +221,9 @@ The local dependency tree needed repair after an interrupted `npm ci` encountere
 
 ---
 
-## 9. Exact-HEAD GitHub Actions truth — EXTERNALLY BLOCKED, NOT SOURCE FAILURE
+## 9. Exact-implementation-SHA GitHub Actions truth — EXTERNALLY BLOCKED, NOT SOURCE FAILURE
 
-GitHub Actions run `31882079363` is bound exactly to:
+GitHub Actions run `31882079363` is bound exactly to the implementation evidence baseline:
 
 ```text
 2592b7b0fed7aabd04260ceb3bcbf53f82f81399
@@ -252,7 +254,9 @@ source test regression evidence = none from this workflow run
 independent exact-SHA green CI  = still unavailable
 ```
 
-Do **not** rerun repeatedly while the billing/spending prerequisite is unchanged. Do **not** call local PASS equivalent to independent GitHub CI. Once the account prerequisite is corrected, rerun or allow the next exact-SHA workflow to execute real steps and classify its result normally.
+Do **not** rerun repeatedly while the billing/spending prerequisite is unchanged. Do **not** call local PASS equivalent to independent GitHub CI. Once the account prerequisite is corrected, rerun or allow a later implementation SHA workflow to execute real steps and classify its result normally.
+
+Documentation-only commits do not repair or invalidate this CI result because the product implementation evidence remains bound to `2592b7b0` until a later implementation commit is introduced.
 
 ---
 
@@ -389,7 +393,7 @@ exact-source Windows provenance                  SOURCE COMPLETE
 Windows packaged-resource sanitation             SOURCE + ACTUAL PACK PASS
 local full Node/Electron boundary                 105 / 105 PASS
 local full Python MCP boundary                    314 PASS, 1 skipped
-exact-HEAD GitHub CI                              EXTERNAL BILLING GATE / NO RUNNER
+implementation-SHA GitHub CI                      EXTERNAL BILLING GATE / NO RUNNER
 native semantic live activation                  BLOCKED / REAL BINDING REQUIRED
 Call Hierarchy                                    HOLD behind semantic activation
 paired routing promotion                          REPRESENTATIVE EVIDENCE PENDING
@@ -407,7 +411,7 @@ There is currently no known critical source implementation defect that should be
 
 When external state changes, resume in this order:
 
-1. **GitHub billing/account prerequisite corrected** → obtain exact-SHA Linux + Windows CI where runners allocate and steps actually execute.
+1. **GitHub billing/account prerequisite corrected** → obtain exact-implementation-SHA Linux + Windows CI where runners allocate and steps actually execute.
 2. **Trusted native semantic binding available + activation authorized** → controlled live semantic activation and security/fallback canary; only then collect semantic workload.
 3. **Representative real tasks naturally arrive** → collect source-matched Mini/Luna routing pairs and handoff A/B evidence; do not manufacture samples.
 4. **Representative proof-cache window becomes large enough** → decide `KEEP`, `KEEP BUT DEMOTE CLAIM`, `FIX`, `REMOVE`, or `DEFER`; exact fingerprint truth remains invariant.
@@ -419,14 +423,15 @@ When external state changes, resume in this order:
 ## 17. Operations in this continuation
 
 ```text
-source commits pushed:      yes
-latest pushed HEAD:         2592b7b0fed7aabd04260ceb3bcbf53f82f81399
-runtime/Electron restart:   no
-provider paid call:         no
-route threshold change:     no
-auto-handoff enablement:    no
-public tool expansion:      no
-release/tag/deploy:         no
+implementation commits pushed: yes
+latest implementation SHA:     2592b7b0fed7aabd04260ceb3bcbf53f82f81399
+documentation sync commits:    may advance branch HEAD without changing this implementation baseline
+runtime/Electron restart:      no
+provider paid call:            no
+route threshold change:        no
+auto-handoff enablement:       no
+public tool expansion:         no
+release/tag/deploy:            no
 ```
 
 The correct next constraint is no longer “find another source feature.” It is to wait for the specific external or representative evidence required by the remaining gates, while keeping the already-proven source boundaries stable.
