@@ -28,12 +28,12 @@ test('smart mode keeps a fixed compact tool surface with hidden compatibility', 
 
 test('HTTP sessions share one runtime and expose protocol health', () => {
   const transport = read('resources/coding-tools-mcp/coding_tools_mcp/transport_http.py');
-  const server = read('resources/coding-tools-mcp/coding_tools_mcp/server.py');
+  const httpHandler = read('resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py');
   assert.match(transport, /Route all authenticated HTTP sessions through one shared Runtime/);
   assert.match(transport, /MAX_TRACKED_SESSION_ALIASES = 512/);
-  assert.match(server, /HTTPSessionManager\(control_runtime\)/);
-  assert.match(server, /__control\/health/);
-  assert.match(server, /__control\/workspace/);
+  assert.match(httpHandler, /HTTPSessionManager\(control_runtime\)/);
+  assert.match(httpHandler, /__control\/health/);
+  assert.match(httpHandler, /__control\/workspace/);
 });
 
 test('desktop runtime hot-switches workspaces and shows stale-task progress', () => {

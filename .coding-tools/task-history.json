@@ -1,1345 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "d8afafd734ec4d018e39663ea1503f74",
-    "orchestration": {
-      "run_id": "7a19e53eb3f14dfcaf7dfa1bfcb2d9f9",
-      "wave_id": "9cf28809cb044ea8a96828b01e48021a",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "dff81e251836666fc825c40bf86e4167afd29c39",
-      "worktree_fp": "f5e130b55e237e1a779bcb54c2d9ce9880fe572b2b389c1132c55db17ae8d066",
-      "contract_fp": ""
-    },
-    "objective": "Complete fault coverage for the TaskStateStore Windows atomic-replace retry. Add one test only: a retryable Windows access-denied error that persists through the full bounded budget must call replace exactly WINDOWS_ATOMIC_REPLACE_ATTEMPTS times, sleep only between attempts, re-raise the PermissionError, and clean the task-state temp file. Do not change production code or any unrelated tests/files.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-15T06:35:34.716Z"
-      },
-      {
-        "id": "verify",
-        "text": "Run tests and build verification",
-        "status": "completed",
-        "updated_at": "2026-08-15T06:35:34.716Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-15T06:35:34.716Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": {
-      "command": "set PYTHONPATH=resources/coding-tools-mcp&& python -m pytest resources/coding-tools-mcp/tests/test_task_state_and_build.py -q",
-      "kind": "test",
-      "session_id": "yzSadiEHwNEJOu5N3182PUQD",
-      "workdir": ".",
-      "status": "running",
-      "started_at": "2026-08-15T06:35:25.022Z"
-    },
-    "test_results": [
-      {
-        "command": "set PYTHONPATH=resources/coding-tools-mcp&& python -m pytest resources/coding-tools-mcp/tests/test_task_state_and_build.py -q",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 8751,
-        "summary": "exit 0 | 8.7s | 2 lines | tail: '..............................'"
-      }
-    ],
-    "build_results": [],
-    "last_build_report": {
-      "project": {
-        "type": "electron",
-        "name": "web-mcp-assistant",
-        "version": "0.3.4",
-        "package_manager": "npm",
-        "test_command": "npm run test",
-        "build_command": "npm run dist",
-        "artifact_paths": [
-          "dist",
-          "build"
-        ]
-      },
-      "commands": {
-        "test": "set PYTHONPATH=resources/coding-tools-mcp&& python -m pytest resources/coding-tools-mcp/tests/test_task_state_and_build.py -q",
-        "build": "npm run dist"
-      },
-      "test_result": {
-        "command": "set PYTHONPATH=resources/coding-tools-mcp&& python -m pytest resources/coding-tools-mcp/tests/test_task_state_and_build.py -q",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 8751,
-        "summary": "exit 0 | 8.7s | 2 lines | tail: '..............................'"
-      },
-      "build_result": null,
-      "artifacts": [],
-      "hash_algorithm": "sha256",
-      "overall_status": "passed",
-      "failure": null,
-      "report_generated_at": "2026-08-15T06:35:33.736Z"
-    },
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-15T06:35:04.411Z",
-    "updated_at": "2026-08-15T06:35:46.627Z",
-    "events": [
-      {
-        "time": "2026-08-15T06:35:04.411Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Inspect the actual current-worktree diff for the active TaskStateStore Windows atomic replace remediation before final acceptance. Focus only on resources/coding-tools-mcp/coding_tools_mcp/task_state.py and resources/coding-tools-mcp/tests/test_task_state_and_build.py. Confirm: one local bounded os.replace retry helper; retries only on Windows for errno EACCES/EPERM/EBUSY or winerror 5/32; preserves temp+replace atomicity; final/non-retryable error is re-raised; both TaskStateStore atomic JSON replace sites use the helper; temp cleanup is preserved; focused fault-injection tests prove transient recovery and immediate fail-closed behavior. Detect any out-of-scope source changes from this remediation. Do not mutate source, do not touch stale orchestration runs, do not call providers/reviewers, and do not restart runtime."
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:05.285Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:06.232Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:15.442Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/tests/test_task_state_and_build.py",
-          "session_id": "spWw_n7x1mncdGiU3Fv1ZOoU"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:15.542Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/tests/test_task_state_and_build.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:20.862Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:22.465Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:23.546Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:23.553Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:24.499Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:24.806Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:25.022Z",
-        "event": "command_started",
-        "details": {
-          "command": "set PYTHONPATH=resources/coding-tools-mcp&& python -m pytest resources/coding-tools-mcp/tests/test_task_state_and_build.py -q",
-          "session_id": "yzSadiEHwNEJOu5N3182PUQD"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:33.710Z",
-        "event": "task_orchestration_aborted",
-        "details": {
-          "state": "ABORTED"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:33.722Z",
-        "event": "task_stopped",
-        "details": {
-          "fields": [
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:33.754Z",
-        "event": "build_verification_finished",
-        "details": {
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:34.705Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:34.716Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:34.940Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:34.953Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:46.555Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-15T06:35:46.577Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-15T06:36:00.400Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "a27e87f8d3cc4e978a0ab0e9162b3397",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Generate the result from the inspected content, then save it once.",
-    "created_at": "2026-08-15T06:36:00.446Z",
-    "updated_at": "2026-08-15T06:41:26.788Z",
-    "events": [
-      {
-        "time": "2026-08-15T06:36:00.446Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:00.505Z",
-        "event": "command_started",
-        "details": {
-          "command": "set PYTHONPATH=resources/coding-tools-mcp&& python -m pytest resources/coding-tools-mcp/tests && git diff --check && git diff --name-only --diff-filter=U",
-          "session_id": "Y-iUqXLiywL_qH03Mm3Qb4TP"
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:11.592Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff -U35 -- resources/coding-tools-mcp/tests/test_task_state_and_build.py | rg -n -A45 -B15 \"atomic_state_replace|WINDOWS_ATOMIC_REPLACE_ATTEMPTS|full bounded|persistent\"",
-          "session_id": "EuzvEn59_eNOU8OSDdpGdkU4"
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:11.734Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff -U35 -- resources/coding-tools-mcp/tests/test_task_state_and_build.py | rg -n -A45 -B15 \"atomic_state_replace|WINDOWS_ATOMIC_REPLACE_ATTEMPTS|full bounded|persistent\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:15.962Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "command_control",
-          "code": "INVALID_ARGUMENT"
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:27.335Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:51.640Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"workflow_patch_preflight|rework|first.pass|accepted_result_economics|causal.*attribution|activation\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp --glob \"*.py\"",
-          "session_id": "2XQynAvyrd00eAZrTeXsp6LS"
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:51.874Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"workflow_patch_preflight|rework|first.pass|accepted_result_economics|causal.*attribution|activation\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp --glob \"*.py\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:57.419Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --help",
-          "session_id": "ihel21GcBvnxWJNfMLFaizBE"
-        }
-      },
-      {
-        "time": "2026-08-15T06:36:57.787Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --help",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:08.279Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:23.006Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A18 -B8 \"process_instance_id|server_instance_id|started_at\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
-          "session_id": "3QqBLTcnoXNlmyeAUdbOzGGP"
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:23.209Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A18 -B8 \"process_instance_id|server_instance_id|started_at\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:28.409Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A6 -B6 \"^PROCESS_INSTANCE_ID|PROCESS_INSTANCE_ID =|runtime_identity|loaded_behavior\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
-          "session_id": "bmGF7LM-F7S_jvwVPpdmENuA"
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:28.512Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A6 -B6 \"^PROCESS_INSTANCE_ID|PROCESS_INSTANCE_ID =|runtime_identity|loaded_behavior\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:34.821Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \".\" resources/coding-tools-mcp/scripts/report_rework_baseline.py",
-          "session_id": "NwFu9h4QzeNEi7op-iUFyUhU"
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:34.966Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \".\" resources/coding-tools-mcp/scripts/report_rework_baseline.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:39.462Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A175 -B5 \"def organic_rework_summary\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
-          "session_id": "_ey0lEM8WkdNUAKeMJ8WlOZg"
-        }
-      },
-      {
-        "time": "2026-08-15T06:37:39.560Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A175 -B5 \"def organic_rework_summary\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:40:49.411Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "command_control",
-          "code": "COMMAND_NOT_FOUND"
-        }
-      },
-      {
-        "time": "2026-08-15T06:41:05.652Z",
-        "event": "command_started",
-        "details": {
-          "command": "set PYTHONPATH=resources/coding-tools-mcp&& python -m pytest resources/coding-tools-mcp/tests/test_task_state_and_build.py -q && python -m pytest resources/coding-tools-mcp/tests -q && git diff --check -- resources/coding-tools-mcp && git diff --name-only --diff-filter=U",
-          "session_id": "BI4oF4Z55O9qnkyuZIftJ2-U"
-        }
-      },
-      {
-        "time": "2026-08-15T06:41:12.567Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --since 2026-08-15T06:27:33Z",
-          "session_id": "VCvoIoU7aWqXlVsKLFaQlq-X"
-        }
-      },
-      {
-        "time": "2026-08-15T06:41:19.665Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --since 2026-08-15T06:27:33Z",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:41:21.673Z",
-        "event": "command_started",
-        "details": {
-          "command": "set PYTHONPATH=resources/coding-tools-mcp&& python -m pytest resources/coding-tools-mcp/tests && npm test && git diff --check && git diff --name-only --diff-filter=U",
-          "session_id": "TCOb-V0XDsaEm7ihc5VEeeLM"
-        }
-      },
-      {
-        "time": "2026-08-15T06:41:26.708Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n --hidden --glob \"!*.sqlite3*\" --glob \"!node_modules/**\" --glob \"!target/**\" \"workflow_patch_preflight\" .coding-tools resources/coding-tools-mcp | head -n 200",
-          "session_id": "_aIDf9W18jgN3nJWFXOYZQsq"
-        }
-      },
-      {
-        "time": "2026-08-15T06:41:26.788Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n --hidden --glob \"!*.sqlite3*\" --glob \"!node_modules/**\" --glob \"!target/**\" \"workflow_patch_preflight\" .coding-tools resources/coding-tools-mcp | head -n 200",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-15T06:41:33.638Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "f1dd46c6ac844a3d94c6069abad610e0",
-    "orchestration": {},
-    "objective": "Complete a workspace task",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Command path could not be inspected safely.",
-    "next_step": "Generate the result from the inspected content, then save it once.",
-    "created_at": "2026-08-15T06:41:33.670Z",
-    "updated_at": "2026-08-15T06:44:55.884Z",
-    "events": [
-      {
-        "time": "2026-08-15T06:41:33.670Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Complete a workspace task"
-        }
-      },
-      {
-        "time": "2026-08-15T06:41:43.547Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -m 200 --hidden --glob \"!*.sqlite3*\" --glob \"!node_modules/**\" --glob \"!target/**\" \"workflow_patch_preflight\" .coding-tools resources/coding-tools-mcp",
-          "session_id": "q1SuGAS0zITyPnp7lsFkX5L1"
-        }
-      },
-      {
-        "time": "2026-08-15T06:41:55.718Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-15T06:42:05.886Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --since 2026-08-15T05:58:50.467Z",
-          "session_id": "7C8FCK3I947nZOe-kHrI8f-V"
-        }
-      },
-      {
-        "time": "2026-08-15T06:42:06.621Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --since 2026-08-15T05:58:50.467Z",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:42:46.043Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -m 100 --hidden --glob \"!*.sqlite3*\" \"accepted_result_economics|cost_attribution_complete|provider_cost\" .coding-tools",
-          "session_id": "hAjwcVjPHlXAQbSg78Ck-U2G"
-        }
-      },
-      {
-        "time": "2026-08-15T06:42:53.589Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -m 100 --hidden --glob \"!*.sqlite3*\" \"accepted_result_economics|cost_attribution_complete|provider_cost\" .coding-tools",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:44:44.129Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -B20 -A35 \"function removeTempTree|removeTempTree\\(|live supervisor escalates\" tests/live-supervisor-e2e.test.js",
-          "session_id": "S32CcTGa2VF7LvqYJZQ0d34C"
-        }
-      },
-      {
-        "time": "2026-08-15T06:44:44.227Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -B20 -A35 \"function removeTempTree|removeTempTree\\(|live supervisor escalates\" tests/live-supervisor-e2e.test.js",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:44:55.884Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A35 -B20 \"worktree_fp|loaded_behavior|process_instance_id|source_identity\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/runtime_identity.py resources/coding-tools-mcp/coding_tools_mcp/*.py",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:44:55.884Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "INVALID_ARGUMENT"
-        }
-      }
-    ],
-    "archived_at": "2026-08-15T06:44:58.818Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "42f654d19c534b9f84746db18d59e71d",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "completed",
-    "steps": [],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [
-      {
-        "path": ".coding-tools/orchestration/evaluation-20260815/POST_ACTIVATION_REMEDIATION_CLOSURE.md",
-        "operation": "create",
-        "updated_at": "2026-08-15T06:45:29.593Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Review or use the generated document.",
-    "created_at": "2026-08-15T06:44:58.848Z",
-    "updated_at": "2026-08-15T06:45:29.593Z",
-    "events": [
-      {
-        "time": "2026-08-15T06:44:58.848Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-15T06:44:58.867Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -B10 -A70 \"function makeHarness|restartNative|restart|force|kill\" tests/live-supervisor-e2e.test.js electron/services/runtimeOrchestrator.js",
-          "session_id": "ErDnyRJWKsXnjP54huGUqtiE"
-        }
-      },
-      {
-        "time": "2026-08-15T06:44:58.967Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -B10 -A70 \"function makeHarness|restartNative|restart|force|kill\" tests/live-supervisor-e2e.test.js electron/services/runtimeOrchestrator.js",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:01.371Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A35 -B20 \"worktree_fp|loaded_behavior|process_instance_id|source_identity\" resources/coding-tools-mcp/coding_tools_mcp",
-          "session_id": "WjxRseVhIDXLD-imne2R5Pxo"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:01.466Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A35 -B20 \"worktree_fp|loaded_behavior|process_instance_id|source_identity\" resources/coding-tools-mcp/coding_tools_mcp",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:06.135Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A75 -B5 \"function makeHarness\" tests/live-supervisor-e2e.test.js",
-          "session_id": "z0cPphTxObx8o-o3i_GT06t2"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:06.239Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A75 -B5 \"function makeHarness\" tests/live-supervisor-e2e.test.js",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:29.431Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A18 -B5 \"function spawnMcp\" tests/live-supervisor-e2e.test.js",
-          "session_id": "76S9WLAykXzFBxygAfBolVHg"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:29.505Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A18 -B5 \"function spawnMcp\" tests/live-supervisor-e2e.test.js",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:29.593Z",
-        "event": "files_modified",
-        "details": {
-          "count": 1
-        }
-      }
-    ],
-    "archived_at": "2026-08-15T06:45:42.536Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "f43ff365d9c346bd92a38db08525f8a1",
-    "orchestration": {
-      "run_id": "1cd63b2af44e47298487ad64d863e3ed",
-      "wave_id": "12ed4cdeeb88401bade1a72ec4c0ea1d",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "dff81e251836666fc825c40bf86e4167afd29c39",
-      "worktree_fp": "07f5a0fe8c0d9026550cc71e1ab6811d89c95db85987384131ee3729014695ce",
-      "contract_fp": ""
-    },
-    "objective": "Fix only the live-supervisor E2E teardown race by making the test harness restart stub wait for the spawned MCP ChildProcess close event instead of exit. This ensures piped stdio is closed before supervise returns and before workspace cleanup. Test-only change; do not modify production supervisor code.",
-    "status": "stopped",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-15T06:46:44.943Z"
-      },
-      {
-        "id": "verify",
-        "text": "Run tests and build verification",
-        "status": "completed",
-        "updated_at": "2026-08-15T06:46:44.943Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-15T06:46:44.943Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [
-      {
-        "command": "node --test tests/live-supervisor-e2e.test.js && node --test tests/live-supervisor-e2e.test.js && node --test tests/live-supervisor-e2e.test.js",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 7267,
-        "summary": "exit 0 | 7.3s | 34 lines | tail: 'ℹ duration_ms 2337.8676'"
-      }
-    ],
-    "build_results": [],
-    "last_build_report": {
-      "project": {
-        "type": "electron",
-        "name": "web-mcp-assistant",
-        "version": "0.3.4",
-        "package_manager": "npm",
-        "test_command": "npm run test",
-        "build_command": "npm run dist",
-        "artifact_paths": [
-          "dist",
-          "build"
-        ]
-      },
-      "commands": {
-        "test": "node --test tests/live-supervisor-e2e.test.js && node --test tests/live-supervisor-e2e.test.js && node --test tests/live-supervisor-e2e.test.js",
-        "build": "npm run dist"
-      },
-      "test_result": {
-        "command": "node --test tests/live-supervisor-e2e.test.js && node --test tests/live-supervisor-e2e.test.js && node --test tests/live-supervisor-e2e.test.js",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 7267,
-        "summary": "exit 0 | 7.3s | 34 lines | tail: 'ℹ duration_ms 2337.8676'"
-      },
-      "build_result": null,
-      "artifacts": [],
-      "hash_algorithm": "sha256",
-      "overall_status": "passed",
-      "failure": null,
-      "report_generated_at": "2026-08-15T06:46:44.182Z"
-    },
-    "modified_files": [],
-    "failure": "Stopped by user",
-    "next_step": "Resume or start a new task.",
-    "created_at": "2026-08-15T06:45:42.558Z",
-    "updated_at": "2026-08-15T06:47:44.976Z",
-    "events": [
-      {
-        "time": "2026-08-15T06:45:42.558Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:42.572Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"once\\('exit'|once\\(\\\"exit\\\"|once\\('close'|once\\(\\\"close\\\"\" tests/live-supervisor-e2e.test.js",
-          "session_id": "97IJRPWsKaIuWV2n_BiqexrM"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:42.666Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"once\\('exit'|once\\(\\\"exit\\\"|once\\('close'|once\\(\\\"close\\\"\" tests/live-supervisor-e2e.test.js",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:45:57.077Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "PATCH_CONTEXT_AMBIGUOUS"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:33.883Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:35.017Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:35.707Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:35.723Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:36.460Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:36.685Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:36.947Z",
-        "event": "command_started",
-        "details": {
-          "command": "node --test tests/live-supervisor-e2e.test.js && node --test tests/live-supervisor-e2e.test.js && node --test tests/live-supervisor-e2e.test.js",
-          "session_id": "jJTslcsqZ9QMkeMiYuumWngk"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:44.182Z",
-        "event": "build_verification_finished",
-        "details": {
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:44.940Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:44.943Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:45.103Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:45.116Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:57.494Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-15T06:46:57.494Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:47:35.544Z",
-        "event": "task_stopped",
-        "details": {
-          "fields": [
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:47:37.478Z",
-        "event": "task_stopped",
-        "details": {
-          "fields": [
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:47:44.976Z",
-        "event": "command_finished",
-        "details": {
-          "command": "npm test && git diff --check && git diff --name-only --diff-filter=U",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-15T06:47:56.030Z",
-    "archive_reason": "superseded"
-  },
-  {
-    "version": 2,
-    "task_id": "0230a1d3346b465aa84371953e622f27",
-    "orchestration": {},
-    "objective": "Final proof-only Node, whitespace, and conflict gate for the current exact worktree after the live-supervisor E2E teardown oracle fix. Do not mutate source, restart services, reconcile stale runs, call providers, commit, push, release, or deploy.",
-    "status": "completed",
-    "steps": [],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [
-      {
-        "command": "npm test && git diff --check && git diff --name-only --diff-filter=U",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": null,
-        "summary": "exit 0 | 0.0s | 117 lines | tail: \"warning: in the working copy of 'resources/coding-tools-mcp/tests/test_resilience_fault_injection.py', LF will be rep...\"",
-        "finished_at": "2026-08-15T06:48:11.023Z",
-        "artifact_ref": {
-          "schema_version": 1,
-          "kind": "command_output",
-          "scope": "runtime_retained",
-          "source": "command",
-          "locator": {
-            "command_id": "DV8QfaINWlD0iljwz444531r"
-          },
-          "durability": "process_runtime",
-          "restart_safe": false,
-          "content_addressed": false,
-          "retrieval": {
-            "tool": "command_control",
-            "action": "read"
-          },
-          "size_bytes": 8989,
-          "command_id": "DV8QfaINWlD0iljwz444531r",
-          "streams": {
-            "stdout": {
-              "output_ref": "command:DV8QfaINWlD0iljwz444531r:stdout",
-              "total_stream_bytes": 8669,
-              "total_retained_bytes": 8669,
-              "head_retained_bytes": 8669,
-              "tail_retained_bytes": 0,
-              "evicted_gap_bytes": 0,
-              "evicted_bytes_total": 0
-            },
-            "stderr": {
-              "output_ref": "command:DV8QfaINWlD0iljwz444531r:stderr",
-              "total_stream_bytes": 320,
-              "total_retained_bytes": 320,
-              "head_retained_bytes": 320,
-              "tail_retained_bytes": 0,
-              "evicted_gap_bytes": 0,
-              "evicted_bytes_total": 0
-            }
-          }
-        }
-      }
-    ],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-15T06:47:56.053Z",
-    "updated_at": "2026-08-15T06:52:01.640Z",
-    "events": [
-      {
-        "time": "2026-08-15T06:47:56.053Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-15T06:48:03.412Z",
-        "event": "command_started",
-        "details": {
-          "command": "npm test && git diff --check && git diff --name-only --diff-filter=U",
-          "session_id": "DV8QfaINWlD0iljwz444531r"
-        }
-      },
-      {
-        "time": "2026-08-15T06:48:11.023Z",
-        "event": "command_finished",
-        "details": {
-          "command": "npm test && git diff --check && git diff --name-only --diff-filter=U",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:48:40.606Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-15T06:52:09.548Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "a4e1d955bc4d42c599bdbf83d68a466b",
-    "orchestration": {
-      "run_id": "4d47b6aa2f324da1925b35d9f8a2321f",
-      "wave_id": "fae6752172e648f8a13767f609579963",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "dff81e251836666fc825c40bf86e4167afd29c39",
-      "worktree_fp": "0bf84fe17a13e66dade27e3dd2d673f5b13f041274221c3a19720bbb6246115a",
-      "contract_fp": ""
-    },
-    "objective": "Complete a workspace task",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Generate the result from the inspected content, then save it once.",
-    "created_at": "2026-08-15T06:52:09.571Z",
-    "updated_at": "2026-08-15T07:14:06.144Z",
-    "events": [
-      {
-        "time": "2026-08-15T06:52:09.571Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Complete a workspace task"
-        }
-      },
-      {
-        "time": "2026-08-15T06:52:09.599Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-15T06:52:41.257Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-15T06:52:46.001Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-15T06:52:55.998Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace . --since 2026-08-15T05:58:50.467Z --limit 500",
-          "session_id": "mnt9Lj0yGAQo5UHd4Fql4TAy"
-        }
-      },
-      {
-        "time": "2026-08-15T06:52:56.470Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace . --since 2026-08-15T05:58:50.467Z --limit 500",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:53:04.406Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -c \"import json; p=json.load(open(r'.coding-tools/performance.json',encoding='utf-8')); keys=['tool_calls','errors','local_execution_ms','estimated_wait_ms','response_bytes','model_visible_bytes','proof_cache_eligible','proof_cache_hits','proof_cache_misses','proof_cache_saved_ms','localization_queries','lsp_attempted_queries','lsp_handled_queries','fallback_search_queries','idempotency_current_policy_required_calls','idempotency_current_policy_required_key_calls','idempotency_current_pol",
-          "session_id": "YjdNa0zIOELh6jIrR7Knqop3"
-        }
-      },
-      {
-        "time": "2026-08-15T06:53:04.525Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python -c \"import json; p=json.load(open(r'.coding-tools/performance.json',encoding='utf-8')); keys=['tool_calls','errors','local_execution_ms','estimated_wait_ms','response_bytes','model_visible_bytes','proof_cache_eligible','proof_cache_hits','proof_cache_misses','proof_cache_saved_ms','localization_queries','lsp_attempted_queries','lsp_handled_queries','fallback_search_queries','idempotency_current_policy_required_calls','idempotency_current_policy_required_key_calls','idempotency_current_pol",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:53:11.181Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"valid_pairs|representative tagged|promotion readiness|promotion_readiness|paired\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp --glob \"*.py\"",
-          "session_id": "taczS2Rze0qoDQktWuqfqNOX"
-        }
-      },
-      {
-        "time": "2026-08-15T06:53:12.056Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"valid_pairs|representative tagged|promotion readiness|promotion_readiness|paired\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp --glob \"*.py\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:53:16.438Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --help",
-          "session_id": "87xAnPqD-xgEdQ8fVoG2UMO6"
-        }
-      },
-      {
-        "time": "2026-08-15T06:53:16.668Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --help",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:53:20.488Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --candidate-policy mini --limit 500",
-          "session_id": "gEdGiShRSopLExZMDu_CsSor"
-        }
-      },
-      {
-        "time": "2026-08-15T06:53:20.841Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --candidate-policy mini --limit 500",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T06:54:12.842Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --candidate-policy luna --limit 500",
-          "session_id": "fF2IVGujVg8FGZ58pcMzt_Oe"
-        }
-      },
-      {
-        "time": "2026-08-15T06:54:13.189Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --candidate-policy luna --limit 500",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T07:03:08.628Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-15T07:03:11.615Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-15T07:11:53.547Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-15T07:11:54.449Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-15T07:13:04.770Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace . --limit 500 && python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --candidate-policy mini --limit 500 && python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --candidate-policy luna --limit 500",
-          "session_id": "SWJzTtrIAWo8y_twavaCMhqf"
-        }
-      },
-      {
-        "time": "2026-08-15T07:13:50.732Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace . --limit 500 && python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --candidate-policy mini --limit 500 && python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --candidate-policy luna --limit 500",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-15T07:14:06.079Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -c \"import sqlite3,json; db=r'.coding-tools/orchestration/ledger.sqlite3'; c=sqlite3.connect(db); c.row_factory=sqlite3.Row; scalar=lambda s,*a:c.execute(s,a).fetchone()[0]; rows=lambda s,*a:[dict(r) for r in c.execute(s,a).fetchall()]; out={'pragma_user_version':scalar('PRAGMA user_version'),'integrity_check':scalar('PRAGMA integrity_check'),'table_counts':{t:scalar('SELECT COUNT(*) FROM '+t) for t in ['runs','waves','delegations','events','proofs','checkpoints','agent_lanes','coordinati",
-          "session_id": "KcD7hoXReTlCn7wNy2tqV5pz"
-        }
-      },
-      {
-        "time": "2026-08-15T07:14:06.144Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python -c \"import sqlite3,json; db=r'.coding-tools/orchestration/ledger.sqlite3'; c=sqlite3.connect(db); c.row_factory=sqlite3.Row; scalar=lambda s,*a:c.execute(s,a).fetchone()[0]; rows=lambda s,*a:[dict(r) for r in c.execute(s,a).fetchall()]; out={'pragma_user_version':scalar('PRAGMA user_version'),'integrity_check':scalar('PRAGMA integrity_check'),'table_counts':{t:scalar('SELECT COUNT(*) FROM '+t) for t in ['runs','waves','delegations','events','proofs','checkpoints','agent_lanes','coordinati",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-15T07:14:12.846Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "9e3c308699a648ecaf77c34eedbe00d5",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -18490,6 +17151,1288 @@
       }
     ],
     "archived_at": "2026-08-15T10:36:12.116Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "5083c179218f4139bf3b6b63b31c3041",
+    "orchestration": {
+      "run_id": "8ccfff43ce25416eafd70fecc96e6c65",
+      "wave_id": "554ce036a60647c9b2b5263510eb1547",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f64abe25a85e6abaa9fe9eeacd3665eb29a82515",
+      "worktree_fp": "e87dec8711ecc2d04be3f3cb61d20e58159279d63efa779b7d94d6fb7f7dbd5b",
+      "contract_fp": ""
+    },
+    "objective": "Live Wave 2A idempotency canary after runtime recovery. Dry-run only; prove same-key durable replay without writing source.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-15T10:53:11.539Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-15T10:53:11.539Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-15T10:52:24.094Z",
+    "updated_at": "2026-08-15T10:53:37.423Z",
+    "events": [
+      {
+        "time": "2026-08-15T10:52:24.094Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-15T10:52:24.259Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log -5 --oneline --decorate --stat",
+          "session_id": "_S8Kj81bcoler6sKIQJvwNOg"
+        }
+      },
+      {
+        "time": "2026-08-15T10:52:24.845Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log -5 --oneline --decorate --stat",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:52:30.492Z",
+        "event": "command_started",
+        "details": {
+          "command": "git show -s --format=\"%H%n%P%n%an <%ae>%n%ad%n%s%n%b\" HEAD && git diff-tree --no-commit-id --name-status -r HEAD",
+          "session_id": "n-ktuvgO7cUBm6xf4j5h2hP0"
+        }
+      },
+      {
+        "time": "2026-08-15T10:52:30.709Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git show -s --format=\"%H%n%P%n%an <%ae>%n%ad%n%s%n%b\" HEAD && git diff-tree --no-commit-id --name-status -r HEAD",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:52:49.994Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"SERVER_TITLE|def agent_workflow|CONTINUATION_SCOPE_MISMATCH\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
+          "session_id": "CGVtoQB_tWKw6zEOdiH-DDC3"
+        }
+      },
+      {
+        "time": "2026-08-15T10:52:50.908Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"SERVER_TITLE|def agent_workflow|CONTINUATION_SCOPE_MISMATCH\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:52:56.870Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -c \"from pathlib import Path; p=Path('resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'); lines=p.read_text(encoding='utf-8').splitlines(); print('\\n'.join(f'{i+1}:{lines[i]}' for i in range(450,470)))\"",
+          "session_id": "WSOFRknpL8OL-86r-j_iAsKs"
+        }
+      },
+      {
+        "time": "2026-08-15T10:52:57.129Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"from pathlib import Path; p=Path('resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'); lines=p.read_text(encoding='utf-8').splitlines(); print('\\n'.join(f'{i+1}:{lines[i]}' for i in range(450,470)))\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:07.195Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:08.522Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:09.634Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:09.636Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:10.915Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:11.539Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:11.539Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:11.868Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:11.869Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:37.328Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:37.329Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-15T10:53:43.001Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "25926fa641a9449d9078385ba2cc253b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-15T10:53:43.023Z",
+    "updated_at": "2026-08-15T10:53:43.088Z",
+    "events": [
+      {
+        "time": "2026-08-15T10:53:43.023Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:43.042Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"coverage|idempotency_policy_epoch|required operations|current-policy|idempotency\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests | head -n 120",
+          "session_id": "z1Rvqd9iNoIRjssQ6hWPjsiJ"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:43.088Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"coverage|idempotency_policy_epoch|required operations|current-policy|idempotency\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests | head -n 120",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-15T10:53:48.508Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c393f7d1d9a04555a6256f33ec1ca80b",
+    "orchestration": {
+      "run_id": "841fce68daad403d8796872ea704b902",
+      "wave_id": "0981c58398b04d8186a550b552bc254a",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f64abe25a85e6abaa9fe9eeacd3665eb29a82515",
+      "worktree_fp": "e87dec8711ecc2d04be3f3cb61d20e58159279d63efa779b7d94d6fb7f7dbd5b",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-08-15T10:53:48.591Z",
+    "updated_at": "2026-08-15T10:55:58.536Z",
+    "events": [
+      {
+        "time": "2026-08-15T10:53:48.591Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:48.617Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"coverage|idempotency_policy_epoch|current-policy|idempotency\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests",
+          "session_id": "49Lp3JBd4vQoqQ3iIfT7T3YS"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:50.205Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"coverage|idempotency_policy_epoch|current-policy|idempotency\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:57.282Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -c \"import json; from pathlib import Path; p=Path('.coding-tools/performance.json'); d=json.loads(p.read_text(encoding='utf-8')); print(sorted(d.keys())); print(json.dumps({k:d.get(k) for k in d if 'idempotency' in k}, indent=2)[:12000])\"",
+          "session_id": "MQ0gz_b_5CSEzBxnayFWofTL"
+        }
+      },
+      {
+        "time": "2026-08-15T10:53:57.487Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import json; from pathlib import Path; p=Path('.coding-tools/performance.json'); d=json.loads(p.read_text(encoding='utf-8')); print(sorted(d.keys())); print(json.dumps({k:d.get(k) for k in d if 'idempotency' in k}, indent=2)[:12000])\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:08.897Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_evaluation_plane.py --run-id 8ccfff43ce25416eafd70fecc96e6c65",
+          "session_id": "L8i9op2Wev8RcPwDXgcirpNG"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:09.490Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_evaluation_plane.py --run-id 8ccfff43ce25416eafd70fecc96e6c65",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:20.528Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -c \"import json; from pathlib import Path; p=Path('.coding-tools/evaluation/chatweb-host-observations.jsonl'); rows=[]\nfor line in p.read_text(encoding='utf-8').splitlines()[-20:]:\n  try:\n    d=json.loads(line); rows.append({k:d.get(k) for k in ('schema_version','event_type','observation_id','span_id','turn_id','trace_id','measurement','start_ms','end_ms','duration_ms') if k in d})\n  except Exception: pass\nprint(json.dumps(rows, indent=2))\"",
+          "session_id": "SUxRY17Cqiw2D31TsvwKYV4Z"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:20.657Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import json; from pathlib import Path; p=Path('.coding-tools/evaluation/chatweb-host-observations.jsonl'); rows=[]\nfor line in p.read_text(encoding='utf-8').splitlines()[-20:]:\n  try:\n    d=json.loads(line); rows.append({k:d.get(k) for k in ('schema_version','event_type','observation_id','span_id','turn_id','trace_id','measurement','start_ms','end_ms','duration_ms') if k in d})\n  except Exception: pass\nprint(json.dumps(rows, indent=2))\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:26.239Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content '.coding-tools/evaluation/chatweb-host-observations.jsonl' -Tail 20\"",
+          "session_id": "rT-R8FT8AKcryaTJJH2lMyDj"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:26.810Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content '.coding-tools/evaluation/chatweb-host-observations.jsonl' -Tail 20\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:34.104Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_evaluation_plane.py --run-id 1c41c4a902ca4a4796e214e82d357e82",
+          "session_id": "RaI-9bv62nr7yeDtP3Smk8Gc"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:34.493Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_evaluation_plane.py --run-id 1c41c4a902ca4a4796e214e82d357e82",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:49.644Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-15T10:54:53.702Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:05.332Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:11.869Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"RequireExactSource|ProvenanceOut|proof_id|publishable|exact_source|installer|electron-builder|web-mcp-assistant\" scripts tests .github/workflows package.json",
+          "session_id": "G0lCeKW8pHpvr7LVnyVCKTjG"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:11.967Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"RequireExactSource|ProvenanceOut|proof_id|publishable|exact_source|installer|electron-builder|web-mcp-assistant\" scripts tests .github/workflows package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:21.231Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/windows-release-provenance.test.js && git diff --check -- scripts/windows-release-provenance.js scripts/npm_install_windows_smoke.ps1 tests/windows-release-provenance.test.js .github/workflows/ci.yml docs/RELEASE_CHECKLIST.md",
+          "session_id": "9GShgBTEZTiWrpWHUqPD7ZAv"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:21.477Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/windows-release-provenance.test.js && git diff --check -- scripts/windows-release-provenance.js scripts/npm_install_windows_smoke.ps1 tests/windows-release-provenance.test.js .github/workflows/ci.yml docs/RELEASE_CHECKLIST.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:27.998Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"source_sha|git_commit|app_version|desktop_version|mcp|sha256|built_at|proof_id|npm|archive|installer|publishable|exact_source\" scripts/windows-release-provenance.js tests/windows-release-provenance.test.js scripts/npm_install_windows_smoke.ps1",
+          "session_id": "h5Sh2uPzxRq65ro4Z-b4Ao0T"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:28.089Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"source_sha|git_commit|app_version|desktop_version|mcp|sha256|built_at|proof_id|npm|archive|installer|publishable|exact_source\" scripts/windows-release-provenance.js tests/windows-release-provenance.test.js scripts/npm_install_windows_smoke.ps1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:38.413Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content 'tests/windows-release-provenance.test.js' -TotalCount 120\"",
+          "session_id": "VS2eLAkCk5oB0eqH_9nqDKqm"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:38.774Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content 'tests/windows-release-provenance.test.js' -TotalCount 120\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:56.657Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:57.354Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:58.338Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /c \"ver & hostname & whoami & where shutdown.exe & whoami /priv | findstr /I /C:\\\"SeShutdownPrivilege\\\"\"",
+          "session_id": "Hu_gVW1xOeg6SNQty-eWbmnE"
+        }
+      },
+      {
+        "time": "2026-08-15T10:55:58.536Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /c \"ver & hostname & whoami & where shutdown.exe & whoami /priv | findstr /I /C:\\\"SeShutdownPrivilege\\\"\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-15T10:56:05.369Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "6c959218a02747d8a75d5049138a7d3b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-15T10:56:05.390Z",
+    "updated_at": "2026-08-15T10:56:24.791Z",
+    "events": [
+      {
+        "time": "2026-08-15T10:56:05.390Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:05.399Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p = whoami /priv; $p | Select-String 'SeShutdownPrivilege'; Get-Command shutdown.exe | Select-Object -ExpandProperty Source\"",
+          "session_id": "bhn2vHq78juqgzq8NuT97Uu-"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:05.975Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p = whoami /priv; $p | Select-String 'SeShutdownPrivilege'; Get-Command shutdown.exe | Select-Object -ExpandProperty Source\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:24.320Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$src=@'\nusing System;\nusing System.Runtime.InteropServices;\npublic static class ShutdownPrivilegeProbe {\n  [StructLayout(LayoutKind.Sequential)] public struct LUID { public uint LowPart; public int HighPart; }\n  [StructLayout(LayoutKind.Sequential)] public struct TOKEN_PRIVILEGES { public uint PrivilegeCount; public LUID Luid; public uint Attributes; }\n  [DllImport(\\\"kernel32.dll\\\")] static extern IntPtr GetCurrentProcess();\n  [DllImport(\\\"kernel32.dll\\\")] sta",
+          "session_id": "9U2FdHSFt8Yf43nllAO_fZpP"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:24.791Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$src=@'\nusing System;\nusing System.Runtime.InteropServices;\npublic static class ShutdownPrivilegeProbe {\n  [StructLayout(LayoutKind.Sequential)] public struct LUID { public uint LowPart; public int HighPart; }\n  [StructLayout(LayoutKind.Sequential)] public struct TOKEN_PRIVILEGES { public uint PrivilegeCount; public LUID Luid; public uint Attributes; }\n  [DllImport(\\\"kernel32.dll\\\")] static extern IntPtr GetCurrentProcess();\n  [DllImport(\\\"kernel32.dll\\\")] sta",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-15T10:56:32.696Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "64f326edbd144957aed578349861e5e1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-15T10:56:32.719Z",
+    "updated_at": "2026-08-15T10:56:32.774Z",
+    "events": [
+      {
+        "time": "2026-08-15T10:56:32.719Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:32.730Z",
+        "event": "command_started",
+        "details": {
+          "command": "C:\\Windows\\System32\\shutdown.exe /?",
+          "session_id": "Da168cn4_03iWWmwW84od8ad"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:32.774Z",
+        "event": "command_finished",
+        "details": {
+          "command": "C:\\Windows\\System32\\shutdown.exe /?",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-15T10:56:39.747Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "7849de9a753f4980a5fd9ba9963c64ec",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-15T10:56:39.768Z",
+    "updated_at": "2026-08-15T10:56:59.739Z",
+    "events": [
+      {
+        "time": "2026-08-15T10:56:39.768Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:39.779Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /v:on /c \"shutdown /? >nul 2>&1 & echo SHUTDOWN_HELP_PROBE_EXITCODE=!errorlevel! & echo MCP_HEARTBEAT_FINAL_OK & hostname & echo %DATE% %TIME%\"",
+          "session_id": "7hq8wYqprvdmMonqYiIF0lmH"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:39.885Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /v:on /c \"shutdown /? >nul 2>&1 & echo SHUTDOWN_HELP_PROBE_EXITCODE=!errorlevel! & echo MCP_HEARTBEAT_FINAL_OK & hostname & echo %DATE% %TIME%\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:59.673Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"Runtime\\(|OrchestrationLedger\\(|accepted_result_evaluation|finish_run\\(|record_checkpoint\\(|agent_workflow\\(\\{|task_control\\(\\{\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/scripts | Select-Object -First 220",
+          "session_id": "En97D1EWMt9A9ZsWNbUn4LAs"
+        }
+      },
+      {
+        "time": "2026-08-15T10:56:59.739Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"Runtime\\(|OrchestrationLedger\\(|accepted_result_evaluation|finish_run\\(|record_checkpoint\\(|agent_workflow\\(\\{|task_control\\(\\{\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/scripts | Select-Object -First 220",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-15T10:57:05.796Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "3d28db5e626b4bb0a01514dd37917d40",
+    "orchestration": {
+      "run_id": "edd43e17f28a4a6eaf96b3ec5109ff5e",
+      "wave_id": "9453bd0b9f2f4bedac3aeb8b25632c4d",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f64abe25a85e6abaa9fe9eeacd3665eb29a82515",
+      "worktree_fp": "32eab4044dd67ff1fa7c4c1e188a7c1bacf61eba3e7f482edd455db82845661d",
+      "contract_fp": ""
+    },
+    "objective": "Finish controlled replay EOCL attestation by requiring pair-level accepted-result identity equality before the study can report accepted_result_evidence_complete. Preserve the individually attested accepted results, but fail the overall paired-evidence gate if the two arms of any pair have different or missing pair_fingerprint values.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-15T11:00:43.914Z"
+      },
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-08-15T11:00:43.914Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-15T11:00:43.914Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_evaluation_replay.py tests/test_orchestration_ledger.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 18580,
+        "summary": "exit 0 | 18.6s | 3 lines | tail: '39 passed in 17.48s'"
+      },
+      {
+        "command": "rg -n \"def _orchestration_workspace_identity|worktree_fp\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/*.py | Select-String -Pattern \"def _orchestration_workspace_identity|worktree_fp\" | Select-Object -First 80",
+        "status": "failed",
+        "exit_code": null,
+        "duration_ms": null,
+        "summary": "",
+        "finished_at": "2026-08-15T10:59:48.374Z"
+      },
+      {
+        "command": "python -m pytest tests/test_evaluation_replay.py tests/test_orchestration_ledger.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 16756,
+        "summary": "exit 0 | 16.7s | 3 lines | tail: '40 passed in 15.34s'"
+      },
+      {
+        "command": "python -m pytest -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 6 lines | tail: '313 passed, 1 skipped, 20 subtests passed in 104.67s (0:01:44)'",
+        "finished_at": "2026-08-15T11:02:45.650Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "yCHqxUIKYYNpDAk0kw6E1hkb"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 440,
+          "command_id": "yCHqxUIKYYNpDAk0kw6E1hkb",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:yCHqxUIKYYNpDAk0kw6E1hkb:stdout",
+              "total_stream_bytes": 440,
+              "total_retained_bytes": 440,
+              "head_retained_bytes": 440,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:yCHqxUIKYYNpDAk0kw6E1hkb:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "electron",
+        "name": "web-mcp-assistant",
+        "version": "0.3.4",
+        "package_manager": "npm",
+        "test_command": "npm run test",
+        "build_command": "npm run dist",
+        "artifact_paths": [
+          "dist",
+          "build"
+        ]
+      },
+      "commands": {
+        "test": "python -m pytest tests/test_evaluation_replay.py tests/test_orchestration_ledger.py -q",
+        "build": "npm run dist"
+      },
+      "test_result": {
+        "command": "python -m pytest tests/test_evaluation_replay.py tests/test_orchestration_ledger.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 16756,
+        "summary": "exit 0 | 16.7s | 3 lines | tail: '40 passed in 15.34s'"
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "passed",
+      "failure": null,
+      "report_generated_at": "2026-08-15T11:00:42.976Z"
+    },
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-15T10:57:05.822Z",
+    "updated_at": "2026-08-15T11:03:29.501Z",
+    "events": [
+      {
+        "time": "2026-08-15T10:57:05.822Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:05.839Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"rg -n 'Runtime\\(|OrchestrationLedger\\(|accepted_result_evaluation|finish_run\\(|record_checkpoint\\(|agent_workflow\\(\\{|task_control\\(\\{' resources/coding-tools-mcp/tests resources/coding-tools-mcp/scripts | Select-Object -First 220\"",
+          "session_id": "dt69f6cnlA7q4Slu9kBvmHEk"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:06.542Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"rg -n 'Runtime\\(|OrchestrationLedger\\(|accepted_result_evaluation|finish_run\\(|record_checkpoint\\(|agent_workflow\\(\\{|task_control\\(\\{' resources/coding-tools-mcp/tests resources/coding-tools-mcp/scripts | Select-Object -First 220\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:12.420Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_task_state_and_build.py'; $a=Get-Content $p; $a[845..885]; Write-Output '--- ledger pair fixtures ---'; $q='resources/coding-tools-mcp/tests/test_orchestration_ledger.py'; $b=Get-Content $q; $b[1..115]\"",
+          "session_id": "84LWS8twxVPZJwxJEbIb1AeH"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:12.824Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_task_state_and_build.py'; $a=Get-Content $p; $a[845..885]; Write-Output '--- ledger pair fixtures ---'; $q='resources/coding-tools-mcp/tests/test_orchestration_ledger.py'; $b=Get-Content $q; $b[1..115]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:35.013Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py'; $a=Get-Content $p; $a[0..35]; Write-Output '--- executor tail ---'; $a[205..323]; Write-Output '--- tests imports + executor test ---'; $q='resources/coding-tools-mcp/tests/test_evaluation_replay.py'; $b=Get-Content $q; $b[0..20]; $b[75..145]\"",
+          "session_id": "56huBSQqp1ebg46JNzP_ILcE"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:35.396Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py'; $a=Get-Content $p; $a[0..35]; Write-Output '--- executor tail ---'; $a[205..323]; Write-Output '--- tests imports + executor test ---'; $q='resources/coding-tools-mcp/tests/test_evaluation_replay.py'; $b=Get-Content $q; $b[0..20]; $b[75..145]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:40.137Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py'; $a=Get-Content $p; for($i=220;$i -le 323;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }\"",
+          "session_id": "umyEYHdkIn6cQ6TyCD_umSY7"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:40.452Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py'; $a=Get-Content $p; for($i=220;$i -le 323;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:45.812Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py'; $a=Get-Content $p; for($i=245;$i -le 289;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }\"",
+          "session_id": "aqD5DFQ16re9GsGqaxCKxWkK"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:46.127Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py'; $a=Get-Content $p; for($i=245;$i -le 289;$i++){ '{0}: {1}' -f ($i+1),$a[$i] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:52.558Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"def list_runs\\(|def record_checkpoint\\(\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "session_id": "GF0s0T_yoXgGUtX8U5vTFcrd"
+        }
+      },
+      {
+        "time": "2026-08-15T10:57:52.643Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def list_runs\\(|def record_checkpoint\\(\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:58:09.695Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $a=Get-Content $p; $a[2175..2215]; $a[3374..3405]\"",
+          "session_id": "seFNl9Ves9rAHHck1lZAmXlU"
+        }
+      },
+      {
+        "time": "2026-08-15T10:58:10.011Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $a=Get-Content $p; $a[2175..2215]; $a[3374..3405]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:58:26.192Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /c \"echo MCP_HEARTBEAT_1_OK & hostname & whoami & where shutdown & whoami /priv | findstr /I SeShutdownPrivilege & echo MCP_HEARTBEAT_2_OK\"",
+          "session_id": "8-dhr9ltZPQLX3aSAPsc-7Mf"
+        }
+      },
+      {
+        "time": "2026-08-15T10:58:26.426Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /c \"echo MCP_HEARTBEAT_1_OK & hostname & whoami & where shutdown & whoami /priv | findstr /I SeShutdownPrivilege & echo MCP_HEARTBEAT_2_OK\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:04.013Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:04.799Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:05.494Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:05.496Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:06.319Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:06.554Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:06.790Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_evaluation_replay.py tests/test_orchestration_ledger.py -q",
+          "session_id": "MzcqLvSO2sPAklQAENWtKnXa"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:25.362Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:26.587Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:26.594Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:26.920Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:26.923Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:48.374Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def _orchestration_workspace_identity|worktree_fp\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/*.py | Select-String -Pattern \"def _orchestration_workspace_identity|worktree_fp\" | Select-Object -First 80",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-15T10:59:48.374Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:07.701Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:07.705Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:22.868Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:23.759Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:24.768Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:24.771Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:25.676Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:25.995Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:26.234Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_evaluation_replay.py tests/test_orchestration_ledger.py -q",
+          "session_id": "a4lqBe3hbekFTq2_aX7L3Xpa"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:42.977Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:43.909Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:43.914Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:44.122Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:44.131Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-15T11:00:52.060Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest -q",
+          "session_id": "yCHqxUIKYYNpDAk0kw6E1hkb"
+        }
+      },
+      {
+        "time": "2026-08-15T11:02:45.650Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T11:02:50.863Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py resources/coding-tools-mcp/tests/test_evaluation_replay.py && git status --short --branch",
+          "session_id": "fAsi5XymwMztDWBCMSqwATnN"
+        }
+      },
+      {
+        "time": "2026-08-15T11:02:51.004Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py resources/coding-tools-mcp/tests/test_evaluation_replay.py && git status --short --branch",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-15T11:03:15.076Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-15T11:03:15.079Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-15T11:03:36.814Z",
     "archive_reason": "finished"
   }
 ]

@@ -1,0 +1,15 @@
+PyJWT>=2.8
+
+[desktop]
+PySide6<6.9,>=6.8
+psutil<8,>=7.0
+
+[dev]
+mcp<2,>=1.26
+mypy<2.2,>=2.1
+PyYAML>=6.0
+ruff<0.16,>=0.15
+typing_extensions>=4.12
+
+[image]
+Pillow>=10.0

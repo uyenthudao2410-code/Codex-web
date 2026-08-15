@@ -55,11 +55,13 @@ test('main process exposes Execution Control Center IPC through MCP control plan
 });
 
 test('MCP exposes an authorized orchestration snapshot endpoint', () => {
-  const server = read('resources/coding-tools-mcp/coding_tools_mcp/server.py');
-  assert.match(server, /__control\/orchestration/);
-  assert.match(server, /def control_orchestration_snapshot/);
-  assert.match(server, /current_active_run/);
-  assert.match(server, /latest_handoff_capsule/);
+  // HTTP routing was extracted from server.py into the focused handler module;
+  // keep the source assertion on the module that owns the endpoint.
+  const httpHandler = read('resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py');
+  assert.match(httpHandler, /__control\/orchestration/);
+  assert.match(httpHandler, /def control_orchestration_snapshot/);
+  assert.match(httpHandler, /current_active_run/);
+  assert.match(httpHandler, /latest_handoff_capsule/);
 });
 
 test('control panel renders task plus multi-client authority and continuity controls', () => {

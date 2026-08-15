@@ -69,9 +69,13 @@ test('background runtime processes are hidden and never detached on Windows', ()
   }
   const runner = fs.readFileSync(path.join(root, 'electron/services/commandRunner.js'), 'utf8');
   assert.doesNotMatch(runner, /spawnDetached/);
-  const mcpServer = fs.readFileSync(path.join(root, 'resources/coding-tools-mcp/coding_tools_mcp/server.py'), 'utf8');
-  assert.match(mcpServer, /CREATE_NO_WINDOW/);
-  assert.match(mcpServer, /encoding="utf-8"/);
+  // Process launch policy is shared by the extracted process helper rather
+  // than duplicated in server.py.
+  const processPolicy = fs.readFileSync(path.join(root, 'resources/coding-tools-mcp/coding_tools_mcp/processes.py'), 'utf8');
+  assert.match(processPolicy, /def hidden_process_popen_kwargs/);
+  assert.match(processPolicy, /CREATE_NO_WINDOW/);
+  const execTools = fs.readFileSync(path.join(root, 'resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py'), 'utf8');
+  assert.match(execTools, /encoding="utf-8"/);
 });
 
 test('runtime state migration keeps only current native and tunnel fields', () => {
