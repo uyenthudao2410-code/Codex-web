@@ -109,6 +109,13 @@ Workflow là: sửa source, chạy test, xem `update_pending`, gọi explicit pr
 và `activate_update` đúng component, rồi đọc operation status cùng
 `running_revision == disk_revision`. Không có watcher hoặc `restart-all`.
 
+Lần chuyển đầu tiên từ Recovery Host/Coding MCP legacy chưa expose activation
+RPC là một mixed-version bootstrap boundary. Process legacy không thể tự chứng
+minh canonical preflight bằng protocol mới, nên không được tự fallback sang
+kill/restart. Operator chỉ bootstrap trong maintenance window đã xác nhận
+canonical runtime idle; sau khi host và MCP mới đã load, mọi activation tiếp
+theo phải đi qua protocol controlled ở trên.
+
 ## Current scope and rollback
 
 Wave hiện tại đã chuyển ownership local và UI client, đồng thời có focused

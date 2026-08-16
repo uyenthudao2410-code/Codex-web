@@ -1096,6 +1096,11 @@ Wave này không thêm watcher hoặc auto restart. `activate_update()` hiện c
   reacquire ownership trong bounded timeout;
 - không action nào nhận arbitrary executable/path/shell hoặc restart tất cả.
 
+Mixed-version bootstrap là boundary riêng: host/MCP legacy chưa có activation
+RPC không được tự bypass preflight. Lần chuyển đầu chỉ thực hiện trong explicit
+maintenance window sau khi canonical state được xác nhận idle; từ revision mới
+trở đi dùng hoàn toàn controlled activation protocol.
+
 ---
 
 # Phase 3 — Independent Recovery MCP + Recovery Tunnel
