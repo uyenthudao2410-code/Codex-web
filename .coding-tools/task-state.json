@@ -1,37 +1,225 @@
 {
   "version": 2,
-  "task_id": "9df7d41271ef4a5296a4f030d5c915e0",
-  "orchestration": {},
-  "objective": "Complete a workspace task",
-  "status": "stopped",
-  "steps": [],
-  "current_step": "Control command session",
+  "task_id": "4649c3ce8c28477fa96331fd5b22e450",
+  "orchestration": {
+    "run_id": "ce474411932c46f19d32fd22d900060d",
+    "wave_id": "70507facff0b4bb0930d7b67dc29fd92",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "6b5d16e980058d51585f039eff918d938bbb66e9",
+    "worktree_fp": "39e1a99a9beb89c60425b5ef1d71f3db4e5bbb23a71d8c6493a0877b529a27c6",
+    "contract_fp": ""
+  },
+  "objective": "Implement R3B1b only: backward-compatible source_snapshot_validation Runner capability and explicit CleanHead versus SourceSnapshot placement semantics. Current Runner must still advertise snapshot capability false, and production ToolRuntime must still create CleanHead intents only. Dirty cargo validation remains disabled. Preserve unrelated WIP and all R2B/R3A/R3B1a behavior.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "in_progress",
+      "updated_at": "2026-08-16T15:21:37.367Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "pending",
+      "updated_at": "2026-08-16T15:21:37.367Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-16T15:21:37.367Z"
+    }
+  ],
+  "current_step": "Replan required",
   "current_command": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "Resume or start a new task.",
-  "created_at": "2026-08-16T14:40:28.553Z",
-  "updated_at": "2026-08-16T14:41:00.285Z",
+  "next_step": "Replan from the durable failure or cancellation; do not retry an unchanged wave.",
+  "created_at": "2026-08-16T15:16:32.550Z",
+  "updated_at": "2026-08-16T15:22:34.273Z",
   "events": [
     {
-      "time": "2026-08-16T14:40:28.553Z",
-      "event": "task_auto_started",
+      "time": "2026-08-16T15:16:32.550Z",
+      "event": "task_started",
       "details": {
-        "objective": "Complete a workspace task"
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
       }
     },
     {
-      "time": "2026-08-16T14:40:53.508Z",
-      "event": "task_stopped",
+      "time": "2026-08-16T15:16:44.687Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-16T15:16:49.576Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-16T15:16:49.580Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T15:17:09.402Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T15:18:09.548Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T15:18:37.896Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T15:19:33.088Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T15:20:05.518Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_NOT_FOUND"
+      }
+    },
+    {
+      "time": "2026-08-16T15:20:21.217Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:11.675Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:36.114Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:36.701Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:37.365Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:37.367Z",
+      "event": "continuous_workflow_started",
       "details": {
         "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:38.331Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:38.334Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:38.337Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
           "failure",
           "next_step",
           "status"
         ]
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:38.438Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_NOT_FOUND"
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:41.683Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T15:21:54.959Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
       }
     }
   ]

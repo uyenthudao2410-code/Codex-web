@@ -18,6 +18,7 @@ pub(crate) mod projects;
 pub(crate) mod remote_shell;
 pub(crate) mod shell;
 pub(crate) mod shutdown;
+pub(crate) mod source_snapshot;
 pub(crate) mod ssh;
 pub(crate) mod transport;
 pub(crate) mod util;

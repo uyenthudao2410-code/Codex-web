@@ -1,1021 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "1296f889d2ab403ebf33c9dad68daf06",
-    "orchestration": {
-      "run_id": "a6478c1960eb452c8f551e95e437db40",
-      "wave_id": "66685f9b53804cfd9595cfa5db8a20dc",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "415cb658f43cbd1d2456f65bf5649ed52b87ab25",
-      "worktree_fp": "fab5f3a75a62f57ee9ebbf0885ddf767f437cd153972e1e61b04dda363e851d8",
-      "contract_fp": ""
-    },
-    "objective": "Run a workspace command",
-    "status": "completed",
-    "steps": [],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [
-      {
-        "path": "docs/research/260816_CHATWEB_SERVER_FIRST_COMPUTE_ORCHESTRATION_RESEARCH.md",
-        "operation": "create",
-        "updated_at": "2026-08-16T09:56:46.443Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Review or use the generated document.",
-    "created_at": "2026-08-16T09:51:34.083Z",
-    "updated_at": "2026-08-16T09:56:57.550Z",
-    "events": [
-      {
-        "time": "2026-08-16T09:51:34.083Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:34.279Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"sqlite3\\.connect|ledger\\.sqlite3|managed_process_jobs|orchestration_runs|wave_events\" resources/coding-tools-mcp scripts docs --glob \"*.py\" --glob \"*.ps1\" --glob \"*.md\"",
-          "session_id": "eY_A5MWdXhzCCtad7M4nLvEj"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:34.496Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"sqlite3\\.connect|ledger\\.sqlite3|managed_process_jobs|orchestration_runs|wave_events\" resources/coding-tools-mcp scripts docs --glob \"*.py\" --glob \"*.ps1\" --glob \"*.md\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:36.096Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$statusPath=Join-Path $d 'recovery-supervisor-status.json';$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$rt=Get-Content -Raw -LiteralPath (Join-Path $d 'runtime-state.json')|ConvertFrom-Json;$s=Get-Content -Raw -LiteralPath $statusPath|ConvertFrom-Json;$oldPid=[int]$s.supervisor_pid;$oldHost=[int]$desc.owner_pid;$oldMcp=[int]$rt.nativePid;$oldTunnel=[int]$",
-          "session_id": "TsDT1IzZCnvg9TL_abTs1Ed1"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:40.513Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --help",
-          "session_id": "vlKo5VktJQtdko1HdfjOJaJ0"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:40.747Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --help",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:46.338Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace . --limit 200",
-          "session_id": "F3TC4uN-PygBav9lX6r782vL"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:51.962Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace . --limit 200",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:58.487Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --help",
-          "session_id": "3DqoU4c7Wkh2CfYjInodcffw"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:58.754Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --help",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:51:58.850Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$statusPath=Join-Path $d 'recovery-supervisor-status.json';$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$rt=Get-Content -Raw -LiteralPath (Join-Path $d 'runtime-state.json')|ConvertFrom-Json;$s=Get-Content -Raw -LiteralPath $statusPath|ConvertFrom-Json;$oldPid=[int]$s.supervisor_pid;$oldHost=[int]$desc.owner_pid;$oldMcp=[int]$rt.nativePid;$oldTunnel=[int]$",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:52:04.607Z",
-        "event": "command_started",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --baseline-policy chatweb_mcp --candidate-policy mini --min-pairs 10 --min-task-classes 3 --limit 500",
-          "session_id": "Lzgwac1LlU0oUzWQ_9zzxPar"
-        }
-      },
-      {
-        "time": "2026-08-16T09:52:04.953Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python resources/coding-tools-mcp/scripts/compare_route_policies.py --workspace . --baseline-policy chatweb_mcp --candidate-policy mini --min-pairs 10 --min-task-classes 3 --limit 500",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:52:33.845Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$descPath=Join-Path $d 'recovery-host.json';$rtPath=Join-Path $d 'runtime-state.json';$rpPath=Join-Path $d 'recovery-plane-state.json';$supPath=Join-Path $d 'recovery-supervisor-status.json';$desc=Get-Content -Raw -LiteralPath $descPath|ConvertFrom-Json;$rt=Get-Content -Raw -LiteralPath $rtPath|ConvertFrom-Json;$rp=Get-Content -Raw -LiteralPath $rpPath|ConvertFrom-Json;$sup=Get-Content -Raw -Literal",
-          "session_id": "o3pyqOS8zYBZQU4bvx0qCLVo"
-        }
-      },
-      {
-        "time": "2026-08-16T09:52:45.536Z",
-        "event": "command_started",
-        "details": {
-          "command": "git status --short && git rev-parse --verify HEAD && git branch --show-current && if exist docs\\research\\260816_CHATWEB_SERVER_FIRST_COMPUTE_ORCHESTRATION_RESEARCH.md (echo REPORT_EXISTS) else (echo REPORT_ABSENT)",
-          "session_id": "mcMycoIkTBRxX48AwR77JkEi"
-        }
-      },
-      {
-        "time": "2026-08-16T09:52:45.820Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git status --short && git rev-parse --verify HEAD && git branch --show-current && if exist docs\\research\\260816_CHATWEB_SERVER_FIRST_COMPUTE_ORCHESTRATION_RESEARCH.md (echo REPORT_EXISTS) else (echo REPORT_ABSENT)",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:52:57.607Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$descPath=Join-Path $d 'recovery-host.json';$rtPath=Join-Path $d 'runtime-state.json';$rpPath=Join-Path $d 'recovery-plane-state.json';$supPath=Join-Path $d 'recovery-supervisor-status.json';$desc=Get-Content -Raw -LiteralPath $descPath|ConvertFrom-Json;$rt=Get-Content -Raw -LiteralPath $rtPath|ConvertFrom-Json;$rp=Get-Content -Raw -LiteralPath $rpPath|ConvertFrom-Json;$sup=Get-Content -Raw -Literal",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:53:13.028Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';Start-Sleep -Seconds 12;$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$sup=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-supervisor-status.json')|ConvertFrom-Json;$act=Get-Content -Raw -LiteralPath (Join-Path $d 'accepted-code-activation.json')|ConvertFrom-Json;$logPath=Join-Path $d 'logs\\assistant.log';$recent=@();if(Test-Path -LiteralPath $logPath",
-          "session_id": "oaNccpSkNLbXm8LfsgqIOS4i"
-        }
-      },
-      {
-        "time": "2026-08-16T09:53:53.191Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';Start-Sleep -Seconds 12;$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$sup=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-supervisor-status.json')|ConvertFrom-Json;$act=Get-Content -Raw -LiteralPath (Join-Path $d 'accepted-code-activation.json')|ConvertFrom-Json;$logPath=Join-Path $d 'logs\\assistant.log';$recent=@();if(Test-Path -LiteralPath $logPath",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:54:06.841Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$sup=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-supervisor-status.json')|ConvertFrom-Json;$act=Get-Content -Raw -LiteralPath (Join-Path $d 'accepted-code-activation.json')|ConvertFrom-Json;$last=@($act.intents)|Select-Object -Last 12|ForEach-Object{[pscustomobject]@{checkpoint=$_.checkpoint_id;compone",
-          "session_id": "nTJyThafEMcfmdh_C3wV9IOE"
-        }
-      },
-      {
-        "time": "2026-08-16T09:54:07.746Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$sup=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-supervisor-status.json')|ConvertFrom-Json;$act=Get-Content -Raw -LiteralPath (Join-Path $d 'accepted-code-activation.json')|ConvertFrom-Json;$last=@($act.intents)|Select-Object -Last 12|ForEach-Object{[pscustomobject]@{checkpoint=$_.checkpoint_id;compone",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:54:24.327Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$act=Get-Content -Raw -LiteralPath (Join-Path $d 'accepted-code-activation.json')|ConvertFrom-Json;$sup=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-supervisor-status.json')|ConvertFrom-Json;$task=Get-ScheduledTask -TaskName 'WebMCP Recovery Supervisor' -ErrorAction Stop;$blocked=@($act.intents)|Where-Object{$_.state -eq 'blocked'}|Select-Object -Last 8|ForEach-Object{[pscustomobject]@{chec",
-          "session_id": "9jc-OHahsMjvYJOH7L7gHBd7"
-        }
-      },
-      {
-        "time": "2026-08-16T09:54:25.856Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$act=Get-Content -Raw -LiteralPath (Join-Path $d 'accepted-code-activation.json')|ConvertFrom-Json;$sup=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-supervisor-status.json')|ConvertFrom-Json;$task=Get-ScheduledTask -TaskName 'WebMCP Recovery Supervisor' -ErrorAction Stop;$blocked=@($act.intents)|Where-Object{$_.state -eq 'blocked'}|Select-Object -Last 8|ForEach-Object{[pscustomobject]@{chec",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:01.451Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$statePath=Join-Path $d 'recovery-supervisor-status.json';$initial=Get-Content -Raw -LiteralPath $statePath|ConvertFrom-Json;$initialCheck=[string]$initial.last_check_at;$deadline=(Get-Date).AddSeconds(75);$observed=$null;do{Start-Sleep -Seconds 3;try{$s=Get-Content -Raw -LiteralPath $statePath|ConvertFrom-Json;if([string]$s.last_check_at -ne $initialCheck){$observed=$s;break}}catch{}}while((Get-Dat",
-          "session_id": "iVbbTWqZ0n5_24lbbHYJSXKl"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:05.959Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$statePath=Join-Path $d 'recovery-supervisor-status.json';$initial=Get-Content -Raw -LiteralPath $statePath|ConvertFrom-Json;$initialCheck=[string]$initial.last_check_at;$deadline=(Get-Date).AddSeconds(75);$observed=$null;do{Start-Sleep -Seconds 3;try{$s=Get-Content -Raw -LiteralPath $statePath|ConvertFrom-Json;if([string]$s.last_check_at -ne $initialCheck){$observed=$s;break}}catch{}}while((Get-Dat",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:23.252Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$rt=Get-Content -Raw -LiteralPath (Join-Path $d 'runtime-state.json')|ConvertFrom-Json;$rp=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-plane-state.json')|ConvertFrom-Json;$host=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$desc.owner_pid) -ErrorAction SilentlyContinue;$mcp=Get-Process -Id (",
-          "session_id": "XWQwWbXCE-7aWUftsVCO3XUV"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:24.126Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$rt=Get-Content -Raw -LiteralPath (Join-Path $d 'runtime-state.json')|ConvertFrom-Json;$rp=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-plane-state.json')|ConvertFrom-Json;$host=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$desc.owner_pid) -ErrorAction SilentlyContinue;$mcp=Get-Process -Id (",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:35.867Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -e \"recoveryHost.*Log\" -e \"recovery-host.*log\" -e \"recoveryHost.*Stderr\" -e \"recovery-host.*stderr\" -e \"logFile\" electron/services/runtimePaths.js electron/services/recoveryHostLauncher.js electron/recoveryHost.js electron/services/logService.js",
-          "session_id": "PFUYchuhBD-azqJ5Jgw5cGd1"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:36.082Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -e \"recoveryHost.*Log\" -e \"recovery-host.*log\" -e \"recoveryHost.*Stderr\" -e \"recovery-host.*stderr\" -e \"logFile\" electron/services/runtimePaths.js electron/services/recoveryHostLauncher.js electron/recoveryHost.js electron/services/logService.js",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:39.042Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:39.681Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:39.685Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:46.900Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$f=Join-Path $env:APPDATA 'web-mcp-assistant\\logs\\assistant.log';$lock=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.lock';$size=if(Test-Path $f){(Get-Item -LiteralPath $f).Length}else{0};$tail=if(Test-Path $f){Get-Content -LiteralPath $f -Tail 160|Where-Object{$_ -match '2026-08-16T09:5|recovery-host|Recovery Host|accepted-code-auto-activation|OWNER_DEAD|process'}|Select-Object -Last 80}else{@()};$lockValue=if(Test-Path $lock){Get-Co",
-          "session_id": "jadf87hz2esNgMCTWrSAxzrc"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:50.214Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$os=Get-CimInstance Win32_OperatingSystem; Write-Host ('MEM TotalMB={0:N0} FreeMB={1:N0}' -f ($os.TotalVisibleMemorySize/1024),($os.FreePhysicalMemory/1024)); Write-Host '--- TOP CPU/WS ---'; Get-Process | Sort-Object CPU -Descending | Select-Object -First 30 ProcessName,Id,CPU,@{N='WS_MB';E={[math]::Round($_.WorkingSet64/1MB,1)}},@{N='PM_MB';E={[math]::Round($_.PrivateMemorySize64/1MB,1)}},Handles | Format-Table -AutoSize; Write-Host '--- PROJECT RELATED ---'; Ge",
-          "session_id": "V2be-RMBJXZgfdk99szp27sB"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:51.295Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$os=Get-CimInstance Win32_OperatingSystem; Write-Host ('MEM TotalMB={0:N0} FreeMB={1:N0}' -f ($os.TotalVisibleMemorySize/1024),($os.FreePhysicalMemory/1024)); Write-Host '--- TOP CPU/WS ---'; Get-Process | Sort-Object CPU -Descending | Select-Object -First 30 ProcessName,Id,CPU,@{N='WS_MB';E={[math]::Round($_.WorkingSet64/1MB,1)}},@{N='PM_MB';E={[math]::Round($_.PrivateMemorySize64/1MB,1)}},Handles | Format-Table -AutoSize; Write-Host '--- PROJECT RELATED ---'; Ge",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:55:58.002Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$f=Join-Path $env:APPDATA 'web-mcp-assistant\\logs\\assistant.log';$lock=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.lock';$size=if(Test-Path $f){(Get-Item -LiteralPath $f).Length}else{0};$tail=if(Test-Path $f){Get-Content -LiteralPath $f -Tail 160|Where-Object{$_ -match '2026-08-16T09:5|recovery-host|Recovery Host|accepted-code-auto-activation|OWNER_DEAD|process'}|Select-Object -Last 80}else{@()};$lockValue=if(Test-Path $lock){Get-Co",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:01.300Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$targets=Get-Process | Where-Object {$_.ProcessName -match 'electron|node|rust-analyzer|cargo|rustc|python|cockpit-tools'}; $a=@{}; foreach($p in $targets){$a[$p.Id]=[double]$p.CPU}; Start-Sleep -Seconds 3; $b=Get-Process | Where-Object {$a.ContainsKey($_.Id)}; $cores=[Environment]::ProcessorCount; Write-Host ('CORES='+$cores); $rows=foreach($p in $b){$d=[double]$p.CPU-$a[$p.Id]; [pscustomobject]@{Name=$p.ProcessName;Id=$p.Id;CPU_pct=[math]::Round(($d/3)*100/$core",
-          "session_id": "SSEjfHnS0zkzT2BUnKxYKuOs"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:05.375Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$targets=Get-Process | Where-Object {$_.ProcessName -match 'electron|node|rust-analyzer|cargo|rustc|python|cockpit-tools'}; $a=@{}; foreach($p in $targets){$a[$p.Id]=[double]$p.CPU}; Start-Sleep -Seconds 3; $b=Get-Process | Where-Object {$a.ContainsKey($_.Id)}; $cores=[Environment]::ProcessorCount; Write-Host ('CORES='+$cores); $rows=foreach($p in $b){$d=[double]$p.CPU-$a[$p.Id]; [pscustomobject]@{Name=$p.ProcessName;Id=$p.Id;CPU_pct=[math]::Round(($d/3)*100/$core",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:12.566Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Write-Host '--- TIMERS / RAF / OBSERVERS ---'; rg -n --glob '!node_modules/**' --glob '!target/**' 'setInterval\\(|requestAnimationFrame\\(|setTimeout\\(|MutationObserver|ResizeObserver|IntersectionObserver' renderer frontend electron | Select-Object -First 400; Write-Host '--- IPC / SEND / INVOKE ---'; rg -n --glob '!node_modules/**' 'ipcRenderer|ipcMain|webContents\\.send|send\\(|invoke\\(' renderer frontend electron | Select-Object -First 400; Write-Host '--- RECENT ",
-          "session_id": "VzFj8den3apeR7RBpSKsxUqj"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:13.788Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Write-Host '--- TIMERS / RAF / OBSERVERS ---'; rg -n --glob '!node_modules/**' --glob '!target/**' 'setInterval\\(|requestAnimationFrame\\(|setTimeout\\(|MutationObserver|ResizeObserver|IntersectionObserver' renderer frontend electron | Select-Object -First 400; Write-Host '--- IPC / SEND / INVOKE ---'; rg -n --glob '!node_modules/**' 'ipcRenderer|ipcMain|webContents\\.send|send\\(|invoke\\(' renderer frontend electron | Select-Object -First 400; Write-Host '--- RECENT ",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:20.312Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"rg -n -C 8 'new BrowserWindow|loadURL\\(|loadFile\\(|WebContentsView|runtime:heartbeat|lightweightSnapshot|create.*Window|chatWindow|managerWindow|panelWindow' electron/main.js; Write-Host '--- CHAT VIEW CONTROLLER ---'; rg -n -C 6 'WebContentsView|loadURL\\(|MutationObserver|setInterval|scheduleChatUiEnhancements|evaluationDrainTimer|requestAnimationFrame' electron/chatViewController.js\"",
-          "session_id": "ptD2w81EzUywGXnPkSCFFvcR"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:20.879Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"rg -n -C 8 'new BrowserWindow|loadURL\\(|loadFile\\(|WebContentsView|runtime:heartbeat|lightweightSnapshot|create.*Window|chatWindow|managerWindow|panelWindow' electron/main.js; Write-Host '--- CHAT VIEW CONTROLLER ---'; rg -n -C 6 'WebContentsView|loadURL\\(|MutationObserver|setInterval|scheduleChatUiEnhancements|evaluationDrainTimer|requestAnimationFrame' electron/chatViewController.js\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:27.937Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Write-Host '--- BLAME DRAIN ---'; git blame -L 345,365 -- electron/chatViewController.js; Write-Host '--- LOG DRAIN ---'; git log -S'evaluationDrainTimer' --oneline --decorate -- electron/chatViewController.js; Write-Host '--- EVALUATION OBSERVER ---'; $f='electron/services/chatEvaluationJournal.js'; $lines=Get-Content $f; for($i=300;$i -le [Math]::Min(455,$lines.Length);$i++){('{0,4}: {1}' -f $i,$lines[$i-1])}; Write-Host '--- BLAME OBSERVER ---'; git blame -L 35",
-          "session_id": "qKlFj2JMKaJyvfkvztceW1UT"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:28.835Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Write-Host '--- BLAME DRAIN ---'; git blame -L 345,365 -- electron/chatViewController.js; Write-Host '--- LOG DRAIN ---'; git log -S'evaluationDrainTimer' --oneline --decorate -- electron/chatViewController.js; Write-Host '--- EVALUATION OBSERVER ---'; $f='electron/services/chatEvaluationJournal.js'; $lines=Get-Content $f; for($i=300;$i -le [Math]::Min(455,$lines.Length);$i++){('{0,4}: {1}' -f $i,$lines[$i-1])}; Write-Host '--- BLAME OBSERVER ---'; git blame -L 35",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:31.054Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$sup=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-supervisor-status.json')|ConvertFrom-Json;$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$sp=Get-Process -Id ([int]$sup.supervisor_pid) -ErrorAction SilentlyContinue;$hp=Get-Process -Id ([int]$desc.owner_pid) -ErrorAction SilentlyContinue;$task=Get-ScheduledTask -TaskName 'WebMCP Recovery Supervisor'",
-          "session_id": "-pHdIlZtrUePA5R7W3QZtC53"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:32.636Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant';$sup=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-supervisor-status.json')|ConvertFrom-Json;$desc=Get-Content -Raw -LiteralPath (Join-Path $d 'recovery-host.json')|ConvertFrom-Json;$sp=Get-Process -Id ([int]$sup.supervisor_pid) -ErrorAction SilentlyContinue;$hp=Get-Process -Id ([int]$desc.owner_pid) -ErrorAction SilentlyContinue;$task=Get-ScheduledTask -TaskName 'WebMCP Recovery Supervisor'",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:40.508Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$f='electron/services/chatEvaluationJournal.js'; $lines=Get-Content $f; for($i=220;$i -le 315;$i++){('{0,4}: {1}' -f $i,$lines[$i-1])}; Write-Host '--- TESTS ---'; rg -n -C 4 'chatEvaluation|HostEvaluation|evaluationDrain|host_turn_span|MutationObserver|pendingUser|awaitingUserVisible' tests electron --glob '*.test.js' --glob '*.js' | Select-Object -First 500\"",
-          "session_id": "ulM-oBmVxHWqV2cVtzPu9kLw"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:41.100Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$f='electron/services/chatEvaluationJournal.js'; $lines=Get-Content $f; for($i=220;$i -le 315;$i++){('{0,4}: {1}' -f $i,$lines[$i-1])}; Write-Host '--- TESTS ---'; rg -n -C 4 'chatEvaluation|HostEvaluation|evaluationDrain|host_turn_span|MutationObserver|pendingUser|awaitingUserVisible' tests electron --glob '*.test.js' --glob '*.js' | Select-Object -First 500\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:43.803Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff -- package.json && git status --short --untracked-files=all -- package.json resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js electron/services/recoveryActionStore.js tests/accepted-code-activation.test.js",
-          "session_id": "UV2cda8p8a03UwZ0EsuQJ1KW"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:44.217Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff -- package.json && git status --short --untracked-files=all -- package.json resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js electron/services/recoveryActionStore.js tests/accepted-code-activation.test.js",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:56:46.443Z",
-        "event": "files_modified",
-        "details": {
-          "count": 1
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T09:57:02.640Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "0c2176f46cbf4422a6cebb4b4bc67377",
-    "orchestration": {
-      "run_id": "a6478c1960eb452c8f551e95e437db40",
-      "wave_id": "66685f9b53804cfd9595cfa5db8a20dc",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "415cb658f43cbd1d2456f65bf5649ed52b87ab25",
-      "worktree_fp": "fab5f3a75a62f57ee9ebbf0885ddf767f437cd153972e1e61b04dda363e851d8",
-      "contract_fp": ""
-    },
-    "objective": "Loại bỏ regression gây lag nặng trong embedded ChatGPT renderer do host-evaluation telemetry vừa thêm ở commit f64abe25: không được scan toàn bộ DOM trên mọi MutationObserver khi idle, và không được tạo executeJavaScript drain chồng lấn ở chu kỳ 150ms. Giữ nguyên semantics host-visible timestamp/correlation và không làm yếu content-free telemetry. Chỉ sửa electron/chatViewController.js, electron/services/chatEvaluationJournal.js và focused tests.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-16T09:57:30.535Z"
-      },
-      {
-        "id": "verify",
-        "text": "Run tests and build verification",
-        "status": "completed",
-        "updated_at": "2026-08-16T09:57:30.535Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-16T09:57:30.535Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": {
-      "command": "node --test tests/chat-evaluation-journal.test.js tests/chat-ui-compact.test.js",
-      "kind": "command",
-      "session_id": "VCqogy_GmxyE6XiYUp9JvcWB",
-      "workdir": ".",
-      "status": "running",
-      "started_at": "2026-08-16T09:57:29.486Z"
-    },
-    "test_results": [
-      {
-        "command": "node --test tests/chat-evaluation-journal.test.js tests/chat-ui-compact.test.js",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 899,
-        "summary": "exit 0 | 0.5s | 71 lines | tail: '# duration_ms 180.2695'"
-      }
-    ],
-    "build_results": [],
-    "last_build_report": {
-      "project": {
-        "type": "electron",
-        "name": "web-mcp-assistant",
-        "version": "0.3.4",
-        "package_manager": "npm",
-        "test_command": "npm run test",
-        "build_command": "npm run dist",
-        "artifact_paths": [
-          "dist",
-          "build"
-        ]
-      },
-      "commands": {
-        "test": "node --test tests/chat-evaluation-journal.test.js tests/chat-ui-compact.test.js",
-        "build": "npm run dist"
-      },
-      "test_result": {
-        "command": "node --test tests/chat-evaluation-journal.test.js tests/chat-ui-compact.test.js",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 899,
-        "summary": "exit 0 | 0.5s | 71 lines | tail: '# duration_ms 180.2695'"
-      },
-      "build_result": null,
-      "artifacts": [],
-      "hash_algorithm": "sha256",
-      "overall_status": "passed",
-      "failure": null,
-      "report_generated_at": "2026-08-16T09:57:29.951Z"
-    },
-    "modified_files": [
-      {
-        "path": "electron/chatViewController.js",
-        "operation": "update",
-        "updated_at": "2026-08-16T09:57:30.807Z"
-      },
-      {
-        "path": "electron/services/chatEvaluationJournal.js",
-        "operation": "update",
-        "updated_at": "2026-08-16T09:57:30.807Z"
-      },
-      {
-        "path": "tests/chat-evaluation-journal.test.js",
-        "operation": "update",
-        "updated_at": "2026-08-16T09:57:30.807Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-16T09:57:02.680Z",
-    "updated_at": "2026-08-16T09:57:42.786Z",
-    "events": [
-      {
-        "time": "2026-08-16T09:57:02.680Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:02.891Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$f='electron/chatViewController.js'; $l=Get-Content $f; foreach($r in @(@(35,95),@(115,175),@(345,370),@(445,465))){for($i=$r[0];$i -le $r[1];$i++){('{0,4}: {1}' -f $i,$l[$i-1])}; Write-Host '---'}; $t='tests/chat-evaluation-journal.test.js'; $q=Get-Content $t; for($i=90;$i -le [Math]::Min(155,$q.Length);$i++){('{0,4}: {1}' -f $i,$q[$i-1])}\"",
-          "session_id": "YOLR2Pc0ad8tc7GqTJ3e5QX9"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:03.441Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$f='electron/chatViewController.js'; $l=Get-Content $f; foreach($r in @(@(35,95),@(115,175),@(345,370),@(445,465))){for($i=$r[0];$i -le $r[1];$i++){('{0,4}: {1}' -f $i,$l[$i-1])}; Write-Host '---'}; $t='tests/chat-evaluation-journal.test.js'; $q=Get-Content $t; for($i=90;$i -le [Math]::Min(155,$q.Length);$i++){('{0,4}: {1}' -f $i,$q[$i-1])}\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:16.029Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:16.366Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:18.821Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:18.824Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:27.065Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:27.545Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:28.025Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:28.027Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:28.742Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:28.937Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:29.486Z",
-        "event": "command_started",
-        "details": {
-          "command": "node --test tests/chat-evaluation-journal.test.js tests/chat-ui-compact.test.js",
-          "session_id": "VCqogy_GmxyE6XiYUp9JvcWB"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:29.951Z",
-        "event": "build_verification_finished",
-        "details": {
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:30.533Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:30.535Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:30.660Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:30.662Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:30.807Z",
-        "event": "files_modified",
-        "details": {
-          "count": 3
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:41.485Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:42.755Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:42.756Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T09:57:54.136Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "43ac9724cf4d40bc8ce8ca06fc9aee63",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Shell command substitution and parameter expansion require explicit permission.",
-    "next_step": "",
-    "created_at": "2026-08-16T09:57:54.180Z",
-    "updated_at": "2026-08-16T09:58:04.320Z",
-    "events": [
-      {
-        "time": "2026-08-16T09:57:54.180Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:54.398Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Write-Host '--- RUNTIME EVIDENCE FILES ---'; Get-Item .coding-tools\\orchestration\\ledger.sqlite3,.coding-tools\\orchestration\\ledger.sqlite3-wal,.coding-tools\\orchestration\\ledger.sqlite3-shm,.coding-tools\\performance.json,.coding-tools\\task-history.json,.coding-tools\\task-state.json -ErrorAction SilentlyContinue | Select-Object Name,@{N='MB';E={[math]::Round($_.Length/1MB,3)}},LastWriteTime | Format-Table -AutoSize; Write-Host '--- PERFORMANCE SHAPE ---'; $p=Get-C",
-          "session_id": "v8tp5lEQFOmzTl6Vyn3kHQFF"
-        }
-      },
-      {
-        "time": "2026-08-16T09:57:55.767Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Write-Host '--- RUNTIME EVIDENCE FILES ---'; Get-Item .coding-tools\\orchestration\\ledger.sqlite3,.coding-tools\\orchestration\\ledger.sqlite3-wal,.coding-tools\\orchestration\\ledger.sqlite3-shm,.coding-tools\\performance.json,.coding-tools\\task-history.json,.coding-tools\\task-state.json -ErrorAction SilentlyContinue | Select-Object Name,@{N='MB';E={[math]::Round($_.Length/1MB,3)}},LastWriteTime | Format-Table -AutoSize; Write-Host '--- PERFORMANCE SHAPE ---'; $p=Get-C",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:04.320Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"Write-Host '--- EVIDENCE SIZES ---'; Get-Item .coding-tools\\orchestration\\ledger.sqlite3,.coding-tools\\orchestration\\ledger.sqlite3-wal,.coding-tools\\orchestration\\ledger.sqlite3-shm,.coding-tools\\performance.json,.coding-tools\\task-history.json,.coding-tools\\task-state.json -ErrorAction SilentlyContinue | ForEach-Object { '{0}`t{1:N3} MB`t{2:HH:mm:ss.fff}' -f $_.Name,($_.Length/1MB),$_.LastWriteTime }; Write-Host '--- WAIT BEFORE DEFINITION ---'; rg -n -C 5 'wait",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:04.320Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "PERMISSION_REQUIRED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T09:58:09.765Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "ac24b64177e84985a5087e75308966ab",
-    "orchestration": {
-      "run_id": "7191568871e44ca987c4ac359fdab890",
-      "wave_id": "86b5a849409d4616bcfd2025c370aa69",
-      "orchestration_state": "REPLAN",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "415cb658f43cbd1d2456f65bf5649ed52b87ab25",
-      "worktree_fp": "d810f52819470b521c826d096061dc7e1aa0435236e3a43d0d052b7b0ea01d8c",
-      "contract_fp": ""
-    },
-    "objective": "Phase 3 final provenance closure. Modify only package.json by adding the useful bounded script recovery:supervisor:once invoking the existing fixed Recovery Supervisor -Action Once entry point. This both completes the supervisor operator surface and gives package.json a canonical accepted SHA receipt on current HEAD, which is the only file currently blocking Recovery Host/UI auto activation with UNACCEPTED_COMPONENT_DIRTY. Preserve all other dirty/untracked work, especially concurrent research documents and Phase 3 source. Verify package JSON parses, run npm test, inspect package-only diff, and stop at ACCEPTING for ChatWeb Sol review.",
-    "status": "failed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-16T09:58:19.347Z"
-      },
-      {
-        "id": "checks",
-        "text": "Run requested checks",
-        "status": "in_progress",
-        "updated_at": "2026-08-16T09:58:19.347Z"
-      },
-      {
-        "id": "verify",
-        "text": "Run tests and build verification",
-        "status": "pending",
-        "updated_at": "2026-08-16T09:58:19.347Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "pending",
-        "updated_at": "2026-08-16T09:58:19.347Z"
-      }
-    ],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Provide replan_reason after correcting the failure cause.",
-    "created_at": "2026-08-16T09:58:09.807Z",
-    "updated_at": "2026-08-16T09:58:29.936Z",
-    "events": [
-      {
-        "time": "2026-08-16T09:58:09.807Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:10.040Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 6 \"wait_before_ms|waitBefore\" resources/coding-tools-mcp electron src tests --glob !**/__pycache__/**",
-          "session_id": "RT-91VZx4gwFXfhodQAwBUOH"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:10.256Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 6 \"wait_before_ms|waitBefore\" resources/coding-tools-mcp electron src tests --glob !**/__pycache__/**",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:15.531Z",
-        "event": "command_started",
-        "details": {
-          "command": "cmd /c \"dir /-C .coding-tools\\orchestration\\ledger.sqlite3 .coding-tools\\orchestration\\ledger.sqlite3-wal .coding-tools\\orchestration\\ledger.sqlite3-shm .coding-tools\\performance.json .coding-tools\\task-history.json .coding-tools\\task-state.json\"",
-          "session_id": "cXo_D7VsFkjr9WuLy5UAdOFH"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:15.756Z",
-        "event": "command_finished",
-        "details": {
-          "command": "cmd /c \"dir /-C .coding-tools\\orchestration\\ledger.sqlite3 .coding-tools\\orchestration\\ledger.sqlite3-wal .coding-tools\\orchestration\\ledger.sqlite3-shm .coding-tools\\performance.json .coding-tools\\task-history.json .coding-tools\\task-state.json\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:17.291Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:18.139Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:18.640Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:18.641Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:19.155Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:19.347Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:19.847Z",
-        "event": "execution_exception",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:19.848Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:19.942Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "PERMISSION_REQUIRED"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:23.834Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git blame -L 226,343 -- electron/chatViewController.js",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-16T09:58:23.834Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "EXECUTION_OWNER_INVALID"
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T09:58:41.883Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "779844babd5340af8a4acfc9f2e739c7",
     "orchestration": {
       "run_id": "955c417452684f389a4d336e8af8d2d2",
@@ -22952,5 +21937,1991 @@
     ],
     "archived_at": "2026-08-16T14:40:28.524Z",
     "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "9df7d41271ef4a5296a4f030d5c915e0",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Control command session",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "The current task was stopped. Start or resume a task before continuing.",
+    "next_step": "Resume or start a new task.",
+    "created_at": "2026-08-16T14:40:28.553Z",
+    "updated_at": "2026-08-16T14:42:49.706Z",
+    "events": [
+      {
+        "time": "2026-08-16T14:40:28.553Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-16T14:40:53.508Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:42:49.706Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "TASK_STOPPED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-16T14:43:03.287Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "b83a45c2f621495692ad85e79ede4e7e",
+    "orchestration": {
+      "run_id": "acddab468da74e4fb876b7e8509b5446",
+      "wave_id": "06e645a4b9dd46b7bd0fb2c60c24c948",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "6b5d16e980058d51585f039eff918d938bbb66e9",
+      "worktree_fp": "3ffbaff0e9a4276159f7515f2a3e0e862fe05de8a9d642a0a0e580e5e821fb06",
+      "contract_fp": ""
+    },
+    "objective": "Implement R3A immutable source-snapshot foundation only; do not enable dirty validation dispatch yet. Add a backward-compatible shared V1 source snapshot contract in webcodex-core shell_protocol with an explicit future capability field `source_snapshot_validation` defaulting false. The contract must be content-addressed and bounded for current transport/output budgets: at most 128 entries, at most 64 KiB per upsert file, at most 128 KiB decoded upsert bytes total, UTF-8 project-relative paths <=1024 bytes, no absolute/parent/.git path components, regular-file upsert or delete only, optional executable bit on upserts, SHA-256 content hash per upsert, and a canonical snapshot digest that includes schema version + full base Git HEAD + sorted unique entries and their metadata/content hashes. Reject malformed/base64/hash/duplicate/unsorted/oversize snapshots fail-closed. Do not expose raw snapshot content through Job/status structures and do not add a public MCP tool.\n\nIn webcodex-runner add a small internal `source_snapshot` module with two side-effect-bounded primitives: (1) capture a stable dirty snapshot against an expected full Git HEAD by using `git diff --name-only --no-renames -z HEAD --` plus `git ls-files --others --exclude-standard -z --`, reading only regular files within the shared bounds, encoding deletes/upserts, capturing executable metadata where supported, and rechecking HEAD/change lists/file hashes before returning so concurrent source mutation fails closed; reject symlink/submodule/special-file changed entries. (2) materialize a validated snapshot into a Runner-owned temporary clone, using a private local `git clone --no-checkout --shared <registered repo> <temp>` followed by detached checkout of the exact base head, then applying only safe snapshot entries under the temp checkout, verifying resulting upsert hashes/deletions, and returning an RAII owner that deletes the temp clone on drop. It must never use `git worktree add`, never write the registered checkout or its normal `.git/index`, never auto-commit, and never follow parent symlinks while applying entries. The module may read the registered repo/object database only.\n\nAdd focused tests proving: deterministic digest/roundtrip contract; malformed/oversize/unsafe entries reject; capture includes modified, staged/new, untracked and deleted regular files; concurrent/unsupported symlink input fails closed where supported; materialization reproduces exact changed/deleted bytes and executable metadata where supported; dropping materialization removes temp tree; and capture/materialize leave the original checkout HEAD/status/file bytes unchanged except for the test's intentionally dirty source. Update capability struct/default/name list and compatibility literals as necessary so old serialized runners default false, but keep the current production runner advertisement false until R3B wiring exists. Preserve all unrelated WIP and runtime evidence. Run only focused proof: cargo fmt --all -- --check; cargo test -p webcodex-core source_snapshot -- --test-threads=1; cargo test -p webcodex-runner source_snapshot -- --test-threads=1 if that package test target links within the bounded budget, otherwise cargo check -p webcodex-runner --tests; then cargo check --lib -q and cargo check --tests -q. Do not run the root monolithic cargo test binary.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-16T14:50:00.813Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-16T14:50:00.813Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [
+      {
+        "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 3825,
+        "summary": "exit 0 | 3.8s | 11 lines | tail: 'Running unittests src\\\\lib.rs (target\\\\debug\\\\deps\\\\webcodex_core-7633faa1c658fc27.exe)'",
+        "finished_at": "2026-08-16T14:47:44.883Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "DeaLoGbX-oSFYw5NVM-mzqV5"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 359,
+          "command_id": "DeaLoGbX-oSFYw5NVM-mzqV5",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:DeaLoGbX-oSFYw5NVM-mzqV5:stdout",
+              "total_stream_bytes": 114,
+              "total_retained_bytes": 114,
+              "head_retained_bytes": 114,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:DeaLoGbX-oSFYw5NVM-mzqV5:stderr",
+              "total_stream_bytes": 245,
+              "total_retained_bytes": 245,
+              "head_retained_bytes": 245,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 127 lines | tail: 'Running unittests src\\\\main.rs (target\\\\debug\\\\deps\\\\webcodex_runner-600a46880ae05279.exe)'",
+        "finished_at": "2026-08-16T14:48:33.986Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "1yVGindewK-8DRjgSK9ZC2wR"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 5034,
+          "command_id": "1yVGindewK-8DRjgSK9ZC2wR",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:1yVGindewK-8DRjgSK9ZC2wR:stdout",
+              "total_stream_bytes": 115,
+              "total_retained_bytes": 115,
+              "head_retained_bytes": 115,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:1yVGindewK-8DRjgSK9ZC2wR:stderr",
+              "total_stream_bytes": 4919,
+              "total_retained_bytes": 4919,
+              "head_retained_bytes": 4919,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-16T14:43:03.314Z",
+    "updated_at": "2026-08-16T14:50:20.512Z",
+    "events": [
+      {
+        "time": "2026-08-16T14:43:03.314Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:43:13.288Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T14:43:18.274Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T14:43:18.287Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T14:43:53.030Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T14:44:55.369Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:32.192Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:32.697Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:33.242Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:33.242Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:33.815Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:34.062Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:34.723Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "session_id": "cBsZvqHLbbvzmOYFFZZ7A5kz"
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:40.331Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:41.287Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+          "session_id": "DeaLoGbX-oSFYw5NVM-mzqV5"
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:44.883Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T14:47:45.829Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+          "session_id": "1yVGindewK-8DRjgSK9ZC2wR"
+        }
+      },
+      {
+        "time": "2026-08-16T14:48:33.986Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T14:48:35.102Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo check --lib -q",
+          "session_id": "NbswsxpdxjsH106SAdlBvpYr"
+        }
+      },
+      {
+        "time": "2026-08-16T14:48:57.012Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo check --lib -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T14:48:57.868Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo check --tests -q",
+          "session_id": "8KwmXX6udHYVEO97EQQyZ66J"
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:00.548Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo check --tests -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:00.806Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:00.813Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:00.923Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:00.931Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:01.104Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:03.669Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:20.437Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:20.440Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-16T14:50:33.735Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "4e712648d2214e5488f24a8c37fcff32",
+    "orchestration": {
+      "run_id": "c4159c9d6ea94654887b89c7851dfbe4",
+      "wave_id": "271a8b902b164888b62fa972752b01c5",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "6b5d16e980058d51585f039eff918d938bbb66e9",
+      "worktree_fp": "39e1a99a9beb89c60425b5ef1d71f3db4e5bbb23a71d8c6493a0877b529a27c6",
+      "contract_fp": ""
+    },
+    "objective": "Format-only repair of the newly added R3A source-snapshot foundation, then run real non-zero focused proof. Make no semantic changes, touch no unrelated WIP, do not wire R3B production dispatch yet. Acceptance still requires source_snapshot tests to execute non-zero cases in both webcodex-core and webcodex-runner.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-16T15:07:17.799Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-16T15:07:17.799Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-16T15:07:17.799Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [
+      {
+        "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 13616,
+        "summary": "exit 0 | 13.6s | 13 lines | tail: 'Running unittests src\\\\lib.rs (target\\\\debug\\\\deps\\\\webcodex_core-f7573bb1cb5c464f.exe)'",
+        "finished_at": "2026-08-16T15:02:23.835Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "wyCtchMaJayVOZbbbSHQNav-"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 578,
+          "command_id": "wyCtchMaJayVOZbbbSHQNav-",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:wyCtchMaJayVOZbbbSHQNav-:stdout",
+              "total_stream_bytes": 332,
+              "total_retained_bytes": 332,
+              "head_retained_bytes": 332,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:wyCtchMaJayVOZbbbSHQNav-:stderr",
+              "total_stream_bytes": 246,
+              "total_retained_bytes": 246,
+              "head_retained_bytes": 246,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 129 lines | tail: 'Running unittests src\\\\main.rs (target\\\\debug\\\\deps\\\\webcodex_runner-1480d88646298969.exe)'",
+        "finished_at": "2026-08-16T15:03:24.095Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "TowtBdZvXsgxmqlTiVis3TqU"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 5258,
+          "command_id": "TowtBdZvXsgxmqlTiVis3TqU",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:TowtBdZvXsgxmqlTiVis3TqU:stdout",
+              "total_stream_bytes": 339,
+              "total_retained_bytes": 339,
+              "head_retained_bytes": 339,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:TowtBdZvXsgxmqlTiVis3TqU:stderr",
+              "total_stream_bytes": 4919,
+              "total_retained_bytes": 4919,
+              "head_retained_bytes": 4919,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "cargo test -p webcodex-core source_snapshot -- --list",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 1221,
+        "summary": "exit 0 | 1.2s | 9 lines | tail: 'Running unittests src\\\\lib.rs (target\\\\debug\\\\deps\\\\webcodex_core-f7573bb1cb5c464f.exe)'",
+        "finished_at": "2026-08-16T15:08:11.346Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "T6vtbtXRPV8T9R01YM4q6aoW"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 391,
+          "command_id": "T6vtbtXRPV8T9R01YM4q6aoW",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:T6vtbtXRPV8T9R01YM4q6aoW:stdout",
+              "total_stream_bytes": 229,
+              "total_retained_bytes": 229,
+              "head_retained_bytes": 229,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:T6vtbtXRPV8T9R01YM4q6aoW:stderr",
+              "total_stream_bytes": 162,
+              "total_retained_bytes": 162,
+              "head_retained_bytes": 162,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "cargo test -p webcodex-runner source_snapshot -- --list",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 1364,
+        "summary": "exit 0 | 1.4s | 123 lines | tail: 'Running unittests src\\\\main.rs (target\\\\debug\\\\deps\\\\webcodex_runner-1480d88646298969.exe)'",
+        "finished_at": "2026-08-16T15:08:21.886Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "D2ZfUh75bhimJKmu66loNOG-"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 4884,
+          "command_id": "D2ZfUh75bhimJKmu66loNOG-",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:D2ZfUh75bhimJKmu66loNOG-:stdout",
+              "total_stream_bytes": 235,
+              "total_retained_bytes": 235,
+              "head_retained_bytes": 235,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:D2ZfUh75bhimJKmu66loNOG-:stderr",
+              "total_stream_bytes": 4649,
+              "total_retained_bytes": 4649,
+              "head_retained_bytes": 4649,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "crates/webcodex-core/src/source_snapshot.rs",
+        "operation": "update",
+        "updated_at": "2026-08-16T15:07:18.199Z"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/source_snapshot.rs",
+        "operation": "update",
+        "updated_at": "2026-08-16T15:07:18.199Z"
+      },
+      {
+        "path": "crates/webcodex-core/Cargo.toml",
+        "operation": "update",
+        "updated_at": "2026-08-16T15:00:30.961Z"
+      },
+      {
+        "path": "Cargo.lock",
+        "operation": "update",
+        "updated_at": "2026-08-16T15:00:30.961Z"
+      },
+      {
+        "path": "crates/webcodex-core/src/lib.rs",
+        "operation": "update",
+        "updated_at": "2026-08-16T15:00:30.961Z"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/mod.rs",
+        "operation": "update",
+        "updated_at": "2026-08-16T15:00:30.961Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-16T14:50:33.786Z",
+    "updated_at": "2026-08-16T15:08:37.837Z",
+    "events": [
+      {
+        "time": "2026-08-16T14:50:33.786Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:49.748Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:49.760Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "orchestration"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:58.963Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T14:50:58.969Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T14:51:52.197Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-08-16T14:52:48.638Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T14:54:10.940Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T14:58:42.892Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-16T14:58:59.748Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:21.578Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:21.998Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "orchestration"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:22.110Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:22.655Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:22.658Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:23.502Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:23.729Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:24.488Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "session_id": "IkCMj2-JJrln-YgnnvM8LF1L"
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:30.195Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:30.449Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:30.778Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:30.784Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:30.785Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:30.961Z",
+        "event": "files_modified",
+        "details": {
+          "count": 6
+        }
+      },
+      {
+        "time": "2026-08-16T15:00:33.661Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:01:24.926Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:00.927Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:01.477Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:02.032Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:02.035Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:02.711Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:02.938Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:03.674Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "session_id": "MG6bxYxiMKmjkjuRAiICeCO-"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:09.282Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:10.453Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+          "session_id": "wyCtchMaJayVOZbbbSHQNav-"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:23.835Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:02:24.954Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+          "session_id": "TowtBdZvXsgxmqlTiVis3TqU"
+        }
+      },
+      {
+        "time": "2026-08-16T15:03:24.095Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:03:25.325Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo check --lib -q",
+          "session_id": "4OukxdpY4UD-GA8DcluCuGaj"
+        }
+      },
+      {
+        "time": "2026-08-16T15:04:55.362Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo check --lib -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:04:56.358Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo check --tests -q",
+          "session_id": "u9tp0CExafTLdJB0vid3hTlp"
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:17.151Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo check --tests -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:17.790Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:17.799Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:17.957Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:17.973Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:18.199Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:19.671Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:27.778Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "SESSION_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-16T15:07:31.662Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:08:10.225Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --list",
+          "session_id": "T6vtbtXRPV8T9R01YM4q6aoW"
+        }
+      },
+      {
+        "time": "2026-08-16T15:08:11.346Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --list",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:08:13.659Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:08:20.730Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-runner source_snapshot -- --list",
+          "session_id": "D2ZfUh75bhimJKmu66loNOG-"
+        }
+      },
+      {
+        "time": "2026-08-16T15:08:21.886Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-runner source_snapshot -- --list",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:08:23.667Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:08:37.728Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-16T15:08:37.731Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-16T15:08:49.711Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "51609f080ac345cdb393a5b0a678034e",
+    "orchestration": {
+      "run_id": "5186e82d34ca4c70944f60be06f02cd2",
+      "wave_id": "9c65dabcbcc34192954303a1dbf2aec1",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "6b5d16e980058d51585f039eff918d938bbb66e9",
+      "worktree_fp": "39e1a99a9beb89c60425b5ef1d71f3db4e5bbb23a71d8c6493a0877b529a27c6",
+      "contract_fp": ""
+    },
+    "objective": "R3B1a only: strengthen the accepted SourceSnapshotV1 shared contract for safe transient transport. Add a 224 KiB serialized JSON ceiling and a typed SourceSnapshotAgentPayloadV1 { Capture { expected_git_head }, Execute { snapshot } } with fail-closed validation. Do not touch shell protocol, Runner capability, placement, cargo dispatch, or public MCP surfaces yet. Preserve unrelated WIP.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-16T15:15:07.938Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-16T15:15:07.938Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-16T15:15:07.938Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [
+      {
+        "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 892,
+        "summary": "exit 0 | 0.9s | 12 lines | tail: 'Running unittests src\\\\lib.rs (target\\\\debug\\\\deps\\\\webcodex_core-f7573bb1cb5c464f.exe)'",
+        "finished_at": "2026-08-16T15:13:06.756Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "VJwuhBiTLsftVL9_SjFE4JlD"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 494,
+          "command_id": "VJwuhBiTLsftVL9_SjFE4JlD",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:VJwuhBiTLsftVL9_SjFE4JlD:stdout",
+              "total_stream_bytes": 332,
+              "total_retained_bytes": 332,
+              "head_retained_bytes": 332,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:VJwuhBiTLsftVL9_SjFE4JlD:stderr",
+              "total_stream_bytes": 162,
+              "total_retained_bytes": 162,
+              "head_retained_bytes": 162,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "cargo test -p webcodex-core compute_placement -- --test-threads=1",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 690,
+        "summary": "exit 0 | 0.7s | 20 lines | tail: 'Running unittests src\\\\lib.rs (target\\\\debug\\\\deps\\\\webcodex_core-f7573bb1cb5c464f.exe)'",
+        "finished_at": "2026-08-16T15:13:08.290Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "QKjZrpMEvbrYJ9qoPVfvn-jP"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 1231,
+          "command_id": "QKjZrpMEvbrYJ9qoPVfvn-jP",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:QKjZrpMEvbrYJ9qoPVfvn-jP:stdout",
+              "total_stream_bytes": 1069,
+              "total_retained_bytes": 1069,
+              "head_retained_bytes": 1069,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:QKjZrpMEvbrYJ9qoPVfvn-jP:stderr",
+              "total_stream_bytes": 162,
+              "total_retained_bytes": 162,
+              "head_retained_bytes": 162,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 3984,
+        "summary": "exit 0 | 4.0s | 126 lines | tail: 'Running unittests src\\\\main.rs (target\\\\debug\\\\deps\\\\webcodex_runner-1480d88646298969.exe)'",
+        "finished_at": "2026-08-16T15:13:13.189Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "4bVulWnSWOUlA5AZML6L-zva"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 4988,
+          "command_id": "4bVulWnSWOUlA5AZML6L-zva",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:4bVulWnSWOUlA5AZML6L-zva:stdout",
+              "total_stream_bytes": 339,
+              "total_retained_bytes": 339,
+              "head_retained_bytes": 339,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:4bVulWnSWOUlA5AZML6L-zva:stderr",
+              "total_stream_bytes": 4649,
+              "total_retained_bytes": 4649,
+              "head_retained_bytes": 4649,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 14570,
+        "summary": "exit 0 | 14.6s | 14 lines | tail: 'Running unittests src\\\\lib.rs (target\\\\debug\\\\deps\\\\webcodex_core-f7573bb1cb5c464f.exe)'",
+        "finished_at": "2026-08-16T15:14:59.346Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "NG_8WVehnh2g4i9kWjospVzm"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 693,
+          "command_id": "NG_8WVehnh2g4i9kWjospVzm",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:NG_8WVehnh2g4i9kWjospVzm:stdout",
+              "total_stream_bytes": 447,
+              "total_retained_bytes": 447,
+              "head_retained_bytes": 447,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:NG_8WVehnh2g4i9kWjospVzm:stderr",
+              "total_stream_bytes": 246,
+              "total_retained_bytes": 246,
+              "head_retained_bytes": 246,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "crates/webcodex-core/src/source_snapshot.rs",
+        "operation": "update",
+        "updated_at": "2026-08-16T15:15:08.336Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-16T15:08:49.804Z",
+    "updated_at": "2026-08-16T15:15:32.114Z",
+    "events": [
+      {
+        "time": "2026-08-16T15:08:49.804Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:09:16.337Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T15:09:24.875Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T15:09:24.881Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T15:10:44.255Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T15:11:05.988Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T15:12:56.592Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T15:12:57.171Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-16T15:12:57.721Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:12:57.725Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:12:58.390Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:12:58.605Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:12:59.277Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "session_id": "cHdbNHC3zHuBjLlqX7gxLabs"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:04.989Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:06.105Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+          "session_id": "VJwuhBiTLsftVL9_SjFE4JlD"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:06.756Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:07.734Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-core compute_placement -- --test-threads=1",
+          "session_id": "QKjZrpMEvbrYJ9qoPVfvn-jP"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:08.290Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-core compute_placement -- --test-threads=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:09.292Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+          "session_id": "4bVulWnSWOUlA5AZML6L-zva"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:13.189Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-runner source_snapshot -- --test-threads=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:14.222Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo check --lib -q",
+          "session_id": "r16p8ZFaD4jNTYkPSRMPJM_H"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:15.673Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo check --lib -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:16.773Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo check --tests -q",
+          "session_id": "5p9k6Lbuj9PQr8rvgOaFuf74"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:17.666Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo check --tests -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:17.948Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:17.950Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:18.073Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:18.076Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:18.222Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:19.660Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:34.773Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "REJECTION_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:35.656Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:45.246Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:45.248Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:13:49.664Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:05.457Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:34.672Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:35.261Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:35.838Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:35.841Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:36.546Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:36.790Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:37.556Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "session_id": "jNygV0ujkQkKCBTB396Cqm_I"
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:43.856Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo fmt --all -- --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:44.873Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+          "session_id": "NG_8WVehnh2g4i9kWjospVzm"
+        }
+      },
+      {
+        "time": "2026-08-16T15:14:59.346Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo test -p webcodex-core source_snapshot -- --test-threads=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:00.389Z",
+        "event": "command_started",
+        "details": {
+          "command": "cargo check -p webcodex-core -q",
+          "session_id": "xaTXq1GOtHUxjU-BpFaMVxke"
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:07.228Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cargo check -p webcodex-core -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:07.933Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:07.938Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:08.122Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:08.125Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:08.336Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:11.660Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:32.004Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-16T15:15:32.004Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-16T15:16:32.511Z",
+    "archive_reason": "superseded"
   }
 ]

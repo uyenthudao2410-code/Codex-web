@@ -3657,8 +3657,10 @@ dependencies = [
 name = "webcodex-core"
 version = "0.3.5"
 dependencies = [
+ "base64",
  "serde",
  "serde_json",
+ "sha2",
  "tokio",
 ]
 
