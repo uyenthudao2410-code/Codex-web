@@ -27,11 +27,16 @@ class RuntimePaths {
   recoveryHostLockFile() { return path.join(this.dataRootPath, 'recovery-host.lock'); }
   recoveryActionsFile() { return path.join(this.dataRootPath, 'recovery-actions.json'); }
   acceptedCodeActivationFile() { return path.join(this.dataRootPath, 'accepted-code-activation.json'); }
+  // Keep break-glass process identity outside primary runtime-state.json so host adoption cannot erase it.
+  recoveryPlaneStateFile() { return path.join(this.dataRootPath, 'recovery-plane-state.json'); }
   logFile() { return path.join(this.dataRootPath, 'logs', 'assistant.log'); }
   mcpLogFile() { return path.join(this.dataRootPath, 'logs', 'mcp.log'); }
   tunnelLogFile() { return path.join(this.dataRootPath, 'logs', 'tunnel.log'); }
+  recoveryMcpLogFile() { return path.join(this.dataRootPath, 'logs', 'recovery-mcp.log'); }
+  recoveryTunnelLogFile() { return path.join(this.dataRootPath, 'logs', 'recovery-tunnel.log'); }
   tunnelExecutable() { return path.join(this.resourcesRootPath, 'tools', 'tunnel-client.exe'); }
   portablePython() { return path.join(this.resourcesRootPath, 'native-python', 'python.exe'); }
+  recoveryMcpScript() { return path.join(this.resourcesRootPath, 'recovery-mcp', 'recovery_mcp.py'); }
 }
 
 function createRuntimePaths(options) {

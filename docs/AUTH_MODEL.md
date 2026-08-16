@@ -1,5 +1,7 @@
 # Authentication and credential model
 
+> **Component scope:** this credential model applies to the **WebCodex core server/runner/connector** subsystem. Current Desktop MCP/tunnel/loopback/recovery secret ownership is documented in [`../SECURITY.md`](../SECURITY.md) and [`CURRENT_STATE.md`](CURRENT_STATE.md).
+
 [English](AUTH_MODEL.md) | [简体中文](AUTH_MODEL.zh-CN.md)
 
 WebCodex separates bootstrap administration, account onboarding, runtime API access, and agent connectivity. Do not reuse one credential across all surfaces.

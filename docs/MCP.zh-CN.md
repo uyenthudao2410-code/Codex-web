@@ -1,5 +1,7 @@
 # MCP
 
+> **组件范围：** 本文描述 **WebCodex core remote MCP surfaces**（`canonical_connector`、`local_coding`、`full_operator_runtime`），不是当前 Desktop Coding Tools MCP 的 `smart-v3` contract。当前 Desktop 精确八工具 surface 见 [`CURRENT_STATE.md`](CURRENT_STATE.md) 和 [`../README.md`](../README.md)。
+
 [English](MCP.md) | [简体中文](MCP.zh-CN.md)
 
 client 能连接 project-bound WebCodex endpoint 时使用 MCP。先完成

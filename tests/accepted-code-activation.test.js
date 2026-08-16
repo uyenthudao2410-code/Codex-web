@@ -141,12 +141,12 @@ async function fixture(t, options = {}) {
 
 function controllerFor(paths, workspace, activation, options = {}) {
   const diskRevision = typeof options.diskRevision === 'function' ? options.diskRevision : () => String(options.diskRevision || 'b'.repeat(64));
-  const runningRevision = typeof options.runningRevision === 'function' ? options.runningRevision : () => String(options.runningRevision || diskRevision());
+  const runningRevision = typeof options.runningRevision === 'function' ? options.runningRevision : (component) => String(options.runningRevision || diskRevision(component));
   return new AcceptedCodeActivationController({
     paths,
     settings: { load: () => ({ workspace }) },
-    revisions: { disk: () => ({ revision: diskRevision() }) },
-    runningRevisionProvider: () => ({ running_revision: runningRevision(), disk_revision: diskRevision() }),
+    revisions: { disk: (component) => ({ revision: String(diskRevision(component)) }) },
+    runningRevisionProvider: (component) => ({ running_revision: String(runningRevision(component)), disk_revision: String(diskRevision(component)) }),
     activation,
     log: { warn() {} },
     intervalMs: 60000
@@ -244,7 +244,7 @@ test('component bytes changed after running baseline are blocked without final a
   };
   const controller = controllerFor(paths, workspace, activation);
   const baselineState = controller.loadState();
-  controller.ensureBaseline(workspace, baselineState, await gitStatus(workspace, true));
+  await controller.ensureBaseline(workspace, baselineState, await gitStatus(workspace, true));
   write(path.join(workspace, 'electron', 'services', 'nativeService.js'), 'module.exports = { concurrent: false, changedAfterBaseline: true };\n');
   await controller.tick();
   assert.equal(activations, 0);
@@ -295,4 +295,143 @@ test('later accepted untracked source activates with prior accepted dirty wave t
   assert.equal(second.state, 'completed');
   assert.equal(state.baseline.components.recovery_host.revision, 'c'.repeat(64));
   assert.equal(state.baseline.components.recovery_host.receipts.some((item) => item.path === 'electron/services/nativeService.js'), true);
+});
+
+test('accepted committed recovery-host bytes on a new Git HEAD activate from the prior component baseline', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  let diskRevision = 'b'.repeat(64);
+  let runningRevision = diskRevision;
+  const activations = [];
+  const activation = {
+    preflight: async () => ({ safe: true, code: 'READY' }),
+    activate: async (request) => { activations.push(request.expected_disk_revision); runningRevision = request.expected_disk_revision; return { state: 'completed', result: { activated: true } }; },
+    status: () => null
+  };
+  const controller = controllerFor(paths, workspace, activation, { diskRevision: () => diskRevision, runningRevision: () => runningRevision });
+  await controller.tick();
+  const oldHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  write(path.join(workspace, 'electron', 'services', 'recoveryHost.js'), 'module.exports = { version: 3 };\n');
+  git(workspace, ['add', '.']);
+  git(workspace, ['commit', '-m', 'accepted new head']);
+  const newHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  diskRevision = 'c'.repeat(64);
+  insertAcceptedCheckpoint(workspace, { checkpointId: 'checkpoint-auto-activation-new-head', runId: 'run-auto-activation-new-head', waveId: 'wave-auto-activation-new-head', head: newHead, files: ['electron/services/recoveryHost.js'], createdAt: '2026-01-01T00:00:02.000Z' });
+  await controller.tick();
+  const state = controller.loadState();
+  assert.notEqual(oldHead, newHead);
+  assert.deepEqual(activations, ['b'.repeat(64), 'c'.repeat(64)]);
+  assert.equal(state.baseline.components.recovery_host.head, newHead);
+  assert.equal(state.baseline.components.recovery_host.revision, 'c'.repeat(64));
+});
+
+test('unaccepted committed component delta blocks a new-HEAD checkpoint', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  let diskRevision = 'b'.repeat(64);
+  let runningRevision = diskRevision;
+  const activation = {
+    preflight: async () => ({ safe: true, code: 'READY' }),
+    activate: async (request) => { runningRevision = request.expected_disk_revision; return { state: 'completed' }; },
+    status: () => null
+  };
+  const controller = controllerFor(paths, workspace, activation, { diskRevision: () => diskRevision, runningRevision: () => runningRevision });
+  await controller.tick();
+  write(path.join(workspace, 'electron', 'services', 'recoveryHost.js'), 'module.exports = { version: 3, unaccepted: true };\n');
+  write(path.join(workspace, 'electron', 'services', 'nativeService.js'), 'module.exports = { accepted: true };\n');
+  git(workspace, ['add', '.']);
+  git(workspace, ['commit', '-m', 'mixed trust head']);
+  const newHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  diskRevision = 'c'.repeat(64);
+  insertAcceptedCheckpoint(workspace, { checkpointId: 'checkpoint-auto-activation-partial-head', runId: 'run-auto-activation-partial-head', waveId: 'wave-auto-activation-partial-head', head: newHead, files: ['electron/services/nativeService.js'], createdAt: '2026-01-01T00:00:03.000Z' });
+  await controller.tick();
+  const state = controller.loadState();
+  const intent = state.intents.find((item) => item.checkpoint_id === 'checkpoint-auto-activation-partial-head');
+  assert.equal(intent.state, 'blocked');
+  assert.equal(intent.error.code, 'UNACCEPTED_COMPONENT_DIRTY');
+  assert.deepEqual(intent.error.files, ['electron/services/recoveryHost.js']);
+});
+
+test('ALREADY_CURRENT accepted bytes on a new HEAD advance the trusted component row', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const stableRevision = 'd'.repeat(64);
+  let recoveryDisk = 'b'.repeat(64);
+  let recoveryRunning = recoveryDisk;
+  let activationCalls = 0;
+  let alreadyCurrent = false;
+  const activation = {
+    preflight: async () => alreadyCurrent ? ({ safe: false, code: 'ALREADY_CURRENT' }) : ({ safe: true, code: 'READY' }),
+    activate: async (request) => { activationCalls += 1; recoveryRunning = request.expected_disk_revision; return { state: 'completed' }; },
+    status: () => null
+  };
+  const controller = controllerFor(paths, workspace, activation, {
+    diskRevision: (component) => component === 'recovery_host' ? recoveryDisk : stableRevision,
+    runningRevision: (component) => component === 'recovery_host' ? recoveryRunning : stableRevision
+  });
+  await controller.tick();
+  write(path.join(workspace, 'electron', 'services', 'recoveryHost.js'), 'module.exports = { version: 4 };\n');
+  git(workspace, ['add', '.']);
+  git(workspace, ['commit', '-m', 'externally loaded accepted head']);
+  const newHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  recoveryDisk = 'e'.repeat(64);
+  recoveryRunning = recoveryDisk;
+  alreadyCurrent = true;
+  insertAcceptedCheckpoint(workspace, { checkpointId: 'checkpoint-auto-activation-already-current', runId: 'run-auto-activation-already-current', waveId: 'wave-auto-activation-already-current', head: newHead, files: ['electron/services/recoveryHost.js'], createdAt: '2026-01-01T00:00:04.000Z' });
+  await controller.tick();
+  const state = controller.loadState();
+  const intent = state.intents.find((item) => item.checkpoint_id === 'checkpoint-auto-activation-already-current');
+  assert.equal(activationCalls, 1);
+  assert.equal(intent.state, 'completed');
+  assert.equal(intent.result.already_current, true);
+  assert.equal(state.baseline.components.recovery_host.head, newHead);
+  assert.equal(state.baseline.components.recovery_host.revision, 'e'.repeat(64));
+});
+
+test('unchanged component may advance its head while changed component remains on the prior head', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const oldHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  let recoveryDisk = 'b'.repeat(64);
+  const recoveryRunning = 'b'.repeat(64);
+  const uiRevision = 'd'.repeat(64);
+  let busy = false;
+  const activation = {
+    preflight: async () => busy ? { safe: false, code: 'RUNTIME_BUSY', runtime: { reason: 'test' } } : { safe: true, code: 'READY' },
+    activate: async () => ({ state: 'completed' }),
+    status: () => null
+  };
+  const controller = controllerFor(paths, workspace, activation, {
+    diskRevision: (component) => component === 'recovery_host' ? recoveryDisk : uiRevision,
+    runningRevision: (component) => component === 'recovery_host' ? recoveryRunning : uiRevision
+  });
+  await controller.tick();
+  write(path.join(workspace, 'electron', 'services', 'recoveryHost.js'), 'module.exports = { version: 5 };\n');
+  git(workspace, ['add', '.']);
+  git(workspace, ['commit', '-m', 'component-specific head']);
+  const newHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  recoveryDisk = 'f'.repeat(64);
+  insertAcceptedCheckpoint(workspace, { checkpointId: 'checkpoint-auto-activation-mixed-head', runId: 'run-auto-activation-mixed-head', waveId: 'wave-auto-activation-mixed-head', head: newHead, files: ['electron/services/recoveryHost.js'], createdAt: '2026-01-01T00:00:05.000Z' });
+  busy = true;
+  await controller.tick();
+  const state = controller.loadState();
+  assert.equal(state.baseline.components.recovery_host.head, oldHead);
+  assert.equal(state.baseline.components.electron_ui.head, newHead);
+});
+
+test('legacy V2 baseline rows inherit the legacy head without trusting changed new-HEAD bytes', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  let diskRevision = 'b'.repeat(64);
+  const runningRevision = 'b'.repeat(64);
+  const controller = controllerFor(paths, workspace, { preflight: async () => ({ safe: false, code: 'RUNTIME_BUSY' }), activate: async () => ({ state: 'refused' }), status: () => null }, { diskRevision: () => diskRevision, runningRevision: () => runningRevision });
+  const initial = controller.loadState();
+  await controller.ensureBaseline(workspace, initial, await gitStatus(workspace, true));
+  const legacy = JSON.parse(fs.readFileSync(paths.acceptedCodeActivationFile(), 'utf8'));
+  const legacyHead = legacy.baseline.head;
+  for (const row of Object.values(legacy.baseline.components)) delete row.head;
+  fs.writeFileSync(paths.acceptedCodeActivationFile(), JSON.stringify(legacy), 'utf8');
+  write(path.join(workspace, 'electron', 'services', 'recoveryHost.js'), 'module.exports = { version: 6, legacyGuard: true };\n');
+  git(workspace, ['add', '.']);
+  git(workspace, ['commit', '-m', 'unaccepted legacy transition']);
+  diskRevision = 'c'.repeat(64);
+  await controller.tick();
+  const state = controller.loadState();
+  assert.equal(state.baseline.components.recovery_host.head, legacyHead);
+  assert.equal(state.baseline.components.recovery_host.revision, 'b'.repeat(64));
 });

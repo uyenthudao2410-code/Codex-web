@@ -1,5 +1,7 @@
 # 概念
 
+> **组件范围：** 下文术语与心智模型描述保留的 **WebCodex core server/runner/connector** 子系统。当前 Windows Desktop 产品使用 Execution Hub + Recovery Host + Coding Tools MCP；见 [`CURRENT_STATE.md`](CURRENT_STATE.md)。
+
 [English](CONCEPTS.md) | [简体中文](CONCEPTS.zh-CN.md)
 
 WebCodex 让线上 AI client 通过自托管、可审计的工具 runtime 操作私有代码仓库。本文定义 setup、MCP、GPT Actions、安全和架构文档中的核心术语。

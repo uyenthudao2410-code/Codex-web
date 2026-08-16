@@ -1,44 +1,61 @@
-# Roadmap
+# Roadmap — Current Desktop Product
 
-WebCodex is a remote, auditable, bounded execution layer for coding assistants. It is not an embedded model, autonomous agent loop, or full browser IDE.
+This roadmap describes the current **Tools-Codex-web Windows Desktop Execution Hub**, not the historical WebCodex product roadmap. For exact current-state precedence, see [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
 ## Current baseline
 
-- Project-bound MCP and OpenAPI surfaces expose a small canonical capability set.
-- Durable tasks, executions, events, results, approvals, resumable review, and bounded output are persisted.
-- Server, CLI, and runner share code through workspace library crates with enforced package boundaries.
-- Authentication, project grants, allowed roots, path policy, authority mode, and audit evidence remain explicit boundaries.
-- Structured validation supports Rust, Node, Python, and Go recipes without installing dependencies or running networked setup hooks.
-- Typed process/script execution can continue as the same durable Job, and models can observe up to eight existing local or Agent Jobs through one bounded read-only batch wait.
-- Normal polling dispatch is bounded to two in-flight workers with no local pending queue, so one ordinary long request no longer blocks the next poll or replays execution.
-- Runner Job execution defaults to four concurrent Jobs, normalizes operator configuration to the effective range 1 through 64, and exposes authorization-safe running/queued/limit facts through existing runtime observability. The 64 ceiling is the unchanged active Job inventory hard bound, not a new scheduling policy; polling dispatch remains independently fixed at two.
-- The review console, reconnect continuity, read-only LSP navigation, shell profiles, and transport fallbacks are available.
+The maintained product boundary now includes Electron Execution Control Center; one shared Coding Tools MCP Runtime; ChatWeb primary-tunnel access; Codex Desktop thin-proxy access into the same authority; the verified `smart-v3` eight-tool surface; EOCL/controller/write-fencing/proof/handoff/observation/restart controls; Recovery Host + Windows Recovery Supervisor + independent Recovery MCP/Tunnel source implementation; bounded Codex/OpenCode provider lanes; semantic-first localization; and current-worktree LSP process telemetry/resource governance.
 
-## Next priorities
+## Policy already decided
 
-The execution cycle remains centered on **model execution friction**, not
-fleet-management breadth. See [MODEL_EXECUTION.md](MODEL_EXECUTION.md) for the
-design contract.
+1. **One Runtime authority.** ChatWeb and Codex Desktop do not run peer primary runtimes over the same workspace/ledger.
+2. **Deterministic proof first.** Tests/compiler/tool evidence outrank model debate when they can answer the question.
+3. **Automatic routing is evidence-gated.** `execution_route=auto` currently resolves to `deterministic` while representative accepted paired evidence is insufficient.
+4. **High-cost routes are explicit.** `sol_max`/`sol_ultra` require acknowledgement.
+5. **Secondary providers are not primary writers.** Codex/OpenCode lanes do not gain primary-checkout authority from routing or telemetry.
+6. **Auto-handoff stays off** until representative real-task A/B evidence demonstrates stable benefit without duplicate work or state loss.
+7. **No fabricated observability.** Unknown quota, billing, ChatGPT context percentage or host state stays unknown.
 
-1. Execution Phases A–F are code-complete and final acceptance is complete: lifecycle truth, structured process and script payloads, same-execution Job handoff, bounded batch observation, non-pinning polling dispatch, practical Job concurrency/observability, and bounded Windows local process-output normalization have passed Linux regression and real Windows/MSVC service-context validation.
-2. Further execution work in this cycle is maintenance/stabilization only: fix demonstrated regressions, preserve Linux/Windows acceptance evidence, and do not add another execution feature phase without a new concrete need.
-3. Preserve structured MCP results and allow an optional conversation-level Orchestrator without making UI or optional MCP 2026 extensions part of execution truth.
+## Immediate hardening and acceptance priorities
 
-## Deferred until there is a current need
+### P1 — exact-source activation and release boundaries
 
-- Runner drain/maintenance/self-upgrade and richer fleet dashboards.
-- Productized Windows SCM service lifecycle; external/manual service wrapping is sufficient for current dogfood.
-- A generic process/service management API, batch Job launch, PTY terminal UX, or polished MCP App UI.
-- Depending on MCP Tasks, MRTR, elicitation, or progress extensions before the target host makes them a dependable product contract.
+- Keep source proof, controlled activation, live canary and packaged/released claims separate.
+- Verify exact running revision/process identity after controlled activation when current Recovery/Coding MCP/Electron changes require live proof.
+- Complete relevant packaged-Windows/login and production fault-matrix checks for Recovery before calling that boundary release-complete.
+- Keep restart/activation fail-closed around active commands, background work, provider/agent lanes and EOCL acceptance.
+
+### P2 — representative routing economics
+
+- Produce accepted, homogeneous paired cohorts by task class/oracle/environment instead of synthetic no-op volume.
+- Compare quality/critical-defect/repair/TTA/cost with explicit sample sizes and provenance.
+- Keep automatic non-deterministic routing disabled until the evidence gate is actually satisfied.
+- Real paid OpenCode Flash terminal canary requires explicit external-cost authorization; preflight remains the default zero-dispatch check.
+
+### P2 — validate LSP resource hardening
+
+- Finish focused/process-level acceptance of current-worktree LSP process identity, memory-pressure and reaper behavior.
+- Confirm soft pressure degrades broad semantic work without killing active requests; hard pressure fails closed before unsafe growth.
+- Calibrate policy from representative measurements instead of one historical ~GiB observation.
+
+### P3 — operationalize evidence without inflating architecture
+
+- Continue using `.coding-tools/orchestration/ledger.sqlite3` as canonical causal audit.
+- Keep host latency attribution explicitly bound by content-free turn/trace identity.
+- Improve summaries only from real measured state; do not add a second truth store.
+- Promote optional features only when benchmark/product evidence demonstrates a concrete need.
+
+## Deferred until evidence promotes them
+
+- automatic provider/model routing from small or synthetic samples;
+- automatic controller transfer/auto-handoff;
+- dual primary Runtime authority;
+- broad autonomous provider writes to the primary checkout;
+- arbitrary remote process/service management through Recovery;
+- fabricated context-pressure percentages;
+- large generic fleet/orchestration layers without a second real use case;
+- rewriting historical research to pretend it described current source.
 
 ## Completion criteria
 
-A roadmap item is complete only when its public contract is documented, focused and regression validation pass, failure behavior is explicit, and deployment or rollback guidance exists when operations are affected.
-
-## Non-goals
-
-- Built-in model selection, prompt loops, context compaction, or token budgeting.
-- Full IDE replacement or arbitrary computer use.
-- Autonomous deployment or production mutation by default.
-- Compatibility aliases for hypothetical consumers.
-- Treating tool count, test count, or lines of code as product progress.
+An item is complete only when the relevant source contract, focused proof, live activation, EOCL final acceptance, packaged/process-boundary acceptance, rollback guidance and representative measurement evidence are satisfied. Tool count, raw test count, LOC or model-call count are not completion metrics by themselves.

@@ -4,6 +4,7 @@ function createPreviewApi() {
   const previewSettings = {
     workspace: 'C:\\Users\\ExampleUser\\Desktop\\my-project', permissionMode: 'safe', toolMode: 'smart',
     mcpPort: 18766, healthPort: 18082, proxyMode: 'auto', proxyUrl: '', tunnelId: 'tunnel_demo',
+    recoveryMcpPort: 18767, recoveryHealthPort: 18083, recoveryTunnelId: '',
     theme: 'light', startWithWindows: false, progressReportSeconds: 90, keepRunningOnClose: true, autoStartServices: false, firstRunCompleted: true, guideProgress: {}, authorizedRoots: []
   };
   const snapshot = {
@@ -14,7 +15,8 @@ function createPreviewApi() {
       proxy: { mode: 'auto', configured: false, reachable: true, source: 'auto-direct', url: '' }, tunnelClient: { installed: true },
       workspace: { configured: true, exists: true }, ports: { mcpListening: true, tunnelListening: true }
     },
-    status: { busy: false, runtimeRunning: true, tunnelRunning: true, fullyReady: true, localMcpUrl: 'http://127.0.0.1:18766/mcp', tunnelUiUrl: 'http://127.0.0.1:18082/ui' }
+    status: { busy: false, runtimeRunning: true, tunnelRunning: true, fullyReady: true, localMcpUrl: 'http://127.0.0.1:18766/mcp', tunnelUiUrl: 'http://127.0.0.1:18082/ui' },
+    recoveryHost: { recovery_plane: { tunnel: { state: 'not_configured', configured: false, pid: null } } }
   };
   const ok = (data) => Promise.resolve({ ok: true, data });
   return {
@@ -87,6 +89,34 @@ function setDot(element, status) {
   if (!element) return;
   element.classList.remove('ready', 'warn', 'error');
   if (status) element.classList.add(status);
+}
+
+function recoveryTunnelPresentation(source) {
+  const tunnel = source?.recoveryHost?.recovery_plane?.tunnel || null;
+  const raw = String(tunnel?.state || '').toLowerCase();
+  if (raw === 'healthy') return { state: 'connected', label: 'Đã kết nối', detail: 'Recovery Tunnel đã qua health check cục bộ.' };
+  if (raw === 'starting') return { state: 'connecting', label: 'Đang kết nối', detail: 'Recovery Tunnel đang khởi tạo và chờ health check.' };
+  if (raw === 'not_configured') return { state: 'not_configured', label: 'Chưa cấu hình', detail: 'Chưa có Recovery Tunnel ID riêng.' };
+  if (raw === 'blocked_shared_tunnel_id') return { state: 'error', label: 'Bị chặn', detail: 'Recovery Tunnel ID đang trùng với Coding Tunnel ID chính.' };
+  if (raw === 'blocked_missing_runtime_key') return { state: 'error', label: 'Thiếu Runtime Key', detail: 'Đã có Recovery Tunnel ID nhưng chưa có Runtime API Key khả dụng.' };
+  if (raw) return { state: 'error', label: 'Lỗi kết nối', detail: `Recovery Tunnel báo trạng thái: ${raw}.` };
+  return { state: 'not_configured', label: 'Đang kiểm tra', detail: 'Chưa nhận được telemetry Recovery Tunnel từ Recovery Host.' };
+}
+
+function renderRecoveryTunnelSettings(source) {
+  const presentation = recoveryTunnelPresentation(source);
+  const badge = $('#recoveryTunnelSettingsBadge');
+  const stateChip = $('#recoveryTunnelSettingsState');
+  if (badge) {
+    badge.textContent = presentation.label;
+    badge.dataset.state = presentation.state;
+  }
+  if (stateChip) {
+    stateChip.textContent = presentation.label;
+    stateChip.dataset.state = presentation.state;
+  }
+  const detail = $('#recoveryTunnelSettingsStatus');
+  if (detail) detail.textContent = presentation.detail;
 }
 
 function navigate(page) {
@@ -224,6 +254,8 @@ function applyFormValues(snapshot, force = false) {
   const settings = snapshot.settings;
   state.selectedWorkspace = settings.workspace;
   $('#tunnelIdInput').value = settings.tunnelId || '';
+  $('#recoveryTunnelIdInput').value = settings.recoveryTunnelId || '';
+  $('#recoveryMcpEndpoint').textContent = `http://127.0.0.1:${settings.recoveryMcpPort || 18767}/mcp`;
   $('#proxyModeSelect').value = settings.proxyMode || 'auto';
   $('#proxyUrlInput').value = settings.proxyUrl || '';
   $('#mcpPortInput').value = settings.mcpPort;
@@ -249,6 +281,7 @@ function renderSnapshot(snapshot, options = {}) {
   const { settings, secrets, environment, status } = snapshot;
   state.selectedWorkspace = settings.workspace;
   const ready = status.fullyReady;
+  renderRecoveryTunnelSettings(snapshot);
 
   $('#sideRuntimeText').textContent = ready ? 'Dịch vụ sẵn sàng' : status.runtimeRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
   setDot($('#sideRuntimeDot'), ready ? 'ready' : status.runtimeRunning ? 'warn' : 'error');
@@ -401,6 +434,7 @@ function collectSettings() {
     proxyMode: $('#proxyModeSelect').value,
     proxyUrl: $('#proxyUrlInput').value.trim(),
     tunnelId: $('#tunnelIdInput').value.trim(),
+    recoveryTunnelId: $('#recoveryTunnelIdInput').value.trim(),
     theme: $('#themeSelect').value,
     startWithWindows: $('#startWithWindowsToggle').checked,
     keepRunningOnClose: $('#keepRunningToggle').checked,
@@ -603,6 +637,8 @@ function applyHeartbeat(status) {
   state.snapshot.status.runtimeRunning = Boolean(status.mcpRunning);
   state.snapshot.status.tunnelRunning = Boolean(status.tunnelRunning);
   state.snapshot.status.fullyReady = Boolean(status.fullyReady);
+  if (status.recoveryHost) state.snapshot.recoveryHost = status.recoveryHost;
+  renderRecoveryTunnelSettings(state.snapshot);
   const ready = state.snapshot.status.fullyReady;
   $('#sideMcp').textContent = status.mcpRunning ? 'ON' : 'OFF';
   $('#sideTunnel').textContent = status.tunnelRunning ? 'ON' : 'OFF';
@@ -689,6 +725,16 @@ function bindEvents() {
   $('#removeRuntimeKey').addEventListener('click', async () => {
     try { unwrap(await api.removeRuntimeKey()); toast('Đã xóa khóa mật mã'); await refreshSnapshot(); }
     catch (error) { toast('Xóa thất bại', error.message, 'error'); }
+  });
+  $('#saveRecoveryTunnel').addEventListener('click', async () => {
+    try {
+      const recoveryId = $('#recoveryTunnelIdInput').value.trim();
+      const primaryId = $('#tunnelIdInput').value.trim() || String(state.snapshot?.settings?.tunnelId || '').trim();
+      if (recoveryId && primaryId && recoveryId === primaryId) throw new Error('Tunnel cứu hộ phải dùng Tunnel ID riêng, khác Tunnel chính.');
+      await saveSettings(false);
+      toast('Đã lưu Tunnel cứu hộ', recoveryId ? 'Recovery Host sẽ tự thử kết nối trong vài giây.' : 'Tunnel cứu hộ đang để ở trạng thái chưa cấu hình.');
+      await refreshSnapshot({ forceForms: true });
+    } catch (error) { toast('Lưu Tunnel cứu hộ thất bại', error.message, 'error'); }
   });
   $('#regenerateToken').addEventListener('click', async () => {
     try { unwrap(await api.regenerateMcpToken()); toast('Token xác thực đã được tạo lại', 'Có hiệu lực sau khi triển khai lại.'); }

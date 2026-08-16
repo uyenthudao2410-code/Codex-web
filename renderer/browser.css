@@ -1,4 +1,4 @@
-:root{color-scheme:light;font-family:Inter,"Segoe UI","Microsoft YaHei UI",sans-serif;--border:#e5e5e5;--text:#202123;--muted:#6f7378;--green:#10a37f;--red:#d94343}
+:root{color-scheme:light;font-family:Inter,"Segoe UI","Microsoft YaHei UI",sans-serif;--border:#e5e5e5;--text:#202123;--muted:#6f7378;--green:#10a37f;--amber:#c58b13;--red:#d94343}
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f7f8;color:var(--text)}
 button{font:inherit}
@@ -17,6 +17,7 @@ button{font:inherit}
 .page-state i,.service-state span i{width:8px;height:8px;border-radius:50%;background:#b8bcc2}
 .page-state.loading i{border:2px solid #d6d8dc;border-top-color:#34363a;background:transparent;animation:spin .75s linear infinite}
 .page-state.ready i,.service-state span.ready i{background:var(--green);box-shadow:0 0 0 3px rgba(16,163,127,.11)}
+.service-state span.warn i{background:var(--amber);box-shadow:0 0 0 3px rgba(197,139,19,.12)}
 .page-state.error{color:var(--red)}
 .page-state.error i,.service-state span.error i{background:var(--red)}
 .service-state span{display:inline-flex;align-items:center;gap:6px;padding:0 5px;color:var(--muted);font-size:11px}

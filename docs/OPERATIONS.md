@@ -1,5 +1,7 @@
 # Operations Guide
 
+> **Component scope:** this is the operations guide for self-hosted **WebCodex core server + runner** deployments. It is not the current Windows Desktop operator runbook. For Desktop lifecycle/recovery/runtime operations, use [`CURRENT_STATE.md`](CURRENT_STATE.md), [`../README.md`](../README.md), and [`RECOVERY_HOST.md`](RECOVERY_HOST.md).
+
 [English](OPERATIONS.md)
 
 This guide covers day-to-day WebCodex operations: server initialization, client enrollment, pairing, project registration, token management, and smoke testing. For first deployment, see [QUICK_START.md](QUICK_START.md). For production hardening, Nginx, QUIC, and OAuth2 details, see [DEPLOYMENT.md](DEPLOYMENT.md).

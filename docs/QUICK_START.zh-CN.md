@@ -1,8 +1,10 @@
 # 快速开始
 
+> **组件范围：** 本文是独立/自托管 **WebCodex core server + runner** 路径的 canonical project-first 快速开始，不是当前 Windows Desktop Execution Hub 的快速开始。当前 Tools-Codex-web 应从 [`../README.md`](../README.md) 和 [`CURRENT_STATE.md`](CURRENT_STATE.md) 开始。
+
 [English](QUICK_START.md) | [简体中文](QUICK_START.zh-CN.md)
 
-这是唯一 canonical project-first 路径。它配置一个本地 Git 项目，不要求用户提供
+在 WebCodex core 范围内，这是 canonical project-first 路径。它配置一个本地 Git 项目，不要求用户提供
 Agent client ID、runtime project ID、transport、workflow session、executor
 reference 或内部 config path。
 

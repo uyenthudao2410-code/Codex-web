@@ -1,5 +1,7 @@
 # GPT Actions
 
+> **组件范围：** 本文描述备用的 **WebCodex core OpenAPI Custom GPT Action** 集成。当前 Desktop 产品的主要 ChatWeb 路径是通过 Execution Hub 的 Coding Tools MCP；见 [`CURRENT_STATE.md`](CURRENT_STATE.md)。
+
 [English](GPT_ACTIONS.md) | [简体中文](GPT_ACTIONS.zh-CN.md)
 
 Custom GPT 需要调用 project-bound WebCodex Connector 时使用 GPT Actions；

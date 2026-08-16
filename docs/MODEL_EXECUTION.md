@@ -1,5 +1,7 @@
 # Model Execution and Durable Continuation
 
+> **Component scope:** this document describes the WebCodex core execution/Job substrate. It is not the top-level roadmap for the current Windows Desktop Execution Hub. For current Tools-Codex-web product truth and precedence, read [`CURRENT_STATE.md`](CURRENT_STATE.md). Outside this component scope, current implementation + `CURRENT_STATE.md` win on conflicts.
+
 Status: design direction for the next WebCodex execution iterations. This is not a claim that every described tool or MCP extension is implemented today.
 
 WebCodex should make model-driven execution predictable across Linux and Windows without requiring the model to become an expert in shell quoting, process lifetime, transport behavior, or UI orchestration. The core execution contract must also remain usable when one model turn ends before the underlying work does.

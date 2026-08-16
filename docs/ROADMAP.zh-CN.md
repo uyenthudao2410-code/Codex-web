@@ -1,5 +1,7 @@
 # Roadmap
 
+> **范围说明：** 本页保留的是较早的 **WebCodex core 子系统路线图/历史翻译**，不再代表当前 Windows Desktop 产品路线图。当前路线图以 [`ROADMAP.md`](ROADMAP.md) 和 [`CURRENT_STATE.md`](CURRENT_STATE.md) 为准；不要用本页覆盖当前 source/test/runtime 事实。
+
 WebCodex 是面向 coding assistant 的远程、可审计、有界执行层。它不是内置模型、自主 agent loop，也不是完整浏览器 IDE。
 
 ## 当前已交付基线

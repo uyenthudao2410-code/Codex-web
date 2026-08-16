@@ -307,6 +307,7 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
       return observationId;
     };
     const scan = () => {
+      if (!state.awaitingUserVisible && !state.pendingUser) return;
       const turns = visibleTurns();
       if (!turns.length) return;
       const latest = turns[turns.length - 1];
@@ -412,7 +413,7 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
         schedulePriming();
         return;
       }
-      scheduleScan();
+      if (state.awaitingUserVisible || state.pendingUser) scheduleScan();
     });
     if (target) state.observer.observe(target, { childList: true, subtree: true });
     document.addEventListener('submit', onSubmit, true);

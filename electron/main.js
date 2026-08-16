@@ -667,7 +667,8 @@ function registerIpc() {
     return result.canceled ? '' : result.filePaths[0];
   }));
   secureHandle('settings:save', (_event, patch) => invokeSafely(async () => {
-    const allowed = ['permissionMode', 'toolMode', 'mcpPort', 'healthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
+    // Recovery settings stay explicitly operator-controlled and separate from the primary runtime failure domain.
+    const allowed = ['permissionMode', 'toolMode', 'mcpPort', 'healthPort', 'recoveryMcpPort', 'recoveryHealthPort', 'proxyMode', 'proxyUrl', 'tunnelId', 'tunnelProfile', 'recoveryTunnelId', 'recoveryTunnelProfile', 'startWithWindows', 'autoStartServices', 'keepRunningOnClose', 'progressReportSeconds', 'theme', 'guideProgress', 'firstRunCompleted', 'costPreset', 'costRateInUsd', 'costRateOutUsd', 'costCurrency', 'costFxRate', 'costBytesPerToken', 'costLaneRates'];
     const clean = Object.fromEntries(Object.entries(patch || {}).filter(([key]) => allowed.includes(key)));
     const saved = settings.save(clean);
     if (Object.hasOwn(clean, 'startWithWindows')) {

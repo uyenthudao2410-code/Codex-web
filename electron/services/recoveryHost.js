@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const { RuntimeOrchestrator } = require('./runtimeOrchestrator');
+const { RecoveryPlaneService } = require('./recoveryPlaneService');
 const { HealthService } = require('./healthService');
 const { HubProxyGateway } = require('./hubProxyGateway');
 const { RecoveryIpcServer } = require('./recoveryIpc');
@@ -74,7 +75,7 @@ class RecoveryHost {
   constructor({
     paths, settings, secrets, environment, log, orchestrator, healthService, gateway, ipcServerFactory,
     revisionTracker = null, actionStore = null, spawnRecoveryReplacement = null, spawnElectronUi = null,
-    exitProcess = null, replacement = null, autoActivationController = null
+    exitProcess = null, replacement = null, autoActivationController = null, recoveryPlaneService = null
   }) {
     this.paths = paths;
     this.settings = settings;
@@ -103,6 +104,7 @@ class RecoveryHost {
     this.ipcServer = null;
     this.supervisionTimer = null;
     this.lastSupervisionStatus = null;
+    this.lastRecoveryPlaneStatus = null;
     this.ownsLock = false;
     this.running = false;
     this.replacement = replacement;
@@ -122,6 +124,7 @@ class RecoveryHost {
       beginRecoveryHandoff: (operationId) => this.scheduleRecoveryHandoff(operationId)
     });
     this.autoActivation = autoActivationController || new AcceptedCodeActivationController({ paths, settings, revisions: this.revisions, activation: this.activation, log });
+    this.recoveryPlane = recoveryPlaneService || new RecoveryPlaneService({ paths, log });
   }
 
   hostStatus() {
@@ -147,6 +150,8 @@ class RecoveryHost {
       code_revision: codeRevision,
       electron_ui_revision: this.activation.uiRevisionStatus(),
       auto_activation: this.autoActivation?.status?.() || null,
+      recovery_plane_mode: 'independent_mcp_tunnel_v1',
+      recovery_plane: this.lastRecoveryPlaneStatus,
       last_progress: this.lastProgress,
       runtime: this.lastSupervisionStatus ? {
         mcp: Boolean(this.lastSupervisionStatus.mcpRunning),
@@ -187,13 +192,28 @@ class RecoveryHost {
   }
 
   async superviseOnce() {
+    let runtime = null;
     try {
-      this.lastSupervisionStatus = await this.orchestrator.supervise();
-      return this.lastSupervisionStatus;
+      runtime = await this.orchestrator.supervise();
+      this.lastSupervisionStatus = runtime;
     } catch (error) {
       this.log.error(error.message, { stage: 'recovery-host-supervise' });
-      return null;
     }
+    await this.ensureRecoveryPlane();
+    return runtime;
+  }
+
+  async ensureRecoveryPlane() {
+    try {
+      const current = this.settings.load();
+      const authToken = await this.orchestrator.ensureToken();
+      const runtimeApiKey = this.secrets.get('runtimeApiKey');
+      this.lastRecoveryPlaneStatus = await this.recoveryPlane.ensure(current, { authToken, runtimeApiKey });
+    } catch (error) {
+      this.lastRecoveryPlaneStatus = { state: 'unavailable', error_code: String(error?.code || 'RECOVERY_PLANE_UNAVAILABLE'), checked_at: new Date().toISOString() };
+      this.log.error(error.message, { stage: 'recovery-plane-supervise', code: this.lastRecoveryPlaneStatus.error_code });
+    }
+    return this.lastRecoveryPlaneStatus;
   }
 
   async start() {
@@ -214,6 +234,7 @@ class RecoveryHost {
       });
       await this.ipcServer.start();
       this.running = true;
+      await this.ensureRecoveryPlane();
       this.supervisionTimer = setInterval(() => { this.superviseOnce(); }, SUPERVISION_INTERVAL_MS);
       this.supervisionTimer.unref();
       this.log.info('Recovery Host đã sở hữu Coding runtime, watchdog và local gateway', {

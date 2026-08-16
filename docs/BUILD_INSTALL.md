@@ -1,8 +1,10 @@
 # Build and Install Quick Reference
 
+> **Component scope:** this page is the build/install quick reference for the standalone/hosted **WebCodex core CLI + Server + Runner** distribution. It is not the current Windows Electron Desktop install path. For the Desktop product, use [`../README.md`](../README.md), [`CURRENT_STATE.md`](CURRENT_STATE.md), and [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
+
 [English](BUILD_INSTALL.md) | [简体中文](BUILD_INSTALL.zh-CN.md)
 
-This is the short install path. See [DEPLOYMENT.md](DEPLOYMENT.md) for production details.
+For WebCodex core, this is the short install path. See [DEPLOYMENT.md](DEPLOYMENT.md) for production details.
 
 ## Fastest hosted install
 

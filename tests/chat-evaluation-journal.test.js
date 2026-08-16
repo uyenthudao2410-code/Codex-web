@@ -111,6 +111,8 @@ test('ChatGPT observer uses renderer monotonic clock and never reads message con
   assert.match(script, /intentBaselineOrdinal/);
   assert.match(script, /intentDeadlineMs/);
   assert.match(script, /visibleTurns/);
+  assert.match(script, /if \(!state\.awaitingUserVisible && !state\.pendingUser\) return;/);
+  assert.match(script, /if \(state\.awaitingUserVisible \|\| state\.pendingUser\) scheduleScan\(\);/);
   assert.match(script, /setTimeout\(finishPriming, 750\)/);
   assert.match(script, /setTimeout\(finishPriming, 5000\)/);
   assert.match(script, /turnNodes\(\)\.forEach\(markSeen\)/);
@@ -137,6 +139,9 @@ test('ChatViewController drains host observations to a best-effort main callback
   assert.match(controller, /chatEvaluationDrainScript/);
   assert.match(controller, /onEvaluation/);
   assert.match(controller, /startEvaluationDrain\(\)/);
+  assert.match(controller, /CHAT_EVALUATION_DRAIN_INTERVAL_MS = 1000/);
+  assert.match(controller, /evaluationDrainInFlight/);
+  assert.match(controller, /\.finally\(\(\) => \{/);
   assert.match(main, /new ChatEvaluationJournal\(\)/);
   assert.match(main, /chatEvaluationJournal\.append\(workspace, correlated\)/);
   assert.match(main, /action: 'observation'/);

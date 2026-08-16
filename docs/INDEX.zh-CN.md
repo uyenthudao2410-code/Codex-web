@@ -2,19 +2,22 @@
 
 [English](INDEX.md) | [简体中文](INDEX.zh-CN.md)
 
+> **当前 Desktop 导航：** 请先阅读 [`CURRENT_STATE.md`](CURRENT_STATE.md)、[`../README.md`](../README.md)、[`ARCHITECTURE.md`](ARCHITECTURE.md)、[`RECOVERY_HOST.md`](RECOVERY_HOST.md) 和 [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)。本索引同时保留大量 WebCodex core/server/runner 文档；除非页面明确标注为当前 Desktop 指南，否则应按子系统文档理解。
+
 ## Getting Started
 
-- [中文 README](../README.zh-CN.md) / [README](../README.md)
-- [快速开始](QUICK_START.zh-CN.md) / [Quick Start](QUICK_START.md)
-- [构建与安装](BUILD_INSTALL.zh-CN.md) / [Build and Install](BUILD_INSTALL.md)
+- [当前 Desktop README](../README.md)
+- [WebCodex Core AI Coding Agent Onboarding](AI_ONBOARDING.zh-CN.md) / [English](AI_ONBOARDING.md)
+- [WebCodex Core 快速开始](QUICK_START.zh-CN.md) / [Core Quick Start](QUICK_START.md)
+- [WebCodex Core 构建与安装](BUILD_INSTALL.zh-CN.md) / [Core Build and Install](BUILD_INSTALL.md)
 - [演示](DEMO.zh-CN.md) / [Demo](DEMO.md)
-- [概念](CONCEPTS.zh-CN.md) / [Concepts](CONCEPTS.md)
-- [MCP](MCP.zh-CN.md) / [English](MCP.md)
-- [GPT Actions](GPT_ACTIONS.zh-CN.md) / [English](GPT_ACTIONS.md)
+- [WebCodex Core 概念](CONCEPTS.zh-CN.md) / [Core Concepts](CONCEPTS.md)
+- [WebCodex Core MCP](MCP.zh-CN.md) / [English](MCP.md)
+- [WebCodex Core GPT Actions](GPT_ACTIONS.zh-CN.md) / [English](GPT_ACTIONS.md)
 
 ## Operations
 
-- [部署](DEPLOYMENT.zh-CN.md) / [Deployment](DEPLOYMENT.md)
+- [WebCodex Core 部署](DEPLOYMENT.zh-CN.md) / [Core Deployment](DEPLOYMENT.md)
 - [Docker 部署](DOCKER_DEPLOYMENT.zh-CN.md) / [Docker Deployment](DOCKER_DEPLOYMENT.md)
 - [Operations](OPERATIONS.md)
 - [故障排查](TROUBLESHOOTING.zh-CN.md) / [Troubleshooting](TROUBLESHOOTING.md)
@@ -34,7 +37,7 @@
 - [LSP Navigation](LSP_NAVIGATION.md)
 - [Multi-Language Validation](MULTI_LANGUAGE_VALIDATION.md)
 - [只读命令沙箱](READ_ONLY_COMMAND_SANDBOX.zh-CN.md) / [English](READ_ONLY_COMMAND_SANDBOX.md)
-- [Roadmap](ROADMAP.zh-CN.md) / [English](ROADMAP.md)
+- [WebCodex Core 历史路线图](ROADMAP.zh-CN.md) / [Current Desktop Roadmap](ROADMAP.md)
 - [Contributor Agent Contract](../AGENTS.md)
 - [Architecture Decisions](agent/architecture-decisions.md)
 - [Session Model](agent/session-model.md)

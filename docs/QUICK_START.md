@@ -1,8 +1,10 @@
 # Quick Start
 
+> **Component scope:** this is the canonical project-first quick start for the standalone/self-hosted **WebCodex core server + runner** path. It is not the current Windows Desktop Execution Hub quick start. For current Tools-Codex-web operation, start with [`../README.md`](../README.md) and [`CURRENT_STATE.md`](CURRENT_STATE.md).
+
 [English](QUICK_START.md) | [简体中文](QUICK_START.zh-CN.md)
 
-This is the canonical project-first path. It configures one local Git project
+Within the WebCodex core scope, this is the canonical project-first path. It configures one local Git project
 without asking you for an Agent client ID, runtime project ID, transport,
 workflow session, executor reference, or internal config path.
 

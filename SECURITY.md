@@ -1,144 +1,60 @@
 # Security Policy
 
-WebCodex is a remote tool execution system for private code. Deploy it as a permissioned bridge: online clients can request bounded tool calls, but repository access and command execution stay behind your self-hosted server and connected agent.
+Tools-Codex-web is a local Windows desktop execution bridge that lets authenticated AI clients operate a configured coding workspace through MCP. The current security boundary is the **Electron Execution Hub + Recovery Host + one Coding Tools MCP Runtime**. WebCodex server/runner security documents still apply inside that core subsystem, but they do not replace the Desktop boundary described here.
 
-## Supported Versions
+## Supported version
 
-| Version | Supported |
-| --- | --- |
-| 0.3.x | Yes |
-| 0.2.x and earlier | No |
+The current desktop package is `web-mcp-assistant 0.3.4`. Security fixes should target the currently maintained `0.3.x` line unless a release note states otherwise.
 
-Security fixes are expected to target the latest v0.3.x release unless stated otherwise.
+## Trust and authority model
 
-## Security Model Summary
+- ChatWeb/ChatGPT and Codex Desktop are clients of the same Execution Hub truth; they must not create two peer Coding Tools runtimes that independently mutate the same workspace/ledger.
+- Recovery Host owns primary service lifecycle. Electron is the UI/configuration client and Execution Control Center.
+- Coding Tools MCP owns workspace mutation, deterministic proof, EOCL state, durable orchestration evidence, and write fencing.
+- Semantic controller authority and repository write lease are separate. Controller transfer does not silently grant mutation rights.
+- Codex App Server and OpenCode are secondary candidate/review/provider lanes. Provider availability, telemetry, or route selection does not grant independent authoritative write access to the primary checkout.
+- `execution_route=auto` is currently fail-closed to deterministic while representative accepted paired evidence is insufficient.
 
-- The online model can only call exposed WebCodex tools.
-- Projects are registered by agents; the server does not scan your filesystem.
-- Project work runs on the agent machine inside configured project boundaries.
-- Structured read, edit, validation, review, and finish tools should be the default workflow.
-- Shell and job tools are bounded but powerful and require operator discipline.
-- Session, handoff, validation, and hygiene outputs provide review evidence.
+## Workspace and command boundary
 
-## What The Online Model Can Do
+Coding Tools MCP enforces a configured workspace plus explicitly authorized roots. Relevant controls include path normalization, traversal/symlink escape protection, command policy, bounded output/session handling, runtime-specific HOME/TMP/CACHE, and secret-environment filtering according to permission mode.
 
-Depending on the token, scopes, client surface, session state, and agent policy, the model can ask WebCodex to:
+Permission modes are `safe`, `trusted`, or `dangerous`. `dangerous` deliberately bypasses important safety gates and should be used only for a trusted local workspace when the operator understands the consequences. A host that does not support interactive permission elicitation does **not** create an implicit grant; `request_permissions` remains fail-closed.
 
-- Discover runtime health and registered projects.
-- Read bounded project files and search project text.
-- Inspect Git status, diffs, and changed files.
-- Apply structured line edits or checked patches.
-- Run structured validation helpers such as Cargo format, check, and test.
-- Request bounded shell commands or async jobs when the deployment exposes them.
-- Produce `show_changes`, `workspace_hygiene_check`, `finish_coding_task`, and `session_handoff_summary` evidence for review.
+## One Runtime, multiple clients
 
-## What The Online Model Cannot Do
+Codex Desktop should connect through the Electron-generated thin stdio proxy/loopback gateway rather than spawning a second Coding Tools MCP authority for the same workspace. The real MCP bearer remains owned by Electron/SecretStore; copied proxy configuration must not expose it.
 
-WebCodex does not grant the model:
+## Recovery plane
 
-- Direct filesystem access outside exposed tools.
-- Automatic discovery of local repositories from the server.
-- Access to projects not registered by an agent.
-- Admin, account-management, pairing, token-creation, or agent-token creation through GPT Actions or MCP.
-- Permission to bypass path safety, sensitive-path denial, read-only session guards, or agent policy.
-- A reason to see secrets, tokens, env files, Authorization headers, or complete agent configs.
+The current source implements an independent break-glass Recovery MCP and, when configured, a separate Recovery Tunnel. It must not reuse the primary Coding Tunnel identity. Recovery is intentionally bounded: no arbitrary remote shell/process/RPC input; repair requires confirmation and forwards fixed authenticated recovery behavior; status/log projections remain secret-free.
 
-## Project Access Model
+## Runtime activation and restart
 
-Projects live on the agent machine. The agent registers allowed directories with the server. The server does not scan your filesystem.
+Do not kill the active MCP process from inside the request it is serving. `task_control(action="restart_runtime")` uses the supervised restart path and explicit confirmation. Source changes do not prove that the live process loaded them; verify the new process/runtime identity and revision/contract after runtime-affecting work.
 
-Runtime project ids use:
+## Secrets and logs
 
-```text
-agent:<client_id>:<project_id>
-```
+Never commit or expose MCP/tunnel/recovery/loopback tokens, OAuth/account credentials, private keys, secret-store exports, `.env` values, Authorization headers, or raw sensitive provider/workspace content. Provider usage/cost telemetry should persist measured numeric facts and correlation identifiers rather than prompt/response content.
 
-Use narrow allowed roots and register only repositories you intend the selected client to operate. Remove a project from the agent registry, narrow the allowed root, or stop the agent to remove access from that client path.
+## Durable orchestration evidence
 
-## Agent Trust Boundary
+`.coding-tools/orchestration/ledger.sqlite3` is the canonical local causal audit source for runs, waves, authority, delegations, proof lineage, observations and acceptance. Host-turn correlation should remain content-free (`turn_id`, `trace_id`, `span_id`) rather than persisting full ChatGPT prompts/responses.
 
-The agent is trusted to enforce local project policy and execute work on the machine that owns the code. Treat an agent token as a credential for that execution boundary.
+## LSP and provider boundaries
 
-Operational guidance:
+Native LSP integration is a read-only semantic acceleration path; typed requests stay project-bound and constrained profiles must not become arbitrary JSON-RPC passthrough, execute repo code, fetch dependencies, or leak external paths. Resource pressure policy must be bounded/observable rather than hardcoded from one historical working-set sample.
 
-- Run agents under an OS user appropriate for the repositories they serve.
-- Keep project roots narrow.
-- Configure shell profiles deliberately; do not inherit broad interactive shell state by accident.
-- Do not copy complete agent configs between machines unless that is the intended deployment action.
+OpenCode/Codex provider lanes remain bounded by source authority/traffic policy. Automatic provider routing is currently evidence-gated/off. Do not present internal estimated credits as provider billing.
 
-## Shell And Job Risk
+## Git, release and destructive operations
 
-`run_shell` and `run_job` are bounded escape hatches, not the default coding loop. They can run project commands, so they are more powerful than read, edit, or review tools.
+Do not reset, clean, rebase, force-push, move published tags, overwrite releases, deploy, restart services, or mutate external systems unless explicitly authorized. Preserve unrelated dirty work and review intentional runtime evidence for sensitive content before publication.
 
-Use them only when:
+## Reporting vulnerabilities
 
-- The command is needed for validation or diagnostics.
-- The project, timeout, output limit, and shell profile are appropriate.
-- The resulting output will not expose secrets.
-- A human can review the command, output summary, and workspace state.
+For vulnerabilities in this customized repository, contact the current repository owner/maintainer through GitHub using a private channel when sensitive details are involved. Use a public issue only for non-sensitive, minimized reproduction information. Report to upstream WebCodex only when the vulnerability actually belongs to that upstream/core component.
 
-Prefer structured tools first: `read_file`, `search_project_text`, structured edits, `validate_patch`, `cargo_fmt`, `cargo_check`, `cargo_test`, `show_changes`, and `workspace_hygiene_check`.
+## Known boundary
 
-## Token Handling
-
-Do not expose secrets in prompts, tool output, docs, examples, screenshots, logs, or committed config files.
-
-Never share or commit:
-
-- server bootstrap tokens,
-- user API tokens,
-- OAuth access or refresh tokens,
-- shared keys,
-- account credentials,
-- agent tokens,
-- env files,
-- complete `agent.toml` files,
-- Authorization headers.
-
-Use the right credential for the right surface:
-
-- GPT Actions, MCP, and runtime API calls use a shared key for quick evaluation or a scoped user token for managed mode.
-- Agents use agent tokens.
-- Server bootstrap/admin credentials stay server-side.
-- Account credentials are for local token creation, not for model-facing clients.
-
-Shared-key quick-start is a lightweight grouping mechanism, not production IAM.
-
-Detailed PAT, shared-key, and OAuth behavior belongs in [docs/AUTH_MODEL.md](docs/AUTH_MODEL.md), not in prompts or README examples.
-
-## Session And Audit Evidence
-
-WebCodex records bounded task evidence for review and handoff:
-
-- session ids and tool status,
-- selected project ids,
-- validation summaries,
-- permission decision summaries,
-- workspace review and hygiene summaries,
-- finish or handoff verdicts.
-
-These records are intentionally bounded and redacted. They are not a substitute for full infrastructure logs, Git review, or secret scanning. They must not contain raw secrets, full env values, Authorization headers, unbounded stdout/stderr, or complete private file dumps.
-
-## Revoking Access
-
-Use the narrowest revocation that matches the risk:
-
-- For shared-key quick-start, replace the Bearer value used by both agent and client, or disable shared-key quick-start.
-- Revoke or rotate a user token used by MCP, GPT Actions, or REST clients.
-- Revoke OAuth tokens when using OAuth.
-- Remove a project from the agent registry or narrow its allowed root.
-- Stop the agent when the client should no longer reach that machine.
-- Rotate an agent token if the agent credential may have leaked.
-- Rotate server bootstrap/admin credentials if they were exposed.
-
-After revocation, verify with `runtime_status`, `list_projects`, and a read-only client call.
-
-## Reporting Vulnerabilities
-
-Please report vulnerabilities through GitHub Issues on `yyjeqhc/webcodex` or by contacting the maintainer privately through GitHub if the report contains sensitive details.
-
-Do not publish real tokens, env files, complete agent configs, private repository contents, or exploit details in public issues. Use placeholders and minimal reproduction steps.
-
-## Known Limitations
-
-WebCodex v0.3.x is intended for controlled self-hosted environments. It is not a hosted SaaS, not a full identity provider, and not a replacement for normal code review, Git hygiene, endpoint hardening, or least-privilege operating-system policy.
+This project is intended for controlled local/self-hosted operation. It is not a substitute for OS least privilege, endpoint protection, Git review, secret scanning, provider account controls, or production change-management policy.

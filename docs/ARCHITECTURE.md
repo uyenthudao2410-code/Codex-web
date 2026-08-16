@@ -1,5 +1,29 @@
 # Architecture
 
+> **Current product scope (2026-08-16):** the operated Tools-Codex-web product is the Windows Electron **Execution Hub + Recovery Host + one Coding Tools MCP Runtime**. The detailed WebCodex server/runner architecture below remains valid for its core subsystem. For cross-product precedence and current operational status, read [`CURRENT_STATE.md`](CURRENT_STATE.md) first.
+
+## Current Desktop product boundary
+
+```text
+ChatWeb -- primary Tunnel/MCP --+
+                                v
+                         Recovery Host
+                    +---------+---------+
+                    |                   |
+                    v                   v
+           ONE Coding Tools MCP   independent Recovery MCP
+                    ^                   |
+                    |                   +-- separate Recovery Tunnel when configured
+                    |
+           Codex Desktop thin proxy
+
+Electron UI = Execution Control Center / configuration client
+Recovery Host = runtime lifecycle owner
+Coding Tools MCP / EOCL = workspace mutation, proof and durable orchestration authority
+```
+
+Secondary Codex/OpenCode lanes are bounded candidate/review/provider lanes; they do not become an independent primary-checkout writer merely because a route/provider is available. `execution_route=auto` currently remains deterministic under the representative-evidence ROI gate.
+
 WebCodex is a self-hosted tool runtime that lets online AI clients operate private code through a server and a local execution agent. This document starts with the product architecture, then maps that architecture to the main Rust modules.
 
 For vocabulary, read [CONCEPTS.md](CONCEPTS.md). For setup, read [QUICK_START.md](QUICK_START.md).
@@ -15,7 +39,10 @@ gateway resident when Electron windows or the Electron UI main process exit.
 The Recovery Host is intentionally not a second coding API: its IPC surface is
 an authenticated, bounded JSON RPC with an action allowlist, binds to
 `127.0.0.1`, and does not accept arbitrary shell, PID, executable, or environment
-input. Independent Recovery MCP/Tunnel remains a later roadmap phase. Controlled
+input. Independent Recovery MCP/Tunnel is implemented in the current Desktop
+worktree as a separate break-glass plane with its own process/identity/ports and
+distinct tunnel id when configured. Packaged/live fault-matrix acceptance is a
+separate proof boundary. Controlled
 code activation uses typed per-component requests, a durable idempotency ledger,
 and Coding MCP's canonical activation fence before any control-plane or MCP
 replacement. See
@@ -444,7 +471,7 @@ not a side effect of the builder. The tool has no recorder bypass.
 
 ## Frontend
 
-The current product entry points are MCP, GPT Actions, REST, and CLI. Any frontend should remain an operator aid and should not become the model-facing trust boundary unless it uses the same runtime, auth, and session rules.
+For the WebCodex core runtime described in this section, the entry points are MCP, GPT Actions, REST, and CLI. Any frontend for that subsystem should remain an operator aid and should not become the model-facing trust boundary unless it uses the same runtime, auth, and session rules.
 
 ## Invariants For New Runtime Tools
 

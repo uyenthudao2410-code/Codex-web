@@ -2,6 +2,8 @@
 
 [English](BUILD_INSTALL.md) | [简体中文](BUILD_INSTALL.zh-CN.md)
 
+> **组件范围：** 本文是独立/hosted **WebCodex core CLI + Server + Runner** 发行方式的构建与安装速查，不是当前 Windows Electron Desktop 的安装路径。Desktop 产品请使用 [`../README.md`](../README.md)、[`CURRENT_STATE.md`](CURRENT_STATE.md) 和 [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)。
+
 这是构建和安装的快速参考。生产部署细节见 [DEPLOYMENT.md](DEPLOYMENT.md) / [DEPLOYMENT.zh-CN.md](DEPLOYMENT.zh-CN.md)。
 
 ## 最快 hosted 安装

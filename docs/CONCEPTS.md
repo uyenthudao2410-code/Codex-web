@@ -1,5 +1,7 @@
 # Concepts
 
+> **Component scope:** the terms and mental model below describe the retained **WebCodex core server/runner/connector** subsystem. The current Windows Desktop product uses Execution Hub + Recovery Host + Coding Tools MCP; see [`CURRENT_STATE.md`](CURRENT_STATE.md).
+
 [English](CONCEPTS.md) | [简体中文](CONCEPTS.zh-CN.md)
 
 WebCodex lets an online AI client operate a private repository through a self-hosted, auditable tool runtime. This page defines the terms used across the setup, MCP, GPT Actions, security, and architecture docs.

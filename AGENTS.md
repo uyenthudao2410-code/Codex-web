@@ -1,6 +1,15 @@
-# AGENTS.md — WebCodex Repository Guide
+# AGENTS.md — Tools-Codex-web / WebCodex Repository Guide
 
 These are the always-on rules for ordinary repository work. Read only the linked sections needed for the current task. A deeper `AGENTS.md` governs its directory.
+
+## 0. Current product truth and document precedence
+
+- The current operated product is the Windows **Electron Execution Hub + Coding Tools MCP** stack. WebCodex Rust/server/runner code remains an important foundation/subsystem, but WebCodex-core docs do not automatically describe current Desktop operations.
+- Resolve conflicts in this order: current implementation/focused tests/live contract -> [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) -> maintained product docs -> component-specific `docs/agent/*` / `docs/MODEL_EXECUTION.md` -> dated `docs/research/*` snapshots.
+- In `smart-v3`, the public MCP surface is exactly `workspace_context`, `agent_workflow`, `task_control`, `document_workflow`, `exec_command`, `command_control`, `request_permissions`, and `view_image`. `restart_runtime` is a `task_control` action.
+- `execution_route=auto` is currently evidence-gated and fail-closed to `deterministic`; do not infer automatic Mini/Luna/Terra/Sol routing from route availability or old research plans.
+- Source presence, focused proof, live controlled activation, and packaged/released state are different claims. State the strongest one actually proven.
+- Dated research documents are immutable chronology/evidence by default. Correct current guidance instead of rewriting old measurements to look current.
 
 ## 1. Verify and preserve
 
@@ -21,7 +30,7 @@ These are the always-on rules for ordinary repository work. Read only the linked
 - For model-facing execution, prefer structured process/argv and durable Job/observation primitives over shell-text orchestration. Keep shell as an escape hatch; structured lifecycle state is the source of truth for retry safety.
 - Treat demonstrated host features such as MCP App orchestration as optional adapters. Core execution and Job semantics must remain protocol-, UI-, transport-, and OS-neutral.
 
-Product direction: [`docs/ROADMAP.md`](docs/ROADMAP.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and [`docs/MODEL_EXECUTION.md`](docs/MODEL_EXECUTION.md).
+Product direction: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md), [`docs/ROADMAP.md`](docs/ROADMAP.md), and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). [`docs/MODEL_EXECUTION.md`](docs/MODEL_EXECUTION.md) is the WebCodex core execution-subsystem contract.
 
 ## 3. Follow intent and make focused changes
 
@@ -68,7 +77,7 @@ These files are **volatile runtime evidence, not source-code inputs**. For resea
 - Push, publish, tag, release, deploy, restart services, or alter external systems only when the task explicitly includes it and identifies the destination.
 - Review status and diff before committing. Do not mix unrelated work or amend an unrelated commit.
 
-Release guidance: [`docs/agent/release-process.md`](docs/agent/release-process.md) and [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
+Current Desktop release guidance: [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md). Use [`docs/agent/release-process.md`](docs/agent/release-process.md) only when releasing the WebCodex core/server/npm component it describes.
 
 ## 6. Load domain rules only when relevant
 
@@ -77,7 +86,7 @@ Release guidance: [`docs/agent/release-process.md`](docs/agent/release-process.m
 - Authority boundaries: [`docs/agent/permission-model.md`](docs/agent/permission-model.md).
 - Architecture decisions: [`docs/agent/architecture-decisions.md`](docs/agent/architecture-decisions.md).
 
-Use these documents as sources of truth instead of copying subsystem invariants into every task prompt.
+Use these documents as sources of truth **inside their subsystem scope** instead of copying invariants into every task prompt. If they conflict with the current Desktop boundary, follow Section 0 precedence.
 
 ## 7. Report the completed state
 

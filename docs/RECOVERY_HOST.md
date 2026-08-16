@@ -22,6 +22,57 @@ route IPC dùng action allowlist và bounded JSON request/response; không có
 arbitrary shell, executable, PID hoặc environment input. Per-action typed schema
 được enforce cho preflight, activation, operation status và UI registration.
 
+## Phase 3A independent Recovery Supervisor
+
+`resources/recovery-supervisor/recovery-supervisor.ps1` là watchdog cùng Windows
+user nhưng nằm ngoài process Recovery Host. `recovery:supervisor:install` copy
+script + fixed manifest sang `%LOCALAPPDATA%\\WebMcpRecoverySupervisor` và đăng ký
+Scheduled Task `WebMCP Recovery Supervisor` ở logon. Supervisor xác minh bounded
+descriptor, exact owner PID và authenticated `recovery.ping` trên `127.0.0.1`.
+
+Nếu descriptor hoặc lock owner còn sống nhưng IPC không trả lời, supervisor
+fail-closed ở `blocked_live_owner` và không kill process. Chỉ khi cả hai owner đều
+đã chết qua 4 mẫu liên tiếp, nó mới spawn argv cố định `--recovery-host`. Manifest
+khóa app root, executable và SHA-256 executable; binary đổi thì yêu cầu reinstall.
+Sau spawn có cooldown 20 giây; tối đa 4 lần trong 10 phút rồi suppress 5 phút.
+Status secret-free nằm ở `%APPDATA%\\web-mcp-assistant\\recovery-supervisor-status.json`.
+
+```text
+npm run recovery:supervisor:install
+npm run recovery:supervisor:status
+npm run recovery:supervisor:uninstall
+```
+
+Supervisor không sở hữu Coding MCP/Tunnel. Nó chỉ chịu trách nhiệm bounded
+resurrection của Recovery Host. **Phase 3B independent Recovery MCP/Tunnel đã có
+implementation trong current worktree** và được Recovery Host supervise; Recovery
+Tunnel phải có tunnel ID riêng, không reuse Coding Tunnel để tránh cùng failure
+domain.
+
+## Phase 3B independent Recovery MCP/Tunnel
+
+Recovery Host supervise một break-glass data plane riêng: Python
+`resources/recovery-mcp/recovery_mcp.py` trên `127.0.0.1:18767` và, khi được cấu
+hình, Recovery Tunnel health trên `127.0.0.1:18083`. Hai process dùng state/log/PID
+riêng và spawn `detached`, nên Recovery Host handoff/crash không kéo chúng chết.
+Host mới adopt process đúng fingerprint hoặc replace đúng PID nếu code/settings đổi.
+
+Recovery MCP không import Coding MCP và chỉ export `recovery_status` cùng
+`repair_primary_runtime`. Repair bắt buộc `confirm=true` và chỉ forward fixed
+authenticated RPC `health.repair` tới Recovery Host; không nhận shell, path, PID
+hay RPC action tùy ý.
+
+`recoveryTunnelId` mặc định rỗng. Khi chưa có tunnel resource thứ hai, local Recovery
+MCP vẫn chạy nhưng Recovery Tunnel báo `not_configured`. `recoveryTunnelId` bị từ
+chối nếu trùng `tunnelId`; hệ thống không reuse Coding Tunnel để giả lập independent
+recovery. Khi có tunnel ID riêng, Recovery Tunnel dùng channel `recovery`, port và PID
+riêng. Runtime API key có thể dùng chung credential, nhưng process/tunnel failure
+domain vẫn tách biệt.
+
+Operational status exposes `recovery_plane_mode=independent_mcp_tunnel_v1`; persisted
+`recovery-plane-state.json` uses schema `version: 1`. These markers make it explicit
+that Recovery MCP/Tunnel identity must not be folded back into primary runtime state.
+
 ## Startup
 
 - Mở ứng dụng bình thường: UI kiểm tra descriptor rồi khởi động một Recovery
@@ -130,16 +181,19 @@ theo phải đi qua protocol controlled ở trên.
 
 ## Current scope and rollback
 
-Wave hiện tại đã chuyển ownership local và UI client, đồng thời có focused
-lock/IPC/lifecycle tests. Lane `npm run test:recovery:e2e` chạy Electron main
+Current worktree đã chuyển ownership local/UI client sang Recovery Host và đã có
+independent Recovery MCP/Tunnel source implementation cùng focused
+lock/IPC/lifecycle coverage. Lane `npm run test:recovery:e2e` chạy Electron main
 process thật trong data root tạm, kill client thứ nhất rồi xác nhận client thứ hai
 attach lại cùng Recovery Host, process identity của Coding MCP/Tunnel stand-in và
-gateway. Lane này chứng minh process boundary một cách deterministic; packaged
-Windows/login acceptance và fault matrix với Coding MCP/Tunnel production vẫn
-pending. Independent Recovery MCP/Tunnel, remote recovery exposure và production
-fault matrix vẫn là các wave tiếp theo. Source implementation chưa có nghĩa là
-process đang sống đã load code mới; activation thực tế vẫn phải được gọi rõ sau
-khi gate kiểm thử pass.
+gateway.
+
+Các boundary còn cần chứng minh theo từng thay đổi là packaged Windows/login
+acceptance, production fault matrix, cấu hình tunnel thứ hai khi môi trường yêu
+cầu remote recovery, và live controlled activation của exact source revision.
+Remote recovery exposure rộng hơn break-glass surface hiện tại vẫn là future
+scope nếu có nhu cầu. Source implementation chưa có nghĩa là process đang sống đã
+load code mới; activation thực tế vẫn phải được chứng minh sau gate kiểm thử.
 
 Rollback không cần migrate persisted state: tắt login item Recovery Host, dừng
 process host thuộc instance hiện tại, rồi chạy bản build trước đó. Không xóa

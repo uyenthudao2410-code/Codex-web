@@ -67,6 +67,23 @@ function renderServiceState(state) {
     element.classList.toggle('ready', Boolean(value));
     element.classList.toggle('error', !value);
   });
+  const recoveryElement = $('#recoveryTunnelState');
+  const recoveryTunnel = state?.recoveryHost?.recovery_plane?.tunnel || null;
+  const rawState = String(recoveryTunnel?.state || '').toLowerCase();
+  const presentation = rawState === 'healthy'
+    ? { state: 'connected', tone: 'ready', title: 'Tunnel cứu hộ: Đã kết nối' }
+    : rawState === 'starting'
+      ? { state: 'connecting', tone: 'warn', title: 'Tunnel cứu hộ: Đang kết nối' }
+      : rawState === 'not_configured'
+        ? { state: 'not_configured', tone: '', title: 'Tunnel cứu hộ: Chưa cấu hình' }
+        : rawState
+          ? { state: 'error', tone: 'error', title: `Tunnel cứu hộ: Lỗi (${rawState})` }
+          : { state: 'not_configured', tone: '', title: 'Tunnel cứu hộ: Đang kiểm tra' };
+  recoveryElement.classList.remove('ready', 'warn', 'error');
+  if (presentation.tone) recoveryElement.classList.add(presentation.tone);
+  recoveryElement.dataset.state = presentation.state;
+  recoveryElement.title = presentation.title;
+  recoveryElement.setAttribute('aria-label', presentation.title);
   renderWorkspaceHealth();
 }
 

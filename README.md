@@ -2,6 +2,8 @@
 
 > Bộ công cụ desktop Windows giúp kết nối ChatGPT với máy lập trình của bạn qua MCP, quản lý workspace, chạy lệnh/test/build, thao tác Git, xử lý tài liệu và điều phối Codex theo mức độ khó của công việc.
 
+> **Nguồn trạng thái hiện tại:** [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md). Các file có ngày dưới `docs/research/` là evidence/plan lịch sử và không được dùng để ghi đè source, test hoặc trạng thái vận hành mới hơn.
+
 **Phiên bản desktop hiện tại:** `web-mcp-assistant 0.3.4`  
 **Repository:** `uyenthudao2410-code/Tools-Codex-web`  
 **Nền tảng chính:** Windows + Electron  
@@ -26,7 +28,7 @@ Khi được kết nối qua MCP, ChatGPT có thể:
 - dùng Codex App Server như một reviewer/worker độc lập ở chế độ chỉ đọc;
 - giữ các thao tác nguy hiểm trong ranh giới workspace và policy đã cấu hình.
 
-Đây là bản tùy biến phát triển từ WebCodex, nhưng trọng tâm hiện tại của desktop app là **Execution Hub + Coding Tools MCP + ChatGPT/Codex Desktop + adaptive model routing**.
+Đây là bản tùy biến phát triển từ WebCodex, nhưng trọng tâm hiện tại của desktop app là **Execution Hub + Coding Tools MCP + ChatGPT/Codex Desktop + evidence-gated model routing**.
 
 ---
 
@@ -202,7 +204,7 @@ Các invariant hiện tại:
 
 ## 5. Adaptive Model Routing
 
-Bản hiện tại có router để chọn lane xử lý theo độ khó, phạm vi code và chất lượng oracle/verification.
+Bản hiện tại hỗ trợ nhiều route xử lý, nhưng production policy đang **fail-closed**: `execution_route=auto` hiện resolve về `deterministic` trong khi chưa đủ representative accepted paired evidence. Mini/Luna/Terra/Sol vẫn là các route explicit/evaluation hợp lệ; việc chúng tồn tại không đồng nghĩa automatic routing đang bật.
 
 ### Các route đang được cấu hình
 
@@ -218,18 +220,16 @@ Bản hiện tại có router để chọn lane xử lý theo độ khó, phạm
 
 > Đây là route cấu hình của repository hiện tại. Model thực tế còn phụ thuộc khả năng mà Codex runtime tại máy cung cấp.
 
-### Strong oracle
+### Strong oracle và ROI gate hiện tại
 
-Router không gửi bug nhỏ xuống Mini chỉ vì ít file.
-
-Với bug/test-failure cục bộ, Mini chỉ được ưu tiên tự động khi có **strong oracle**, ví dụ:
+Strong oracle vẫn là một dimension quan trọng để đánh giá một candidate lane, ví dụ:
 
 - `verification=tests`;
 - `verification=build`;
 - `verification=all`;
 - hoặc có `test_command` / `build_command` cụ thể.
 
-Nếu phạm vi nhỏ nhưng không có oracle đủ mạnh, router có thể nâng lên Luna thay vì tối ưu chi phí quá sớm.
+Tuy nhiên strong oracle **không vượt qua ROI evidence gate hiện tại**. Cho tới khi có representative accepted paired cohorts đủ chất lượng, `auto` vẫn chọn `deterministic` với fail-closed reason tương ứng; không được mô tả bug nhỏ như đang tự động bị đẩy xuống Mini/Luna trong production.
 
 ### High-cost gate
 
@@ -491,7 +491,7 @@ Khuyến nghị: **dùng `smart` cho luồng agent bình thường**.
 ### Cài dependency
 
 ```powershell
-cd E:\DEV\Tools-Codex-web
+Set-Location <path-to-Tools-Codex-web>
 npm install
 ```
 
@@ -722,12 +722,17 @@ Xem thêm: [`SECURITY.md`](SECURITY.md).
 
 Các tài liệu hữu ích cho kiến trúc hiện tại:
 
+- [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) — snapshot vận hành hiện tại và thứ tự ưu tiên tài liệu;
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — kiến trúc desktop hiện tại ở phần đầu và WebCodex core ở phần subsystem;
+- [`docs/RECOVERY_HOST.md`](docs/RECOVERY_HOST.md) — Recovery Host, Supervisor và independent Recovery MCP/Tunnel;
 - [`docs/agent/architecture-decisions.md`](docs/agent/architecture-decisions.md) — quyết định kiến trúc bền vững;
 - [`docs/agent/permission-model.md`](docs/agent/permission-model.md) — authority/safety model của WebCodex core;
 - [`docs/research/EXECUTOR_ROUTING_BENCHMARK_2026-08-12.md`](docs/research/EXECUTOR_ROUTING_BENCHMARK_2026-08-12.md) — benchmark executor routing;
 - [`docs/research/MODEL_ORCHESTRATION_RESEARCH_PHASE2_2026-08-12.md`](docs/research/MODEL_ORCHESTRATION_RESEARCH_PHASE2_2026-08-12.md) — nghiên cứu orchestration/model routing;
 - [`docs/research/2026-08-14_POST_P1_FOLLOWUP_TRACKER.md`](docs/research/2026-08-14_POST_P1_FOLLOWUP_TRACKER.md) — trạng thái proof-cache, handoff, runtime activation và routing evidence hiện tại;
 - [`AGENTS.md`](AGENTS.md) — hướng dẫn cho coding agent trong repository.
+
+Các file `docs/research/*` giữ giá trị chronology/evidence tại thời điểm chúng được viết. Nếu một tracker cũ nói một capability còn ở roadmap nhưng source hiện tại đã triển khai, dùng `docs/CURRENT_STATE.md` + implementation/test hiện tại làm nguồn kết luận mới.
 
 ---
 
@@ -779,6 +784,6 @@ Xem file [`LICENSE`](LICENSE) và [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES
 Nếu chỉ cần nhớ bốn điểm về bản hiện tại:
 
 > **1. `smart-v3` chỉ public 8 tool và có contract fingerprint để phát hiện connector stale.**
-> **2. `agent_workflow` là đường chính cho coding; MCP giữ mutation/proof, route rẻ chỉ được dùng khi evidence đủ mạnh.**
+> **2. `agent_workflow` là đường chính cho coding; `auto` hiện fail-closed về deterministic cho tới khi representative accepted paired evidence đủ mạnh.**
 > **3. `task_control` quản lý EOCL/handoff và có production-safe `restart_runtime` qua Electron supervisor.**
 > **4. `request_permissions` fail-closed: host không hỗ trợ elicitation không bao giờ đồng nghĩa permission được cấp.**

@@ -343,8 +343,14 @@
             <article class="panel">
               <div class="panel-title"><div><h3>Định danh OpenAI Tunnel</h3><p>Khóa mật mã được mã hóa lưu trữ trong tiến trình chính, giao diện và nhật ký không bao giờ đọc văn bản thuần.</p></div><span class="security-chip">Mã hóa Windows</span></div>
               <label class="field"><span>Runtime API Key</span><div class="input-action"><input id="runtimeKeyInput" type="password" autocomplete="off" placeholder="Dán Runtime API Key"><button id="saveRuntimeKey">Lưu an toàn</button></div><small id="runtimeKeyHint">Chưa lưu</small></label>
-              <label class="field"><span>Tunnel ID</span><input id="tunnelIdInput" placeholder="Ví dụ tunnel_..."><small>Tạo hoặc xem trên trang Tunnels của OpenAI Platform.</small></label>
-              <div class="inline-actions"><button class="secondary-button" data-open="openai-runtime-keys">Yêu cầu Runtime Key</button><button class="secondary-button" data-open="openai-tunnels">Quản lý Tunnels</button></div>
+              <label class="field"><span>Tunnel ID chính</span><input id="tunnelIdInput" placeholder="Ví dụ tunnel_..."><small>Tunnel dành cho Coding Tools MCP. Tạo hoặc xem trên trang Tunnels của OpenAI Platform.</small></label>
+              <div class="recovery-tunnel-settings">
+                <div class="panel-title"><div><h3>Tunnel cứu hộ</h3><p>Đường truy cập độc lập tới Recovery MCP khi Coding Tunnel chính gặp sự cố.</p></div><span id="recoveryTunnelSettingsBadge" class="soft-badge neutral">Chưa cấu hình</span></div>
+                <label class="field"><span>Recovery Tunnel ID</span><input id="recoveryTunnelIdInput" autocomplete="off" spellcheck="false" placeholder="tunnel_..."><small>Phải là một Tunnel riêng và khác Tunnel ID chính. Sau khi lưu, Recovery Host sẽ tự kết nối trong vài giây.</small></label>
+                <div class="setting-row"><span><b>Recovery MCP cục bộ</b><small id="recoveryMcpEndpoint">http://127.0.0.1:18767/mcp</small></span><span class="security-chip">Break-glass</span></div>
+                <div class="setting-row"><span><b>Trạng thái Tunnel cứu hộ</b><small id="recoveryTunnelSettingsStatus">Đang kiểm tra trạng thái thực tế…</small></span><span id="recoveryTunnelSettingsState" class="security-chip">Đang kiểm tra</span></div>
+              </div>
+              <div class="inline-actions"><button class="secondary-button" data-open="openai-runtime-keys">Yêu cầu Runtime Key</button><button class="secondary-button" data-open="openai-tunnels">Tạo / quản lý Tunnels</button><button class="primary-button" id="saveRecoveryTunnel">Lưu Tunnel cứu hộ</button></div>
             </article>
 
             <article class="panel">

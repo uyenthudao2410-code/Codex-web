@@ -1,5 +1,7 @@
 # GPT Actions
 
+> **Component scope:** this page documents the alternate **WebCodex core OpenAPI Custom GPT Action** integration. The current Desktop product's primary ChatWeb path is Coding Tools MCP through the Execution Hub; see [`CURRENT_STATE.md`](CURRENT_STATE.md).
+
 [English](GPT_ACTIONS.md) | [简体中文](GPT_ACTIONS.zh-CN.md)
 
 Use GPT Actions when a Custom GPT should call the project-bound WebCodex

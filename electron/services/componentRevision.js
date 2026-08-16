@@ -27,11 +27,14 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/recoveryHost.js',
       'electron/services/recoveryHostLauncher.js',
       'electron/services/recoveryIpc.js',
+      // Recovery-plane source is Recovery Host-owned so accepted bytes activate through the safe host handoff.
+      'electron/services/recoveryPlaneService.js',
       'electron/services/runtimeOrchestrator.js',
       'electron/services/runtimePaths.js',
       'electron/services/secretStore.js',
       'electron/services/settingsStore.js',
-      'electron/services/tunnelService.js'
+      'electron/services/tunnelService.js',
+      'resources/recovery-mcp/recovery_mcp.py'
     ])
   }),
   coding_mcp: Object.freeze({

@@ -11,6 +11,11 @@ const DEFAULTS = Object.freeze({
   proxyUrl: '',
   tunnelId: '',
   tunnelProfile: 'coding-tools',
+  // Recovery ports and tunnel identity must remain independent from the primary data plane.
+  recoveryMcpPort: 18767,
+  recoveryHealthPort: 18083,
+  recoveryTunnelId: '',
+  recoveryTunnelProfile: 'recovery',
   startWithWindows: false,
   autoStartServices: false,
   keepRunningOnClose: true,
@@ -70,6 +75,8 @@ function normalize(input = {}) {
   merged.proxyMode = ['auto', 'system', 'manual', 'direct'].includes(merged.proxyMode) ? merged.proxyMode : 'auto';
   merged.mcpPort = Number.isInteger(Number(merged.mcpPort)) ? Number(merged.mcpPort) : 18766;
   merged.healthPort = Number.isInteger(Number(merged.healthPort)) ? Number(merged.healthPort) : 18082;
+  merged.recoveryMcpPort = Number.isInteger(Number(merged.recoveryMcpPort)) ? Number(merged.recoveryMcpPort) : 18767;
+  merged.recoveryHealthPort = Number.isInteger(Number(merged.recoveryHealthPort)) ? Number(merged.recoveryHealthPort) : 18083;
   if (sourceVersion < 6 && Number(input.mcpPort) === 18765 && Number(input.healthPort) === 18081) {
     merged.mcpPort = 18766;
     merged.healthPort = 18082;
@@ -77,6 +84,8 @@ function normalize(input = {}) {
   merged.proxyUrl = String(merged.proxyUrl || '').trim();
   merged.workspace = normalizeWorkspacePath(merged.workspace);
   merged.tunnelId = String(merged.tunnelId || '').trim();
+  merged.recoveryTunnelId = String(merged.recoveryTunnelId || '').trim();
+  merged.recoveryTunnelProfile = 'recovery';
   if (sourceVersion < 5 && merged.theme === 'dark') merged.theme = 'light';
   merged.theme = merged.theme === 'dark' ? 'dark' : 'light';
   merged.progressReportSeconds = [60, 90, 120, 180].includes(Number(merged.progressReportSeconds))
@@ -123,13 +132,16 @@ function normalizeLaneRates(value) {
 }
 
 function validateRuntimeSettings(settings) {
-  for (const [label, port] of [['Cổng MCP', settings.mcpPort], ['Cổng bảng điều khiển Tunnel', settings.healthPort]]) {
+  const ports = [['Cổng MCP', settings.mcpPort], ['Cổng bảng điều khiển Tunnel', settings.healthPort], ['Recovery MCP port', settings.recoveryMcpPort], ['Recovery Tunnel health port', settings.recoveryHealthPort]];
+  for (const [label, port] of ports) {
     if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error(`${label} phải nằm trong khoảng 1024-65535.`);
   }
-  if (settings.mcpPort === settings.healthPort) throw new Error('Cổng MCP và cổng bảng điều khiển Tunnel không được giống nhau.');
+  if (new Set(ports.map(([, port]) => port)).size !== ports.length) throw new Error('Primary và Recovery ports không được giống nhau để giữ failure domain độc lập.');
   if (settings.tunnelId && !/^tunnel_[A-Za-z0-9_-]{4,}$/.test(settings.tunnelId)) {
     throw new Error('Định dạng Tunnel ID không hợp lệ, phải bắt đầu bằng tunnel_.');
   }
+  if (settings.recoveryTunnelId && !/^tunnel_[A-Za-z0-9_-]{4,}$/.test(settings.recoveryTunnelId)) throw new Error('Recovery Tunnel ID phải bắt đầu bằng tunnel_.');
+  if (settings.recoveryTunnelId && settings.recoveryTunnelId === settings.tunnelId) throw new Error('Recovery Tunnel ID phải independent và khác Coding Tunnel ID.');
   if (settings.proxyMode === 'manual' && !settings.proxyUrl) {
     throw new Error('Chế độ proxy thủ công cần điền địa chỉ proxy.');
   }

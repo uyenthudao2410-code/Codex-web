@@ -28,6 +28,7 @@ const COMPONENT_ORDER = Object.freeze(['recovery_host', 'coding_mcp', 'electron_
 const RETRYABLE_REFUSALS = new Set(['RUNTIME_BUSY', 'ORCHESTRATION_STATE_UNCERTAIN', 'ACCEPTANCE_PENDING', 'ACTIVATION_REQUEST_EXPIRED']);
 const TERMINAL_INTENT_STATES = new Set(['completed', 'blocked', 'failed', 'superseded']);
 const HEX64 = /^[a-f0-9]{64}$/;
+const GIT_OBJECT_ID = /^[a-f0-9]{40,64}$/;
 
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
@@ -216,6 +217,26 @@ async function gitStatus(workspace, forceUntracked = false) {
   return { ...parsed, head };
 }
 
+async function gitChangedPaths(workspace, fromHead, toHead) {
+  const from = String(fromHead || '').toLowerCase();
+  const to = String(toHead || '').toLowerCase();
+  if (!GIT_OBJECT_ID.test(from) || !GIT_OBJECT_ID.test(to)) {
+    throw actionError('BASE_HEAD_CHANGED', 'Component baseline Git identity is invalid.');
+  }
+  if (from === to) return [];
+  let stdout;
+  try {
+    stdout = String((await runGit(workspace, ['diff', '--name-only', '--no-renames', `${from}..${to}`, '--'])).stdout || '');
+  } catch {
+    throw actionError('BASE_HEAD_CHANGED', 'Component baseline Git identity is no longer available.');
+  }
+  const files = [...new Set(stdout.split(/\r?\n/).map(normalizeRelative).filter(Boolean))];
+  if (files.length > MAX_DIRTY_ENTRIES) {
+    throw actionError('AUTO_ACTIVATION_GIT_TOO_LARGE', 'Committed Git delta exceeded the bounded activation limit.');
+  }
+  return files;
+}
+
 function fingerprintPaths(workspace, entries, head, branch) {
   const digest = crypto.createHash('sha256');
   for (const relative of [...new Set(entries.map((item) => item.path).filter(Boolean))].sort()) {
@@ -357,7 +378,7 @@ function normalizeBaseline(value) {
       totalBytes += receipt.size_bytes;
       receipts.push(receipt);
     }
-    components[component] = { revision: HEX64.test(revision) ? revision : null, receipts };
+    components[component] = { head: String(source.head || value.head || ''), revision: HEX64.test(revision) ? revision : null, receipts };
   }
   return { head: String(value.head), components, captured_at: String(value.captured_at || ''), updated_at: String(value.updated_at || '') };
 }
@@ -415,7 +436,7 @@ class AcceptedCodeActivationController {
   }
 
   captureComponentReceipts(workspace, component, forcedEntries) {
-    const files = [...new Set((forcedEntries || []).map((item) => normalizeRelative(item.path)).filter((relative) => componentOwnsPath(component, relative)))];
+    const files = [...new Set((forcedEntries || []).map((item) => normalizeRelative(typeof item === 'string' ? item : item?.path)).filter((relative) => componentOwnsPath(component, relative)))];
     if (files.length > MAX_TRUST_RECEIPTS) throw actionError('AUTO_ACTIVATION_RECEIPT_TOO_LARGE', 'Target component has too many dirty source receipts.');
     const receipts = [];
     let totalBytes = 0;
@@ -435,6 +456,7 @@ class AcceptedCodeActivationController {
       const runningRevision = String(this.runtimeRevisionStatus(component).running_revision || '').toLowerCase();
       const current = HEX64.test(runningRevision) && runningRevision === diskRevision;
       components[component] = {
+        head: String(forced.head || ''),
         revision: HEX64.test(runningRevision) ? runningRevision : null,
         receipts: current ? this.captureComponentReceipts(workspace, component, forced.entries) : []
       };
@@ -443,54 +465,71 @@ class AcceptedCodeActivationController {
     return { head: String(forced.head || ''), components, captured_at: now, updated_at: now };
   }
 
-  ensureBaseline(workspace, state, forced) {
+  async ensureBaseline(workspace, state, forced) {
     if (!state.baseline) {
       state.baseline = this.captureBaseline(workspace, forced);
       this.saveState(state);
       return state.baseline;
     }
-    if (state.baseline.head === String(forced.head || '')) {
-      let changed = false;
-      for (const component of COMPONENT_ORDER) {
-        const row = state.baseline.components[component];
-        if (row?.revision) continue;
-        const diskRevision = String(this.revisions.disk(component, { force: true }).revision || '').toLowerCase();
-        const runningRevision = String(this.runtimeRevisionStatus(component).running_revision || '').toLowerCase();
-        if (HEX64.test(runningRevision) && runningRevision === diskRevision) {
+    const currentHead = String(forced.head || '');
+    const active = state.intents.filter((item) => item.checkpoint_id === state.active_checkpoint_id && !TERMINAL_INTENT_STATES.has(String(item.state || '')));
+    if (active.some((item) => String(item.accepted_head || '') !== currentHead)) {
+      throw actionError('BASE_HEAD_CHANGED', 'Git HEAD changed while an automatic activation was still active.');
+    }
+    let changed = false;
+    for (const component of COMPONENT_ORDER) {
+      const row = state.baseline.components?.[component];
+      if (!row) continue;
+      const rowHead = String(row.head || state.baseline.head || '');
+      if (!row.head && rowHead) { row.head = rowHead; changed = true; }
+      const baselineRevision = String(row.revision || '').toLowerCase();
+      const diskRevision = String(this.revisions.disk(component, { force: true }).revision || '').toLowerCase();
+      const runningRevision = String(this.runtimeRevisionStatus(component).running_revision || '').toLowerCase();
+      if (rowHead === currentHead) {
+        if (!HEX64.test(baselineRevision) && HEX64.test(runningRevision) && runningRevision === diskRevision) {
           row.revision = runningRevision;
           row.receipts = this.captureComponentReceipts(workspace, component, forced.entries);
           changed = true;
         }
+        continue;
       }
-      if (changed) { state.baseline.updated_at = new Date(this.now()).toISOString(); this.saveState(state); }
-      return state.baseline;
-    }
-    const active = state.intents.filter((item) => item.checkpoint_id === state.active_checkpoint_id && !TERMINAL_INTENT_STATES.has(String(item.state || '')));
-    if (active.length) throw actionError('BASE_HEAD_CHANGED', 'Git HEAD changed while an automatic activation was still active.');
-    for (const component of COMPONENT_ORDER) {
-      const baselineRevision = String(state.baseline.components?.[component]?.revision || '').toLowerCase();
-      const diskRevision = String(this.revisions.disk(component, { force: true }).revision || '').toLowerCase();
-      const runningRevision = String(this.runtimeRevisionStatus(component).running_revision || '').toLowerCase();
-      if (!HEX64.test(baselineRevision) || runningRevision !== diskRevision || diskRevision !== baselineRevision) {
-        throw actionError('BASE_HEAD_CHANGED', 'Git HEAD changed while component bytes no longer matched the running baseline.');
+      let committed;
+      try { committed = (await gitChangedPaths(workspace, rowHead, currentHead)).filter((relative) => componentOwnsPath(component, relative)); }
+      catch { continue; }
+      const currentReceipts = this.captureComponentReceipts(workspace, component, [...forced.entries, ...committed]);
+      const baselineMap = receiptMap(row.receipts || []);
+      const bytesUnchanged = currentReceipts.every((current) => receiptMatches(current, baselineMap.get(current.path)));
+      if (HEX64.test(baselineRevision) && runningRevision === baselineRevision && diskRevision === baselineRevision && bytesUnchanged) {
+        row.head = currentHead;
+        row.receipts = currentReceipts;
+        changed = true;
       }
     }
-    state.baseline = this.captureBaseline(workspace, forced);
-    this.saveState(state);
+    const rowHeads = COMPONENT_ORDER.map((component) => String(state.baseline.components?.[component]?.head || ''));
+    if (rowHeads.length && rowHeads.every((head) => head === currentHead) && state.baseline.head !== currentHead) {
+      state.baseline.head = currentHead;
+      changed = true;
+    }
+    if (changed) { state.baseline.updated_at = new Date(this.now()).toISOString(); this.saveState(state); }
     return state.baseline;
   }
 
-  componentGate(workspace, component, baseline, accepted, forcedEntries) {
-    const currentReceipts = this.captureComponentReceipts(workspace, component, forcedEntries);
-    const baselineMap = receiptMap(baseline?.components?.[component]?.receipts || []);
+  async componentGate(workspace, component, baseline, accepted, forced) {
+    const row = baseline?.components?.[component] || {};
+    const baselineHead = String(row.head || baseline?.head || '');
+    const currentHead = String(forced?.head || '');
+    const committed = baselineHead === currentHead ? [] : (await gitChangedPaths(workspace, baselineHead, currentHead)).filter((relative) => componentOwnsPath(component, relative));
+    const currentReceipts = this.captureComponentReceipts(workspace, component, [...(forced?.entries || []), ...committed]);
+    const baselineMap = receiptMap(row.receipts || []);
     const untrusted = currentReceipts.filter((current) => !receiptMatches(current, baselineMap.get(current.path)) && !receiptMatches(current, accepted.get(current.path)));
     if (untrusted.length) {
       return {
         error: { code: 'UNACCEPTED_COMPONENT_DIRTY', message: 'Target component contains dirty bytes that are neither running-baseline nor finally accepted.', files: untrusted.slice(0, 20).map((item) => item.path) },
-        receipts: currentReceipts
+        receipts: currentReceipts,
+        committed_paths: committed
       };
     }
-    return { error: null, receipts: currentReceipts };
+    return { error: null, receipts: currentReceipts, committed_paths: committed };
   }
 
   candidate(checkpoints, state, head) {
@@ -515,7 +554,7 @@ class AcceptedCodeActivationController {
     if (!fs.existsSync(workspace)) return false;
     const state = this.loadState();
     const forced = await this.forcedStatusProvider(workspace);
-    this.ensureBaseline(workspace, state, forced);
+    await this.ensureBaseline(workspace, state, forced);
     if (state.active_checkpoint_id) {
       if (!this.markActiveProcessed(state)) return false;
     }
@@ -532,7 +571,7 @@ class AcceptedCodeActivationController {
     const accepted = acceptedReceiptUnion(checkpoints, forced.head);
     state.active_checkpoint_id = checkpointId;
     for (const component of targets) {
-      const gate = this.componentGate(workspace, component, state.baseline, accepted, forced.entries);
+      const gate = await this.componentGate(workspace, component, state.baseline, accepted, forced);
       state.intents.push({
         checkpoint_id: checkpointId,
         run_id: String(candidate.checkpoint.run_id || ''),
@@ -562,13 +601,13 @@ class AcceptedCodeActivationController {
     const workspace = path.resolve(rawWorkspace);
     const forced = await this.forcedStatusProvider(workspace);
     const state = this.loadState();
-    const baseline = this.ensureBaseline(workspace, state, forced);
+    const baseline = await this.ensureBaseline(workspace, state, forced);
     const checkpoints = this.acceptedCheckpointProvider(workspace, MAX_ACCEPTED_CHECKPOINTS);
     const trusted = trustedAcceptedCheckpoints(checkpoints, forced.head);
     const checkpoint = trusted.find((item) => String(item.checkpoint.checkpoint_id) === intent.checkpoint_id)?.checkpoint || null;
     if (!checkpoint || String(checkpoint.proof_fingerprint).toLowerCase() !== intent.proof_fingerprint || String(checkpoint.git_head || '') !== intent.accepted_head) throw actionError('ACCEPTED_CHECKPOINT_CHANGED', 'Accepted checkpoint identity changed before activation.');
     const accepted = acceptedReceiptUnion(checkpoints, forced.head);
-    const gate = this.componentGate(workspace, intent.component, baseline, accepted, forced.entries);
+    const gate = await this.componentGate(workspace, intent.component, baseline, accepted, forced);
     if (gate.error) throw actionError(gate.error.code, gate.error.message, { files: gate.error.files });
     const diskRevision = String(this.revisions.disk(intent.component, { force: true }).revision || '').toLowerCase();
     if (diskRevision !== intent.expected_revision) throw actionError('REVISION_CHANGED', 'Target component revision changed after final acceptance.');
@@ -577,11 +616,14 @@ class AcceptedCodeActivationController {
 
   updateIntent(state, intent, patch) { Object.assign(intent, patch, { updated_at: new Date(this.now()).toISOString() }); this.saveState(state); }
   advanceBaseline(state, intent) {
-    if (!state.baseline || state.baseline.head !== intent.trusted_head || !Array.isArray(intent.trusted_receipts)) return false;
+    if (!state.baseline || !GIT_OBJECT_ID.test(String(intent.trusted_head || '').toLowerCase()) || !Array.isArray(intent.trusted_receipts)) return false;
     const row = state.baseline.components?.[intent.component];
     if (!row || !HEX64.test(String(intent.expected_revision || '').toLowerCase())) return false;
+    row.head = String(intent.trusted_head).toLowerCase();
     row.revision = String(intent.expected_revision).toLowerCase();
     row.receipts = intent.trusted_receipts.map(normalizeReceipt).filter(Boolean);
+    const rowHeads = COMPONENT_ORDER.map((component) => String(state.baseline.components?.[component]?.head || ''));
+    if (rowHeads.length && rowHeads.every((head) => head === row.head)) state.baseline.head = row.head;
     state.baseline.updated_at = new Date(this.now()).toISOString();
     return true;
   }

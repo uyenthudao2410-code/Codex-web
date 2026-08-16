@@ -1,9 +1,12 @@
 # AI Coding Agent Onboarding
 
+> **Component scope:** this guide on `webcodex connect`, hosted shared keys, project credentials, and standalone Server/Runner paths applies to the retained **WebCodex core** subsystem. For an AI agent operating the current Windows Desktop Execution Hub + Coding Tools MCP product, start with [`CURRENT_STATE.md`](CURRENT_STATE.md), [`../AGENTS.md`](../AGENTS.md), and [`../README.md`](../README.md).
+
 [English](AI_ONBOARDING.md) | [简体中文](AI_ONBOARDING.zh-CN.md)
 
-This guide is for an AI coding agent helping a user connect a local repository
-to WebCodex. Choose one path before running commands.
+Within the WebCodex core scope, this guide is for an AI coding agent helping a
+user connect a local repository to WebCodex. Choose one path before running
+commands.
 
 ## Decision tree
 

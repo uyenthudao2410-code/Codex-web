@@ -1,5 +1,7 @@
 # 认证和凭据模型
 
+> **组件范围：** 本文凭据模型适用于 **WebCodex core server/runner/connector** 子系统。当前 Desktop 的 MCP/tunnel/loopback/recovery secret ownership 以 [`../SECURITY.md`](../SECURITY.md) 和 [`CURRENT_STATE.md`](CURRENT_STATE.md) 为准。
+
 [English](AUTH_MODEL.md) | [简体中文](AUTH_MODEL.zh-CN.md)
 
 WebCodex 把 bootstrap administration、account onboarding、runtime API access 和 agent connectivity 分开。不要在所有 surface 上复用同一种凭据。

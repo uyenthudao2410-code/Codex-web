@@ -1,5 +1,7 @@
 # MCP
 
+> **Component scope:** this page documents the **WebCodex core remote MCP surfaces** (`canonical_connector`, `local_coding`, and `full_operator_runtime`). It is not the current Desktop Coding Tools MCP `smart-v3` contract. For the exact current eight-tool Desktop surface, see [`CURRENT_STATE.md`](CURRENT_STATE.md) and [`../README.md`](../README.md).
+
 [English](MCP.md) | [简体中文](MCP.zh-CN.md)
 
 Use MCP when the client can connect to the project-bound WebCodex endpoint.

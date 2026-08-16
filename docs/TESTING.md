@@ -1,5 +1,26 @@
 # Testing Strategy
 
+> **Current product scope:** the top-level product is now the Windows Electron Execution Hub + Coding Tools MCP. The WebCodex Cargo lanes below remain component-specific coverage. Use [`CURRENT_STATE.md`](CURRENT_STATE.md) for precedence.
+
+## Current Desktop product entry points
+
+Run only the lane relevant to the changed boundary; documentation-only changes do not require Cargo/npm suites merely for ceremony.
+
+| Boundary | Current command | Notes |
+|---|---|---|
+| Electron/Desktop source tests | `npm test` | Node test suite plus source-root cleanliness check. |
+| Coding Tools MCP | `npm run test:mcp` | Runs the Python MCP pytest suite from its correct package root. |
+| Desktop + MCP | `npm run test:all` | Use for cross-boundary changes or release readiness, not every edit. |
+| Recovery process boundary | `npm run test:recovery:e2e` | Required when Recovery Host/process ownership behavior changes. |
+| OpenCode provider readiness | `npm run canary:opencode-flash:preflight` | Zero provider dispatch; safe readiness/contract preflight. |
+| Windows package | `npm run dist` | Runs current NSIS packaging path; package proof is separate from source tests. |
+
+`npm run canary:opencode-flash` performs a real provider dispatch and may incur external cost. Run it only when the user/operator explicitly authorizes that external-cost canary. Do not substitute it for the no-dispatch preflight.
+
+For Electron, Recovery Host, Coding MCP or runtime-contract changes, source tests are only the first boundary. If the running process must load new code, perform the controlled activation/restart allowed by the task and verify the new process/runtime identity plus the relevant revision/contract before claiming a live pass. Do not reuse proof from an older process instance as acceptance for new source.
+
+For routing/evaluation work, keep representative accepted evidence separate from benchmark/synthetic data. `execution_route=auto` currently remains deterministic while the representative paired-evidence gate is open; a successful explicit Mini/Luna/OpenCode canary is not by itself permission to change automatic routing.
+
 WebCodex has a large test surface because the product has several independent
 contracts that must stay aligned: runtime tools, session guards, project and
 file operations, Git and shell dispatch, agent transports, MCP, OpenAPI, OAuth

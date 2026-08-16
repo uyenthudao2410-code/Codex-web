@@ -2,6 +2,8 @@
 
 [English](AI_ONBOARDING.md) | [简体中文](AI_ONBOARDING.zh-CN.md)
 
+> **组件范围：** 本文中的 `webcodex connect`、hosted shared key、project credential 与独立 Server/Runner 路径适用于保留的 **WebCodex core** 子系统。AI agent 若操作当前 Windows Desktop Execution Hub + Coding Tools MCP 产品，应先阅读 [`CURRENT_STATE.md`](CURRENT_STATE.md)、[`../AGENTS.md`](../AGENTS.md) 和 [`../README.md`](../README.md)。
+
 本文面向帮助用户把本地仓库接入 WebCodex 的 AI coding agent。执行命令前，先选择
 一条路径。
 

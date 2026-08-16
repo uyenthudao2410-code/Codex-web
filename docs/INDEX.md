@@ -1,21 +1,23 @@
 # Documentation Index
 
+> **Current Desktop navigation:** start with [`CURRENT_STATE.md`](CURRENT_STATE.md), [`../README.md`](../README.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`RECOVERY_HOST.md`](RECOVERY_HOST.md), and [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md). This index also retains WebCodex core/server/runner documentation; those pages are subsystem guides unless explicitly marked as current Desktop guidance.
+
 [English](INDEX.md) | [简体中文](INDEX.zh-CN.md)
 
 ## Getting Started
 
-- [README](../README.md) / [中文 README](../README.zh-CN.md)
-- [AI Coding Agent Onboarding](AI_ONBOARDING.md) / [AI 接入指南](AI_ONBOARDING.zh-CN.md)
-- [Quick Start](QUICK_START.md) / [快速开始](QUICK_START.zh-CN.md)
-- [Build and Install](BUILD_INSTALL.md) / [构建与安装](BUILD_INSTALL.zh-CN.md)
+- [Current Desktop README](../README.md)
+- [WebCodex Core AI Coding Agent Onboarding](AI_ONBOARDING.md) / [核心 AI 接入指南](AI_ONBOARDING.zh-CN.md)
+- [WebCodex Core Quick Start](QUICK_START.md) / [核心快速开始](QUICK_START.zh-CN.md)
+- [WebCodex Core Build and Install](BUILD_INSTALL.md) / [核心构建与安装](BUILD_INSTALL.zh-CN.md)
 - [Demo](DEMO.md) / [演示](DEMO.zh-CN.md)
-- [Concepts](CONCEPTS.md) / [概念](CONCEPTS.zh-CN.md)
-- [MCP](MCP.md) / [中文](MCP.zh-CN.md)
-- [GPT Actions](GPT_ACTIONS.md) / [中文](GPT_ACTIONS.zh-CN.md)
+- [WebCodex Core Concepts](CONCEPTS.md) / [核心概念](CONCEPTS.zh-CN.md)
+- [WebCodex Core MCP](MCP.md) / [核心 MCP](MCP.zh-CN.md)
+- [WebCodex Core GPT Actions](GPT_ACTIONS.md) / [核心 GPT Actions](GPT_ACTIONS.zh-CN.md)
 
 ## Operations
 
-- [Deployment](DEPLOYMENT.md) / [部署](DEPLOYMENT.zh-CN.md)
+- [WebCodex Core Deployment](DEPLOYMENT.md) / [核心部署](DEPLOYMENT.zh-CN.md)
 - [Docker Deployment](DOCKER_DEPLOYMENT.md) / [Docker 部署](DOCKER_DEPLOYMENT.zh-CN.md)
 - [Operations](OPERATIONS.md)
 - [Troubleshooting](TROUBLESHOOTING.md) / [故障排查](TROUBLESHOOTING.zh-CN.md)
@@ -35,7 +37,7 @@
 - [LSP Navigation](LSP_NAVIGATION.md)
 - [Multi-Language Validation](MULTI_LANGUAGE_VALIDATION.md)
 - [Read-Only Command Sandbox](READ_ONLY_COMMAND_SANDBOX.md) / [中文](READ_ONLY_COMMAND_SANDBOX.zh-CN.md)
-- [Roadmap](ROADMAP.md) / [中文](ROADMAP.zh-CN.md)
+- [Current Desktop Roadmap](ROADMAP.md) / [WebCodex Core historical Chinese roadmap](ROADMAP.zh-CN.md)
 - [Contributor Agent Contract](../AGENTS.md)
 - [Architecture Decisions](agent/architecture-decisions.md)
 - [Session Model](agent/session-model.md)

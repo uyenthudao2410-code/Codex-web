@@ -1,5 +1,7 @@
 # 部署指南
 
+> **组件范围：** 本文覆盖自托管 **WebCodex core server + runner** 的生产部署，不描述 Electron Desktop 的打包/部署。当前 Windows Desktop 产品边界与 release 流程见 [`CURRENT_STATE.md`](CURRENT_STATE.md) 和 [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md)。
+
 [English](DEPLOYMENT.md) | [简体中文](DEPLOYMENT.zh-CN.md)
 
 本文档说明当前 WebCodex 的生产部署形态：server bootstrap、service 安装、agent 配置、GPT Actions、MCP 以及 smoke checks。

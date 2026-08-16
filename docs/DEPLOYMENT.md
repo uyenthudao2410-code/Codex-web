@@ -1,5 +1,7 @@
 # Deployment
 
+> **Component scope:** this guide covers production deployment of the self-hosted **WebCodex core server + runner** stack. It does not describe Electron Desktop packaging/deployment. For the current Windows Desktop product boundary and release process, see [`CURRENT_STATE.md`](CURRENT_STATE.md) and [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
+
 [English](DEPLOYMENT.md) | [简体中文](DEPLOYMENT.zh-CN.md)
 
 This guide covers the current WebCodex production shape: server bootstrap, service installation, agent configuration, GPT Actions, MCP, and smoke checks.
