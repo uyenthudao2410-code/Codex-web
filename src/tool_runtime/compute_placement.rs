@@ -10,9 +10,10 @@ use crate::shell_client::CLIENT_ONLINE_WINDOW_SECS;
 use crate::shell_protocol::{ShellClientView, ShellJobInfo};
 use serde_json::{json, Value};
 use webcodex_core::compute_placement::{
-    choose_compute_placement, ComputeIntentV1, ComputeMutationMode, ComputePlacementPolicy,
-    ComputeResourceClass, RunnerComputeSnapshotV1, RunnerProjectComputeSnapshotV1,
-    COMPUTE_PLACEMENT_POLICY_V1, COMPUTE_PLACEMENT_SCHEMA_VERSION,
+    choose_compute_placement, choose_compute_placement_excluding_runner,
+    validation_auto_offload_eligible as core_validation_auto_offload_eligible, ComputeIntentV1,
+    ComputeMutationMode, ComputePlacementPolicy, ComputeResourceClass, RunnerComputeSnapshotV1,
+    RunnerProjectComputeSnapshotV1, COMPUTE_PLACEMENT_POLICY_V1, COMPUTE_PLACEMENT_SCHEMA_VERSION,
 };
 
 const RUNNING_JOB_STATUSES: &[&str] = &["running", "started"];
@@ -53,9 +54,12 @@ pub(crate) fn validation_auto_offload_eligible(
     sync_wait_secs: u64,
     sandbox: Option<&str>,
 ) -> bool {
-    matches!(tool_name, "cargo_check" | "cargo_test")
-        && timeout_secs > sync_wait_secs
-        && sandbox.is_none()
+    core_validation_auto_offload_eligible(
+        tool_name,
+        timeout_secs,
+        sync_wait_secs,
+        sandbox.is_some(),
+    )
 }
 
 impl ToolRuntime {
@@ -71,10 +75,10 @@ impl ToolRuntime {
         let clients = self.shell_clients.list_clients_for_auth(auth).await;
         let jobs = self.shell_clients.list_all_jobs_for_auth(auth).await;
         let now = chrono::Utc::now().timestamp();
-        let mut runners = runner_compute_snapshots(&clients, &jobs, now);
-        runners.retain(|runner| runner.client_id != source_client_id);
+        let runners = runner_compute_snapshots(&clients, &jobs, now);
         let intent = heavy_validation_intent(project_id, expected_git_head, purpose);
-        let decision = choose_compute_placement(&intent, &runners);
+        let decision =
+            choose_compute_placement_excluding_runner(&intent, &runners, source_client_id);
         let client_id = decision.selected_runner_id?;
         let runtime_project_id = decision.selected_runtime_project_id?;
         (client_id != source_client_id).then_some(RemoteValidationTargetV1 {

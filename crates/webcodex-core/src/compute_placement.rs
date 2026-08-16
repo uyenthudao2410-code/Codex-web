@@ -25,6 +25,20 @@ pub const REASON_RUNNER_COMPUTE_NOT_OPTED_IN: &str = "RUNNER_COMPUTE_NOT_OPTED_I
 pub const REASON_RUNNER_CAPACITY_UNKNOWN: &str = "RUNNER_CAPACITY_UNKNOWN";
 pub const REASON_RUNNER_CAPACITY_EXHAUSTED: &str = "RUNNER_CAPACITY_EXHAUSTED";
 
+/// Narrow R2B auto-offload scope for read-only Rust validation.
+///
+/// Resource class, source identity, capabilities and capacity remain placement
+/// concerns below. This helper only answers whether the validation shape may
+/// enter server-preferred placement at all.
+pub fn validation_auto_offload_eligible(
+    tool_name: &str,
+    timeout_secs: u64,
+    sync_wait_secs: u64,
+    sandboxed: bool,
+) -> bool {
+    matches!(tool_name, "cargo_check" | "cargo_test") && timeout_secs > sync_wait_secs && !sandboxed
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ComputeResourceClass {
     Light,
@@ -322,6 +336,25 @@ pub fn choose_compute_placement(
     }
 }
 
+/// Apply the same deterministic placement policy while excluding the Runner
+/// that owns the authoritative source project from remote-compute candidacy.
+///
+/// R2B uses this at the runtime boundary so "server preferred" can never mean
+/// selecting the source Runner itself as a remote compute target. If no other
+/// Runner remains eligible the normal local/fallback decision is returned.
+pub fn choose_compute_placement_excluding_runner(
+    intent: &ComputeIntentV1,
+    runners: &[RunnerComputeSnapshotV1],
+    excluded_runner_id: &str,
+) -> PlacementDecisionV1 {
+    let candidates = runners
+        .iter()
+        .filter(|runner| runner.client_id != excluded_runner_id)
+        .cloned()
+        .collect::<Vec<_>>();
+    choose_compute_placement(intent, &candidates)
+}
+
 fn local_decision(
     reason_code: &'static str,
     rejected_runners: Vec<RunnerPlacementRejectionV1>,
@@ -481,6 +514,104 @@ mod tests {
             decision.rejected_runners[0].reason_code,
             REASON_RUNNER_COMPUTE_NOT_OPTED_IN
         );
+    }
+
+    #[test]
+    fn server_first_excludes_source_and_selects_distinct_exact_target() {
+        let source = runner("source", Some("abc123"), Some(false));
+        let target = runner("compute", Some("abc123"), Some(false));
+        let decision = choose_compute_placement_excluding_runner(
+            &heavy_validation_intent(Some("abc123")),
+            &[source, target],
+            "source",
+        );
+        assert_eq!(decision.placement, "remote");
+        assert_eq!(decision.selected_runner_id.as_deref(), Some("compute"));
+        assert_eq!(
+            decision.selected_runtime_project_id.as_deref(),
+            Some("agent:compute:tools-codex-web")
+        );
+    }
+
+    #[test]
+    fn server_first_source_only_never_selects_itself() {
+        let decision = choose_compute_placement_excluding_runner(
+            &heavy_validation_intent(Some("abc123")),
+            &[runner("source", Some("abc123"), Some(false))],
+            "source",
+        );
+        assert_eq!(decision.placement, "local");
+        assert_eq!(decision.reason_code, REASON_LOCAL_REMOTE_UNAVAILABLE);
+        assert!(decision.selected_runner_id.is_none());
+    }
+
+    #[test]
+    fn server_first_ineligible_targets_fall_back_after_source_exclusion() {
+        let intent = heavy_validation_intent(Some("abc123"));
+        let source = runner("source", Some("abc123"), Some(false));
+        let dirty = runner("dirty", Some("abc123"), Some(true));
+        let mismatch = runner("mismatch", Some("def456"), Some(false));
+        let mut unknown_capacity = runner("unknown", Some("abc123"), Some(false));
+        unknown_capacity.job_concurrency_limit = None;
+        let mut not_opted_in = runner("not-opted", Some("abc123"), Some(false));
+        not_opted_in.server_compute_opt_in = false;
+
+        let decision = choose_compute_placement_excluding_runner(
+            &intent,
+            &[source, dirty, mismatch, unknown_capacity, not_opted_in],
+            "source",
+        );
+        assert_eq!(decision.placement, "local");
+        assert_eq!(decision.reason_code, REASON_LOCAL_REMOTE_UNAVAILABLE);
+        let reasons = decision
+            .rejected_runners
+            .iter()
+            .map(|rejection| rejection.reason_code)
+            .collect::<Vec<_>>();
+        assert!(reasons.contains(&REASON_REMOTE_DIRTY_WORKTREE));
+        assert!(reasons.contains(&REASON_SOURCE_IDENTITY_MISMATCH));
+        assert!(reasons.contains(&REASON_RUNNER_CAPACITY_UNKNOWN));
+        assert!(reasons.contains(&REASON_RUNNER_COMPUTE_NOT_OPTED_IN));
+    }
+
+    #[test]
+    fn validation_auto_offload_scope_requires_long_unsandboxed_check_or_test() {
+        assert!(validation_auto_offload_eligible(
+            "cargo_check",
+            600,
+            90,
+            false
+        ));
+        assert!(validation_auto_offload_eligible(
+            "cargo_test",
+            600,
+            90,
+            false
+        ));
+        assert!(!validation_auto_offload_eligible(
+            "cargo_fmt",
+            600,
+            90,
+            false
+        ));
+        assert!(!validation_auto_offload_eligible(
+            "cargo_check",
+            90,
+            90,
+            false
+        ));
+        assert!(!validation_auto_offload_eligible(
+            "cargo_test",
+            60,
+            90,
+            false
+        ));
+        assert!(!validation_auto_offload_eligible(
+            "cargo_check",
+            600,
+            90,
+            true
+        ));
     }
 
     #[test]
