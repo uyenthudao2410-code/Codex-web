@@ -23,6 +23,8 @@ pub(crate) const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 pub(crate) const DEFAULT_INITIALIZE_TIMEOUT: Duration = Duration::from_secs(15);
 pub(crate) const DEFAULT_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(2);
 pub(crate) const DEFAULT_IDLE_TTL: Duration = Duration::from_secs(15 * 60);
+pub(crate) const DEFAULT_LSP_MEMORY_SOFT_LIMIT_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+pub(crate) const DEFAULT_LSP_MEMORY_HARD_LIMIT_BYTES: u64 = 3 * 1024 * 1024 * 1024;
 const DEFAULT_MAX_SERVERS_PER_PROJECT: usize = 1;
 const DEFAULT_MAX_SERVERS_PER_AGENT: usize = 4;
 const MAX_STDERR_BYTES: usize = 64 * 1024;
@@ -83,6 +85,31 @@ pub(crate) enum LspServerStatus {
     Crashed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LspMemoryPressure {
+    Normal,
+    Soft,
+    Hard,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct LspProcessSnapshot {
+    pub(crate) process_instance_id: String,
+    pub(crate) pid: u32,
+    pub(crate) process_start_token: Option<u64>,
+    pub(crate) server_kind: LspServerKind,
+    pub(crate) project_identity: String,
+    pub(crate) working_set_bytes: Option<u64>,
+    pub(crate) peak_working_set_bytes: Option<u64>,
+    pub(crate) pending_request_count: usize,
+    pub(crate) last_used_age_ms: u64,
+    pub(crate) lifecycle_usable: bool,
+    pub(crate) pressure_state: LspMemoryPressure,
+    pub(crate) restart_count: u64,
+    pub(crate) drain_count: u64,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum LspError {
     ServerUnavailable,
@@ -107,6 +134,10 @@ pub(crate) enum LspError {
     RestartExhausted(String),
     CapacityExceeded {
         limit: usize,
+    },
+    MemoryPressure {
+        state: LspMemoryPressure,
+        reason: &'static str,
     },
     InvalidProjectRoot(String),
 }
@@ -150,6 +181,9 @@ impl fmt::Display for LspError {
             }
             Self::CapacityExceeded { limit } => {
                 write!(f, "language server capacity exceeded (limit {limit})")
+            }
+            Self::MemoryPressure { state, reason } => {
+                write!(f, "language server memory pressure ({state:?}, {reason})")
             }
             Self::InvalidProjectRoot(message) => write!(f, "invalid project root: {message}"),
         }
@@ -231,6 +265,11 @@ pub(crate) struct LspSupervisorConfig {
     pub(crate) initialize_timeout: Duration,
     pub(crate) shutdown_timeout: Duration,
     pub(crate) idle_ttl: Duration,
+    /// Direct-child working-set thresholds. The hard threshold must be
+    /// strictly greater than the soft threshold; invalid values explicitly
+    /// disable pressure actions while leaving metrics observable.
+    pub(crate) lsp_memory_soft_limit_bytes: u64,
+    pub(crate) lsp_memory_hard_limit_bytes: u64,
     /// Reap idle/unusable servers from a background thread so `idle_ttl` and
     /// capacity recovery work in long-lived agents without explicit
     /// `cleanup_idle` calls. Tests that pin manual `cleanup_idle` semantics
@@ -248,6 +287,8 @@ impl Default for LspSupervisorConfig {
             initialize_timeout: DEFAULT_INITIALIZE_TIMEOUT,
             shutdown_timeout: DEFAULT_SHUTDOWN_TIMEOUT,
             idle_ttl: DEFAULT_IDLE_TTL,
+            lsp_memory_soft_limit_bytes: DEFAULT_LSP_MEMORY_SOFT_LIMIT_BYTES,
+            lsp_memory_hard_limit_bytes: DEFAULT_LSP_MEMORY_HARD_LIMIT_BYTES,
             background_reaper: true,
         }
     }
@@ -257,6 +298,22 @@ impl Default for LspSupervisorConfig {
 struct ProcessKey {
     project_root: PathBuf,
     kind: LspServerKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LspRequestScope {
+    Focused,
+    Workspace,
+}
+
+impl LspRequestScope {
+    fn from_method(method: &str) -> Self {
+        if method.starts_with("workspace/") {
+            Self::Workspace
+        } else {
+            Self::Focused
+        }
+    }
 }
 
 struct ServerSlot {
@@ -272,7 +329,9 @@ enum SlotState {
 
 struct SupervisorInner {
     config: LspSupervisorConfig,
+    memory_limits: Option<LspMemoryLimits>,
     servers: Mutex<HashMap<ProcessKey, Arc<ServerSlot>>>,
+    generations: Mutex<HashMap<ProcessKey, u64>>,
     shutting_down: Arc<AtomicBool>,
     shutdown_deadline: Arc<Mutex<Option<Instant>>>,
     shutdown_started: AtomicBool,
@@ -280,6 +339,32 @@ struct SupervisorInner {
     shutdown_changed: Condvar,
     reaper_started: AtomicBool,
     reaper_thread: Mutex<Option<JoinHandle<()>>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LspMemoryLimits {
+    soft: u64,
+    hard: u64,
+}
+
+impl LspMemoryLimits {
+    fn from_config(config: &LspSupervisorConfig) -> Option<Self> {
+        (config.lsp_memory_soft_limit_bytes > 0
+            && config.lsp_memory_hard_limit_bytes > config.lsp_memory_soft_limit_bytes)
+            .then_some(Self {
+                soft: config.lsp_memory_soft_limit_bytes,
+                hard: config.lsp_memory_hard_limit_bytes,
+            })
+    }
+
+    fn classify(self, working_set_bytes: Option<u64>) -> LspMemoryPressure {
+        match working_set_bytes {
+            None => LspMemoryPressure::Unknown,
+            Some(bytes) if bytes >= self.hard => LspMemoryPressure::Hard,
+            Some(bytes) if bytes >= self.soft => LspMemoryPressure::Soft,
+            Some(_) => LspMemoryPressure::Normal,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -303,10 +388,20 @@ impl Default for LspSupervisor {
 
 impl LspSupervisor {
     pub(crate) fn new(config: LspSupervisorConfig) -> Self {
+        let memory_limits = LspMemoryLimits::from_config(&config);
+        if memory_limits.is_none() {
+            tracing::warn!(
+                soft_limit_bytes = config.lsp_memory_soft_limit_bytes,
+                hard_limit_bytes = config.lsp_memory_hard_limit_bytes,
+                "invalid LSP memory thresholds; pressure actions are disabled"
+            );
+        }
         Self {
             inner: Arc::new(SupervisorInner {
                 config,
+                memory_limits,
                 servers: Mutex::new(HashMap::new()),
+                generations: Mutex::new(HashMap::new()),
                 shutting_down: Arc::new(AtomicBool::new(false)),
                 shutdown_deadline: Arc::new(Mutex::new(None)),
                 shutdown_started: AtomicBool::new(false),
@@ -365,6 +460,27 @@ impl LspSupervisor {
         match &*state {
             SlotState::Running(server) => Some(*lock_unpoison(&server.position_encoding)),
             _ => None,
+        }
+    }
+
+    /// Return a bounded, content-free resource snapshot for an existing
+    /// project server. This never starts a language server.
+    pub(crate) fn project_process_snapshot(
+        &self,
+        project_root: &Path,
+        kind: LspServerKind,
+    ) -> Option<LspProcessSnapshot> {
+        let root = fs::canonicalize(project_root).ok()?;
+        let key = ProcessKey {
+            project_root: root,
+            kind,
+        };
+        let servers = lock_unpoison(&self.inner.servers);
+        let slot = servers.get(&key)?;
+        let state = lock_unpoison(&slot.state);
+        match &*state {
+            SlotState::Running(server) => Some(server.resource_snapshot(self.inner.memory_limits)),
+            SlotState::Starting | SlotState::Failed(_) => None,
         }
     }
 
@@ -435,6 +551,7 @@ impl LspSupervisor {
                 }
                 Err(error) => return Err(error),
             };
+            let _operation = self.admit_operation(&key, &server, LspRequestScope::Focused)?;
             match server.synchronize_document(document) {
                 Ok(_) => return Ok(server.position_encoding()),
                 Err(error) if attempt == 0 && error.permits_restart() => continue,
@@ -482,6 +599,7 @@ impl LspSupervisor {
                 }
                 Err(error) => return Err(error),
             };
+            let _operation = self.admit_operation(&key, &server, LspRequestScope::Focused)?;
             let baseline_generation = server.diagnostics.generation();
             let document_version = match server.synchronize_document(document) {
                 Ok(version) => version,
@@ -593,6 +711,8 @@ impl LspSupervisor {
                 }
                 Err(error) => return Err(error),
             };
+            let _operation =
+                self.admit_operation(&key, &server, LspRequestScope::from_method(method))?;
             if let Some(document) = document {
                 if let Err(error) = server.synchronize_document(document) {
                     if attempt == 0 && error.permits_restart() {
@@ -609,7 +729,7 @@ impl LspSupervisor {
                     return Err(error);
                 }
             }
-            match server.request(method, params.clone(), timeout) {
+            match server.request_admitted(method, params.clone(), timeout) {
                 Ok(value) => return Ok((value, server.position_encoding())),
                 Err(error) if attempt == 0 && error.permits_restart() => {
                     last_error = Some(error);
@@ -647,11 +767,25 @@ impl LspSupervisor {
                 .filter_map(|(key, slot)| {
                     let state = lock_unpoison(&slot.state);
                     match &*state {
-                        SlotState::Running(server) if !server.is_usable() => Some(key.clone()),
+                        SlotState::Running(server) if !server.is_usable() => {
+                            server.force_begin_drain();
+                            Some(key.clone())
+                        }
+                        SlotState::Running(server)
+                            if matches!(
+                                server
+                                    .resource_snapshot(self.inner.memory_limits)
+                                    .pressure_state,
+                                LspMemoryPressure::Soft | LspMemoryPressure::Hard
+                            ) && server.try_begin_drain() =>
+                        {
+                            Some(key.clone())
+                        }
                         SlotState::Running(server)
                             if server.pending_count() == 0
                                 && now.saturating_duration_since(server.last_used())
-                                    >= self.inner.config.idle_ttl =>
+                                    >= self.inner.config.idle_ttl
+                                && server.try_begin_drain() =>
                         {
                             Some(key.clone())
                         }
@@ -669,6 +803,57 @@ impl LspSupervisor {
         // Never perform slow shutdown while holding the supervisor map lock.
         shutdown_slots(removed, Instant::now() + self.inner.config.shutdown_timeout);
         count
+    }
+
+    fn admit_operation<'a>(
+        &self,
+        key: &ProcessKey,
+        server: &'a ServerInstance,
+        scope: LspRequestScope,
+    ) -> Result<ServerOperationGuard<'a>, LspError> {
+        let operation = server.begin_operation()?;
+        let pressure = server
+            .resource_snapshot(self.inner.memory_limits)
+            .pressure_state;
+        let reason = match (pressure, scope) {
+            (LspMemoryPressure::Hard, _) => Some("LSP_MEMORY_HARD_LIMIT"),
+            (LspMemoryPressure::Soft, LspRequestScope::Workspace) => Some("LSP_MEMORY_PRESSURE"),
+            _ => None,
+        };
+        if let Some(reason) = reason {
+            drop(operation);
+            self.drain_server_if_idle(key, server);
+            return Err(LspError::MemoryPressure {
+                state: pressure,
+                reason,
+            });
+        }
+        Ok(operation)
+    }
+
+    fn drain_server_if_idle(&self, key: &ProcessKey, server: &ServerInstance) -> bool {
+        if !server.try_begin_drain() {
+            return false;
+        }
+        let slot = {
+            let mut servers = lock_unpoison(&self.inner.servers);
+            let remove = servers.get(key).is_some_and(|slot| {
+                matches!(
+                    &*lock_unpoison(&slot.state),
+                    SlotState::Running(current) if std::ptr::eq(current.as_ref(), server)
+                )
+            });
+            remove.then(|| servers.remove(key)).flatten()
+        };
+        if let Some(slot) = slot {
+            shutdown_slots(
+                vec![slot],
+                Instant::now() + self.inner.config.shutdown_timeout,
+            );
+            true
+        } else {
+            false
+        }
     }
 
     #[cfg(test)]
@@ -912,14 +1097,24 @@ impl LspSupervisor {
         let command = self
             .resolve_command(key.kind)
             .ok_or(LspError::ServerUnavailable)?;
-        ServerInstance::start(
+        let generation = lock_unpoison(&self.inner.generations)
+            .get(key)
+            .copied()
+            .unwrap_or(0)
+            .saturating_add(1);
+        let result = ServerInstance::start(
             key.clone(),
             command,
             self.inner.config.initialize_timeout,
             self.inner.config.shutdown_timeout,
             Arc::clone(&self.inner.shutting_down),
             Arc::clone(&self.inner.shutdown_deadline),
-        )
+            generation.saturating_sub(1),
+        );
+        if result.is_ok() {
+            lock_unpoison(&self.inner.generations).insert(key.clone(), generation);
+        }
+        result
     }
 
     /// Remove and shut down a Running slot that is no longer usable. Does not
@@ -1607,12 +1802,35 @@ struct ServerInstance {
     open_documents: Mutex<HashMap<String, OpenDocumentState>>,
     diagnostics: Arc<DiagnosticsCache>,
     last_used: Mutex<Instant>,
+    operation_gate: Mutex<OperationGate>,
+    last_pressure_state: Mutex<LspMemoryPressure>,
+    restart_count: u64,
+    drain_count: AtomicU64,
+    #[cfg(test)]
+    resource_snapshot_override: Mutex<Option<webcodex_process::ProcessResourceSnapshot>>,
     stderr: Arc<Mutex<BoundedStderr>>,
     reader_thread: Mutex<Option<JoinHandle<()>>>,
     stderr_thread: Mutex<Option<JoinHandle<()>>>,
     shutdown_started: AtomicBool,
     supervisor_shutdown: Arc<AtomicBool>,
     global_shutdown_deadline: Arc<Mutex<Option<Instant>>>,
+}
+
+#[derive(Debug, Default)]
+struct OperationGate {
+    draining: bool,
+    active_operations: usize,
+}
+
+struct ServerOperationGuard<'a> {
+    server: &'a ServerInstance,
+}
+
+impl Drop for ServerOperationGuard<'_> {
+    fn drop(&mut self) {
+        let mut gate = lock_unpoison(&self.server.operation_gate);
+        gate.active_operations = gate.active_operations.saturating_sub(1);
+    }
 }
 
 #[derive(Debug)]
@@ -1629,6 +1847,7 @@ impl ServerInstance {
         shutdown_timeout: Duration,
         supervisor_shutdown: Arc<AtomicBool>,
         global_shutdown_deadline: Arc<Mutex<Option<Instant>>>,
+        restart_count: u64,
     ) -> Result<Arc<Self>, LspError> {
         let cleanup_deadline = || {
             lock_unpoison(&global_shutdown_deadline)
@@ -1711,6 +1930,12 @@ impl ServerInstance {
             open_documents: Mutex::new(HashMap::new()),
             diagnostics,
             last_used: Mutex::new(Instant::now()),
+            operation_gate: Mutex::new(OperationGate::default()),
+            last_pressure_state: Mutex::new(LspMemoryPressure::Unknown),
+            restart_count,
+            drain_count: AtomicU64::new(0),
+            #[cfg(test)]
+            resource_snapshot_override: Mutex::new(None),
             stderr: stderr_buffer,
             reader_thread: Mutex::new(Some(reader_thread)),
             stderr_thread: Mutex::new(Some(stderr_thread)),
@@ -1795,6 +2020,16 @@ impl ServerInstance {
     }
 
     fn request(&self, method: &str, params: Value, timeout: Duration) -> Result<Value, LspError> {
+        let _operation = self.begin_operation()?;
+        self.request_admitted(method, params, timeout)
+    }
+
+    fn request_admitted(
+        &self,
+        method: &str,
+        params: Value,
+        timeout: Duration,
+    ) -> Result<Value, LspError> {
         if self.shutdown_started.load(Ordering::SeqCst) {
             return Err(LspError::ServerExited);
         }
@@ -1812,6 +2047,80 @@ impl ServerInstance {
                 Err(LspError::ServerExited)
             }
             result => result,
+        }
+    }
+
+    fn begin_operation(&self) -> Result<ServerOperationGuard<'_>, LspError> {
+        let mut gate = lock_unpoison(&self.operation_gate);
+        if gate.draining || self.shutdown_started.load(Ordering::SeqCst) {
+            return Err(LspError::ServerExited);
+        }
+        gate.active_operations = gate.active_operations.saturating_add(1);
+        Ok(ServerOperationGuard { server: self })
+    }
+
+    /// Atomically reject new operations only when no admitted operation is
+    /// active. This closes the cleanup/request race without interrupting a
+    /// request that already owns admission.
+    fn try_begin_drain(&self) -> bool {
+        let mut gate = lock_unpoison(&self.operation_gate);
+        if gate.draining || gate.active_operations != 0 || self.pending_count() != 0 {
+            return false;
+        }
+        gate.draining = true;
+        self.drain_count.fetch_add(1, Ordering::Relaxed);
+        true
+    }
+
+    fn force_begin_drain(&self) {
+        let mut gate = lock_unpoison(&self.operation_gate);
+        if !gate.draining {
+            gate.draining = true;
+            self.drain_count.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    fn resource_snapshot(&self, limits: Option<LspMemoryLimits>) -> LspProcessSnapshot {
+        #[cfg(test)]
+        let resources = lock_unpoison(&self.resource_snapshot_override)
+            .unwrap_or_else(|| lock_unpoison(&self.child).resource_snapshot());
+        #[cfg(not(test))]
+        let resources = lock_unpoison(&self.child).resource_snapshot();
+        let pressure_state = limits
+            .map(|limits| limits.classify(resources.working_set_bytes))
+            .unwrap_or_else(|| {
+                if resources.working_set_bytes.is_some() {
+                    LspMemoryPressure::Normal
+                } else {
+                    LspMemoryPressure::Unknown
+                }
+            });
+        let mut previous = lock_unpoison(&self.last_pressure_state);
+        if *previous != pressure_state {
+            tracing::info!(
+                pid = resources.pid,
+                working_set_bytes = ?resources.working_set_bytes,
+                previous = ?*previous,
+                current = ?pressure_state,
+                "LSP process memory pressure changed"
+            );
+            *previous = pressure_state;
+        }
+        let last_used_age = Instant::now().saturating_duration_since(self.last_used());
+        LspProcessSnapshot {
+            process_instance_id: opaque_process_instance_id(&resources),
+            pid: resources.pid,
+            process_start_token: resources.process_start_token,
+            server_kind: self.key.kind,
+            project_identity: opaque_project_identity(&self.key.project_root),
+            working_set_bytes: resources.working_set_bytes,
+            peak_working_set_bytes: resources.peak_working_set_bytes,
+            pending_request_count: self.pending_count(),
+            last_used_age_ms: last_used_age.as_millis().min(u64::MAX as u128) as u64,
+            lifecycle_usable: self.is_usable(),
+            pressure_state,
+            restart_count: self.restart_count,
+            drain_count: self.drain_count.load(Ordering::Relaxed),
         }
     }
 
@@ -1935,6 +2244,9 @@ impl ServerInstance {
         if self.shutdown_started.load(Ordering::SeqCst) {
             return false;
         }
+        if lock_unpoison(&self.operation_gate).draining {
+            return false;
+        }
         if self.connection.status() != LspServerStatus::Running {
             return false;
         }
@@ -1973,6 +2285,7 @@ impl ServerInstance {
     }
 
     fn shutdown_until(&self, deadline: Instant) -> ServerShutdownResult {
+        self.force_begin_drain();
         if self.shutdown_started.swap(true, Ordering::SeqCst) {
             return ServerShutdownResult {
                 timed_out: !self.process_reaped_and_group_gone(),
@@ -2082,6 +2395,37 @@ impl ServerInstance {
     fn process_id(&self) -> u32 {
         lock_unpoison(&self.child).id()
     }
+
+    #[cfg(test)]
+    fn set_resource_snapshot_for_test(&self, snapshot: webcodex_process::ProcessResourceSnapshot) {
+        *lock_unpoison(&self.resource_snapshot_override) = Some(snapshot);
+    }
+}
+
+fn opaque_process_instance_id(resources: &webcodex_process::ProcessResourceSnapshot) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(resources.pid.to_le_bytes());
+    hasher.update(
+        resources
+            .process_start_token
+            .unwrap_or_default()
+            .to_le_bytes(),
+    );
+    short_hex(&hasher.finalize())
+}
+
+fn opaque_project_identity(project_root: &Path) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(project_root.as_os_str().to_string_lossy().as_bytes());
+    short_hex(&hasher.finalize())
+}
+
+fn short_hex(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .take(12)
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 impl Drop for ServerInstance {

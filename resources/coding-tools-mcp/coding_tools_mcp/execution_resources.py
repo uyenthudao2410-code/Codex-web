@@ -280,6 +280,8 @@ class ExecutionResourceGovernor:
                 {},
             )
         self._last_pressure: dict[str, Any] = {"pressured": False, "observed": False}
+        self._last_semantic_admission: dict[str, Any] = {}
+        self._semantic_admission_counts = {"allowed": 0, "rejected": 0}
         self.recovery = self.reconcile_restart()
 
     def _rows(self, *, run_id: str = "", wave_id: str = "", active_only: bool = False) -> list[dict[str, Any]]:
@@ -486,6 +488,70 @@ class ExecutionResourceGovernor:
         """Return bounded, redacted HEAVY processes confirmed on this checkout."""
 
         return self._foreign_heavy_processes()
+
+    def semantic_native_admission(self, *, mode: str, cost: str) -> dict[str, Any]:
+        """Return a read-only native-semantic admission decision.
+
+        This deliberately does not reserve the HEAVY semaphore and does not
+        create a managed-process row: a persistent LSP remains owned by the
+        Connector/Runner process tree, not by an orchestration wave.
+        """
+
+        normalized_mode = str(mode or "").strip().lower()
+        normalized_cost = str(cost or "").strip().upper()
+        if normalized_mode not in {"single_file", "workspace"}:
+            raise ExecutionResourceError(
+                "INVALID_SEMANTIC_MODE",
+                "Native semantic mode must be single_file or workspace.",
+            )
+        if normalized_cost not in {"MEDIUM", "HEAVY"}:
+            raise ExecutionResourceError(
+                "INVALID_RESOURCE_CLASS",
+                "Native semantic cost must be MEDIUM or HEAVY.",
+            )
+
+        self.reconcile()
+        active = self._rows(active_only=True)
+        active_heavy_count = sum(
+            1 for row in active if row["resource_class"] == "HEAVY"
+        )
+        pressure = self._host_pressure()
+        foreign = self._foreign_heavy_processes()
+        foreign_heavy_present = bool(foreign)
+        # A warm rust-analyzer is the semantic provider itself, not a competing
+        # workload for one focused document request. It remains a conflict for
+        # broad workspace work, and every other foreign HEAVY process conflicts
+        # in both modes.
+        foreign_conflict = any(
+            normalized_mode == "workspace"
+            or str(item.get("name") or "").lower()
+            not in {"rust-analyzer", "rust-analyzer.exe"}
+            for item in foreign
+        )
+
+        reason_code = ""
+        if active_heavy_count:
+            reason_code = "HEAVY_SLOT_BUSY"
+        elif pressure.get("pressured"):
+            reason_code = "HOST_RESOURCE_PRESSURE"
+        elif foreign_conflict:
+            reason_code = "UNOWNED_EXECUTION_PROCESS"
+        allowed = not reason_code
+        decision = {
+            "allowed": allowed,
+            "mode": normalized_mode,
+            "cost": normalized_cost,
+            "reason_code": reason_code or "ALLOWED",
+            "active_heavy_count": active_heavy_count,
+            "host_pressured": pressure.get("pressured") is True,
+            "host_pressure_observed": pressure.get("observed") is True,
+            "foreign_heavy_present": foreign_heavy_present,
+        }
+        with self._lock:
+            self._last_semantic_admission = dict(decision)
+            counter = "allowed" if allowed else "rejected"
+            self._semantic_admission_counts[counter] += 1
+        return decision
 
     def _active_write_fence_count(self, run_id: str, wave_id: str) -> int:
         with self.ledger._lock, self.ledger._connect() as connection:
@@ -824,6 +890,8 @@ class ExecutionResourceGovernor:
             "quiescent": not active,
             "quiescence_scope": "managed_processes",
             "host_pressure": dict(self._last_pressure),
+            "semantic_native_admission": dict(self._last_semantic_admission),
+            "semantic_native_admission_counts": dict(self._semantic_admission_counts),
             "recovery": dict(self.recovery),
             "jobs": [self._public_row(row) for row in visible],
         }

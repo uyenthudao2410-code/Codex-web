@@ -14,7 +14,7 @@ use std::os::windows::process::CommandExt;
 use std::process::{Child, Command, ExitStatus};
 use std::time::{Duration, Instant};
 
-use windows_sys::Win32::Foundation::{HANDLE, INVALID_HANDLE_VALUE};
+use windows_sys::Win32::Foundation::{FILETIME, HANDLE, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
 };
@@ -24,11 +24,13 @@ use windows_sys::Win32::System::JobObjects::{
     TerminateJobObject, JOBOBJECT_BASIC_ACCOUNTING_INFORMATION,
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
+use windows_sys::Win32::System::ProcessStatus::{K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS};
 use windows_sys::Win32::System::Threading::{
-    GetProcessId, OpenThread, ResumeThread, CREATE_SUSPENDED, THREAD_SUSPEND_RESUME,
+    GetProcessId, GetProcessTimes, OpenThread, ResumeThread, CREATE_SUSPENDED,
+    THREAD_SUSPEND_RESUME,
 };
 
-use crate::{GracefulTermination, SpawnOptions};
+use crate::{GracefulTermination, ProcessResourceSnapshot, SpawnOptions};
 
 /// `Thread32Next` reports this when enumeration reaches the end of the table.
 const ERROR_NO_MORE_FILES: u32 = 18;
@@ -204,6 +206,53 @@ impl ManagedChild {
     /// Mutably borrow the underlying [`Child`].
     pub fn child_mut(&mut self) -> &mut Child {
         &mut self.child
+    }
+
+    /// Capture best-effort resource telemetry for the direct child.
+    ///
+    /// The child handle remains valid for the lifetime of `Child`, but either
+    /// query can legitimately fail after process exit. Keep each metric
+    /// independently optional so one unavailable Windows counter does not
+    /// erase the other observations.
+    pub fn resource_snapshot(&self) -> ProcessResourceSnapshot {
+        let process_handle = self.child.as_raw_handle() as HANDLE;
+        let mut counters = PROCESS_MEMORY_COUNTERS {
+            cb: size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
+            ..PROCESS_MEMORY_COUNTERS::default()
+        };
+        // SAFETY: `process_handle` is the live handle owned by `Child` and
+        // `counters` is an initialized buffer with its exact structure size.
+        let memory_available = unsafe {
+            K32GetProcessMemoryInfo(
+                process_handle,
+                &mut counters,
+                size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
+            )
+        } != 0;
+
+        let mut creation = FILETIME::default();
+        let mut exit = FILETIME::default();
+        let mut kernel = FILETIME::default();
+        let mut user = FILETIME::default();
+        // SAFETY: every out pointer references a valid FILETIME and the child
+        // process handle remains owned for the duration of the call.
+        let start_available = unsafe {
+            GetProcessTimes(
+                process_handle,
+                &mut creation,
+                &mut exit,
+                &mut kernel,
+                &mut user,
+            )
+        } != 0;
+
+        ProcessResourceSnapshot {
+            pid: self.child.id(),
+            process_start_token: start_available
+                .then(|| ((creation.dwHighDateTime as u64) << 32) | creation.dwLowDateTime as u64),
+            working_set_bytes: memory_available.then_some(counters.WorkingSetSize as u64),
+            peak_working_set_bytes: memory_available.then_some(counters.PeakWorkingSetSize as u64),
+        }
     }
 
     /// Wait only for the direct child.

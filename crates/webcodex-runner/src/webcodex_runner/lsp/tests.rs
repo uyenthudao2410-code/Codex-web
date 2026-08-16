@@ -96,6 +96,38 @@ impl Fixture {
         shutdown_timeout: Duration,
         background_reaper: bool,
     ) -> Self {
+        Self::with_memory_config(
+            scenario,
+            maximum,
+            idle_ttl,
+            shutdown_timeout,
+            background_reaper,
+            DEFAULT_LSP_MEMORY_SOFT_LIMIT_BYTES,
+            DEFAULT_LSP_MEMORY_HARD_LIMIT_BYTES,
+        )
+    }
+
+    fn with_memory_limits(scenario: &str, soft: u64, hard: u64) -> Self {
+        Self::with_memory_config(
+            scenario,
+            4,
+            Duration::from_secs(3600),
+            Duration::from_millis(300),
+            false,
+            soft,
+            hard,
+        )
+    }
+
+    fn with_memory_config(
+        scenario: &str,
+        maximum: usize,
+        idle_ttl: Duration,
+        shutdown_timeout: Duration,
+        background_reaper: bool,
+        lsp_memory_soft_limit_bytes: u64,
+        lsp_memory_hard_limit_bytes: u64,
+    ) -> Self {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("project");
         fs::create_dir(&root).unwrap();
@@ -115,6 +147,8 @@ impl Fixture {
             initialize_timeout: Duration::from_secs(2),
             shutdown_timeout,
             idle_ttl,
+            lsp_memory_soft_limit_bytes,
+            lsp_memory_hard_limit_bytes,
             background_reaper,
         });
         Self {
@@ -1552,6 +1586,8 @@ fn lsp_initialize_timeout_cleanup_uses_configured_shutdown_budget() {
         initialize_timeout: Duration::from_millis(80),
         shutdown_timeout,
         idle_ttl: Duration::from_secs(60),
+        lsp_memory_soft_limit_bytes: DEFAULT_LSP_MEMORY_SOFT_LIMIT_BYTES,
+        lsp_memory_hard_limit_bytes: DEFAULT_LSP_MEMORY_HARD_LIMIT_BYTES,
         background_reaper: true,
     });
 
@@ -1688,6 +1724,228 @@ fn lsp_background_reaper_reclaims_idle_capacity_without_explicit_cleanup() {
         .supervisor
         .server_for_test(&second_root, LspServerKind::RustAnalyzer)
         .expect("capacity must recover after background reaping");
+}
+
+fn synthetic_resources(
+    server: &ServerInstance,
+    process_start_token: Option<u64>,
+    working_set_bytes: Option<u64>,
+) -> webcodex_process::ProcessResourceSnapshot {
+    webcodex_process::ProcessResourceSnapshot {
+        pid: server.process_id(),
+        process_start_token,
+        working_set_bytes,
+        peak_working_set_bytes: working_set_bytes.map(|bytes| bytes.saturating_add(10)),
+    }
+}
+
+#[test]
+fn lsp_memory_snapshot_classifies_normal_soft_hard_and_unknown() {
+    let _serial = super::super::serialize_fake_lsp_test();
+    let fixture = Fixture::with_memory_limits("normal", 100, 200);
+    let server = fixture
+        .supervisor
+        .server_for_test(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+
+    server.set_resource_snapshot_for_test(synthetic_resources(&server, Some(11), Some(99)));
+    let normal = fixture
+        .supervisor
+        .project_process_snapshot(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    assert_eq!(normal.pressure_state, LspMemoryPressure::Normal);
+    assert_eq!(normal.working_set_bytes, Some(99));
+    assert_eq!(normal.peak_working_set_bytes, Some(109));
+    assert_eq!(normal.pending_request_count, 0);
+    assert!(normal.lifecycle_usable);
+    assert_eq!(normal.restart_count, 0);
+    assert_eq!(normal.drain_count, 0);
+    assert_eq!(normal.server_kind, LspServerKind::RustAnalyzer);
+    assert!(!normal.project_identity.is_empty());
+
+    server.set_resource_snapshot_for_test(synthetic_resources(&server, Some(11), Some(100)));
+    let soft = fixture
+        .supervisor
+        .project_process_snapshot(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    assert_eq!(soft.pressure_state, LspMemoryPressure::Soft);
+    assert_eq!(soft.process_instance_id, normal.process_instance_id);
+
+    server.set_resource_snapshot_for_test(synthetic_resources(&server, Some(11), Some(200)));
+    let hard = fixture
+        .supervisor
+        .project_process_snapshot(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    assert_eq!(hard.pressure_state, LspMemoryPressure::Hard);
+
+    server.set_resource_snapshot_for_test(synthetic_resources(&server, Some(12), None));
+    let unknown = fixture
+        .supervisor
+        .project_process_snapshot(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    assert_eq!(unknown.pressure_state, LspMemoryPressure::Unknown);
+    assert_eq!(unknown.working_set_bytes, None);
+    assert_ne!(unknown.process_instance_id, normal.process_instance_id);
+}
+
+#[test]
+fn lsp_memory_soft_pressure_allows_focused_work_but_drains_broad_work_and_restarts() {
+    let _serial = super::super::serialize_fake_lsp_test();
+    let fixture = Fixture::with_memory_limits("shutdown_descendant", 100, 200);
+    let server = fixture
+        .supervisor
+        .server_for_test(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    let first_pid = server.process_id();
+    assert!(wait_until(Duration::from_secs(1), || !fixture
+        .descendant_pids()
+        .is_empty()));
+    let first_descendant = fixture.descendant_pids()[0];
+    server.set_resource_snapshot_for_test(synthetic_resources(&server, Some(21), Some(150)));
+
+    fixture
+        .supervisor
+        .request(
+            &fixture.root,
+            LspServerKind::RustAnalyzer,
+            "textDocument/documentSymbol",
+            json!({}),
+        )
+        .unwrap();
+    assert!(process_exists(first_pid));
+
+    let error = fixture
+        .supervisor
+        .request(
+            &fixture.root,
+            LspServerKind::RustAnalyzer,
+            "workspace/symbol",
+            json!({}),
+        )
+        .unwrap_err();
+    assert!(matches!(
+        error,
+        LspError::MemoryPressure {
+            state: LspMemoryPressure::Soft,
+            reason: "LSP_MEMORY_PRESSURE"
+        }
+    ));
+    assert!(wait_until(Duration::from_secs(2), || !process_exists(
+        first_pid
+    )));
+    assert!(wait_until(Duration::from_secs(2), || !process_exists(
+        first_descendant
+    )));
+    assert_eq!(fixture.supervisor.server_count_for_test(), 0);
+
+    let restarted = fixture
+        .supervisor
+        .server_for_test(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    restarted.set_resource_snapshot_for_test(synthetic_resources(&restarted, Some(22), Some(50)));
+    let restarted_snapshot = fixture
+        .supervisor
+        .project_process_snapshot(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    assert_eq!(restarted_snapshot.restart_count, 1);
+    assert_ne!(restarted_snapshot.pid, first_pid);
+    assert_ne!(
+        restarted_snapshot.process_instance_id,
+        opaque_process_instance_id(&synthetic_resources(&server, Some(21), Some(150)))
+    );
+    let value = fixture
+        .supervisor
+        .request(
+            &fixture.root,
+            LspServerKind::RustAnalyzer,
+            "fake/restarted",
+            json!({}),
+        )
+        .unwrap();
+    assert_eq!(value["method"], "fake/restarted");
+}
+
+#[test]
+fn lsp_memory_hard_pressure_never_kills_an_active_request_and_drains_afterward() {
+    let _serial = super::super::serialize_fake_lsp_test();
+    let fixture = Fixture::with_memory_limits("timeout", 100, 200);
+    let server = fixture
+        .supervisor
+        .server_for_test(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    let pid = server.process_id();
+    server.set_resource_snapshot_for_test(synthetic_resources(&server, Some(31), Some(250)));
+
+    let active_server = Arc::clone(&server);
+    let active = std::thread::spawn(move || {
+        active_server.request("fake/timeout", json!({}), Duration::from_millis(250))
+    });
+    assert!(wait_until(Duration::from_secs(1), || server
+        .pending_count()
+        > 0));
+    assert_eq!(fixture.supervisor.cleanup_idle(), 0);
+    assert!(
+        process_exists(pid),
+        "hard pressure killed an active request"
+    );
+
+    let denied = fixture
+        .supervisor
+        .request(
+            &fixture.root,
+            LspServerKind::RustAnalyzer,
+            "textDocument/hover",
+            json!({}),
+        )
+        .unwrap_err();
+    assert!(matches!(
+        denied,
+        LspError::MemoryPressure {
+            state: LspMemoryPressure::Hard,
+            reason: "LSP_MEMORY_HARD_LIMIT"
+        }
+    ));
+    assert!(process_exists(pid));
+    assert!(matches!(
+        active.join().unwrap(),
+        Err(LspError::RequestTimeout { .. })
+    ));
+
+    assert_eq!(fixture.supervisor.cleanup_idle(), 1);
+    assert!(wait_until(Duration::from_secs(2), || !process_exists(pid)));
+}
+
+#[test]
+fn lsp_memory_unknown_metrics_are_not_zero_and_invalid_limits_disable_actions() {
+    let _serial = super::super::serialize_fake_lsp_test();
+    let fixture = Fixture::with_memory_limits("normal", 200, 100);
+    let server = fixture
+        .supervisor
+        .server_for_test(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    server.set_resource_snapshot_for_test(synthetic_resources(&server, Some(41), None));
+    let snapshot = fixture
+        .supervisor
+        .project_process_snapshot(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    assert_eq!(snapshot.working_set_bytes, None);
+    assert_eq!(snapshot.pressure_state, LspMemoryPressure::Unknown);
+
+    server.set_resource_snapshot_for_test(synthetic_resources(&server, Some(41), Some(u64::MAX)));
+    let disabled = fixture
+        .supervisor
+        .project_process_snapshot(&fixture.root, LspServerKind::RustAnalyzer)
+        .unwrap();
+    assert_eq!(disabled.pressure_state, LspMemoryPressure::Normal);
+    fixture
+        .supervisor
+        .request(
+            &fixture.root,
+            LspServerKind::RustAnalyzer,
+            "workspace/symbol",
+            json!({}),
+        )
+        .unwrap();
 }
 
 #[test]

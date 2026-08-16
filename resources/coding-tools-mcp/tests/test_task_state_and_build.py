@@ -725,6 +725,124 @@ class ToolModeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_prepare_coding_context_falls_back_before_native_call_during_heavy(self) -> None:
+        semantic_calls = []
+
+        class SemanticStub:
+            def status(self):
+                return {
+                    "available": True,
+                    "provider": "native-lsp-test",
+                    "read_only": True,
+                }
+
+            def localize(self, *, workspace, path, queries, max_results):
+                del workspace, max_results
+                semantic_calls.append(path)
+                return [
+                    {
+                        "query_index": 0,
+                        "handled": True,
+                        "matches": [
+                            {
+                                "path": "semantic.py",
+                                "line": 1,
+                                "kind": "definition",
+                                "symbol": queries[0],
+                            }
+                        ],
+                    }
+                ]
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "semantic.py").write_text(
+                "fallback_token = 2\n",
+                encoding="utf-8",
+            )
+            runtime = Runtime(root, semantic_localizer=SemanticStub())
+            try:
+                run_id = runtime.orchestration_ledger.create_run(
+                    objective="semantic admission conflict"
+                )
+                wave_id = runtime.orchestration_ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only",
+                )
+                heavy = runtime.execution_resource_governor.admit(
+                    command="cargo test",
+                    command_id="semantic-admission-heavy",
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    resource_class="HEAVY",
+                )
+                with (
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "_host_pressure",
+                        return_value={"observed": True, "pressured": False},
+                    ),
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "_foreign_heavy_processes",
+                        return_value=[],
+                    ),
+                ):
+                    denied = runtime.prepare_coding_context(
+                        {
+                            "objective": "semantic conflict fallback",
+                            "queries": ["fallback_token"],
+                            "max_files": 2,
+                            "force_refresh": True,
+                        }
+                    )
+                self.assertEqual(semantic_calls, [])
+                denied_localization = denied["composite_read"]["execution"][
+                    "localization"
+                ]
+                self.assertEqual(
+                    denied_localization["native_admission"]["reason_code"],
+                    "HEAVY_SLOT_BUSY",
+                )
+                self.assertEqual(denied_localization["semantic_attempted"], 0)
+                self.assertEqual(denied_localization["text_fallback_queries"], 1)
+                self.assertIn("semantic.py", denied["selected_paths"])
+
+                runtime.execution_resource_governor.complete(
+                    heavy.job_id,
+                    lifecycle_state="exited",
+                    exit_code=0,
+                )
+                with (
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "_host_pressure",
+                        return_value={"observed": True, "pressured": False},
+                    ),
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "_foreign_heavy_processes",
+                        return_value=[],
+                    ),
+                ):
+                    recovered = runtime.prepare_coding_context(
+                        {
+                            "objective": "semantic conflict fallback",
+                            "queries": ["fallback_token"],
+                            "max_files": 2,
+                            "force_refresh": True,
+                        }
+                    )
+                self.assertEqual(semantic_calls, ["."])
+                recovered_localization = recovered["composite_read"]["execution"][
+                    "localization"
+                ]
+                self.assertTrue(recovered_localization["native_admission"]["allowed"])
+                self.assertEqual(recovered_localization["semantic_handled"], 1)
+                self.assertEqual(recovered_localization["text_fallback_queries"], 0)
+            finally:
+                runtime.close()
+
     def test_continuous_check_terminalizes_internal_command_bookkeeping(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp), permission_mode="dangerous")

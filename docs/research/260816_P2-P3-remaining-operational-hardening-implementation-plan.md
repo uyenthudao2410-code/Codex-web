@@ -1,0 +1,1470 @@
+# P2/P3 Remaining Operational Hardening — Kế hoạch triển khai đã hiệu chỉnh theo trạng thái thực tế
+
+**Dự án:** `E:\Github\Tools-Codex-web`  
+**Ngày lập kế hoạch:** 2026-08-16  
+**Cập nhật theo live audit:** 2026-08-16 16:38 +07:00  
+**Baseline source tại thời điểm audit:** `main`, `HEAD == origin/main == 415cb658f43cbd1d2456f65bf5649ed52b87ab25`  
+**Runtime quan sát:** Coding Tools MCP `0.4.3`, `smart-v3`, public tool count `8`  
+**Tài liệu nền:** `docs/research/260816_P2-P3-orchestration-resource-analysis.md`  
+**Mục tiêu:** hoàn thiện phần operational hardening còn lại của P2/P3 bằng cách tận dụng tối đa implementation hiện đã có, chỉ bổ sung các gap thực sự còn mở, tránh viết lại LSP lifecycle/resource governor/EOCL đã tồn tại, và chứng minh kết quả bằng operational soak có thể lặp lại.
+
+---
+
+# 1. Executive summary
+
+Sau khi đối chiếu trực tiếp implementation plan cũ với source/runtime thực tế của repository, hướng kiến trúc tổng thể vẫn đúng nhưng một số giả định đã lỗi thời.
+
+Điểm quan trọng nhất là: **không nên triển khai nguyên xi plan cũ**.
+
+Một số capability mà tài liệu trước coi là “chưa có” thực tế đã tồn tại:
+
+- `LspSupervisor` đã có `idle_ttl`.
+- `LspSupervisor` đã có background idle reaper.
+- idle cleanup đã kiểm tra `pending_count() == 0` trước khi drain.
+- `ServerInstance` đã cập nhật `last_used` tại request start/completion.
+- LSP child đã được quản lý bằng `webcodex_process::ManagedChild`.
+- Windows backend đã dùng private Job Object với `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`.
+- LSP shutdown đã terminate/reap đúng owned tree.
+- Coding MCP đã có `LIGHT/MEDIUM/HEAVY` classification.
+- Coding MCP đã có unique HEAVY admission per checkout.
+- Coding MCP đã có host-memory gate, foreign-heavy detection và quiescence checks.
+- semantic single-file scope đã dùng `document_symbols`.
+- workspace semantic đã có cold concurrency `1`, warm concurrency bounded.
+- Connector đã có `semantic_lsp_warm` state cơ bản.
+
+Do đó phần còn thiếu thực sự tập trung vào bốn nhóm:
+
+1. **Chứng minh idle teardown hiện có hoạt động đúng trong topology live**, thay vì viết lại lifecycle.
+2. **Bổ sung working-set/process telemetry và memory-pressure policy cho persistent LSP**.
+3. **Nối native semantic admission với resource governor hiện có để chặn Cargo/full-test ↔ cold LSP HEAVY overlap theo cả hai chiều**.
+4. **Chạy authoritative soak cold → warm → idle → stopped → cold restart + conflict/fallback**, rồi chỉ bổ sung durable persistent ownership nếu soak/restart chứng minh thật sự cần.
+
+Thứ tự triển khai đã hiệu chỉnh:
+
+```text
+Recovery Phase 3B accepted/checkpointed
+        ↓
+Wave 1 — Prove existing LSP idle lifecycle
+        ↓
+Wave 2 — LSP process/memory telemetry + pressure policy
+        ↓
+Wave 3 — Native semantic ↔ HEAVY governor integration
+        ↓
+Wave 4 — Ownership/restart proof
+        ↓
+        ├─ nếu existing ownership đủ → không thêm schema
+        └─ nếu không đủ → bổ sung CONNECTOR_PROFILE ownership tối thiểu
+        ↓
+Wave 5 — Authoritative operational soak
+        ↓
+Wave 6 — Disk/cache hygiene
+        ↓
+Wave 7 — Final operational baseline + EOCL delivery
+```
+
+---
+
+# 2. Trạng thái thực tế của repository tại thời điểm audit
+
+## 2.1. Git/source baseline
+
+Tại thời điểm đối chiếu:
+
+```text
+branch      = main
+HEAD        = 415cb658f43cbd1d2456f65bf5649ed52b87ab25
+origin/main = 415cb658f43cbd1d2456f65bf5649ed52b87ab25
+ahead       = 0
+behind      = 0
+```
+
+Repository không clean vì Recovery Phase 3B và runtime evidence vẫn đang thay đổi.
+
+Các source/worktree path Recovery nổi bật đang dirty/untracked gồm:
+
+```text
+docs/RECOVERY_HOST.md
+electron/main.js
+electron/services/componentRevision.js
+electron/services/config.js
+electron/services/recoveryHost.js
+electron/services/runtimePaths.js
+package.json
+
+electron/services/recoveryPlaneService.js
+resources/recovery-mcp/recovery_mcp.py
+resources/recovery-supervisor/recovery-supervisor.ps1
+tests/recovery-plane.test.js
+tests/recovery-supervisor.test.js
+```
+
+Ngoài ra `.coding-tools` tiếp tục có volatile evidence, đặc biệt:
+
+```text
+.coding-tools/orchestration/ledger.sqlite3
+.coding-tools/performance.json
+.coding-tools/task-state.json
+.coding-tools/task-history.json
+.coding-tools/evaluation/...
+```
+
+**Policy dự án vẫn giữ nguyên:** `.coding-tools/orchestration/ledger.sqlite3` là artifact quan trọng và phải được đưa vào final commit/push của delivery phù hợp; không được bỏ sót file này.
+
+## 2.2. Runtime baseline
+
+Live runtime đã xác nhận:
+
+```text
+runtime_version      = 0.4.3
+profile              = smart-v3
+public tool count    = 8
+semantic provider    = webcodex_native_lsp
+semantic read_only   = true
+heavy concurrency    = 1 per checkout
+```
+
+Coding Tools MCP hiện đã expose/thi hành:
+
+- managed process jobs;
+- HEAVY checkout admission;
+- host pressure check;
+- foreign-heavy detection;
+- quiescence reconciliation;
+- EOCL RUN/WAVE state;
+- proof/acceptance gate.
+
+## 2.3. Recovery Phase 3B vẫn là hard blocker
+
+Trong evidence window gần nhất, Recovery implementation đã có nhiều proof xanh nhưng run vẫn từng bị ChatWeb reject vì canonical acceptance receipt/modified-file scope chưa đủ rõ cho Recovery MCP Python và sau đó chuyển `REPLAN`.
+
+Vì vậy **không được mở P2/P3 resource write wave trên authoritative checkout cho tới khi Recovery Phase 3B có accepted successor checkpoint hoặc explicit terminal isolation**.
+
+Điều kiện vào Wave 1:
+
+```text
+Recovery run = CHECKPOINTED
+OR explicit terminal ABORTED/isolated handoff
+AND no active Recovery write lease
+AND no active managed HEAVY job
+AND no Recovery mutation wave đang EXECUTING/PROVING/ACCEPTING
+```
+
+---
+
+# 3. Đối chiếu plan cũ với implementation thật
+
+| Hạng mục plan cũ | Trạng thái thực tế | Hành động mới |
+|---|---|---|
+| LSP chưa có idle teardown | Đã có `idle_ttl`, background reaper, pending guard, owned-tree shutdown | Không viết lại; audit + live proof |
+| LSP chưa có process-tree ownership | Đã dùng `ManagedChild`; Windows có Job Object | Không viết lại process ownership |
+| Global HEAVY governor chưa có | Đã có classification, unique slot, host pressure, foreign heavy, quiescence | Chỉ mở rộng admission signal cho native semantic |
+| Single-file semantic còn global | Đã dùng `document_symbols` | Closed |
+| Workspace cold/warm concurrency chưa có | Đã có cold `1`, warm bounded | Closed, chỉ regression |
+| LSP memory soft/hard policy | Chưa thấy working-set policy trực tiếp trong supervisor | Gap thật — triển khai |
+| Persistent profile ownership durable | Chưa có model rõ như `CONNECTOR_PROFILE` trong EOCL ledger | Chỉ triển khai nếu ownership proof thất bại |
+| Cargo↔LSP conflict | Cargo-side đã nhìn foreign rust-analyzer; semantic-side chưa gate đủ trước native start | Gap thật — triển khai hai chiều |
+| Soak cold/warm/idle/restart | Chưa có authoritative matrix khép kín | Gap thật — bắt buộc |
+| Disk/cache lifecycle | Chủ yếu guidance | Làm sau RAM/process lifecycle |
+
+---
+
+# 4. Protected invariants
+
+## 4.1. Correctness
+
+- Text fallback phải tiếp tục hoạt động khi native LSP unavailable, denied hoặc draining.
+- Một lỗi native semantic không được làm context localization toàn task fail nếu text path vẫn đủ.
+- Single-file request không được quay lại `workspace_symbols`.
+- Workspace query order phải được giữ.
+- Project-relative path only.
+- Không làm suy yếu semantic result sanitation.
+
+## 4.2. Security
+
+- Không log credential contents hoặc bearer token.
+- Không expose credential-file path trong durable telemetry.
+- Wrong token vẫn reject.
+- Workspace mismatch vẫn fail closed.
+- Absolute path/traversal vẫn reject theo contract hiện tại.
+- Không dùng global process-name kill.
+
+## 4.3. Orchestration
+
+- Mutation chỉ xảy ra trong EOCL wave có write authority hợp lệ.
+- Không mở writer mới khi wave khác còn `ACCEPTING`.
+- `REPLAN` phải thay strategy/evidence/scope.
+- Không sửa SQLite ledger trực tiếp ngoài control plane.
+- Proof reuse chỉ trên exact fingerprint tương ứng.
+
+## 4.4. Public compatibility
+
+- `smart-v3` public tool count phải vẫn là `8`.
+- Không thêm public MCP tool chỉ để expose LSP resource internals.
+- Resource telemetry phải là internal/operator-facing state.
+
+## 4.5. Git/worktree
+
+- Không trộn Recovery Phase 3B source với P2/P3 LSP hardening trong cùng implementation wave.
+- Không reset/restore unrelated work.
+- Final delivery selective stage.
+- `ledger.sqlite3` phải có trong final commit/push theo project policy.
+
+---
+
+# 5. Kiến trúc hiện hữu cần tái sử dụng
+
+## 5.1. Existing LSP lifecycle
+
+`crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs` đã có cấu trúc:
+
+```text
+LspSupervisorConfig
+  request_timeout
+  initialize_timeout
+  shutdown_timeout
+  idle_ttl
+  background_reaper
+```
+
+Slot state hiện tại:
+
+```text
+Starting
+Running(ServerInstance)
+Failed(LspError)
+```
+
+Idle cleanup hiện đã tương đương:
+
+```text
+if Running
+and pending_count() == 0
+and now - last_used >= idle_ttl:
+    remove slot
+    shutdown owned process tree
+```
+
+Background reaper cũng đã tự start theo demand và dùng `Weak` reference để không pin supervisor vô hạn.
+
+## 5.2. Existing process ownership
+
+`webcodex-process` đã định nghĩa `ManagedChild` ownership cho toàn descendant tree.
+
+Windows backend:
+
+```text
+private Job Object
+JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+TerminateJobObject
+wait/reap owned tree
+```
+
+Do đó không được tạo thêm một Windows process-tree mechanism thứ hai cho LSP.
+
+## 5.3. Existing semantic cold/warm behavior
+
+Connector hiện có:
+
+```text
+semantic_lsp_warm: AtomicBool
+```
+
+File scope:
+
+```text
+existing file → document_symbols
+```
+
+Workspace scope:
+
+```text
+cold  → concurrency = 1
+warm  → bounded concurrency
+```
+
+LSP failure hạ state warm về false.
+
+## 5.4. Existing Coding MCP governor
+
+`resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py` đã có:
+
+```text
+RESOURCE_CLASSES = LIGHT | MEDIUM | HEAVY
+managed_process_jobs
+checkout-wide HEAVY admission
+host pressure check
+foreign heavy process detection
+rust-analyzer classification
+wave quiescence assertion
+```
+
+Vì vậy không xây “Global Resource Governor v2”. Chỉ mở rộng existing governor để native semantic có thể hỏi admission state trước khi tạo tải LSP nặng.
+
+---
+
+# 6. Design correction — không triển khai state machine LSP thứ hai
+
+Plan cũ đề xuất:
+
+```text
+STOPPED → STARTING → COLD_READY → WARM → IDLE → DRAINING → STOPPED
+```
+
+Không nên persist/duplicate toàn bộ state machine này vì source đã có các state tương đương ở nhiều lớp.
+
+Thay vào đó giữ state hiện hữu và thêm **resource state trực giao**:
+
+```text
+pressure_state = NORMAL | SOFT | HARD | UNKNOWN
+
+process_instance_id
+working_set_bytes
+peak_working_set_bytes
+pending_request_count
+last_used_age_ms
+restart_count
+drain_count
+last_pressure_reason
+```
+
+Derived state có thể tính:
+
+```text
+STOPPED  = no live slot/process
+STARTING = SlotState::Starting
+RUNNING  = SlotState::Running
+FAILED   = SlotState::Failed
+IDLE     = pending_count == 0 && last_used_age >= threshold
+WARM     = Connector semantic_lsp_warm == true
+```
+
+`DRAINING` có thể là transient implementation detail, không cần durable public state nếu không có consumer thật sự cần.
+
+---
+
+# 7. Gate 0 — Close Recovery Phase 3B trước khi P2/P3 tiếp tục
+
+## 7.1. Mục tiêu
+
+Tạo authoritative source/runtime boundary để resource hardening không trộn với Recovery implementation.
+
+## 7.2. Bắt buộc
+
+- Recovery successor wave đạt acceptance hoặc terminal explicit isolation.
+- Canonical modified-file receipt phải chứa đúng Recovery source thực tế.
+- Recovery proof phù hợp fingerprint cuối.
+- Không còn Recovery writer.
+- Không còn managed HEAVY job liên quan.
+- Không sửa P2/P3 LSP files trong Recovery wave.
+
+## 7.3. Exit criteria
+
+```text
+Recovery source ownership = settled
+Recovery EOCL = CHECKPOINTED hoặc explicit terminal isolation
+active write lease = 0 trên P2/P3 target surface
+active managed HEAVY = 0
+```
+
+---
+
+# 8. Wave 1 — Prove existing LSP idle lifecycle
+
+## 8.1. Mục tiêu
+
+Không implement idle teardown mới. Chứng minh implementation hiện có thật sự chạy đúng trong topology Connector `p3-live`/equivalent.
+
+## 8.2. Kiểm tra source trước proof
+
+Xác minh:
+
+- exact `DEFAULT_IDLE_TTL` hiện tại;
+- config path nào có thể override TTL trong test/live profile;
+- background reaper thực sự enabled ở production Runner config;
+- Connector artifact đang chạy được build từ source chứa reaper hiện tại.
+
+Không hardcode TTL vào tài liệu trước khi đọc đúng constant/config.
+
+## 8.3. Operational scenario
+
+```text
+1. ensure target LSP instance absent/STOPPED
+2. issue one single-file semantic request
+3. prove native document_symbols handled
+4. record LSP PID/process identity
+5. issue warm request
+6. stop semantic traffic
+7. wait configured test idle TTL
+8. verify LSP owned tree is gone
+9. verify Connector process/profile remains alive
+10. issue a new single-file semantic request
+11. verify new LSP instance identity
+12. verify native semantic handled again
+```
+
+## 8.4. Acceptance
+
+Pass nếu:
+
+```text
+idle LSP exits
+Connector remains alive
+no orphan descendants
+new request cold-starts new LSP successfully
+text fallback remains available during transition
+```
+
+## 8.5. Decision after Wave 1
+
+### Nếu PASS
+
+Đóng toàn bộ “Packet A — implement idle lifecycle” trong plan cũ.
+
+Không sửa supervisor lifecycle chỉ để đổi tên state.
+
+### Nếu FAIL
+
+Chỉ patch đúng defect được chứng minh, ví dụ:
+
+- reaper không start trong live topology;
+- production TTL bị vô hiệu hóa;
+- `last_used` không được cập nhật cho một request path;
+- process shutdown không release tree;
+- new request không cold restart.
+
+---
+
+# 9. Wave 2 — LSP process telemetry + memory-pressure policy
+
+Đây là implementation gap quan trọng nhất còn mở.
+
+## 9.1. Mục tiêu
+
+Cho supervisor biết process working set và có policy soft/hard pressure mà không kill active request giữa chừng.
+
+## 9.2. Process telemetry tối thiểu
+
+Thêm một bounded internal snapshot:
+
+```text
+lsp_process_snapshot {
+  process_instance_id,
+  pid_or_opaque_identity,
+  server_kind,
+  project_identity,
+  working_set_bytes,
+  peak_working_set_bytes,
+  pending_request_count,
+  last_used_age_ms,
+  lifecycle_usable,
+  pressure_state,
+  restart_count,
+  drain_count
+}
+```
+
+Không lưu:
+
+- raw source;
+- raw semantic query;
+- credentials;
+- unrestricted stderr.
+
+## 9.3. Cross-platform abstraction
+
+Không đưa Windows API trực tiếp vào LSP policy.
+
+Ưu tiên abstraction ở process layer:
+
+```text
+ManagedChild::resource_snapshot()
+```
+
+hoặc tương đương internal API.
+
+Windows implementation đọc working set/process identity.
+
+Các platform khác có thể:
+
+```text
+supported metrics → numeric snapshot
+unsupported      → pressure_state=UNKNOWN / metric unavailable
+```
+
+Không được biến unsupported thành `0 bytes`.
+
+## 9.4. Soft/hard thresholds
+
+Internal config:
+
+```text
+lsp_memory_soft_limit_bytes
+lsp_memory_hard_limit_bytes
+```
+
+Yêu cầu:
+
+- test có thể override threshold thấp deterministic;
+- production default không được suy ra trực tiếp từ một snapshot lịch sử ~4.2 GiB;
+- hard limit > soft limit;
+- invalid config fail closed hoặc disable pressure action rõ ràng.
+
+## 9.5. Soft pressure behavior
+
+```text
+if working_set >= soft_limit:
+    pressure_state = SOFT
+```
+
+Behavior:
+
+- không kill request đang active;
+- broad workspace native request mới có thể bị deny/fallback;
+- single-file native request chỉ được admit khi global governor không conflict và policy cho phép;
+- khi pending requests về `0`, server trở thành eligible cho early drain.
+
+## 9.6. Hard pressure behavior
+
+```text
+if working_set >= hard_limit:
+    pressure_state = HARD
+```
+
+Behavior:
+
+- không admit native request mới;
+- active request đang chạy được phép hoàn thành theo timeout bình thường;
+- khi pending count về `0`, drain exact owned LSP tree;
+- next request chỉ cold-start sau khi admission state cho phép.
+
+Không `taskkill /IM rust-analyzer.exe`.
+
+## 9.7. UNKNOWN metrics
+
+Nếu working-set measurement unavailable:
+
+```text
+pressure_state = UNKNOWN
+```
+
+Policy:
+
+- không giả định memory = 0;
+- LIGHT/read-only status vẫn allow;
+- broad semantic khi đang có HEAVY conflict vẫn fail closed/fallback;
+- no automatic blind kill.
+
+## 9.8. Tests
+
+Bắt buộc dùng injectable/synthetic metrics thay vì thật sự cấp phát nhiều GiB RAM.
+
+Tests:
+
+- below soft → NORMAL;
+- >= soft → SOFT;
+- >= hard → HARD;
+- soft không kill pending request;
+- hard không kill pending request giữa chừng;
+- hard + pending=0 → owned tree drain;
+- UNKNOWN không trở thành zero;
+- cold restart sau hard drain;
+- process identity thay đổi sau restart;
+- descendants của managed tree gone sau drain.
+
+---
+
+# 10. Wave 3 — Native semantic admission ↔ existing HEAVY governor
+
+## 10.1. Mục tiêu
+
+Chặn conflict theo cả hai chiều:
+
+```text
+Cargo/full pytest HEAVY active
+    ↓
+broad/cold native semantic must not start competing HEAVY LSP work
+```
+
+và:
+
+```text
+cold/high-pressure rust-analyzer active
+    ↓
+new Cargo/full-test HEAVY must not start concurrently
+```
+
+Nửa thứ hai phần lớn đã có qua foreign-heavy/governor detection. Gap chính là semantic-side admission.
+
+## 10.2. Không biến persistent LSP thành fake EOCL wave job
+
+LSP vẫn thuộc Connector/Runner `ManagedChild` lifecycle.
+
+Coding MCP governor chỉ cung cấp **admission decision**.
+
+Không ghi một fake `managed_process_jobs` row để giả LSP là command của wave nếu ownership không đúng semantic.
+
+## 10.3. Admission API nội bộ
+
+Thêm helper có output deterministic, ví dụ:
+
+```text
+semantic_native_admission {
+  allowed,
+  mode,
+  reason_code,
+  active_heavy_count,
+  host_pressured,
+  foreign_heavy_present
+}
+```
+
+Reason code reuse existing vocabulary khi có thể:
+
+```text
+HEAVY_SLOT_BUSY
+HOST_MEMORY_PRESSURE
+FOREIGN_HEAVY_PRESENT
+RESOURCE_OWNER_REQUIRED
+```
+
+Chỉ thêm code mới khi semantic policy thực sự cần phân biệt:
+
+```text
+LSP_MEMORY_PRESSURE
+LSP_MEMORY_HARD_LIMIT
+```
+
+## 10.4. Admission placement
+
+Quan trọng: gate phải xảy ra **trước native provider call** khi request có nguy cơ cold/broad HEAVY.
+
+Không làm:
+
+```text
+start/index rust-analyzer
+→ rồi mới hỏi governor
+```
+
+Mục tiêu:
+
+```text
+context localization request
+    ↓
+classify native semantic cost
+    ↓
+ask resource admission
+    ├─ allow → native provider
+    └─ deny  → text fallback
+```
+
+## 10.5. Request classification
+
+Initial policy tối giản:
+
+```text
+single-file document semantic + warm/normal LSP → MEDIUM
+workspace semantic + cold LSP                → HEAVY
+workspace semantic + hard/soft pressure      → deny/fallback
+single-file + active Cargo HEAVY              → policy-defined; default prefer fallback
+```
+
+Không cần autoscheduler phức tạp ở wave này.
+
+## 10.6. Acceptance matrix
+
+| Existing workload | New semantic/workload | Expected |
+|---|---|---|
+| none | cold workspace semantic | allow nếu host pressure thấp |
+| Cargo HEAVY | cold/broad semantic | native deny, text fallback |
+| full pytest HEAVY | broad semantic | native deny, text fallback |
+| LSP cold/high pressure | Cargo HEAVY | Cargo defer/reject |
+| warm normal LSP | focused Cargo HEAVY | governor policy quyết định theo pressure; không blind kill |
+| LIGHT command | any HEAVY active | LIGHT status vẫn allow |
+
+## 10.7. Tests
+
+- active Cargo HEAVY → native broad semantic không được gọi;
+- text fallback vẫn trả usable context;
+- after Cargo completes → native semantic lại được admit;
+- high-pressure LSP → new managed HEAVY bị chặn;
+- LIGHT status vẫn chạy;
+- unknown ownership không làm governor tự kill process;
+- reason code deterministic.
+
+---
+
+# 11. Wave 4 — Ownership/restart proof trước khi thêm durable profile schema
+
+## 11.1. Mục tiêu
+
+Xác định liệu existing natural process ownership có đủ hay không.
+
+Current natural topology:
+
+```text
+Connector / Runner
+    └─ LspSupervisor
+         └─ ManagedChild
+              └─ rust-analyzer tree
+```
+
+EOCL command ownership là topology riêng:
+
+```text
+RUN/WAVE
+    └─ managed_process_jobs
+         └─ cargo/python/npm/etc.
+```
+
+Không trộn hai topology nếu chưa có evidence cần thiết.
+
+## 11.2. Proof matrix
+
+Bắt buộc chứng minh:
+
+1. terminal wave cleanup không kill persistent Connector profile;
+2. idle LSP teardown chỉ kill LSP child tree, không kill Connector parent;
+3. Connector/profile shutdown kill đúng descendant LSP;
+4. MCP/runtime restart không làm wave cleanup nhận nhầm profile LSP;
+5. PID reuse/process identity mismatch không bị coi là owned;
+6. unknown resource identity không bị auto-kill.
+
+## 11.3. Decision gate
+
+### Nếu tất cả PASS
+
+Không thêm `CONNECTOR_PROFILE` table/schema.
+
+Document ownership contract và dừng ở đây.
+
+### Nếu FAIL vì không reconcile persistent process identity sau restart
+
+Bổ sung durable record **tối thiểu**:
+
+```text
+persistent_resource {
+  owner_type = CONNECTOR_PROFILE,
+  owner_id,
+  checkout_id,
+  runtime_instance_id,
+  process_identity,
+  lifecycle_state,
+  updated_at
+}
+```
+
+Chỉ persist event quan trọng:
+
+- registered;
+- process identity changed;
+- pressure entered;
+- drained/restarted;
+- unknown/orphaned;
+- reconciled after restart.
+
+Không ghi từng LSP request.
+
+## 11.4. Fail-closed ownership rule
+
+```text
+identity exact match → can manage/reconcile
+identity uncertain   → UNKNOWN
+UNKNOWN              → do not kill blindly
+UNKNOWN + collision risk → block/defer new HEAVY
+```
+
+---
+
+# 12. Wave 5 — Authoritative operational soak
+
+Đây là proof quyết định để đóng defect resource-lifecycle ban đầu.
+
+## 12.1. Test environment
+
+- stable Connector profile riêng hoặc `p3-live` khi không có conflict;
+- không chạy cùng Recovery/feature mutation wave;
+- host không có unrelated compile/test do system quản lý;
+- record exact Git HEAD/runtime/tool contract.
+
+## 12.2. Scenario A — Cold single-file semantic
+
+```text
+LSP absent
+→ single-file semantic
+→ document_symbols
+→ semantic_handled > 0
+→ fallback = 0
+```
+
+Record:
+
+- cold latency;
+- process instance;
+- initial working set;
+- peak during startup.
+
+## 12.3. Scenario B — Warm repeated single-file semantic
+
+Pass khi:
+
+- reuse same LSP instance;
+- handled ổn định;
+- no extra server instance;
+- working set growth bounded;
+- no workspace_symbols regression.
+
+## 12.4. Scenario C — Warm workspace semantic
+
+Pass khi:
+
+- bounded concurrency;
+- query order preserved;
+- no unbounded process growth;
+- result remains sanitized/project-relative.
+
+## 12.5. Scenario D — Idle teardown
+
+```text
+stop traffic
+→ wait test TTL
+→ LSP tree gone
+→ Connector alive
+→ memory reclaimed by process exit
+```
+
+Acceptance dựa trên process termination, không dựa duy nhất vào một MB threshold.
+
+## 12.6. Scenario E — Cold restart after idle
+
+```text
+new semantic request
+→ new process identity
+→ native handled > 0
+```
+
+## 12.7. Scenario F — Memory soft pressure
+
+Synthetic/controlled threshold:
+
+```text
+working_set >= soft
+→ pressure=SOFT
+→ no active request killed
+→ broad native request denied/fallback as policy
+→ pending=0 permits drain
+```
+
+## 12.8. Scenario G — Memory hard pressure
+
+```text
+working_set >= hard
+→ new native request denied
+→ current request completes/timeout normally
+→ pending=0
+→ exact owned LSP tree drained
+→ later request cold-starts new instance
+```
+
+## 12.9. Scenario H — Cargo/LSP conflict
+
+```text
+start managed Cargo HEAVY
+→ request broad semantic
+```
+
+Expected:
+
+```text
+native LSP HEAVY not admitted
+text fallback used
+HEAVY overlap count remains 0
+```
+
+Sau Cargo terminal:
+
+```text
+semantic request → native admission restored
+```
+
+## 12.10. Scenario I — Reverse conflict
+
+```text
+cold/high-pressure LSP exists
+→ request Cargo/full-test HEAVY
+```
+
+Expected:
+
+- Cargo deferred/rejected by governor;
+- no blind kill of LSP if active;
+- if LSP idle and policy says drain, drain exact owned tree first;
+- Cargo only admitted after safe state.
+
+## 12.11. Scenario J — REPLAN/terminal cleanup
+
+Controlled wave-owned process tree:
+
+```text
+spawn managed descendant
+→ terminal/replan path
+→ descendants exit
+→ Connector-profile process unaffected
+```
+
+## 12.12. Metrics
+
+Record content-free metrics:
+
+```text
+cold_semantic_latency_ms
+warm_semantic_latency_ms
+workspace_semantic_latency_ms
+lsp_working_set_bytes
+lsp_peak_working_set_bytes
+lsp_idle_teardown_count
+lsp_restart_count
+lsp_soft_pressure_count
+lsp_hard_pressure_count
+native_semantic_attempted
+native_semantic_handled
+text_fallback_count
+heavy_admission_allowed_count
+heavy_admission_rejected_count
+heavy_overlap_detected_count
+orphan_process_count
+unknown_owner_count
+```
+
+## 12.13. Hard acceptance
+
+```text
+orphan_process_count = 0
+heavy_overlap_detected_count = 0
+idle LSP teardown = proven
+cold restart = proven
+single-file document_symbols = proven
+text fallback under deliberate denial = proven
+active request not killed by ordinary idle policy
+active request not killed mid-flight by soft/hard memory policy
+Smart-v3 public tool count = 8
+```
+
+Nếu các điều kiện trên pass, defect resource-lifecycle gây host lag có thể coi là closed về kỹ thuật.
+
+---
+
+# 13. Wave 6 — Disk/cache lifecycle
+
+Chỉ triển khai sau khi RAM/process lifecycle đã đạt soak acceptance.
+
+## 13.1. Mục tiêu
+
+Quan sát và dọn build cache/artifact an toàn mà không làm mất incremental performance vô ích.
+
+## 13.2. Telemetry
+
+```text
+target_total_bytes
+debug_incremental_bytes
+release_artifact_bytes
+temporary_worktree_target_bytes
+last_soft_cleanup_at
+last_hard_cleanup_at
+```
+
+## 13.3. Soft cleanup
+
+Ưu tiên:
+
+- old temporary worktree target dirs;
+- obsolete dedicated hardening target dirs;
+- disposable temporary artifacts có owner/path rõ.
+
+Guard:
+
+```text
+no active build owner
+path belongs to allowed cleanup roots
+artifact not used by active Connector/profile
+```
+
+## 13.4. Hard cleanup
+
+`cargo clean` vẫn là manual/operator policy.
+
+Không dùng `cargo clean` làm automatic response cho RAM pressure.
+
+---
+
+# 14. Wave 7 — Final operational baseline + EOCL delivery
+
+## 14.1. Final fingerprint
+
+Chốt:
+
+```text
+Git HEAD
+origin/main HEAD
+runtime version
+resource policy version
+tool contract SHA
+smart-v3 tool count
+Connector artifact identity
+LSP policy/config identity
+```
+
+## 14.2. Final baseline
+
+Record:
+
+```text
+LSP cold peak working set
+LSP warm working set
+idle teardown behavior
+cold restart behavior
+soft/hard pressure behavior
+Cargo/LSP conflict behavior
+native/fallback counts
+orphan count
+unknown-owner count
+stale orchestration count
+```
+
+Không biến measurement trên một máy thành universal guarantee.
+
+## 14.3. Verification ladder
+
+Ở final source fingerprint:
+
+1. scoped static/diff checks;
+2. LSP supervisor/resource unit tests;
+3. process-tree tests;
+4. governor focused tests;
+5. connector semantic tests;
+6. operational soak;
+7. affected subsystem Python/Rust suites;
+8. broad authority run một lần nếu change surface thực sự cross-cutting.
+
+Không full-build/full-suite sau mọi patch.
+
+## 14.4. EOCL closure
+
+Material implementation run phải đạt:
+
+```text
+PREFLIGHT
+→ READY
+→ ROUTED
+→ EXECUTING
+→ PROVING
+→ ACCEPTING
+→ CHECKPOINTED
+```
+
+Không để source “xong” nhưng final run còn `REPLAN`.
+
+## 14.5. Git delivery
+
+Trước commit:
+
+```text
+review full status
+separate Recovery/P2-P3 scopes
+selective stage intended source/tests/docs
+include .coding-tools/orchestration/ledger.sqlite3
+exclude volatile runtime junk unless intentionally required
+git diff --cached --check
+secret scan staged diff
+```
+
+Sau commit:
+
+```text
+push main
+verify local SHA == origin/main SHA
+verify commit contains intended files
+verify ledger.sqlite3 included
+```
+
+Không force-push.
+
+---
+
+# 15. Revised implementation packets
+
+## Packet A — Existing idle lifecycle proof
+
+**Scope:** no production feature by default.  
+**Outcome:** chứng minh idle reaper hiện có thực sự teardown và cold restart.  
+**Write:** chỉ khi proof expose defect.  
+**Proof:** cold → warm → idle → process gone → new cold instance.
+
+## Packet B — Process/memory telemetry
+
+**Scope:** `ManagedChild` resource snapshot + LSP supervisor counters/pressure state.  
+**Outcome:** working set/peak/pressure observable.  
+**Proof:** synthetic deterministic metrics + process identity tests.
+
+## Packet C — LSP soft/hard memory pressure
+
+**Scope:** supervisor admission/drain behavior.  
+**Outcome:** no new native work under hard pressure; safe drain only after pending=0.  
+**Proof:** no mid-flight kill + restart regression.
+
+## Packet D — Native semantic resource admission
+
+**Scope:** existing Coding MCP governor + context/native semantic decision point.  
+**Outcome:** Cargo/full-test ↔ cold LSP HEAVY overlap = 0.  
+**Proof:** deliberate deny/fallback + post-completion native recovery.
+
+## Packet E — Ownership/restart proof
+
+**Scope:** evidence first.  
+**Outcome:** determine if natural Connector/ManagedChild ownership is sufficient.  
+**Write:** durable profile owner only if proof fails.
+
+## Packet F — Soak harness
+
+**Scope:** integration/proof only unless defect discovered.  
+**Outcome:** repeatable resource lifecycle evidence.
+
+## Packet G — Disk/cache hygiene
+
+**Scope:** telemetry + safe soft cleanup guards.  
+**Outcome:** observable disk growth without destructive automatic cleaning.
+
+---
+
+# 16. Candidate file map đã hiệu chỉnh
+
+## 16.1. Primary Rust surfaces
+
+```text
+crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs
+crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs
+crates/webcodex-runner/src/webcodex_runner/lsp/navigation_tests.rs
+crates/webcodex-process/src/lib.rs
+crates/webcodex-process/src/windows.rs
+src/connector_runtime/semantic_bridge.rs
+src/connector_runtime/mod.rs
+```
+
+### Nguyên tắc
+
+- `supervisor.rs`: telemetry + pressure policy; không rewrite idle lifecycle.
+- `webcodex-process`: chỉ expose process metrics/identity abstraction nếu cần.
+- `semantic_bridge.rs`: giữ document/workspace scope và cold/warm policy; chỉ thêm pressure/admission semantics nếu interface cần.
+
+## 16.2. Primary Python governor surfaces
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py
+resources/coding-tools-mcp/coding_tools_mcp/context_tools.py
+resources/coding-tools-mcp/tests/test_execution_resources.py
+```
+
+Có thể cần thêm affected focused tests tùy localization thật.
+
+## 16.3. Conditional surfaces — chỉ dùng nếu evidence bắt buộc
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py
+resources/coding-tools-mcp/coding_tools_mcp/coordination.py
+resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py
+crates/webcodex-core/src/lsp_bridge.rs
+```
+
+Không sửa các file này chỉ vì plan cũ liệt kê.
+
+## 16.4. Explicitly out of P2/P3 waves
+
+Recovery source không được đụng trong resource hardening wave:
+
+```text
+electron/services/recoveryPlaneService.js
+resources/recovery-mcp/recovery_mcp.py
+resources/recovery-supervisor/recovery-supervisor.ps1
+Recovery-specific tests/docs
+```
+
+trừ khi user mở riêng Recovery task.
+
+---
+
+# 17. Error/reason taxonomy
+
+Reuse existing governor codes trước:
+
+```text
+HEAVY_SLOT_BUSY
+HOST_MEMORY_PRESSURE
+FOREIGN_HEAVY_PRESENT
+UNOWNED_EXECUTION_PROCESS
+RESOURCE_OWNER_REQUIRED
+```
+
+Chỉ thêm LSP-specific internal codes nếu cần:
+
+```text
+LSP_MEMORY_PRESSURE
+LSP_MEMORY_HARD_LIMIT
+LSP_METRICS_UNAVAILABLE
+LSP_RESTART_REQUIRED
+LSP_OWNER_UNCERTAIN
+RESOURCE_IDENTITY_MISMATCH
+```
+
+Không bắt buộc expose thành public MCP API.
+
+---
+
+# 18. Telemetry contract
+
+## 18.1. Allowed
+
+- numeric working set/peak;
+- process instance hash/opaque identity;
+- lifecycle/pressure transition;
+- owner/profile identity đã sanitize;
+- admission reason;
+- teardown/restart counters;
+- semantic handled/fallback counters.
+
+## 18.2. Forbidden/unnecessary
+
+- raw source file content;
+- raw prompt;
+- private chain-of-thought;
+- credentials;
+- Authorization header;
+- full unbounded stdout/stderr;
+- machine-local secret path.
+
+---
+
+# 19. Rollback strategy
+
+## 19.1. Idle proof fails
+
+- không viết lại toàn LSP stack;
+- identify exact reaper/config/lifecycle defect;
+- patch minimal surface;
+- text fallback remains enabled.
+
+## 19.2. Memory metric unreliable
+
+- retain metric observation as `UNKNOWN`;
+- disable automatic memory-driven drain;
+- keep idle teardown;
+- do not invent zero value.
+
+## 19.3. Soft/hard pressure causes semantic instability
+
+- keep telemetry;
+- disable memory-triggered automatic drain via internal flag;
+- preserve native/text fallback logic;
+- debug restart/admission separately.
+
+## 19.4. Persistent ownership cannot be reconciled
+
+- mark UNKNOWN;
+- no blind kill;
+- block unsafe HEAVY collision;
+- only then add minimal durable `CONNECTOR_PROFILE` record.
+
+## 19.5. Soak finds correctness regression
+
+- reject current EOCL wave;
+- reuse exact prior proof where fingerprint still matches;
+- replan only failing invariant;
+- no broad suite loop until focused defect fixed.
+
+---
+
+# 20. Definition of Done
+
+## 20.1. Process lifecycle
+
+```text
+orphan managed process = 0
+wave cleanup kills only wave-owned descendants
+idle LSP teardown works
+Connector survives LSP idle teardown
+profile shutdown kills correct LSP descendants
+cold restart works
+PID/process identity mismatch fail closed
+```
+
+## 20.2. Memory/resource policy
+
+```text
+LSP working set observable or explicitly UNKNOWN
+soft pressure does not kill active request
+hard pressure blocks new native request
+hard drain only after pending=0
+no blind process-name kill
+```
+
+## 20.3. Scheduling
+
+```text
+conflicting HEAVY overlap = 0
+Cargo/full pytest considers LSP conflict
+cold/broad semantic considers active Cargo/full-test conflict
+LIGHT inspection still allowed
+foreign/unknown heavy process not killed blindly
+```
+
+## 20.4. Semantic behavior
+
+```text
+single-file → document_symbols
+workspace → bounded cold/warm behavior
+native semantic recovers after idle/hard drain
+text fallback works during native deny/failure
+project-relative sanitized results preserved
+```
+
+## 20.5. Security/public contract
+
+```text
+wrong token rejected
+workspace mismatch rejected
+absolute/traversal path rejected
+credential not leaked
+smart-v3 public tool count = 8
+```
+
+## 20.6. Operational proof
+
+```text
+cold → warm → idle → stopped → cold restart proven
+soft pressure proven
+hard pressure proven
+Cargo/LSP conflict fallback proven
+orphan count = 0
+HEAVY overlap count = 0
+stale orchestration count = 0 at final evidence window
+active write fences = 0 at final acceptance
+active managed HEAVY = 0 after proof
+```
+
+## 20.7. Delivery
+
+```text
+EOCL CHECKPOINTED
+selective intended source commit
+ledger.sqlite3 included
+push main successful
+local SHA == origin/main SHA
+no force-push
+```
+
+---
+
+# 21. Recommended execution order — authoritative version
+
+Không đổi thứ tự trừ khi live evidence chứng minh dependency khác.
+
+```text
+0. Finish/checkpoint Recovery Phase 3B.
+1. Establish quiescent P2/P3 baseline.
+2. Prove existing LSP idle reaper/cold restart.
+3. Implement process/memory telemetry.
+4. Implement soft/hard LSP memory policy.
+5. Integrate native semantic admission with existing HEAVY governor.
+6. Run ownership/restart proof.
+7. Add durable CONNECTOR_PROFILE ownership only if Step 6 proves necessary.
+8. Run authoritative cold/warm/idle/restart/conflict soak.
+9. Implement disk/cache hygiene.
+10. Final EOCL acceptance + selective commit/push including ledger.sqlite3.
+```
+
+---
+
+# 22. Priority thực tế
+
+## P0 — Blocker
+
+1. Đóng Recovery Phase 3B.
+2. Không trộn Recovery source với LSP/resource hardening.
+
+## P1 — Core technical closure
+
+1. Prove existing idle reaper.
+2. Add LSP process/memory telemetry.
+3. Add soft/hard memory policy.
+4. Gate native semantic against existing HEAVY governor.
+5. Authoritative operational soak.
+
+## P2 — Conditional hardening
+
+1. Persistent `CONNECTOR_PROFILE` ownership chỉ nếu restart/ownership proof không đủ.
+2. Additional telemetry/reporting nếu có consumer cụ thể.
+
+## P3 — Operational hygiene
+
+1. Disk/cache telemetry.
+2. Safe soft cleanup.
+3. Performance tuning sau khi correctness/resource safety đã proven.
+
+---
+
+# 23. Những việc không được làm
+
+- Không viết lại `LspSupervisor` state machine chỉ vì plan cũ đề xuất nhiều state hơn.
+- Không tạo Resource Governor thứ hai.
+- Không biến persistent LSP thành fake wave-owned command nếu semantic ownership không đúng.
+- Không thêm persistent ownership schema trước khi proof chứng minh cần.
+- Không hardcode memory threshold từ snapshot lịch sử ~4.2 GiB.
+- Không test hard pressure bằng cách cố allocate nhiều GiB RAM trong CI.
+- Không `taskkill /IM rust-analyzer.exe`.
+- Không chạy Cargo/full pytest song song với cold LSP chỉ để “test tải”.
+- Không rerun broad suite sau mọi patch.
+- Không `cargo clean` trong active proof wave.
+- Không thay đổi public tool count để expose telemetry nội bộ.
+- Không bỏ `.coding-tools/orchestration/ledger.sqlite3` khỏi final commit/push.
+
+---
+
+# 24. Kết luận
+
+Correctness foundation của P2/P3 đã đi xa hơn plan cũ mô tả.
+
+Các capability quan trọng — process-tree ownership, idle TTL/reaper, semantic file scope, cold/warm concurrency, HEAVY governor và quiescence — đã tồn tại. Vì vậy mục tiêu còn lại không phải xây thêm framework mà là **nối các capability hiện hữu thành một operational resource contract khép kín và chứng minh bằng live soak**.
+
+Kiến trúc mục tiêu sau hiệu chỉnh:
+
+```text
+LSP requested
+    ↓
+existing LspSupervisor starts owned ManagedChild
+    ↓
+semantic cold/warm policy bounds request fan-out
+    ↓
+process metrics expose working set/pressure
+    ↓
+existing Coding MCP governor coordinates HEAVY admission
+    ↓
+normal/warm → reuse
+soft pressure → restrict broad native work, drain when safe
+hard pressure → deny new native work, drain after pending=0
+idle → existing reaper tears down
+next request → safe cold restart
+    ↓
+text fallback preserves correctness whenever native path is denied/unavailable
+```
+
+Definition of success không phải “rust-analyzer luôn sống” mà là:
+
+```text
+khi cần      → start đúng owner
+khi warm     → reuse bounded
+khi idle     → release process/memory
+khi pressure → defer/drain/fallback
+khi conflict → không HEAVY overlap
+khi quay lại → cold restart an toàn
+khi cleanup  → chỉ kill đúng owned tree
+```
+
+Khi Wave 1–5 pass với `orphan_process_count = 0` và `heavy_overlap_detected_count = 0`, defect resource-lifecycle gây lag trước đây có thể coi là đóng về kỹ thuật. Các bước disk/cache sau đó là operational hygiene, không còn là blocker correctness/resource safety.

@@ -58,6 +58,26 @@ pub enum GracefulTermination {
     Unsupported,
 }
 
+/// Best-effort resource telemetry for the direct process owned by a
+/// [`ManagedChild`].
+///
+/// The start token is an opaque, platform-local process identity component;
+/// combine it with `pid` before comparing two process instances. Unsupported
+/// or temporarily unavailable metrics are represented as `None`, never as a
+/// misleading zero-byte measurement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProcessResourceSnapshot {
+    /// PID of the direct child.
+    pub pid: u32,
+    /// Opaque process-start identity (Windows creation FILETIME or Linux
+    /// `/proc/<pid>/stat` start time).
+    pub process_start_token: Option<u64>,
+    /// Current resident/working-set bytes for the direct child.
+    pub working_set_bytes: Option<u64>,
+    /// Peak resident/working-set bytes for the direct child.
+    pub peak_working_set_bytes: Option<u64>,
+}
+
 /// Options that influence how a [`ManagedChild`] is spawned.
 ///
 /// All fields have platform-neutral defaults; set only what you need.

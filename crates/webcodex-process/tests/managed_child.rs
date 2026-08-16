@@ -391,6 +391,46 @@ fn managed_child_is_send_and_sync() {
     assert_send_sync::<ManagedChild>();
 }
 
+#[test]
+fn resource_snapshot_preserves_process_identity_and_unknown_semantics() {
+    let (mut managed, _) = spawn_helper("sleep", &["2", "0"], false);
+    let first = managed.resource_snapshot();
+    let second = managed.resource_snapshot();
+
+    assert_eq!(first.pid, managed.id());
+    assert_eq!(first.process_start_token, second.process_start_token);
+    #[cfg(any(target_os = "linux", windows))]
+    {
+        assert!(
+            first.process_start_token.is_some(),
+            "supported targets should expose a process-start token"
+        );
+        let working = first
+            .working_set_bytes
+            .expect("supported targets should expose working set");
+        let peak = first
+            .peak_working_set_bytes
+            .expect("supported targets should expose peak working set");
+        assert!(working > 0, "a live helper should have resident memory");
+        assert!(
+            peak >= working,
+            "peak working set must cover current working set"
+        );
+    }
+    #[cfg(not(any(target_os = "linux", windows)))]
+    {
+        assert_eq!(first.process_start_token, None);
+        assert_eq!(first.working_set_bytes, None);
+        assert_eq!(first.peak_working_set_bytes, None);
+    }
+
+    managed.terminate_tree().expect("terminate helper tree");
+    assert!(managed
+        .wait_tree_exit(Duration::from_secs(10))
+        .expect("wait helper tree"));
+    let _ = managed.try_wait();
+}
+
 // ---------------------------------------------------------------------------
 // 6. Repeated terminate
 // ---------------------------------------------------------------------------

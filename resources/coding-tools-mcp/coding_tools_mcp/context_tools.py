@@ -220,6 +220,7 @@ class ContextToolsMixin:
         fallback_pairs = list(enumerate(queries))
         semantic_attempted = 0
         semantic_handled = 0
+        semantic_admission: dict[str, Any] | None = None
 
         if queries and bool(args.get("regex", False)):
             semantic_status = dict(semantic_status)
@@ -235,44 +236,63 @@ class ContextToolsMixin:
                     and (self.workspace.root / candidate_path).is_file()
                 ):
                     semantic_path = candidate
-            semantic_batch = run_semantic_localization(
-                self.semantic_localizer,
-                workspace=self.workspace.root,
-                path=semantic_path,
-                queries=queries,
-                max_results=max_matches,
+            semantic_mode = "single_file" if semantic_path != "." else "workspace"
+            semantic_cost = "MEDIUM" if semantic_mode == "single_file" else "HEAVY"
+            semantic_admission = self.execution_resource_governor.semantic_native_admission(
+                mode=semantic_mode,
+                cost=semantic_cost,
             )
-            semantic_status = dict(semantic_batch.get("provider") or semantic_status)
-            fallback_pairs = []
-            for item in semantic_batch.get("results", []):
-                if not isinstance(item, dict):
-                    continue
-                index = int(item.get("query_index", -1))
-                if index < 0 or index >= len(queries):
-                    continue
-                semantic_attempted += 1
-                matches = list(item.get("matches") or [])
-                handled = item.get("handled") is True
-                composite_operations.append({
-                    "id": f"semantic:{index}",
-                    "stage": "localize",
-                    "kind": "semantic_navigation",
-                    "status": "completed" if handled else "fallback",
-                    "query_sha256": hashlib.sha256(queries[index].encode("utf-8")).hexdigest(),
-                    "match_count": len(matches),
-                    "provider": semantic_status.get("provider"),
-                })
-                if handled:
-                    semantic_handled += 1
-                    search_results_by_index[index] = {
-                        "query": queries[index],
-                        "engine": f"semantic:{semantic_status.get('provider') or 'provider'}",
-                        "total_matches": len(matches),
-                        "truncated": False,
-                        "matches": matches,
-                    }
-                else:
-                    fallback_pairs.append((index, queries[index]))
+            semantic_status = dict(semantic_status)
+            semantic_status["admission"] = dict(semantic_admission)
+            composite_operations.append({
+                "id": "semantic-admission:0",
+                "stage": "localize",
+                "kind": "semantic_admission",
+                "status": "completed" if semantic_admission["allowed"] else "fallback",
+                "mode": semantic_admission["mode"],
+                "cost": semantic_admission["cost"],
+                "reason_code": semantic_admission["reason_code"],
+            })
+            if semantic_admission["allowed"]:
+                semantic_batch = run_semantic_localization(
+                    self.semantic_localizer,
+                    workspace=self.workspace.root,
+                    path=semantic_path,
+                    queries=queries,
+                    max_results=max_matches,
+                )
+                semantic_status = dict(semantic_batch.get("provider") or semantic_status)
+                semantic_status["admission"] = dict(semantic_admission)
+                fallback_pairs = []
+                for item in semantic_batch.get("results", []):
+                    if not isinstance(item, dict):
+                        continue
+                    index = int(item.get("query_index", -1))
+                    if index < 0 or index >= len(queries):
+                        continue
+                    semantic_attempted += 1
+                    matches = list(item.get("matches") or [])
+                    handled = item.get("handled") is True
+                    composite_operations.append({
+                        "id": f"semantic:{index}",
+                        "stage": "localize",
+                        "kind": "semantic_navigation",
+                        "status": "completed" if handled else "fallback",
+                        "query_sha256": hashlib.sha256(queries[index].encode("utf-8")).hexdigest(),
+                        "match_count": len(matches),
+                        "provider": semantic_status.get("provider"),
+                    })
+                    if handled:
+                        semantic_handled += 1
+                        search_results_by_index[index] = {
+                            "query": queries[index],
+                            "engine": f"semantic:{semantic_status.get('provider') or 'provider'}",
+                            "total_matches": len(matches),
+                            "truncated": False,
+                            "matches": matches,
+                        }
+                    else:
+                        fallback_pairs.append((index, queries[index]))
 
         def search_once(index_and_query: tuple[int, str]) -> tuple[dict[str, Any], dict[str, Any]]:
             index, query = index_and_query
@@ -381,6 +401,7 @@ class ContextToolsMixin:
                     "semantic_attempted": semantic_attempted,
                     "semantic_handled": semantic_handled,
                     "text_fallback_queries": len(fallback_pairs),
+                    "native_admission": semantic_admission,
                 },
                 "parallelism": {
                     "search_parallel": bool(fallback_search_workers > 1),

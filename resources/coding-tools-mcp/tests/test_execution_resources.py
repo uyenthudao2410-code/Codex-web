@@ -145,7 +145,13 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
             patch.object(
                 self.governor,
                 "_foreign_heavy_processes",
-                return_value=[{"pid": 123, "name": "cargo.exe", "working_set_bytes": 1}],
+                return_value=[
+                    {
+                        "pid": 123,
+                        "name": "rust-analyzer.exe",
+                        "working_set_bytes": 2 * 1024 * 1024 * 1024,
+                    }
+                ],
             ),
         ):
             with self.assertRaises(ExecutionResourceError) as foreign:
@@ -156,6 +162,122 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
                     wave_id=wave_id,
                 )
         self.assertEqual(foreign.exception.code, "UNOWNED_EXECUTION_PROCESS")
+
+    def test_semantic_native_admission_is_read_only_and_recovers_after_heavy(self) -> None:
+        run_id, wave_id = self._owner()
+        heavy = self.governor.admit(
+            command="cargo test",
+            command_id="semantic-conflict",
+            run_id=run_id,
+            wave_id=wave_id,
+            resource_class="HEAVY",
+        )
+        rows_before = len(self.governor._rows())
+        with (
+            patch.object(
+                self.governor,
+                "_host_pressure",
+                return_value={"observed": True, "pressured": False},
+            ),
+            patch.object(self.governor, "_foreign_heavy_processes", return_value=[]),
+        ):
+            denied = self.governor.semantic_native_admission(
+                mode="workspace",
+                cost="HEAVY",
+            )
+        self.assertFalse(denied["allowed"])
+        self.assertEqual(denied["reason_code"], "HEAVY_SLOT_BUSY")
+        self.assertEqual(denied["active_heavy_count"], 1)
+        self.assertEqual(len(self.governor._rows()), rows_before)
+
+        # LIGHT/read-only status remains available while the HEAVY slot is
+        # occupied; semantic admission never kills or completes that owner.
+        self.assertEqual(self.governor.snapshot()["active_heavy_count"], 1)
+        self.governor.complete(heavy.job_id, lifecycle_state="exited", exit_code=0)
+        with (
+            patch.object(
+                self.governor,
+                "_host_pressure",
+                return_value={"observed": True, "pressured": False},
+            ),
+            patch.object(self.governor, "_foreign_heavy_processes", return_value=[]),
+        ):
+            allowed = self.governor.semantic_native_admission(
+                mode="workspace",
+                cost="HEAVY",
+            )
+        self.assertTrue(allowed["allowed"])
+        self.assertEqual(allowed["reason_code"], "ALLOWED")
+        snapshot = self.governor.snapshot()
+        self.assertEqual(
+            snapshot["semantic_native_admission_counts"],
+            {"allowed": 1, "rejected": 1},
+        )
+
+    def test_semantic_native_admission_reason_priority_is_deterministic(self) -> None:
+        with (
+            patch.object(
+                self.governor,
+                "_host_pressure",
+                return_value={"observed": True, "pressured": True},
+            ),
+            patch.object(self.governor, "_foreign_heavy_processes", return_value=[]),
+        ):
+            pressured = self.governor.semantic_native_admission(
+                mode="single_file",
+                cost="MEDIUM",
+            )
+        self.assertEqual(pressured["reason_code"], "HOST_RESOURCE_PRESSURE")
+
+        with (
+            patch.object(
+                self.governor,
+                "_host_pressure",
+                return_value={"observed": True, "pressured": False},
+            ),
+            patch.object(
+                self.governor,
+                "_foreign_heavy_processes",
+                return_value=[
+                    {"pid": 123, "name": "cargo.exe", "working_set_bytes": 1}
+                ],
+            ),
+        ):
+            foreign = self.governor.semantic_native_admission(
+                mode="single_file",
+                cost="MEDIUM",
+            )
+        self.assertEqual(foreign["reason_code"], "UNOWNED_EXECUTION_PROCESS")
+
+        with (
+            patch.object(
+                self.governor,
+                "_host_pressure",
+                return_value={"observed": True, "pressured": False},
+            ),
+            patch.object(
+                self.governor,
+                "_foreign_heavy_processes",
+                return_value=[
+                    {
+                        "pid": 456,
+                        "name": "rust-analyzer.exe",
+                        "working_set_bytes": 2 * 1024 * 1024 * 1024,
+                    }
+                ],
+            ),
+        ):
+            focused = self.governor.semantic_native_admission(
+                mode="single_file",
+                cost="MEDIUM",
+            )
+            workspace = self.governor.semantic_native_admission(
+                mode="workspace",
+                cost="HEAVY",
+            )
+        self.assertTrue(focused["allowed"])
+        self.assertTrue(focused["foreign_heavy_present"])
+        self.assertEqual(workspace["reason_code"], "UNOWNED_EXECUTION_PROCESS")
 
     def test_replan_tears_down_descendants_but_not_another_wave(self) -> None:
         control = OrchestrationControl(

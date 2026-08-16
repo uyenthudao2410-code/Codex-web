@@ -4,6 +4,7 @@ const { buildChatEvaluationObserverScript, chatEvaluationDrainScript } = require
 
 const CHAT_HOME = 'https://chatgpt.com/';
 const CHAT_PARTITION = 'persist:chatgpt-session';
+const CHAT_EVALUATION_DRAIN_INTERVAL_MS = 1000;
 const NAVIGATION_HOSTS = new Set([
   'chatgpt.com', 'www.chatgpt.com', 'openai.com', 'www.openai.com',
   'auth.openai.com', 'login.openai.com', 'accounts.google.com',
@@ -50,6 +51,7 @@ class ChatViewController {
     this.rightInset = 0;
     this.navigationEpoch = 0;
     this.evaluationDrainTimer = null;
+    this.evaluationDrainInFlight = false;
     this.boundResize = () => this.resize();
   }
 
@@ -355,12 +357,15 @@ class ChatViewController {
     if (this.evaluationDrainTimer) return;
     this.evaluationDrainTimer = setInterval(() => {
       const contents = this.view?.webContents;
-      if (!contents || contents.isDestroyed()) return;
+      if (!contents || contents.isDestroyed() || this.evaluationDrainInFlight) return;
+      this.evaluationDrainInFlight = true;
       contents.executeJavaScript(chatEvaluationDrainScript(), true).then((events) => {
         if (Array.isArray(events) && events.length) return this.onEvaluation(events);
         return null;
-      }).catch(() => null);
-    }, 150);
+      }).catch(() => null).finally(() => {
+        this.evaluationDrainInFlight = false;
+      });
+    }, CHAT_EVALUATION_DRAIN_INTERVAL_MS);
     this.evaluationDrainTimer.unref?.();
   }
 
@@ -451,6 +456,7 @@ class ChatViewController {
   dispose() {
     if (this.evaluationDrainTimer) clearInterval(this.evaluationDrainTimer);
     this.evaluationDrainTimer = null;
+    this.evaluationDrainInFlight = false;
     if (this.window && !this.window.isDestroyed()) this.window.removeListener('resize', this.boundResize);
     if (this.view && this.window && !this.window.isDestroyed()) {
       try { this.window.contentView.removeChildView(this.view); } catch { /* already detached */ }

@@ -11,7 +11,7 @@ use std::process::{Child, Command, ExitStatus};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::{GracefulTermination, SpawnOptions};
+use crate::{GracefulTermination, ProcessResourceSnapshot, SpawnOptions};
 
 /// Poll interval used by `wait_tree_exit` and bounded drop reaping.
 const TREE_POLL: Duration = Duration::from_millis(20);
@@ -76,6 +76,26 @@ impl ManagedChild {
     /// Mutably borrow the underlying [`Child`].
     pub fn child_mut(&mut self) -> &mut Child {
         &mut self.child
+    }
+
+    /// Capture best-effort resource telemetry for the direct child.
+    ///
+    /// Linux exposes resident memory and the process start token through
+    /// `/proc`. Other Unix targets keep the same API and explicitly report
+    /// unavailable counters rather than fabricating zero-byte values.
+    pub fn resource_snapshot(&self) -> ProcessResourceSnapshot {
+        #[cfg(target_os = "linux")]
+        let (process_start_token, working_set_bytes, peak_working_set_bytes) =
+            linux_process_resources(self.child.id());
+        #[cfg(not(target_os = "linux"))]
+        let (process_start_token, working_set_bytes, peak_working_set_bytes) = (None, None, None);
+
+        ProcessResourceSnapshot {
+            pid: self.child.id(),
+            process_start_token,
+            working_set_bytes,
+            peak_working_set_bytes,
+        }
     }
 
     /// Wait only for the direct child.
@@ -173,6 +193,43 @@ impl ManagedChild {
             std::thread::sleep(TREE_POLL);
         }
     }
+}
+
+#[cfg(target_os = "linux")]
+fn linux_process_resources(pid: u32) -> (Option<u64>, Option<u64>, Option<u64>) {
+    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).ok();
+    // `comm` is parenthesized and may contain spaces or `)` characters. Split
+    // after the final `)`; the remaining zero-based index 19 is field 22
+    // (`starttime`) because index 0 is field 3 (`state`).
+    let process_start_token = stat.as_deref().and_then(|stat| {
+        let (_, fields) = stat.rsplit_once(") ")?;
+        fields.split_whitespace().nth(19)?.parse::<u64>().ok()
+    });
+
+    let status = std::fs::read_to_string(format!("/proc/{pid}/status")).ok();
+    let working_set_bytes = status
+        .as_deref()
+        .and_then(|status| linux_status_kib(status, "VmRSS:"));
+    let peak_working_set_bytes = status
+        .as_deref()
+        .and_then(|status| linux_status_kib(status, "VmHWM:"));
+    (
+        process_start_token,
+        working_set_bytes,
+        peak_working_set_bytes,
+    )
+}
+
+#[cfg(target_os = "linux")]
+fn linux_status_kib(status: &str, key: &str) -> Option<u64> {
+    let kib = status
+        .lines()
+        .find_map(|line| line.strip_prefix(key))?
+        .split_whitespace()
+        .next()?
+        .parse::<u64>()
+        .ok()?;
+    kib.checked_mul(1024)
 }
 
 impl Drop for ManagedChild {
