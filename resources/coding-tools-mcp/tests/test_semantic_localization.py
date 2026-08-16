@@ -14,7 +14,9 @@ from coding_tools_mcp.semantic_localization import (
     DEFAULT_UNAVAILABLE_REASON,
     INVALID_BINDING_REASON,
     NATIVE_LSP_CREDENTIAL_FILE_ENV,
+    NATIVE_LSP_MACHINE_BINDING_MAX_BYTES,
     NATIVE_LSP_PROVIDER,
+    NATIVE_LSP_TIMEOUT_SECONDS,
     NATIVE_LSP_URL_ENV,
     NativeRustSemanticLocalizationProvider,
     _read_project_credential,
@@ -113,6 +115,178 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
         )
         self.assertEqual(_portable_workspace_identity("/srv/repo", windows=False), "/srv/repo")
 
+    def test_machine_binding_fallback_is_workspace_bound_and_env_pair_wins(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            workspace = root / "workspace"
+            workspace.mkdir()
+            appdata = root / "appdata"
+            binding_file = appdata / "web-mcp-assistant" / "native-lsp-binding.json"
+            binding_file.parent.mkdir(parents=True)
+            credential_file = root / "credential"
+            credential_file.write_text(VALID_CREDENTIAL + "\n", encoding="utf-8")
+            if os.name != "nt":
+                credential_file.chmod(0o600)
+            binding_file.write_text(
+                json.dumps({
+                    "schema_version": 1,
+                    "workspace_sha256": portable_workspace_sha256(workspace),
+                    "origin": "http://127.0.0.1:45819",
+                    "credential_file": str(credential_file),
+                }),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "APPDATA": str(appdata),
+                    NATIVE_LSP_URL_ENV: "",
+                    NATIVE_LSP_CREDENTIAL_FILE_ENV: "",
+                },
+            ):
+                status = semantic_provider_status(semantic_localizer_from_env(workspace))
+            self.assertTrue(status["available"])
+            self.assertEqual(status["provider"], NATIVE_LSP_PROVIDER)
+
+            binding_file.write_text(
+                json.dumps({
+                    "schema_version": 1,
+                    "workspace_sha256": "0" * 64,
+                    "origin": "http://example.com:7777",
+                    "credential_file": str(workspace / "forbidden"),
+                }),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "APPDATA": str(appdata),
+                    NATIVE_LSP_URL_ENV: "http://127.0.0.1:45820",
+                    NATIVE_LSP_CREDENTIAL_FILE_ENV: str(credential_file),
+                },
+            ):
+                status = semantic_provider_status(semantic_localizer_from_env(workspace))
+            self.assertTrue(status["available"])
+
+    def test_partial_env_binding_does_not_fall_back_to_machine_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            workspace = root / "workspace"
+            workspace.mkdir()
+            appdata = root / "appdata"
+            binding_file = appdata / "web-mcp-assistant" / "native-lsp-binding.json"
+            binding_file.parent.mkdir(parents=True)
+            credential_file = root / "credential"
+            credential_file.write_text(VALID_CREDENTIAL + "\n", encoding="utf-8")
+            if os.name != "nt":
+                credential_file.chmod(0o600)
+            binding_file.write_text(
+                json.dumps({
+                    "schema_version": 1,
+                    "workspace_sha256": portable_workspace_sha256(workspace),
+                    "origin": "http://127.0.0.1:45819",
+                    "credential_file": str(credential_file),
+                }),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "APPDATA": str(appdata),
+                    NATIVE_LSP_URL_ENV: "http://127.0.0.1:45820",
+                    NATIVE_LSP_CREDENTIAL_FILE_ENV: "",
+                },
+            ):
+                status = semantic_provider_status(semantic_localizer_from_env(workspace))
+            self.assertFalse(status["available"])
+            self.assertEqual(status["reason"], INVALID_BINDING_REASON)
+            self.assertEqual(status["binding"]["state"], "partial")
+
+    def test_machine_binding_rejects_workspace_origin_and_credential_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            workspace = root / "workspace"
+            workspace.mkdir()
+            appdata = root / "appdata"
+            binding_file = appdata / "web-mcp-assistant" / "native-lsp-binding.json"
+            binding_file.parent.mkdir(parents=True)
+            external_credential = root / "credential"
+            external_credential.write_text(VALID_CREDENTIAL + "\n", encoding="utf-8")
+            if os.name != "nt":
+                external_credential.chmod(0o600)
+            inside_credential = workspace / "credential"
+            inside_credential.write_text(VALID_CREDENTIAL + "\n", encoding="utf-8")
+            if os.name != "nt":
+                inside_credential.chmod(0o600)
+            base = {
+                "schema_version": 1,
+                "workspace_sha256": portable_workspace_sha256(workspace),
+                "origin": "http://127.0.0.1:45819",
+                "credential_file": str(external_credential),
+            }
+            cases = (
+                ("workspace", {**base, "workspace_sha256": "0" * 64}),
+                ("origin", {**base, "origin": "http://example.com:45819"}),
+                ("credential_file", {**base, "credential_file": str(inside_credential)}),
+            )
+            for component, payload in cases:
+                with self.subTest(component=component):
+                    binding_file.write_text(json.dumps(payload), encoding="utf-8")
+                    with patch.dict(
+                        os.environ,
+                        {
+                            "APPDATA": str(appdata),
+                            NATIVE_LSP_URL_ENV: "",
+                            NATIVE_LSP_CREDENTIAL_FILE_ENV: "",
+                        },
+                    ):
+                        status = semantic_provider_status(semantic_localizer_from_env(workspace))
+                    self.assertFalse(status["available"])
+                    self.assertEqual(status["reason"], INVALID_BINDING_REASON)
+                    self.assertEqual(status["binding"]["invalid_component"], component)
+
+    def test_machine_binding_rejects_malformed_and_oversized_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            workspace = root / "workspace"
+            workspace.mkdir()
+            appdata = root / "appdata"
+            binding_file = appdata / "web-mcp-assistant" / "native-lsp-binding.json"
+            binding_file.parent.mkdir(parents=True)
+            with patch.dict(
+                os.environ,
+                {
+                    "APPDATA": str(appdata),
+                    NATIVE_LSP_URL_ENV: "",
+                    NATIVE_LSP_CREDENTIAL_FILE_ENV: "",
+                },
+            ):
+                for raw in ("{", "x" * (NATIVE_LSP_MACHINE_BINDING_MAX_BYTES + 1)):
+                    with self.subTest(size=len(raw)):
+                        binding_file.write_text(raw, encoding="utf-8")
+                        status = semantic_provider_status(semantic_localizer_from_env(workspace))
+                        self.assertFalse(status["available"])
+                        self.assertEqual(status["reason"], INVALID_BINDING_REASON)
+                        self.assertEqual(status["binding"]["invalid_component"], "binding_file")
+
+    def test_missing_machine_binding_remains_truthfully_unconfigured(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            workspace = root / "workspace"
+            workspace.mkdir()
+            with patch.dict(
+                os.environ,
+                {
+                    "APPDATA": str(root / "missing-appdata"),
+                    NATIVE_LSP_URL_ENV: "",
+                    NATIVE_LSP_CREDENTIAL_FILE_ENV: "",
+                },
+            ):
+                status = semantic_provider_status(semantic_localizer_from_env(workspace))
+            self.assertFalse(status["available"])
+            self.assertEqual(status["reason"], DEFAULT_UNAVAILABLE_REASON)
+            self.assertEqual(status["binding"]["state"], "unconfigured")
+
     def test_happy_request_is_loopback_bounded_and_sends_no_raw_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             workspace = Path(temp).resolve()
@@ -153,6 +327,8 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
                 )
             request = captured["request"]
             body = json.loads(request.data.decode("utf-8"))
+            self.assertEqual(captured["timeout"], NATIVE_LSP_TIMEOUT_SECONDS)
+            self.assertGreater(captured["timeout"], 32.0)
             self.assertEqual(body["workspace_sha256"], portable_workspace_sha256(workspace))
             self.assertNotIn(str(workspace), request.data.decode("utf-8"))
             self.assertEqual(request.full_url, "http://127.0.0.1:45819/api/connector/internal/semantic/localize")

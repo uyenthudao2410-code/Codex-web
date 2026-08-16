@@ -21,12 +21,21 @@ NATIVE_LSP_PROVIDER = "webcodex_native_lsp"
 NATIVE_LSP_ENDPOINT_PATH = "/api/connector/internal/semantic/localize"
 NATIVE_LSP_URL_ENV = f"{ENV_PREFIX}_NATIVE_LSP_URL"
 NATIVE_LSP_CREDENTIAL_FILE_ENV = f"{ENV_PREFIX}_NATIVE_LSP_CREDENTIAL_FILE"
-NATIVE_LSP_TIMEOUT_SECONDS = 5.0
+# The Rust ToolRuntime gives one agent LSP request a 30s wait budget plus a
+# 2s waiter margin. The Connector fans a bounded semantic query batch out
+# concurrently, so the loopback HTTP client only needs to outlive one such
+# request rather than multiplying the deadline by the query count.
+NATIVE_LSP_TIMEOUT_SECONDS = 35.0
 NATIVE_LSP_MAX_RESPONSE_BYTES = 1024 * 1024
+NATIVE_LSP_MACHINE_BINDING_SCHEMA_VERSION = 1
+NATIVE_LSP_MACHINE_BINDING_MAX_BYTES = 16 * 1024
+NATIVE_LSP_MACHINE_BINDING_RELATIVE = Path("web-mcp-assistant") / "native-lsp-binding.json"
 _PROJECT_CREDENTIAL_RE = re.compile(r"^webcodex_[a-f0-9]{64}$")
+_WORKSPACE_SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1"})
 _BINDING_STATES = frozenset({"unconfigured", "partial", "invalid", "configured"})
-_BINDING_COMPONENTS = frozenset({"origin", "credential_file"})
+_BINDING_COMPONENTS = frozenset({"binding_file", "workspace", "origin", "credential_file"})
+_MACHINE_BINDING_FIELDS = frozenset({"schema_version", "workspace_sha256", "origin", "credential_file"})
 
 
 def _semantic_binding_status(
@@ -110,6 +119,100 @@ def portable_workspace_sha256(workspace: Path) -> str:
     resolved = workspace.expanduser().resolve(strict=True)
     identity = _portable_workspace_identity(str(resolved), windows=os.name == "nt")
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+
+class _MachineBindingError(ValueError):
+    def __init__(
+        self,
+        component: str,
+        *,
+        origin_configured: bool = False,
+        credential_file_configured: bool = False,
+    ) -> None:
+        super().__init__("invalid native LSP machine binding")
+        self.component = component if component in _BINDING_COMPONENTS else "binding_file"
+        self.origin_configured = origin_configured
+        self.credential_file_configured = credential_file_configured
+
+
+def _machine_binding_path() -> Path | None:
+    raw_appdata = (os.environ.get("APPDATA") or "").strip()
+    if not raw_appdata:
+        return None
+    appdata = Path(raw_appdata).expanduser()
+    if not appdata.is_absolute():
+        return None
+    return appdata / NATIVE_LSP_MACHINE_BINDING_RELATIVE
+
+
+def _path_is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def _validated_machine_credential_file(path_text: str, *, workspace: Path) -> str:
+    candidate = Path(path_text).expanduser()
+    if not candidate.is_absolute() or candidate.is_symlink():
+        raise _MachineBindingError("credential_file", credential_file_configured=bool(path_text.strip()))
+    try:
+        info = candidate.stat()
+        resolved = candidate.resolve(strict=True)
+        workspace_root = workspace.expanduser().resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise _MachineBindingError("credential_file", credential_file_configured=True) from exc
+    if not stat.S_ISREG(info.st_mode) or resolved == workspace_root or _path_is_within(resolved, workspace_root):
+        raise _MachineBindingError("credential_file", credential_file_configured=True)
+    return str(resolved)
+
+
+def _machine_binding_for_workspace(workspace: Path) -> tuple[str, str] | None:
+    binding_path = _machine_binding_path()
+    if binding_path is None or not binding_path.exists():
+        return None
+    if binding_path.is_symlink():
+        raise _MachineBindingError("binding_file")
+    try:
+        info = binding_path.stat()
+        if not stat.S_ISREG(info.st_mode) or info.st_size <= 0 or info.st_size > NATIVE_LSP_MACHINE_BINDING_MAX_BYTES:
+            raise _MachineBindingError("binding_file")
+        raw = binding_path.read_bytes()
+        if len(raw) > NATIVE_LSP_MACHINE_BINDING_MAX_BYTES:
+            raise _MachineBindingError("binding_file")
+        payload = json.loads(raw.decode("utf-8"))
+    except _MachineBindingError:
+        raise
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise _MachineBindingError("binding_file") from exc
+    if not isinstance(payload, dict) or set(payload) != _MACHINE_BINDING_FIELDS:
+        raise _MachineBindingError("binding_file")
+    if payload.get("schema_version") != NATIVE_LSP_MACHINE_BINDING_SCHEMA_VERSION:
+        raise _MachineBindingError("binding_file")
+
+    raw_workspace_sha = str(payload.get("workspace_sha256") or "").strip().lower()
+    if _WORKSPACE_SHA256_RE.fullmatch(raw_workspace_sha) is None:
+        raise _MachineBindingError("workspace")
+    if raw_workspace_sha != portable_workspace_sha256(workspace):
+        raise _MachineBindingError("workspace")
+
+    raw_origin = str(payload.get("origin") or "").strip()
+    raw_credential_file = str(payload.get("credential_file") or "").strip()
+    if not raw_origin:
+        raise _MachineBindingError("origin")
+    if not raw_credential_file:
+        raise _MachineBindingError("credential_file", origin_configured=True)
+    try:
+        origin = _validated_loopback_origin(raw_origin)
+    except ValueError as exc:
+        raise _MachineBindingError(
+            "origin",
+            origin_configured=True,
+            credential_file_configured=True,
+        ) from exc
+    credential_file = _validated_machine_credential_file(raw_credential_file, workspace=workspace)
+    return origin, credential_file
 
 
 def _validated_loopback_origin(raw: str) -> str:
@@ -238,26 +341,45 @@ class NativeRustSemanticLocalizationProvider:
         return data["results"]
 
 
-def semantic_localizer_from_env() -> Any:
+def semantic_localizer_from_env(workspace: Path | None = None) -> Any:
     raw_origin = (os.environ.get(NATIVE_LSP_URL_ENV) or "").strip()
     raw_credential_file = (os.environ.get(NATIVE_LSP_CREDENTIAL_FILE_ENV) or "").strip()
     origin_configured = bool(raw_origin)
     credential_file_configured = bool(raw_credential_file)
+    if origin_configured or credential_file_configured:
+        if not raw_origin or not raw_credential_file:
+            return UnavailableSemanticLocalizationProvider(
+                INVALID_BINDING_REASON,
+                binding=_semantic_binding_status(
+                    state="partial",
+                    origin_configured=origin_configured,
+                    credential_file_configured=credential_file_configured,
+                ),
+            )
+    elif workspace is not None:
+        try:
+            machine_binding = _machine_binding_for_workspace(workspace)
+        except _MachineBindingError as exc:
+            return UnavailableSemanticLocalizationProvider(
+                INVALID_BINDING_REASON,
+                binding=_semantic_binding_status(
+                    state="invalid",
+                    origin_configured=exc.origin_configured,
+                    credential_file_configured=exc.credential_file_configured,
+                    invalid_component=exc.component,
+                ),
+            )
+        if machine_binding is not None:
+            raw_origin, raw_credential_file = machine_binding
+            origin_configured = True
+            credential_file_configured = True
+
     if not raw_origin and not raw_credential_file:
         return UnavailableSemanticLocalizationProvider(
             binding=_semantic_binding_status(
                 state="unconfigured",
                 origin_configured=False,
                 credential_file_configured=False,
-            )
-        )
-    if not raw_origin or not raw_credential_file:
-        return UnavailableSemanticLocalizationProvider(
-            INVALID_BINDING_REASON,
-            binding=_semantic_binding_status(
-                state="partial",
-                origin_configured=origin_configured,
-                credential_file_configured=credential_file_configured,
             ),
         )
     try:

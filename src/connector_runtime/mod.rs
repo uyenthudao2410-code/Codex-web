@@ -77,6 +77,7 @@ use crate::Database;
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex as StdMutex, Weak};
 
 const MAX_EVENT_COUNT: usize = 50;
@@ -106,6 +107,7 @@ pub(crate) struct ConnectorRuntime {
     workspace_ops: tokio::sync::Mutex<()>,
     task_locks: StdMutex<HashMap<String, Weak<tokio::sync::Mutex<()>>>>,
     context_locks: StdMutex<HashMap<String, Weak<tokio::sync::Mutex<()>>>>,
+    semantic_lsp_warm: AtomicBool,
     #[cfg(test)]
     finish_after_fingerprint: StdMutex<Option<FinishTestHook>>,
     #[cfg(test)]
@@ -188,6 +190,7 @@ impl ConnectorRuntime {
             workspace_ops: tokio::sync::Mutex::new(()),
             task_locks: StdMutex::new(HashMap::new()),
             context_locks: StdMutex::new(HashMap::new()),
+            semantic_lsp_warm: AtomicBool::new(false),
             #[cfg(test)]
             finish_after_fingerprint: StdMutex::new(None),
             #[cfg(test)]

@@ -17,7 +17,7 @@ from typing import Any, Iterable
 from .artifact_refs import handoff_capsule_artifact_ref, proof_artifact_ref
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 _MAX_TEXT = 16_000
 HANDOFF_CAPSULE_MAX_BYTES = 8_192
 _SECRET_KEY_RE = re.compile(r"(authorization|credential|password|passwd|secret|token|api[_-]?key|private[_-]?key)", re.I)
@@ -552,6 +552,32 @@ class OrchestrationLedger:
                 );
                 CREATE INDEX IF NOT EXISTS idx_controller_leases_status
                     ON controller_leases(status, expires_at);
+                CREATE TABLE IF NOT EXISTS managed_process_jobs (
+                    job_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL DEFAULT '',
+                    wave_id TEXT NOT NULL DEFAULT '',
+                    command_id TEXT NOT NULL UNIQUE,
+                    owner TEXT NOT NULL DEFAULT '',
+                    checkout_id TEXT NOT NULL,
+                    resource_class TEXT NOT NULL,
+                    root_pid INTEGER NOT NULL DEFAULT 0,
+                    root_process_token TEXT NOT NULL DEFAULT '',
+                    process_instance_id TEXT NOT NULL DEFAULT '',
+                    runtime_instance_id TEXT NOT NULL DEFAULT '',
+                    lifecycle_state TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    finished_at TEXT,
+                    metadata_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE INDEX IF NOT EXISTS idx_managed_process_wave_state
+                    ON managed_process_jobs(run_id, wave_id, lifecycle_state, updated_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_managed_process_checkout_state
+                    ON managed_process_jobs(checkout_id, resource_class, lifecycle_state, updated_at DESC);
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_managed_process_one_heavy_checkout
+                    ON managed_process_jobs(checkout_id)
+                    WHERE resource_class='HEAVY'
+                      AND lifecycle_state IN ('starting','running','terminating','orphaned');
                 """
             )
             connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
@@ -3084,7 +3110,33 @@ class OrchestrationLedger:
             "updated_at": row["updated_at"],
         }
 
+    def expire_controller_leases(self, *, now: float | None = None) -> list[str]:
+        """Persist expiry for controller leases whose TTL has elapsed.
+
+        Lease readers historically derived ``expired`` in memory while leaving the
+        SQLite row ``active``.  That made a restarted client see ghost ownership
+        until another acquisition happened.  Reconciliation is deliberately
+        idempotent and returns the affected run ids for health reporting.
+        """
+
+        now_ts = time.time() if now is None else float(now)
+        updated_at = utc_now()
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                "SELECT run_id FROM controller_leases WHERE status='active' AND expires_at<=?",
+                (now_ts,),
+            ).fetchall()
+            if rows:
+                connection.execute(
+                    """UPDATE controller_leases
+                       SET status='expired', updated_at=?
+                       WHERE status='active' AND expires_at<=?""",
+                    (updated_at, now_ts),
+                )
+        return [str(row["run_id"]) for row in rows]
+
     def get_controller_lease(self, run_id: str) -> dict[str, Any] | None:
+        self.expire_controller_leases()
         with self._lock, self._connect() as connection:
             row = connection.execute(
                 "SELECT * FROM controller_leases WHERE run_id=?",
@@ -4166,6 +4218,7 @@ class OrchestrationLedger:
         ]
 
     def current_active_run(self, *, task_id: str = "") -> dict[str, Any] | None:
+        self.expire_controller_leases()
         with self._lock, self._connect() as connection:
             if task_id:
                 row = connection.execute(
@@ -4205,6 +4258,15 @@ class OrchestrationLedger:
         ).fetchall()
         for row in rows:
             run_id = str(row["run_id"])
+            latest_event = connection.execute(
+                "SELECT state_after FROM events WHERE run_id=? ORDER BY seq DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+            # ACCEPTING is intentionally resumable: proof is already complete
+            # and the next controller may still accept/reject it after a
+            # reconnect.  It must not be mistaken for an abandoned execution.
+            if latest_event and str(latest_event["state_after"] or "").upper() == "ACCEPTING":
+                continue
             if connection.execute(
                 "SELECT 1 FROM background_operations WHERE run_id=? AND status='running' LIMIT 1",
                 (run_id,),
@@ -4248,6 +4310,7 @@ class OrchestrationLedger:
     ) -> list[str]:
         """Read-only current health view of stale active runs with no live ownership."""
         now_ts = time.time() if now is None else float(now)
+        self.expire_controller_leases(now=now_ts)
         threshold = max(60.0, float(stale_after_seconds))
         cutoff = datetime.fromtimestamp(now_ts - threshold, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         with self._lock, self._connect() as connection:
@@ -4274,6 +4337,7 @@ class OrchestrationLedger:
         """
 
         now_ts = time.time() if now is None else float(now)
+        self.expire_controller_leases(now=now_ts)
         threshold = max(60.0, float(stale_after_seconds))
         cutoff = datetime.fromtimestamp(now_ts - threshold, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         terminal_repairs: list[tuple[str, str, str]] = []

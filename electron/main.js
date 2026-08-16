@@ -7,18 +7,21 @@ const { SettingsStore } = require('./services/settingsStore');
 const { SecretStore } = require('./services/secretStore');
 const { LogService } = require('./services/logService');
 const { EnvironmentService, pythonStatus } = require('./services/environmentService');
-const { RuntimeOrchestrator } = require('./services/runtimeOrchestrator');
 const { ChatViewController } = require('./chatViewController');
 const { ChatEvaluationJournal } = require('./services/chatEvaluationJournal');
 const { run } = require('./services/commandRunner');
 const { resolveProxy, clearProxyCache } = require('./services/proxyService');
 const { BuildVerificationService } = require('./services/buildVerificationService');
-const { HealthService } = require('./services/healthService');
-const { HubProxyGateway } = require('./services/hubProxyGateway');
 const { buildCodexDesktopMcpConfig } = require('./services/codexDesktopConfig');
 const { readJson, writeJsonAtomic } = require('./services/jsonStore');
 const { panelInset, panelBounds } = require('./services/panelLayout');
-const { resourcesRoot, hubProxyDescriptorFile } = require('./paths');
+const runtimePathApi = require('./paths');
+const { resourcesRoot, hubProxyDescriptorFile } = runtimePathApi;
+const { createElectronRuntimePaths } = require('./services/runtimePaths');
+const { RecoveryIpcClient } = require('./services/recoveryIpc');
+const { ensureRecoveryHost, recoveryLoginItemArguments, electronUiArguments } = require('./services/recoveryHostLauncher');
+const { ComponentRevisionTracker } = require('./services/componentRevision');
+const { startRecoveryHostApplication } = require('./recoveryHost');
 
 let chatWindow;
 let managerWindow;
@@ -27,17 +30,55 @@ let orchestrator;
 let forceQuit = false;
 let tray = null;
 let buildVerification;
-let healthService;
-let hubProxyGateway;
 let panelView = null;
 let panelVisible = false;
+let lastRecoveryProgressTime = '';
 const TOOLBAR_HEIGHT = 112;
 const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
-const settings = new SettingsStore();
-const secrets = new SecretStore();
-const log = new LogService();
-const environment = new EnvironmentService();
+const recoveryHostMode = process.argv.includes('--recovery-host') || process.env.WEBCODEX_PROCESS_ROLE === 'recovery-host';
+const runtimePaths = createElectronRuntimePaths(app);
+runtimePathApi.configureRuntimePaths(runtimePaths);
+const settings = new SettingsStore(runtimePaths);
+const secrets = new SecretStore(runtimePaths);
+const log = new LogService(runtimePaths);
+const environment = new EnvironmentService(runtimePaths);
 const chatEvaluationJournal = new ChatEvaluationJournal();
+const uiRevisionTracker = new ComponentRevisionTracker({ paths: runtimePaths });
+const uiInstanceId = crypto.randomBytes(16).toString('hex');
+const uiStartedAtUnixMs = Date.now();
+const uiRunningRevision = recoveryHostMode ? null : uiRevisionTracker.captureRunning('electron_ui');
+let uiRestartScheduled = false;
+
+function codeActivationRequest(component, allowAcceptancePending = false) {
+  const allowed = new Set(['coding_mcp', 'electron_ui', 'recovery_host']);
+  if (!allowed.has(component)) throw Object.assign(new Error('Component kích hoạt không hợp lệ.'), { code: 'INVALID_COMPONENT' });
+  const now = Date.now();
+  return {
+    operation_id: crypto.randomBytes(18).toString('base64url'),
+    component,
+    requested_at_unix_ms: now,
+    expires_at_unix_ms: now + 60_000,
+    expected_disk_revision: uiRevisionTracker.disk(component, { force: true }).revision,
+    allow_acceptance_pending: allowAcceptancePending === true
+  };
+}
+
+async function registerUiRevision() {
+  if (recoveryHostMode || uiRestartScheduled || !orchestrator || !uiRunningRevision) return null;
+  const result = await orchestrator.registerUiRevision({
+    instance_id: uiInstanceId,
+    pid: process.pid,
+    revision: uiRunningRevision,
+    started_at_unix_ms: uiStartedAtUnixMs
+  });
+  if (result?.restart_required) {
+    uiRestartScheduled = true;
+    forceQuit = true;
+    app.relaunch({ execPath: process.execPath, args: electronUiArguments(app) });
+    app.exit(0);
+  }
+  return result;
+}
 
 function appIconPath() {
   return path.join(__dirname, 'app-icon.png');
@@ -508,8 +549,8 @@ function registerIpc() {
   }));
   secureHandle('build:inspect', () => invokeSafely(() => buildVerification.inspect(settings.load().workspace)));
   secureHandle('build:run', (_event, options) => invokeSafely(() => buildVerification.execute(settings.load().workspace, options || {})));
-  secureHandle('health:inspect', () => invokeSafely(() => healthService.inspect()));
-  secureHandle('health:repair', () => invokeSafely(() => healthService.repair()));
+  secureHandle('health:inspect', () => invokeSafely(() => orchestrator.healthInspect()));
+  secureHandle('health:repair', () => invokeSafely(() => orchestrator.healthRepair()));
   secureHandle('workspace:choose-and-switch', () => invokeSafely(async () => { const result = await dialog.showOpenDialog(chatWindow, { properties: ['openDirectory', 'createDirectory'] }); if (result.canceled) return null; return orchestrator.switchWorkspace(result.filePaths[0]); }));
   secureHandle('manager:close', () => invokeSafely(async () => {
     if (managerWindow && !managerWindow.isDestroyed()) managerWindow.hide();
@@ -618,7 +659,11 @@ function registerIpc() {
     const clean = Object.fromEntries(Object.entries(patch || {}).filter(([key]) => allowed.includes(key)));
     const saved = settings.save(clean);
     if (Object.hasOwn(clean, 'startWithWindows')) {
-      app.setLoginItemSettings({ openAtLogin: Boolean(saved.startWithWindows), path: process.execPath });
+      app.setLoginItemSettings({
+        openAtLogin: Boolean(saved.startWithWindows),
+        path: process.execPath,
+        args: recoveryLoginItemArguments(app)
+      });
     }
     clearProxyCache();
     return saved;
@@ -640,9 +685,20 @@ function registerIpc() {
   secureHandle('runtime:start', () => invokeSafely(() => orchestrator.start()));
   secureHandle('runtime:stop', () => invokeSafely(() => orchestrator.stop()));
   secureHandle('runtime:restart', () => invokeSafely(() => orchestrator.restart()));
+  secureHandle('code:activation-preflight', (_event, component, allowAcceptancePending) => invokeSafely(async () => {
+    const request = codeActivationRequest(component, allowAcceptancePending);
+    return { request, preflight: await orchestrator.activationPreflight(request) };
+  }));
+  secureHandle('code:activate-update', (_event, component, allowAcceptancePending) => invokeSafely(async () => {
+    const request = codeActivationRequest(component, allowAcceptancePending);
+    const result = await orchestrator.activateUpdate(request);
+    if (component === 'electron_ui') setImmediate(() => registerUiRevision().catch(() => {}));
+    return result;
+  }));
+  secureHandle('code:activation-status', (_event, operationId) => invokeSafely(() => orchestrator.activationStatus(operationId)));
   secureHandle('connector:ack-contract', () => invokeSafely(() => orchestrator.acknowledgeConnectorContract()));
-  secureHandle('logs:read', () => invokeSafely(async () => log.read()));
-  secureHandle('logs:clear', () => invokeSafely(async () => { log.clear(); return true; }));
+  secureHandle('logs:read', () => invokeSafely(() => orchestrator.readLogs()));
+  secureHandle('logs:clear', () => invokeSafely(() => orchestrator.clearLogs()));
   secureHandle('environment:install-python', () => invokeSafely(async () => {
     const result = await run('winget.exe', ['install', '--id', 'Python.Python.3.12', '-e', '--accept-source-agreements', '--accept-package-agreements']);
     return result.stdout;
@@ -671,49 +727,52 @@ function registerIpc() {
   }));
 }
 
-const hasSingleInstanceLock = app.requestSingleInstanceLock();
-if (!hasSingleInstanceLock) app.quit();
-app.on('second-instance', () => showChatWindow());
+if (recoveryHostMode) {
+  app.whenReady().then(() => startRecoveryHostApplication(app));
+} else {
+  const hasSingleInstanceLock = app.requestSingleInstanceLock();
+  if (!hasSingleInstanceLock) app.quit();
+  app.on('second-instance', () => showChatWindow());
 
-app.whenReady().then(async () => {
-  app.setLoginItemSettings({ openAtLogin: Boolean(settings.load().startWithWindows), path: process.execPath });
-  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
-  session.defaultSession.setPermissionCheckHandler(() => false);
-  app.on('web-contents-created', (_event, contents) => {
-    contents.on('will-attach-webview', (event) => event.preventDefault());
+  app.whenReady().then(async () => {
+    app.setLoginItemSettings({
+      openAtLogin: Boolean(settings.load().startWithWindows),
+      path: process.execPath,
+      args: recoveryLoginItemArguments(app)
+    });
+    session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+    session.defaultSession.setPermissionCheckHandler(() => false);
+    app.on('web-contents-created', (_event, contents) => {
+      contents.on('will-attach-webview', (event) => event.preventDefault());
+    });
+    createTray();
+    try {
+      orchestrator = await ensureRecoveryHost({ app, paths: runtimePaths, log });
+    } catch (error) {
+      orchestrator = new RecoveryIpcClient({ paths: runtimePaths });
+      log.error(error.message, { stage: 'recovery-host-connect', code: error?.code || '' });
+    }
+    await registerUiRevision().catch((error) => log.warn(error.message, { stage: 'ui-revision-registration', code: error?.code || '' }));
+    buildVerification = new BuildVerificationService(log, (payload) => sendManager('build:progress', payload));
+    log.on('entry', (payload) => sendManager('logs:entry', payload));
+    registerIpc();
+    createChatWindow();
+    setInterval(() => orchestrator.lightweightSnapshot().then((status) => {
+      const progress = status?.recoveryHost?.last_progress;
+      if (progress?.time && progress.time !== lastRecoveryProgressTime) {
+        lastRecoveryProgressTime = progress.time;
+        sendManager('runtime:progress', progress);
+      }
+      sendManager('runtime:heartbeat', status);
+      if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
+    }).then(() => registerUiRevision()).catch(() => {}), 5000).unref();
+    log.info('Trợ lý Web MCP UI đã kết nối Recovery Host');
   });
-  createTray();
-  orchestrator = new RuntimeOrchestrator({
-    settings,
-    secrets,
-    environment,
-    log,
-    emitProgress: (payload) => sendManager('runtime:progress', payload),
-    emitStatus: (payload) => sendManager('runtime:status-changed', payload)
-  });
-  hubProxyGateway = new HubProxyGateway({ settings, secrets, log });
-  await hubProxyGateway.start().catch((error) => log.error(error.message, { stage: 'hub-proxy-start' }));
-  buildVerification = new BuildVerificationService(log, (payload) => sendManager('build:progress', payload));
-  healthService = new HealthService({ settings, secrets, environment, orchestrator });
-  log.on('entry', (payload) => sendManager('logs:entry', payload));
-  registerIpc();
-  createChatWindow();
-  setInterval(() => orchestrator.supervise().then((status) => {
-    sendManager('runtime:heartbeat', status);
-    if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
-  }).catch(() => {}), 5000).unref();
-  log.info('Trợ lý Web MCP đã khởi động');
-  if (settings.load().autoStartServices && !orchestrator.isManuallyStopped()) {
-    orchestrator.start({ automatic: true }).catch((error) => log.error(error.message, { stage: 'auto-start' }));
-  }
-});
 
-app.on('before-quit', () => {
-  forceQuit = true;
-  hubProxyGateway?.stop().catch((error) => log.error(error.message, { stage: 'hub-proxy-stop' }));
-});
-app.on('window-all-closed', () => {
-  if (!forceQuit && settings.load().keepRunningOnClose) return;
-  if (!forceQuit) app.quit();
-});
-app.on('activate', () => showChatWindow());
+  app.on('before-quit', () => { forceQuit = true; });
+  app.on('window-all-closed', () => {
+    if (!forceQuit && settings.load().keepRunningOnClose) return;
+    if (!forceQuit) app.quit();
+  });
+  app.on('activate', () => showChatWindow());
+}

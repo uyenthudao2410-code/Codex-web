@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
-const { tunnelExecutable, tunnelLogFile, stateFile } = require('../paths');
+const defaultPaths = require('../paths');
 const { readJson, updateJsonAtomic, ensureParent } = require('./jsonStore');
 const { rotateLog } = require('./logService');
 const { canConnect } = require('./environmentService');
@@ -8,19 +8,20 @@ const { run } = require('./commandRunner');
 const { isAlive } = require('./nativeService');
 
 class TunnelService {
-  constructor(log) {
+  constructor(log, paths = defaultPaths) {
     this.log = log;
+    this.paths = paths;
   }
 
   async start(settings, runtimeApiKey, token, progress) {
-    if (!fs.existsSync(tunnelExecutable())) throw new Error('Gói cài đặt thiếu tệp tunnel-client.exe.');
+    if (!fs.existsSync(this.paths.tunnelExecutable())) throw new Error('Gói cài đặt thiếu tệp tunnel-client.exe.');
     if (!runtimeApiKey) throw new Error('Vui lòng lưu OpenAI Runtime API Key trước.');
     if (!settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
     await this.stop();
     progress('tunnel-start', 72, 'Đang kết nối OpenAI MCP Tunnel');
-    ensureParent(tunnelLogFile());
-    rotateLog(tunnelLogFile());
-    const output = fs.openSync(tunnelLogFile(), 'a');
+    ensureParent(this.paths.tunnelLogFile());
+    rotateLog(this.paths.tunnelLogFile());
+    const output = fs.openSync(this.paths.tunnelLogFile(), 'a');
     const env = {
       ...process.env,
       CONTROL_PLANE_API_KEY: runtimeApiKey,
@@ -34,20 +35,20 @@ class TunnelService {
       '--mcp.server-url', `url=http://127.0.0.1:${settings.mcpPort}/mcp,channel=main`,
       '--mcp.extra-headers', 'Authorization: env:MCP_RUNTIME_HEADER_VALUE',
       '--mcp.discovery-extra-headers', 'Authorization: env:MCP_RUNTIME_HEADER_VALUE',
-      '--log.file', tunnelLogFile()
+      '--log.file', this.paths.tunnelLogFile()
     ];
     const proxyUrl = Object.prototype.hasOwnProperty.call(settings, 'effectiveProxyUrl')
       ? settings.effectiveProxyUrl
       : settings.proxyUrl;
     if (proxyUrl) args.push('--control-plane.http-proxy', proxyUrl);
-    const child = spawn(tunnelExecutable(), args, {
+    const child = spawn(this.paths.tunnelExecutable(), args, {
       detached: false,
       windowsHide: true,
       stdio: ['ignore', output, output],
       env
     });
     child.unref();
-    updateJsonAtomic(stateFile(), (state) => ({
+    updateJsonAtomic(this.paths.stateFile(), (state) => ({
       ...state,
       tunnelPid: child.pid,
       tunnelStartedAt: new Date().toISOString()
@@ -63,15 +64,15 @@ class TunnelService {
   }
 
   async stop() {
-    const state = readJson(stateFile(), {});
+    const state = readJson(this.paths.stateFile(), {});
     if (!isAlive(state.tunnelPid)) return false;
     await run('taskkill.exe', ['/PID', String(state.tunnelPid), '/T', '/F'], { allowFailure: true });
-    updateJsonAtomic(stateFile(), (value) => ({ ...value, tunnelPid: null }));
+    updateJsonAtomic(this.paths.stateFile(), (value) => ({ ...value, tunnelPid: null }));
     return true;
   }
 
   async status(settings) {
-    const state = readJson(stateFile(), {});
+    const state = readJson(this.paths.stateFile(), {});
     return isAlive(state.tunnelPid) && await canConnect('127.0.0.1', settings.healthPort, 400);
   }
 }

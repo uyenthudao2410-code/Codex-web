@@ -1,7 +1,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const http = require('node:http');
-const { hubProxyDescriptorFile } = require('../paths');
+const defaultPaths = require('../paths');
 const { writeJsonAtomic } = require('./jsonStore');
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
@@ -107,11 +107,12 @@ function summarizeLatencySamples(values, statusCounts = {}, failures = 0) {
 }
 
 class HubProxyGateway {
-  constructor({ settings, secrets, log, descriptorPath = hubProxyDescriptorFile() }) {
+  constructor({ settings, secrets, log, descriptorPath, paths = defaultPaths, owner = 'recovery-host' }) {
     this.settings = settings;
     this.secrets = secrets;
     this.log = log;
-    this.descriptorPath = descriptorPath;
+    this.descriptorPath = descriptorPath || paths.hubProxyDescriptorFile();
+    this.owner = String(owner || 'recovery-host');
     this.server = null;
     this.token = '';
     this.port = 0;
@@ -149,7 +150,8 @@ class HubProxyGateway {
       host: '127.0.0.1',
       port: this.port,
       token: this.token,
-      electron_pid: process.pid,
+      owner: this.owner,
+      owner_pid: process.pid,
       created_at: new Date().toISOString()
     };
   }

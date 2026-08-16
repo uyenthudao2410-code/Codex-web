@@ -106,6 +106,7 @@ class _Dispatch:
     prompt_bytes: int
     timeout_ms: int
     process: subprocess.Popen[bytes]
+    managed_job_id: str
     created_at_ms: int
     started_at_ms: int
     status: str = "running"
@@ -129,9 +130,10 @@ class _Dispatch:
 
 
 class OpenCodeProviderAdapter:
-    def __init__(self, workspace_provider, *, on_terminal=None) -> None:
+    def __init__(self, workspace_provider, *, on_terminal=None, resource_governor=None) -> None:
         self._workspace_provider = workspace_provider
         self._on_terminal = on_terminal
+        self._resource_governor = resource_governor
         self._lock = threading.RLock()
         self._dispatches: dict[str, _Dispatch] = {}
 
@@ -229,7 +231,18 @@ class OpenCodeProviderAdapter:
             elif hasattr(os, "setsid"):
                 popen_kwargs["start_new_session"] = True
             created_at_ms = int(time.time() * 1000)
+            admission = None
+            process = None
             try:
+                if self._resource_governor is not None:
+                    admission = self._resource_governor.admit(
+                        command=f"opencode provider {model}",
+                        command_id=dispatch_id,
+                        run_id=str(run_id),
+                        wave_id=str(wave_id),
+                        owner="opencode-provider",
+                        resource_class="MEDIUM",
+                    )
                 process, _ = spawn_process(
                     argv,
                     cwd=str(workspace),
@@ -238,7 +251,13 @@ class OpenCodeProviderAdapter:
                     tty=False,
                     popen_kwargs=popen_kwargs,
                 )
-            except OSError as exc:
+                if admission is not None:
+                    self._resource_governor.bind_process(admission, process)
+            except Exception as exc:
+                if process is not None and process.poll() is None:
+                    terminate_process_group(process, signal.SIGTERM, force=True)
+                if admission is not None:
+                    self._resource_governor.spawn_failed(admission)
                 raise OpenCodeProviderError("OPENCODE_START_FAILED", "OpenCode provider process could not be started.", retryable=True) from exc
             started_at_ms = int(time.time() * 1000)
             item = _Dispatch(
@@ -252,6 +271,7 @@ class OpenCodeProviderAdapter:
                 prompt_bytes=len(prompt_bytes),
                 timeout_ms=timeout_ms,
                 process=process,
+                managed_job_id=admission.job_id if admission is not None else "",
                 created_at_ms=created_at_ms,
                 started_at_ms=started_at_ms,
             )
@@ -391,6 +411,13 @@ class OpenCodeProviderAdapter:
                 item.error_class = item.error_class or "provider_process_error"
             else:
                 item.status = "completed"
+            terminal_status = item.status
+        if item.managed_job_id and self._resource_governor is not None:
+            self._resource_governor.complete(
+                item.managed_job_id,
+                lifecycle_state=terminal_status,
+                exit_code=returncode,
+            )
         callback = self._on_terminal
         if callback is not None:
             try:

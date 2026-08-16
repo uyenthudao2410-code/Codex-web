@@ -7,7 +7,7 @@ import threading
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .orchestration_ledger import OrchestrationLedger
 
@@ -130,9 +130,18 @@ def normalize_failure_class(value: object) -> str:
 class OrchestrationControl:
     """State/authority guard over the append-only orchestration ledger."""
 
-    def __init__(self, workspace: Path, ledger: OrchestrationLedger) -> None:
+    def __init__(
+        self,
+        workspace: Path,
+        ledger: OrchestrationLedger,
+        *,
+        on_wave_terminal: Callable[[RunContext, str], Any] | None = None,
+        assert_wave_quiescent: Callable[[str, str], None] | None = None,
+    ) -> None:
         self.workspace = workspace.resolve(strict=False)
         self.ledger = ledger
+        self._on_wave_terminal = on_wave_terminal
+        self._assert_wave_quiescent = assert_wave_quiescent
         self._lock = threading.RLock()
         self._contexts: dict[str, RunContext] = {}
 
@@ -220,6 +229,10 @@ class OrchestrationControl:
             elif to_state == "CHECKPOINTED":
                 self.ledger.finish_wave(ctx.wave_id, status="accepted")
                 self.ledger.finish_run(ctx.run_id, status="accepted")
+            if to_state in {"REPLAN", "BLOCKED", "ABORTED", "CHECKPOINTED"}:
+                callback = self._on_wave_terminal
+                if callback is not None:
+                    callback(ctx, to_state)
             self._contexts[ctx.run_id] = ctx
             return ctx
 
@@ -236,6 +249,7 @@ class OrchestrationControl:
 
     def select_route(self, ctx: RunContext, route: dict[str, Any]) -> RunContext:
         if ctx.state == "REPLAN":
+            self.assert_quiescent(ctx)
             self.transition(ctx, "READY", reason="replan_route_ready")
         if ctx.state != "READY":
             raise OrchestrationControlError("ROUTE_OUTSIDE_READY", "Route selection requires READY state.")
@@ -537,6 +551,7 @@ class OrchestrationControl:
     ) -> RunContext:
         if ctx.state != "REPLAN":
             raise OrchestrationControlError("REPLAN_REQUIRED", "A replacement wave requires REPLAN state.")
+        self.assert_quiescent(ctx)
         self.ledger.finish_wave(ctx.wave_id, status="replanned", metadata={"reason": reason})
         wave_id = self.ledger.create_wave(
             ctx.run_id,
@@ -566,6 +581,21 @@ class OrchestrationControl:
         with self._lock:
             self._contexts[ctx.run_id] = ctx
         return ctx
+
+    def assert_quiescent(self, ctx: RunContext) -> None:
+        gate = self._assert_wave_quiescent
+        if gate is None:
+            return
+        try:
+            gate(ctx.run_id, ctx.wave_id)
+        except Exception as exc:
+            code = str(getattr(exc, "code", "WAVE_NOT_QUIESCENT"))
+            details = dict(getattr(exc, "details", {}) or {})
+            raise OrchestrationControlError(
+                code,
+                str(exc),
+                details={"run_id": ctx.run_id, "wave_id": ctx.wave_id, **details},
+            ) from exc
 
     def mark_accepting(self, ctx: RunContext, *, proof_summary: dict[str, Any] | None = None) -> RunContext:
         if ctx.state != "PROVING":

@@ -41,7 +41,10 @@ async function loadDescriptor(target) {
     host: '127.0.0.1',
     port,
     token,
-    electronPid: Number.isInteger(Number(value.electron_pid)) ? Number(value.electron_pid) : null,
+    owner: String(value.owner || (value.electron_pid ? 'electron' : '')),
+    ownerPid: Number.isInteger(Number(value.owner_pid ?? value.electron_pid))
+      ? Number(value.owner_pid ?? value.electron_pid)
+      : null,
   };
 }
 
@@ -87,16 +90,17 @@ async function probeActivation({ descriptorFile = descriptorPath(), timeoutMs = 
     descriptor_version: descriptor.version,
     host: descriptor.host,
     port: descriptor.port,
-    electron_pid: descriptor.electronPid,
+    owner: descriptor.owner,
+    owner_pid: descriptor.ownerPid,
   };
   if (status === 403) {
     return { ok: true, route_loaded: true, ...base };
   }
   if (status === 404) {
-    return { ok: false, route_loaded: false, code: 'ELECTRON_RESTART_REQUIRED', message: 'Electron is reachable but has not loaded the telemetry gateway route.', ...base };
+    return { ok: false, route_loaded: false, code: 'ELECTRON_RESTART_REQUIRED', message: 'The local runtime owner is reachable but has not loaded the telemetry gateway route.', ...base };
   }
   if (status === 401) {
-    return { ok: false, route_loaded: false, code: 'DESCRIPTOR_STALE', message: 'The descriptor token does not match the running Electron gateway.', ...base };
+    return { ok: false, route_loaded: false, code: 'DESCRIPTOR_STALE', message: 'The descriptor token does not match the running local gateway.', ...base };
   }
   return { ok: false, route_loaded: false, code: 'UNEXPECTED_GATEWAY_RESPONSE', message: 'Telemetry route probe returned an unexpected status.', ...base };
 }

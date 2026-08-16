@@ -252,6 +252,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "/.well-known/mcp.json",
             "/.well-known/mcp/server-card.json",
             "/__control/health",
+            "/__control/activation",
             "/__control/workspace",
             "/__control/roots",
             "/__control/orchestration",
@@ -287,6 +288,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "ready": not runtime._closed,
                 "version": __version__,
                 "instance_id": runtime.server_instance_id,
+                "process_instance_id": runtime.process_instance_id,
                 "workspace": str(runtime.workspace.root),
                 "default_cwd": runtime.default_cwd_display(),
                 "authorized_roots": [str(item) for item in runtime.workspace.authorized_roots if item != runtime.workspace.root],
@@ -295,11 +297,18 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "tool_count": len(runtime.exposed_tool_names()),
                 "tool_contract": dict(runtime.tool_contract),
                 "workspace_generation": runtime.workspace_generation,
+                "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
                 "active_commands": active_commands,
                 "retained_outputs": retained_outputs,
                 "legacy_session_alias_uses": runtime.legacy_session_alias_uses,
                 "http_sessions": self.server.sessions.stats(),
             }, head_only=head_only)
+            return
+        if normalized == "/__control/activation":
+            if not self.is_authorized():
+                self.send_unauthorized(head_only=head_only)
+                return
+            self.send_json(self.runtime.activation_preflight(), head_only=head_only)
             return
         if normalized == "/__control/orchestration":
             if not self.is_authorized():
@@ -339,6 +348,10 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
 
     def control_orchestration_snapshot(self) -> dict[str, Any]:
         runtime = self.runtime
+        runtime._maybe_reconcile_stale_orchestration()
+        # Reconnects must return the canonical ledger state even when the
+        # previous response stream was interrupted midway through a turn.
+        runtime._reconcile_task_orchestration_projection()
         state = runtime.task_state.get()
         projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
         ledger = runtime.orchestration_ledger
@@ -656,6 +669,45 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         except ToolFailure as exc:
             self.send_json({"error": exc.message, "code": exc.code, "details": exc.details}, status=409)
 
+    def handle_control_activation(self) -> None:
+        if not self.is_authorized():
+            self.send_unauthorized()
+            return
+        payload = self._read_control_json()
+        if payload is None:
+            return
+        action = str(payload.get("action") or "").strip().lower()
+        allowed = {
+            "prepare": {"action", "operation_id", "expires_at_unix_ms", "workspace", "allow_acceptance_pending"},
+            "cancel": {"action", "operation_id"},
+        }
+        if action not in allowed or set(payload) - allowed[action]:
+            self.send_json({"error": "Invalid activation control request", "code": "INVALID_ARGUMENT"}, status=400)
+            return
+        try:
+            if action == "prepare":
+                workspace = str(payload.get("workspace") or "")
+                if os.path.normcase(os.path.abspath(workspace)) != os.path.normcase(str(self.runtime.workspace.root)):
+                    raise ToolFailure(
+                        "WORKSPACE_MISMATCH",
+                        "Activation request workspace does not match the running MCP workspace.",
+                        category="validation",
+                    )
+                result = self.runtime.activation_preflight(
+                    operation_id=str(payload.get("operation_id") or ""),
+                    expires_at_unix_ms=int(payload.get("expires_at_unix_ms") or 0),
+                    allow_acceptance_pending=payload.get("allow_acceptance_pending") is True,
+                    prepare=True,
+                )
+                self.send_json(result, status=200 if result.get("safe") else 409)
+                return
+            cancelled = self.runtime.cancel_activation(str(payload.get("operation_id") or ""))
+            self.send_json({"cancelled": cancelled})
+        except ToolFailure as exc:
+            self.send_json({"error": exc.message, "code": exc.code, "details": exc.details}, status=409)
+        except (TypeError, ValueError) as exc:
+            self.send_json({"error": str(exc), "code": "INVALID_ARGUMENT"}, status=400)
+
     def handle_control_workspace(self) -> None:
         if not self.is_authorized():
             self.send_unauthorized()
@@ -722,6 +774,9 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             return
         if normalized == "/__control/roots":
             self.handle_control_roots()
+            return
+        if normalized == "/__control/activation":
+            self.handle_control_activation()
             return
         if normalized == "/__control/hub":
             self.handle_control_hub()

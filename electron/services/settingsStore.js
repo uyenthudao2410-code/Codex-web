@@ -1,16 +1,20 @@
 const crypto = require('node:crypto');
-const { settingsFile } = require('../paths');
+const defaultPaths = require('../paths');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
 const { DEFAULTS, normalize } = require('./config');
 
 class SettingsStore {
+  constructor(paths = defaultPaths) {
+    this.paths = paths;
+  }
+
   load() {
-    return normalize(readJson(settingsFile(), {}));
+    return normalize(readJson(this.paths.settingsFile(), {}));
   }
 
   save(patch) {
     const next = normalize({ ...this.load(), ...patch });
-    writeJsonAtomic(settingsFile(), next);
+    writeJsonAtomic(this.paths.settingsFile(), next);
     return next;
   }
 
@@ -18,7 +22,7 @@ class SettingsStore {
     const current = this.load();
     if (!current.authTokenId) {
       current.authTokenId = crypto.randomBytes(16).toString('hex');
-      writeJsonAtomic(settingsFile(), current);
+      writeJsonAtomic(this.paths.settingsFile(), current);
     }
     return current.authTokenId;
   }

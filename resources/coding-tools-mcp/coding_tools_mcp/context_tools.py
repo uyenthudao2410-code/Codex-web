@@ -225,10 +225,20 @@ class ContextToolsMixin:
             semantic_status = dict(semantic_status)
             semantic_status["reason"] = "REGEX_QUERY_REQUIRES_TEXT_SEARCH"
         elif semantic_enabled:
+            semantic_path = str(args.get("path", "."))
+            if len(requested_paths) == 1:
+                candidate = requested_paths[0].replace("\\", "/")
+                candidate_path = Path(candidate)
+                if (
+                    not candidate_path.is_absolute()
+                    and ".." not in candidate_path.parts
+                    and (self.workspace.root / candidate_path).is_file()
+                ):
+                    semantic_path = candidate
             semantic_batch = run_semantic_localization(
                 self.semantic_localizer,
                 workspace=self.workspace.root,
-                path=str(args.get("path", ".")),
+                path=semantic_path,
                 queries=queries,
                 max_results=max_matches,
             )

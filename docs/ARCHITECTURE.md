@@ -4,6 +4,33 @@ WebCodex is a self-hosted tool runtime that lets online AI clients operate priva
 
 For vocabulary, read [CONCEPTS.md](CONCEPTS.md). For setup, read [QUICK_START.md](QUICK_START.md).
 
+## Runtime Recovery Plane
+
+Desktop runtime lifecycle is owned by a user-session Recovery Host rather than
+the Electron UI process. The UI connects over authenticated loopback IPC, while
+the host owns `RuntimeOrchestrator`, Coding MCP/Tunnel supervision, the local
+Execution Hub gateway, and bounded recovery state. This keeps the runtime and
+gateway resident when Electron windows or the Electron UI main process exit.
+
+The Recovery Host is intentionally not a second coding API: its IPC surface is
+an authenticated, bounded JSON RPC with an action allowlist, binds to
+`127.0.0.1`, and does not accept arbitrary shell, PID, executable, or environment
+input. Independent Recovery MCP/Tunnel remains a later roadmap phase. Controlled
+code activation uses typed per-component requests, a durable idempotency ledger,
+and Coding MCP's canonical activation fence before any control-plane or MCP
+replacement. See
+[RECOVERY_HOST.md](RECOVERY_HOST.md) for startup, safety, and rollback details.
+
+Development source activation remains observation-first. Component-scoped content
+hashes expose the revision loaded by Recovery Host/Coding MCP, the current disk
+revision, and whether activation is pending. The tracker is cached and bounded;
+it does not hash the whole repository on every watchdog tick and it never
+restarts a process because a file changed. Explicit `activate_update` requests
+are limited to one component, expire within 60 seconds, and verify the new
+running revision before completion. Coding MCP restarts without restarting the
+tunnel; Electron UI self-relaunches after host registration; Recovery Host uses
+a replacement/lock handoff with bounded rollback.
+
 ## 1. Client / Server / Agent / Codebase
 
 ```mermaid

@@ -9,6 +9,7 @@
     "icon:build": "node scripts/generate-icon.js",
     "start": "electron .",
     "test": "node --test tests/*.test.js && node scripts/check-source-root-clean.js",
+    "test:recovery:e2e": "node --test tests/integration/recovery-host-process.test.js",
     "test:mcp": "cd resources/coding-tools-mcp && python -m pytest tests",
     "test:all": "npm test && npm run test:mcp",
     "benchmark:routing": "cd resources/coding-tools-mcp && python -m benchmarks.routing_economics",

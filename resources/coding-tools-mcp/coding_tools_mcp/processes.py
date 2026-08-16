@@ -50,13 +50,32 @@ WINDOWS_JOB_OBJECT_ENV = "CODING_TOOLS_MCP_WINDOWS_JOB_OBJECT"
 
 _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS = 9
+_WINDOWS_CREATE_SUSPENDED = 0x00000004
 
 _kernel32: Any = None
+_ntdll: Any = None
 if os.name == "nt":
     try:
         import ctypes
+        from ctypes import wintypes
 
         _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        _ntdll = ctypes.WinDLL("ntdll", use_last_error=True)
+        _kernel32.CreateJobObjectW.argtypes = [wintypes.LPVOID, wintypes.LPCWSTR]
+        _kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        _kernel32.SetInformationJobObject.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_int,
+            wintypes.LPVOID,
+            wintypes.DWORD,
+        ]
+        _kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        _kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        _kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        _kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        _kernel32.CloseHandle.restype = wintypes.BOOL
+        _ntdll.NtResumeProcess.argtypes = [wintypes.HANDLE]
+        _ntdll.NtResumeProcess.restype = ctypes.c_long
 
         class _JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
             _fields_ = [
@@ -92,6 +111,7 @@ if os.name == "nt":
             ]
     except Exception:  # noqa: BLE001 - job objects are an optimization, never a requirement
         _kernel32 = None
+        _ntdll = None
 
 
 def windows_job_object_enabled() -> bool:
@@ -103,7 +123,7 @@ def windows_job_object_enabled() -> bool:
     return True
 
 
-def _attach_windows_job(process: subprocess.Popen[bytes]) -> bool:
+def _attach_windows_job(process: subprocess.Popen[Any]) -> bool:
     """Attach the spawned process to a kill-on-close Job Object.
 
     Closing the job handle later becomes a deterministic whole-tree kill:
@@ -135,7 +155,7 @@ def _attach_windows_job(process: subprocess.Popen[bytes]) -> bool:
         return False
 
 
-def _close_windows_job(process: subprocess.Popen[bytes]) -> bool:
+def _close_windows_job(process: subprocess.Popen[Any]) -> bool:
     handle = getattr(process, "_coding_tools_job_handle", None)
     if not handle:
         return False
@@ -147,8 +167,49 @@ def _close_windows_job(process: subprocess.Popen[bytes]) -> bool:
     return True
 
 
+def managed_process_creationflags(creationflags: int = 0) -> int:
+    """Suspend a Windows child until its kill-on-close Job Object is attached."""
+
+    flags = int(creationflags)
+    if windows_job_object_enabled():
+        flags |= _WINDOWS_CREATE_SUSPENDED
+    return flags
+
+
+def attach_managed_process(process: subprocess.Popen[Any]) -> bool:
+    """Attach and resume a Windows process; return whether Job ownership exists."""
+
+    if not windows_job_object_enabled():
+        return False
+    attached = bool(getattr(process, "_coding_tools_job_handle", None))
+    if not attached:
+        attached = _attach_windows_job(process)
+    if bool(getattr(process, "_coding_tools_created_suspended", False)):
+        resumed = False
+        try:
+            process_handle = getattr(process, "_handle", None)
+            if process_handle is not None and _ntdll is not None:
+                resumed = _ntdll.NtResumeProcess(process_handle) == 0
+        except Exception:  # noqa: BLE001 - termination fallback still owns the tree
+            resumed = False
+        setattr(process, "_coding_tools_created_suspended", False)
+        if not resumed:
+            _close_windows_job(process)
+            try:
+                process.kill()
+            except OSError:
+                pass
+            raise ToolFailure(
+                "PROCESS_RESUME_FAILED",
+                "The managed Windows process could not be resumed after Job Object attachment.",
+                category="runtime",
+                retryable=True,
+            )
+    return attached
+
+
 def terminate_process_group(
-    process: subprocess.Popen[bytes],
+    process: subprocess.Popen[Any],
     signum: signal.Signals,
     *,
     force: bool = False,
@@ -222,10 +283,11 @@ def spawn_process(
 
     use_job_object = os.name == "nt" and windows_job_object_enabled()
     if use_job_object:
-        suspended_flag = getattr(subprocess, "CREATE_SUSPENDED", 0)
         popen_kwargs = {
             **popen_kwargs,
-            "creationflags": int(popen_kwargs.get("creationflags", 0)) | suspended_flag,
+            "creationflags": managed_process_creationflags(
+                int(popen_kwargs.get("creationflags", 0))
+            ),
         }
 
     if not tty:
@@ -240,13 +302,8 @@ def spawn_process(
             **popen_kwargs,
         )
         if use_job_object:
-            _attach_windows_job(process)
-            thread_handle = getattr(process, "_thread", None)
-            if thread_handle is not None:
-                try:
-                    _kernel32.ResumeThread(thread_handle)
-                except Exception:  # noqa: BLE001
-                    pass
+            setattr(process, "_coding_tools_created_suspended", True)
+            attach_managed_process(process)
         return process, None
     if os.name == "nt":
         raise ToolFailure(
@@ -288,6 +345,11 @@ def spawn_process(
 class ExecSession:
     session_id: str
     process: subprocess.Popen[bytes]
+    managed_job_id: str = ""
+    owner_run_id: str = ""
+    owner_wave_id: str = ""
+    resource_class: str = "LIGHT"
+    resource_terminal_recorded: bool = False
     timeout_at: float | None = None
     warnings: list[str] = field(default_factory=list)
     # Keep a frozen head plus a rolling tail. This preserves startup warnings and

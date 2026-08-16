@@ -41,6 +41,7 @@ from . import __version__
 from .budget_control import BudgetDeadline, RetryPolicy
 from .envutils import ENV_PREFIX, truthy_env
 from .errors import JsonRpcError, ToolFailure
+from .execution_resources import ExecutionResourceGovernor
 from .landlock_exec import libc_syscall
 from .oauth import (
     OAUTH_CODE_TTL_SECONDS,
@@ -171,8 +172,10 @@ except (TypeError, ValueError):
 BACKGROUND_OPERATION_WAIT_MAX_MS = 60_000
 MAX_BACKGROUND_OPERATIONS = 32
 IDEMPOTENCY_RESULT_MAX_BYTES = 256 * 1024
+TRACE_MAX_PAYLOAD_BYTES = 16 * 1024
 AUTO_IDEMPOTENCY_KEY_PREFIX = "auto-v1:"
 BACKGROUND_BUDGET_POLL_SECONDS = 1.0
+STALE_RECONCILIATION_INTERVAL_SECONDS = 30.0
 try:
     READ_RETRY_ATTEMPTS = max(
         1,
@@ -592,6 +595,9 @@ class Runtime(
         self.output_sessions: dict[str, ExecSession] = {}
         self.sessions_lock = threading.Lock()
         self.supervisor_request_lock = threading.Lock()
+        self.activation_lock = threading.RLock()
+        self.activation_fence: dict[str, Any] | None = None
+        self.active_tool_calls = 0
         self.session_principals: dict[str, str] = {}
         self.principal_active_counts: dict[str, int] = {}
         self.legacy_session_alias_uses = 0
@@ -608,7 +614,12 @@ class Runtime(
         self.project_context: ProjectContext = (
             project_context if project_context is not None else load_project_context(self.workspace.root)
         )
-        self.semantic_localizer = semantic_localizer or semantic_localizer_from_env()
+        self._semantic_localizer_injected = semantic_localizer is not None
+        self.semantic_localizer = (
+            semantic_localizer
+            if semantic_localizer is not None
+            else semantic_localizer_from_env(self.workspace.root)
+        )
         # Internal prerequisite for a future isolated Code Mode worker. This
         # proxy is intentionally not model-facing and is not itself an
         # isolation boundary; Code Mode remains disabled until such a worker
@@ -627,6 +638,12 @@ class Runtime(
         self.task_state = TaskStateStore(self.workspace.root)
         self.performance_trace = PerformanceTraceStore(self.workspace.root)
         self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
+        self.execution_resource_governor = ExecutionResourceGovernor(
+            self.workspace.root,
+            self.orchestration_ledger,
+            process_instance_id=self.process_instance_id,
+            runtime_instance_id=self.server_instance_id,
+        )
         self.orphaned_background_operations = self.orchestration_ledger.mark_orphaned_background_operations(
             current_server_instance_id=self.process_instance_id
         )
@@ -639,6 +656,7 @@ class Runtime(
             stale_run_seconds = 24 * 60 * 60
         stale_run_seconds = max(60 * 60, min(stale_run_seconds, 30 * 24 * 60 * 60))
         self.stale_run_seconds = stale_run_seconds
+        self._last_stale_reconciliation_monotonic = 0.0
         self.reconciled_stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
             stale_after_seconds=self.stale_run_seconds,
             close_stale_active=False,
@@ -654,18 +672,22 @@ class Runtime(
                 metadata={"recovery_reason": "mcp_runtime_restarted"},
             ):
                 self.recovered_agent_lanes += 1
-        self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
+        self.orchestration_control = self._new_orchestration_control()
         self.reconciled_task_orchestration = self._reconcile_task_orchestration_projection()
         self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
         self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
         self._opencode_provider = OpenCodeProviderAdapter(
             lambda: self.workspace.root,
             on_terminal=self._on_opencode_provider_terminal,
+            resource_governor=self.execution_resource_governor,
         )
         self.provider_traffic = ProviderTrafficGovernor.from_env()
         self.workspace_switch_lock = threading.RLock()
         self.workspace_generation = 1
-        self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
+        self._codex_bridge = CodexAppServerBridge(
+            lambda: self.workspace.root,
+            resource_governor=self.execution_resource_governor,
+        )
         self._tool_handlers = {name: getattr(self, name) for name in TOOL_REGISTRY}
 
     def _set_runtime_dir(self, runtime_dir: Path) -> None:
@@ -674,33 +696,82 @@ class Runtime(
         self.tmp_dir = self.runtime_dir / "tmp"
         self.cache_dir = self.runtime_dir / "cache"
 
+    def _new_orchestration_control(self) -> OrchestrationControl:
+        return OrchestrationControl(
+            self.workspace.root,
+            self.orchestration_ledger,
+            on_wave_terminal=lambda ctx, state: self.execution_resource_governor.teardown_wave(
+                ctx.run_id,
+                ctx.wave_id,
+                reason=f"orchestration_state:{str(state).lower()}",
+            ),
+            assert_wave_quiescent=self.execution_resource_governor.assert_wave_quiescent,
+        )
+
     def _reconcile_task_orchestration_projection(self) -> bool:
         state = self.task_state.get()
+        if not str(state.get("task_id") or "").strip() and not str(state.get("objective") or "").strip():
+            return False
         projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
         run_id = str(projection.get("run_id") or "").strip()
+        if not run_id:
+            active = self.orchestration_ledger.current_active_run()
+            run_id = str(active.get("run_id") or "") if active else ""
         if not run_id:
             return False
         run = self.orchestration_ledger.get_run(run_id)
         if not isinstance(run, dict):
             return False
+        run_status = str(run.get("status") or "").lower()
         target_state = {
             "accepted": "CHECKPOINTED",
             "blocked": "BLOCKED",
             "aborted": "ABORTED",
             "stale": "ABORTED",
-        }.get(str(run.get("status") or "").lower())
-        if not target_state or str(projection.get("orchestration_state") or "").upper() == target_state:
+        }.get(run_status)
+        ctx = self.orchestration_control.snapshot(run_id)
+        if ctx is None:
             return False
         waves = self.orchestration_ledger.list_waves(run_id)
         repaired = dict(projection)
-        repaired.update({
-            "run_id": run_id,
-            "wave_id": str(waves[-1].get("wave_id") or repaired.get("wave_id") or "") if waves else str(repaired.get("wave_id") or ""),
-            "orchestration_state": target_state,
-            "write_lease_id": "",
-            "write_owner": "",
-        })
-        self.task_state.set_orchestration_projection(repaired, event="orchestration_projection_reconciled")
+        repaired.update(ctx.projection())
+        repaired["run_id"] = run_id
+        if waves:
+            repaired["wave_id"] = str(waves[-1].get("wave_id") or repaired.get("wave_id") or "")
+        if target_state:
+            repaired["orchestration_state"] = target_state
+            repaired["write_lease_id"] = ""
+            repaired["write_owner"] = ""
+
+        canonical_state = str(repaired.get("orchestration_state") or "").upper()
+        desired_task: dict[str, Any] = {"orchestration": repaired}
+        if canonical_state == "ACCEPTING":
+            desired_task.update({
+                "status": "waiting",
+                "current_step": "Awaiting acceptance",
+                "next_step": (
+                    "Inspect the durable proof, then call task_control action=accept or reject; "
+                    "do not retry completed tool calls."
+                ),
+                "failure": None,
+            })
+        elif canonical_state == "CHECKPOINTED":
+            desired_task.update({
+                "status": "completed",
+                "current_step": "Completed",
+                "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+                "failure": None,
+            })
+        current_projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        projection_changed = any(current_projection.get(key) != repaired.get(key) for key in repaired)
+        task_changed = any(
+            state.get(key) != desired_task[key]
+            for key in ("status", "current_step", "next_step", "failure")
+            if key in desired_task
+        )
+        if not projection_changed and not task_changed:
+            return False
+        self.task_state.update(desired_task, event="orchestration_projection_reconciled")
         return True
 
     def close(self) -> None:
@@ -719,6 +790,13 @@ class Runtime(
             session.refresh_status()
             if session.process.poll() is None:
                 terminate_process_group(session.process, signal.SIGTERM)
+            if session.managed_job_id and not session.resource_terminal_recorded:
+                self.execution_resource_governor.complete(
+                    session.managed_job_id,
+                    lifecycle_state="runtime_closed",
+                    exit_code=session.process.poll(),
+                )
+                session.resource_terminal_recorded = True
             session.drain_readers()
         shutil.rmtree(self.runtime_dir, ignore_errors=True)
         self.telemetry.finish()
@@ -793,9 +871,17 @@ class Runtime(
             self._set_runtime_dir(runtime_dir_for_workspace(self.workspace.root, self.server_instance_id))
             self.fallback_runtime_dir = fallback_runtime_dir_for_workspace(self.workspace.root, self.server_instance_id)
             self.project_context = load_project_context(self.workspace.root)
+            if not self._semantic_localizer_injected:
+                self.semantic_localizer = semantic_localizer_from_env(self.workspace.root)
             self.task_state = TaskStateStore(self.workspace.root)
             self.performance_trace = PerformanceTraceStore(self.workspace.root)
             self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
+            self.execution_resource_governor = ExecutionResourceGovernor(
+                self.workspace.root,
+                self.orchestration_ledger,
+                process_instance_id=self.process_instance_id,
+                runtime_instance_id=self.server_instance_id,
+            )
             self.orphaned_background_operations = self.orchestration_ledger.mark_orphaned_background_operations(
                 current_server_instance_id=self.process_instance_id
             )
@@ -806,6 +892,7 @@ class Runtime(
                 stale_after_seconds=self.stale_run_seconds,
                 close_stale_active=False,
             )
+            self._last_stale_reconciliation_monotonic = 0.0
             self.recovered_agent_lanes = 0
             for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
                 owner_process = str((lane.get("metadata") or {}).get("owner_process_instance_id") or "")
@@ -817,16 +904,20 @@ class Runtime(
                     metadata={"recovery_reason": "workspace_runtime_restarted"},
                 ):
                     self.recovered_agent_lanes += 1
-            self.orchestration_control = OrchestrationControl(self.workspace.root, self.orchestration_ledger)
+            self.orchestration_control = self._new_orchestration_control()
             self.reconciled_task_orchestration = self._reconcile_task_orchestration_projection()
             self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
             self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
             self._opencode_provider = OpenCodeProviderAdapter(
                 lambda: self.workspace.root,
                 on_terminal=self._on_opencode_provider_terminal,
+                resource_governor=self.execution_resource_governor,
             )
             self.provider_traffic = ProviderTrafficGovernor.from_env()
-            self._codex_bridge = CodexAppServerBridge(lambda: self.workspace.root)
+            self._codex_bridge = CodexAppServerBridge(
+                lambda: self.workspace.root,
+                resource_governor=self.execution_resource_governor,
+            )
             with self.patch_lock:
                 self.patch_baselines.clear()
             self.workspace_generation += 1
@@ -924,11 +1015,30 @@ class Runtime(
         value = getattr(self.request_context, "hub_client", None)
         return value if isinstance(value, dict) and value.get("client_id") else None
 
+    def _maybe_reconcile_stale_orchestration(self, *, force: bool = False) -> list[str]:
+        """Run bounded stale cleanup without making every UI poll scan the ledger."""
+
+        now = time.monotonic()
+        if not force and now - self._last_stale_reconciliation_monotonic < STALE_RECONCILIATION_INTERVAL_SECONDS:
+            return []
+        self._last_stale_reconciliation_monotonic = now
+        return self.orchestration_ledger.reconcile_stale_runs(
+            stale_after_seconds=self.stale_run_seconds,
+            close_stale_active=True,
+        )
+
     def _projected_hub_run_id(self) -> str:
+        # The task-state projection may lag after a reconnect.  Lease ownership
+        # must be selected from the durable ledger instead of a stale stream.
         state = self.task_state.get()
         projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
         run_id = str(projection.get("run_id") or "").strip()
-        return run_id if run_id and self.orchestration_ledger.get_run(run_id) else ""
+        if run_id:
+            run = self.orchestration_ledger.get_run(run_id)
+            if run and str(run.get("status") or "") == "active":
+                return run_id
+        active = self.orchestration_ledger.current_active_run()
+        return str(active.get("run_id") or "") if active else ""
 
     def _touch_hub_client(self, identity: dict[str, Any]) -> dict[str, Any]:
         client_id = str(identity.get("client_id") or "").strip()
@@ -936,6 +1046,14 @@ class Runtime(
         role = str(identity.get("role") or "client").strip()
         if not HUB_CLIENT_ID_RE.fullmatch(client_id):
             raise ValueError("invalid Execution Hub client id")
+        # Heartbeats are also a safe reconciliation point: persist expired
+        # leases and close genuinely abandoned runs while retaining ACCEPTING
+        # runs so a new controller can finish the accept/reject decision.
+        self._maybe_reconcile_stale_orchestration()
+        # Rebuild the compact projection from durable events before claiming a
+        # lease.  A reconnect must resume the existing run, never replay the
+        # old stream or start a duplicate turn.
+        self._reconcile_task_orchestration_projection()
         client = self.orchestration_ledger.upsert_hub_client(
             client_id=client_id,
             client_type=client_type,
@@ -1599,30 +1717,46 @@ class Runtime(
         request_id: str | int | None = None,
     ) -> dict[str, Any]:
         args = dict(arguments or {})
-        if not str(args.get("idempotency_key", "") or "").strip():
-            if (
-                name == "agent_workflow"
-                and self._idempotency_policy(name, args) == "required"
-            ):
-                # Auto-key derivation happens before the normal dispatch validator.
-                # Validate first so an invalid request cannot create a task epoch.
-                validate_arguments(name, args)
-                self._ensure_agent_workflow_task_epoch(args)
-            derived_key = self._derive_idempotency_key(name, args)
-            if derived_key:
-                args["idempotency_key"] = derived_key
         try:
-            result = self._call_tool_dispatch(name, args, request_id=request_id)
-        except Exception as exc:
-            self._idempotency_finish(name, args, exc=exc)
-            raise
-        failure = None
-        structured = result.get("structuredContent") if isinstance(result.get("structuredContent"), dict) else {}
-        if result.get("isError") or structured.get("ok") is False:
-            failure = structured.get("error") if isinstance(structured.get("error"), dict) else {}
-        if not structured.get("deduplicated"):
-            self._idempotency_finish(name, args, result=result, failure=failure)
-        return result
+            self._activation_enter_tool_call(name, args)
+        except ToolFailure as exc:
+            return make_tool_result(name, {
+                "ok": False,
+                "error": {
+                    "code": exc.code,
+                    "message": exc.message,
+                    "category": exc.category,
+                    "retryable": exc.retryable,
+                    "details": exc.details,
+                },
+            }, is_error=True)
+        try:
+            if not str(args.get("idempotency_key", "") or "").strip():
+                if (
+                    name == "agent_workflow"
+                    and self._idempotency_policy(name, args) == "required"
+                ):
+                    # Auto-key derivation happens before the normal dispatch validator.
+                    # Validate first so an invalid request cannot create a task epoch.
+                    validate_arguments(name, args)
+                    self._ensure_agent_workflow_task_epoch(args)
+                derived_key = self._derive_idempotency_key(name, args)
+                if derived_key:
+                    args["idempotency_key"] = derived_key
+            try:
+                result = self._call_tool_dispatch(name, args, request_id=request_id)
+            except Exception as exc:
+                self._idempotency_finish(name, args, exc=exc)
+                raise
+            failure = None
+            structured = result.get("structuredContent") if isinstance(result.get("structuredContent"), dict) else {}
+            if result.get("isError") or structured.get("ok") is False:
+                failure = structured.get("error") if isinstance(structured.get("error"), dict) else {}
+            if not structured.get("deduplicated"):
+                self._idempotency_finish(name, args, result=result, failure=failure)
+            return result
+        finally:
+            self._activation_leave_tool_call()
 
     def _idempotency_claim_or_replay(self, name: str, args: dict[str, Any]) -> dict[str, Any] | None:
         if name == "agent_workflow" or name not in TOOL_REGISTRY:
@@ -2349,6 +2483,25 @@ class Runtime(
         )
         if os.environ.get(f"{ENV_PREFIX}_TRACE") != "1":
             return
+        trace_args = redact_for_trace(args)
+        try:
+            max_trace_bytes = max(
+                1024,
+                min(
+                    64 * 1024,
+                    int(os.environ.get(f"{ENV_PREFIX}_TRACE_MAX_PAYLOAD_BYTES", str(TRACE_MAX_PAYLOAD_BYTES))),
+                ),
+            )
+        except (TypeError, ValueError):
+            max_trace_bytes = TRACE_MAX_PAYLOAD_BYTES
+        encoded_trace_args = json.dumps(trace_args, ensure_ascii=False, separators=(",", ":"), default=str)
+        if len(encoded_trace_args.encode("utf-8")) > max_trace_bytes:
+            trace_args = {
+                "_trace_truncated": True,
+                "_trace_bytes": len(encoded_trace_args.encode("utf-8")),
+                "_trace_max_bytes": max_trace_bytes,
+                "keys": sorted(str(key) for key in args)[:50],
+            }
         event = {
             "event": "tool_call",
             "timestamp": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
@@ -2359,7 +2512,7 @@ class Runtime(
             "duration_ms": duration_ms,
             "session_id": payload.get("session_id"),
             "truncated": payload.get("truncated"),
-            "args": redact_for_trace(args),
+            "args": trace_args,
         }
         print(json.dumps(event, sort_keys=True, separators=(",", ":")), file=sys.stderr, flush=True)
 

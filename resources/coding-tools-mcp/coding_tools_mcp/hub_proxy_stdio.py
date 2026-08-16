@@ -91,14 +91,14 @@ class HubProxyClient:
         try:
             payload = json.loads(self.descriptor_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            raise RuntimeError("Execution Hub Electron gateway descriptor is unavailable") from exc
+            raise RuntimeError("Execution Hub local gateway descriptor is unavailable") from exc
         if not isinstance(payload, dict) or payload.get("version") != 1:
-            raise RuntimeError("Execution Hub Electron gateway descriptor is invalid")
+            raise RuntimeError("Execution Hub local gateway descriptor is invalid")
         host = str(payload.get("host") or "")
         port = int(payload.get("port") or 0)
         token = str(payload.get("token") or "")
         if host not in {"127.0.0.1", "localhost"} or not (1 <= port <= 65535) or len(token) < 32:
-            raise RuntimeError("Execution Hub Electron gateway descriptor is invalid")
+            raise RuntimeError("Execution Hub local gateway descriptor is invalid")
         identity = f"{host}:{port}:{token}"
         if self._descriptor_identity and identity != self._descriptor_identity:
             self.session_id = ""
@@ -110,7 +110,7 @@ class HubProxyClient:
         try:
             descriptor = self._load_descriptor()
         except RuntimeError:
-            return jsonrpc_error(request_id(request), -32001, "Execution Hub Electron gateway is unavailable")
+            return jsonrpc_error(request_id(request), -32001, "Execution Hub local gateway is unavailable")
         body = json.dumps(request, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         if len(body) > MAX_LINE_BYTES:
             return jsonrpc_error(request_id(request), -32600, "Request exceeds Execution Hub proxy limit")
@@ -158,7 +158,7 @@ class HubProxyClient:
                     self.protocol_version = version
             return payload if isinstance(payload, dict) else jsonrpc_error(request_id(request), -32001, "Execution Hub gateway returned invalid response")
         except (OSError, http.client.HTTPException):
-            return jsonrpc_error(request_id(request), -32001, "Execution Hub Electron gateway is unavailable")
+            return jsonrpc_error(request_id(request), -32001, "Execution Hub local gateway is unavailable")
         finally:
             connection.close()
 
@@ -254,11 +254,11 @@ def default_descriptor_path() -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Forward local MCP stdio clients to the Electron-owned Coding Tools Runtime.")
+    parser = argparse.ArgumentParser(description="Forward local MCP stdio clients to the Recovery Host-owned Coding Tools Runtime.")
     parser.add_argument(
         "--descriptor",
         default=default_descriptor_path(),
-        help="Electron Execution Hub proxy descriptor path",
+        help="Recovery Host Execution Hub proxy descriptor path",
     )
     parser.add_argument(
         "--structured-content-as-text",

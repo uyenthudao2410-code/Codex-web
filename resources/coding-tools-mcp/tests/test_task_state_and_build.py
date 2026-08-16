@@ -647,12 +647,15 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(second["composite_read"]["plan"]["plan_sha256"], composite["plan"]["plan_sha256"])
 
     def test_prepare_coding_context_prefers_semantic_provider_then_falls_back_per_query(self) -> None:
+        semantic_paths = []
+
         class SemanticStub:
             def status(self):
                 return {"available": True, "provider": "native-lsp-test", "read_only": True}
 
             def localize(self, *, workspace, path, queries, max_results):
-                del workspace, path, max_results
+                del workspace, max_results
+                semantic_paths.append(path)
                 return [
                     {
                         "query_index": 0,
@@ -672,9 +675,11 @@ class ToolModeTests(unittest.TestCase):
                     result = runtime.prepare_coding_context({
                         "objective": "semantic localization",
                         "queries": ["target_symbol", "fallback_token"],
+                        "paths": ["semantic.py"],
                         "max_files": 4,
                         "max_matches_per_query": 10,
                     })
+                self.assertEqual(semantic_paths, ["semantic.py"])
                 self.assertEqual(search_text.call_count, 1)
                 self.assertEqual(search_text.call_args.args[0]["query"], "fallback_token")
                 self.assertTrue(result["searches"][0]["engine"].startswith("semantic:"))

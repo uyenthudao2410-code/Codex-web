@@ -7,8 +7,9 @@ const { TunnelService } = require('./tunnelService');
 const { validateRuntimeSettings, mergeRecentWorkspaces, workspaceKey } = require('./config');
 const { canConnect } = require('./environmentService');
 const { resolveProxy } = require('./proxyService');
-const { stateFile, supervisorRequestFile } = require('../paths');
+const defaultPaths = require('../paths');
 const { readJson, updateJsonAtomic } = require('./jsonStore');
+const { ComponentRevisionTracker } = require('./componentRevision');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -48,6 +49,35 @@ function readMcpHealth(port, token, expectedWorkspace = '') {
 
 async function probeMcp(port, token, expectedWorkspace = '') {
   return Boolean(await readMcpHealth(port, token, expectedWorkspace));
+}
+
+function readMcpActivationPreflight(port, token) {
+  return new Promise((resolve, reject) => {
+    const request = http.request({
+      host: '127.0.0.1',
+      port,
+      path: '/__control/activation',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 3000
+    }, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { if (body.length < 65536) body += chunk; });
+      response.on('end', () => {
+        let parsed = {};
+        try { parsed = body ? JSON.parse(body) : {}; } catch { /* handled below */ }
+        if (response.statusCode !== 200 || typeof parsed.safe !== 'boolean') {
+          reject(Object.assign(new Error('Coding MCP activation preflight is unavailable.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
+          return;
+        }
+        resolve(parsed);
+      });
+    });
+    request.on('timeout', () => request.destroy(Object.assign(new Error('Coding MCP activation preflight timed out.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' })));
+    request.on('error', (error) => reject(Object.assign(error, { code: error.code || 'ORCHESTRATION_STATE_UNCERTAIN' })));
+    request.end();
+  });
 }
 
 
@@ -119,16 +149,55 @@ function setMcpAuthorizedRoots(port, token, roots) {
   });
 }
 
+function controlMcpActivation(port, token, payload) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(payload);
+    const request = http.request({
+      host: '127.0.0.1',
+      port,
+      path: '/__control/activation',
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      },
+      timeout: 5000
+    }, (response) => {
+      let responseBody = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { if (responseBody.length < 65536) responseBody += chunk; });
+      response.on('end', () => {
+        let parsed = {};
+        try { parsed = responseBody ? JSON.parse(responseBody) : {}; } catch { /* handled below */ }
+        if (response.statusCode !== 200) {
+          reject(Object.assign(new Error(String(parsed.error || 'Coding MCP activation preflight failed.')), {
+            code: String(parsed.code || 'ORCHESTRATION_STATE_UNCERTAIN'),
+            details: parsed.details || parsed
+          }));
+          return;
+        }
+        resolve(parsed);
+      });
+    });
+    request.on('timeout', () => request.destroy(Object.assign(new Error('Coding MCP activation preflight timed out.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' })));
+    request.on('error', (error) => reject(Object.assign(error, { code: error.code || 'ORCHESTRATION_STATE_UNCERTAIN' })));
+    request.end(body);
+  });
+}
+
 class RuntimeOrchestrator {
-  constructor({ settings, secrets, environment, log, emitProgress, emitStatus = () => {} }) {
+  constructor({ settings, secrets, environment, log, emitProgress, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null }) {
     this.settingsStore = settings;
     this.secrets = secrets;
     this.environment = environment;
     this.log = log;
     this.emitProgress = emitProgress;
     this.emitStatus = emitStatus;
-    this.native = new NativeService(log);
-    this.tunnel = new TunnelService(log);
+    this.paths = paths;
+    this.revisions = revisionTracker || new ComponentRevisionTracker({ paths });
+    this.native = new NativeService(log, paths, this.revisions);
+    this.tunnel = new TunnelService(log, paths);
     this.busy = false;
     this.snapshotCache = null;
     this.snapshotCacheAt = 0;
@@ -174,6 +243,19 @@ class RuntimeOrchestrator {
     };
   }
 
+  codingMcpRevisionStatus() {
+    try {
+      if (typeof this.native?.revisionStatus === 'function') return this.native.revisionStatus();
+    } catch { /* revision awareness must never take down lifecycle supervision */ }
+    return {
+      running_revision: null,
+      disk_revision: null,
+      update_pending: null,
+      state: 'unavailable',
+      error_code: 'REVISION_UNAVAILABLE'
+    };
+  }
+
   async ensureToken() {
     let token = this.secrets.get('mcpAuthToken');
     if (!token) {
@@ -183,12 +265,119 @@ class RuntimeOrchestrator {
     return token;
   }
 
+  async prepareCodeActivation({ operationId, expiresAtUnixMs, allowAcceptancePending = false }) {
+    const settings = this.settingsStore.load();
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token || !(await this.native.status(settings))) {
+      throw Object.assign(new Error('Coding Tools MCP is not running under this Recovery Host.'), { code: 'COMPONENT_STOPPED' });
+    }
+    return controlMcpActivation(settings.mcpPort, token, {
+      action: 'prepare',
+      operation_id: operationId,
+      expires_at_unix_ms: expiresAtUnixMs,
+      workspace: settings.workspace,
+      allow_acceptance_pending: allowAcceptancePending === true
+    });
+  }
+
+  async inspectCodeActivation() {
+    const settings = this.settingsStore.load();
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token || !(await this.native.status(settings))) {
+      return { safe: true, code: 'COMPONENT_STOPPED', reason: 'coding_mcp_stopped', workspace: settings.workspace };
+    }
+    const result = await readMcpActivationPreflight(settings.mcpPort, token);
+    if (workspaceKey(result.workspace) !== workspaceKey(settings.workspace)) {
+      throw Object.assign(new Error('Coding MCP activation preflight returned another workspace.'), { code: 'WORKSPACE_MISMATCH' });
+    }
+    return result;
+  }
+
+  async currentMcpHealth() {
+    const settings = this.settingsStore.load();
+    const token = this.secrets.get('mcpAuthToken');
+    return token ? readMcpHealth(settings.mcpPort, token, settings.workspace) : null;
+  }
+
+  async cancelCodeActivation(operationId) {
+    const settings = this.settingsStore.load();
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) return false;
+    try {
+      const result = await controlMcpActivation(settings.mcpPort, token, { action: 'cancel', operation_id: operationId });
+      return result.cancelled === true;
+    } catch {
+      return false;
+    }
+  }
+
+  async activateCodingMcpUpdate(expectedRevision) {
+    if (this.busy || this.recovering) {
+      throw Object.assign(new Error('Runtime lifecycle is already busy.'), { code: 'RUNTIME_BUSY' });
+    }
+    this.busy = true;
+    let replacementStarted = false;
+    try {
+      const settings = this.settingsStore.load();
+      this.validate(settings);
+      const token = await this.ensureToken();
+      const diskRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
+      if (diskRevision !== expectedRevision) {
+        throw Object.assign(new Error('Coding MCP source revision changed before activation.'), { code: 'REVISION_CHANGED' });
+      }
+      const oldState = readJson(this.paths.stateFile(), {});
+      const oldHealth = await this.currentMcpHealth();
+      if (!oldHealth) throw Object.assign(new Error('Coding MCP health identity is unavailable.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
+      await this.native.stop();
+      const started = await this.native.start(settings, token, this.progress.bind(this), { expectedCodeRevision: expectedRevision });
+      replacementStarted = true;
+      let health = null;
+      for (let index = 0; index < 35; index += 1) {
+        health = await this.currentMcpHealth();
+        if (health?.code_revision === expectedRevision) break;
+        if (!(await this.native.status(settings))) {
+          throw Object.assign(new Error('Coding MCP exited during activation.'), { code: 'ACTIVATION_HEALTH_FAILED' });
+        }
+        await wait(1000);
+      }
+      if (!health || health.code_revision !== expectedRevision) {
+        throw Object.assign(new Error('Coding MCP did not report the expected code revision after restart.'), { code: 'REVISION_VERIFICATION_FAILED' });
+      }
+      const oldProcessInstanceId = String(oldHealth.process_instance_id || '');
+      const newProcessInstanceId = String(health.process_instance_id || '');
+      const oldServerInstanceId = String(oldHealth.instance_id || '');
+      const newServerInstanceId = String(health.instance_id || '');
+      if (!oldProcessInstanceId || !newProcessInstanceId || oldProcessInstanceId === newProcessInstanceId
+        || !oldServerInstanceId || !newServerInstanceId || oldServerInstanceId === newServerInstanceId) {
+        throw Object.assign(new Error('Coding MCP restart did not produce a new verified process identity.'), { code: 'ACTIVATION_IDENTITY_UNCHANGED' });
+      }
+      this.invalidateSnapshot();
+      return {
+        old_instance_id: oldProcessInstanceId,
+        new_instance_id: newProcessInstanceId,
+        old_server_instance_id: oldServerInstanceId,
+        new_server_instance_id: newServerInstanceId,
+        old_supervisor_instance_id: String(oldState.nativeInstanceId || '') || null,
+        new_supervisor_instance_id: String(started.instanceId || '') || null,
+        old_revision: String(oldState.nativeCodeRevision || oldHealth.code_revision || '') || null,
+        new_revision: health.code_revision,
+        health_verified: true,
+        tunnel_preserved: true
+      };
+    } catch (error) {
+      if (replacementStarted) await this.native.stop().catch(() => false);
+      throw error;
+    } finally {
+      this.busy = false;
+    }
+  }
+
   isManuallyStopped() {
-    return readJson(stateFile(), {}).manualStop === true;
+    return readJson(this.paths.stateFile(), {}).manualStop === true;
   }
 
   setManualStop(value) {
-    updateJsonAtomic(stateFile(), (state) => ({
+    updateJsonAtomic(this.paths.stateFile(), (state) => ({
       ...state,
       manualStop: Boolean(value),
       intentChangedAt: new Date().toISOString()
@@ -197,7 +386,7 @@ class RuntimeOrchestrator {
 
   connectorContractStatus(toolContract) {
     const currentSha256 = String(toolContract?.sha256 || '').trim();
-    const runtimeState = readJson(stateFile(), {});
+    const runtimeState = readJson(this.paths.stateFile(), {});
     const acknowledgedSha256 = String(runtimeState.chatgptToolContractSha256 || '').trim();
     return {
       available: Boolean(currentSha256),
@@ -212,7 +401,7 @@ class RuntimeOrchestrator {
   acknowledgeConnectorContractHash(toolContract) {
     const status = this.connectorContractStatus(toolContract);
     if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
-    updateJsonAtomic(stateFile(), (state) => ({
+    updateJsonAtomic(this.paths.stateFile(), (state) => ({
       ...state,
       chatgptToolContractSha256: status.currentSha256,
       chatgptToolContractAcknowledgedAt: new Date().toISOString()
@@ -232,7 +421,7 @@ class RuntimeOrchestrator {
 
   pendingSupervisorRestartRequest() {
     if (this.busy || this.recovering) return null;
-    const file = supervisorRequestFile();
+    const file = this.paths.supervisorRequestFile();
     if (!fs.existsSync(file)) return null;
     let request = null;
     try {
@@ -275,10 +464,17 @@ class RuntimeOrchestrator {
     fs.rmSync(pending.file, { force: true });
     fs.rmSync(`${pending.file}.bak`, { force: true });
     const ticketId = String(pending.request.ticket_id);
-    this.log.info('Electron supervisor đã nhận yêu cầu restart từ Coding Tools MCP', { ticketId });
+    this.log.info('Recovery Host supervisor đã nhận yêu cầu restart từ Coding Tools MCP', { ticketId });
     try {
-      await this.restart({ automatic: true });
-      return { ticketId, status: 'completed' };
+      const health = await this.currentMcpHealth();
+      if (!health
+        || health.process_instance_id !== pending.request.process_instance_id
+        || health.instance_id !== pending.request.server_instance_id) {
+        throw Object.assign(new Error('Supervisor restart ticket no longer matches the running MCP instance.'), { code: 'STALE_RESTART_TICKET' });
+      }
+      const expectedRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
+      const result = await this.activateCodingMcpUpdate(expectedRevision);
+      return { ticketId, status: 'completed', component: 'coding_mcp', result };
     } catch (error) {
       this.log.error(error.message, { stage: 'supervisor-restart-request', ticketId });
       return { ticketId, status: 'failed', error: error.message };
@@ -499,6 +695,7 @@ class RuntimeOrchestrator {
       nativeAlive,
       tunnelRunning,
       fullyReady: mcpRunning && tunnelRunning,
+      codeRevision: { codingMcp: this.codingMcpRevisionStatus() },
       ...this.recoveryStatus()
     };
   }
@@ -537,7 +734,7 @@ class RuntimeOrchestrator {
       this.deferredRecoveryCount = 0;
       return { ...status, ...this.recoveryStatus() };
     }
-    const runtimeState = readJson(stateFile(), {});
+    const runtimeState = readJson(this.paths.stateFile(), {});
     const expectedRunning = runtimeState.manualStop === false
       && Boolean(runtimeState.nativePid || runtimeState.tunnelPid || this.settingsStore.load().autoStartServices);
     if (this.busy || this.recovering || this.isManuallyStopped() || !expectedRunning) return status;
@@ -652,6 +849,7 @@ class RuntimeOrchestrator {
         } : null,
         connectorContractAcknowledgedSha256: connectorContract.acknowledgedSha256,
         connectorRefreshRequired: connectorContract.refreshRequired,
+        codeRevision: { codingMcp: this.codingMcpRevisionStatus() },
         ...this.recoveryStatus()
       }
     }, reason);

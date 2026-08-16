@@ -49,6 +49,7 @@ test('desktop runtime hot-switches workspaces and shows stale-task progress', ()
 test('startup failure cleans runtime state and blocks automatic recovery until manual retry', () => {
   const orchestrator = read('electron/services/runtimeOrchestrator.js');
   const main = read('electron/main.js');
+  const recoveryHost = read('electron/services/recoveryHost.js');
   assert.match(orchestrator, /autoRecoveryBlocked/);
   assert.match(orchestrator, /lastStartFailure/);
   assert.match(orchestrator, /await this\.tunnel\.stop\(\)\.catch/);
@@ -56,7 +57,8 @@ test('startup failure cleans runtime state and blocks automatic recovery until m
   assert.match(orchestrator, /if \(this\.autoRecoveryBlocked\)/);
   assert.match(orchestrator, /restart\(\{ automatic: true \}\)/);
   assert.match(orchestrator, /Tiến trình Coding Tools MCP đã thoát sớm/);
-  assert.match(main, /start\(\{ automatic: true \}\)/);
+  assert.doesNotMatch(main, /new RuntimeOrchestrator/);
+  assert.match(recoveryHost, /this\.orchestrator\.start\(\{ automatic: true \}\)/);
 });
 
 test('browser task strip exposes stage progress and long-command elapsed time', () => {

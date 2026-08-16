@@ -328,7 +328,12 @@ class EfficiencyRuntimeTests(unittest.TestCase):
         self.assertEqual(Runtime._error_class({"code": "SOMETHING_NEW", "category": "runtime"}), "RUNTIME")
 
     def test_workspace_context_exposes_non_secret_runtime_activation_identity(self) -> None:
-        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {
+            "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+            "CODING_TOOLS_MCP_NATIVE_LSP_URL": "",
+            "CODING_TOOLS_MCP_NATIVE_LSP_CREDENTIAL_FILE": "",
+            "APPDATA": "",
+        }):
             runtime = Runtime(Path(temp), permission_mode="safe")
             try:
                 compact = runtime.workspace_context({"detail": "compact"})
@@ -348,7 +353,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "32c4f0eacfa2743afdb556337483e758a57a666e4c4b3b0f56dde9b6f521362c")
+                self.assertEqual(contract["sha256"], "4ddfa6bb982f46f02bdd448975ca64b3235a59379b379ec651bcc44000ac9aca")
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)
                 self.assertEqual(

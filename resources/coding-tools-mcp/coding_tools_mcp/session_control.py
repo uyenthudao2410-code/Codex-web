@@ -39,13 +39,22 @@ class SessionControlMixin:
         self,
         process: subprocess.Popen[bytes],
         *,
+        session_id: str | None = None,
+        managed_job_id: str = "",
+        owner_run_id: str = "",
+        owner_wave_id: str = "",
+        resource_class: str = "LIGHT",
         timeout_at: float | None = None,
         warnings: list[str] | None = None,
         pty_master_fd: int | None = None,
     ) -> ExecSession:
         return ExecSession(
-            session_id=secrets.token_urlsafe(18),
+            session_id=session_id or secrets.token_urlsafe(18),
             process=process,
+            managed_job_id=managed_job_id,
+            owner_run_id=owner_run_id,
+            owner_wave_id=owner_wave_id,
+            resource_class=resource_class,
             timeout_at=timeout_at,
             warnings=warnings or [],
             pty_master_fd=pty_master_fd,
@@ -107,6 +116,24 @@ class SessionControlMixin:
         session.refresh_status()
         if session.process.poll() is None:
             return
+        # Closing a Windows Job Object also removes descendants that survived
+        # after the root shell exited. POSIX process groups get the equivalent
+        # bounded cleanup signal.
+        terminate_process_group(session.process, signal.SIGTERM)
+        if session.managed_job_id and not session.resource_terminal_recorded:
+            lifecycle = (
+                "timeout"
+                if session.timed_out
+                else "terminated"
+                if session.signal_name is not None or session.terminating
+                else "exited"
+            )
+            self.execution_resource_governor.complete(
+                session.managed_job_id,
+                lifecycle_state=lifecycle,
+                exit_code=session.exit_code,
+            )
+            session.resource_terminal_recorded = True
         with self.sessions_lock:
             self.sessions.pop(session.session_id, None)
             principal = self.session_principals.get(session.session_id)
@@ -147,6 +174,12 @@ class SessionControlMixin:
             self._complete_session(session)
         payload["command_id"] = session.session_id
         payload.setdefault("session_id", session.session_id)
+        payload["execution_owner"] = {
+            "job_id": session.managed_job_id,
+            "run_id": session.owner_run_id,
+            "wave_id": session.owner_wave_id,
+            "resource_class": session.resource_class,
+        }
         if payload.get("status") == "running":
             payload["next_action"] = {
                 "tool": "command_control",

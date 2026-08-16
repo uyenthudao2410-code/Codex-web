@@ -31,6 +31,8 @@
 | 3601 | 2026-08-15T00:04:01.589Z | proof_cache_miss |  |  | reason=input_fingerprint_changed; stage_id=verify:tests; input_fingerprint=0ff17c5a1e33f3db21bb56ba7feb8391fb64bd85078c0512d4520013af67e7c3 |
 | 3602 | 2026-08-15T00:04:15.376Z | proof_recorded |  |  | stage_id=verify:tests; status=passed; cache_hit=False; input_fingerprint=0ff17c5a1e33f3db21bb56ba7feb8391fb64bd85078c0512d4520013af67e7c3 |
 | 3603 | 2026-08-15T00:04:15.751Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 5573 | 2026-08-16T00:33:51.448Z | failure_observed | ACCEPTING | ACCEPTING | reason=Stale unrelated P0 acceptance lineage: audited proof is green for historical base_head 8581b833... and worktree fingerprint 512437..., while the current P2/P3 checkout is on a different base/worktree. Reject rather than falsely accepting evidence that does not bind to the current source state.; failure_class=SOL_REJECTED |
+| 5574 | 2026-08-16T00:33:51.566Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
 
 ## Proof
 
@@ -47,5 +49,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `12`
-- Chain head: `60ce90adf721e74bab3036874f8a6f36ee7859f41a1fb47d4094bd7b2e1f3231`
+- Events checked: `14`
+- Chain head: `c593ddb6a9e380565d91f33c14df1ca9644e5f850301c42ace24737ea18507ee`

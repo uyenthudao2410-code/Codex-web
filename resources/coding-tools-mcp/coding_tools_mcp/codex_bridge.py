@@ -8,9 +8,12 @@ import subprocess
 import threading
 import time
 import tomllib
+import uuid
 from collections import deque
 from pathlib import Path
 from typing import Any, Callable
+
+from .processes import managed_process_creationflags
 
 
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -357,8 +360,10 @@ class CodexAppServerBridge:
     approvalPolicy=never and a read-only, no-network sandbox.
     """
 
-    def __init__(self, workspace_provider: Callable[[], Path]) -> None:
+    def __init__(self, workspace_provider: Callable[[], Path], *, resource_governor=None) -> None:
         self._workspace_provider = workspace_provider
+        self._resource_governor = resource_governor
+        self._managed_job_id = ""
         self._process: subprocess.Popen[str] | None = None
         self._binary: Path | None = None
         self._disabled_mcp_servers: list[str] = []
@@ -855,6 +860,13 @@ class CodexAppServerBridge:
                 except OSError:
                     pass
                 _terminate_process_tree(proc)
+            if proc is not None and self._managed_job_id and self._resource_governor is not None:
+                self._resource_governor.complete(
+                    self._managed_job_id,
+                    lifecycle_state="closed",
+                    exit_code=proc.poll(),
+                )
+                self._managed_job_id = ""
             self._closing = False
 
     def _validate_prompt(self, prompt: str) -> str:
@@ -1095,7 +1107,21 @@ class CodexAppServerBridge:
             creationflags = 0
             if os.name == "nt":
                 creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                if self._resource_governor is not None:
+                    creationflags = managed_process_creationflags(creationflags)
+            popen_extra: dict[str, Any] = {"creationflags": creationflags}
+            if os.name != "nt" and self._resource_governor is not None:
+                popen_extra["start_new_session"] = True
+            admission = None
+            proc = None
             try:
+                if self._resource_governor is not None:
+                    admission = self._resource_governor.admit(
+                        command="codex app-server",
+                        command_id=f"codex-app-server-{uuid.uuid4().hex}",
+                        owner="codex-app-server",
+                        resource_class="MEDIUM",
+                    )
                 proc = subprocess.Popen(
                     argv,
                     cwd=str(workspace),
@@ -1106,10 +1132,19 @@ class CodexAppServerBridge:
                     encoding="utf-8",
                     errors="replace",
                     bufsize=1,
-                    creationflags=creationflags,
                     env=child_env,
+                    **popen_extra,
                 )
-            except OSError as exc:
+                if admission is not None:
+                    if os.name == "nt" and creationflags & 0x00000004:
+                        setattr(proc, "_coding_tools_created_suspended", True)
+                    self._resource_governor.bind_process(admission, proc)
+                    self._managed_job_id = admission.job_id
+            except Exception as exc:
+                if proc is not None and proc.poll() is None:
+                    _terminate_process_tree(proc, wait_seconds=1.0)
+                if admission is not None:
+                    self._resource_governor.spawn_failed(admission)
                 raise CodexBridgeError(
                     "CODEX_START_FAILED",
                     f"Failed to start Codex App Server: {exc}",
@@ -1161,6 +1196,13 @@ class CodexAppServerBridge:
         self._fail_pending("Codex App Server exited")
         if force and proc.poll() is None:
             _terminate_process_tree(proc, wait_seconds=1.0)
+        if self._managed_job_id and self._resource_governor is not None:
+            self._resource_governor.complete(
+                self._managed_job_id,
+                lifecycle_state="terminated" if force else "exited",
+                exit_code=proc.poll(),
+            )
+            self._managed_job_id = ""
 
     def _request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         self._ensure_connected()

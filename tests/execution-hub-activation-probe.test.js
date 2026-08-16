@@ -31,12 +31,14 @@ test('activation probe proves the telemetry route without forwarding or exposing
   assert.equal(result.ok, true);
   assert.equal(result.route_loaded, true);
   assert.equal(result.status, 403);
+  assert.equal(result.owner, 'recovery-host');
+  assert.equal(result.owner_pid, process.pid);
   const serialized = JSON.stringify(result);
   assert.equal(serialized.includes(descriptor.token), false);
   assert.equal(serialized.toLowerCase().includes('token'), false);
 });
 
-test('activation probe distinguishes an old Electron gateway that does not expose telemetry route', async (t) => {
+test('activation probe distinguishes a legacy Electron gateway that does not expose telemetry route', async (t) => {
   const token = 'x'.repeat(43);
   const legacy = http.createServer((_request, response) => {
     response.writeHead(404, { 'Content-Length': 0 });
@@ -53,5 +55,7 @@ test('activation probe distinguishes an old Electron gateway that does not expos
   assert.equal(result.ok, false);
   assert.equal(result.route_loaded, false);
   assert.equal(result.code, 'ELECTRON_RESTART_REQUIRED');
+  assert.equal(result.owner, 'electron');
+  assert.equal(result.owner_pid, 1234);
   assert.equal(JSON.stringify(result).includes(token), false);
 });

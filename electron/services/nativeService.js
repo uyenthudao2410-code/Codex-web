@@ -3,9 +3,10 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { pythonStatus } = require('./environmentService');
-const { stateFile, supervisorRequestFile, mcpLogFile, resourcesRoot } = require('../paths');
+const defaultPaths = require('../paths');
 const { readJson, updateJsonAtomic, ensureParent } = require('./jsonStore');
 const { rotateLog } = require('./logService');
+const { ComponentRevisionTracker } = require('./componentRevision');
 
 function isAlive(pid) {
   if (!Number.isInteger(pid)) return false;
@@ -26,27 +27,46 @@ function currentRuntimeState(input = {}) {
   const allowed = new Set([
     'manualStop', 'tunnelPid', 'tunnelStartedAt',
     'nativePid', 'nativeFingerprint', 'nativeWorkspace', 'nativePort',
-    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'startedAt',
+    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId', 'startedAt',
     'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt'
   ]);
   return Object.fromEntries(Object.entries(input).filter(([key]) => allowed.has(key)));
 }
 
 class NativeService {
-  constructor(log) {
+  constructor(log, paths = defaultPaths, revisionTracker = null) {
     this.log = log;
+    this.paths = paths;
+    this.revisions = revisionTracker || new ComponentRevisionTracker({ paths });
   }
 
-  async start(settings, token, progress) {
-    const python = await pythonStatus();
+  async start(settings, token, progress, options = {}) {
+    const python = await pythonStatus(this.paths);
     if (!python.installed) {
       throw new Error('Không tìm thấy Python 3.11+. Gói cài đặt chính thức tích hợp sẵn Python Portable; phiên bản phát triển vui lòng cài đặt Python 3.11+ trước.');
     }
-    const current = readJson(stateFile(), {});
+    const current = readJson(this.paths.stateFile(), {});
     const fingerprint = runtimeFingerprint(settings);
+    const diskRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
+    const expectedCodeRevision = String(options.expectedCodeRevision || '');
+    if (expectedCodeRevision && diskRevision !== expectedCodeRevision) {
+      throw Object.assign(new Error('Coding MCP source revision changed before process start.'), {
+        code: 'REVISION_CHANGED',
+        expectedRevision: expectedCodeRevision,
+        diskRevision
+      });
+    }
     if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint) {
+      const updatePending = Boolean(current.nativeCodeRevision && current.nativeCodeRevision !== diskRevision);
       this.log.info('MCP Portable đã chạy trong thư mục làm việc mục tiêu', { pid: current.nativePid, workspace: settings.workspace });
-      return { reused: true, pid: current.nativePid };
+      if (updatePending) {
+        this.log.info('Coding Tools MCP có source revision mới đang chờ controlled activation', {
+          pid: current.nativePid,
+          runningRevision: String(current.nativeCodeRevision).slice(0, 12),
+          diskRevision: diskRevision.slice(0, 12)
+        });
+      }
+      return { reused: true, pid: current.nativePid, codeRevision: current.nativeCodeRevision || null, updatePending };
     }
     if (isAlive(current.nativePid)) {
       this.log.info('Phát hiện cấu hình MCP Portable đã thay đổi, đang âm thầm tạo lại', { from: current.nativeWorkspace || '', to: settings.workspace });
@@ -54,9 +74,9 @@ class NativeService {
     }
 
     progress('native-start', 45, `Đang âm thầm khởi động môi trường runtime portable bằng ${python.version}`);
-    ensureParent(mcpLogFile());
-    rotateLog(mcpLogFile());
-    const output = fs.openSync(mcpLogFile(), 'a');
+    ensureParent(this.paths.mcpLogFile());
+    rotateLog(this.paths.mcpLogFile());
+    const output = fs.openSync(this.paths.mcpLogFile(), 'a');
     const env = {
       ...process.env,
       CODING_TOOLS_MCP_AUTH_MODE: 'bearer',
@@ -65,12 +85,13 @@ class NativeService {
       CODING_TOOLS_MCP_TOOL_MODE: 'smart',
       CODING_TOOLS_MCP_AUTHORIZED_ROOTS: JSON.stringify(settings.authorizedRoots || []),
       CODING_TOOLS_MCP_LONG_TOOL_HANDOFF_SECONDS: String(settings.progressReportSeconds || 90),
-      CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: supervisorRequestFile()
+      CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: this.paths.supervisorRequestFile(),
+      CODING_TOOLS_MCP_CODE_REVISION: diskRevision
     };
-    const bundledTools = path.join(resourcesRoot(), 'tools');
-    const vendoredPython = path.join(resourcesRoot(), 'coding-tools-mcp', 'python_vendor');
+    const bundledTools = path.join(this.paths.resourcesRoot(), 'tools');
+    const vendoredPython = path.join(this.paths.resourcesRoot(), 'coding-tools-mcp', 'python_vendor');
     env.PATH = [bundledTools, process.env.PATH || ''].filter(Boolean).join(path.delimiter);
-    env.PYTHONPATH = [vendoredPython, path.join(resourcesRoot(), 'coding-tools-mcp'), process.env.PYTHONPATH || ''].filter(Boolean).join(path.delimiter);
+    env.PYTHONPATH = [vendoredPython, path.join(this.paths.resourcesRoot(), 'coding-tools-mcp'), process.env.PYTHONPATH || ''].filter(Boolean).join(path.delimiter);
     const args = [
       ...python.prefixArgs,
       '-m', 'coding_tools_mcp',
@@ -92,7 +113,8 @@ class NativeService {
     });
     child.unref();
     fs.closeSync(output);
-    updateJsonAtomic(stateFile(), (value) => ({
+    const instanceId = crypto.randomBytes(12).toString('hex');
+    updateJsonAtomic(this.paths.stateFile(), (value) => ({
       ...currentRuntimeState(value),
       nativePid: child.pid,
       nativeFingerprint: fingerprint,
@@ -101,15 +123,16 @@ class NativeService {
       nativePermissionMode: settings.permissionMode,
       nativeToolMode: 'smart',
       nativeCommand: command,
+      nativeCodeRevision: diskRevision,
       startedAt: new Date().toISOString(),
-      nativeInstanceId: crypto.randomBytes(12).toString('hex')
+      nativeInstanceId: instanceId
     }));
     this.log.info('Môi trường runtime MCP Portable đã khởi động', { pid: child.pid, workspace: settings.workspace, command });
-    return { reused: false, pid: child.pid };
+    return { reused: false, pid: child.pid, instanceId, codeRevision: diskRevision, updatePending: false };
   }
 
   async stop() {
-    const state = readJson(stateFile(), {});
+    const state = readJson(this.paths.stateFile(), {});
     const alive = isAlive(state.nativePid);
     try {
       if (alive) {
@@ -118,20 +141,21 @@ class NativeService {
       }
       return alive;
     } finally {
-      updateJsonAtomic(stateFile(), (value) => ({
+      updateJsonAtomic(this.paths.stateFile(), (value) => ({
         ...value,
         nativePid: null,
         nativeFingerprint: '',
         nativeWorkspace: '',
         nativePort: null,
         nativePermissionMode: '',
-        nativeInstanceId: ''
+        nativeInstanceId: '',
+        nativeCodeRevision: ''
       }));
     }
   }
 
   async markWorkspace(settings) {
-    updateJsonAtomic(stateFile(), (value) => ({
+    updateJsonAtomic(this.paths.stateFile(), (value) => ({
       ...value,
       nativeFingerprint: runtimeFingerprint(settings),
       nativeWorkspace: path.resolve(settings.workspace),
@@ -143,9 +167,27 @@ class NativeService {
   }
 
   async status(settings = null) {
-    const state = readJson(stateFile(), {});
+    const state = readJson(this.paths.stateFile(), {});
     if (!isAlive(state.nativePid)) return false;
     return !settings || state.nativeFingerprint === runtimeFingerprint(settings);
+  }
+
+  revisionStatus() {
+    const state = readJson(this.paths.stateFile(), {});
+    const alive = isAlive(state.nativePid);
+    try {
+      const status = this.revisions.status('coding_mcp', alive ? state.nativeCodeRevision : null);
+      if (!alive) return { ...status, update_pending: false, state: 'stopped' };
+      return status;
+    } catch (error) {
+      return {
+        running_revision: alive ? String(state.nativeCodeRevision || '') || null : null,
+        disk_revision: null,
+        update_pending: null,
+        state: 'unavailable',
+        error_code: String(error?.code || 'REVISION_UNAVAILABLE')
+      };
+    }
   }
 }
 

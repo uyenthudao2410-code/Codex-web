@@ -45,7 +45,7 @@ test('resident gateway latency summary uses bounded nearest-rank percentiles', (
   assert.equal(LATENCY_SAMPLE_CAP, 256);
 });
 
-test('gateway keeps real MCP bearer in Electron and tags Desktop requests', async (t) => {
+test('gateway keeps real MCP bearer in the recovery host and tags Desktop requests', async (t) => {
   const observed = [];
   const actualBearer = 'actual-mcp-secret-never-in-descriptor';
   const upstream = http.createServer((request, response) => {
@@ -75,6 +75,9 @@ test('gateway keeps real MCP bearer in Electron and tags Desktop requests', asyn
   const descriptorText = fs.readFileSync(descriptorPath, 'utf8');
   assert.equal(descriptorText.includes(actualBearer), false);
   assert.notEqual(descriptor.token, actualBearer);
+  assert.equal(descriptor.owner, 'recovery-host');
+  assert.equal(descriptor.owner_pid, process.pid);
+  assert.equal(Object.hasOwn(descriptor, 'electron_pid'), false);
 
   const payload = { jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} };
   const result = await post(descriptor.port, descriptor.token, payload, {

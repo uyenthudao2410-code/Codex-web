@@ -11,8 +11,8 @@
 
 - Waves: **1**
 - Route decisions: **1**
-- Failures observed: **0**
-- REPLAN transitions: **0**
+- Failures observed: **1**
+- REPLAN transitions: **1**
 - Proof stages: **1**
 - Proof cache hits: **0**
 - Acceptance checkpoints: **0**
@@ -39,11 +39,12 @@
 
 | Seq | Failure class | State | Evidence |
 |---:|---|---|---|
+| 5573 | `SOL_REJECTED` | `ACCEPTING` | Stale unrelated P0 acceptance lineage: audited proof is green for historical base_head 8581b833... and worktree fingerprint 512437..., while the current P2/P3 checkout is on a different base/worktree. Reject rather than falsely accepting evidence that does not bind to the current source state. |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `12`
-- Chain head: `60ce90adf721e74bab3036874f8a6f36ee7859f41a1fb47d4094bd7b2e1f3231`
+- Events checked: `14`
+- Chain head: `c593ddb6a9e380565d91f33c14df1ca9644e5f850301c42ace24737ea18507ee`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

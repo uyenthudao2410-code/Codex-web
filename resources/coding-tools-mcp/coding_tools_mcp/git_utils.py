@@ -82,14 +82,24 @@ def parse_git_blame_porcelain(output: str) -> list[dict[str, Any]]:
 
 def redact_for_trace(value: Any) -> Any:
     if isinstance(value, dict):
-        return {
+        items = list(value.items())
+        result = {
             str(key): "[REDACTED]" if SENSITIVE_ENV_RE.search(str(key)) else redact_for_trace(item)
-            for key, item in value.items()
+            for key, item in items[:50]
         }
+        if len(items) > 50:
+            result["_trace_truncated_keys"] = len(items) - 50
+        return result
     if isinstance(value, list):
-        return [redact_for_trace(item) for item in value[:50]]
+        result = [redact_for_trace(item) for item in value[:20]]
+        if len(value) > 20:
+            result.append(f"...[{len(value) - 20} items truncated]")
+        return result
     if isinstance(value, tuple):
-        return [redact_for_trace(item) for item in value[:50]]
+        result = [redact_for_trace(item) for item in value[:20]]
+        if len(value) > 20:
+            result.append(f"...[{len(value) - 20} items truncated]")
+        return result
     if isinstance(value, str):
         if SENSITIVE_VALUE_RE.search(value):
             return "[REDACTED]"

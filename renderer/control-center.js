@@ -164,7 +164,7 @@
     ROUTED: { phase: 'dispatching', label: 'Đang điều phối', state: 'active', busy: true },
     EXECUTING: { phase: 'executing', label: 'Đang thực thi', state: 'active', busy: true },
     PROVING: { phase: 'proving', label: 'Đang kiểm chứng', state: 'active', busy: true },
-    ACCEPTING: { phase: 'accepting', label: 'Đang chờ chấp nhận', state: 'waiting', busy: true },
+    ACCEPTING: { phase: 'awaiting_acceptance', label: 'Đang chờ chấp nhận', state: 'waiting', busy: false },
     REPLAN: { phase: 'replanning', label: 'Đang lập lại kế hoạch', state: 'waiting', busy: true },
     CHECKPOINTED: { phase: 'completed', label: 'Đã hoàn tất', state: 'completed', busy: false },
     BLOCKED: { phase: 'blocked', label: 'Đang bị chặn', state: 'blocked', busy: false },

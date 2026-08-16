@@ -7,14 +7,18 @@ use crate::auth::{AuthContext, SCOPE_PROJECT_READ};
 use crate::tool_runtime::kernel::{
     ToolCallContext, ToolCallRequest as KernelToolCallRequest, ToolTransport,
 };
+use futures_util::stream::{self, StreamExt};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::path::Path;
+use std::sync::atomic::Ordering;
 
 pub(crate) const INTERNAL_SEMANTIC_ROUTE: &str = "/api/connector/internal/semantic/localize";
 pub(crate) const INTERNAL_SEMANTIC_SUBPATH: &str = "internal/semantic/localize";
 const MAX_SEMANTIC_QUERIES: usize = 8;
 const MAX_SEMANTIC_RESULTS_PER_QUERY: usize = 50;
+const MAX_DOCUMENT_SYMBOL_VISITS: usize = 1_000;
+const WARM_SEMANTIC_CONCURRENCY: usize = 2;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -105,22 +109,17 @@ impl ConnectorRuntime {
             );
         }
 
-        let mut rows = Vec::with_capacity(queries.len());
-        for (query_index, query) in queries.iter().enumerate() {
-            let internal_limit = if path_scope.is_some() {
-                MAX_SEMANTIC_RESULTS_PER_QUERY
-            } else {
-                max_results
-            };
+        if let Some(document_path) = path_scope.as_deref().filter(|path| is_document_scope(path)) {
+            let was_warm = self.semantic_lsp_warm.load(Ordering::Acquire);
             let outcome = self
                 .tools
                 .call_tool_with_context(
                     KernelToolCallRequest {
-                        tool_name: "workspace_symbols".to_string(),
+                        tool_name: "document_symbols".to_string(),
                         arguments: json!({
                             "project": self.context.executor_project.clone(),
-                            "query": query,
-                            "limit": internal_limit
+                            "path": document_path,
+                            "limit": MAX_SEMANTIC_RESULTS_PER_QUERY
                         }),
                     },
                     ToolCallContext {
@@ -133,12 +132,116 @@ impl ConnectorRuntime {
                 )
                 .await;
             if outcome.error_status.is_some() {
+                self.semantic_lsp_warm.store(false, Ordering::Release);
                 return native_lsp_unavailable();
             }
             let Some(result) = outcome.result else {
+                self.semantic_lsp_warm.store(false, Ordering::Release);
                 return native_lsp_unavailable();
             };
             if !result.success {
+                self.semantic_lsp_warm.store(false, Ordering::Release);
+                return native_lsp_unavailable();
+            }
+            self.semantic_lsp_warm.store(true, Ordering::Release);
+            let symbols = result
+                .output
+                .get("symbols")
+                .and_then(Value::as_array)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]);
+            let mut rows = Vec::with_capacity(queries.len());
+            for (query_index, query) in queries.iter().enumerate() {
+                let mut matches = Vec::new();
+                collect_document_symbol_matches(
+                    symbols,
+                    document_path,
+                    query,
+                    max_results,
+                    &mut matches,
+                );
+                rows.push(json!({
+                    "query_index": query_index,
+                    "query": query,
+                    "handled": !matches.is_empty(),
+                    "definitive": false,
+                    "matches": matches
+                }));
+            }
+            return ConnectorCallOutcome::success_project(json!({
+                "schema_version": 1,
+                "provider": "webcodex_native_lsp",
+                "read_only": true,
+                "lsp_state": if was_warm { "WARM" } else { "COLD_READY" },
+                "semantic_concurrency": 1,
+                "results": rows
+            }));
+        }
+
+        let internal_limit = if path_scope.is_some() {
+            MAX_SEMANTIC_RESULTS_PER_QUERY
+        } else {
+            max_results
+        };
+        let was_warm = self.semantic_lsp_warm.load(Ordering::Acquire);
+        let concurrency = if was_warm {
+            WARM_SEMANTIC_CONCURRENCY.min(queries.len())
+        } else {
+            1
+        };
+        let tools = self.tools.clone();
+        let project = self.context.executor_project.clone();
+        let request_auth = auth.clone();
+        let calls = queries
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(move |(query_index, query)| {
+                let tools = tools.clone();
+                let project = project.clone();
+                let request_auth = request_auth.clone();
+                async move {
+                    let outcome = tools
+                        .call_tool_with_context(
+                            KernelToolCallRequest {
+                                tool_name: "workspace_symbols".to_string(),
+                                arguments: json!({
+                                    "project": project,
+                                    "query": query,
+                                    "limit": internal_limit
+                                }),
+                            },
+                            ToolCallContext {
+                                transport: ToolTransport::Api,
+                                session_id: None,
+                                auth: Some(&request_auth),
+                                window: None,
+                                record_oauth_scope_denials: false,
+                            },
+                        )
+                        .await;
+                    (query_index, outcome)
+                }
+            });
+        let mut outcomes = stream::iter(calls)
+            .buffer_unordered(concurrency)
+            .collect::<Vec<_>>()
+            .await;
+        outcomes.sort_by_key(|(query_index, _)| *query_index);
+
+        let mut rows = Vec::with_capacity(queries.len());
+        for (query_index, outcome) in outcomes {
+            let query = &queries[query_index];
+            if outcome.error_status.is_some() {
+                self.semantic_lsp_warm.store(false, Ordering::Release);
+                return native_lsp_unavailable();
+            }
+            let Some(result) = outcome.result else {
+                self.semantic_lsp_warm.store(false, Ordering::Release);
+                return native_lsp_unavailable();
+            };
+            if !result.success {
+                self.semantic_lsp_warm.store(false, Ordering::Release);
                 return native_lsp_unavailable();
             }
 
@@ -186,11 +289,14 @@ impl ConnectorRuntime {
                 "matches": matches
             }));
         }
+        self.semantic_lsp_warm.store(true, Ordering::Release);
 
         ConnectorCallOutcome::success_project(json!({
             "schema_version": 1,
             "provider": "webcodex_native_lsp",
             "read_only": true,
+            "lsp_state": if was_warm { "WARM" } else { "COLD_READY" },
+            "semantic_concurrency": concurrency,
             "results": rows
         }))
     }
@@ -252,11 +358,68 @@ fn path_in_scope(path: &str, scope: Option<&str>) -> bool {
             .is_some_and(|suffix| suffix.starts_with('/'))
 }
 
+fn is_document_scope(path: &str) -> bool {
+    let extension = Path::new(path)
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    matches!(
+        extension.as_str(),
+        "rs" | "py" | "pyi" | "ts" | "mts" | "cts" | "tsx" | "js" | "mjs" | "cjs" | "jsx"
+    )
+}
+
+fn collect_document_symbol_matches(
+    symbols: &[Value],
+    path: &str,
+    query: &str,
+    max_results: usize,
+    matches: &mut Vec<Value>,
+) {
+    let query = query.to_lowercase();
+    let mut stack = symbols.iter().rev().collect::<Vec<_>>();
+    let mut visited = 0usize;
+    while let Some(symbol) = stack.pop() {
+        if visited >= MAX_DOCUMENT_SYMBOL_VISITS {
+            return;
+        }
+        visited += 1;
+        if matches.len() >= max_results {
+            return;
+        }
+        let name = symbol.get("name").and_then(Value::as_str).unwrap_or("");
+        if !name.is_empty() && name.to_lowercase().contains(&query) {
+            let mut item = json!({
+                "path": path,
+                "symbol": name,
+                "kind": symbol.get("kind").and_then(Value::as_str).unwrap_or("symbol")
+            });
+            let start = symbol
+                .get("selection_range")
+                .or_else(|| symbol.get("range"))
+                .and_then(|range| range.get("start"));
+            if let Some(start) = start {
+                if let Some(line) = start.get("line").and_then(Value::as_u64) {
+                    item["line"] = json!(line);
+                }
+                if let Some(column) = start.get("column").and_then(Value::as_u64) {
+                    item["column"] = json!(column);
+                }
+            }
+            matches.push(item);
+        }
+        if let Some(children) = symbol.get("children").and_then(Value::as_array) {
+            stack.extend(children.iter().rev());
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::auth::{AuthContext, AuthKind};
-    use crate::connector_runtime::tests::{auth, connector};
+    use crate::connector_runtime::tests::{auth, connector, PROJECT_CREDENTIAL};
     use crate::lsp_bridge::{
         AgentLspRequest, AgentLspResultEnvelope, PublicWorkspaceSymbol, WorkspaceSymbolsResult,
     };
@@ -320,6 +483,40 @@ mod tests {
             queries: vec!["ToolRuntime".to_string()],
             max_results: Some(10),
         }
+    }
+
+    async fn complete_workspace_symbol_request(
+        registry: &crate::shell_client::ShellClientRegistry,
+        request: crate::shell_protocol::ShellAgentShellRequest,
+    ) {
+        let request_id = request.request_id;
+        let payload = request.lsp.expect("typed LSP payload");
+        let AgentLspRequest::WorkspaceSymbols { query, .. } = payload.request else {
+            panic!("expected workspace symbols request");
+        };
+        let result = WorkspaceSymbolsResult {
+            project: "demo".to_string(),
+            query,
+            symbols: Vec::new(),
+            total_results: 0,
+            returned_count: 0,
+            truncated: false,
+            external_results_omitted: 0,
+            invalid_results_omitted: 0,
+        };
+        registry
+            .complete(ShellAgentResultRequest {
+                client_id: "hosted".to_string(),
+                agent_instance_id: "semantic-instance".to_string(),
+                request_id,
+                exit_code: Some(0),
+                stdout: Some(AgentLspResultEnvelope::ok(result).to_stdout_json()),
+                stderr: Some(String::new()),
+                duration_ms: Some(1),
+                error: None,
+            })
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -459,6 +656,264 @@ mod tests {
         let serialized = outcome.body.to_string();
         assert!(!serialized.contains("agent:hosted:demo"));
         assert!(!serialized.contains(&connector.context.executor_root));
-        assert!(!serialized.contains("webcodex_"));
+        assert!(!serialized.contains(PROJECT_CREDENTIAL));
+    }
+
+    #[tokio::test]
+    async fn native_semantic_bridge_uses_document_symbols_for_file_scope() {
+        let (_temp, connector) = connector();
+        register_semantic_agent(&connector, true).await;
+        let registry = connector.tools.shell_clients.clone();
+        let responder = tokio::spawn(async move {
+            let request = loop {
+                if let Some(request) = registry
+                    .poll(ShellAgentPollRequest {
+                        client_id: "hosted".to_string(),
+                        agent_instance_id: "semantic-instance".to_string(),
+                        projects: None,
+                    })
+                    .await
+                    .unwrap()
+                {
+                    break request;
+                }
+                tokio::task::yield_now().await;
+            };
+            let request_id = request.request_id;
+            let payload = request.lsp.expect("typed LSP payload");
+            assert!(matches!(
+                payload.request,
+                AgentLspRequest::DocumentSymbols { ref path, limit }
+                    if path == "src/tool_runtime/runtime.rs" && limit == MAX_SEMANTIC_RESULTS_PER_QUERY
+            ));
+            let result = json!({
+                "project": "demo",
+                "path": "src/tool_runtime/runtime.rs",
+                "language": "rust",
+                "symbols": [
+                    {
+                        "name": "ToolRuntime",
+                        "kind": "struct",
+                        "kind_code": 23,
+                        "range": {
+                            "start": {"line": 10, "column": 1},
+                            "end": {"line": 20, "column": 1}
+                        },
+                        "selection_range": {
+                            "start": {"line": 10, "column": 12},
+                            "end": {"line": 10, "column": 23}
+                        },
+                        "children": [
+                            {
+                                "name": "handle_request",
+                                "kind": "method",
+                                "kind_code": 6,
+                                "range": {
+                                    "start": {"line": 14, "column": 5},
+                                    "end": {"line": 16, "column": 5}
+                                },
+                                "selection_range": {
+                                    "start": {"line": 14, "column": 8},
+                                    "end": {"line": 14, "column": 22}
+                                },
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "name": "Unrelated",
+                        "kind": "function",
+                        "kind_code": 12,
+                        "range": {
+                            "start": {"line": 30, "column": 1},
+                            "end": {"line": 31, "column": 1}
+                        },
+                        "selection_range": {
+                            "start": {"line": 30, "column": 4},
+                            "end": {"line": 30, "column": 13}
+                        },
+                        "children": []
+                    }
+                ],
+                "total_count": 2,
+                "returned_count": 2,
+                "truncated": false,
+                "external_results_omitted": 0,
+                "invalid_results_omitted": 0
+            });
+            registry
+                .complete(ShellAgentResultRequest {
+                    client_id: "hosted".to_string(),
+                    agent_instance_id: "semantic-instance".to_string(),
+                    request_id,
+                    exit_code: Some(0),
+                    stdout: Some(AgentLspResultEnvelope::ok(result).to_stdout_json()),
+                    stderr: Some(String::new()),
+                    duration_ms: Some(1),
+                    error: None,
+                })
+                .await
+                .unwrap();
+        });
+
+        let mut input = valid_input(&connector);
+        input.path = Some("src/tool_runtime/runtime.rs".to_string());
+        input.queries = vec![
+            "ToolRuntime".to_string(),
+            "Unrelated".to_string(),
+            "handle_request".to_string(),
+        ];
+        let outcome = connector.semantic_localize(&auth("u1"), input).await;
+        responder.await.unwrap();
+        assert!(outcome.ok, "{}", outcome.body);
+        let rows = outcome.body["data"]["results"].as_array().unwrap();
+        assert_eq!(rows.len(), 3);
+        assert_eq!(rows[0]["query"], "ToolRuntime");
+        assert_eq!(rows[0]["handled"], true);
+        let first_matches = rows[0]["matches"].as_array().unwrap();
+        assert_eq!(first_matches.len(), 1);
+        assert_eq!(first_matches[0]["path"], "src/tool_runtime/runtime.rs");
+        assert_eq!(first_matches[0]["symbol"], "ToolRuntime");
+        assert_eq!(first_matches[0]["line"], 10);
+        assert_eq!(first_matches[0]["column"], 12);
+        assert_eq!(rows[1]["query"], "Unrelated");
+        assert_eq!(rows[1]["handled"], true);
+        let second_matches = rows[1]["matches"].as_array().unwrap();
+        assert_eq!(second_matches.len(), 1);
+        assert_eq!(second_matches[0]["symbol"], "Unrelated");
+        assert_eq!(rows[2]["query"], "handle_request");
+        assert_eq!(rows[2]["handled"], true);
+        assert_eq!(rows[2]["matches"][0]["symbol"], "handle_request");
+        assert_eq!(rows[2]["matches"][0]["line"], 14);
+    }
+
+    #[tokio::test]
+    async fn native_semantic_bridge_cold_workspace_queries_are_serial() {
+        let (_temp, connector) = connector();
+        register_semantic_agent(&connector, true).await;
+        let registry = connector.tools.shell_clients.clone();
+        let responder = tokio::spawn(async move {
+            let first = loop {
+                if let Some(request) = registry
+                    .poll(ShellAgentPollRequest {
+                        client_id: "hosted".to_string(),
+                        agent_instance_id: "semantic-instance".to_string(),
+                        projects: None,
+                    })
+                    .await
+                    .unwrap()
+                {
+                    break request;
+                }
+                tokio::task::yield_now().await;
+            };
+            assert!(registry
+                .poll(ShellAgentPollRequest {
+                    client_id: "hosted".to_string(),
+                    agent_instance_id: "semantic-instance".to_string(),
+                    projects: None,
+                })
+                .await
+                .unwrap()
+                .is_none());
+            complete_workspace_symbol_request(&registry, first).await;
+
+            let second = loop {
+                if let Some(request) = registry
+                    .poll(ShellAgentPollRequest {
+                        client_id: "hosted".to_string(),
+                        agent_instance_id: "semantic-instance".to_string(),
+                        projects: None,
+                    })
+                    .await
+                    .unwrap()
+                {
+                    break request;
+                }
+                tokio::task::yield_now().await;
+            };
+            complete_workspace_symbol_request(&registry, second).await;
+        });
+
+        let mut input = valid_input(&connector);
+        input.path = None;
+        input.queries = vec!["ToolRuntime".to_string(), "LspSupervisor".to_string()];
+        let outcome = connector.semantic_localize(&auth("u1"), input).await;
+        responder.await.unwrap();
+
+        assert!(outcome.ok, "{}", outcome.body);
+        assert_eq!(outcome.body["data"]["lsp_state"], "COLD_READY");
+        assert_eq!(outcome.body["data"]["semantic_concurrency"], 1);
+    }
+
+    #[tokio::test]
+    async fn native_semantic_bridge_warm_workspace_queries_are_bounded_and_ordered() {
+        let (_temp, connector) = connector();
+        register_semantic_agent(&connector, true).await;
+        connector.semantic_lsp_warm.store(true, Ordering::Release);
+        let registry = connector.tools.shell_clients.clone();
+        let responder = tokio::spawn(async move {
+            let mut requests = Vec::new();
+            while requests.len() < 2 {
+                if let Some(request) = registry
+                    .poll(ShellAgentPollRequest {
+                        client_id: "hosted".to_string(),
+                        agent_instance_id: "semantic-instance".to_string(),
+                        projects: None,
+                    })
+                    .await
+                    .unwrap()
+                {
+                    requests.push(request);
+                } else {
+                    tokio::task::yield_now().await;
+                }
+            }
+            assert!(registry
+                .poll(ShellAgentPollRequest {
+                    client_id: "hosted".to_string(),
+                    agent_instance_id: "semantic-instance".to_string(),
+                    projects: None,
+                })
+                .await
+                .unwrap()
+                .is_none());
+            complete_workspace_symbol_request(&registry, requests.remove(0)).await;
+            let third = loop {
+                if let Some(request) = registry
+                    .poll(ShellAgentPollRequest {
+                        client_id: "hosted".to_string(),
+                        agent_instance_id: "semantic-instance".to_string(),
+                        projects: None,
+                    })
+                    .await
+                    .unwrap()
+                {
+                    break request;
+                }
+                tokio::task::yield_now().await;
+            };
+            complete_workspace_symbol_request(&registry, requests.remove(0)).await;
+            complete_workspace_symbol_request(&registry, third).await;
+        });
+
+        let mut input = valid_input(&connector);
+        input.path = None;
+        input.queries = vec![
+            "ToolRuntime".to_string(),
+            "LspSupervisor".to_string(),
+            "ConnectorRuntime".to_string(),
+        ];
+        let outcome = connector.semantic_localize(&auth("u1"), input).await;
+        responder.await.unwrap();
+
+        assert!(outcome.ok, "{}", outcome.body);
+        assert_eq!(outcome.body["data"]["lsp_state"], "WARM");
+        assert_eq!(outcome.body["data"]["semantic_concurrency"], 2);
+        let results = outcome.body["data"]["results"].as_array().unwrap();
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0]["query"], "ToolRuntime");
+        assert_eq!(results[1]["query"], "LspSupervisor");
+        assert_eq!(results[2]["query"], "ConnectorRuntime");
     }
 }

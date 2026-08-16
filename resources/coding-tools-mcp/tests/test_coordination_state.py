@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -108,6 +109,23 @@ class CoordinationStateTests(unittest.TestCase):
             self.assertFalse(second["renewed"])
             self.assertEqual(second["fencing_token"], first["fencing_token"] + 1)
             self.assertEqual(second["owner_client_id"], "chatweb")
+
+    def test_controller_expiry_is_persisted_and_reported_without_a_new_acquire(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            ledger.create_run(run_id="run-1", objective="persist expiry")
+            ledger.upsert_hub_client(client_id="chatweb", client_type="chatweb", role="controller")
+            ledger.acquire_controller_lease(
+                run_id="run-1", owner_client_id="chatweb", lease_id="lease-chat", ttl_seconds=60
+            )
+            expired = ledger.expire_controller_leases(now=time.time() + 120)
+            self.assertEqual(expired, ["run-1"])
+            self.assertEqual(ledger.get_controller_lease("run-1")["status"], "expired")
+            with ledger._lock, ledger._connect() as connection:
+                status = connection.execute(
+                    "SELECT status FROM controller_leases WHERE run_id='run-1'"
+                ).fetchone()["status"]
+            self.assertEqual(status, "expired")
 
     def test_operator_controller_transfer_requires_online_registered_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

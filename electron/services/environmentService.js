@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const net = require('node:net');
 const { run } = require('./commandRunner');
-const paths = require('../paths');
+const defaultPaths = require('../paths');
 const { resolveProxy } = require('./proxyService');
 
 async function commandExists(name) {
@@ -20,7 +20,7 @@ function canConnect(host, port, timeout = 800) {
   });
 }
 
-async function pythonStatus() {
+async function pythonStatus(paths = defaultPaths) {
   const candidates = [];
   if (fs.existsSync(paths.portablePython())) {
     const pythonw = pathForPythonw(paths.portablePython());
@@ -46,9 +46,13 @@ function pathForPythonw(pythonPath) {
 }
 
 class EnvironmentService {
+  constructor(paths = defaultPaths) {
+    this.paths = paths;
+  }
+
   async inspect(settings, options = {}) {
     const [python, proxy, mcpListening, tunnelListening] = await Promise.all([
-      pythonStatus(),
+      pythonStatus(this.paths),
       resolveProxy(settings, { force: options.forceProxy === true }).catch(() => ({ mode: settings.proxyMode, resolvedUrl: '', source: 'error', reachable: false })),
       canConnect('127.0.0.1', settings.mcpPort),
       canConnect('127.0.0.1', settings.healthPort)
@@ -63,10 +67,10 @@ class EnvironmentService {
         url: proxy.resolvedUrl,
         source: proxy.source
       },
-      tunnelClient: { installed: fs.existsSync(paths.tunnelExecutable()), path: paths.tunnelExecutable() },
+      tunnelClient: { installed: fs.existsSync(this.paths.tunnelExecutable()), path: this.paths.tunnelExecutable() },
       workspace: { configured: Boolean(settings.workspace), exists: Boolean(settings.workspace && fs.existsSync(settings.workspace)) },
       ports: { mcpListening, tunnelListening },
-      nativePortableReady: fs.existsSync(paths.portablePython())
+      nativePortableReady: fs.existsSync(this.paths.portablePython())
     };
   }
 

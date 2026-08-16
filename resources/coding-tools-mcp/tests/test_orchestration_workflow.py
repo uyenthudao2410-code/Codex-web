@@ -99,6 +99,37 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
             self.assertEqual(rejected["orchestration"]["run_id"], run_id)
             runtime.close()
 
+    def test_reconnect_repairs_acceptance_projection_from_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            result = runtime.agent_workflow({
+                "workflow": "bugfix",
+                "phase": "execute",
+                "objective": "change value",
+                "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                "verification": "none",
+                "include_diff": False,
+            })
+            self.assertEqual(result["orchestration"]["orchestration_state"], "ACCEPTING")
+            runtime.task_state.update({
+                "status": "waiting",
+                "current_step": "Waiting for model",
+                "next_step": "Wait for the old response stream.",
+            })
+            runtime.close()
+
+            recovered = Runtime(root, permission_mode="dangerous")
+            try:
+                self.assertTrue(recovered.reconciled_task_orchestration)
+                state = recovered.task_state.get()
+                self.assertEqual(state["orchestration"]["orchestration_state"], "ACCEPTING")
+                self.assertEqual(state["current_step"], "Awaiting acceptance")
+                self.assertIn("task_control action=accept or reject", state["next_step"])
+            finally:
+                recovered.close()
+
 
 if __name__ == "__main__":
     unittest.main()

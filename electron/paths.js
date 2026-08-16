@@ -1,28 +1,36 @@
-﻿const path = require('node:path');
-const { app } = require('electron');
+const { createElectronRuntimePaths } = require('./services/runtimePaths');
 
-function resourcesRoot() {
-  return app.isPackaged
-    ? path.join(process.resourcesPath, 'resources')
-    : path.join(app.getAppPath(), 'resources');
+let resolved = null;
+
+function current() {
+  if (!resolved) {
+    const { app } = require('electron');
+    resolved = createElectronRuntimePaths(app);
+  }
+  return resolved;
 }
 
-function dataRoot() {
-  return app.getPath('userData');
+function configureRuntimePaths(paths) {
+  resolved = paths;
+  return resolved;
 }
 
 module.exports = {
-  resourcesRoot,
-  dataRoot,
-  settingsFile: () => path.join(dataRoot(), 'settings.json'),
-  secretsFile: () => path.join(dataRoot(), 'secrets.bin'),
-  stateFile: () => path.join(dataRoot(), 'runtime-state.json'),
-  hubProxyDescriptorFile: () => path.join(dataRoot(), 'execution-hub-proxy.json'),
-  supervisorRequestFile: () => path.join(dataRoot(), 'runtime-supervisor-request.json'),
-  logFile: () => path.join(dataRoot(), 'logs', 'assistant.log'),
-  mcpLogFile: () => path.join(dataRoot(), 'logs', 'mcp.log'),
-  tunnelLogFile: () => path.join(dataRoot(), 'logs', 'tunnel.log'),
-  tunnelExecutable: () => path.join(resourcesRoot(), 'tools', 'tunnel-client.exe'),
-  portablePython: () => path.join(resourcesRoot(), 'native-python', 'python.exe')
+  configureRuntimePaths,
+  appRoot: () => current().appRoot(),
+  resourcesRoot: () => current().resourcesRoot(),
+  dataRoot: () => current().dataRoot(),
+  settingsFile: () => current().settingsFile(),
+  secretsFile: () => current().secretsFile(),
+  stateFile: () => current().stateFile(),
+  hubProxyDescriptorFile: () => current().hubProxyDescriptorFile(),
+  supervisorRequestFile: () => current().supervisorRequestFile(),
+  recoveryHostDescriptorFile: () => current().recoveryHostDescriptorFile(),
+  recoveryHostLockFile: () => current().recoveryHostLockFile(),
+  recoveryActionsFile: () => current().recoveryActionsFile(),
+  logFile: () => current().logFile(),
+  mcpLogFile: () => current().mcpLogFile(),
+  tunnelLogFile: () => current().tunnelLogFile(),
+  tunnelExecutable: () => current().tunnelExecutable(),
+  portablePython: () => current().portablePython()
 };
-

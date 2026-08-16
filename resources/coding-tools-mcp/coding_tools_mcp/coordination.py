@@ -57,11 +57,175 @@ COORDINATION_LANE_OUTPUT_SCHEMA = {
 
 
 class CoordinationMixin:
+    def _activation_cleanup_locked(self) -> None:
+        fence = self.activation_fence
+        if fence and int(fence.get("expires_at_unix_ms") or 0) <= int(time.time() * 1000):
+            self.activation_fence = None
+
+    def _activation_enter_tool_call(self, name: str = "", args: dict[str, Any] | None = None) -> None:
+        with self.activation_lock:
+            self._activation_cleanup_locked()
+            if self.activation_fence:
+                if name == "task_control" and str((args or {}).get("action") or "").lower() == "restart_runtime":
+                    self.active_tool_calls += 1
+                    return
+                raise ToolFailure(
+                    "RUNTIME_ACTIVATION_PENDING",
+                    "The runtime is draining for a controlled code activation; retry after reconnect.",
+                    category="runtime",
+                    retryable=True,
+                    details={"operation_id": str(self.activation_fence.get("operation_id") or "")},
+                )
+            self.active_tool_calls += 1
+
+    def _activation_leave_tool_call(self) -> None:
+        with self.activation_lock:
+            self.active_tool_calls = max(0, int(self.active_tool_calls) - 1)
+
+    def activation_preflight(
+        self,
+        *,
+        operation_id: str = "",
+        expires_at_unix_ms: int = 0,
+        allow_acceptance_pending: bool = False,
+        prepare: bool = False,
+        ignore_active_tool_calls: int = 0,
+    ) -> dict[str, Any]:
+        """Return canonical restart safety and optionally fence new tool admission."""
+        with self.activation_lock:
+            self._activation_cleanup_locked()
+            now_ms = int(time.time() * 1000)
+            if prepare:
+                allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
+                if not (16 <= len(operation_id) <= 128) or any(char not in allowed for char in operation_id):
+                    raise ToolFailure("INVALID_OPERATION_ID", "Invalid activation operation_id.", category="validation")
+                if expires_at_unix_ms <= now_ms or expires_at_unix_ms > now_ms + 60_000:
+                    raise ToolFailure("ACTIVATION_REQUEST_EXPIRED", "Activation expiry must be within the next 60 seconds.", category="validation")
+            if self.activation_fence and str(self.activation_fence.get("operation_id") or "") != operation_id:
+                return {
+                    "safe": False,
+                    "code": "RUNTIME_BUSY",
+                    "reason": "another_activation_pending",
+                    "operation_id": str(self.activation_fence.get("operation_id") or ""),
+                }
+
+            with self.sessions_lock:
+                active_commands = sum(1 for session in self.sessions.values() if session.process.poll() is None)
+                starting_commands = int(self.starting_sessions)
+            with self.background_operations_lock:
+                active_background = sum(1 for item in self.background_operations.values() if not item["event"].is_set())
+            ledger_background = sum(
+                1 for item in self.orchestration_ledger.list_background_operations(limit=100)
+                if str(item.get("status") or "") == "running"
+            )
+            managed = self.execution_resource_governor.snapshot(limit=100)
+            managed_active = int(managed.get("active_command_count") or 0)
+            foreign_heavy = self.execution_resource_governor.foreign_heavy_processes()
+            active_lanes = len(self.orchestration_ledger.list_agent_lanes(lifecycle="active"))
+            active_tool_calls = max(0, int(self.active_tool_calls) - max(0, int(ignore_active_tool_calls)))
+            counts = {
+                "active_tool_calls": active_tool_calls,
+                "active_commands": active_commands,
+                "starting_commands": starting_commands,
+                "active_background_operations": max(active_background, ledger_background),
+                "active_managed_processes": managed_active,
+                "foreign_heavy_processes": len(foreign_heavy),
+                "active_agent_lanes": active_lanes,
+            }
+            if any(counts.values()):
+                return {"safe": False, "code": "RUNTIME_BUSY", "reason": "active_runtime_work", "counts": counts}
+
+            active_run = self.orchestration_ledger.current_active_run()
+            orchestration_state = "IDLE"
+            run_id = ""
+            acceptance_pending = False
+            if active_run:
+                run_id = str(active_run.get("run_id") or "")
+                ctx = self.orchestration_control.snapshot(run_id)
+                if ctx is None:
+                    return {
+                        "safe": False,
+                        "code": "ORCHESTRATION_STATE_UNCERTAIN",
+                        "reason": "active_run_missing_context",
+                        "run_id": run_id,
+                        "counts": counts,
+                    }
+                orchestration_state = str(ctx.state or "").upper()
+                integrity = self.orchestration_ledger.verify_chain(run_id)
+                if not integrity.get("ok", False):
+                    return {
+                        "safe": False,
+                        "code": "ORCHESTRATION_STATE_UNCERTAIN",
+                        "reason": "ledger_integrity_failed",
+                        "run_id": run_id,
+                        "orchestration_state": orchestration_state,
+                        "counts": counts,
+                    }
+                if orchestration_state == "ACCEPTING":
+                    acceptance_pending = True
+                    if not allow_acceptance_pending:
+                        return {
+                            "safe": False,
+                            "code": "ACCEPTANCE_PENDING",
+                            "reason": "explicit_acceptance_preservation_required",
+                            "run_id": run_id,
+                            "orchestration_state": orchestration_state,
+                            "counts": counts,
+                        }
+                else:
+                    return {
+                        "safe": False,
+                        "code": "RUNTIME_BUSY",
+                        "reason": "orchestration_active",
+                        "run_id": run_id,
+                        "orchestration_state": orchestration_state,
+                        "counts": counts,
+                    }
+
+            result = {
+                "safe": True,
+                "code": "READY",
+                "reason": "idle" if not acceptance_pending else "acceptance_state_is_durable",
+                "run_id": run_id,
+                "orchestration_state": orchestration_state,
+                "acceptance_pending": acceptance_pending,
+                "counts": counts,
+                "process_instance_id": self.process_instance_id,
+                "server_instance_id": self.server_instance_id,
+                "workspace": str(self.workspace.root),
+            }
+            if prepare:
+                self.activation_fence = {
+                    "operation_id": operation_id,
+                    "expires_at_unix_ms": expires_at_unix_ms,
+                    "prepared_at_unix_ms": now_ms,
+                }
+                result["fenced"] = True
+                result["expires_at_unix_ms"] = expires_at_unix_ms
+            return result
+
+    def cancel_activation(self, operation_id: str) -> bool:
+        with self.activation_lock:
+            self._activation_cleanup_locked()
+            if not self.activation_fence:
+                return False
+            if str(self.activation_fence.get("operation_id") or "") != str(operation_id or ""):
+                raise ToolFailure("ACTIVATION_OPERATION_MISMATCH", "Activation fence belongs to another operation.", category="validation")
+            self.activation_fence = None
+            return True
+
     def _coordination_ids(self, args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], str, str]:
+        self._reconcile_task_orchestration_projection()
         state = self.task_state.get()
         projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
         run_id = str(args.get("run_id") or projection.get("run_id") or "").strip()
         wave_id = str(args.get("wave_id") or projection.get("wave_id") or "").strip()
+        if not run_id:
+            active = self.orchestration_ledger.current_active_run()
+            run_id = str(active.get("run_id") or "") if active else ""
+            if run_id and not wave_id:
+                waves = self.orchestration_ledger.list_waves(run_id)
+                wave_id = str(waves[-1].get("wave_id") or "") if waves else ""
         return state, projection, run_id, wave_id
 
     @staticmethod
@@ -563,6 +727,21 @@ class CoordinationMixin:
                     }
 
             ticket_id = secrets.token_urlsafe(12)
+            preflight = self.activation_preflight(
+                operation_id=ticket_id,
+                expires_at_unix_ms=now_ms + SUPERVISOR_RESTART_TICKET_TTL_MS,
+                allow_acceptance_pending=args.get("allow_acceptance_pending") is True,
+                prepare=True,
+                ignore_active_tool_calls=1,
+            )
+            if not preflight.get("safe"):
+                raise ToolFailure(
+                    str(preflight.get("code") or "ORCHESTRATION_STATE_UNCERTAIN"),
+                    f"Controlled restart preflight refused: {preflight.get('reason') or 'runtime state is not safe'}.",
+                    category="runtime",
+                    retryable=str(preflight.get("code") or "") == "RUNTIME_BUSY",
+                    details=preflight,
+                )
             ticket = {
                 "version": 1,
                 "action": "restart",
@@ -582,6 +761,7 @@ class CoordinationMixin:
                 temporary.write_text(json.dumps(ticket, ensure_ascii=False, sort_keys=True), encoding="utf-8")
                 os.replace(temporary, request_path)
             except OSError as exc:
+                self.cancel_activation(ticket_id)
                 try:
                     temporary.unlink(missing_ok=True)
                 except OSError:
@@ -631,7 +811,10 @@ class CoordinationMixin:
         action = str(args.get("action", "get")).lower()
         if action == "restart_runtime":
             return self._enqueue_runtime_restart(args)
+        self._reconcile_task_orchestration_projection()
         if action == "get":
+            # The stream is not the source of truth after reconnect.  Repair
+            # the compact view from the SQLite ledger before returning status.
             with self.background_operations_lock:
                 memory_operations = {
                     item["operation_id"]: self._background_operation_snapshot(item)
@@ -652,6 +835,7 @@ class CoordinationMixin:
             )
             return {
                 "state": self.task_state.get(),
+                "resources": self.execution_resource_governor.snapshot(),
                 "operations": operations[-8:],
                 "recovery": {
                     "orphaned_background_operations": self.orphaned_background_operations,
@@ -839,6 +1023,7 @@ class CoordinationMixin:
                     "state": state,
                     "orchestration": self._orchestration_result(ctx, write_reports=False),
                     "audit": summary,
+                    "resources": self.execution_resource_governor.snapshot(),
                     "reports": reports,
                 }
             if action == "accept":

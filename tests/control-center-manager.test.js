@@ -105,7 +105,7 @@ test('Control Center projects durable orchestration phases into visible activity
   assert.match(js, /ROUTED:\s*\{\s*phase:\s*'dispatching'/);
   assert.match(js, /EXECUTING:\s*\{\s*phase:\s*'executing'/);
   assert.match(js, /PROVING:\s*\{\s*phase:\s*'proving'/);
-  assert.match(js, /ACCEPTING:\s*\{\s*phase:\s*'accepting'/);
+  assert.match(js, /ACCEPTING:\s*\{\s*phase:\s*'awaiting_acceptance'.*busy:\s*false/);
   assert.match(js, /REPLAN:\s*\{\s*phase:\s*'replanning'/);
   assert.match(js, /\['streaming', 'responding'\]\.includes\(delegationStatus\)/);
   assert.match(js, /fabric\.dataset\.phase = view\.activity\.phase/);

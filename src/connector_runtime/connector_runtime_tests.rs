@@ -9,7 +9,7 @@ use crate::shell_protocol::{
 
 pub(super) const PROJECT_GRANT_ID: &str = "wc_pgrant_1111111111111111";
 pub(super) const PROJECT_SUBJECT_ID: &str = "project:wc_pgrant_1111111111111111";
-const PROJECT_CREDENTIAL: &str =
+pub(super) const PROJECT_CREDENTIAL: &str =
     "webcodex_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 pub(super) fn credential() -> ProjectCredentialVerifier {

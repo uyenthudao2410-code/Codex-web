@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
 import shutil
 import signal
 import stat
@@ -25,6 +26,7 @@ from .command_parse import (
     strip_heredoc_payloads,
 )
 from .errors import ToolFailure
+from .execution_resources import ExecutionResourceError
 from .git_utils import require_git
 from .landlock_exec import (
     SPECIAL_DEVICE_PATHS,
@@ -280,9 +282,52 @@ class ExecToolsMixin:
             self.starting_sessions += 1
         process: subprocess.Popen[bytes] | None = None
         session: ExecSession | None = None
+        admission = None
         registered = False
         slot_released = False
         try:
+            command_id = secrets.token_urlsafe(18)
+            projection = self.task_state.get().get("orchestration", {})
+            projection = projection if isinstance(projection, dict) else {}
+            projected_run = str(projection.get("run_id") or "").strip()
+            projected_wave = str(projection.get("wave_id") or "").strip()
+            requested_run = str(args.get("run_id") or "").strip()
+            requested_wave = str(args.get("wave_id") or "").strip()
+            if requested_run and projected_run and requested_run != projected_run:
+                raise ToolFailure(
+                    "EXECUTION_OWNER_MISMATCH",
+                    "run_id does not match the task's current orchestration owner.",
+                    category="runtime",
+                    retryable=True,
+                    details={"run_id": requested_run, "current_run_id": projected_run},
+                )
+            if requested_wave and projected_wave and requested_wave != projected_wave:
+                raise ToolFailure(
+                    "EXECUTION_OWNER_MISMATCH",
+                    "wave_id does not match the task's current orchestration owner.",
+                    category="runtime",
+                    retryable=True,
+                    details={"wave_id": requested_wave, "current_wave_id": projected_wave},
+                )
+            owner_run = requested_run or projected_run
+            owner_wave = requested_wave or projected_wave
+            try:
+                admission = self.execution_resource_governor.admit(
+                    command=cmd,
+                    command_id=command_id,
+                    run_id=owner_run,
+                    wave_id=owner_wave,
+                    owner=principal_id,
+                    resource_class=args.get("resource_class", ""),
+                )
+            except ExecutionResourceError as exc:
+                raise ToolFailure(
+                    exc.code,
+                    exc.message,
+                    category="runtime",
+                    retryable=exc.retryable,
+                    details=exc.details,
+                ) from exc
             process, pty_master_fd = spawn_process(
                 popen_cmd,
                 cwd=str(workdir.path),
@@ -291,8 +336,14 @@ class ExecToolsMixin:
                 tty=tty,
                 popen_kwargs=popen_extra,
             )
+            self.execution_resource_governor.bind_process(admission, process)
             session = self._make_session(
                 process,
+                session_id=command_id,
+                managed_job_id=admission.job_id,
+                owner_run_id=admission.run_id,
+                owner_wave_id=admission.wave_id,
+                resource_class=admission.resource_class,
                 timeout_at=deadline,
                 warnings=[landlock_warning] if landlock_warning else None,
                 pty_master_fd=pty_master_fd,
@@ -319,6 +370,8 @@ class ExecToolsMixin:
                     self.starting_sessions -= 1
             if process is not None and process.poll() is None:
                 terminate_process_group(process, signal.SIGTERM)
+            if admission is not None:
+                self.execution_resource_governor.spawn_failed(admission)
             raise
         finally:
             if landlock_fd is not None:
