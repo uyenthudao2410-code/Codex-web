@@ -792,6 +792,7 @@ class ToolModeTests(unittest.TestCase):
                         {
                             "objective": "semantic conflict fallback",
                             "queries": ["fallback_token"],
+                            "path": ".",
                             "max_files": 2,
                             "force_refresh": True,
                         }
@@ -807,6 +808,36 @@ class ToolModeTests(unittest.TestCase):
                 self.assertEqual(denied_localization["semantic_attempted"], 0)
                 self.assertEqual(denied_localization["text_fallback_queries"], 1)
                 self.assertIn("semantic.py", denied["selected_paths"])
+
+                (root / "src").mkdir()
+                with (
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "_host_pressure",
+                        return_value={"observed": True, "pressured": False},
+                    ),
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "_foreign_heavy_processes",
+                        return_value=[],
+                    ),
+                ):
+                    directory_denied = runtime.prepare_coding_context(
+                        {
+                            "objective": "directory scope remains workspace heavy",
+                            "queries": ["fallback_token"],
+                            "path": "src",
+                            "max_files": 2,
+                            "force_refresh": True,
+                        }
+                    )
+                directory_admission = directory_denied["composite_read"]["execution"][
+                    "localization"
+                ]["native_admission"]
+                self.assertEqual(directory_admission["mode"], "workspace")
+                self.assertEqual(directory_admission["cost"], "HEAVY")
+                self.assertEqual(directory_admission["reason_code"], "HEAVY_SLOT_BUSY")
+                self.assertEqual(semantic_calls, [])
 
                 runtime.execution_resource_governor.complete(
                     heavy.job_id,

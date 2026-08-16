@@ -24,6 +24,10 @@ from .tool_schema import EVALUATION_SCHEMA_VERSION
 _CONTEXT_BUNDLE_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _CONTEXT_BUNDLE_CACHE_LOCK = threading.Lock()
 CONTEXT_BUNDLE_CACHE_TTL_SECONDS = 30
+NATIVE_SEMANTIC_DOCUMENT_SUFFIXES = frozenset({
+    ".rs", ".py", ".pyi", ".ts", ".mts", ".cts", ".tsx",
+    ".js", ".mjs", ".cjs", ".jsx",
+})
 
 
 class ContextToolsMixin:
@@ -236,7 +240,20 @@ class ContextToolsMixin:
                     and (self.workspace.root / candidate_path).is_file()
                 ):
                     semantic_path = candidate
-            semantic_mode = "single_file" if semantic_path != "." else "workspace"
+            normalized_semantic_path = semantic_path.replace("\\", "/")
+            semantic_candidate = Path(normalized_semantic_path)
+            semantic_is_document = (
+                normalized_semantic_path != "."
+                and not semantic_candidate.is_absolute()
+                and ".." not in semantic_candidate.parts
+                and semantic_candidate.suffix.lower() in NATIVE_SEMANTIC_DOCUMENT_SUFFIXES
+                and (self.workspace.root / semantic_candidate).is_file()
+            )
+            # The native bridge uses document symbols only for a supported
+            # existing source file. Directory, missing, and unsupported-file
+            # scopes fall through to workspace symbols and must retain HEAVY
+            # admission semantics.
+            semantic_mode = "single_file" if semantic_is_document else "workspace"
             semantic_cost = "MEDIUM" if semantic_mode == "single_file" else "HEAVY"
             semantic_admission = self.execution_resource_governor.semantic_native_admission(
                 mode=semantic_mode,

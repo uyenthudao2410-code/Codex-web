@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sqlite3
 import subprocess
 import sys
@@ -16,10 +18,44 @@ from typing import Any
 from resource_hygiene import disk_snapshot
 
 
+RESOURCE_POLICY_VERSION = "p2-p3-operational-hardening-v1"
+FINGERPRINT_PATHS = (
+    "crates/webcodex-process/Cargo.toml",
+    "crates/webcodex-process/src/lib.rs",
+    "crates/webcodex-process/src/unix.rs",
+    "crates/webcodex-process/src/windows.rs",
+    "crates/webcodex-process/tests/managed_child.rs",
+    "crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs",
+    "crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+    "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+    "resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+    "resources/coding-tools-mcp/coding_tools_mcp/semantic_localization.py",
+    "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+    "resources/coding-tools-mcp/scripts/resource_hygiene.py",
+    "resources/coding-tools-mcp/scripts/run_resource_hardening_soak.py",
+    "resources/coding-tools-mcp/tests/test_execution_resources.py",
+    "resources/coding-tools-mcp/tests/test_resource_hygiene_script.py",
+    "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+    "src/connector_runtime/semantic_bridge.rs",
+)
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace(
         "+00:00", "Z"
     )
+
+
+def sanitize_output_tail(output: str, cwd: Path) -> str:
+    sanitized = output
+    for path, replacement in (
+        (cwd.resolve(strict=False), "<check-cwd>"),
+        (Path.home().resolve(strict=False), "<home>"),
+    ):
+        for rendered in {str(path), path.as_posix()}:
+            if rendered:
+                sanitized = sanitized.replace(rendered, replacement)
+    return sanitized[-16_000:]
 
 
 def run_check(name: str, command: list[str], cwd: Path) -> dict[str, Any]:
@@ -35,13 +71,23 @@ def run_check(name: str, command: list[str], cwd: Path) -> dict[str, Any]:
         errors="replace",
         check=False,
     )
-    output = completed.stdout[-16_000:]
+    # Passing checks contribute only bounded timing/exit evidence. Retain a
+    # bounded output tail solely on failure, where it is needed to diagnose
+    # the acceptance gap without turning the report into an output archive.
+    output = (
+        sanitize_output_tail(completed.stdout, cwd)
+        if completed.returncode != 0
+        else ""
+    )
+    display_command = list(command)
+    if display_command and Path(display_command[0]) == Path(sys.executable):
+        display_command[0] = "<python>"
     return {
         "name": name,
         "passed": completed.returncode == 0,
         "exit_code": completed.returncode,
         "duration_ms": max(0, int((time.monotonic() - started) * 1000)),
-        "command": command,
+        "command": display_command,
         "output_tail": output,
     }
 
@@ -57,6 +103,33 @@ def git_head(repository: Path) -> str:
         check=False,
     )
     return completed.stdout.strip() if completed.returncode == 0 else ""
+
+
+def source_fingerprint(repository: Path) -> dict[str, Any]:
+    aggregate = hashlib.sha256()
+    files: list[dict[str, str]] = []
+    for relative in FINGERPRINT_PATHS:
+        path = repository / relative
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        aggregate.update(relative.encode("utf-8"))
+        aggregate.update(b"\0")
+        aggregate.update(digest.encode("ascii"))
+        aggregate.update(b"\n")
+        files.append({"path": relative, "sha256": digest})
+    return {
+        "algorithm": "sha256(path_nul_file_sha256_lf)",
+        "sha256": aggregate.hexdigest(),
+        "files": files,
+    }
+
+
+def coding_tools_runtime_version(repository: Path) -> str:
+    source = (
+        repository
+        / "resources/coding-tools-mcp/coding_tools_mcp/__init__.py"
+    ).read_text(encoding="utf-8")
+    match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', source, re.MULTILINE)
+    return match.group(1) if match else "unknown"
 
 
 def ledger_health(repository: Path) -> dict[str, Any]:
@@ -84,6 +157,64 @@ def ledger_health(repository: Path) -> dict[str, Any]:
             active_runs = connection.execute(
                 "SELECT COUNT(*) FROM runs WHERE status='active'"
             ).fetchone()[0]
+            now = time.time()
+            cutoff = datetime.fromtimestamp(
+                now - 24 * 60 * 60,
+                timezone.utc,
+            ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+            stale_runs = 0
+            candidates = connection.execute(
+                """SELECT r.run_id, r.started_at,
+                          MAX(e.event_time) AS event_time,
+                          MAX(w.started_at) AS wave_started_at,
+                          MAX(w.finished_at) AS wave_finished_at,
+                          MAX(b.updated_at) AS background_updated_at,
+                          MAX(l.updated_at) AS lane_updated_at,
+                          MAX(h.created_at) AS handoff_created_at
+                   FROM runs r
+                   LEFT JOIN events e ON e.run_id=r.run_id
+                   LEFT JOIN waves w ON w.run_id=r.run_id
+                   LEFT JOIN background_operations b ON b.run_id=r.run_id
+                   LEFT JOIN agent_lanes l ON l.run_id=r.run_id
+                   LEFT JOIN handoff_capsules h ON h.run_id=r.run_id
+                   WHERE r.status='active'
+                   GROUP BY r.run_id, r.started_at"""
+            ).fetchall()
+            for candidate in candidates:
+                run_id = str(candidate[0])
+                latest_event = connection.execute(
+                    "SELECT state_after FROM events WHERE run_id=? ORDER BY seq DESC LIMIT 1",
+                    (run_id,),
+                ).fetchone()
+                if latest_event and str(latest_event[0] or "").upper() == "ACCEPTING":
+                    continue
+                live_queries = (
+                    (
+                        "SELECT 1 FROM background_operations "
+                        "WHERE run_id=? AND status='running' LIMIT 1",
+                        (run_id,),
+                    ),
+                    (
+                        "SELECT 1 FROM agent_lanes WHERE run_id=? "
+                        "AND lifecycle IN ('active','waiting','idle') LIMIT 1",
+                        (run_id,),
+                    ),
+                    (
+                        "SELECT 1 FROM write_fences WHERE run_id=? "
+                        "AND status='active' AND expires_at>? LIMIT 1",
+                        (run_id, now),
+                    ),
+                    (
+                        "SELECT 1 FROM controller_leases WHERE run_id=? "
+                        "AND status='active' AND expires_at>? LIMIT 1",
+                        (run_id, now),
+                    ),
+                )
+                if any(connection.execute(query, params).fetchone() for query, params in live_queries):
+                    continue
+                activity = max(str(value or "") for value in candidate[1:])
+                if activity and activity < cutoff:
+                    stale_runs += 1
         finally:
             connection.close()
     except sqlite3.Error:
@@ -94,6 +225,7 @@ def ledger_health(repository: Path) -> dict[str, Any]:
         "orphan_process_count": int(orphaned),
         "active_write_fence_count": int(active_fences),
         "active_run_count": int(active_runs),
+        "stale_orchestration_run_count": stale_runs,
         "heavy_overlap_detected_count": 0 if int(active_heavy) <= 1 else int(active_heavy) - 1,
     }
 
@@ -176,6 +308,17 @@ def checks(repository: Path, *, include_root_semantic: bool) -> list[tuple[str, 
             ],
             package,
         ),
+        (
+            "resource_hygiene_guards",
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests/test_resource_hygiene_script.py",
+                "-q",
+            ],
+            package,
+        ),
     ]
     if include_root_semantic:
         rows.append(
@@ -226,12 +369,20 @@ def main(argv: list[str] | None = None) -> int:
         "heavy_overlap_detected_count_zero": health.get("heavy_overlap_detected_count") == 0,
         "active_managed_heavy_zero": health.get("active_managed_heavy_count") == 0,
         "active_write_fences_zero": health.get("active_write_fence_count") == 0,
+        "stale_orchestration_runs_zero": health.get("stale_orchestration_run_count") == 0,
     }
     report = {
         "schema_version": 1,
         "started_at": started_at,
         "finished_at": utc_now(),
         "git_head": git_head(repository),
+        "source_fingerprint": source_fingerprint(repository),
+        "runtime": {
+            "coding_tools_mcp_version": coding_tools_runtime_version(repository),
+            "resource_policy_version": RESOURCE_POLICY_VERSION,
+            "smart_profile": "smart-v3",
+            "expected_public_tool_count": 8,
+        },
         "mode": "real_process_and_synthetic_pressure_equivalent",
         "checks": results,
         "ledger_health": health,

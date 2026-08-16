@@ -76,6 +76,34 @@ class ResourceHygieneScriptTests(unittest.TestCase):
                     state_path=state,
                 )
 
+            nested_primary = root / "target/cache/target"
+            nested_primary.mkdir(parents=True)
+            with self.assertRaises(resource_hygiene.HygieneError):
+                resource_hygiene.soft_cleanup(
+                    root,
+                    [nested_primary],
+                    older_than_hours=0,
+                    state_path=state,
+                )
+
+            unobserved = Path(temp) / "unobserved/target"
+            unobserved.mkdir(parents=True)
+            with self.assertRaisesRegex(
+                resource_hygiene.HygieneError,
+                "process ownership is unavailable",
+            ):
+                resource_hygiene.soft_cleanup(
+                    root,
+                    [unobserved],
+                    older_than_hours=0,
+                    state_path=state,
+                    process_observer=lambda _targets: {
+                        "observed": False,
+                        "active_build_process_count": 0,
+                        "active_connector_reference_count": 0,
+                    },
+                )
+
     def test_active_managed_heavy_owner_blocks_soft_cleanup(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "repository"

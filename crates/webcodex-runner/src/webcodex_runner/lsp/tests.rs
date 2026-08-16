@@ -1848,6 +1848,7 @@ fn lsp_memory_soft_pressure_allows_focused_work_but_drains_broad_work_and_restar
         .project_process_snapshot(&fixture.root, LspServerKind::RustAnalyzer)
         .unwrap();
     assert_eq!(restarted_snapshot.restart_count, 1);
+    assert_eq!(restarted_snapshot.drain_count, 1);
     assert_ne!(restarted_snapshot.pid, first_pid);
     assert_ne!(
         restarted_snapshot.process_instance_id,

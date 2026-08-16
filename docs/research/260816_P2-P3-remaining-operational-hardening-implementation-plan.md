@@ -1468,3 +1468,80 @@ khi cleanup  → chỉ kill đúng owned tree
 ```
 
 Khi Wave 1–5 pass với `orphan_process_count = 0` và `heavy_overlap_detected_count = 0`, defect resource-lifecycle gây lag trước đây có thể coi là đóng về kỹ thuật. Các bước disk/cache sau đó là operational hygiene, không còn là blocker correctness/resource safety.
+
+---
+
+# 25. Implementation closure — 2026-08-16
+
+## 25.1. Trạng thái các wave
+
+| Gate/Wave | Kết quả | Bằng chứng chốt |
+|---|---|---|
+| Gate 0 — Recovery boundary | PASS | Recovery delivery đã được tách tại `cb26a54f`; evidence cuối không có write fence hoặc managed HEAVY job. |
+| Wave 1 — existing idle lifecycle | PASS | Background reaper dọn exact owned LSP tree và cho phép cold restart. |
+| Wave 2 — process/memory policy | PASS | Cross-platform process snapshot, `NORMAL/SOFT/HARD/UNKNOWN`, safe drain và restart counters đã có test deterministic. |
+| Wave 3 — semantic/governor admission | PASS | Native provider bị gate trước call; Cargo/pytest HEAVY chuyển semantic sang text fallback; native phục hồi sau terminal. Directory/unsupported scope giữ HEAVY semantics. |
+| Wave 4 — ownership/restart | PASS | `ManagedChild`/Connector ownership đủ; PID/start-token và owned-tree proof không cho thấy nhu cầu thêm schema `CONNECTOR_PROFILE`. |
+| Wave 5 — operational soak | PASS | Ma trận real-process + synthetic-pressure equivalent pass 28 focused tests/checks. |
+| Wave 6 — disk/cache hygiene | PASS | Snapshot và fail-closed soft-clean guard đã triển khai; không chạy cleanup trên primary `target`. |
+| Wave 7 — baseline/delivery | PASS về source/proof | Implementation gốc đã lên `main` tại `5d3968ec`; follow-up closure được khóa bằng source fingerprint bên dưới và delivery commit chứa record này. |
+
+## 25.2. Final proof fingerprint
+
+Evidence window cuối:
+
+```text
+started_at  = 2026-08-16T11:09:18.211Z
+finished_at = 2026-08-16T11:09:38.055Z
+base HEAD   = 5d3968ec2dead0d47859e32028e167bc53d28e1f
+source SHA  = 22b73a14c103fdc00e061e5114ce34d555d24f26f68f2f07b7182678cd633e03
+mode        = real_process_and_synthetic_pressure_equivalent
+runtime     = Coding Tools MCP 0.4.3 / smart-v3 / 8 public tools
+policy      = p2-p3-operational-hardening-v1
+```
+
+`source SHA` là SHA-256 tổng hợp theo `path + NUL + file_sha256 + LF` của 17 source/test file được harness liệt kê. Nó khóa cả các file uncommitted tại thời điểm proof, vì vậy không suy diễn proof chỉ từ base HEAD.
+
+Verification matrix cuối:
+
+```text
+managed process snapshot             1/1 PASS
+owned process-tree termination       1/1 PASS
+background idle teardown             1/1 PASS
+LSP memory-pressure matrix           4/4 PASS
+governor + semantic fallback        12/12 PASS
+smart-v3 public contract             1/1 PASS
+resource-hygiene guards              2/2 PASS
+native semantic bridge               6/6 PASS
+total                               28/28 PASS
+```
+
+Ledger health tại cuối evidence window:
+
+```text
+active_managed_heavy_count     = 0
+active_write_fence_count       = 0
+orphan_process_count           = 0
+heavy_overlap_detected_count   = 0
+stale_orchestration_run_count  = 0
+active_run_count               = 1
+```
+
+`active_run_count = 1` là một ChatWeb controller có live lease, không có write fence/job/HEAVY owner; vì vậy không phải stale hay conflicting owner. Hard gate dùng đúng invariant của kế hoạch là stale run/fence/job/orphan bằng `0`, không biến mọi read-only/live controller thành lỗi giả.
+
+## 25.3. Disk baseline và cleanup decision
+
+```text
+target_total_bytes                  = 14,178,286,735
+debug_incremental_bytes             =  7,961,953,346
+release_artifact_bytes              =  1,550,436,025
+temporary_worktree_target_bytes     =              0
+last_soft_cleanup_at                = null
+last_hard_cleanup_at                = null
+```
+
+Không chạy `cargo clean` và không chạy soft cleanup. Primary `target` vẫn là cache incremental hữu ích; policy hard cleanup tiếp tục là manual-only. Soft cleanup chỉ nhận explicit non-primary `target`, yêu cầu confirmation, chặn primary/nested-primary target, và fail closed nếu không quan sát được process ownership hoặc còn managed HEAVY/build/Connector reference.
+
+## 25.4. Kết luận triển khai
+
+P2/P3 operational hardening đã đóng về kỹ thuật theo scope của kế hoạch. Persistent profile schema không được thêm vì ownership proof đã pass. Giới hạn còn lại được ghi rõ: pressure thresholds được chứng minh bằng synthetic metrics để không cấp phát nhiều GiB trong CI; process teardown/cold restart vẫn dùng real managed child, và native semantic bridge chạy qua integration tests của repository. Không có release, deployment hoặc service restart trong delivery này.

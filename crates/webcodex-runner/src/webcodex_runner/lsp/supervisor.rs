@@ -1933,7 +1933,11 @@ impl ServerInstance {
             operation_gate: Mutex::new(OperationGate::default()),
             last_pressure_state: Mutex::new(LspMemoryPressure::Unknown),
             restart_count,
-            drain_count: AtomicU64::new(0),
+            // Every successfully replaced instance implies that the prior
+            // owned instance was drained or evicted. Seed the per-instance
+            // counter from the supervisor generation so the snapshot remains
+            // meaningful after a cold restart instead of resetting to zero.
+            drain_count: AtomicU64::new(restart_count),
             #[cfg(test)]
             resource_snapshot_override: Mutex::new(None),
             stderr: stderr_buffer,

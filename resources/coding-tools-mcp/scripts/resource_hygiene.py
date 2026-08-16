@@ -2,8 +2,9 @@
 """Content-free build-cache telemetry and guarded soft cleanup.
 
 This script never runs ``cargo clean``. Soft cleanup is limited to explicitly
-named, old, non-primary ``target`` directories and is blocked while a managed
-HEAVY job, local build process, or Connector process references those roots.
+named, old, non-primary ``target`` directories and is blocked unless managed
+HEAVY ownership and local build/Connector process references can be observed
+and confirmed inactive for those roots.
 """
 
 from __future__ import annotations
@@ -110,13 +111,15 @@ def validate_temporary_target(repository: Path, target: Path) -> Path:
     repository = repository.resolve(strict=True)
     target = target.resolve(strict=False)
     primary_target = (repository / "target").resolve(strict=False)
-    if target == primary_target:
+    if target == primary_target or primary_target in target.parents:
         raise HygieneError("primary repository target requires manual cargo clean policy")
     if target.name.lower() != "target":
         raise HygieneError("soft cleanup targets must be explicitly named target directories")
     if target.is_symlink():
         raise HygieneError("soft cleanup refuses symlink targets")
-    if repository == target or repository in target.parents and ".git" in target.parts:
+    if repository == target or (
+        repository in target.parents and ".git" in target.parts
+    ):
         raise HygieneError("soft cleanup target is inside protected repository metadata")
     return target
 
@@ -245,6 +248,8 @@ def soft_cleanup(
     guards = process_observer(targets)
     if active_heavy:
         raise HygieneError("soft cleanup blocked by an active managed HEAVY owner")
+    if guards.get("observed") is not True:
+        raise HygieneError("soft cleanup blocked because process ownership is unavailable")
     if int(guards.get("active_build_process_count", 0) or 0):
         raise HygieneError("soft cleanup blocked by an active build process")
     if int(guards.get("active_connector_reference_count", 0) or 0):
