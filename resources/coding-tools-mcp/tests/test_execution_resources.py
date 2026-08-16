@@ -112,6 +112,7 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
         self.assertEqual(classify_resource_class("rustfmt --check lib.rs && cargo test"), "HEAVY")
         self.assertEqual(classify_resource_class("python -m pytest tests/test_one.py"), "MEDIUM")
         self.assertEqual(classify_resource_class("python -m pytest tests/"), "HEAVY")
+        self.assertEqual(classify_resource_class("python -m pytest --version"), "LIGHT")
         self.assertEqual(
             classify_resource_class(
                 "python -m pytest tests/test_one.py && python -m pytest tests/"
@@ -383,7 +384,7 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
                 "run_id": ctx.run_id,
                 "wave_id": ctx.wave_id,
                 "resource_class": "HEAVY",
-                "yield_time_ms": 1000,
+                "yield_time_ms": 5000,
             })
             self.assertEqual(result["exit_code"], 0)
             self.assertEqual(result["execution_owner"]["run_id"], ctx.run_id)

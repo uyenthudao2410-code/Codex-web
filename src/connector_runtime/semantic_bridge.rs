@@ -344,6 +344,15 @@ fn normalize_scope_path(raw: Option<&str>) -> Result<Option<String>, &'static st
         return Ok(None);
     }
     let normalized = normalized.trim_end_matches('/').to_string();
+    let bytes = normalized.as_bytes();
+    let has_windows_drive_prefix =
+        bytes.len() >= 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' && bytes[2] == b'/';
+    if Path::new(&normalized).is_absolute()
+        || normalized.starts_with('/')
+        || has_windows_drive_prefix
+    {
+        return Err("path must be project-relative");
+    }
     validate_path(&normalized)?;
     Ok(Some(normalized))
 }
@@ -556,6 +565,22 @@ mod tests {
             .body
             .to_string()
             .contains(&connector.context.executor_root));
+
+        for path in [
+            r"E:\absolute\source.rs",
+            "/absolute/source.rs",
+            "../outside.rs",
+        ] {
+            let mut invalid_path = valid_input(&connector);
+            invalid_path.path = Some(path.to_string());
+            let invalid_path = connector.semantic_localize(&auth("u1"), invalid_path).await;
+            assert_eq!(invalid_path.http_status, 400, "path={path}");
+            assert_eq!(invalid_path.body["error"]["code"], "invalid_arguments");
+            assert!(!invalid_path
+                .body
+                .to_string()
+                .contains(&connector.context.executor_root));
+        }
     }
 
     #[tokio::test]

@@ -127,17 +127,33 @@ def classify_resource_class(command: str, requested: object = "") -> str:
             segment,
         )
     ]
+    pytest_resource = ""
     if pytest_segments:
-        if any(
-            not re.search(r"(?:\.py(?:::\S+)?|\s-k\s+\S+)", segment)
+        executable_pytest_segments = [
+            segment
             for segment in pytest_segments
+            if not re.search(
+                r"pytest(?:\.exe)?\s+(?:--version|--help|-h)\s*$",
+                segment.strip(),
+            )
+        ]
+        if not executable_pytest_segments:
+            pytest_resource = "LIGHT"
+        elif any(
+            not re.search(r"(?:\.py(?:::\S+)?|\s-k\s+\S+)", segment)
+            for segment in executable_pytest_segments
         ):
             return "HEAVY"
+        else:
+            pytest_resource = "MEDIUM"
+    if (
+        cargo_resource == "MEDIUM"
+        or pytest_resource == "MEDIUM"
+        or executable_names & {"rustfmt", "rustfmt.exe"}
+    ):
         return "MEDIUM"
-    if cargo_resource:
-        return cargo_resource
-    if executable_names & {"rustfmt", "rustfmt.exe"}:
-        return "MEDIUM"
+    if cargo_resource or pytest_resource:
+        return "LIGHT"
     return "LIGHT"
 
 
