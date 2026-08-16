@@ -215,11 +215,17 @@ class TaskStateStore:
                 return
             terminal_orchestration = self._has_terminal_orchestration(state)
             ok = payload.get("ok", True) is not False
-            if name in {"apply_patch", "apply_changes_and_verify", "file_batch", "document_workflow", "document_create", "document_convert"} and ok and not args.get("dry_run"):
-                for item in payload.get("affected_files", []):
+            if name in {"apply_patch", "apply_changes_and_verify", "agent_workflow", "file_batch", "document_workflow", "document_create", "document_convert"} and ok and not args.get("dry_run"):
+                affected_files = payload.get("affected_files", [])
+                if name == "agent_workflow" and isinstance(payload.get("execution"), dict):
+                    nested = payload["execution"].get("affected_files")
+                    if isinstance(nested, list):
+                        affected_files = nested
+                affected_files = affected_files if isinstance(affected_files, list) else []
+                for item in affected_files:
                     if isinstance(item, dict) and item.get("path"):
                         self._add_file(state, str(item["path"]), str(item.get("operation", "update")))
-                self._event(state, "files_modified", {"count": len(payload.get("affected_files", []))})
+                self._event(state, "files_modified", {"count": len(affected_files)})
             elif name == "exec_command":
                 self._record_command_payload(state, _text(args.get("cmd"), 4000), payload)
             elif name == "command_control":

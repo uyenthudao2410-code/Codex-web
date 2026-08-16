@@ -42,7 +42,7 @@ class TunnelService {
       : settings.proxyUrl;
     if (proxyUrl) args.push('--control-plane.http-proxy', proxyUrl);
     const child = spawn(this.paths.tunnelExecutable(), args, {
-      detached: false,
+      detached: true,
       windowsHide: true,
       stdio: ['ignore', output, output],
       env

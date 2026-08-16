@@ -13,6 +13,16 @@ const { ComponentRevisionTracker } = require('./componentRevision');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
+function assertActivationDeadline(expiresAtUnixMs, boundary, processMutated = false) {
+  const expiresAt = Number(expiresAtUnixMs || 0);
+  if (expiresAt > 0 && Date.now() >= expiresAt) {
+    throw Object.assign(new Error('Activation request expired before process mutation.'), {
+      code: 'ACTIVATION_REQUEST_EXPIRED',
+      details: { boundary, process_mutated: processMutated }
+    });
+  }
+}
+
 const MAX_DEFERRED_RECOVERIES = 6;
 const MAX_SUPERVISOR_REQUEST_AGE_MS = 60_000;
 
@@ -311,13 +321,14 @@ class RuntimeOrchestrator {
     }
   }
 
-  async activateCodingMcpUpdate(expectedRevision) {
+  async activateCodingMcpUpdate(expectedRevision, options = {}) {
     if (this.busy || this.recovering) {
       throw Object.assign(new Error('Runtime lifecycle is already busy.'), { code: 'RUNTIME_BUSY' });
     }
     this.busy = true;
     let replacementStarted = false;
     try {
+      const expiresAtUnixMs = Number(options.expiresAtUnixMs || 0);
       const settings = this.settingsStore.load();
       this.validate(settings);
       const token = await this.ensureToken();
@@ -328,8 +339,14 @@ class RuntimeOrchestrator {
       const oldState = readJson(this.paths.stateFile(), {});
       const oldHealth = await this.currentMcpHealth();
       if (!oldHealth) throw Object.assign(new Error('Coding MCP health identity is unavailable.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
+      assertActivationDeadline(expiresAtUnixMs, 'before_native_stop', false);
       await this.native.stop();
-      const started = await this.native.start(settings, token, this.progress.bind(this), { expectedCodeRevision: expectedRevision });
+      assertActivationDeadline(expiresAtUnixMs, 'before_native_start', true);
+      const started = await this.native.start(settings, token, this.progress.bind(this), {
+        expectedCodeRevision: expectedRevision,
+        expiresAtUnixMs,
+        activationProcessMutated: true
+      });
       replacementStarted = true;
       let health = null;
       for (let index = 0; index < 35; index += 1) {
@@ -351,6 +368,13 @@ class RuntimeOrchestrator {
         || !oldServerInstanceId || !newServerInstanceId || oldServerInstanceId === newServerInstanceId) {
         throw Object.assign(new Error('Coding MCP restart did not produce a new verified process identity.'), { code: 'ACTIVATION_IDENTITY_UNCHANGED' });
       }
+      const verifiedDiskRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
+      if (verifiedDiskRevision !== expectedRevision) {
+        throw Object.assign(new Error('Coding MCP source revision changed while activation was in progress.'), {
+          code: 'REVISION_CHANGED_DURING_ACTIVATION',
+          details: { expected_revision: expectedRevision, disk_revision: verifiedDiskRevision }
+        });
+      }
       this.invalidateSnapshot();
       return {
         old_instance_id: oldProcessInstanceId,
@@ -362,6 +386,7 @@ class RuntimeOrchestrator {
         old_revision: String(oldState.nativeCodeRevision || oldHealth.code_revision || '') || null,
         new_revision: health.code_revision,
         health_verified: true,
+        disk_revision_verified: true,
         tunnel_preserved: true
       };
     } catch (error) {
@@ -473,7 +498,9 @@ class RuntimeOrchestrator {
         throw Object.assign(new Error('Supervisor restart ticket no longer matches the running MCP instance.'), { code: 'STALE_RESTART_TICKET' });
       }
       const expectedRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
-      const result = await this.activateCodingMcpUpdate(expectedRevision);
+      const result = await this.activateCodingMcpUpdate(expectedRevision, {
+        expiresAtUnixMs: Number(pending.request.expires_at_unix_ms || 0)
+      });
       return { ticketId, status: 'completed', component: 'coding_mcp', result };
     } catch (error) {
       this.log.error(error.message, { stage: 'supervisor-restart-request', ticketId });

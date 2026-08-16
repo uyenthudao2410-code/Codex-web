@@ -57,15 +57,14 @@ test('proxy values from Windows settings are normalized', () => {
   assert.equal(normalizeProxyValue('http://user:pass@127.0.0.1:7890'), '');
 });
 
-test('background runtime processes are hidden and never detached on Windows', () => {
+test('background runtime processes are hidden and detached from Recovery Host lifetime', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const root = path.resolve(__dirname, '..');
   for (const relative of ['electron/services/nativeService.js', 'electron/services/tunnelService.js']) {
     const source = fs.readFileSync(path.join(root, relative), 'utf8');
     assert.match(source, /windowsHide:\s*true/);
-    assert.match(source, /detached:\s*false/);
-    assert.doesNotMatch(source, /detached:\s*true/);
+    assert.match(source, /detached:\s*true/);
   }
   const runner = fs.readFileSync(path.join(root, 'electron/services/commandRunner.js'), 'utf8');
   assert.doesNotMatch(runner, /spawnDetached/);
@@ -181,6 +180,7 @@ test('connector contract stays pending until operator acknowledges the current h
 test('supervisor consumes a fresh workspace-bound restart ticket exactly once', async () => {
   const workspace = 'C:\\work\\one';
   const calls = { activate: 0 };
+  let activationOptions = null;
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ workspace, autoStartServices: true }) },
     secrets: { get: () => '' },
@@ -191,7 +191,11 @@ test('supervisor consumes a fresh workspace-bound restart ticket exactly once', 
   orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
   orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one' });
   orchestrator.revisions.disk = () => ({ revision: 'a'.repeat(64) });
-  orchestrator.activateCodingMcpUpdate = async (revision) => { calls.activate += 1; return { new_revision: revision }; };
+  orchestrator.activateCodingMcpUpdate = async (revision, options) => {
+    calls.activate += 1;
+    activationOptions = options;
+    return { new_revision: revision };
+  };
   const now = Date.now();
   fs.writeFileSync(supervisorRequestPath, JSON.stringify({
     version: 1,
@@ -210,6 +214,7 @@ test('supervisor consumes a fresh workspace-bound restart ticket exactly once', 
   assert.equal(result.supervisorRequest.ticketId, 'ticket-1');
   assert.equal(result.supervisorRequest.status, 'completed');
   assert.equal(result.supervisorRequest.component, 'coding_mcp');
+  assert.equal(activationOptions.expiresAtUnixMs, now + 30000);
 });
 
 test('Coding MCP activation verifies revision and a new process identity without touching the tunnel', async (t) => {
@@ -218,6 +223,7 @@ test('Coding MCP activation verifies revision and a new process identity without
   const stateFile = path.join(root, 'runtime-state.json');
   fs.writeFileSync(stateFile, JSON.stringify({ nativeInstanceId: 'old-supervisor', nativeCodeRevision: 'a'.repeat(64) }));
   const expectedRevision = 'b'.repeat(64);
+  const expiresAtUnixMs = Date.now() + 30_000;
   const paths = { stateFile: () => stateFile };
   const orchestrator = new RuntimeOrchestrator({
     paths,
@@ -244,6 +250,8 @@ test('Coding MCP activation verifies revision and a new process identity without
     start: async (_settings, _token, _progress, options) => {
       calls.start += 1;
       assert.equal(options.expectedCodeRevision, expectedRevision);
+      assert.equal(options.expiresAtUnixMs, expiresAtUnixMs);
+      assert.equal(options.activationProcessMutated, true);
       health = {
         ready: true,
         workspace: root,
@@ -257,15 +265,85 @@ test('Coding MCP activation verifies revision and a new process identity without
   };
   orchestrator.tunnel = { stop: async () => { calls.tunnel += 1; } };
 
-  const result = await orchestrator.activateCodingMcpUpdate(expectedRevision);
+  const result = await orchestrator.activateCodingMcpUpdate(expectedRevision, { expiresAtUnixMs });
 
   assert.equal(result.old_instance_id, 'old-process');
   assert.equal(result.new_instance_id, 'new-process');
   assert.equal(result.old_server_instance_id, 'old-server');
   assert.equal(result.new_server_instance_id, 'new-server');
   assert.equal(result.new_revision, expectedRevision);
+  assert.equal(result.disk_revision_verified, true);
   assert.equal(result.tunnel_preserved, true);
   assert.deepEqual(calls, { stop: 1, start: 1, tunnel: 0 });
+});
+
+test('Coding MCP activation refuses an expired request immediately before stopping the old process', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-mcp-activation-expired-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const expectedRevision = 'b'.repeat(64);
+  const orchestrator = new RuntimeOrchestrator({
+    paths: { stateFile: () => path.join(root, 'runtime-state.json') },
+    settings: { load: () => ({ workspace: root, mcpPort: 32123 }) },
+    secrets: { get: () => 'token' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    revisionTracker: { disk: () => ({ revision: expectedRevision }) }
+  });
+  orchestrator.validate = () => {};
+  orchestrator.ensureToken = async () => 'token';
+  orchestrator.currentMcpHealth = async () => ({
+    process_instance_id: 'old-process', instance_id: 'old-server', code_revision: 'a'.repeat(64)
+  });
+  let stopped = false;
+  orchestrator.native = { stop: async () => { stopped = true; } };
+
+  await assert.rejects(
+    orchestrator.activateCodingMcpUpdate(expectedRevision, { expiresAtUnixMs: Date.now() - 1 }),
+    { code: 'ACTIVATION_REQUEST_EXPIRED' }
+  );
+  assert.equal(stopped, false);
+});
+
+test('Coding MCP activation fails closed when disk revision changes after replacement identity verification', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-mcp-activation-post-drift-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const stateFile = path.join(root, 'runtime-state.json');
+  fs.writeFileSync(stateFile, JSON.stringify({ nativeInstanceId: 'old-supervisor', nativeCodeRevision: 'a'.repeat(64) }));
+  const expectedRevision = 'b'.repeat(64);
+  const changedRevision = 'c'.repeat(64);
+  let revisionReads = 0;
+  const orchestrator = new RuntimeOrchestrator({
+    paths: { stateFile: () => stateFile },
+    settings: { load: () => ({ workspace: root, mcpPort: 32123 }) },
+    secrets: { get: () => 'token' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    revisionTracker: { disk: () => ({ revision: ++revisionReads === 1 ? expectedRevision : changedRevision }) }
+  });
+  orchestrator.validate = () => {};
+  orchestrator.ensureToken = async () => 'token';
+  let health = {
+    process_instance_id: 'old-process', instance_id: 'old-server', code_revision: 'a'.repeat(64)
+  };
+  orchestrator.currentMcpHealth = async () => health;
+  const calls = { stop: 0, start: 0, tunnel: 0 };
+  orchestrator.native = {
+    stop: async () => { calls.stop += 1; return true; },
+    start: async () => {
+      calls.start += 1;
+      health = { process_instance_id: 'new-process', instance_id: 'new-server', code_revision: expectedRevision };
+      return { instanceId: 'new-supervisor', codeRevision: expectedRevision };
+    },
+    status: async () => true
+  };
+  orchestrator.tunnel = { stop: async () => { calls.tunnel += 1; } };
+
+  await assert.rejects(orchestrator.activateCodingMcpUpdate(expectedRevision), {
+    code: 'REVISION_CHANGED_DURING_ACTIVATION'
+  });
+  assert.deepEqual(calls, { stop: 2, start: 1, tunnel: 0 });
 });
 
 test('Coding MCP activation fails before stop when the requested revision changed', async (t) => {

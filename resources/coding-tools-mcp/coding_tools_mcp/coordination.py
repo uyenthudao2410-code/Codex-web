@@ -20,6 +20,75 @@ from .orchestration_control import OrchestrationControlError
 SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
 SUPERVISOR_RESTART_RESPONSE_GRACE_MS = 2_000
 BACKGROUND_OPERATION_WAIT_MAX_MS = 60_000
+MAX_ACCEPTED_FILE_RECEIPTS = 256
+MAX_ACCEPTED_RECEIPT_FILE_BYTES = 16 * 1024 * 1024
+MAX_ACCEPTED_RECEIPT_TOTAL_BYTES = 64 * 1024 * 1024
+
+
+def _accepted_file_receipts(workspace: Path, modified_files: Any) -> dict[str, Any]:
+    """Build content-free, bounded file receipts for one final acceptance."""
+    root = workspace.resolve()
+    raw_items = list(modified_files or []) if isinstance(modified_files, list) else []
+    normalized: list[str] = []
+    incomplete_reasons: set[str] = set()
+    for item in raw_items:
+        raw = item.get("path") if isinstance(item, dict) else item
+        value = str(raw or "").strip().replace("\\", "/")
+        while value.startswith("./"):
+            value = value[2:]
+        if not value or value.startswith(".coding-tools/"):
+            continue
+        relative = Path(value)
+        if relative.is_absolute() or ".." in relative.parts:
+            incomplete_reasons.add("unsafe_path")
+            continue
+        target = (root / relative).resolve(strict=False)
+        if not is_relative_to(target, root):
+            incomplete_reasons.add("outside_workspace")
+            continue
+        portable = relative.as_posix()
+        if portable not in normalized:
+            normalized.append(portable)
+    if len(normalized) > MAX_ACCEPTED_FILE_RECEIPTS:
+        incomplete_reasons.add("too_many_files")
+        normalized = normalized[:MAX_ACCEPTED_FILE_RECEIPTS]
+
+    receipts: list[dict[str, Any]] = []
+    total_bytes = 0
+    for portable in normalized:
+        target = (root / Path(portable)).resolve(strict=False)
+        if not target.exists():
+            receipts.append({"path": portable, "state": "missing", "sha256": None, "size_bytes": 0})
+            continue
+        if not target.is_file():
+            incomplete_reasons.add("non_file")
+            continue
+        try:
+            size = int(target.stat().st_size)
+        except OSError:
+            incomplete_reasons.add("stat_failed")
+            continue
+        if size < 0 or size > MAX_ACCEPTED_RECEIPT_FILE_BYTES or total_bytes + size > MAX_ACCEPTED_RECEIPT_TOTAL_BYTES:
+            incomplete_reasons.add("byte_limit")
+            continue
+        digest = hashlib.sha256()
+        try:
+            with target.open("rb") as handle:
+                while chunk := handle.read(1024 * 1024):
+                    digest.update(chunk)
+        except OSError:
+            incomplete_reasons.add("read_failed")
+            continue
+        total_bytes += size
+        receipts.append({"path": portable, "state": "file", "sha256": digest.hexdigest(), "size_bytes": size})
+    return {
+        "schema_version": 1,
+        "complete": not incomplete_reasons and len(receipts) == len(normalized),
+        "count": len(receipts),
+        "total_bytes": total_bytes,
+        "files": receipts,
+        "incomplete_reasons": sorted(incomplete_reasons),
+    }
 
 COORDINATION_LANE_OUTPUT_SCHEMA = {
     "type": "object",
@@ -1042,6 +1111,7 @@ class CoordinationMixin:
                 ).hexdigest() if proofs else ""
                 identity = self._orchestration_workspace_identity(".")
                 accepted_by = str((self._current_hub_client() or {}).get("client_id") or "ChatWeb Sol")
+                accepted_files = _accepted_file_receipts(self.workspace.root, state.get("modified_files"))
                 self.orchestration_control.checkpoint(ctx, reason="controller_acceptance" if controller else "chatweb_sol_acceptance")
                 self.orchestration_ledger.record_checkpoint(
                     run_id=run_id,
@@ -1049,7 +1119,11 @@ class CoordinationMixin:
                     git_head=str(identity.get("base_head") or ""),
                     proof_fingerprint=proof_fp,
                     status="accepted",
-                    metadata={"accepted_by": accepted_by, "worktree_fp": identity.get("worktree_fp")},
+                    metadata={
+                        "accepted_by": accepted_by,
+                        "worktree_fp": identity.get("worktree_fp"),
+                        "accepted_files": accepted_files,
+                    },
                 )
                 self._project_orchestration(ctx, event="final_acceptance_recorded")
                 accepted_state = self.task_state.update({

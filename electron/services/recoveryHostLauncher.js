@@ -3,6 +3,16 @@ const { RecoveryIpcClient } = require('./recoveryIpc');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
+function assertActivationDeadline(options = {}, boundary = 'before_process_spawn') {
+  const expiresAt = Number(options.expiresAtUnixMs || 0);
+  if (expiresAt > 0 && Date.now() >= expiresAt) {
+    throw Object.assign(new Error('Activation request expired before process launch.'), {
+      code: 'ACTIVATION_REQUEST_EXPIRED',
+      details: { boundary, process_mutated: false }
+    });
+  }
+}
+
 function recoveryHostArguments(app, options = {}) {
   const args = app.isPackaged
     ? ['--recovery-host']
@@ -23,6 +33,7 @@ function recoveryLoginItemArguments(app) {
 }
 
 async function spawnRecoveryHost(app, spawnProcess = spawn, options = {}) {
+  assertActivationDeadline(options);
   const child = spawnProcess(process.execPath, recoveryHostArguments(app, options), {
     detached: true,
     windowsHide: true,
@@ -41,7 +52,8 @@ function electronUiArguments(app) {
   return app.isPackaged ? [] : [app.getAppPath()];
 }
 
-async function spawnElectronUi(app, spawnProcess = spawn) {
+async function spawnElectronUi(app, spawnProcess = spawn, options = {}) {
+  assertActivationDeadline(options);
   const child = spawnProcess(process.execPath, electronUiArguments(app), {
     detached: true,
     windowsHide: true,
@@ -88,5 +100,6 @@ module.exports = {
   recoveryHostArguments,
   recoveryLoginItemArguments,
   electronUiArguments,
-  spawnElectronUi
+  spawnElectronUi,
+  assertActivationDeadline
 };

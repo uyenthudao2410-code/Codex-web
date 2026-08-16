@@ -7,6 +7,7 @@ const { RecoveryIpcServer } = require('./recoveryIpc');
 const { ensureParent } = require('./jsonStore');
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { RecoveryActivation } = require('./recoveryActivation');
+const { AcceptedCodeActivationController } = require('./recoveryActionStore');
 
 const SUPERVISION_INTERVAL_MS = 5000;
 const REPLACEMENT_WAIT_MS = 15_000;
@@ -73,7 +74,7 @@ class RecoveryHost {
   constructor({
     paths, settings, secrets, environment, log, orchestrator, healthService, gateway, ipcServerFactory,
     revisionTracker = null, actionStore = null, spawnRecoveryReplacement = null, spawnElectronUi = null,
-    exitProcess = null, replacement = null
+    exitProcess = null, replacement = null, autoActivationController = null
   }) {
     this.paths = paths;
     this.settings = settings;
@@ -120,6 +121,7 @@ class RecoveryHost {
       spawnElectronUi,
       beginRecoveryHandoff: (operationId) => this.scheduleRecoveryHandoff(operationId)
     });
+    this.autoActivation = autoActivationController || new AcceptedCodeActivationController({ paths, settings, revisions: this.revisions, activation: this.activation, log });
   }
 
   hostStatus() {
@@ -144,6 +146,7 @@ class RecoveryHost {
       gateway: this.gateway?.server ? 'healthy' : 'stopped',
       code_revision: codeRevision,
       electron_ui_revision: this.activation.uiRevisionStatus(),
+      auto_activation: this.autoActivation?.status?.() || null,
       last_progress: this.lastProgress,
       runtime: this.lastSupervisionStatus ? {
         mcp: Boolean(this.lastSupervisionStatus.mcpRunning),
@@ -233,8 +236,10 @@ class RecoveryHost {
           });
         }
       }
+      this.autoActivation?.start?.();
       return this.hostStatus();
     } catch (error) {
+      this.autoActivation?.stop?.();
       await this.ipcServer?.stop().catch(() => false);
       await this.gateway?.stop().catch(() => false);
       if (this.ownsLock) releaseRecoveryHostLock(this.paths, this.instanceId);
@@ -283,6 +288,7 @@ class RecoveryHost {
   }
 
   async stop() {
+    this.autoActivation?.stop?.();
     if (this.supervisionTimer) clearInterval(this.supervisionTimer);
     this.supervisionTimer = null;
     this.running = false;

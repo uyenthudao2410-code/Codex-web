@@ -42,7 +42,7 @@ async function startRecoveryHostApplication(app) {
     log,
     replacement,
     spawnRecoveryReplacement: (options) => spawnRecoveryHost(app, undefined, options),
-    spawnElectronUi: () => spawnElectronUi(app),
+    spawnElectronUi: (options) => spawnElectronUi(app, undefined, options),
     exitProcess: (code) => app.exit(code)
   });
 

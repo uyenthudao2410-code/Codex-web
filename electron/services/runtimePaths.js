@@ -26,6 +26,7 @@ class RuntimePaths {
   recoveryHostDescriptorFile() { return path.join(this.dataRootPath, 'recovery-host.json'); }
   recoveryHostLockFile() { return path.join(this.dataRootPath, 'recovery-host.lock'); }
   recoveryActionsFile() { return path.join(this.dataRootPath, 'recovery-actions.json'); }
+  acceptedCodeActivationFile() { return path.join(this.dataRootPath, 'accepted-code-activation.json'); }
   logFile() { return path.join(this.dataRootPath, 'logs', 'assistant.log'); }
   mcpLogFile() { return path.join(this.dataRootPath, 'logs', 'mcp.log'); }
   tunnelLogFile() { return path.join(this.dataRootPath, 'logs', 'tunnel.log'); }

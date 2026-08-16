@@ -13,7 +13,13 @@ const {
   acquireRecoveryHostLock,
   releaseRecoveryHostLock
 } = require('../electron/services/recoveryHost');
-const { recoveryHostArguments, recoveryLoginItemArguments } = require('../electron/services/recoveryHostLauncher');
+const {
+  recoveryHostArguments,
+  recoveryLoginItemArguments,
+  spawnRecoveryHost,
+  spawnElectronUi,
+  assertActivationDeadline
+} = require('../electron/services/recoveryHostLauncher');
 const { replacementArguments } = require('../electron/recoveryHost');
 
 function fixture(t) {
@@ -369,6 +375,22 @@ test('Recovery Host launch arguments preserve the app root in development', () =
   });
 });
 
+test('activation launchers reject expired requests before invoking the process spawn boundary', async () => {
+  const app = { isPackaged: true, getAppPath: () => 'ignored' };
+  let spawnCalls = 0;
+  const spawnProcess = () => {
+    spawnCalls += 1;
+    throw new Error('spawn must not be reached');
+  };
+  const expired = { expiresAtUnixMs: Date.now() - 1 };
+  await assert.rejects(spawnRecoveryHost(app, spawnProcess, expired), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+  await assert.rejects(spawnElectronUi(app, spawnProcess, expired), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+  assert.throws(() => assertActivationDeadline(expired, 'before_ui_relaunch'), {
+    code: 'ACTIVATION_REQUEST_EXPIRED'
+  });
+  assert.equal(spawnCalls, 0);
+});
+
 test('Electron main delegates runtime ownership to Recovery Host', () => {
   const root = path.resolve(__dirname, '..');
   const main = fs.readFileSync(path.join(root, 'electron', 'main.js'), 'utf8');
@@ -379,4 +401,6 @@ test('Electron main delegates runtime ownership to Recovery Host', () => {
   assert.match(host, /new RuntimeOrchestrator/);
   assert.match(host, /new HubProxyGateway/);
   assert.match(host, /orchestrator\.supervise\(\)/);
+  assert.match(main, /assertActivationDeadline\(\{ expiresAtUnixMs: result\.expires_at_unix_ms \}, 'before_ui_relaunch'\)/);
+  assert.match(main, /orchestrator\.activationStatus\(result\.operation_id\)/);
 });

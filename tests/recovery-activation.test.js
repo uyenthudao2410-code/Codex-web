@@ -117,12 +117,17 @@ test('completed activation replays its durable result after request expiry', asy
 test('Coding MCP activation is fenced, component-scoped, verified, and idempotent', async (t) => {
   const paths = fixture(t);
   const calls = { prepare: 0, activate: 0 };
+  let activationOptions = null;
   const manager = new RecoveryActivation({
     paths,
     revisions: revisions(),
     orchestrator: orchestrator({
       prepareCodeActivation: async () => { calls.prepare += 1; return { safe: true, code: 'READY', fenced: true }; },
-      activateCodingMcpUpdate: async () => { calls.activate += 1; return { old_instance_id: 'old', new_instance_id: 'new', old_revision: OLD, new_revision: NEXT, health_verified: true, tunnel_preserved: true }; }
+      activateCodingMcpUpdate: async (_revision, options) => {
+        calls.activate += 1;
+        activationOptions = options;
+        return { old_instance_id: 'old', new_instance_id: 'new', old_revision: OLD, new_revision: NEXT, health_verified: true, tunnel_preserved: true };
+      }
     }),
     log: {},
     recoveryInstanceId: 'recovery-instance-0001',
@@ -135,7 +140,26 @@ test('Coding MCP activation is fenced, component-scoped, verified, and idempoten
   assert.equal(first.result.new_revision, NEXT);
   assert.equal(first.result.tunnel_preserved, true);
   assert.equal(replay.deduplicated, true);
+  assert.equal(activationOptions.expiresAtUnixMs, activation.expires_at_unix_ms);
   assert.deepEqual(calls, { prepare: 1, activate: 1 });
+});
+
+test('Electron UI activation propagates its deadline to the launch boundary', async (t) => {
+  const paths = fixture(t);
+  let launchOptions = null;
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(),
+    orchestrator: orchestrator(),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: OLD,
+    spawnElectronUi: async (options) => { launchOptions = options; }
+  });
+  const activation = request('electron_ui');
+  const result = await manager.activate(activation);
+  assert.equal(result.state, 'accepted');
+  assert.equal(launchOptions.expiresAtUnixMs, activation.expires_at_unix_ms);
 });
 
 test('canonical runtime refusal is persisted without restarting Coding MCP', async (t) => {
@@ -200,6 +224,7 @@ test('Electron UI registration completes only after the expected revision is run
     instance_id: 'electron-ui-old-0001', pid: process.pid, revision: OLD, started_at_unix_ms: Date.now()
   });
   assert.equal(oldRegistration.restart_required, true);
+  assert.equal(oldRegistration.expires_at_unix_ms, activation.expires_at_unix_ms);
   const newRegistration = manager.registerUi({
     instance_id: 'electron-ui-new-0001', pid: process.pid, revision: NEXT, started_at_unix_ms: Date.now()
   });
@@ -211,6 +236,7 @@ test('Electron UI registration completes only after the expected revision is run
 test('Recovery Host activation prepares MCP continuity before scheduling a fixed handoff', async (t) => {
   const paths = fixture(t);
   const events = [];
+  let replacementOptions = null;
   const manager = new RecoveryActivation({
     paths,
     revisions: revisions(),
@@ -218,12 +244,39 @@ test('Recovery Host activation prepares MCP continuity before scheduling a fixed
     log: {},
     recoveryInstanceId: 'recovery-instance-0001',
     recoveryRunningRevision: OLD,
-    spawnRecoveryReplacement: async (options) => { events.push(`spawn:${options.expectedOldInstanceId}`); },
+    spawnRecoveryReplacement: async (options) => {
+      replacementOptions = options;
+      events.push(`spawn:${options.expectedOldInstanceId}`);
+    },
     beginRecoveryHandoff: () => { events.push('handoff'); }
   });
-  const result = await manager.activate(request('recovery_host'));
+  const activation = request('recovery_host');
+  const result = await manager.activate(activation);
   assert.equal(result.state, 'accepted');
   assert.deepEqual(events, ['preflight', 'spawn:recovery-instance-0001', 'handoff']);
+  assert.equal(replacementOptions.expiresAtUnixMs, activation.expires_at_unix_ms);
+});
+
+test('expiry after a process mutation is persisted as failed rather than refused', async (t) => {
+  const paths = fixture(t);
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(),
+    orchestrator: orchestrator({
+      activateCodingMcpUpdate: async () => {
+        throw Object.assign(new Error('deadline after stop'), {
+          code: 'ACTIVATION_REQUEST_EXPIRED',
+          details: { process_mutated: true, boundary: 'before_native_start' }
+        });
+      }
+    }),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: OLD
+  });
+  const result = await manager.activate(request('coding_mcp'));
+  assert.equal(result.state, 'failed');
+  assert.equal(result.error.code, 'ACTIVATION_REQUEST_EXPIRED');
 });
 
 test('request expiring during preflight cannot mutate a stopped component', async (t) => {

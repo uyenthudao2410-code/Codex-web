@@ -161,7 +161,9 @@ class RecoveryActivation {
       }
       if (request.component === 'electron_ui') {
         ensureActivationFresh(request, this.now());
-        if (!this.uiRegistration && typeof this.spawnElectronUi === 'function') await this.spawnElectronUi();
+        if (!this.uiRegistration && typeof this.spawnElectronUi === 'function') {
+          await this.spawnElectronUi({ expiresAtUnixMs: request.expires_at_unix_ms });
+        }
         return this.actions.get(request.operation_id);
       }
 
@@ -194,7 +196,9 @@ class RecoveryActivation {
       }
       if (request.component === 'coding_mcp') {
         ensureActivationFresh(request, this.now());
-        const result = await this.orchestrator.activateCodingMcpUpdate(request.expected_disk_revision);
+        const result = await this.orchestrator.activateCodingMcpUpdate(request.expected_disk_revision, {
+          expiresAtUnixMs: request.expires_at_unix_ms
+        });
         return this.actions.finish(request.operation_id, 'completed', { activated: true, ...result });
       }
       ensureActivationFresh(request, this.now());
@@ -207,15 +211,17 @@ class RecoveryActivation {
       }
       await this.spawnRecoveryReplacement({
         operationId: request.operation_id,
-        expectedOldInstanceId: this.recoveryInstanceId
+        expectedOldInstanceId: this.recoveryInstanceId,
+        expiresAtUnixMs: request.expires_at_unix_ms
       });
       this.beginRecoveryHandoff(request.operation_id);
       return this.actions.get(request.operation_id);
     } catch (error) {
       if (request.component !== 'electron_ui') await this.orchestrator.cancelCodeActivation(request.operation_id).catch(() => false);
-      const state = ['RUNTIME_BUSY', 'ORCHESTRATION_STATE_UNCERTAIN', 'ACCEPTANCE_PENDING', 'WORKSPACE_MISMATCH', 'COMPONENT_STOPPED', 'REVISION_CHANGED', 'ACTIVATION_REQUEST_EXPIRED'].includes(String(error?.code || ''))
-        ? 'refused'
-        : 'failed';
+      const code = String(error?.code || '');
+      const expiredAfterMutation = code === 'ACTIVATION_REQUEST_EXPIRED' && error?.details?.process_mutated === true;
+      const state = ['RUNTIME_BUSY', 'ORCHESTRATION_STATE_UNCERTAIN', 'ACCEPTANCE_PENDING', 'WORKSPACE_MISMATCH', 'COMPONENT_STOPPED', 'REVISION_CHANGED', 'ACTIVATION_REQUEST_EXPIRED'].includes(code)
+        && !expiredAfterMutation ? 'refused' : 'failed';
       return this.actions.finish(request.operation_id, state, null, error);
     }
   }
@@ -261,6 +267,7 @@ class RecoveryActivation {
       registered: true,
       restart_required: true,
       operation_id: pending.operation_id,
+      expires_at_unix_ms: Number(pending.expires_at_unix_ms || 0),
       expected_revision: pending.expected_disk_revision,
       code_revision: this.uiRevisionStatus()
     };

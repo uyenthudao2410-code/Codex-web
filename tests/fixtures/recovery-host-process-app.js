@@ -8,6 +8,9 @@ const { RecoveryHost } = require('../../electron/services/recoveryHost');
 const { RecoveryIpcClient } = require('../../electron/services/recoveryIpc');
 const { readJson, writeJsonAtomic } = require('../../electron/services/jsonStore');
 
+const OLD_REVISION = 'a'.repeat(64);
+const NEXT_REVISION = 'b'.repeat(64);
+
 function argument(name, fallback = '') {
   const index = process.argv.indexOf(name);
   return index >= 0 && index + 1 < process.argv.length ? process.argv[index + 1] : fallback;
@@ -15,6 +18,17 @@ function argument(name, fallback = '') {
 
 function processAlive(pid) {
   try { process.kill(Number(pid), 0); return true; } catch { return false; }
+}
+
+function revisionStatus(runningRevision, diskRevision) {
+  const running = String(runningRevision || '') || null;
+  const disk = String(diskRevision || '') || null;
+  return {
+    running_revision: running,
+    disk_revision: disk,
+    update_pending: running && disk ? running !== disk : null,
+    state: running && disk ? (running === disk ? 'current' : 'update_pending') : 'unknown'
+  };
 }
 
 function gatewayReachable(port, timeoutMs = 2000) {
@@ -79,11 +93,35 @@ function runtimeProjection(mcp, tunnel, supervisionCount) {
   };
 }
 
-async function runHost(paths, dataRoot, reportFile, nodeExecutable) {
-  const [mcp, tunnel] = await Promise.all([
-    spawnStandIn(nodeExecutable, 'coding-mcp'),
-    spawnStandIn(nodeExecutable, 'coding-tunnel')
-  ]);
+async function runHost(paths, dataRoot, reportFile, errorFile, nodeExecutable) {
+  const activationMode = argument('--activation-mode', 'none');
+  const externalMcpPid = Number(argument('--mcp-pid', '0'));
+  const externalTunnelPid = Number(argument('--tunnel-pid', '0'));
+  const useExternalRuntime = activationMode === 'recovery-host'
+    && processAlive(externalMcpPid)
+    && processAlive(externalTunnelPid);
+  let mcp;
+  let tunnel;
+  if (useExternalRuntime) {
+    mcp = { pid: externalMcpPid };
+    tunnel = { pid: externalTunnelPid };
+  } else {
+    [mcp, tunnel] = await Promise.all([
+      spawnStandIn(nodeExecutable, 'coding-mcp'),
+      spawnStandIn(nodeExecutable, 'coding-tunnel')
+    ]);
+  }
+  let codingMcpRevision = activationMode === 'coding-mcp' ? OLD_REVISION : NEXT_REVISION;
+  const hostRunningRevision = argument(
+    '--host-running-revision',
+    activationMode === 'recovery-host' ? OLD_REVISION : NEXT_REVISION
+  );
+  const replacementOldInstanceId = argument('--replace-old-instance');
+  const replacementOperationId = argument('--activation-operation');
+  const replacement = replacementOldInstanceId && replacementOperationId
+    ? { expectedOldInstanceId: replacementOldInstanceId, operationId: replacementOperationId }
+    : null;
+  const replacementReportFile = argument('--replacement-report-file');
   let supervisionCount = 0;
   const projection = () => runtimeProjection(mcp, tunnel, supervisionCount);
   const orchestrator = {
@@ -96,13 +134,104 @@ async function runHost(paths, dataRoot, reportFile, nodeExecutable) {
     restart: async () => projection(),
     switchWorkspace: async () => projection(),
     updateAuthorizedRoots: async () => projection(),
-    acknowledgeConnectorContract: async () => projection()
+    acknowledgeConnectorContract: async () => projection(),
+    codingMcpRevisionStatus: () => revisionStatus(
+      codingMcpRevision,
+      activationMode === 'coding-mcp' ? NEXT_REVISION : codingMcpRevision
+    ),
+    inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: dataRoot }),
+    prepareCodeActivation: async () => ({ safe: true, code: 'READY', fenced: true }),
+    cancelCodeActivation: async () => true,
+    activateCodingMcpUpdate: async (expectedRevision, options = {}) => {
+      if (activationMode !== 'coding-mcp') {
+        throw Object.assign(new Error('Coding MCP fixture activation is not enabled.'), { code: 'FIXTURE_ACTIVATION_DISABLED' });
+      }
+      if (expectedRevision !== NEXT_REVISION) {
+        throw Object.assign(new Error('Unexpected fixture revision.'), { code: 'REVISION_CHANGED' });
+      }
+      const expiresAt = Number(options.expiresAtUnixMs || 0);
+      if (expiresAt > 0 && Date.now() >= expiresAt) {
+        throw Object.assign(new Error('Fixture activation expired before stop.'), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+      }
+      const previous = mcp;
+      const oldPid = previous.pid;
+      await stopChild(previous);
+      if (expiresAt > 0 && Date.now() >= expiresAt) {
+        throw Object.assign(new Error('Fixture activation expired after stop.'), {
+          code: 'ACTIVATION_REQUEST_EXPIRED',
+          details: { process_mutated: true }
+        });
+      }
+      mcp = await spawnStandIn(nodeExecutable, 'coding-mcp-replacement');
+      codingMcpRevision = NEXT_REVISION;
+      return {
+        old_instance_id: `mcp-process-${oldPid}`,
+        new_instance_id: `mcp-process-${mcp.pid}`,
+        old_server_instance_id: `mcp-server-${oldPid}`,
+        new_server_instance_id: `mcp-server-${mcp.pid}`,
+        old_revision: OLD_REVISION,
+        new_revision: NEXT_REVISION,
+        health_verified: true,
+        disk_revision_verified: true,
+        tunnel_preserved: true
+      };
+    }
   };
   const settings = {
     load: () => ({ autoStartServices: false, mcpPort: 65534 })
   };
   const secrets = { get: () => 'fixture-token' };
   const log = { info() {}, warn() {}, error() {}, read: () => [], clear() {} };
+  const revisionTracker = {
+    captureRunning: (component) => component === 'recovery_host' ? hostRunningRevision : null,
+    status: (component, supplied) => {
+      if (component === 'recovery_host') {
+        const diskRevision = activationMode === 'recovery-host' ? NEXT_REVISION : hostRunningRevision;
+        return revisionStatus(supplied || hostRunningRevision, diskRevision);
+      }
+      return revisionStatus(supplied || null, NEXT_REVISION);
+    }
+  };
+  const spawnReplacement = async (options) => {
+    if (!replacementReportFile) {
+      throw Object.assign(new Error('Replacement report path is missing.'), { code: 'FIXTURE_REPLACEMENT_UNAVAILABLE' });
+    }
+    const expiresAt = Number(options?.expiresAtUnixMs || 0);
+    if (expiresAt > 0 && Date.now() >= expiresAt) {
+      throw Object.assign(new Error('Fixture replacement activation expired before spawn.'), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+    }
+    const args = [
+      __filename,
+      '--disable-gpu',
+      '--fixture-role', 'host',
+      '--data-root', dataRoot,
+      '--resources-root', paths.resourcesRoot(),
+      '--report-file', replacementReportFile,
+      '--error-file', errorFile,
+      '--node-executable', nodeExecutable,
+      '--activation-mode', 'recovery-host',
+      '--mcp-pid', String(mcp.pid),
+      '--tunnel-pid', String(tunnel.pid),
+      '--host-running-revision', NEXT_REVISION,
+      '--replace-old-instance', String(options.expectedOldInstanceId),
+      '--activation-operation', String(options.operationId)
+    ];
+    const env = { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: '1' };
+    delete env.ELECTRON_RUN_AS_NODE;
+    const child = spawn(process.execPath, args, {
+      cwd: path.resolve(__dirname, '..', '..'),
+      detached: true,
+      windowsHide: true,
+      stdio: 'ignore',
+      env
+    });
+    await new Promise((resolve, reject) => {
+      child.once('spawn', resolve);
+      child.once('error', reject);
+    });
+    child.unref();
+    return child.pid;
+  };
   const host = new RecoveryHost({
     paths,
     settings,
@@ -110,7 +239,11 @@ async function runHost(paths, dataRoot, reportFile, nodeExecutable) {
     environment: {},
     log,
     orchestrator,
-    healthService: { inspect: async () => projection(), repair: async () => projection() }
+    healthService: { inspect: async () => projection(), repair: async () => projection() },
+    revisionTracker,
+    replacement,
+    spawnRecoveryReplacement: activationMode === 'recovery-host' && !replacement ? spawnReplacement : null,
+    exitProcess: (code) => app.exit(code)
   });
   let shuttingDown = false;
   const shutdown = async () => {
@@ -118,7 +251,7 @@ async function runHost(paths, dataRoot, reportFile, nodeExecutable) {
     shuttingDown = true;
     clearInterval(shutdownTimer);
     await host.stop().catch(() => false);
-    await Promise.all([stopChild(mcp), stopChild(tunnel)]);
+    if (!useExternalRuntime) await Promise.all([stopChild(mcp), stopChild(tunnel)]);
     app.exit(0);
   };
 
@@ -132,10 +265,12 @@ async function runHost(paths, dataRoot, reportFile, nodeExecutable) {
       mcpPid: mcp.pid,
       tunnelPid: tunnel.pid,
       gatewayOwnerPid: Number(gateway?.owner_pid || 0),
-      gatewayPort: Number(gateway?.port || 0)
+      gatewayPort: Number(gateway?.port || 0),
+      activationMode,
+      hostRunningRevision
     });
   } catch (error) {
-    await Promise.all([stopChild(mcp), stopChild(tunnel)]);
+    if (!useExternalRuntime) await Promise.all([stopChild(mcp), stopChild(tunnel)]);
     throw error;
   }
 
@@ -181,7 +316,8 @@ async function main() {
   const dataRoot = path.resolve(argument('--data-root'));
   const resourcesRoot = path.resolve(argument('--resources-root'));
   const reportFile = path.resolve(argument('--report-file'));
-  if (!role || !dataRoot || !resourcesRoot || !reportFile) {
+  const errorFile = path.resolve(argument('--error-file'));
+  if (!role || !dataRoot || !resourcesRoot || !reportFile || !errorFile) {
     throw new Error('Recovery process fixture arguments are incomplete.');
   }
   fs.mkdirSync(dataRoot, { recursive: true });
@@ -190,7 +326,7 @@ async function main() {
   await app.whenReady();
   const paths = createRuntimePaths({ dataRoot, resourcesRoot });
   if (role === 'host') {
-    await runHost(paths, dataRoot, reportFile, path.resolve(argument('--node-executable')));
+    await runHost(paths, dataRoot, reportFile, errorFile, path.resolve(argument('--node-executable')));
     return;
   }
   if (role === 'client') {

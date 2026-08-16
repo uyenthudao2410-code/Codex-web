@@ -19,7 +19,12 @@ const runtimePathApi = require('./paths');
 const { resourcesRoot, hubProxyDescriptorFile } = runtimePathApi;
 const { createElectronRuntimePaths } = require('./services/runtimePaths');
 const { RecoveryIpcClient } = require('./services/recoveryIpc');
-const { ensureRecoveryHost, recoveryLoginItemArguments, electronUiArguments } = require('./services/recoveryHostLauncher');
+const {
+  ensureRecoveryHost,
+  recoveryLoginItemArguments,
+  electronUiArguments,
+  assertActivationDeadline
+} = require('./services/recoveryHostLauncher');
 const { ComponentRevisionTracker } = require('./services/componentRevision');
 const { startRecoveryHostApplication } = require('./recoveryHost');
 
@@ -72,6 +77,13 @@ async function registerUiRevision() {
     started_at_unix_ms: uiStartedAtUnixMs
   });
   if (result?.restart_required) {
+    try {
+      assertActivationDeadline({ expiresAtUnixMs: result.expires_at_unix_ms }, 'before_ui_relaunch');
+    } catch (error) {
+      if (error?.code !== 'ACTIVATION_REQUEST_EXPIRED') throw error;
+      await orchestrator.activationStatus(result.operation_id).catch(() => null);
+      return { ...result, restart_required: false, expired: true };
+    }
     uiRestartScheduled = true;
     forceQuit = true;
     app.relaunch({ execPath: process.execPath, args: electronUiArguments(app) });

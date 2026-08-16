@@ -13,6 +13,16 @@ function isAlive(pid) {
   try { process.kill(pid, 0); return true; } catch { return false; }
 }
 
+function assertActivationDeadline(expiresAtUnixMs, processMutated = false) {
+  const expiresAt = Number(expiresAtUnixMs || 0);
+  if (expiresAt > 0 && Date.now() >= expiresAt) {
+    throw Object.assign(new Error('Activation request expired before Coding MCP process spawn.'), {
+      code: 'ACTIVATION_REQUEST_EXPIRED',
+      details: { boundary: 'before_native_spawn', process_mutated: processMutated }
+    });
+  }
+}
+
 function runtimeFingerprint(settings) {
   return crypto.createHash('sha256').update(JSON.stringify({
     workspace: path.resolve(String(settings.workspace || '')).toLowerCase(),
@@ -101,18 +111,23 @@ class NativeService {
       '--permission-mode', settings.permissionMode
     ];
     const command = python.launchCommand || python.command;
-    const child = spawn(command, args, {
-      detached: false,
-      windowsHide: true,
-      stdio: ['ignore', output, output],
-      env
-    });
-    await new Promise((resolve, reject) => {
-      child.once('spawn', resolve);
-      child.once('error', reject);
-    });
-    child.unref();
-    fs.closeSync(output);
+    let child;
+    try {
+      assertActivationDeadline(options.expiresAtUnixMs, options.activationProcessMutated === true);
+      child = spawn(command, args, {
+        detached: true,
+        windowsHide: true,
+        stdio: ['ignore', output, output],
+        env
+      });
+      await new Promise((resolve, reject) => {
+        child.once('spawn', resolve);
+        child.once('error', reject);
+      });
+      child.unref();
+    } finally {
+      fs.closeSync(output);
+    }
     const instanceId = crypto.randomBytes(12).toString('hex');
     updateJsonAtomic(this.paths.stateFile(), (value) => ({
       ...currentRuntimeState(value),

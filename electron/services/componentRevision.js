@@ -96,6 +96,19 @@ function componentFiles(root, spec) {
   return files;
 }
 
+function componentOwnsPath(component, workspaceRelative, specs = COMPONENT_SPECS) {
+  const spec = specs[component];
+  const relative = normalizedRelative(workspaceRelative);
+  if (!spec || !relative) return false;
+  const rootPrefix = spec.root ? `${normalizedRelative(spec.root)}/` : '';
+  if ((spec.files || []).some((file) => relative === `${rootPrefix}${normalizedRelative(file)}`)) return true;
+  return (spec.directories || []).some((directory) => {
+    const prefix = `${rootPrefix}${normalizedRelative(directory.path)}/`;
+    return relative.startsWith(prefix)
+      && (directory.extensions || []).includes(path.extname(relative).toLowerCase());
+  });
+}
+
 function hashComponentRevision(appRoot, component, specs = COMPONENT_SPECS) {
   const root = path.resolve(String(appRoot || ''));
   const spec = specs[component];
@@ -194,6 +207,7 @@ class ComponentRevisionTracker {
 module.exports = {
   COMPONENT_SPECS,
   ComponentRevisionTracker,
+  componentOwnsPath,
   hashComponentRevision,
   DEFAULT_REFRESH_INTERVAL_MS,
   MAX_COMPONENT_FILES,

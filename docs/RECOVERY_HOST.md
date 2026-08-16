@@ -109,6 +109,18 @@ Workflow là: sửa source, chạy test, xem `update_pending`, gọi explicit pr
 và `activate_update` đúng component, rồi đọc operation status cùng
 `running_revision == disk_revision`. Không có watcher hoặc `restart-all`.
 
+Sau final acceptance, Recovery Host có accepted-code auto activation. Host không
+watch source file: nó chỉ xét task current/history đã `CHECKPOINTED`, yêu cầu
+checkpoint `accepted` trong canonical SQLite ledger, khớp exact final worktree
+fingerprint, rồi chạy thêm `git status --untracked-files=all` để chặn concurrent
+dirty source trong target component. Với checkpoint legacy được tạo khi Git ẩn
+untracked, target source vẫn còn untracked sẽ bị từ chối vì bytes chưa được
+fingerprint chứng minh; staged/tracked source không có giới hạn này. Khi các gate
+đều đúng, Host gọi lại chính Safe Code Activation theo thứ tự
+`recovery_host -> coding_mcp -> electron_ui`; busy/uncertain chỉ deferred, không
+restart. Queue nằm trong user-data nên Recovery Host mới tiếp tục được sau
+handoff và không cần ChatGPT gọi loopback IPC để kích hoạt mỗi lần.
+
 Lần chuyển đầu tiên từ Recovery Host/Coding MCP legacy chưa expose activation
 RPC là một mixed-version bootstrap boundary. Process legacy không thể tự chứng
 minh canonical preflight bằng protocol mới, nên không được tự fallback sang

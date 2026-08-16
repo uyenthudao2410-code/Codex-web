@@ -11,6 +11,8 @@ const { RecoveryIpcClient } = require('../../electron/services/recoveryIpc');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const FIXTURE = path.join(ROOT, 'tests', 'fixtures', 'recovery-host-process-app.js');
+const OLD_REVISION = 'a'.repeat(64);
+const NEXT_REVISION = 'b'.repeat(64);
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -55,7 +57,56 @@ async function stopProcess(child) {
   await waitForExit(child, 5000);
 }
 
-function spawnElectron({ role, dataRoot, resourcesRoot, reportFile, errorFile, clientId, exitAfterAttach = false }) {
+function spawnStandIn(component) {
+  const child = spawn(process.execPath, [
+    '-e',
+    'setTimeout(() => process.exit(0), 120000); setInterval(() => {}, 1000);'
+  ], {
+    windowsHide: true,
+    stdio: 'ignore',
+    env: { ...process.env, WEBCODEX_RECOVERY_TEST_COMPONENT: component }
+  });
+  return new Promise((resolve, reject) => {
+    child.once('spawn', () => resolve(child));
+    child.once('error', reject);
+  });
+}
+
+async function waitForPidExit(pid, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!processAlive(pid)) return true;
+    await wait(50);
+  }
+  return !processAlive(pid);
+}
+
+function activationRequest(component, operationId) {
+  const now = Date.now();
+  return {
+    operation_id: operationId,
+    component,
+    requested_at_unix_ms: now,
+    expires_at_unix_ms: now + 30_000,
+    expected_disk_revision: NEXT_REVISION,
+    allow_acceptance_pending: false
+  };
+}
+
+function spawnElectron({
+  role,
+  dataRoot,
+  resourcesRoot,
+  reportFile,
+  errorFile,
+  clientId,
+  exitAfterAttach = false,
+  activationMode = '',
+  mcpPid = 0,
+  tunnelPid = 0,
+  hostRunningRevision = '',
+  replacementReportFile = ''
+}) {
   const args = [
     FIXTURE,
     '--disable-gpu',
@@ -68,6 +119,11 @@ function spawnElectron({ role, dataRoot, resourcesRoot, reportFile, errorFile, c
   ];
   if (clientId) args.push('--client-id', clientId);
   if (exitAfterAttach) args.push('--exit-after-attach');
+  if (activationMode) args.push('--activation-mode', activationMode);
+  if (mcpPid) args.push('--mcp-pid', String(mcpPid));
+  if (tunnelPid) args.push('--tunnel-pid', String(tunnelPid));
+  if (hostRunningRevision) args.push('--host-running-revision', hostRunningRevision);
+  if (replacementReportFile) args.push('--replacement-report-file', replacementReportFile);
   const env = {
     ...process.env,
     ELECTRON_DISABLE_SECURITY_WARNINGS: '1'
@@ -209,6 +265,144 @@ test('real Electron client can be killed and reattach without replacing Recovery
         try { process.kill(pid); } catch { /* exact fixture PID cleanup */ }
       }
     }
+    removeTempTree(tempRoot);
+  }
+});
+
+test('real Safe Code Activation replaces Coding MCP process while preserving Tunnel and gateway', {
+  skip: process.platform !== 'win32',
+  timeout: 45_000
+}, async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-recovery-mcp-activation-'));
+  const dataRoot = path.join(tempRoot, 'data');
+  const resourcesRoot = path.join(tempRoot, 'resources');
+  const errorFile = path.join(tempRoot, 'fixture-error.json');
+  const hostReportFile = path.join(tempRoot, 'host.json');
+  fs.mkdirSync(dataRoot, { recursive: true });
+  fs.mkdirSync(resourcesRoot, { recursive: true });
+  const paths = createRuntimePaths({ dataRoot, resourcesRoot });
+  let host;
+  let hostReport;
+  let replacementMcpPid = 0;
+
+  try {
+    host = spawnElectron({
+      role: 'host', dataRoot, resourcesRoot, reportFile: hostReportFile, errorFile, activationMode: 'coding-mcp'
+    });
+    hostReport = await waitForJson(hostReportFile, errorFile);
+    const client = new RecoveryIpcClient({ paths });
+    const request = activationRequest('coding_mcp', 'coding-activation-0001');
+    const preflight = await client.activationPreflight(request);
+    assert.equal(preflight.safe, true);
+    assert.equal(preflight.code, 'READY');
+
+    const activation = await client.activateUpdate(request);
+    assert.equal(activation.state, 'completed');
+    assert.equal(activation.result.activated, true);
+    assert.equal(activation.result.tunnel_preserved, true);
+    const status = await client.activationStatus(request.operation_id);
+    assert.equal(status.state, 'completed');
+
+    const snapshot = await client.lightweightSnapshot();
+    replacementMcpPid = Number(snapshot.mcpPid || 0);
+    assert.notEqual(replacementMcpPid, hostReport.mcpPid);
+    assert.equal(await waitForPidExit(hostReport.mcpPid, 5000), true);
+    assert.equal(processAlive(replacementMcpPid), true);
+    assert.equal(snapshot.tunnelPid, hostReport.tunnelPid);
+    assert.equal(processAlive(hostReport.tunnelPid), true);
+    assert.equal(processAlive(host.pid), true);
+    assert.equal(await gatewayReachable(hostReport.gatewayPort), true);
+  } finally {
+    try { fs.writeFileSync(path.join(dataRoot, 'fixture-shutdown.request'), '', 'utf8'); } catch { /* host may not have started */ }
+    if (host && !await waitForExit(host, 8000)) await stopProcess(host);
+    for (const pid of [hostReport?.mcpPid, replacementMcpPid, hostReport?.tunnelPid]) {
+      if (processAlive(pid)) {
+        try { process.kill(pid); } catch { /* exact fixture PID cleanup */ }
+      }
+    }
+    removeTempTree(tempRoot);
+  }
+});
+
+test('real Recovery Host activation hands ownership to a new Electron host without replacing MCP or Tunnel', {
+  skip: process.platform !== 'win32',
+  timeout: 60_000
+}, async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-recovery-host-activation-'));
+  const dataRoot = path.join(tempRoot, 'data');
+  const resourcesRoot = path.join(tempRoot, 'resources');
+  const errorFile = path.join(tempRoot, 'fixture-error.json');
+  const oldHostReportFile = path.join(tempRoot, 'host-old.json');
+  const replacementReportFile = path.join(tempRoot, 'host-replacement.json');
+  fs.mkdirSync(dataRoot, { recursive: true });
+  fs.mkdirSync(resourcesRoot, { recursive: true });
+  const paths = createRuntimePaths({ dataRoot, resourcesRoot });
+  let mcp;
+  let tunnel;
+  let oldHost;
+  let oldReport;
+  let replacementReport;
+
+  try {
+    [mcp, tunnel] = await Promise.all([
+      spawnStandIn('external-coding-mcp'),
+      spawnStandIn('external-coding-tunnel')
+    ]);
+    oldHost = spawnElectron({
+      role: 'host',
+      dataRoot,
+      resourcesRoot,
+      reportFile: oldHostReportFile,
+      errorFile,
+      activationMode: 'recovery-host',
+      mcpPid: mcp.pid,
+      tunnelPid: tunnel.pid,
+      hostRunningRevision: OLD_REVISION,
+      replacementReportFile
+    });
+    oldReport = await waitForJson(oldHostReportFile, errorFile);
+    assert.equal(oldReport.hostPid, oldHost.pid);
+    assert.equal(oldReport.mcpPid, mcp.pid);
+    assert.equal(oldReport.tunnelPid, tunnel.pid);
+
+    const oldClient = new RecoveryIpcClient({ paths });
+    const request = activationRequest('recovery_host', 'recovery-activation-0001');
+    const preflight = await oldClient.activationPreflight(request);
+    assert.equal(preflight.safe, true);
+    assert.equal(preflight.code, 'READY');
+    const accepted = await oldClient.activateUpdate(request);
+    assert.equal(accepted.state, 'accepted');
+
+    replacementReport = await waitForJson(replacementReportFile, errorFile, 30_000);
+    assert.notEqual(replacementReport.hostPid, oldReport.hostPid);
+    assert.notEqual(replacementReport.hostInstanceId, oldReport.hostInstanceId);
+    assert.equal(replacementReport.mcpPid, mcp.pid);
+    assert.equal(replacementReport.tunnelPid, tunnel.pid);
+    assert.equal(processAlive(mcp.pid), true);
+    assert.equal(processAlive(tunnel.pid), true);
+    assert.equal(await waitForExit(oldHost, 15_000), true, oldHost.outputTail());
+
+    const replacementClient = new RecoveryIpcClient({ paths });
+    const ping = await replacementClient.ping();
+    assert.equal(ping.pid, replacementReport.hostPid);
+    assert.equal(ping.instance_id, replacementReport.hostInstanceId);
+    const completed = await replacementClient.activationStatus(request.operation_id);
+    assert.equal(completed.state, 'completed');
+    assert.equal(completed.result.coding_mcp_preserved, true);
+    assert.equal(completed.result.tunnel_preserved, true);
+    const snapshot = await replacementClient.lightweightSnapshot();
+    assert.equal(snapshot.mcpPid, mcp.pid);
+    assert.equal(snapshot.tunnelPid, tunnel.pid);
+    assert.equal(replacementReport.gatewayOwnerPid, replacementReport.hostPid);
+    assert.equal(await gatewayReachable(replacementReport.gatewayPort), true);
+  } finally {
+    try { fs.writeFileSync(path.join(dataRoot, 'fixture-shutdown.request'), '', 'utf8'); } catch { /* replacement may not have started */ }
+    if (replacementReport?.hostPid && !await waitForPidExit(replacementReport.hostPid, 8000)) {
+      try { process.kill(replacementReport.hostPid); } catch { /* exact fixture PID cleanup */ }
+    }
+    await stopProcess(oldHost);
+    await stopProcess(mcp);
+    await stopProcess(tunnel);
     removeTempTree(tempRoot);
   }
 });

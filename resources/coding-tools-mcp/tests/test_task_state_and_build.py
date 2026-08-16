@@ -125,6 +125,34 @@ class TaskStateTests(unittest.TestCase):
             self.assertEqual(restored["test_results"][-1]["status"], "passed")
             self.assertEqual(restored["modified_files"], [{"path": "src/app.js", "operation": "update", "updated_at": restored["modified_files"][0]["updated_at"]}])
 
+    def test_agent_workflow_records_nested_execution_affected_files_for_final_acceptance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = TaskStateStore(root)
+            store.update({"objective": "Accepted workflow must retain component scope"})
+            store.record_tool_result(
+                "agent_workflow",
+                {"phase": "execute", "workflow": "feature"},
+                {
+                    "ok": True,
+                    "phase": "execute",
+                    "execution": {
+                        "affected_files": [
+                            {"path": "electron/services/recoveryHost.js", "operation": "modified"},
+                            {"path": "electron/services/recoveryActionStore.js", "operation": "modified"},
+                        ],
+                    },
+                },
+            )
+            modified = TaskStateStore(root).get()["modified_files"]
+            self.assertEqual(
+                [(item["path"], item["operation"]) for item in modified],
+                [
+                    ("electron/services/recoveryHost.js", "modified"),
+                    ("electron/services/recoveryActionStore.js", "modified"),
+                ],
+            )
+
     def test_command_output_artifact_ref_survives_task_state_without_persisting_raw_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -878,10 +906,26 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual((root / "src" / "main.py").read_text(encoding="utf-8"), "print('ready')\n")
             self.assertEqual(result["task"]["status"], "waiting")
             self.assertEqual(result["orchestration"]["orchestration_state"], "ACCEPTING")
+            runtime.task_state.record_tool_result(
+                "agent_workflow",
+                {"phase": "execute", "workflow": "greenfield"},
+                {"ok": True, "execution": {"affected_files": [{"path": "src/main.py", "operation": "created"}]}},
+            )
             accepted = runtime.task_control({"action": "accept", "run_id": result["orchestration"]["run_id"]})
             self.assertTrue(accepted["accepted"])
             self.assertEqual(accepted["state"]["status"], "completed")
             self.assertEqual(accepted["orchestration"]["orchestration_state"], "CHECKPOINTED")
+            checkpoint = runtime.orchestration_ledger.export_summary(result["orchestration"]["run_id"])["checkpoints"][-1]
+            receipt = checkpoint["metadata"]["accepted_files"]
+            self.assertTrue(receipt["complete"])
+            self.assertEqual(receipt["schema_version"], 1)
+            self.assertEqual(receipt["count"], 1)
+            self.assertEqual(receipt["files"][0]["path"], "src/main.py")
+            self.assertEqual(receipt["files"][0]["state"], "file")
+            self.assertEqual(
+                receipt["files"][0]["sha256"],
+                __import__("hashlib").sha256(b"print('ready')\n").hexdigest(),
+            )
 
     def test_agent_workflow_schema_exposes_final_execution_routes_without_new_tool(self) -> None:
         schemas = server_module.input_schemas()
