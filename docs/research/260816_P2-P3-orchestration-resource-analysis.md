@@ -917,7 +917,42 @@ Không nên giải quyết tình trạng hiện tại bằng các cách sau:
 
 ---
 
-## 19. Kết luận
+## 19. Trạng thái triển khai và nghiệm thu P3
+
+Phần dưới đây ghi nhận trạng thái thực thi, không phải giả định thiết kế. Evidence window: `2026-08-16T15:49:24+07:00`, workspace `E:\Github\Tools-Codex-web`, branch `main`, source HEAD tại thời điểm build/live proof `a8588b47c35d3fc009bebc131b0353dcdd7075b0`. Artifact runtime trong `.coding-tools/` được giữ nguyên như evidence volatile; không dùng nó làm source fingerprint.
+
+### 19.1. Đã triển khai
+
+- Execution ownership được đăng ký trước spawn cho MCP `exec_command`, OpenCode sidecar và Codex app-server sidecar; ledger schema đã nâng lên v6 với `managed_process_jobs`.
+- Governor phân loại `LIGHT/MEDIUM/HEAVY`, áp dụng HEAVY semaphore theo checkout, gate memory/foreign-heavy, yêu cầu `run_id/wave_id` cho HEAVY và fail-closed khi ownership/PID identity không thể xác minh.
+- Windows Job Object/process-group được gắn trước khi resume; terminal wave đóng descendant tree, restart reconciliation không kill PID không có handle ownership; `REPLAN/BLOCKED/ABORTED/CHECKPOINTED` yêu cầu quiescence trước wave thay thế.
+- Semantic single-file scope forward đúng một file hiện hữu và dùng một `document_symbols` request; scope directory/workspace dùng `workspace_symbols` với cold concurrency `1`, warm concurrency tối đa `2`, giữ query order và project-relative paths. Absolute Windows/POSIX path và traversal bị từ chối.
+- Connector giữ `semantic_lsp_warm` bằng `AtomicBool`; lỗi LSP hạ về cold. Smart-v3 public tool count vẫn là `8`.
+
+### 19.2. Proof cuối
+
+- Python full suite: `335 passed, 1 skipped, 25 subtests passed`.
+- Resource/orchestration/provider/activation focused suites đã pass theo các proof window trước; regression resource/Windows hiện tại pass `12` tests.
+- Rust semantic bridge: `cargo test -p webcodex -j 1 native_semantic_bridge -- --test-threads=1` → `6 passed, 0 failed` (chỉ còn 3 warning có sẵn ngoài phạm vi).
+- Scoped Rust format check: `rustfmt --edition 2021 --check src/connector_runtime/semantic_bridge.rs` → pass.
+- Final release authority sau patch path: `cargo build --release -p webcodex -j 1` → pass (`Finished release profile` trong `10m 36s`).
+
+### 19.3. Live acceptance
+
+- `webcodex status --profile p3-live`: `agent=online`, `connection=connected`, `ready=true`.
+- Native semantic probe trên `src/connector_runtime/semantic_bridge.rs`: HTTP `200`, provider `webcodex_native_lsp`, `read_only=true`, `lsp_state=COLD_READY`, `semantic_concurrency=1`; hai query đều handled.
+- Thực thi `Runtime.prepare_coding_context` live với một file: `semantic_attempted=2`, `semantic_handled=2`, `text_fallback_queries=0`, cả hai kết quả dùng `semantic:webcodex_native_lsp`, selected path chỉ gồm file yêu cầu.
+- Security matrix: fake token `401`; workspace mismatch `403/semantic_workspace_mismatch`; traversal, absolute Windows và absolute POSIX đều `400/invalid_arguments`; không response nào làm lộ credential path hoặc local state path.
+- Smart-v3 runtime projection: `8` tools, không thêm public tool cho orchestration nội bộ.
+- Ledger health tại cùng evidence window: `stale_run_candidates=0`, active write fences `0`, active controller leases `0`, active managed process jobs `0`. Connector tree còn sống theo profile `p3-live`; không còn `cargo`, `rustc` hay `pytest` chạy sau proof.
+
+### 19.4. Delivery note
+
+Concurrent commit `6299c052567852607ddcda30fabe48c859eef932` sau evidence window đã đưa cùng delta regression classifier/Windows timing và absolute-path validation lên `main`/`origin/main`; do đó source P3 đã đồng bộ ở HEAD hiện tại. Worktree chỉ còn tài liệu nghiệm thu này và các artifact/runtime thay đổi ngoài source P3, cần selective review riêng. Không chạy `cargo clean` trong evidence window.
+
+---
+
+## 20. Kết luận
 
 Sự cố lag vừa rồi là một **orchestration/resource-lifecycle defect**, không chỉ là "máy yếu" hay "Rust compile lâu".
 
