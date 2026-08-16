@@ -1,5 +1,6 @@
 use super::external_tools::ExternalRoute;
 use super::lsp::{handle_lsp_request, is_lsp_request_kind, LspSupervisor};
+use super::source_snapshot::handle_source_snapshot_request;
 use super::transport::ResultSubmission;
 use super::validation::{handle_validation_request, is_validation_request_kind};
 use super::{
@@ -18,6 +19,7 @@ use crate::shell_protocol::{
 use crate::{handle_file_request, is_file_request_kind, JobManager};
 use std::path::Path;
 use std::sync::atomic::Ordering;
+use webcodex_core::source_snapshot::SOURCE_SNAPSHOT_AGENT_REQUEST_KIND;
 
 /// Execute a single agent request (shell/file/job/lsp/validation) and send the
 /// result over the active transport. This is the shared dispatch path used by
@@ -174,6 +176,13 @@ pub(crate) fn dispatch_request(
             }
         }
         return submitted.map(|_| true);
+    }
+    if request.kind == SOURCE_SNAPSHOT_AGENT_REQUEST_KIND {
+        let request_id = request.request_id.clone();
+        let result = handle_source_snapshot_request(projects_dir, &request);
+        return sink
+            .submit_result_with_metadata(request_id, result, config, runtime)
+            .map(|_| true);
     }
     // Inspect requests must stay on the native execution path where Landlock
     // is applied in pre_exec. External providers are not an equivalent local

@@ -126,11 +126,309 @@ fn server_first_validation_caps(server_compute: bool) -> ShellClientCapabilities
     }
 }
 
+fn server_first_snapshot_validation_caps(server_compute: bool) -> ShellClientCapabilities {
+    ShellClientCapabilities {
+        async_shell_jobs: true,
+        structured_validation_argv: true,
+        exact_source_validation: true,
+        source_snapshot_validation: true,
+        server_compute,
+        ..Default::default()
+    }
+}
+
 fn clean_project_at_head(head: &str) -> crate::shell_protocol::ShellAgentProjectSummary {
     let mut project = registered_project("agent-proj", "/tmp/agent-proj");
     project.git_head = Some(head.to_string());
     project.git_dirty = Some(false);
     project
+}
+
+fn dirty_project_at_head(head: &str) -> crate::shell_protocol::ShellAgentProjectSummary {
+    let mut project = clean_project_at_head(head);
+    project.git_dirty = Some(true);
+    project
+}
+
+fn validation_snapshot_at_head(head: &str) -> webcodex_core::source_snapshot::SourceSnapshotV1 {
+    webcodex_core::source_snapshot::SourceSnapshotV1::from_entries(
+        head,
+        vec![
+            webcodex_core::source_snapshot::SourceSnapshotEntryV1::upsert(
+                "src/lib.rs",
+                b"pub fn snapshot_test_marker() -> u8 { 7 }\n",
+                false,
+            )
+            .unwrap(),
+        ],
+    )
+    .unwrap()
+}
+
+async fn complete_source_snapshot_capture(
+    runtime: &ToolRuntime,
+    client_id: &str,
+    request_id: String,
+    snapshot: &webcodex_core::source_snapshot::SourceSnapshotV1,
+) {
+    runtime
+        .shell_clients
+        .complete(ShellAgentResultPayload {
+            result: ShellAgentResultRequest {
+                client_id: client_id.to_string(),
+                agent_instance_id: "inst".to_string(),
+                request_id,
+                exit_code: Some(0),
+                stdout: Some(serde_json::to_string(snapshot).unwrap()),
+                stderr: None,
+                duration_ms: Some(5),
+                error: None,
+            },
+            command_execution_state: None,
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn server_first_dirty_snapshot_validation_captures_then_dispatches_target() {
+    let source_id = "server-first-snapshot-source";
+    let target_id = "server-first-snapshot-target";
+    let head = "4123456789abcdef0123456789abcdef01234567";
+    let runtime = runtime_with_agent_project(source_id)
+        .with_validation_sync_wait(std::time::Duration::from_millis(300));
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        source_id,
+        None,
+        server_first_snapshot_validation_caps(false),
+        vec![dirty_project_at_head(head)],
+        Some(1),
+    )
+    .await;
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        target_id,
+        None,
+        server_first_snapshot_validation_caps(true),
+        vec![clean_project_at_head(head)],
+        Some(2),
+    )
+    .await;
+    let project = agent_test_project_id(source_id);
+    let task = tokio::spawn({
+        let runtime = runtime.clone();
+        async move {
+            runtime
+                .cargo_check(project, None, None, None, None, None, None, Some(600))
+                .await
+        }
+    });
+
+    let capture = wait_for_agent_request(&runtime, source_id).await;
+    assert_eq!(
+        capture.kind,
+        webcodex_core::source_snapshot::SOURCE_SNAPSHOT_AGENT_REQUEST_KIND
+    );
+    assert!(capture.job_id.is_none());
+    let capture_payload: webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1 =
+        serde_json::from_str(capture.stdin.as_deref().expect("snapshot capture payload")).unwrap();
+    assert_eq!(
+        capture_payload,
+        webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1::Capture {
+            project_id: "agent-proj".to_string(),
+            expected_git_head: head.to_string(),
+        }
+    );
+    assert!(next_patch_agent_request(&runtime, target_id)
+        .await
+        .is_none());
+
+    let snapshot = validation_snapshot_at_head(head);
+    complete_source_snapshot_capture(&runtime, source_id, capture.request_id.clone(), &snapshot)
+        .await;
+    let (request, job_id) = poll_start_validation_job(&runtime, target_id).await;
+    assert_eq!(
+        request
+            .job_context
+            .as_ref()
+            .and_then(|context| context.runtime_project_id.as_deref()),
+        Some("agent:server-first-snapshot-target:agent-proj")
+    );
+    assert!(request
+        .job_context
+        .as_ref()
+        .and_then(|context| context.validation.as_ref())
+        .and_then(|validation| validation.source_identity.as_ref())
+        .is_none());
+    let execute_payload: webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1 =
+        serde_json::from_str(request.stdin.as_deref().expect("snapshot execute payload")).unwrap();
+    assert_eq!(
+        execute_payload,
+        webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1::Execute {
+            snapshot: snapshot.clone(),
+        }
+    );
+    let hidden = runtime
+        .shell_clients
+        .get_hidden_job_for_auth(None, &job_id)
+        .await
+        .unwrap();
+    assert!(!serde_json::to_string(&hidden)
+        .unwrap()
+        .contains("snapshot_test_marker"));
+    assert!(next_patch_agent_request(&runtime, source_id)
+        .await
+        .is_none());
+
+    runtime
+        .shell_clients
+        .update_job(cargo_test_update(
+            target_id,
+            &request.request_id,
+            &job_id,
+            "completed",
+            "Finished `dev` profile\n",
+            "",
+            Some(0),
+            completed_progress(),
+            true,
+        ))
+        .await
+        .unwrap();
+    let result = task.await.unwrap();
+    assert!(result.success, "{:?}", result.error);
+    assert_eq!(result.output["passed"], true);
+}
+
+#[tokio::test]
+async fn server_first_dirty_snapshot_validation_undispatched_capture_falls_back_to_source() {
+    let source_id = "server-first-snapshot-fallback-source";
+    let target_id = "server-first-snapshot-fallback-target";
+    let head = "5123456789abcdef0123456789abcdef01234567";
+    let runtime = runtime_with_agent_project(source_id)
+        .with_validation_sync_wait(std::time::Duration::from_millis(20));
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        source_id,
+        None,
+        server_first_snapshot_validation_caps(false),
+        vec![dirty_project_at_head(head)],
+        Some(1),
+    )
+    .await;
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        target_id,
+        None,
+        server_first_snapshot_validation_caps(true),
+        vec![clean_project_at_head(head)],
+        Some(2),
+    )
+    .await;
+    let project = agent_test_project_id(source_id);
+    let task = tokio::spawn({
+        let runtime = runtime.clone();
+        async move {
+            runtime
+                .cargo_check(project, None, None, None, None, None, None, Some(600))
+                .await
+        }
+    });
+
+    // Do not poll the queued capture. Its bounded wait expires with
+    // request_dispatched=Some(false), so only then may the server fall back.
+    tokio::time::sleep(std::time::Duration::from_millis(80)).await;
+    let (request, job_id) = poll_start_validation_job(&runtime, source_id).await;
+    assert!(request.stdin.is_none());
+    assert!(request
+        .job_context
+        .as_ref()
+        .and_then(|context| context.validation.as_ref())
+        .and_then(|validation| validation.source_identity.as_ref())
+        .is_none());
+    assert!(next_patch_agent_request(&runtime, target_id)
+        .await
+        .is_none());
+    runtime
+        .shell_clients
+        .update_job(cargo_test_update(
+            source_id,
+            &request.request_id,
+            &job_id,
+            "completed",
+            "Finished `dev` profile\n",
+            "",
+            Some(0),
+            completed_progress(),
+            true,
+        ))
+        .await
+        .unwrap();
+    assert!(task.await.unwrap().success);
+}
+
+#[tokio::test]
+async fn server_first_dirty_snapshot_validation_dispatched_capture_timeout_fails_closed() {
+    let source_id = "server-first-snapshot-ambiguous-source";
+    let target_id = "server-first-snapshot-ambiguous-target";
+    let head = "6123456789abcdef0123456789abcdef01234567";
+    let runtime = runtime_with_agent_project(source_id)
+        .with_validation_sync_wait(std::time::Duration::from_millis(30));
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        source_id,
+        None,
+        server_first_snapshot_validation_caps(false),
+        vec![dirty_project_at_head(head)],
+        Some(1),
+    )
+    .await;
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        target_id,
+        None,
+        server_first_snapshot_validation_caps(true),
+        vec![clean_project_at_head(head)],
+        Some(2),
+    )
+    .await;
+    let project = agent_test_project_id(source_id);
+    let task = tokio::spawn({
+        let runtime = runtime.clone();
+        async move {
+            runtime
+                .cargo_check(project, None, None, None, None, None, None, Some(600))
+                .await
+        }
+    });
+
+    let capture = wait_for_agent_request(&runtime, source_id).await;
+    assert_eq!(
+        capture.kind,
+        webcodex_core::source_snapshot::SOURCE_SNAPSHOT_AGENT_REQUEST_KIND
+    );
+    assert!(capture.job_id.is_none());
+    // The request was polled, so timeout cannot prove that snapshot capture
+    // never started. No validation may be dispatched to either Runner.
+    let result = task.await.unwrap();
+    assert!(!result.success);
+    assert_eq!(
+        result.output["failure_kind"],
+        "source_snapshot_capture_outcome_unknown"
+    );
+    assert_eq!(result.output["command_started"], false);
+    assert!(next_patch_agent_request(&runtime, source_id)
+        .await
+        .is_none());
+    assert!(next_patch_agent_request(&runtime, target_id)
+        .await
+        .is_none());
+    assert!(runtime
+        .shell_clients
+        .hidden_job_ids_for_test()
+        .await
+        .is_empty());
 }
 
 #[tokio::test]

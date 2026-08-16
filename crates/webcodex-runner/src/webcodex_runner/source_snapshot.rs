@@ -12,10 +12,15 @@ use std::process::{Command, Stdio};
 
 use tempfile::TempDir;
 use webcodex_core::source_snapshot::{
-    sha256_hex, validate_source_snapshot_path, SourceSnapshotEntryV1, SourceSnapshotOperationV1,
-    SourceSnapshotV1, SOURCE_SNAPSHOT_MAX_ENTRIES, SOURCE_SNAPSHOT_MAX_FILE_BYTES,
-    SOURCE_SNAPSHOT_MAX_PATH_BYTES,
+    sha256_hex, validate_source_snapshot_path, SourceSnapshotAgentPayloadV1, SourceSnapshotEntryV1,
+    SourceSnapshotOperationV1, SourceSnapshotV1, SOURCE_SNAPSHOT_AGENT_REQUEST_KIND,
+    SOURCE_SNAPSHOT_MAX_ENTRIES, SOURCE_SNAPSHOT_MAX_FILE_BYTES, SOURCE_SNAPSHOT_MAX_PATH_BYTES,
+    SOURCE_SNAPSHOT_MAX_SERIALIZED_BYTES,
 };
+
+use super::projects::find_project_shell_context_by_id;
+use super::CommandResult;
+use crate::shell_protocol::ShellAgentShellRequest;
 
 const GIT_PATH_LIST_MAX_BYTES: usize =
     (SOURCE_SNAPSHOT_MAX_ENTRIES * (SOURCE_SNAPSHOT_MAX_PATH_BYTES + 1) * 2) + 1;
@@ -26,6 +31,77 @@ pub(crate) fn capture_source_snapshot(
     expected_head: &str,
 ) -> Result<SourceSnapshotV1, String> {
     capture_source_snapshot_with_before_recheck(project_root, expected_head, || {})
+}
+
+pub(crate) fn handle_source_snapshot_request(
+    projects_dir: &Path,
+    request: &ShellAgentShellRequest,
+) -> CommandResult {
+    let fail = |code: &str| CommandResult {
+        exit_code: Some(1),
+        stdout: None,
+        stderr: None,
+        duration_ms: Some(0),
+        error: Some(code.to_string()),
+    };
+    if request.kind != SOURCE_SNAPSHOT_AGENT_REQUEST_KIND
+        || request.job_id.is_some()
+        || request.cwd.is_some()
+        || request.path.is_some()
+        || request.content.is_some()
+        || request.max_bytes.is_some()
+        || request.expected_sha256.is_some()
+        || request.expected_prefix.is_some()
+        || request.start_line.is_some()
+        || request.end_line.is_some()
+        || request.create_dirs
+        || !request.command.is_empty()
+        || request.process.is_some()
+        || request.script.is_some()
+        || request.validation.is_some()
+        || request.lsp.is_some()
+        || request.sandbox.is_some()
+        || request.job_context.is_some()
+        || request.persistent_shell.is_some()
+    {
+        return fail("invalid_source_snapshot_request");
+    }
+    let Some(raw) = request.stdin.as_deref() else {
+        return fail("missing_source_snapshot_payload");
+    };
+    let payload: SourceSnapshotAgentPayloadV1 = match serde_json::from_str(raw) {
+        Ok(payload) => payload,
+        Err(_) => return fail("invalid_source_snapshot_payload"),
+    };
+    if payload.validate().is_err() {
+        return fail("invalid_source_snapshot_payload");
+    }
+    let SourceSnapshotAgentPayloadV1::Capture {
+        project_id,
+        expected_git_head,
+    } = payload
+    else {
+        return fail("source_snapshot_execute_not_enabled");
+    };
+    let project = match find_project_shell_context_by_id(projects_dir, &project_id) {
+        Some(project) => project,
+        None => return fail("source_snapshot_project_unavailable"),
+    };
+    let snapshot = match capture_source_snapshot(Path::new(&project.path), &expected_git_head) {
+        Ok(snapshot) => snapshot,
+        Err(_) => return fail("source_snapshot_capture_failed"),
+    };
+    let stdout = match serde_json::to_string(&snapshot) {
+        Ok(stdout) if stdout.len() <= SOURCE_SNAPSHOT_MAX_SERIALIZED_BYTES => stdout,
+        _ => return fail("source_snapshot_response_too_large"),
+    };
+    CommandResult {
+        exit_code: Some(0),
+        stdout: Some(stdout),
+        stderr: None,
+        duration_ms: Some(0),
+        error: None,
+    }
 }
 
 fn capture_source_snapshot_with_before_recheck<F>(
@@ -743,6 +819,71 @@ mod tests {
         });
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("source drift"));
+    }
+
+    #[test]
+    fn source_snapshot_agent_capture_uses_registered_project_and_rejects_execute() {
+        let repo = fixture_repo();
+        let head = git_text(repo.path(), &["rev-parse", "HEAD"]);
+        fs::write(repo.path().join("tracked.txt"), b"agent dirty\n").unwrap();
+        let projects = tempfile::tempdir().unwrap();
+        fs::write(
+            projects.path().join("demo.toml"),
+            format!(
+                "id = \"demo\"\npath = {:?}\nallow_patch = true\n",
+                repo.path().to_string_lossy()
+            ),
+        )
+        .unwrap();
+        let request_for = |payload: SourceSnapshotAgentPayloadV1| ShellAgentShellRequest {
+            request_id: "snapshot-test".to_string(),
+            client_id: "runner".to_string(),
+            kind: SOURCE_SNAPSHOT_AGENT_REQUEST_KIND.to_string(),
+            job_id: None,
+            cwd: None,
+            path: None,
+            content: None,
+            max_bytes: None,
+            expected_sha256: None,
+            expected_prefix: None,
+            start_line: None,
+            end_line: None,
+            create_dirs: false,
+            command: String::new(),
+            process: None,
+            script: None,
+            stdin: Some(serde_json::to_string(&payload).unwrap()),
+            timeout_secs: 30,
+            requested_by: "test".to_string(),
+            created_at: 0,
+            validation: None,
+            lsp: None,
+            sandbox: None,
+            job_context: None,
+            persistent_shell: None,
+        };
+
+        let capture = request_for(SourceSnapshotAgentPayloadV1::Capture {
+            project_id: "demo".to_string(),
+            expected_git_head: head,
+        });
+        let result = handle_source_snapshot_request(projects.path(), &capture);
+        assert_eq!(result.exit_code, Some(0), "{:?}", result.error);
+        let snapshot: SourceSnapshotV1 =
+            serde_json::from_str(result.stdout.as_deref().unwrap()).unwrap();
+        snapshot.validate().unwrap();
+        assert!(snapshot
+            .entries
+            .iter()
+            .any(|entry| entry.path == "tracked.txt"));
+
+        let execute = request_for(SourceSnapshotAgentPayloadV1::Execute { snapshot });
+        let rejected = handle_source_snapshot_request(projects.path(), &execute);
+        assert_eq!(rejected.exit_code, Some(1));
+        assert_eq!(
+            rejected.error.as_deref(),
+            Some("source_snapshot_execute_not_enabled")
+        );
     }
 
     #[cfg(unix)]

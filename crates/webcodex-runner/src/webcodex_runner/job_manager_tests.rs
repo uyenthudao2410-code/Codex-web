@@ -2172,6 +2172,355 @@ fn validation_spawn_failure_is_infrastructure_without_failed_assertion() {
     );
 }
 
+fn git_for_snapshot_validation(repo: &Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo)
+        .args(args)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git {:?} failed: {:?}",
+        args,
+        output
+    );
+    String::from_utf8(output.stdout).unwrap().trim().to_string()
+}
+
+struct SnapshotValidationFixture {
+    _temp: TempDir,
+    repo: PathBuf,
+    projects_dir: PathBuf,
+    target_dir: PathBuf,
+    manifest_marker: PathBuf,
+    authoritative_bytes: Vec<u8>,
+    authoritative_status: String,
+    snapshot: webcodex_core::source_snapshot::SourceSnapshotV1,
+}
+
+fn snapshot_validation_fixture(mutate_source_in_build: bool) -> SnapshotValidationFixture {
+    let temp = tempfile::tempdir().unwrap();
+    let repo = temp.path().join("repo");
+    let projects_dir = temp.path().join("projects.d");
+    let target_dir = temp.path().join("cargo-target");
+    let manifest_marker = temp.path().join("manifest-dir.txt");
+    std::fs::create_dir_all(repo.join("src")).unwrap();
+    std::fs::create_dir_all(&projects_dir).unwrap();
+    std::fs::write(
+        repo.join("Cargo.toml"),
+        "[package]\nname = \"snapshot-validation-fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    std::fs::write(repo.join(".gitignore"), "target/\n").unwrap();
+    std::fs::write(
+        repo.join("src/lib.rs"),
+        b"pub fn value() -> u8 { base_source_does_not_compile }\n",
+    )
+    .unwrap();
+    let mutation = if mutate_source_in_build {
+        "std::fs::write(root.join(\"src/lib.rs\"), b\"pub fn value() -> u8 { 99 }\\n\").unwrap();"
+    } else {
+        ""
+    };
+    std::fs::write(
+        repo.join("build.rs"),
+        format!(
+            "fn main() {{ let root = std::path::PathBuf::from(std::env::var(\"CARGO_MANIFEST_DIR\").unwrap()); std::fs::write({:?}, root.to_string_lossy().as_bytes()).unwrap(); {} }}\n",
+            manifest_marker.to_string_lossy(),
+            mutation
+        ),
+    )
+    .unwrap();
+    let _ = git_for_snapshot_validation(&repo, &["init", "-q"]);
+    let _ = git_for_snapshot_validation(
+        &repo,
+        &[
+            "config",
+            "user.email",
+            "snapshot-validation@example.invalid",
+        ],
+    );
+    let _ = git_for_snapshot_validation(&repo, &["config", "user.name", "Snapshot Validation"]);
+    let lock_status = Command::new("cargo")
+        .arg("generate-lockfile")
+        .current_dir(&repo)
+        .status()
+        .unwrap();
+    assert!(lock_status.success());
+    let _ = git_for_snapshot_validation(&repo, &["add", "."]);
+    let _ = git_for_snapshot_validation(&repo, &["commit", "-q", "-m", "base"]);
+    let head = git_for_snapshot_validation(&repo, &["rev-parse", "HEAD"]);
+
+    let authoritative_bytes =
+        b"pub fn value() -> u8 { authoritative_source_does_not_compile }\n".to_vec();
+    std::fs::write(repo.join("src/lib.rs"), &authoritative_bytes).unwrap();
+    let authoritative_status = git_for_snapshot_validation(
+        &repo,
+        &["status", "--porcelain=v1", "--untracked-files=all"],
+    );
+    let snapshot = webcodex_core::source_snapshot::SourceSnapshotV1::from_entries(
+        &head,
+        vec![
+            webcodex_core::source_snapshot::SourceSnapshotEntryV1::upsert(
+                "src/lib.rs",
+                b"pub fn value() -> u8 { 7 }\n",
+                false,
+            )
+            .unwrap(),
+        ],
+    )
+    .unwrap();
+    std::fs::write(
+        projects_dir.join("demo.toml"),
+        format!(
+            "id = \"demo\"\npath = {:?}\nallow_patch = true\n",
+            repo.to_string_lossy()
+        ),
+    )
+    .unwrap();
+
+    SnapshotValidationFixture {
+        _temp: temp,
+        repo,
+        projects_dir,
+        target_dir,
+        manifest_marker,
+        authoritative_bytes,
+        authoritative_status,
+        snapshot,
+    }
+}
+
+fn snapshot_validation_identity(
+    fixture: &SnapshotValidationFixture,
+) -> shell_protocol::ShellJobValidationSourceSnapshotIdentity {
+    shell_protocol::ShellJobValidationSourceSnapshotIdentity {
+        base_git_head: fixture.snapshot.base_git_head.clone(),
+        snapshot_sha256: fixture.snapshot.snapshot_sha256.clone(),
+        entry_count: fixture.snapshot.entries.len(),
+    }
+}
+
+fn run_source_snapshot_validation_job_with_identity(
+    fixture: &SnapshotValidationFixture,
+    steps: Vec<ShellJobValidationStep>,
+    job_id: &str,
+    source_snapshot_identity: Option<shell_protocol::ShellJobValidationSourceSnapshotIdentity>,
+) -> Vec<ShellAgentJobUpdateRequest> {
+    let (tx, mut rx) = tokio::sync::mpsc::channel(64);
+    let sink = AgentSink::WebSocket {
+        tx,
+        client_id: "snapshot-validation-agent".into(),
+        agent_instance_id: "snapshot-validation-instance".into(),
+    };
+    let mut context = test_job_context(
+        &fixture.repo,
+        steps.iter().map(|step| step.name.clone()).collect(),
+    );
+    context.runtime_project_id = Some("agent:snapshot-validation-agent:demo".to_string());
+    context.project_cwd = Some(fixture.repo.to_string_lossy().into_owned());
+    context.purpose = Some("validation".to_string());
+    if let Some(source_snapshot_identity) = source_snapshot_identity {
+        context.validation = Some(shell_protocol::ShellJobValidationMetadata {
+            tool: "cargo_check".to_string(),
+            kind: "check".to_string(),
+            steps: steps.clone(),
+            effective_timeout_secs: 60,
+            sync_wait_secs: 1,
+            adapter: "cargo_check".to_string(),
+            source_identity: None,
+            source_snapshot_identity: Some(source_snapshot_identity),
+        });
+    }
+    let payload = webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1::Execute {
+        snapshot: fixture.snapshot.clone(),
+    };
+    let manager = JobManager::new(1);
+    manager.enqueue(
+        sink,
+        1,
+        AgentPolicy {
+            allow_cwd_anywhere: true,
+            ..AgentPolicy::default()
+        },
+        ShellConfig::default(),
+        SshConfig::default(),
+        fixture.projects_dir.clone(),
+        serde_json::from_value(json!({
+            "request_id": format!("request-{job_id}"),
+            "client_id": "snapshot-validation-agent",
+            "kind": "start_validation_job",
+            "job_id": job_id,
+            "cwd": fixture.repo.to_string_lossy().into_owned(),
+            "command": serde_json::to_string(&steps).unwrap(),
+            "stdin": serde_json::to_string(&payload).unwrap(),
+            "timeout_secs": 60,
+            "requested_by": "test",
+            "created_at": 1,
+            "job_context": context
+        }))
+        .unwrap(),
+    );
+    let updates = collect_job_updates(&mut rx, Duration::from_secs(120));
+    let inventory_json = serde_json::to_string(&manager.inventory()).unwrap();
+    assert!(!inventory_json.contains("pub fn value() -> u8 { 7 }"));
+    updates
+}
+
+fn run_source_snapshot_validation_job(
+    fixture: &SnapshotValidationFixture,
+    steps: Vec<ShellJobValidationStep>,
+    job_id: &str,
+) -> Vec<ShellAgentJobUpdateRequest> {
+    run_source_snapshot_validation_job_with_identity(fixture, steps, job_id, None)
+}
+
+fn assert_snapshot_authoritative_checkout_unchanged(fixture: &SnapshotValidationFixture) {
+    assert_eq!(
+        std::fs::read(fixture.repo.join("src/lib.rs")).unwrap(),
+        fixture.authoritative_bytes
+    );
+    assert_eq!(
+        git_for_snapshot_validation(
+            &fixture.repo,
+            &["status", "--porcelain=v1", "--untracked-files=all"],
+        ),
+        fixture.authoritative_status
+    );
+}
+
+#[test]
+fn source_snapshot_validation_job_runs_in_ephemeral_materialization_and_preserves_registered_checkout(
+) {
+    let fixture = snapshot_validation_fixture(false);
+    let updates = run_source_snapshot_validation_job_with_identity(
+        &fixture,
+        vec![ShellJobValidationStep {
+            name: "check".into(),
+            program: "cargo".into(),
+            args: vec!["check".into()],
+            env: vec![(
+                "CARGO_TARGET_DIR".into(),
+                fixture.target_dir.to_string_lossy().into_owned(),
+            )],
+        }],
+        "snapshot-success",
+        Some(snapshot_validation_identity(&fixture)),
+    );
+    let final_update = updates.last().expect("snapshot validation terminal update");
+    assert!(final_update.finished, "{final_update:?}");
+    assert_eq!(final_update.status, "completed", "{final_update:?}");
+    assert_eq!(final_update.exit_code, Some(0), "{final_update:?}");
+    assert_snapshot_authoritative_checkout_unchanged(&fixture);
+    let manifest_dir = PathBuf::from(
+        std::fs::read_to_string(&fixture.manifest_marker)
+            .unwrap()
+            .trim(),
+    );
+    assert_ne!(manifest_dir, fixture.repo);
+    assert!(
+        wait_until(Duration::from_secs(5), || !manifest_dir.exists()),
+        "materialized checkout must be removed after terminal update: {}",
+        manifest_dir.display()
+    );
+}
+
+#[test]
+fn source_snapshot_validation_job_rejects_mismatched_proof_identity_before_spawn() {
+    let fixture = snapshot_validation_fixture(false);
+    let mut identity = snapshot_validation_identity(&fixture);
+    let replacement = if identity.snapshot_sha256.starts_with('0') {
+        "1"
+    } else {
+        "0"
+    };
+    identity.snapshot_sha256.replace_range(0..1, replacement);
+    let updates = run_source_snapshot_validation_job_with_identity(
+        &fixture,
+        vec![ShellJobValidationStep {
+            name: "check".into(),
+            program: "cargo".into(),
+            args: vec!["check".into()],
+            env: vec![(
+                "CARGO_TARGET_DIR".into(),
+                fixture.target_dir.to_string_lossy().into_owned(),
+            )],
+        }],
+        "snapshot-identity-mismatch",
+        Some(identity),
+    );
+    let final_update = updates.last().expect("snapshot mismatch terminal update");
+    assert!(final_update.finished, "{final_update:?}");
+    assert_eq!(final_update.status, "failed", "{final_update:?}");
+    assert_eq!(final_update.exit_code, None, "{final_update:?}");
+    assert_eq!(
+        final_update.error.as_deref(),
+        Some(VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE)
+    );
+    assert_eq!(
+        final_update.validation_progress,
+        Some(ShellJobValidationProgress {
+            completed: 0,
+            current_step: None,
+            failed_step: None,
+        })
+    );
+    assert!(
+        !fixture.manifest_marker.exists(),
+        "mismatched proof identity must fail before Cargo spawn"
+    );
+    assert_snapshot_authoritative_checkout_unchanged(&fixture);
+}
+
+#[test]
+fn source_snapshot_validation_job_detects_materialized_source_drift_before_next_step() {
+    let fixture = snapshot_validation_fixture(true);
+    let target = fixture.target_dir.to_string_lossy().into_owned();
+    let updates = run_source_snapshot_validation_job(
+        &fixture,
+        vec![
+            ShellJobValidationStep {
+                name: "check".into(),
+                program: "cargo".into(),
+                args: vec!["check".into()],
+                env: vec![("CARGO_TARGET_DIR".into(), target.clone())],
+            },
+            ShellJobValidationStep {
+                name: "test".into(),
+                program: "cargo".into(),
+                args: vec!["test".into(), "--no-run".into()],
+                env: vec![("CARGO_TARGET_DIR".into(), target)],
+            },
+        ],
+        "snapshot-drift",
+    );
+    let final_update = updates.last().expect("snapshot drift terminal update");
+    assert!(final_update.finished, "{final_update:?}");
+    assert_eq!(final_update.status, "failed", "{final_update:?}");
+    assert_eq!(final_update.exit_code, None, "{final_update:?}");
+    assert_eq!(
+        final_update.error.as_deref(),
+        Some(VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE)
+    );
+    assert_eq!(
+        final_update.validation_progress,
+        Some(ShellJobValidationProgress {
+            completed: 1,
+            current_step: None,
+            failed_step: None,
+        })
+    );
+    assert!(!updates.iter().any(|update| {
+        update
+            .validation_progress
+            .as_ref()
+            .and_then(|progress| progress.current_step.as_deref())
+            == Some("test")
+    }));
+    assert_snapshot_authoritative_checkout_unchanged(&fixture);
+}
+
 #[cfg(unix)]
 #[test]
 fn python_module_probe_reports_tool_unavailable_without_running_recipe() {

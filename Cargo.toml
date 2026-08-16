@@ -27,6 +27,9 @@ edition.workspace = true
 name = "webcodex-server"
 path = "src/bin/webcodex-server.rs"
 
+[features]
+internal-r3b2-test-support = []
+
 [dependencies]
 webcodex-admin = { path = "crates/webcodex-admin" }
 webcodex-agent-config = { path = "crates/webcodex-agent-config" }
@@ -83,3 +86,8 @@ salvo = { version = "0.93", features = ["test"] }
 # provider that is already in the dependency tree (via quinn-proto), so it
 # does not pull a new crypto backend.
 rcgen = "0.13"
+
+[[test]]
+name = "r3b2_snapshot_validation"
+path = "tests/r3b2_snapshot_validation.rs"
+required-features = ["internal-r3b2-test-support"]

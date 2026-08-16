@@ -989,6 +989,51 @@ class ToolModeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_continuous_check_caps_timeout_to_remaining_background_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                runtime.task_state.update({"objective": "Cap proof to workflow budget", "status": "active"})
+                terminal = {
+                    "ok": True,
+                    "status": "exited",
+                    "session_id": "budget-capped-proof",
+                    "exit_code": 0,
+                    "elapsed_ms": 25,
+                    "summary": "proof complete",
+                }
+                with (
+                    patch.object(runtime, "_background_operation_remaining_seconds", return_value=8.0),
+                    patch.object(runtime, "exec_command", return_value=terminal) as exec_command,
+                ):
+                    result = runtime._run_continuous_check("python -m pytest -q", ".", 30_000)
+                self.assertEqual(result["status"], "passed")
+                self.assertEqual(result["effective_timeout_ms"], 3_000)
+                call = exec_command.call_args.args[0]
+                self.assertEqual(call["timeout_ms"], 3_000)
+                self.assertEqual(call["yield_time_ms"], 1_000)
+            finally:
+                runtime.close()
+
+    def test_continuous_check_does_not_start_when_only_finalization_reserve_remains(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                with (
+                    patch.object(runtime, "_background_operation_remaining_seconds", return_value=4.0),
+                    patch.object(runtime, "exec_command") as exec_command,
+                ):
+                    result = runtime._run_continuous_check("python -m pytest -q", ".", 30_000)
+                exec_command.assert_not_called()
+                self.assertEqual(result["status"], "timed_out")
+                self.assertTrue(result["timed_out"])
+                self.assertFalse(result["cancelled"])
+                self.assertFalse(result["command_started"])
+                self.assertTrue(result["budget_limited"])
+                self.assertEqual(result["effective_timeout_ms"], 0)
+            finally:
+                runtime.close()
+
     def test_cancelled_check_stops_following_checks_and_never_finalizes_success(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp), permission_mode="dangerous")

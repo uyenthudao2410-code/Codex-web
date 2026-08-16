@@ -13,6 +13,7 @@ use std::collections::BTreeSet;
 use crate::shell_protocol::valid_exact_git_oid;
 
 pub const SOURCE_SNAPSHOT_SCHEMA_VERSION: u64 = 1;
+pub const SOURCE_SNAPSHOT_AGENT_REQUEST_KIND: &str = "source_snapshot";
 pub const SOURCE_SNAPSHOT_MAX_ENTRIES: usize = 128;
 pub const SOURCE_SNAPSHOT_MAX_PATH_BYTES: usize = 1024;
 pub const SOURCE_SNAPSHOT_MAX_FILE_BYTES: usize = 64 * 1024;
@@ -33,19 +34,34 @@ pub enum SourceSnapshotOperationV1 {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SourceSnapshotAgentPayloadV1 {
-    Capture { expected_git_head: String },
-    Execute { snapshot: SourceSnapshotV1 },
+    Capture {
+        project_id: String,
+        expected_git_head: String,
+    },
+    Execute {
+        snapshot: SourceSnapshotV1,
+    },
 }
 
 impl SourceSnapshotAgentPayloadV1 {
     pub fn validate(&self) -> Result<(), String> {
         match self {
-            Self::Capture { expected_git_head } => {
-                if valid_exact_git_oid(expected_git_head) {
-                    Ok(())
-                } else {
-                    Err("source snapshot capture requires a full Git object id".to_string())
+            Self::Capture {
+                project_id,
+                expected_git_head,
+            } => {
+                if project_id.is_empty()
+                    || matches!(project_id.as_str(), "." | "..")
+                    || !project_id.bytes().all(|byte| {
+                        byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.')
+                    })
+                {
+                    return Err("source snapshot capture requires a safe project id".to_string());
                 }
+                if !valid_exact_git_oid(expected_git_head) {
+                    return Err("source snapshot capture requires a full Git object id".to_string());
+                }
+                Ok(())
             }
             Self::Execute { snapshot } => snapshot.validate(),
         }
@@ -439,11 +455,19 @@ mod tests {
         assert!(error.contains("serialized payload"), "{error}");
 
         let capture = SourceSnapshotAgentPayloadV1::Capture {
+            project_id: "demo".to_string(),
             expected_git_head: HEAD.to_string(),
         };
         capture.validate().unwrap();
         assert!(SourceSnapshotAgentPayloadV1::Capture {
+            project_id: "demo".to_string(),
             expected_git_head: "short".to_string(),
+        }
+        .validate()
+        .is_err());
+        assert!(SourceSnapshotAgentPayloadV1::Capture {
+            project_id: "../demo".to_string(),
+            expected_git_head: HEAD.to_string(),
         }
         .validate()
         .is_err());

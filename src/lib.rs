@@ -25,6 +25,9 @@ mod connector_runtime;
 mod console_web;
 mod db;
 mod host_console_http;
+#[cfg(feature = "internal-r3b2-test-support")]
+#[doc(hidden)]
+pub mod internal_r3b2_test_support;
 mod job_observation;
 mod mcp;
 mod model_surface;

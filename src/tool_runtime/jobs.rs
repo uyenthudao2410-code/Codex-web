@@ -14,7 +14,9 @@ use super::tool_result::ToolResult;
 use super::{ExecutionPurpose, ExecutionShell, ToolRuntime};
 use crate::auth::AuthContext;
 use crate::shell_client::{command_preview, ShellJobStartMetadata, COMMAND_PREVIEW_MAX_CHARS};
-use crate::shell_protocol::{ShellJobInfo, ShellJobOpRequest, ShellJobValidationStep};
+use crate::shell_protocol::{
+    ShellJobInfo, ShellJobOpRequest, ShellJobValidationMetadata, ShellJobValidationStep,
+};
 
 pub(crate) fn is_blocking_active_job_status(status: &str) -> bool {
     matches!(
@@ -228,6 +230,34 @@ pub(crate) fn validation_job_projection(
             value["errors_count"] = json!(evidence.errors_count);
         }
         _ => {}
+    }
+    Some(value)
+}
+
+fn validation_job_projection_with_metadata(
+    metadata: Option<&ShellJobValidationMetadata>,
+    status: &str,
+    exit_code: Option<i64>,
+    stdout: &str,
+    stderr: &str,
+    truncated: bool,
+) -> Option<Value> {
+    let mut value = validation_job_projection(
+        metadata.map(|metadata| metadata.tool.as_str()),
+        metadata.map(|metadata| metadata.kind.as_str()),
+        status,
+        exit_code,
+        stdout,
+        stderr,
+        truncated,
+    )?;
+    if let Some(identity) = metadata.and_then(|metadata| metadata.source_snapshot_identity.as_ref())
+    {
+        value["source_snapshot_identity"] = json!({
+            "base_git_head": identity.base_git_head,
+            "snapshot_sha256": identity.snapshot_sha256,
+            "entry_count": identity.entry_count,
+        });
     }
     Some(value)
 }
@@ -1558,9 +1588,7 @@ impl ToolRuntime {
                     add_command_preview_metadata(&mut output, job.command_preview.clone());
                 }
                 let validation_metadata = job.validation.as_ref();
-                let tool = validation_metadata.map(|metadata| metadata.tool.as_str());
-                let kind = validation_metadata.map(|metadata| metadata.kind.as_str());
-                if tool.is_some() {
+                if validation_metadata.is_some() {
                     let logs = self
                         .shell_clients
                         .job_log_for_auth(auth, &job_id, None, None, Some(500), None, None)
@@ -1584,9 +1612,8 @@ impl ToolRuntime {
                         }
                         Err(_) => (String::new(), String::new(), true),
                     };
-                    if let Some(validation) = validation_job_projection(
-                        tool,
-                        kind,
+                    if let Some(validation) = validation_job_projection_with_metadata(
+                        validation_metadata,
                         &status,
                         job.exit_code.map(i64::from),
                         &stdout,
@@ -1712,14 +1739,7 @@ impl ToolRuntime {
                     &stdout,
                     &stderr,
                 );
-                let validation_tool = job
-                    .validation
-                    .as_ref()
-                    .map(|metadata| metadata.tool.as_str());
-                let validation_kind = job
-                    .validation
-                    .as_ref()
-                    .map(|metadata| metadata.kind.as_str());
+                let validation_metadata = job.validation.as_ref();
                 let stdout_incomplete = agent_log_stream_incomplete(
                     job.stdout_log_truncated,
                     job.stdout_retained_from_line,
@@ -1732,9 +1752,8 @@ impl ToolRuntime {
                     stderr_lines,
                     next_stderr_line,
                 );
-                let validation = validation_job_projection(
-                    validation_tool,
-                    validation_kind,
+                let validation = validation_job_projection_with_metadata(
+                    validation_metadata,
                     &job.status,
                     job.exit_code.map(i64::from),
                     &stdout,

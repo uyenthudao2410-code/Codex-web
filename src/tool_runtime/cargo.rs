@@ -19,15 +19,19 @@ use super::validation_profile::{
 };
 use super::{ExecutionPurpose, ToolRuntime};
 use crate::auth::AuthContext;
-use crate::shell_client::ShellJobStartMetadata;
+use crate::shell_client::{decode_source_snapshot_capture_response, ShellJobStartMetadata};
 use crate::shell_protocol::{
     valid_exact_git_oid, ShellCommandExecutionState, ShellJobOpRequest, ShellJobValidationMetadata,
-    ShellJobValidationSourceIdentity, ShellJobValidationStep, VALIDATION_SOURCE_DIRTY_CODE,
-    VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE, VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE,
+    ShellJobValidationSourceIdentity, ShellJobValidationSourceSnapshotIdentity,
+    ShellJobValidationStep, VALIDATION_SOURCE_DIRTY_CODE, VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE,
+    VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE,
 };
+use webcodex_core::source_snapshot::{SourceSnapshotAgentPayloadV1, SourceSnapshotV1};
 
 const CARGO_STDIO_TAIL_CHARS: usize = 12_000;
 const CARGO_VALIDATION_FAILURE_KIND: &str = "validation_failed";
+const SOURCE_SNAPSHOT_CAPTURE_OUTCOME_UNKNOWN: &str = "source_snapshot_capture_outcome_unknown";
+const SOURCE_SNAPSHOT_CAPTURE_WAIT_SECS: u64 = 30;
 const CARGO_FAILURE_GUIDANCE: &str =
     "command was started; inspect stdout_tail/stderr_tail in output, then fix the reported issue or rerun with a narrower cargo filter.";
 
@@ -219,12 +223,24 @@ fn reject_structured_cargo_ssh_resource(ssh_resource: Option<&str>) -> Option<To
     })
 }
 
-fn agent_validation_source_identity(
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum AgentValidationSource {
+    Legacy,
+    Clean(ShellJobValidationSourceIdentity),
+    DirtySnapshot {
+        project_id: String,
+        expected_git_head: String,
+    },
+}
+
+fn agent_validation_source(
     client: &crate::shell_protocol::ShellClientView,
     runtime_project_id: &str,
-) -> Result<Option<ShellJobValidationSourceIdentity>, &'static str> {
-    if !client.capabilities.exact_source_validation {
-        return Ok(None);
+) -> Result<AgentValidationSource, &'static str> {
+    let exact_source = client.capabilities.exact_source_validation;
+    let source_snapshot = client.capabilities.source_snapshot_validation;
+    if !exact_source && !source_snapshot {
+        return Ok(AgentValidationSource::Legacy);
     }
     let Some(rest) = runtime_project_id.strip_prefix("agent:") else {
         return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE);
@@ -243,8 +259,22 @@ fn agent_validation_source_identity(
         return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE);
     };
     match project.git_dirty {
+        Some(false) if !exact_source => return Ok(AgentValidationSource::Legacy),
         Some(false) => {}
-        Some(true) => return Err(VALIDATION_SOURCE_DIRTY_CODE),
+        Some(true) if !source_snapshot => return Err(VALIDATION_SOURCE_DIRTY_CODE),
+        Some(true) => {
+            let Some(expected_git_head) = project
+                .git_head
+                .as_deref()
+                .filter(|head| valid_exact_git_oid(head))
+            else {
+                return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE);
+            };
+            return Ok(AgentValidationSource::DirtySnapshot {
+                project_id: agent_project_id.to_string(),
+                expected_git_head: expected_git_head.to_string(),
+            });
+        }
         None => return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE),
     }
     let Some(expected_git_head) = project
@@ -254,10 +284,27 @@ fn agent_validation_source_identity(
     else {
         return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE);
     };
-    Ok(Some(ShellJobValidationSourceIdentity {
-        expected_git_head: expected_git_head.to_string(),
-        require_clean_worktree: true,
-    }))
+    Ok(AgentValidationSource::Clean(
+        ShellJobValidationSourceIdentity {
+            expected_git_head: expected_git_head.to_string(),
+            require_clean_worktree: true,
+        },
+    ))
+}
+
+fn source_snapshot_capture_outcome_unknown_result(tool_name: &str) -> ToolResult {
+    ToolResult::err_with_output(
+        "source snapshot capture outcome is unknown; no validation Job was started. Refresh the source Runner/project state before a manual retry; do not automatically retry or dispatch another Runner.".to_string(),
+        json!({
+            "execution_source": tool_name,
+            "command_started": false,
+            "command_completed": false,
+            "command_ok": false,
+            "exit_code": null,
+            "failure_kind": SOURCE_SNAPSHOT_CAPTURE_OUTCOME_UNKNOWN,
+            "tool_failure": true,
+        }),
+    )
 }
 
 impl ToolRuntime {
@@ -880,16 +927,13 @@ impl ToolRuntime {
                 ));
             }
         };
-        let source_identity = match agent_validation_source_identity(
-            &source_client,
-            runtime_project_id,
-        ) {
-            Ok(source_identity) => source_identity,
+        let source = match agent_validation_source(&source_client, runtime_project_id) {
+            Ok(source) => source,
             Err(error_code) => {
                 return ToolResult::err_with_output(
                     command_rejected_message(
                         error_code,
-                        "refresh the Runner project state and retry only with a clean checkout at a full Git HEAD.",
+                        "refresh the Runner project state and retry with a supported exact source state.",
                     ),
                     json!({
                         "execution_source": tool_name,
@@ -901,23 +945,71 @@ impl ToolRuntime {
                 );
             }
         };
-        let remote_target =
-            if validation_auto_offload_eligible(tool_name, timeout_secs, sync_wait_secs, sandbox) {
-                match source_identity.as_ref() {
-                    Some(identity) => {
-                        self.select_server_preferred_validation_target(
-                            runtime_project_id,
-                            &identity.expected_git_head,
-                            purpose.as_str(),
-                            auth,
-                        )
-                        .await
+        let auto_offload_eligible =
+            validation_auto_offload_eligible(tool_name, timeout_secs, sync_wait_secs, sandbox);
+        if matches!(source, AgentValidationSource::DirtySnapshot { .. }) && !auto_offload_eligible {
+            return ToolResult::err_with_output(
+                command_rejected_message(
+                    VALIDATION_SOURCE_DIRTY_CODE,
+                    "dirty source snapshot validation is limited to long unsandboxed cargo_check/cargo_test requests.",
+                ),
+                json!({
+                    "execution_source": tool_name,
+                    "command_started": false,
+                    "command_completed": false,
+                    "failure_kind": VALIDATION_SOURCE_DIRTY_CODE,
+                    "tool_failure": true,
+                }),
+            );
+        }
+        let source_identity = match &source {
+            AgentValidationSource::Clean(identity) => Some(identity.clone()),
+            AgentValidationSource::Legacy | AgentValidationSource::DirtySnapshot { .. } => None,
+        };
+        let (remote_target, remote_snapshot) = match &source {
+            AgentValidationSource::Clean(identity) if auto_offload_eligible => (
+                self.select_server_preferred_validation_target(
+                    runtime_project_id,
+                    &identity.expected_git_head,
+                    purpose.as_str(),
+                    auth,
+                )
+                .await,
+                None,
+            ),
+            AgentValidationSource::DirtySnapshot {
+                project_id,
+                expected_git_head,
+            } if auto_offload_eligible && cwd.is_none() => {
+                let target = self
+                    .select_server_preferred_snapshot_validation_target(
+                        runtime_project_id,
+                        expected_git_head,
+                        purpose.as_str(),
+                        auth,
+                    )
+                    .await;
+                match target {
+                    Some(target) => {
+                        match self
+                            .capture_validation_source_snapshot(
+                                tool_name,
+                                &source_client_id,
+                                project_id,
+                                expected_git_head,
+                            )
+                            .await
+                        {
+                            Ok(Some(snapshot)) => (Some(target), Some(snapshot)),
+                            Ok(None) => (None, None),
+                            Err(result) => return result,
+                        }
                     }
-                    None => None,
+                    None => (None, None),
                 }
-            } else {
-                None
-            };
+            }
+            _ => (None, None),
+        };
         let actual_shell = "configured";
         // The validation step is derived from the same options the tool would
         // have run synchronously, so the promoted Job executes the identical
@@ -941,24 +1033,67 @@ impl ToolRuntime {
                 ))
             }
         };
-        let target_project = match (remote_target.as_ref(), source_identity.as_ref()) {
-            (Some(target), Some(identity))
-                if self
-                    .revalidate_server_preferred_validation_target(
-                        runtime_project_id,
-                        &identity.expected_git_head,
-                        purpose.as_str(),
-                        target,
-                        auth,
-                    )
-                    .await =>
-            {
-                self.resolve_project_input_for_auth(&target.runtime_project_id, auth)
-                    .await
-                    .ok()
-                    .filter(|resolved| resolved.resolved_id == target.runtime_project_id)
+        let target_valid = match (&source, remote_target.as_ref(), remote_snapshot.as_ref()) {
+            (AgentValidationSource::Clean(identity), Some(target), None) => {
+                self.revalidate_server_preferred_validation_target(
+                    runtime_project_id,
+                    &identity.expected_git_head,
+                    purpose.as_str(),
+                    target,
+                    auth,
+                )
+                .await
             }
-            _ => None,
+            (
+                AgentValidationSource::DirtySnapshot {
+                    expected_git_head, ..
+                },
+                Some(target),
+                Some(_),
+            ) => {
+                self.revalidate_server_preferred_snapshot_validation_target(
+                    runtime_project_id,
+                    expected_git_head,
+                    purpose.as_str(),
+                    target,
+                    auth,
+                )
+                .await
+            }
+            _ => false,
+        };
+        let target_project = if target_valid {
+            let target = remote_target.as_ref().expect("validated remote target");
+            self.resolve_project_input_for_auth(&target.runtime_project_id, auth)
+                .await
+                .ok()
+                .filter(|resolved| resolved.resolved_id == target.runtime_project_id)
+        } else {
+            None
+        };
+        let (validation_stdin, source_snapshot_identity) = if target_project.is_some() {
+            match remote_snapshot {
+                Some(snapshot) => {
+                    let source_snapshot_identity = ShellJobValidationSourceSnapshotIdentity {
+                        base_git_head: snapshot.base_git_head.clone(),
+                        snapshot_sha256: snapshot.snapshot_sha256.clone(),
+                        entry_count: snapshot.entries.len(),
+                    };
+                    let payload = SourceSnapshotAgentPayloadV1::Execute { snapshot };
+                    match serde_json::to_string(&payload) {
+                        Ok(payload) => (Some(payload), Some(source_snapshot_identity)),
+                        Err(_) => {
+                            return ToolResult::err(command_rejected_message(
+                                "could not serialize the validated source snapshot",
+                                "refresh the source Runner project state before retrying.",
+                            ));
+                        }
+                    }
+                }
+                None => (None, None),
+            }
+        } else {
+            (None, None)
         };
         let (execution_runtime_project_id, execution_config) = match target_project.as_ref() {
             Some(target) => (target.resolved_id.as_str(), &target.config),
@@ -1018,11 +1153,12 @@ impl ToolRuntime {
                         sync_wait_secs,
                         adapter: adapter.tool_identity().to_string(),
                         source_identity,
+                        source_snapshot_identity,
                     }),
                     visibility: crate::shell_client::ShellJobVisibility::HiddenUntilHandoff,
                     sandbox: sandbox.map(str::to_string),
                     structured_execution: None,
-                    stdin: None,
+                    stdin: validation_stdin,
                 },
                 auth,
             )
@@ -1052,6 +1188,57 @@ impl ToolRuntime {
         };
         self.await_validation_job(job_id, sync_wait_secs, adapter, handoff)
             .await
+    }
+
+    async fn capture_validation_source_snapshot(
+        &self,
+        tool_name: &str,
+        source_client_id: &str,
+        project_id: &str,
+        expected_git_head: &str,
+    ) -> Result<Option<SourceSnapshotV1>, ToolResult> {
+        let (request_id, receiver) = match self
+            .shell_clients
+            .enqueue_source_snapshot_capture(
+                source_client_id.to_string(),
+                project_id.to_string(),
+                expected_git_head.to_string(),
+                "tool_runtime_source_snapshot".to_string(),
+            )
+            .await
+        {
+            Ok(pending) => pending,
+            Err(_) => return Ok(None),
+        };
+        let wait = self
+            .validation_sync_wait
+            .min(std::time::Duration::from_secs(
+                SOURCE_SNAPSHOT_CAPTURE_WAIT_SECS,
+            ));
+        match tokio::time::timeout(wait, receiver).await {
+            Ok(Ok(response)) => {
+                let request_dispatched = response.request_dispatched;
+                match decode_source_snapshot_capture_response(response) {
+                    Ok(snapshot) if snapshot.base_git_head == expected_git_head => {
+                        Ok(Some(snapshot))
+                    }
+                    Ok(_) => Err(source_snapshot_capture_outcome_unknown_result(tool_name)),
+                    Err(_) if request_dispatched == Some(false) => Ok(None),
+                    Err(_) => Err(source_snapshot_capture_outcome_unknown_result(tool_name)),
+                }
+            }
+            Ok(Err(_)) | Err(_) => {
+                let request_dispatched = self
+                    .shell_clients
+                    .cancel_request_dispatch_state(&request_id)
+                    .await;
+                if request_dispatched == Some(false) {
+                    Ok(None)
+                } else {
+                    Err(source_snapshot_capture_outcome_unknown_result(tool_name))
+                }
+            }
+        }
     }
 
     /// Local-backed read-only validation. Unsandboxed long validations may hand

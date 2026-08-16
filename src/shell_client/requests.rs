@@ -14,13 +14,18 @@ use crate::shell_protocol::{
     PersistentShellRequest, PersistentShellResult, ShellAgentShellRequest, ShellFileOpRequest,
     ShellJobContext, ShellProcessArgv, ShellRunRequest, ShellRunResponse, ShellScriptPayload,
     SHELL_CLIENT_CAPABILITY_LSP_READ_ONLY_NAVIGATION, SHELL_CLIENT_CAPABILITY_PERSISTENT_SHELL,
-    SHELL_CLIENT_CAPABILITY_SANDBOX_INSPECT_COMMANDS, SHELL_CLIENT_CAPABILITY_SSH_PERSISTENT_SHELL,
-    SHELL_CLIENT_CAPABILITY_STRUCTURED_PROCESS_ARGV,
+    SHELL_CLIENT_CAPABILITY_SANDBOX_INSPECT_COMMANDS,
+    SHELL_CLIENT_CAPABILITY_SOURCE_SNAPSHOT_VALIDATION,
+    SHELL_CLIENT_CAPABILITY_SSH_PERSISTENT_SHELL, SHELL_CLIENT_CAPABILITY_STRUCTURED_PROCESS_ARGV,
     SHELL_CLIENT_CAPABILITY_STRUCTURED_SCRIPT_PAYLOAD,
 };
 use std::fmt;
 use tokio::sync::oneshot;
 use uuid::Uuid;
+use webcodex_core::source_snapshot::{
+    SourceSnapshotAgentPayloadV1, SourceSnapshotV1, SOURCE_SNAPSHOT_AGENT_REQUEST_KIND,
+    SOURCE_SNAPSHOT_MAX_SERIALIZED_BYTES,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum EnqueueLspError {
@@ -194,6 +199,27 @@ pub(super) fn resolve_disconnected_sync_requests_locked(
         }
         inner.persistent_waiters.remove(&request_id);
     }
+}
+
+pub(crate) fn decode_source_snapshot_capture_response(
+    response: ShellRunResponse,
+) -> Result<SourceSnapshotV1, String> {
+    if let Some(error) = response.error {
+        return Err(error);
+    }
+    if !response.success || response.exit_code != Some(0) {
+        return Err("source snapshot capture failed".to_string());
+    }
+    let stdout = response
+        .stdout
+        .ok_or_else(|| "source snapshot capture returned no payload".to_string())?;
+    if stdout.len() > SOURCE_SNAPSHOT_MAX_SERIALIZED_BYTES {
+        return Err("source snapshot response exceeded the serialized limit".to_string());
+    }
+    let snapshot: SourceSnapshotV1 = serde_json::from_str(&stdout)
+        .map_err(|_| "source snapshot response was invalid JSON".to_string())?;
+    snapshot.validate()?;
+    Ok(snapshot)
 }
 
 impl ShellClientRegistry {
@@ -698,6 +724,79 @@ impl ShellClientRegistry {
             request_id: request_id.clone(),
             client_id: client_id.clone(),
             kind: kind.to_string(),
+            job_id: None,
+            cwd: None,
+            path: None,
+            content: None,
+            max_bytes: None,
+            expected_sha256: None,
+            expected_prefix: None,
+            start_line: None,
+            end_line: None,
+            create_dirs: false,
+            command: String::new(),
+            process: None,
+            script: None,
+            stdin: Some(payload),
+            timeout_secs: 30,
+            requested_by,
+            created_at: now_ts(),
+            validation: None,
+            lsp: None,
+            sandbox: None,
+            job_context: None,
+            persistent_shell: None,
+        };
+        let mut inner = self.inner.lock().await;
+        enqueue_pending_request_locked(
+            &mut inner,
+            &client_id,
+            request_id.clone(),
+            request,
+            Some(tx),
+            None,
+        )?;
+        notify_client_locked(&inner, &client_id);
+        Ok((request_id, rx))
+    }
+
+    /// Internal transient capture of one immutable dirty-source snapshot.
+    /// Only the logical registered project id and exact base HEAD cross the
+    /// wire. `job_id` stays absent, so raw snapshot content is never retained
+    /// in Job inventory, status, or reconciliation state.
+    pub(crate) async fn enqueue_source_snapshot_capture(
+        &self,
+        client_id: String,
+        project_id: String,
+        expected_git_head: String,
+        requested_by: String,
+    ) -> Result<(String, oneshot::Receiver<ShellRunResponse>), String> {
+        validate_id(&client_id, "client_id")?;
+        let payload = SourceSnapshotAgentPayloadV1::Capture {
+            project_id,
+            expected_git_head,
+        };
+        payload.validate()?;
+        if !self
+            .client_supports(
+                &client_id,
+                SHELL_CLIENT_CAPABILITY_SOURCE_SNAPSHOT_VALIDATION,
+            )
+            .await
+            .map_err(|error| error.to_string())?
+        {
+            return Err(format!(
+                "capability_unavailable: agent client {client_id} does not support {SHELL_CLIENT_CAPABILITY_SOURCE_SNAPSHOT_VALIDATION}"
+            ));
+        }
+        let payload = serde_json::to_string(&payload)
+            .map_err(|_| "failed to encode source snapshot request".to_string())?;
+        let request_id = next_request_id();
+        let (tx, rx) = oneshot::channel();
+        let request = ShellAgentShellRequest {
+            request_id: request_id.clone(),
+            client_id: client_id.clone(),
+            kind: SOURCE_SNAPSHOT_AGENT_REQUEST_KIND.to_string(),
             job_id: None,
             cwd: None,
             path: None,

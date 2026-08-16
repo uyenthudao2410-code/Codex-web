@@ -24,6 +24,7 @@ use std::collections::HashSet;
 use std::sync::atomic::Ordering;
 use tokio::sync::Notify;
 use uuid::Uuid;
+use webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1;
 
 #[derive(Clone, Copy)]
 struct ValidationProtocolError(&'static str);
@@ -372,6 +373,55 @@ impl ShellClientRegistry {
         {
             return Err("invalid structured validation metadata".to_string());
         }
+        if !validation_steps.is_empty() {
+            if let Some(raw) = structured_stdin.as_deref() {
+                if structured_execution.is_some() {
+                    return Err(
+                        "source snapshot validation cannot use structured execution".to_string()
+                    );
+                }
+                let validation_metadata = validation
+                    .as_ref()
+                    .ok_or_else(|| "source snapshot validation metadata is required".to_string())?;
+                if validation_metadata.source_identity.is_some() {
+                    return Err(
+                        "source snapshot validation cannot also require clean source identity"
+                            .to_string(),
+                    );
+                }
+                if metadata.ssh_resource.is_some() {
+                    return Err(
+                        "source snapshot validation does not support SSH resources".to_string()
+                    );
+                }
+                let payload: SourceSnapshotAgentPayloadV1 = serde_json::from_str(raw)
+                    .map_err(|_| "invalid source snapshot validation payload".to_string())?;
+                payload.validate()?;
+                let SourceSnapshotAgentPayloadV1::Execute { snapshot } = payload else {
+                    return Err(
+                        "validation job requires source snapshot Execute payload".to_string()
+                    );
+                };
+                let identity = validation_metadata
+                    .source_snapshot_identity
+                    .as_ref()
+                    .ok_or_else(|| "source snapshot validation identity is required".to_string())?;
+                if identity.base_git_head != snapshot.base_git_head
+                    || identity.snapshot_sha256 != snapshot.snapshot_sha256
+                    || identity.entry_count != snapshot.entries.len()
+                {
+                    return Err("source snapshot validation identity mismatch".to_string());
+                }
+            } else if validation
+                .as_ref()
+                .and_then(|metadata| metadata.source_snapshot_identity.as_ref())
+                .is_some()
+            {
+                return Err(
+                    "source snapshot validation identity requires Execute payload".to_string(),
+                );
+            }
+        }
         if structured_execution.is_some()
             && (!validation_steps.is_empty() || validation.is_some() || !command.is_empty())
         {
@@ -485,7 +535,11 @@ impl ShellClientRegistry {
                     request_command,
                     None,
                     None,
-                    None,
+                    if validation_steps.is_empty() {
+                        None
+                    } else {
+                        structured_stdin
+                    },
                     preview,
                     None,
                     "shell",

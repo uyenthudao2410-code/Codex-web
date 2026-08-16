@@ -29,12 +29,14 @@ use shell_protocol::{
     ShellAgentShellRequest, ShellClientCapabilities, ShellClientRegisterRequest,
     ShellClientRegisterResponse, ShellCommandExecutionState, ShellJobContext, ShellJobInventory,
     ShellJobLogSnapshot, ShellJobSnapshot, ShellJobStreamSnapshot, ShellJobValidationProgress,
-    ShellJobValidationSourceIdentity, ShellJobValidationStep, ShellProfileSummaryEntry,
-    ShellProfilesSummary, AGENT_PROTOCOL_VERSION_POLLING_V1, JOB_INVENTORY_MAX_ACTIVE_JOBS,
+    ShellJobValidationSourceIdentity, ShellJobValidationSourceSnapshotIdentity,
+    ShellJobValidationStep, ShellProfileSummaryEntry, ShellProfilesSummary,
+    AGENT_PROTOCOL_VERSION_POLLING_V1, JOB_INVENTORY_MAX_ACTIVE_JOBS,
     JOB_INVENTORY_MAX_SERIALIZED_BYTES, JOB_INVENTORY_MAX_TERMINAL_JOBS,
     JOB_SNAPSHOT_STREAM_MAX_BYTES, JOB_TERMINAL_RETENTION_SECS, VALIDATION_SOURCE_DIRTY_CODE,
     VALIDATION_SOURCE_DRIFT_CODE, VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE,
-    VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE, VALIDATION_STEP_SPAWN_FAILED_CODE,
+    VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE, VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE,
+    VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE, VALIDATION_STEP_SPAWN_FAILED_CODE,
     VALIDATION_STEP_WAIT_FAILED_CODE, VALIDATION_TOOL_UNAVAILABLE_CODE,
 };
 
@@ -1549,6 +1551,9 @@ fn agent_register_capabilities(cfg: &AgentConfig) -> ShellClientCapabilities {
     capabilities.ssh_persistent_shell = SshConnectionPool::is_available() && cfg!(unix);
     capabilities.structured_validation_argv = true;
     capabilities.exact_source_validation = true;
+    // This Runner enforces snapshot capture/materialization plus source-digest
+    // guards before spawn, between validation steps, and before final proof.
+    capabilities.source_snapshot_validation = true;
     capabilities.structured_process_argv = true;
     capabilities.structured_script_payload = true;
     capabilities.structured_execution_jobs = true;
@@ -2021,6 +2026,87 @@ fn validation_source_guard(
     }
     if source_identity.require_clean_worktree && current.dirty {
         return Err(VALIDATION_SOURCE_DIRTY_CODE);
+    }
+    Ok(())
+}
+
+struct ValidationSourceSnapshot {
+    snapshot: webcodex_core::source_snapshot::SourceSnapshotV1,
+    workspace: webcodex_runner::source_snapshot::MaterializedSourceSnapshot,
+}
+
+fn prepare_validation_source_snapshot(
+    projects_dir: &Path,
+    request: &ShellAgentShellRequest,
+    source_identity: Option<&ShellJobValidationSourceIdentity>,
+    source_snapshot_identity: Option<&ShellJobValidationSourceSnapshotIdentity>,
+    shutdown: Option<&AtomicBool>,
+) -> Result<Option<ValidationSourceSnapshot>, &'static str> {
+    let Some(raw) = request.stdin.as_deref() else {
+        return if source_snapshot_identity.is_some() {
+            Err(VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)
+        } else {
+            Ok(None)
+        };
+    };
+    if source_identity.is_some() {
+        return Err(VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE);
+    }
+    let payload: webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1 =
+        serde_json::from_str(raw).map_err(|_| VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)?;
+    payload
+        .validate()
+        .map_err(|_| VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)?;
+    let webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1::Execute { snapshot } =
+        payload
+    else {
+        return Err(VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE);
+    };
+    if let Some(identity) = source_snapshot_identity {
+        if !identity.is_valid()
+            || identity.base_git_head != snapshot.base_git_head
+            || identity.snapshot_sha256 != snapshot.snapshot_sha256
+            || identity.entry_count != snapshot.entries.len()
+        {
+            return Err(VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE);
+        }
+    }
+    let runtime_project_id = request
+        .job_context
+        .as_ref()
+        .and_then(|context| context.runtime_project_id.as_deref())
+        .ok_or(VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)?;
+    let prefix = format!("agent:{}:", request.client_id);
+    let project_id = runtime_project_id
+        .strip_prefix(&prefix)
+        .filter(|project_id| !project_id.is_empty())
+        .ok_or(VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)?;
+    let project =
+        webcodex_runner::projects::find_project_shell_context_by_id(projects_dir, project_id)
+            .ok_or(VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)?;
+    let registered_repo = Path::new(&project.path);
+    let source_state = webcodex_runner::project_git_source_state(registered_repo, shutdown)
+        .ok_or(VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)?;
+    if source_state.head != snapshot.base_git_head {
+        return Err(VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE);
+    }
+    let workspace =
+        webcodex_runner::source_snapshot::materialize_source_snapshot(registered_repo, &snapshot)
+            .map_err(|_| VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)?;
+    Ok(Some(ValidationSourceSnapshot {
+        snapshot,
+        workspace,
+    }))
+}
+
+fn validation_source_snapshot_guard(source: &ValidationSourceSnapshot) -> Result<(), &'static str> {
+    let observed = webcodex_runner::source_snapshot::capture_source_snapshot(
+        source.workspace.root(),
+        &source.snapshot.base_git_head,
+    )
+    .map_err(|_| VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE)?;
+    if observed.snapshot_sha256 != source.snapshot.snapshot_sha256 {
+        return Err(VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE);
     }
     Ok(())
 }
@@ -3324,11 +3410,30 @@ impl JobManager {
         let Some(job_id) = request.job_id.clone() else {
             return;
         };
+        let validation = request.kind == "start_validation_job";
         if !policy.allow_raw_shell {
             self.fail_job(
                 &request,
                 "raw shell is disabled by local agent policy".to_string(),
                 None,
+            );
+            return;
+        }
+        if validation
+            && request.stdin.is_some()
+            && request
+                .job_context
+                .as_ref()
+                .is_some_and(|context| context.ssh_resource.is_some())
+        {
+            self.fail_job(
+                &request,
+                VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE.to_string(),
+                Some(ShellJobValidationProgress {
+                    completed: 0,
+                    current_step: None,
+                    failed_step: None,
+                }),
             );
             return;
         }
@@ -3349,7 +3454,6 @@ impl JobManager {
             self.fail_job(&request, e, None);
             return;
         }
-        let validation = request.kind == "start_validation_job";
         let steps = if validation {
             match serde_json::from_str::<Vec<ShellJobValidationStep>>(&request.command) {
                 Ok(steps)
@@ -3400,6 +3504,40 @@ impl JobManager {
             .as_ref()
             .and_then(|context| context.validation.as_ref())
             .and_then(|metadata| metadata.source_identity.clone());
+        let validation_source_snapshot_identity = request
+            .job_context
+            .as_ref()
+            .and_then(|context| context.validation.as_ref())
+            .and_then(|metadata| metadata.source_snapshot_identity.clone());
+        let validation_source_snapshot = if validation {
+            match prepare_validation_source_snapshot(
+                &projects_dir,
+                &request,
+                validation_source_identity.as_ref(),
+                validation_source_snapshot_identity.as_ref(),
+                Some(self.shutting_down.as_ref()),
+            ) {
+                Ok(snapshot) => snapshot,
+                Err(error) => {
+                    self.fail_job(
+                        &request,
+                        error.to_string(),
+                        Some(ShellJobValidationProgress {
+                            completed: 0,
+                            current_step: None,
+                            failed_step: None,
+                        }),
+                    );
+                    return;
+                }
+            }
+        } else {
+            None
+        };
+        let validation_execution_cwd = validation_source_snapshot
+            .as_ref()
+            .map(|source| source.workspace.root().to_path_buf())
+            .unwrap_or_else(|| cwd_path.clone());
         let sandbox_mode = request.sandbox.clone();
         let inspect_scratch = match sandbox_mode.as_deref() {
             None => None,
@@ -3426,6 +3564,7 @@ impl JobManager {
         // the actual command (and global init script, if any) is sandboxed.
         let prepared_profile = match inspect_scratch.as_ref() {
             Some(_) => None,
+            None if validation_source_snapshot.is_some() => None,
             None => match resolve_prepared_shell_profile(
                 generation,
                 &shell,
@@ -3447,7 +3586,7 @@ impl JobManager {
                 !validation_module_available(
                     &shell,
                     prepared_profile.as_deref(),
-                    &cwd_path,
+                    &validation_execution_cwd,
                     step,
                     inspect_scratch.as_ref(),
                     Some(self.shutting_down.as_ref()),
@@ -3511,7 +3650,7 @@ impl JobManager {
                 }
             }
             command
-                .current_dir(&cwd_path)
+                .current_dir(&validation_execution_cwd)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
             commands.push_back(command);
@@ -3535,10 +3674,24 @@ impl JobManager {
         };
         if let Some(source_identity) = validation_source_identity.as_ref() {
             if let Err(error) = validation_source_guard(
-                &cwd_path,
+                &validation_execution_cwd,
                 source_identity,
                 Some(self.shutting_down.as_ref()),
             ) {
+                self.fail_job(
+                    &request,
+                    error.to_string(),
+                    Some(ShellJobValidationProgress {
+                        completed: 0,
+                        current_step: None,
+                        failed_step: None,
+                    }),
+                );
+                return;
+            }
+        }
+        if let Some(source_snapshot) = validation_source_snapshot.as_ref() {
+            if let Err(error) = validation_source_snapshot_guard(source_snapshot) {
                 self.fail_job(
                     &request,
                     error.to_string(),
@@ -3617,8 +3770,9 @@ impl JobManager {
         let lifecycle = Arc::clone(&self.lifecycle);
         let shutting_down = Arc::clone(&self.shutting_down);
         let manager = self.clone_for_worker();
-        let validation_cwd = cwd_path.clone();
+        let validation_cwd = validation_execution_cwd.clone();
         let validation_source_identity_for_worker = validation_source_identity.clone();
+        let validation_source_snapshot_for_worker = validation_source_snapshot;
         let inspect_scratch_guard = inspect_scratch;
         let worker_guard = self.workers.enter();
         std::thread::spawn(move || {
@@ -3816,6 +3970,24 @@ impl JobManager {
                             );
                         }
                     }
+                    if let Some(source_snapshot) = validation_source_snapshot_for_worker.as_ref() {
+                        if validation_source_snapshot_guard(source_snapshot).is_err() {
+                            break (
+                                (
+                                    "failed".to_string(),
+                                    None,
+                                    Some(VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE.to_string()),
+                                ),
+                                out,
+                                err,
+                                validation.then_some(ShellJobValidationProgress {
+                                    completed: step_index,
+                                    current_step: None,
+                                    failed_step: None,
+                                }),
+                            );
+                        }
+                    }
                     let spawn = ManagedChild::spawn(&mut next_command);
                     let mut next = match spawn {
                         Ok(child) => child,
@@ -3919,6 +4091,20 @@ impl JobManager {
                             "failed".to_string(),
                             None,
                             Some(VALIDATION_SOURCE_DRIFT_CODE.to_string()),
+                        );
+                        final_progress = Some(ShellJobValidationProgress {
+                            completed: steps.len(),
+                            current_step: None,
+                            failed_step: None,
+                        });
+                    }
+                }
+                if let Some(source_snapshot) = validation_source_snapshot_for_worker.as_ref() {
+                    if validation_source_snapshot_guard(source_snapshot).is_err() {
+                        final_status = (
+                            "failed".to_string(),
+                            None,
+                            Some(VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE.to_string()),
                         );
                         final_progress = Some(ShellJobValidationProgress {
                             completed: steps.len(),

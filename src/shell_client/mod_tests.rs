@@ -1631,8 +1631,9 @@ async fn client_supports_recognizes_all_protocol_capability_names() {
                 persistent_shell: true,
                 ssh_persistent_shell: true,
                 structured_validation_argv: true,
-                exact_source_validation: false,
-                server_compute: false,
+                exact_source_validation: true,
+                source_snapshot_validation: true,
+                server_compute: true,
                 structured_process_argv: true,
                 structured_script_payload: true,
                 structured_execution_jobs: true,
@@ -1720,6 +1721,133 @@ async fn registry_enqueues_polls_and_completes_shell_request() {
     let response = rx.await.unwrap();
     assert!(response.success);
     assert_eq!(response.stdout.as_deref(), Some("hello\n"));
+}
+
+#[tokio::test]
+async fn registry_source_snapshot_capture_is_capability_gated_transient_and_jobless() {
+    const HEAD: &str = "0123456789abcdef0123456789abcdef01234567";
+
+    let registry = ShellClientRegistry::default();
+    let mut legacy = runner_registration(
+        "snapshot-legacy",
+        "snapshot-legacy-instance",
+        vec![project_summary("demo", "/tmp/demo")],
+    );
+    legacy.capabilities = Some(ShellClientCapabilities::default());
+    registry.register(legacy).await.unwrap();
+    let unsupported = registry
+        .enqueue_source_snapshot_capture(
+            "snapshot-legacy".to_string(),
+            "demo".to_string(),
+            HEAD.to_string(),
+            "test".to_string(),
+        )
+        .await
+        .unwrap_err();
+    assert!(unsupported.contains("source_snapshot_validation"));
+    {
+        let inner = registry.inner.lock().await;
+        assert!(inner.pending_by_id.is_empty());
+        assert!(inner.jobs_by_id.is_empty());
+    }
+
+    let mut capable = runner_registration(
+        "snapshot-capable",
+        "snapshot-capable-instance",
+        vec![project_summary("demo", "/tmp/demo")],
+    );
+    capable.capabilities = Some(ShellClientCapabilities {
+        source_snapshot_validation: true,
+        ..Default::default()
+    });
+    registry.register(capable).await.unwrap();
+
+    let (request_id, waiter) = registry
+        .enqueue_source_snapshot_capture(
+            "snapshot-capable".to_string(),
+            "demo".to_string(),
+            HEAD.to_string(),
+            "test".to_string(),
+        )
+        .await
+        .unwrap();
+    {
+        let inner = registry.inner.lock().await;
+        let pending = inner
+            .pending_by_id
+            .get(&request_id)
+            .expect("snapshot request must be pending before poll");
+        assert!(pending.job_id.is_none());
+        assert!(!inner.request_to_job.contains_key(&request_id));
+        assert!(inner.jobs_by_id.is_empty());
+    }
+
+    let polled = registry
+        .poll(ShellAgentPollRequest {
+            client_id: "snapshot-capable".to_string(),
+            agent_instance_id: "snapshot-capable-instance".to_string(),
+            projects: None,
+        })
+        .await
+        .unwrap()
+        .expect("snapshot capture request");
+    assert_eq!(polled.request_id, request_id);
+    assert_eq!(
+        polled.kind,
+        webcodex_core::source_snapshot::SOURCE_SNAPSHOT_AGENT_REQUEST_KIND
+    );
+    assert!(polled.job_id.is_none());
+    assert!(polled.command.is_empty());
+    assert!(polled.cwd.is_none());
+    assert!(polled.path.is_none());
+    let payload: webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1 =
+        serde_json::from_str(polled.stdin.as_deref().expect("typed snapshot payload")).unwrap();
+    assert_eq!(
+        payload,
+        webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1::Capture {
+            project_id: "demo".to_string(),
+            expected_git_head: HEAD.to_string(),
+        }
+    );
+
+    let snapshot = webcodex_core::source_snapshot::SourceSnapshotV1::from_entries(
+        HEAD,
+        vec![
+            webcodex_core::source_snapshot::SourceSnapshotEntryV1::upsert(
+                "src/lib.rs",
+                b"dirty source\n",
+                false,
+            )
+            .unwrap(),
+        ],
+    )
+    .unwrap();
+    registry
+        .complete(ShellAgentResultRequest {
+            client_id: "snapshot-capable".to_string(),
+            agent_instance_id: "snapshot-capable-instance".to_string(),
+            request_id: request_id.clone(),
+            exit_code: Some(0),
+            stdout: Some(serde_json::to_string(&snapshot).unwrap()),
+            stderr: None,
+            duration_ms: Some(1),
+            error: None,
+        })
+        .await
+        .unwrap();
+    let response = waiter.await.unwrap();
+    let decoded = super::requests::decode_source_snapshot_capture_response(response).unwrap();
+    assert_eq!(decoded, snapshot);
+    decoded.validate().unwrap();
+
+    let inner = registry.inner.lock().await;
+    assert!(!inner.pending_by_id.contains_key(&request_id));
+    assert!(!inner.request_to_job.contains_key(&request_id));
+    assert!(inner.jobs_by_id.is_empty());
+    assert!(inner
+        .queues_by_client
+        .get("snapshot-capable")
+        .is_none_or(|queue| queue.is_empty()));
 }
 
 #[tokio::test]

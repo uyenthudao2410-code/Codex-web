@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -120,6 +121,80 @@ class ReadRetryDispatchTests(unittest.TestCase):
 
 
 class BackgroundBudgetWatchdogTests(unittest.TestCase):
+    def test_agent_workflow_outer_budget_honors_max_runtime_seconds(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            release = threading.Event()
+
+            def blocked_call(name, arguments, request_id=None):
+                del name, arguments, request_id
+                release.wait(2)
+                return {"ok": True}
+
+            try:
+                with patch.object(runtime, "_call_tool_sync", side_effect=blocked_call):
+                    operation, done = runtime._start_background_tool(
+                        "agent_workflow",
+                        {"max_runtime_seconds": 7, "timeout_seconds": 600},
+                        request_id=None,
+                    )
+                    self.assertEqual(operation["budget"].max_runtime_seconds, 7)
+                    release.set()
+                    self.assertTrue(done.wait(2))
+
+                release.clear()
+                with patch.object(runtime, "_call_tool_sync", side_effect=blocked_call):
+                    operation, done = runtime._start_background_tool(
+                        "agent_workflow",
+                        {"max_runtime_seconds": 7, "timeout_seconds": 3},
+                        request_id=None,
+                    )
+                    self.assertEqual(operation["budget"].max_runtime_seconds, 3)
+                    release.set()
+                    self.assertTrue(done.wait(2))
+
+                release.clear()
+                with patch.object(runtime, "_call_tool_sync", side_effect=blocked_call):
+                    operation, done = runtime._start_background_tool(
+                        "server_info",
+                        {"timeout_seconds": 11},
+                        request_id=None,
+                    )
+                    self.assertEqual(operation["budget"].max_runtime_seconds, 11)
+                    release.set()
+                    self.assertTrue(done.wait(2))
+            finally:
+                release.set()
+                runtime.close()
+
+    def test_finished_background_operation_elapsed_and_budget_are_frozen(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                event = threading.Event()
+                event.set()
+                operation = {
+                    "operation_id": "finished-op",
+                    "tool": "agent_workflow",
+                    "workspace": str(Path(temp)),
+                    "started_monotonic": 10.0,
+                    "finished_monotonic": 12.9,
+                    "finished_at": "2026-08-17T00:00:00+00:00",
+                    "finished_budget_remaining_seconds": 42.5,
+                    "event": event,
+                    "result": {"ok": True},
+                    "error": None,
+                    "budget": BudgetDeadline(max_runtime_seconds=60),
+                }
+                with patch("coding_tools_mcp.server.time.monotonic", return_value=999.0):
+                    snapshot = runtime._background_operation_snapshot(operation)
+                self.assertEqual(snapshot["status"], "completed")
+                self.assertEqual(snapshot["elapsed_seconds"], 2)
+                self.assertEqual(snapshot["budget"]["remaining_seconds"], 42.5)
+                self.assertEqual(snapshot["finished_at"], operation["finished_at"])
+            finally:
+                runtime.close()
+
     def test_background_operation_is_marked_failed_when_runtime_budget_exceeded(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp))
@@ -129,8 +204,10 @@ class BackgroundBudgetWatchdogTests(unittest.TestCase):
                     time.sleep(3)
                     return {"ok": True, "summary": "late"}
 
-                with patch.dict(runtime._tool_handlers, {"server_info": slow_handler}), patch(
-                    "coding_tools_mcp.server.validate_arguments", lambda *args, **kwargs: None
+                with (
+                    patch.dict(runtime._tool_handlers, {"server_info": slow_handler}),
+                    patch("coding_tools_mcp.server.validate_arguments", lambda *args, **kwargs: None),
+                    patch("coding_tools_mcp.server.BACKGROUND_BUDGET_TERMINAL_GRACE_SECONDS", 0.05),
                 ):
                     operation, done = runtime._start_background_tool(
                         "server_info",
@@ -151,7 +228,8 @@ class BackgroundBudgetWatchdogTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp))
             try:
-                cancellation_seen = __import__("threading").Event()
+                cancellation_seen = threading.Event()
+                worker_returned = threading.Event()
 
                 def cooperative_handler(args: dict) -> dict:
                     del args
@@ -159,6 +237,8 @@ class BackgroundBudgetWatchdogTests(unittest.TestCase):
                     while time.monotonic() < deadline:
                         if runtime._background_operation_cancelled():
                             cancellation_seen.set()
+                            time.sleep(0.1)
+                            worker_returned.set()
                             return {"ok": False, "status": "cancelled"}
                         time.sleep(0.01)
                     return {"ok": True, "summary": "unexpected late completion"}
@@ -167,17 +247,21 @@ class BackgroundBudgetWatchdogTests(unittest.TestCase):
                     patch.dict(runtime._tool_handlers, {"server_info": cooperative_handler}),
                     patch("coding_tools_mcp.server.validate_arguments", lambda *args, **kwargs: None),
                     patch("coding_tools_mcp.server.BACKGROUND_BUDGET_POLL_SECONDS", 0.01),
+                    patch("coding_tools_mcp.server.BACKGROUND_BUDGET_TERMINAL_GRACE_SECONDS", 0.5),
                 ):
                     operation, done = runtime._start_background_tool(
                         "server_info",
                         {"timeout_seconds": 1},
                         request_id=None,
                     )
-                    self.assertTrue(done.wait(3))
-                    self.assertTrue(cancellation_seen.wait(1))
+                    self.assertTrue(cancellation_seen.wait(2))
+                    self.assertFalse(done.is_set(), "budget expiry must request cancellation before publishing terminal state")
+                    self.assertTrue(worker_returned.wait(1))
+                    self.assertTrue(done.wait(1))
                     snapshot = runtime._background_operation_snapshot(operation)
                     self.assertEqual(snapshot["status"], "failed")
                     self.assertEqual((snapshot.get("error") or {}).get("code"), "WORKFLOW_RUNTIME_EXCEEDED")
+                    self.assertIn("finished_at", snapshot)
             finally:
                 runtime.close()
 

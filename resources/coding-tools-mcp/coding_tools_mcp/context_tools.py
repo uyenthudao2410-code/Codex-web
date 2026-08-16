@@ -31,6 +31,8 @@ from .tool_schema import EVALUATION_SCHEMA_VERSION
 _CONTEXT_BUNDLE_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _CONTEXT_BUNDLE_CACHE_LOCK = threading.Lock()
 CONTEXT_BUNDLE_CACHE_TTL_SECONDS = 30
+BACKGROUND_PROOF_POLL_MS = 1_000
+WORKFLOW_PROOF_FINALIZATION_RESERVE_SECONDS = 5.0
 class ContextToolsMixin:
     def workspace_context(self, args: dict[str, Any]) -> dict[str, Any]:
         detail = str(args.get("detail", "compact")).lower()
@@ -465,7 +467,27 @@ class ContextToolsMixin:
             _CONTEXT_BUNDLE_CACHE[namespaced_key] = (now, payload)
         return payload
 
-    def _run_continuous_check(self, command: str, workdir: str, timeout_ms: int) -> dict[str, Any]:
+    def _workflow_proof_timeout_ms(self, requested_timeout_ms: int) -> int:
+        requested = min(max(int(requested_timeout_ms), 1_000), 600_000)
+        getter = getattr(self, "_background_operation_remaining_seconds", None)
+        if not callable(getter):
+            return requested
+        remaining = getter()
+        if remaining is None:
+            return requested
+        usable_seconds = float(remaining) - WORKFLOW_PROOF_FINALIZATION_RESERVE_SECONDS
+        if usable_seconds < 1.0:
+            return 0
+        return min(requested, max(1_000, int(usable_seconds * 1_000)))
+
+    def _run_continuous_check(
+        self,
+        command: str,
+        workdir: str,
+        timeout_ms: int,
+        *,
+        budget_adjusted: bool = False,
+    ) -> dict[str, Any]:
         started = time.time()
 
         def cancellation_requested() -> bool:
@@ -483,11 +505,33 @@ class ContextToolsMixin:
                 "cancelled": True,
                 "timed_out": True,
             }
+        effective_timeout_ms = (
+            min(max(int(timeout_ms), 0), 600_000)
+            if budget_adjusted
+            else self._workflow_proof_timeout_ms(timeout_ms)
+        )
+        if effective_timeout_ms < 1_000:
+            return {
+                "command": command,
+                "status": "timed_out",
+                "exit_code": None,
+                "duration_ms": 0,
+                "summary": "Insufficient workflow runtime budget remains to start this proof command while preserving finalization time.",
+                "session_id": None,
+                "cancelled": False,
+                "timed_out": True,
+                "command_started": False,
+                "budget_limited": True,
+                "effective_timeout_ms": 0,
+            }
+        remaining_getter = getattr(self, "_background_operation_remaining_seconds", None)
+        background_budget_active = callable(remaining_getter) and remaining_getter() is not None
+        poll_ms = BACKGROUND_PROOF_POLL_MS if background_budget_active else 30_000
         payload = self.exec_command({
             "cmd": command,
             "workdir": workdir,
-            "timeout_ms": timeout_ms,
-            "yield_time_ms": 30000,
+            "timeout_ms": effective_timeout_ms,
+            "yield_time_ms": poll_ms,
             "max_output_bytes": 131072,
             "verbosity": "summary",
         })
@@ -511,7 +555,7 @@ class ContextToolsMixin:
             terminal_args = {
                 "session_id": str(payload.get("session_id", "")),
                 "chars": "",
-                "yield_time_ms": 30000,
+                "yield_time_ms": poll_ms,
                 "max_output_bytes": 131072,
                 "verbosity": "summary",
             }
@@ -547,6 +591,7 @@ class ContextToolsMixin:
             "session_id": payload.get("session_id"),
             "cancelled": cancelled,
             "timed_out": timed_out,
+            "effective_timeout_ms": effective_timeout_ms,
         }
 
     def apply_changes_and_verify(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -718,8 +763,14 @@ class ContextToolsMixin:
         for command in checks:
             if background_cancelled():
                 return cancelled_workflow_result("checks")
+            command_timeout_ms = self._workflow_proof_timeout_ms(timeout_ms)
             if ctx is None:
-                result = self._run_continuous_check(command, workdir, timeout_ms)
+                result = self._run_continuous_check(
+                    command,
+                    workdir,
+                    command_timeout_ms,
+                    budget_adjusted=True,
+                )
             else:
                 command_hash = hashlib.sha256(command.encode("utf-8", errors="replace")).hexdigest()
                 stage_id = f"check:{command_hash[:16]}"
@@ -729,7 +780,7 @@ class ContextToolsMixin:
                     worktree_fp=str(proof_identity.get("worktree_fp") or ""),
                     contract_fp=ctx.contract_fp,
                     input_paths=affected_paths,
-                    config={"command_hash": command_hash, "workdir": workdir, "timeout_ms": timeout_ms},
+                    config={"command_hash": command_hash, "workdir": workdir, "timeout_ms": command_timeout_ms},
                     upstream_proof_ids=upstream_proof_ids,
                 )
                 result, proof_id = self.proof_ledger.run_cached(
@@ -740,7 +791,12 @@ class ContextToolsMixin:
                     command=command,
                     upstream_proof_ids=upstream_proof_ids,
                     metadata={"kind": "check", "workdir": workdir},
-                    runner=lambda command=command: self._run_continuous_check(command, workdir, timeout_ms),
+                    runner=lambda command=command, command_timeout_ms=command_timeout_ms: self._run_continuous_check(
+                        command,
+                        workdir,
+                        command_timeout_ms,
+                        budget_adjusted=True,
+                    ),
                 )
                 proof_ids.append(proof_id)
                 upstream_proof_ids.append(proof_id)

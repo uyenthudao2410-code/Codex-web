@@ -57,7 +57,7 @@ pub(crate) use jobs::{
 #[cfg(test)]
 pub(crate) use projects::ShellClientLookupError;
 pub(crate) use reconciliation::recovery_timeout_sweep;
-pub(crate) use requests::EnqueueLspError;
+pub(crate) use requests::{decode_source_snapshot_capture_response, EnqueueLspError};
 use state::ShellClientRegistryInner;
 pub(crate) use state::ShellJobVisibility;
 use validation::sha256_hex;

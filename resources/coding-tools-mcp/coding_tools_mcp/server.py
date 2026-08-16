@@ -175,6 +175,7 @@ IDEMPOTENCY_RESULT_MAX_BYTES = 256 * 1024
 TRACE_MAX_PAYLOAD_BYTES = 16 * 1024
 AUTO_IDEMPOTENCY_KEY_PREFIX = "auto-v1:"
 BACKGROUND_BUDGET_POLL_SECONDS = 1.0
+BACKGROUND_BUDGET_TERMINAL_GRACE_SECONDS = 5.0
 STALE_RECONCILIATION_INTERVAL_SECONDS = 30.0
 try:
     READ_RETRY_ATTEMPTS = max(
@@ -1596,19 +1597,32 @@ class Runtime(
     def _background_operation_snapshot(self, operation: dict[str, Any], *, include_result: bool = False) -> dict[str, Any]:
         event = operation["event"]
         finished = event.is_set()
+        finished_monotonic = operation.get("finished_monotonic")
+        observed_monotonic = (
+            float(finished_monotonic)
+            if finished and isinstance(finished_monotonic, (int, float))
+            else time.monotonic()
+        )
         payload: dict[str, Any] = {
             "operation_id": operation["operation_id"],
             "tool": operation["tool"],
             "workspace": operation.get("workspace"),
             "status": "completed" if finished else "running",
-            "elapsed_seconds": max(0, int(time.monotonic() - operation["started_monotonic"])),
+            "elapsed_seconds": max(0, int(observed_monotonic - operation["started_monotonic"])),
             "requires_progress_report": not finished,
         }
+        if finished and operation.get("finished_at"):
+            payload["finished_at"] = operation["finished_at"]
         budget = operation.get("budget")
         if isinstance(budget, BudgetDeadline):
+            finished_remaining = operation.get("finished_budget_remaining_seconds")
             payload["budget"] = {
                 "max_runtime_seconds": budget.max_runtime_seconds,
-                "remaining_seconds": budget.remaining_seconds(),
+                "remaining_seconds": (
+                    float(finished_remaining)
+                    if finished and isinstance(finished_remaining, (int, float))
+                    else budget.remaining_seconds()
+                ),
                 "exceeded": budget.exceeded,
             }
         if finished and operation.get("error"):
@@ -1622,6 +1636,12 @@ class Runtime(
         event = getattr(self.request_context, "background_cancel_event", None)
         return bool(event is not None and event.is_set())
 
+    def _background_operation_remaining_seconds(self) -> float | None:
+        budget = getattr(self.request_context, "background_budget", None)
+        if not isinstance(budget, BudgetDeadline):
+            return None
+        return budget.remaining_seconds()
+
     def _start_background_tool(
         self,
         name: str,
@@ -1631,12 +1651,23 @@ class Runtime(
     ) -> tuple[dict[str, Any], threading.Event]:
         operation_id = secrets.token_urlsafe(12)
         done = threading.Event()
+        worker_done = threading.Event()
         cancel_event = threading.Event()
+        finalize_lock = threading.Lock()
         try:
             timeout_seconds = min(int(arguments.get("timeout_seconds", 600)), 3600)
         except (TypeError, ValueError):
             timeout_seconds = 600
         timeout_seconds = max(1, timeout_seconds)
+        if name == "agent_workflow":
+            try:
+                workflow_runtime_seconds = min(
+                    max(1, int(arguments.get("max_runtime_seconds", 600))),
+                    600,
+                )
+            except (TypeError, ValueError):
+                workflow_runtime_seconds = 600
+            timeout_seconds = min(timeout_seconds, workflow_runtime_seconds)
         budget = BudgetDeadline(max_runtime_seconds=timeout_seconds)
         operation: dict[str, Any] = {
             "operation_id": operation_id,
@@ -1667,9 +1698,36 @@ class Runtime(
             },
         )
 
+        def finalize_operation(
+            *,
+            status: str,
+            error: dict[str, Any] | None,
+            summary: dict[str, Any],
+        ) -> bool:
+            with finalize_lock:
+                if operation.get("finalized"):
+                    return False
+                operation["finalized"] = True
+                if error is not None:
+                    operation["error"] = error
+                operation["finished_monotonic"] = time.monotonic()
+                operation["finished_at"] = datetime.now(timezone.utc).isoformat()
+                operation["finished_budget_remaining_seconds"] = budget.remaining_seconds()
+                try:
+                    self.orchestration_ledger.finish_background_operation(
+                        operation_id,
+                        status=status,
+                        summary=summary,
+                    )
+                finally:
+                    done.set()
+                return True
+
         def worker() -> None:
             previous_cancel_event = getattr(self.request_context, "background_cancel_event", None)
+            previous_budget = getattr(self.request_context, "background_budget", None)
             self.request_context.background_cancel_event = cancel_event
+            self.request_context.background_budget = budget
             try:
                 operation["result"] = self._call_tool_sync(name, arguments, request_id=request_id)
             except Exception as exc:  # noqa: BLE001 - background errors must become inspectable state
@@ -1687,8 +1745,14 @@ class Runtime(
                         pass
                 else:
                     self.request_context.background_cancel_event = previous_cancel_event
-                if not operation.get("finalized"):
-                    operation["finalized"] = True
+                if previous_budget is None:
+                    try:
+                        del self.request_context.background_budget
+                    except AttributeError:
+                        pass
+                else:
+                    self.request_context.background_budget = previous_budget
+                try:
                     result = operation.get("result")
                     result_status = ""
                     if isinstance(result, dict):
@@ -1700,37 +1764,52 @@ class Runtime(
                                 or structured.get("workflow")
                                 or ""
                             )[:100]
-                    self.orchestration_ledger.finish_background_operation(
-                        operation_id,
-                        status="failed" if operation.get("error") else "completed",
+                    budget_error = operation.get("budget_error")
+                    error = budget_error if isinstance(budget_error, dict) else operation.get("error")
+                    finalize_operation(
+                        status=(
+                            "timed_out"
+                            if isinstance(budget_error, dict)
+                            else "failed"
+                            if error
+                            else "completed"
+                        ),
+                        error=error if isinstance(error, dict) else None,
                         summary={
                             "result_available_in_memory": result is not None,
                             "result_status": result_status,
-                            "error": operation.get("error"),
+                            "error": error,
+                            "worker_terminalized": True,
                         },
                     )
-                    done.set()
+                finally:
+                    worker_done.set()
 
         def watchdog() -> None:
             while not done.is_set():
                 try:
                     budget.check()
                 except ToolFailure as exc:
-                    if not operation.get("finalized"):
-                        cancel_event.set()
-                        operation["finalized"] = True
-                        operation["error"] = {
-                            "code": exc.code,
-                            "message": exc.message,
-                            "category": exc.category,
-                            "retryable": False,
-                        }
-                        self.orchestration_ledger.finish_background_operation(
-                            operation_id,
-                            status="timed_out",
-                            summary={"error": operation["error"], "budget": exc.details},
-                        )
-                        done.set()
+                    budget_error = {
+                        "code": exc.code,
+                        "message": exc.message,
+                        "category": exc.category,
+                        "retryable": False,
+                    }
+                    operation["budget_error"] = budget_error
+                    cancel_event.set()
+                    if worker_done.wait(BACKGROUND_BUDGET_TERMINAL_GRACE_SECONDS):
+                        return
+                    finalize_operation(
+                        status="timed_out",
+                        error=budget_error,
+                        summary={
+                            "error": budget_error,
+                            "budget": exc.details,
+                            "worker_terminalized": False,
+                            "terminalization_grace_exceeded": True,
+                        },
+                    )
                     return
                 done.wait(BACKGROUND_BUDGET_POLL_SECONDS)
 

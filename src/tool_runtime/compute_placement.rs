@@ -12,8 +12,9 @@ use serde_json::{json, Value};
 use webcodex_core::compute_placement::{
     choose_compute_placement, choose_compute_placement_excluding_runner,
     validation_auto_offload_eligible as core_validation_auto_offload_eligible, ComputeIntentV1,
-    ComputeMutationMode, ComputePlacementPolicy, ComputeResourceClass, RunnerComputeSnapshotV1,
-    RunnerProjectComputeSnapshotV1, COMPUTE_PLACEMENT_POLICY_V1, COMPUTE_PLACEMENT_SCHEMA_VERSION,
+    ComputeMutationMode, ComputePlacementPolicy, ComputeResourceClass, ComputeSourceMode,
+    RunnerComputeSnapshotV1, RunnerProjectComputeSnapshotV1, COMPUTE_PLACEMENT_POLICY_V1,
+    COMPUTE_PLACEMENT_SCHEMA_VERSION,
 };
 
 const RUNNING_JOB_STATUSES: &[&str] = &["running", "started"];
@@ -35,15 +36,17 @@ fn heavy_validation_intent(
     project_id: &str,
     expected_git_head: &str,
     purpose: &str,
+    source_mode: ComputeSourceMode,
 ) -> ComputeIntentV1 {
     ComputeIntentV1 {
         purpose: purpose.to_string(),
         resource_class: ComputeResourceClass::Heavy,
         project_id: project_id.to_string(),
         expected_git_head: Some(expected_git_head.to_string()),
+        source_mode,
         mutation_mode: ComputeMutationMode::ReadOnly,
         requires_structured_validation: true,
-        requires_exact_source_validation: true,
+        requires_exact_source_validation: source_mode == ComputeSourceMode::CleanHead,
         placement_policy: ComputePlacementPolicy::ServerPreferred,
     }
 }
@@ -70,13 +73,48 @@ impl ToolRuntime {
         purpose: &str,
         auth: Option<&AuthContext>,
     ) -> Option<RemoteValidationTargetV1> {
+        self.select_server_preferred_validation_target_for_source_mode(
+            source_runtime_project_id,
+            expected_git_head,
+            purpose,
+            ComputeSourceMode::CleanHead,
+            auth,
+        )
+        .await
+    }
+
+    pub(crate) async fn select_server_preferred_snapshot_validation_target(
+        &self,
+        source_runtime_project_id: &str,
+        expected_git_head: &str,
+        purpose: &str,
+        auth: Option<&AuthContext>,
+    ) -> Option<RemoteValidationTargetV1> {
+        self.select_server_preferred_validation_target_for_source_mode(
+            source_runtime_project_id,
+            expected_git_head,
+            purpose,
+            ComputeSourceMode::SourceSnapshot,
+            auth,
+        )
+        .await
+    }
+
+    async fn select_server_preferred_validation_target_for_source_mode(
+        &self,
+        source_runtime_project_id: &str,
+        expected_git_head: &str,
+        purpose: &str,
+        source_mode: ComputeSourceMode,
+        auth: Option<&AuthContext>,
+    ) -> Option<RemoteValidationTargetV1> {
         let (source_client_id, project_id) =
             agent_runtime_project_binding(source_runtime_project_id)?;
         let clients = self.shell_clients.list_clients_for_auth(auth).await;
         let jobs = self.shell_clients.list_all_jobs_for_auth(auth).await;
         let now = chrono::Utc::now().timestamp();
         let runners = runner_compute_snapshots(&clients, &jobs, now);
-        let intent = heavy_validation_intent(project_id, expected_git_head, purpose);
+        let intent = heavy_validation_intent(project_id, expected_git_head, purpose, source_mode);
         let decision =
             choose_compute_placement_excluding_runner(&intent, &runners, source_client_id);
         let client_id = decision.selected_runner_id?;
@@ -93,6 +131,45 @@ impl ToolRuntime {
         expected_git_head: &str,
         purpose: &str,
         target: &RemoteValidationTargetV1,
+        auth: Option<&AuthContext>,
+    ) -> bool {
+        self.revalidate_server_preferred_validation_target_for_source_mode(
+            source_runtime_project_id,
+            expected_git_head,
+            purpose,
+            target,
+            ComputeSourceMode::CleanHead,
+            auth,
+        )
+        .await
+    }
+
+    pub(crate) async fn revalidate_server_preferred_snapshot_validation_target(
+        &self,
+        source_runtime_project_id: &str,
+        expected_git_head: &str,
+        purpose: &str,
+        target: &RemoteValidationTargetV1,
+        auth: Option<&AuthContext>,
+    ) -> bool {
+        self.revalidate_server_preferred_validation_target_for_source_mode(
+            source_runtime_project_id,
+            expected_git_head,
+            purpose,
+            target,
+            ComputeSourceMode::SourceSnapshot,
+            auth,
+        )
+        .await
+    }
+
+    async fn revalidate_server_preferred_validation_target_for_source_mode(
+        &self,
+        source_runtime_project_id: &str,
+        expected_git_head: &str,
+        purpose: &str,
+        target: &RemoteValidationTargetV1,
+        source_mode: ComputeSourceMode,
         auth: Option<&AuthContext>,
     ) -> bool {
         let Some((source_client_id, project_id)) =
@@ -122,16 +199,26 @@ impl ToolRuntime {
         else {
             return false;
         };
-        let source_still_exact = source.supports_exact_source_validation
+        let Some(source_project) = source
+            .projects
+            .iter()
+            .find(|project| project.project_id == project_id && !project.disabled)
+        else {
+            return false;
+        };
+        let source_mode_valid = match source_mode {
+            ComputeSourceMode::CleanHead => {
+                source.supports_exact_source_validation && source_project.git_dirty == Some(false)
+            }
+            ComputeSourceMode::SourceSnapshot => {
+                source.supports_source_snapshot_validation && source_project.git_dirty == Some(true)
+            }
+        };
+        let source_still_exact = source_mode_valid
             && source.connected
             && source.status == "online"
             && source.metadata_fresh
-            && source.projects.iter().any(|project| {
-                project.project_id == project_id
-                    && !project.disabled
-                    && project.git_dirty == Some(false)
-                    && project.git_head.as_deref() == Some(expected_git_head)
-            });
+            && source_project.git_head.as_deref() == Some(expected_git_head);
         if !source_still_exact {
             return false;
         }
@@ -140,7 +227,7 @@ impl ToolRuntime {
             .into_iter()
             .filter(|runner| runner.client_id == target.client_id)
             .collect::<Vec<_>>();
-        let intent = heavy_validation_intent(project_id, expected_git_head, purpose);
+        let intent = heavy_validation_intent(project_id, expected_git_head, purpose, source_mode);
         let decision = choose_compute_placement(&intent, &target_runners);
         decision.selected_runner_id.as_deref() == Some(target.client_id.as_str())
             && decision.selected_runtime_project_id.as_deref()
@@ -200,6 +287,7 @@ pub(crate) fn runner_compute_snapshots(
                 job_concurrency_limit: client.job_concurrency_limit,
                 supports_structured_validation: client.capabilities.structured_validation_argv,
                 supports_exact_source_validation: client.capabilities.exact_source_validation,
+                supports_source_snapshot_validation: client.capabilities.source_snapshot_validation,
                 server_compute_opt_in: client.capabilities.server_compute,
                 supports_structured_execution_jobs: client.capabilities.structured_execution_jobs,
                 supports_lsp_read_only_navigation: client.capabilities.lsp_read_only_navigation,
@@ -235,6 +323,10 @@ pub(crate) fn compute_runtime_projection(
         .iter()
         .filter(|runner| runner.supports_exact_source_validation)
         .count();
+    let source_snapshot_validation_count = runners
+        .iter()
+        .filter(|runner| runner.supports_source_snapshot_validation)
+        .count();
     let server_compute_count = runners
         .iter()
         .filter(|runner| runner.server_compute_opt_in)
@@ -254,6 +346,7 @@ pub(crate) fn compute_runtime_projection(
         "runner_stale_after_secs": CLIENT_ONLINE_WINDOW_SECS,
         "supported_canary_intent": {
             "resource_class": ComputeResourceClass::Heavy.as_str(),
+            "source_mode": ComputeSourceMode::CleanHead.as_str(),
             "mutation_mode": ComputeMutationMode::ReadOnly.as_str(),
             "placement_policy": ComputePlacementPolicy::ServerPreferred.as_str(),
             "requires_exact_clean_git_head": true,
@@ -272,6 +365,7 @@ pub(crate) fn compute_runtime_projection(
             "available_capacity_count": available_capacity_count,
             "structured_validation_count": structured_validation_count,
             "exact_source_validation_count": exact_source_validation_count,
+            "source_snapshot_validation_count": source_snapshot_validation_count,
             "server_compute_count": server_compute_count,
             "clean_source_project_count": clean_source_project_count,
         },
@@ -293,6 +387,7 @@ pub(crate) fn compact_compute_projection(compute: Option<&Value>) -> Value {
                 "available_capacity_count": 0,
                 "structured_validation_count": 0,
                 "exact_source_validation_count": 0,
+                "source_snapshot_validation_count": 0,
                 "server_compute_count": 0,
                 "clean_source_project_count": 0,
             },

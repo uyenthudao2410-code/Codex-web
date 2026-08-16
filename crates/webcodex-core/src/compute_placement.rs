@@ -72,6 +72,21 @@ impl ComputeMutationMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComputeSourceMode {
+    CleanHead,
+    SourceSnapshot,
+}
+
+impl ComputeSourceMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::CleanHead => "clean_head",
+            Self::SourceSnapshot => "source_snapshot",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ComputePlacementPolicy {
     LocalOnly,
     ServerPreferred,
@@ -95,6 +110,7 @@ pub struct ComputeIntentV1 {
     pub project_id: String,
     /// Exact Git HEAD required on a remote replica. `None` fails closed.
     pub expected_git_head: Option<String>,
+    pub source_mode: ComputeSourceMode,
     pub mutation_mode: ComputeMutationMode,
     pub requires_structured_validation: bool,
     pub requires_exact_source_validation: bool,
@@ -109,6 +125,7 @@ impl ComputeIntentV1 {
             "resource_class": self.resource_class.as_str(),
             "project_id": self.project_id,
             "expected_git_head": self.expected_git_head,
+            "source_mode": self.source_mode.as_str(),
             "mutation_mode": self.mutation_mode.as_str(),
             "requires_structured_validation": self.requires_structured_validation,
             "requires_exact_source_validation": self.requires_exact_source_validation,
@@ -143,6 +160,7 @@ pub struct RunnerComputeSnapshotV1 {
     pub job_concurrency_limit: Option<usize>,
     pub supports_structured_validation: bool,
     pub supports_exact_source_validation: bool,
+    pub supports_source_snapshot_validation: bool,
     pub server_compute_opt_in: bool,
     pub supports_structured_execution_jobs: bool,
     pub supports_lsp_read_only_navigation: bool,
@@ -176,6 +194,7 @@ impl RunnerComputeSnapshotV1 {
             "capabilities": {
                 "structured_validation_argv": self.supports_structured_validation,
                 "exact_source_validation": self.supports_exact_source_validation,
+                "source_snapshot_validation": self.supports_source_snapshot_validation,
                 "server_compute": self.server_compute_opt_in,
                 "structured_execution_jobs": self.supports_structured_execution_jobs,
                 "lsp_read_only_navigation": self.supports_lsp_read_only_navigation,
@@ -250,8 +269,17 @@ fn remote_rejection(
     if intent.requires_exact_source_validation && !runner.supports_exact_source_validation {
         return Some(REASON_CAPABILITY_MISSING);
     }
-    if project.git_dirty != Some(false) {
-        return Some(REASON_REMOTE_DIRTY_WORKTREE);
+    match intent.source_mode {
+        ComputeSourceMode::CleanHead => {
+            if project.git_dirty != Some(false) {
+                return Some(REASON_REMOTE_DIRTY_WORKTREE);
+            }
+        }
+        ComputeSourceMode::SourceSnapshot => {
+            if !runner.supports_source_snapshot_validation {
+                return Some(REASON_CAPABILITY_MISSING);
+            }
+        }
     }
     let Some(expected_head) = intent.expected_git_head.as_deref() else {
         return Some(REASON_SOURCE_IDENTITY_INCOMPLETE);
@@ -390,6 +418,7 @@ mod tests {
             job_concurrency_limit: Some(2),
             supports_structured_validation: true,
             supports_exact_source_validation: true,
+            supports_source_snapshot_validation: false,
             server_compute_opt_in: true,
             supports_structured_execution_jobs: true,
             supports_lsp_read_only_navigation: true,
@@ -409,11 +438,19 @@ mod tests {
             resource_class: ComputeResourceClass::Heavy,
             project_id: "tools-codex-web".to_string(),
             expected_git_head: head.map(str::to_string),
+            source_mode: ComputeSourceMode::CleanHead,
             mutation_mode: ComputeMutationMode::ReadOnly,
             requires_structured_validation: true,
             requires_exact_source_validation: true,
             placement_policy: ComputePlacementPolicy::ServerPreferred,
         }
+    }
+
+    fn snapshot_validation_intent(head: Option<&str>) -> ComputeIntentV1 {
+        let mut intent = heavy_validation_intent(head);
+        intent.source_mode = ComputeSourceMode::SourceSnapshot;
+        intent.requires_exact_source_validation = false;
+        intent
     }
 
     #[test]
@@ -488,6 +525,35 @@ mod tests {
         assert_eq!(
             incomplete.rejected_runners[0].reason_code,
             REASON_SOURCE_IDENTITY_INCOMPLETE
+        );
+    }
+
+    #[test]
+    fn source_snapshot_mode_requires_capability_but_allows_dirty_target_checkout() {
+        let intent = snapshot_validation_intent(Some("abc123"));
+        let mut target = runner("snapshot-target", Some("abc123"), Some(true));
+
+        let unavailable = choose_compute_placement(&intent, &[target.clone()]);
+        assert_eq!(unavailable.placement, "local");
+        assert_eq!(
+            unavailable.rejected_runners[0].reason_code,
+            REASON_CAPABILITY_MISSING
+        );
+
+        target.supports_source_snapshot_validation = true;
+        let selected = choose_compute_placement(&intent, &[target.clone()]);
+        assert_eq!(selected.placement, "remote");
+        assert_eq!(
+            selected.selected_runner_id.as_deref(),
+            Some("snapshot-target")
+        );
+
+        target.projects[0].git_head = Some("def456".to_string());
+        let mismatched = choose_compute_placement(&intent, &[target]);
+        assert_eq!(mismatched.placement, "local");
+        assert_eq!(
+            mismatched.rejected_runners[0].reason_code,
+            REASON_SOURCE_IDENTITY_MISMATCH
         );
     }
 
@@ -618,6 +684,7 @@ mod tests {
     fn decision_and_intent_json_are_bounded_and_explicit() {
         let intent = heavy_validation_intent(Some("abc123"));
         assert_eq!(intent.to_json()["resource_class"], "HEAVY");
+        assert_eq!(intent.to_json()["source_mode"], "clean_head");
         let decision =
             choose_compute_placement(&intent, &[runner("server-a", Some("abc123"), Some(false))]);
         let value = decision.to_json();

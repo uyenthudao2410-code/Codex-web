@@ -52,6 +52,9 @@ pub const VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE: &str =
 pub const VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE: &str = "validation_source_identity_mismatch";
 pub const VALIDATION_SOURCE_DIRTY_CODE: &str = "validation_source_dirty";
 pub const VALIDATION_SOURCE_DRIFT_CODE: &str = "validation_source_drift";
+pub const VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE: &str =
+    "validation_source_snapshot_unavailable";
+pub const VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE: &str = "validation_source_snapshot_drift";
 /// The step ran, but the executor lost the ability to reap it — `waitpid`
 /// answered with an error rather than a status. Distinct from a spawn
 /// failure because the process did start, and distinct from a step failure
@@ -78,6 +81,10 @@ pub fn validation_infrastructure_failure_code(error: &str) -> Option<&'static st
         VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE => Some(VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE),
         VALIDATION_SOURCE_DIRTY_CODE => Some(VALIDATION_SOURCE_DIRTY_CODE),
         VALIDATION_SOURCE_DRIFT_CODE => Some(VALIDATION_SOURCE_DRIFT_CODE),
+        VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE => {
+            Some(VALIDATION_SOURCE_SNAPSHOT_UNAVAILABLE_CODE)
+        }
+        VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE => Some(VALIDATION_SOURCE_SNAPSHOT_DRIFT_CODE),
         _ => None,
     }
 }
@@ -131,6 +138,10 @@ pub const SHELL_CLIENT_CAPABILITY_PERSISTENT_SHELL: &str = "persistent_shell";
 pub const SHELL_CLIENT_CAPABILITY_SSH_PERSISTENT_SHELL: &str = "ssh_persistent_shell";
 pub const SHELL_CLIENT_CAPABILITY_STRUCTURED_VALIDATION_ARGV: &str = "structured_validation_argv";
 pub const SHELL_CLIENT_CAPABILITY_EXACT_SOURCE_VALIDATION: &str = "exact_source_validation";
+/// The Runner can validate an immutable dirty-source snapshot in a private
+/// materialization rather than executing from its authoritative checkout.
+/// Missing on older Runners and therefore fail-closed.
+pub const SHELL_CLIENT_CAPABILITY_SOURCE_SNAPSHOT_VALIDATION: &str = "source_snapshot_validation";
 /// Operator opt-in allowing this Runner to be selected as a server-first
 /// compute target. Missing on older Runners defaults to false; the binary
 /// never infers this role from hostname, transport, or observed load.
@@ -177,6 +188,7 @@ pub const SHELL_CLIENT_CAPABILITY_NAMES: &[&str] = &[
     SHELL_CLIENT_CAPABILITY_SSH_PERSISTENT_SHELL,
     SHELL_CLIENT_CAPABILITY_STRUCTURED_VALIDATION_ARGV,
     SHELL_CLIENT_CAPABILITY_EXACT_SOURCE_VALIDATION,
+    SHELL_CLIENT_CAPABILITY_SOURCE_SNAPSHOT_VALIDATION,
     SHELL_CLIENT_CAPABILITY_SERVER_COMPUTE,
     SHELL_CLIENT_CAPABILITY_STRUCTURED_PROCESS_ARGV,
     SHELL_CLIENT_CAPABILITY_STRUCTURED_SCRIPT_PAYLOAD,
@@ -243,6 +255,10 @@ pub struct ShellClientCapabilities {
     /// structured validation and before publishing successful proof.
     #[serde(default)]
     pub exact_source_validation: bool,
+    /// The Runner can execute validation from a bounded immutable source
+    /// snapshot in Runner-owned temporary storage. Missing defaults to false.
+    #[serde(default)]
+    pub source_snapshot_validation: bool,
     /// Explicit operator opt-in for server-first compute placement.
     #[serde(default)]
     pub server_compute: bool,
@@ -322,6 +338,7 @@ impl Default for ShellClientCapabilities {
             ssh_persistent_shell: false,
             structured_validation_argv: false,
             exact_source_validation: false,
+            source_snapshot_validation: false,
             server_compute: false,
             structured_process_argv: false,
             structured_script_payload: false,
@@ -333,6 +350,14 @@ impl Default for ShellClientCapabilities {
             job_state_reconciliation: false,
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn source_snapshot_validation_capability_defaults_false_for_legacy_payload() {
+    let capabilities: ShellClientCapabilities =
+        serde_json::from_str(r#"{"shell":true}"#).expect("legacy capability payload");
+    assert!(!capabilities.source_snapshot_validation);
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1567,6 +1592,27 @@ impl ShellJobValidationSourceIdentity {
     }
 }
 
+/// Safe immutable SourceSnapshot identity retained for Job proof/recovery.
+/// Raw snapshot entries and file content are deliberately absent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobValidationSourceSnapshotIdentity {
+    pub base_git_head: String,
+    pub snapshot_sha256: String,
+    pub entry_count: usize,
+}
+
+impl ShellJobValidationSourceSnapshotIdentity {
+    pub fn is_valid(&self) -> bool {
+        valid_exact_git_oid(&self.base_git_head)
+            && self.snapshot_sha256.len() == 64
+            && self
+                .snapshot_sha256
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
+            && (1..=crate::source_snapshot::SOURCE_SNAPSHOT_MAX_ENTRIES).contains(&self.entry_count)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShellJobValidationMetadata {
     pub tool: String,
@@ -1577,6 +1623,8 @@ pub struct ShellJobValidationMetadata {
     pub adapter: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_identity: Option<ShellJobValidationSourceIdentity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_snapshot_identity: Option<ShellJobValidationSourceSnapshotIdentity>,
 }
 
 impl ShellJobValidationMetadata {
@@ -1595,6 +1643,11 @@ impl ShellJobValidationMetadata {
                 .source_identity
                 .as_ref()
                 .is_none_or(ShellJobValidationSourceIdentity::is_valid)
+            && self
+                .source_snapshot_identity
+                .as_ref()
+                .is_none_or(ShellJobValidationSourceSnapshotIdentity::is_valid)
+            && !(self.source_identity.is_some() && self.source_snapshot_identity.is_some())
     }
 }
 
@@ -2311,6 +2364,7 @@ mod envelope_tests {
                 ssh_persistent_shell: true,
                 structured_validation_argv: true,
                 exact_source_validation: true,
+                source_snapshot_validation: true,
                 server_compute: false,
                 structured_process_argv: true,
                 structured_script_payload: true,
@@ -2391,6 +2445,7 @@ mod envelope_tests {
         assert!(!capabilities.ssh_shell);
         assert!(!capabilities.ssh_persistent_shell);
         assert!(!capabilities.exact_source_validation);
+        assert!(!capabilities.source_snapshot_validation);
         assert!(!capabilities.structured_execution_jobs);
         assert!(!capabilities.project_path_registration);
         assert!(!ShellClientCapabilities::default().ssh_persistent_shell);
@@ -3712,6 +3767,57 @@ mod filter_canonical_tests {
                 "expected non-canonical for {args:?}"
             );
         }
+    }
+
+    #[test]
+    fn source_snapshot_validation_identity_is_bounded_and_mutually_exclusive() {
+        let step = ShellJobValidationStep {
+            name: "check".to_string(),
+            program: "cargo".to_string(),
+            args: vec!["check".to_string()],
+            env: Vec::new(),
+        };
+        let snapshot_identity = ShellJobValidationSourceSnapshotIdentity {
+            base_git_head: "0123456789abcdef0123456789abcdef01234567".to_string(),
+            snapshot_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                .to_string(),
+            entry_count: 1,
+        };
+        assert!(snapshot_identity.is_valid());
+        let mut metadata = ShellJobValidationMetadata {
+            tool: "cargo_check".to_string(),
+            kind: "check".to_string(),
+            steps: vec![step],
+            effective_timeout_secs: 600,
+            sync_wait_secs: 90,
+            adapter: "cargo_check".to_string(),
+            source_identity: None,
+            source_snapshot_identity: Some(snapshot_identity.clone()),
+        };
+        assert!(metadata.is_valid());
+
+        metadata.source_identity = Some(ShellJobValidationSourceIdentity {
+            expected_git_head: snapshot_identity.base_git_head.clone(),
+            require_clean_worktree: true,
+        });
+        assert!(!metadata.is_valid());
+        metadata.source_identity = None;
+
+        let mut invalid = snapshot_identity;
+        invalid.snapshot_sha256 = "A".repeat(64);
+        metadata.source_snapshot_identity = Some(invalid);
+        assert!(!metadata.is_valid());
+        metadata
+            .source_snapshot_identity
+            .as_mut()
+            .unwrap()
+            .snapshot_sha256 = "0".repeat(64);
+        metadata
+            .source_snapshot_identity
+            .as_mut()
+            .unwrap()
+            .entry_count = 0;
+        assert!(!metadata.is_valid());
     }
 
     fn cargo_test_argv(args: Vec<&str>) -> ShellJobValidationStep {
