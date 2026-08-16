@@ -1631,6 +1631,8 @@ async fn client_supports_recognizes_all_protocol_capability_names() {
                 persistent_shell: true,
                 ssh_persistent_shell: true,
                 structured_validation_argv: true,
+                exact_source_validation: false,
+                server_compute: false,
                 structured_process_argv: true,
                 structured_script_payload: true,
                 structured_execution_jobs: true,

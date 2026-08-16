@@ -1,0 +1,243 @@
+{
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "webcodex-process",
+        "resource_snapshot_preserves_process_identity_and_unknown_semantics",
+        "--",
+        "--nocapture"
+      ],
+      "duration_ms": 327,
+      "exit_code": 0,
+      "name": "managed_process_resource_snapshot",
+      "output_tail": "",
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "webcodex-process",
+        "explicit_terminate_kills_tree",
+        "--",
+        "--nocapture"
+      ],
+      "duration_ms": 860,
+      "exit_code": 0,
+      "name": "managed_process_owned_tree",
+      "output_tail": "",
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "webcodex-runner",
+        "lsp_background_reaper_reclaims_idle_capacity_without_explicit_cleanup",
+        "--",
+        "--nocapture"
+      ],
+      "duration_ms": 1202,
+      "exit_code": 0,
+      "name": "lsp_idle_teardown",
+      "output_tail": "",
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "webcodex-runner",
+        "lsp_memory_",
+        "--",
+        "--nocapture"
+      ],
+      "duration_ms": 3500,
+      "exit_code": 0,
+      "name": "lsp_memory_pressure_matrix",
+      "output_tail": "",
+      "passed": true
+    },
+    {
+      "command": [
+        "<python>",
+        "-m",
+        "pytest",
+        "tests/test_execution_resources.py",
+        "tests/test_task_state_and_build.py::ToolModeTests::test_prepare_coding_context_falls_back_before_native_call_during_heavy",
+        "-q"
+      ],
+      "duration_ms": 9875,
+      "exit_code": 0,
+      "name": "semantic_heavy_conflict_and_fallback",
+      "output_tail": "",
+      "passed": true
+    },
+    {
+      "command": [
+        "<python>",
+        "-m",
+        "pytest",
+        "tests/test_code_mode_bindings.py::CodeModeHostBindingTests::test_metadata_stays_gated_and_smart_surface_is_unchanged",
+        "-q"
+      ],
+      "duration_ms": 1047,
+      "exit_code": 0,
+      "name": "smart_v3_tool_contract",
+      "output_tail": "",
+      "passed": true
+    },
+    {
+      "command": [
+        "<python>",
+        "-m",
+        "pytest",
+        "tests/test_resource_hygiene_script.py",
+        "-q"
+      ],
+      "duration_ms": 858,
+      "exit_code": 0,
+      "name": "resource_hygiene_guards",
+      "output_tail": "",
+      "passed": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "webcodex",
+        "native_semantic_bridge",
+        "--",
+        "--test-threads=1"
+      ],
+      "duration_ms": 2155,
+      "exit_code": 0,
+      "name": "native_semantic_cold_warm_scope",
+      "output_tail": "",
+      "passed": true
+    }
+  ],
+  "disk": {
+    "debug_incremental_bytes": 7961953346,
+    "hard_cleanup_policy": "manual_cargo_clean_only",
+    "last_hard_cleanup_at": null,
+    "last_soft_cleanup_at": null,
+    "observed_at": "2026-08-16T11:09:38.100Z",
+    "release_artifact_bytes": 1550436025,
+    "schema_version": 1,
+    "target_total_bytes": 14178286735,
+    "temporary_target_count": 0,
+    "temporary_targets": [],
+    "temporary_worktree_target_bytes": 0
+  },
+  "finished_at": "2026-08-16T11:09:38.055Z",
+  "git_head": "5d3968ec2dead0d47859e32028e167bc53d28e1f",
+  "hard_acceptance": {
+    "active_managed_heavy_zero": true,
+    "active_write_fences_zero": true,
+    "checks_passed": true,
+    "heavy_overlap_detected_count_zero": true,
+    "orphan_process_count_zero": true,
+    "stale_orchestration_runs_zero": true
+  },
+  "ledger_health": {
+    "active_managed_heavy_count": 0,
+    "active_run_count": 1,
+    "active_write_fence_count": 0,
+    "heavy_overlap_detected_count": 0,
+    "observed": true,
+    "orphan_process_count": 0,
+    "stale_orchestration_run_count": 0
+  },
+  "mode": "real_process_and_synthetic_pressure_equivalent",
+  "passed": true,
+  "runtime": {
+    "coding_tools_mcp_version": "0.4.3",
+    "expected_public_tool_count": 8,
+    "resource_policy_version": "p2-p3-operational-hardening-v1",
+    "smart_profile": "smart-v3"
+  },
+  "schema_version": 1,
+  "source_fingerprint": {
+    "algorithm": "sha256(path_nul_file_sha256_lf)",
+    "files": [
+      {
+        "path": "crates/webcodex-process/Cargo.toml",
+        "sha256": "5b8958757438bb5b83a79d2a756585570896a8e7e61da8ff88c83c3f997f7261"
+      },
+      {
+        "path": "crates/webcodex-process/src/lib.rs",
+        "sha256": "e2714e5fb53613253bdab18f9ef5c41307803fbdc6d8f9dc59834519c0896aa2"
+      },
+      {
+        "path": "crates/webcodex-process/src/unix.rs",
+        "sha256": "48a4b639b711561a62fc2eff22a2cc954b35bc63ae528696450359e540be52c6"
+      },
+      {
+        "path": "crates/webcodex-process/src/windows.rs",
+        "sha256": "49f9ceecf7ad4d56a09ad3654ee1db9dbee27c8ac2f4062516c612b37ccbc005"
+      },
+      {
+        "path": "crates/webcodex-process/tests/managed_child.rs",
+        "sha256": "6d0ddbf2051feb86ec223ddbf05da5bc32838faa8917e43ba4086365c4d6e375"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs",
+        "sha256": "b44aeb999250fdcb7cbdb62b7473136e0e259ce2389527f8825a8000ee4a7e84"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+        "sha256": "7919bf7cf2109525747fcc0c7b994f430b09d1cc2271617f804cbf321de0cebc"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+        "sha256": "e0158d80e33b676001e83e0b533e5857013422c527b8ecaed69ccf0eb9f3d02c"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+        "sha256": "f891f6292e93fee2fa0d5fae8434e7aed6ece2d9ac036a3186ba3de7eac43a1d"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/semantic_localization.py",
+        "sha256": "177b3cde69b374ad15ef6bdab5d47ef0790fdb4a2aaebd6029ba7825ba61092c"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+        "sha256": "7f74bc1037c92d8db764d4f50b8e64273cbab0152376daa7555f28ada1424f45"
+      },
+      {
+        "path": "resources/coding-tools-mcp/scripts/resource_hygiene.py",
+        "sha256": "e63ac2e60edd76e1deab7274a9c3cf84a89472b71cae38c2c7b77b067eb3f275"
+      },
+      {
+        "path": "resources/coding-tools-mcp/scripts/run_resource_hardening_soak.py",
+        "sha256": "bcf7c52cada7cfea377f9d41385903e0c11b917ee2da925788c87a238760e8df"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_execution_resources.py",
+        "sha256": "661f5bb6653acc4c4f08af4f2897f80875e6a9c582d800743d213ec05f513ddc"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_resource_hygiene_script.py",
+        "sha256": "57715ec103a17b9a386fdfec4621eebb5ab3a833e37e3244569edd5f7bc6a1d7"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+        "sha256": "869994ebc0e3b02f5e558f308f9fb0376449c98e5d64957b543e0e87b0195d62"
+      },
+      {
+        "path": "src/connector_runtime/semantic_bridge.rs",
+        "sha256": "5a87fcf5ddd58c93dc94960c06526df5eb30e11a371c2972d8259ff5bac6f50a"
+      }
+    ],
+    "sha256": "22b73a14c103fdc00e061e5114ce34d555d24f26f68f2f07b7182678cd633e03"
+  },
+  "started_at": "2026-08-16T11:09:18.211Z"
+}

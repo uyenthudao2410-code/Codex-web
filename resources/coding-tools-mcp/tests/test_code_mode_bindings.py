@@ -27,8 +27,8 @@ class _SemanticProvider:
             "read_only": True,
         }
 
-    def localize(self, *, workspace: Path, path: str, queries: list[str], max_results: int) -> list[dict]:
-        del workspace, path, max_results
+    def localize(self, *, workspace: Path, path: str, queries: list[str], max_results: int, resource_class: str) -> list[dict]:
+        del workspace, path, max_results, resource_class
         return [
             {
                 "query_index": index,

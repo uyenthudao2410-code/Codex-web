@@ -1140,6 +1140,10 @@ pub enum ToolCall {
         path: String,
         #[serde(default)]
         limit: Option<usize>,
+        /// Fail instead of starting/restarting the language server. Used by
+        /// the Connector's proven-warm MEDIUM semantic path.
+        #[serde(default)]
+        require_existing_server: bool,
         #[serde(default)]
         session_id: Option<String>,
     },

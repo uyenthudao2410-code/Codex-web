@@ -4,6 +4,13 @@
 **Ngày lập kế hoạch:** 2026-08-16  
 **Cập nhật theo live audit:** 2026-08-16 16:38 +07:00  
 **Baseline source tại thời điểm audit:** `main`, `HEAD == origin/main == 415cb658f43cbd1d2456f65bf5649ed52b87ab25`  
+
+**Post-closure planning audit:** 2026-08-16 18:14:53 +07:00, `HEAD == origin/main == cf6cb6ddbf29d90515d003ce72490ffda985c37f`
+
+**R1/R2/R5 implementation audit:** 2026-08-16 19:18 +07:00, source vẫn ở `cf6cb6ddbf29d90515d003ce72490ffda985c37f`; worktree có implementation chưa commit và concurrent changes ngoài scope được giữ nguyên.
+
+**Cách sử dụng tài liệu:** Sections 1–25 là kế hoạch/lịch sử closure đã thực hiện; Section 26 là kế hoạch authoritative cho phần production evidence và race-hardening còn lại.
+
 **Runtime quan sát:** Coding Tools MCP `0.4.3`, `smart-v3`, public tool count `8`  
 **Tài liệu nền:** `docs/research/260816_P2-P3-orchestration-resource-analysis.md`  
 **Mục tiêu:** hoàn thiện phần operational hardening còn lại của P2/P3 bằng cách tận dụng tối đa implementation hiện đã có, chỉ bổ sung các gap thực sự còn mở, tránh viết lại LSP lifecycle/resource governor/EOCL đã tồn tại, và chứng minh kết quả bằng operational soak có thể lặp lại.
@@ -108,7 +115,7 @@ Ngoài ra `.coding-tools` tiếp tục có volatile evidence, đặc biệt:
 .coding-tools/evaluation/...
 ```
 
-**Policy dự án vẫn giữ nguyên:** `.coding-tools/orchestration/ledger.sqlite3` là artifact quan trọng và phải được đưa vào final commit/push của delivery phù hợp; không được bỏ sót file này.
+**Policy dự án hiện hành:** `.coding-tools/orchestration/ledger.sqlite3` là canonical runtime evidence nhưng không phải source-code input. Phải giữ nguyên, đọc làm bằng chứng và ghi observation window/checksum cần thiết vào report; không selective-stage hoặc commit SQLite/WAL/SHM cùng source delivery.
 
 ## 2.2. Runtime baseline
 
@@ -207,7 +214,7 @@ AND no Recovery mutation wave đang EXECUTING/PROVING/ACCEPTING
 - Không trộn Recovery Phase 3B source với P2/P3 LSP hardening trong cùng implementation wave.
 - Không reset/restore unrelated work.
 - Final delivery selective stage.
-- `ledger.sqlite3` phải có trong final commit/push theo project policy.
+- Không stage `.coding-tools` runtime projections; source delivery chỉ record evidence window, fingerprint và checksum của report cần thiết.
 
 ---
 
@@ -1071,8 +1078,8 @@ Trước commit:
 review full status
 separate Recovery/P2-P3 scopes
 selective stage intended source/tests/docs
-include .coding-tools/orchestration/ledger.sqlite3
-exclude volatile runtime junk unless intentionally required
+exclude .coding-tools/orchestration/ledger.sqlite3, WAL/SHM and other volatile projections
+record accepted source fingerprint + report checksum in maintained docs
 git diff --cached --check
 secret scan staged diff
 ```
@@ -1080,10 +1087,10 @@ secret scan staged diff
 Sau commit:
 
 ```text
-push main
+push main only when explicitly authorized
 verify local SHA == origin/main SHA
 verify commit contains intended files
-verify ledger.sqlite3 included
+verify no volatile `.coding-tools` evidence was staged
 ```
 
 Không force-push.
@@ -1354,8 +1361,8 @@ active managed HEAVY = 0 after proof
 ```text
 EOCL CHECKPOINTED
 selective intended source commit
-ledger.sqlite3 included
-push main successful
+runtime ledger preserved outside the source commit; accepted report checksum recorded
+push main successful only when explicitly authorized
 local SHA == origin/main SHA
 no force-push
 ```
@@ -1377,7 +1384,7 @@ Không đổi thứ tự trừ khi live evidence chứng minh dependency khác.
 7. Add durable CONNECTOR_PROFILE ownership only if Step 6 proves necessary.
 8. Run authoritative cold/warm/idle/restart/conflict soak.
 9. Implement disk/cache hygiene.
-10. Final EOCL acceptance + selective commit/push including ledger.sqlite3.
+10. Final EOCL acceptance + selective source commit; preserve ledger as runtime evidence and push only with explicit authorization.
 ```
 
 ---
@@ -1423,7 +1430,7 @@ Không đổi thứ tự trừ khi live evidence chứng minh dependency khác.
 - Không rerun broad suite sau mọi patch.
 - Không `cargo clean` trong active proof wave.
 - Không thay đổi public tool count để expose telemetry nội bộ.
-- Không bỏ `.coding-tools/orchestration/ledger.sqlite3` khỏi final commit/push.
+- Không manually edit, stage hoặc commit `.coding-tools/orchestration/ledger.sqlite3`, WAL/SHM hay runtime projections để làm source delivery trông sạch hơn.
 
 ---
 
@@ -1484,7 +1491,7 @@ Khi Wave 1–5 pass với `orphan_process_count = 0` và `heavy_overlap_detected
 | Wave 4 — ownership/restart | PASS | `ManagedChild`/Connector ownership đủ; PID/start-token và owned-tree proof không cho thấy nhu cầu thêm schema `CONNECTOR_PROFILE`. |
 | Wave 5 — operational soak | PASS | Ma trận real-process + synthetic-pressure equivalent pass 28 focused tests/checks. |
 | Wave 6 — disk/cache hygiene | PASS | Snapshot và fail-closed soft-clean guard đã triển khai; không chạy cleanup trên primary `target`. |
-| Wave 7 — baseline/delivery | PASS về source/proof | Implementation gốc đã lên `main` tại `5d3968ec`; follow-up closure được khóa bằng source fingerprint bên dưới và delivery commit chứa record này. |
+| Wave 7 — baseline/delivery | PASS | Implementation gốc đã lên `main` tại `5d3968ec`; follow-up closure và record này đã lên `main` tại `cf6cb6dd`. |
 
 ## 25.2. Final proof fingerprint
 
@@ -1545,3 +1552,628 @@ Không chạy `cargo clean` và không chạy soft cleanup. Primary `target` v�
 ## 25.4. Kết luận triển khai
 
 P2/P3 operational hardening đã đóng về kỹ thuật theo scope của kế hoạch. Persistent profile schema không được thêm vì ownership proof đã pass. Giới hạn còn lại được ghi rõ: pressure thresholds được chứng minh bằng synthetic metrics để không cấp phát nhiều GiB trong CI; process teardown/cold restart vẫn dùng real managed child, và native semantic bridge chạy qua integration tests của repository. Không có release, deployment hoặc service restart trong delivery này.
+
+---
+
+# 26. Post-closure completion plan — production evidence và atomic admission
+
+Section này supersede Sections 21–22 cho mọi implementation tiếp theo. Mục tiêu không phải mở lại các wave đã PASS, mà là đóng ba khoảng trống còn lại giữa “focused implementation proven” và “production operational contract proven under concurrency”.
+
+## 26.1. Evidence baseline và gap classification
+
+Live observation tại `2026-08-16T18:14:52.984+07:00`:
+
+```text
+branch                         = main
+HEAD                           = cf6cb6ddbf29d90515d003ce72490ffda985c37f
+origin/main                    = cf6cb6ddbf29d90515d003ce72490ffda985c37f
+active_managed_heavy_count     = 0
+active_write_fence_count       = 0
+orphan_process_count           = 0
+heavy_overlap_detected_count   = 0
+stale_orchestration_run_count  = 0
+active_run_count               = 2
+```
+
+Hai active run là observation point-in-time, không tự động là blocker vì không có write fence, managed HEAVY hoặc stale owner. Worktree đang có một đợt documentation reorganization concurrent với nhiều staged deletion/modification ngoài scope; implementation source wave tiếp theo phải chờ ownership của đợt này được settle hoặc dùng isolated worktree.
+
+| Gap | Evidence trong source hiện tại | Phân loại | Quyết định |
+|---|---|---|---|
+| Semantic admission chưa atomic với managed HEAVY admission | `semantic_native_admission()` chỉ đọc state và không reserve slot; native provider được gọi sau decision | Race chưa được chứng minh xảy ra, nhưng hard guarantee `overlap = 0` dưới simultaneous start chưa đủ | Bổ sung checkout-scoped scheduling claim dùng chung cho semantic HEAVY và managed HEAVY |
+| Cold single-file chưa có warm/pressure handshake trước classification | Python phân loại supported file là `MEDIUM`, trong khi request đầu có thể cold-start LSP | Policy ambiguity thật | Status `STOPPED/UNKNOWN` phải làm cold single-file nhận HEAVY semantics; chỉ warm + normal focused request mới là MEDIUM |
+| Process snapshot chưa có production consumer | `project_process_snapshot()` hiện chỉ được dùng trong supervisor tests | Observability gap | Expose một bounded resource projection qua existing internal/operator status, không thêm MCP tool mới |
+| Soak chưa phải long-running live Connector soak | Harness tự khai báo `real_process_and_synthetic_pressure_equivalent` | Evidence gap, không phải code defect | Thêm live mode với real Connector/Runner + rust-analyzer và nhiều cold/warm/idle cycles |
+| Default 2 GiB/3 GiB chưa được field-calibrate trên live profile | Threshold deterministic tests PASS nhưng không có representative live measurement series | Tuning gap | Giữ defaults cho tới khi live evidence chứng minh cần đổi; không auto-tune |
+| Disk hygiene | Snapshot + guarded soft cleanup đã PASS; temporary target hiện bằng `0` trong closure evidence | Closed | Không thêm scheduler/automatic `cargo clean`; chỉ re-open khi có target owner/retention use case thật |
+| Persistent kill ownership | ManagedChild/Connector ownership proof PASS | Closed | Không thêm `CONNECTOR_PROFILE` kill-ownership schema |
+
+## 26.2. Revised finish line
+
+Production completion chỉ đạt khi tất cả điều kiện sau được chứng minh trên cùng source fingerprint:
+
+```text
+1. simultaneous semantic HEAVY và managed HEAVY không thể cùng acquire checkout claim
+2. cold single-file được phân loại HEAVY cho tới khi Connector chứng minh warm + normal
+3. warm + normal focused semantic vẫn có MEDIUM fast path
+4. status/resource projection không start LSP và không lộ path/source/query/credential
+5. active semantic request không bị kill bởi idle/soft/hard cleanup
+6. crash/timeout luôn release claim bằng finally hoặc lease expiry
+7. real Connector soak chứng minh cold → warm → idle → stopped → cold restart nhiều cycle
+8. public smart-v3 tool count vẫn bằng 8
+9. orphan, overlap, stale orchestration, active write fence và terminal managed HEAVY đều bằng 0 ở final window
+```
+
+Không dùng một test tuần tự để chứng minh atomicity. Phải có barrier/concurrent-start oracle làm cả hai phía cố acquire cùng lúc.
+
+## 26.3. Architecture decision — scheduling claim, không phải process ownership
+
+Giữ hai khái niệm tách biệt:
+
+```text
+Process ownership
+  Connector / Runner → LspSupervisor → ManagedChild → exact LSP tree
+  quyền terminate chỉ đi theo exact owned handle/tree
+
+Scheduling claim
+  checkout + resource_class → một active claimant tại một thời điểm
+  chỉ quyết định admit/defer/fallback
+  không tự mang quyền kill process
+```
+
+Data flow mục tiêu:
+
+```text
+semantic request
+  ↓
+read bounded Connector LSP resource status
+  ↓
+classify focused/workspace + stopped/warm + pressure
+  ↓
+atomic checkout resource claim
+  ├─ denied → text fallback
+  └─ acquired → native provider call → release in finally
+
+managed Cargo/full-test HEAVY
+  ↓
+same atomic checkout resource claim
+  ├─ denied → HEAVY_SLOT_BUSY / retry
+  └─ acquired → managed_process_job lifecycle → release on terminal/replan/reconcile
+```
+
+Nếu ledger-backed claim là cần thiết để đồng bộ nhiều Runtime process, schema tối thiểu nên là một scheduling table riêng, ví dụ:
+
+```text
+checkout_resource_claims
+  claim_id
+  checkout_id
+  resource_class
+  owner_type          = MANAGED_JOB | NATIVE_SEMANTIC
+  owner_id_hash       = opaque, content-free
+  lifecycle_state     = active | released | expired
+  acquired_at
+  expires_at
+  updated_at
+```
+
+Invariant:
+
+```text
+at most one active HEAVY claim per checkout
+expired claim reconciled before new insert
+claim acquisition and conflict decision happen in one BEGIN IMMEDIATE transaction
+managed job row and its claim are created/terminalized consistently
+semantic claim never creates a fake managed_process_jobs row
+claim owner never implies process terminate authority
+```
+
+Không tạo generic scheduler framework. Table này chỉ được triển khai khi concurrent-start test trước patch chứng minh oracle có thể quan sát cửa sổ race hoặc khi cross-runtime atomic guarantee được giữ làm acceptance bắt buộc.
+
+## 26.4. Wave R0 — Reconcile authority và freeze acceptance
+
+### Mục tiêu
+
+Tạo base sạch cho implementation mà không đụng documentation reorganization hiện tại.
+
+### Hành động
+
+1. Xác nhận root/branch/HEAD/origin và owner của staged documentation deletions.
+2. Chọn một trong hai:
+   - đợi documentation wave checkpoint/commit; hoặc
+   - tạo isolated worktree từ exact accepted `origin/main`.
+3. Xác nhận không có active write fence trên các surface:
+
+```text
+crates/webcodex-core/src/lsp_bridge.rs
+crates/webcodex-runner/src/webcodex_runner/lsp/
+src/connector_runtime/semantic_bridge.rs
+resources/coding-tools-mcp/coding_tools_mcp/
+resources/coding-tools-mcp/tests/
+```
+
+4. Pin acceptance matrix và source fingerprint trước write.
+
+### Exit criteria
+
+```text
+base HEAD verified
+target source paths clean hoặc isolated
+conflicting write fence = 0
+managed HEAVY = 0
+concurrent docs changes không tham gia source fingerprint
+```
+
+## 26.5. Wave R1 — Bounded LSP resource-status handshake
+
+### Mục tiêu
+
+Biến telemetry hiện có thành input thật cho semantic classification và operator diagnosis.
+
+### Projection tối thiểu
+
+```text
+lsp_resource
+  lifecycle_state       = STOPPED | STARTING | RUNNING | FAILED
+  warm                  = true | false | unknown
+  pressure_state        = NORMAL | SOFT | HARD | UNKNOWN
+  process_instance_id   = opaque
+  working_set_bytes     = number | null
+  peak_working_set_bytes= number | null
+  pending_request_count
+  restart_count
+  drain_count
+  observed_at
+```
+
+Không expose raw PID nếu consumer không cần. Không expose executable path, project absolute path, query, source, stderr hoặc credential-file path.
+
+### Candidate surfaces
+
+```text
+crates/webcodex-core/src/lsp_bridge.rs
+crates/webcodex-runner/src/webcodex_runner/lsp/navigation.rs
+crates/webcodex-runner/src/webcodex_runner/lsp/navigation_tests.rs
+src/connector_runtime/semantic_bridge.rs
+resources/coding-tools-mcp/coding_tools_mcp/semantic_localization.py
+```
+
+Ưu tiên optional resource block trong existing status/internal contract. Không thêm public MCP tool và không làm status call start LSP.
+
+### Classification contract
+
+| Scope | Lifecycle/warm/pressure | Resource class/action |
+|---|---|---|
+| focused file | warm + NORMAL | MEDIUM, native allowed nếu không có policy conflict |
+| focused file | STOPPED/STARTING/UNKNOWN | HEAVY claim trước native call |
+| workspace/directory | any usable state | HEAVY claim |
+| any | HARD | native deny/fallback; safe drain after pending=0 |
+| workspace | SOFT | native deny/fallback; eligible early drain |
+| status only | any | LIGHT, no server start |
+
+### Tests
+
+- status on absent server returns `STOPPED` without process spawn;
+- running server returns content-free instance/pressure snapshot;
+- unsupported metrics stay `null/UNKNOWN`;
+- serialization backward-compatible với optional field;
+- credential/path/query không xuất hiện trong JSON;
+- cold focused classification = HEAVY;
+- warm normal focused classification = MEDIUM.
+
+### Exit criteria
+
+```text
+one bounded status contract
+one demonstrated scheduling consumer
+no public tool-count change
+status read has zero process side effect
+```
+
+## 26.6. Wave R2 — Atomic checkout resource claim
+
+### Mục tiêu
+
+Đóng check-then-call window giữa semantic admission và managed HEAVY admission trên nhiều Runtime process.
+
+### Implementation rules
+
+1. Acquire claim trong một SQLite transaction có write serialization.
+2. Managed HEAVY và semantic HEAVY dùng cùng conflict key.
+3. Semantic giữ claim qua toàn bộ native provider call và release trong `finally`.
+4. Managed HEAVY giữ claim tới terminal/replan/reconcile.
+5. Runtime crash được phục hồi bằng bounded expiry + process/runtime identity reconciliation.
+6. Không release claim của owner khác dựa chỉ trên PID.
+7. LIGHT inspection vẫn chạy khi HEAVY claim bận.
+8. MEDIUM focused semantic không chiếm HEAVY claim sau khi warm + normal đã được chứng minh.
+
+### Candidate surfaces
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py
+resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py
+resources/coding-tools-mcp/coding_tools_mcp/context_tools.py
+resources/coding-tools-mcp/tests/test_execution_resources.py
+resources/coding-tools-mcp/tests/test_task_state_and_build.py
+```
+
+### Deterministic concurrency oracle
+
+Tạo barrier test với hai Runtime instance trỏ cùng checkout/ledger:
+
+```text
+lane A: acquire semantic HEAVY claim
+lane B: acquire managed HEAVY claim
+barrier: release both attempts simultaneously
+assert: exactly one acquired
+assert: loser reason = HEAVY_SLOT_BUSY
+assert: active HEAVY claim count never > 1
+assert: winner terminal/release → loser retry succeeds
+```
+
+Chạy ít nhất 100 iterations bằng synthetic provider/process để tăng khả năng phát hiện race mà không tạo tải Rust thật. Đây là concurrency proof, không phải performance benchmark.
+
+### Negative/repair tests
+
+- provider exception release claim trong `finally`;
+- process spawn failure không để claim active;
+- expired semantic claim được reconcile;
+- stale runtime không release current claim;
+- REPLAN terminalizes managed claim nhưng không đụng Connector process;
+- restart giữa acquire/release fail closed;
+- repeated release idempotent;
+- public snapshot redacts owner identity.
+
+### Exit criteria
+
+```text
+100/100 barrier iterations: active HEAVY claims <= 1
+sequential fallback/recovery tests still PASS
+no fake managed job for LSP
+no process kill added to claim reconciliation
+```
+
+## 26.7. Wave R3 — Live Connector/Runner soak
+
+### Mục tiêu
+
+Nâng evidence từ `real_process_and_synthetic_pressure_equivalent` lên một live profile run có real Connector/Runner artifact và real rust-analyzer.
+
+### Environment
+
+- Windows host hiện tại là primary acceptance host;
+- exact Connector/Runner artifact identity được record;
+- exact Git HEAD/source fingerprint được record;
+- rust-analyzer availability/version được record nhưng không log executable path;
+- test profile có bounded idle TTL thấp để không chờ production TTL 15 phút;
+- không có unrelated Cargo/full-test HEAVY;
+- no Recovery/documentation writer trên source surface.
+
+### Scenario matrix
+
+1. Cold focused file: claim HEAVY, native `document_symbols`, process snapshot numeric hoặc explicit UNKNOWN.
+2. Warm focused file: same process instance, MEDIUM path, stable result.
+3. Warm workspace: HEAVY claim, bounded concurrency, ordered/sanitized result.
+4. Idle: stop traffic, exact LSP tree exits, Connector sống.
+5. Cold restart: new process instance, native handled.
+6. Managed Cargo conflict: simultaneous barrier, exactly one HEAVY claimant.
+7. Semantic exception/timeout: claim released, text fallback usable.
+8. Soft/hard synthetic threshold override against real process: no mid-flight kill, safe drain.
+9. Connector shutdown: correct descendant tree gone.
+10. Repeat cold/warm/idle/restart tối thiểu 10 cycles.
+
+### Metrics
+
+```text
+cold_semantic_latency_ms[]
+warm_semantic_latency_ms[]
+workspace_semantic_latency_ms[]
+lsp_working_set_bytes[]
+lsp_peak_working_set_bytes[]
+claim_wait_ms[]
+semantic_claim_allowed/rejected
+managed_claim_allowed/rejected
+idle_teardown_count
+restart_count
+drain_count
+fallback_count
+orphan_count
+overlap_count
+unknown_owner_count
+```
+
+Record sample size và distribution (`min/median/p95/max`) thay vì chỉ một snapshot.
+
+### Hard acceptance
+
+```text
+10/10 lifecycle cycles PASS
+overlap_count = 0
+orphan_count = 0
+unknown_owner auto-kill = 0
+active request mid-flight kill = 0
+fallback under denial/exception PASS
+final active claim = 0
+final active managed HEAVY = 0
+final write fence = 0
+```
+
+## 26.8. Wave R4 — Threshold calibration decision
+
+### Mục tiêu
+
+Quyết định giữ hay đổi production defaults 2 GiB/3 GiB dựa trên live series, không dựa trên cảm giác hoặc một peak đơn lẻ.
+
+### Decision rule
+
+Giữ defaults nếu:
+
+```text
+normal live p95 < soft limit
+no false soft/hard drain trong 10-cycle soak
+host vẫn giữ quiescence margin hợp lý
+```
+
+Chỉ đề xuất đổi nếu data cho thấy một trong các trường hợp:
+
+- normal operation thường xuyên vượt soft limit;
+- hard limit không ngăn được host pressure trước khi fallback/drain;
+- platform metric semantics khác nhau rõ rệt.
+
+Mọi thay đổi threshold phải:
+
+- giữ `hard > soft > 0`;
+- có deterministic override test;
+- document host/sample scope;
+- không biến measurement máy này thành universal guarantee;
+- không thêm auto-tuning loop ở phase này.
+
+### Exit criteria
+
+Một decision record rõ ràng: `KEEP_DEFAULTS` hoặc `CHANGE_TO(...)`, kèm evidence window/sample size và rollback.
+
+## 26.9. Wave R5 — Operationalization và delivery
+
+### Documentation
+
+Sau khi documentation reorganization hiện tại được settle, cập nhật đúng các canonical docs còn tồn tại:
+
+```text
+docs/CURRENT_STATE.md
+docs/LSP_NAVIGATION.md
+docs/ARCHITECTURE.md
+docs/research/260816_P2-P3-remaining-operational-hardening-implementation-plan.md
+```
+
+Không tự restore các docs đang bị xóa bởi wave khác. Nếu canonical docs thay đổi, resolve destination từ trạng thái repository mới thay vì dùng danh sách cũ như hardcoded authority.
+
+### Final verification ladder
+
+1. scoped diff/static/schema check;
+2. status/classification focused tests;
+3. atomic claim unit + 100-iteration barrier test;
+4. process/LSP memory regression tests;
+5. native semantic auth/scope/sanitation tests;
+6. live Connector soak 10 cycles;
+7. smart-v3 public tool contract test;
+8. final ledger/job/claim/fence health snapshot.
+
+Không rerun full workspace suite nếu các affected boundaries trên đã đủ và không có cross-cutting compile failure. Nếu public `lsp_status` schema đổi, chạy representative consumer tests ở `webcodex-core`, Runner và tool runtime.
+
+### Git/EOCL delivery
+
+```text
+source wave CHECKPOINTED
+selective stage only intended source/tests/docs
+do not include concurrent documentation deletions by accident
+preserve canonical ledger as volatile runtime evidence; do not stage it
+git diff --cached --check
+staged secret-pattern scan
+commit without amend/reset/rebase
+push only when delivery authorization includes push
+verify local HEAD == origin/main after push
+```
+
+## 26.10. Priority và execution order
+
+| Priority | Hạng mục | Lý do |
+|---|---|---|
+| P0 | R0 authority/worktree reconciliation | Worktree hiện có concurrent staged documentation changes; không được mở overlapping writer |
+| P1 | R1 bounded status handshake | Là dependency để phân biệt cold single-file với warm focused request |
+| P1 | R2 atomic checkout claim | Đóng hard concurrency guarantee còn thiếu |
+| P1 | R3 live Connector soak | Chuyển equivalent proof thành live operational evidence |
+| P2 | R4 threshold decision | Chỉ tuning sau khi có series thật |
+| P2 | R5 docs/delivery | Đồng bộ operator contract và accepted source |
+| P3 | Trend/retention automation | Chỉ mở khi có consumer và retention requirement thật |
+
+Authoritative order:
+
+```text
+R0 reconcile/isolate
+  → R1 resource-status handshake
+  → R2 atomic scheduling claim
+  → focused concurrency proof
+  → R3 live soak
+  → R4 keep/change threshold decision
+  → R5 docs + EOCL + selective delivery
+```
+
+Không chạy R1/R2 song song vì status contract quyết định semantic resource classification. R3 chỉ bắt đầu sau khi barrier oracle của R2 đã xanh.
+
+## 26.11. Definition of Done — remaining completion
+
+```text
+[x] concurrent HEAVY admission is atomic across Runtime instances
+[x] cold focused semantic cannot bypass HEAVY claim
+[x] warm normal focused semantic retains MEDIUM fast path
+[x] status projection is bounded, content-free and side-effect-free
+[x] semantic/provider failure cannot leak an active claim
+[x] managed terminal/replan/reconcile releases only its own claim
+[x] 100/100 simultaneous barrier iterations keep active HEAVY <= 1
+[x] 10/10 real Connector lifecycle cycles PASS
+[x] live working-set/latency sample series recorded
+[x] explicit KEEP_DEFAULTS or threshold-change decision recorded
+[x] smart-v3 public tool count remains 8
+[x] final overlap/orphan/stale/fence/claim counts are 0
+[x] no CONNECTOR_PROFILE kill-ownership schema added without new failure evidence
+[x] no automatic cargo clean or global process-name kill added
+[x] unrelated documentation reorganization preserved
+[x] bounded governor snapshot always keeps active managed jobs visible ahead of terminal history
+[ ] accepted source selectively committed; push/readback only when authorized
+```
+
+Các mục kỹ thuật/vận hành của checklist đã đạt **production operational closure with atomic admission and live soak evidence** trong worktree hiện tại. Mục selective commit/push vẫn là delivery boundary riêng và chỉ thực hiện khi có authorization.
+
+## 26.12. Implementation/evidence record — 2026-08-16 20:59 +07:00
+
+### Trạng thái wave
+
+| Wave | Trạng thái | Evidence/decision |
+|---|---|---|
+| R0 — authority/worktree | PASS có điều kiện | Root/branch/HEAD được xác minh là repository được user chỉ định, `main` tại `cf6cb6dd`; chỉ sửa source/test/doc thuộc hardening. Concurrent documentation/source changes ngoài scope không bị restore, stage, reset hoặc overwrite. |
+| R1 — status handshake/classification | IMPLEMENTED + FOCUSED PASS | `lsp_status` có bounded content-free resource projection; internal semantic status route không model-advertised; `STOPPED/UNKNOWN` focused là HEAVY; chỉ `RUNNING + warm=true + NORMAL` focused là MEDIUM; warm-only request không được cold-start server. |
+| R2 — atomic claim | IMPLEMENTED + PASS | Ledger schema v7 có checkout-scoped partial unique HEAVY claim dùng chung cho managed job và native semantic. Barrier semantic↔managed đạt 100/100, đúng một winner, loser `HEAVY_SLOT_BUSY`, claim trở về 0 mỗi vòng. |
+| R3 — live Connector soak | LIVE PASS 10/10 | Profile cô lập `p3-live` dùng Runner TTL 5 giây; real Connector/Runner/rust-analyzer hoàn tất 10 cold/warm/workspace/idle/restart cycles, mỗi restart có opaque process identity mới; final LSP `STOPPED`; barrier có đúng một winner và loser `HEAVY_SLOT_BUSY`. |
+| R4 — threshold decision | `KEEP_DEFAULTS` | Giữ soft/hard defaults 2 GiB/3 GiB. Live sample n=10 có working-set p95 `14,573,568` bytes, peak p95 `29,593,600` bytes, `drain_count=0`; không có evidence để hạ/tăng production defaults. Đây chỉ là host-scoped calibration. |
+| R5 — operationalization | SOURCE/HARNESS/DOC COMPLETE, DELIVERY PENDING | Harness ghi structured blocker, bounded workspace-index warm-up, exact artifact/source identity và final ledger health. Canonical docs đã được đồng bộ. Chưa commit/push vì worktree có concurrent unrelated changes và không có authorization delivery. |
+
+### Implementation đã hoàn tất
+
+1. Core/Runner:
+   - thêm `DocumentSymbolsExisting` và resource status projection;
+   - document sync + symbol request nằm trong cùng owned operation;
+   - warm-only admission giữ map/operation guard để đóng idle-reaper race;
+   - scheduling claim không có quyền kill process và không tạo fake `managed_process_jobs` cho LSP.
+   - thêm Agent profile override `lsp_idle_ttl_seconds` có bound `1..=86400`, mặc định omission vẫn dùng 15 phút và thay đổi cần Runner restart; live profile dùng 5 giây, không đổi production default.
+2. Connector/tool runtime:
+   - thêm exact internal route `/api/connector/internal/semantic/status` với project-credential/workspace validation;
+   - MEDIUM file request bắt buộc existing server; HEAVY được dùng cho cold/unknown/workspace;
+   - public model surface không tăng tool.
+3. Coding Tools MCP:
+   - schema v7 thêm `checkout_resource_claims` và một partial unique index cho active checkout HEAVY;
+   - managed HEAVY job + claim được insert atomically; terminal/quiesced chỉ release claim của chính owner;
+   - semantic lease release bằng owner hash trong `finally`, kể cả provider exception/expiry race;
+   - mọi native path đã biết (`prepare_coding_context` và Code Mode semantic binding) đều đi qua status classification + claim;
+   - cross-runtime reconciliation chỉ mutate row khi cùng process hoặc cùng logical runtime; runtime đồng thời khác chỉ observe scheduling state.
+   - claim `MANAGED_JOB` do schema mới backfill được release khi chính managed Job tương ứng đã terminal; không mutate Job/process của runtime khác và không release owner không xác định.
+4. Operational harness:
+   - `run_resource_hardening_soak.py` tiếp tục tự nhận diện mode là `real_process_and_synthetic_pressure_equivalent`;
+   - thêm `run_live_connector_resource_soak.py`, chỉ dùng binding máy/env hiện hữu, yêu cầu exact artifact IDs, file/query ổn định và tối thiểu 10 cycles;
+   - live report ghi source fingerprint, rust-analyzer version, cold/warm/workspace latency distribution, working-set/peak, claim wait, opaque process identity, conflict, lifecycle và final ledger health;
+   - thiếu binding/status/artifact trả structured `blocked`, không fallback sang fake production binding.
+   - provider failure giữa cycle cũng trả structured `LIVE_NATIVE_CALL_FAILED`; workspace symbol index có bounded retry trong cùng HEAVY claim để phân biệt warm-up với capability failure.
+
+### Verification đã quan sát
+
+```text
+Python focused matrix:
+  35 passed, 1 skipped, 60 deselected, 5 subtests passed
+
+Atomic governor file (bao gồm barrier 100 vòng và cross-version claim reconciliation):
+  15 passed
+
+webcodex-core lsp_bridge tests:
+  7 passed
+
+webcodex-runner navigation tests:
+  35 passed, 1 ignored
+
+Equivalent operational soak (--skip-root-semantic):
+  7/7 checks PASS
+  final fingerprinted rerun 7/7 checks PASS; hard gate was point-in-time busy
+  because another managed Cargo owner started concurrently
+  active_heavy_claim_count = 0
+  heavy_overlap_detected_count = 0
+  orphan_process_count = 0
+  active_write_fence_count = 0
+  stale_orchestration_run_count = 0
+  source_fingerprint = 4d8e15a625643c34558cd1b1f6efe668b3803beb29a11f3f72579ceff59c3968
+
+Smart-v3 contract:
+  exact public tools = 8
+
+Formatting/module budget:
+  cargo fmt --all -- --check = PASS
+  check_module_size.py = PASS
+
+Live Connector/Runner/rust-analyzer acceptance:
+  artifact window = 2026-08-16T13:53:50.219Z..13:57:44.451Z
+  cycles = 10/10 PASS
+  Connector SHA-256 = c4306afe77ed17a4e281fdaad40cb79bfb18f946d55777e60106041e7515557d
+  Runner SHA-256 = 7d6c4a013016d717cacd71d678a1a34b59ca0d7ab3f7c88d531cf2f64029b0a7
+  launcher SHA-256 = 18d552e0c290ecd79117bfa75b182b398234eede444dabf26071e1e4dd01053a
+  rust-analyzer = 1.92.0 (ded5c06c 2025-12-08)
+  source fingerprint = 629dfd66b50e58c396dd89c93882159df053e0e85ea000ffeed2c7c2deee13c2 (34 files)
+  cold latency p95 = 905 ms
+  warm latency p95 = 813 ms
+  workspace latency p95 = 8,860 ms
+  claim wait p95 = 1,968 ms
+  LSP working-set p95 = 14,573,568 bytes
+  LSP peak working-set p95 = 29,593,600 bytes
+  final claim/overlap/orphan/fence/stale = 0/0/0/0/0
+  report = .coding-tools/orchestration/p3-live-connector-resource-soak.json
+  report SHA-256 = 77090a28309eb44bc3d76f86592badfb27325d9f64cff8240e0883e3a225adc7
+```
+
+Health timeline cần đọc theo causal ledger thay vì lấy một snapshot đơn lẻ:
+
+- run đầu tại `2026-08-16T12:17:55Z` PASS toàn bộ hard acceptance với claim/overlap/orphan/fence/stale đều `0`;
+- fingerprinted rerun tại `2026-08-16T12:24:46Z` vẫn có 7/7 checks PASS, nhưng một owner khác đã bắt đầu managed Cargo HEAVY lúc `12:24:21Z`, nên `active_heavy_claim_count=1` và overall report fail-closed;
+- row này là `running`, có live owned process tree (`cmd → cargo → rustc`), không phải orphan/stale/leak; không được kill hoặc sửa ledger từ wave này.
+- owner tự kết thúc trước `2026-08-16 19:34:46 +07:00`; final read-only health snapshot trở lại `active_heavy_claim_count=0`, overlap/orphan/fence/stale đều `0`. `active_run_count=4` là projection point-in-time và không vi phạm hard gate khi không có stale run/fence/job/claim.
+- live rerun quan sát một managed Job của runtime cũ terminalize sau khi schema v7 đã backfill claim; Job đã `exited` nhưng claim còn active. Reconcile mới chỉ release claim khi owner hash khớp đúng một terminal Job, không kill/mutate process và không đụng owner chưa xác định; focused governor file tăng từ 14 lên 15 tests và PASS.
+- final fingerprint-complete live run tại `13:53:50Z..13:57:44Z` PASS 10/10 với exact Connector/Runner hashes, final LSP `STOPPED`, claim/overlap/orphan/fence/stale đều `0`. Sau Ctrl-C, Connector Server, Runner, rust-analyzer, Cargo và rustc đều không còn process.
+
+Root `webcodex` Connector/tool-runtime test binary đã vượt blocker `E0063` cũ và đi vào link, nhưng focused command `cargo test -p webcodex -j 1 connector_runtime::semantic_bridge::tests` được dừng graceful trước test execution khi riêng Cargo/rustc đạt khoảng 5.1 GiB working-set và host chỉ còn 10.25% RAM trống. Sau Ctrl-C đúng owned job, Cargo/rustc trở về 0 và free RAM phục hồi 41.37%. Không tuyên bố test này PASS; production bin build, Core/Runner focused tests và real Connector route 10-cycle soak là evidence acceptance hiện có. Không đánh đổi host safety để chạy một root test binary quá rộng.
+
+### Lệnh live acceptance đã thực thi
+
+```powershell
+python resources/coding-tools-mcp/scripts/run_live_connector_resource_soak.py `
+  --repository E:\Github\Tools-Codex-web `
+  --file src/connector_runtime/semantic_bridge.rs `
+  --query semantic_resource_status `
+  --connector-artifact-id sha256:c4306afe77ed17a4e281fdaad40cb79bfb18f946d55777e60106041e7515557d `
+  --runner-artifact-id sha256:7d6c4a013016d717cacd71d678a1a34b59ca0d7ab3f7c88d531cf2f64029b0a7 `
+  --cycles 10 `
+  --output .coding-tools/orchestration/p3-live-connector-resource-soak.json
+```
+
+Harness không nhận raw credential trên command line; nó chỉ dùng native-LSP binding đã được cấu hình qua contract hiện hữu. Final report có `passed=true`, đủ 10 cycles và đầy đủ working-set/latency series, nên hai checklist R3 đã được đóng.
+
+### Delivery state
+
+Không commit, push, release, deploy, restart service, kill process theo tên hoặc chạy automatic `cargo clean`. Worktree vẫn dirty bởi cả implementation này và các thay đổi concurrent ngoài scope; selective delivery còn chờ authorization riêng.
+
+## 26.13. EOCL/operator observability continuation — 2026-08-16 21:18 +07:00
+
+Đánh giá delivery tiếp theo phát hiện một gap nội bộ độc lập với live soak: `ExecutionResourceGovernor.snapshot(limit=N)` tính đúng `active_command_count`, nhưng trước đây lấy trực tiếp `N` row mới nhất nên một active Job cũ có thể biến mất khỏi bounded `jobs` khi terminal history mới hơn đủ lớn.
+
+Implementation đã được thu hẹp đúng hai file governor/test:
+
+- bounded `jobs` ưu tiên active lifecycle trước, sau đó mới dùng terminal/history để lấp phần limit còn lại;
+- mỗi nhóm vẫn giữ deterministic order hiện hữu và chỉ chọn các row mới nhất nếu chính nhóm đó vượt limit;
+- counts và sanitized public row fields không đổi; không expose command text, argv, environment, secret hoặc schema field mới;
+- regression tạo một active Job cũ cùng năm terminal Job mới hơn với `limit=3`, rồi chứng minh active Job vẫn đứng đầu và hai terminal row mới nhất vẫn giữ thứ tự.
+
+Verification:
+
+```text
+python -m py_compile coding_tools_mcp/execution_resources.py = PASS
+focused snapshot regression = 1 passed, 19 deselected
+test_execution_resources.py = 20 passed
+check_module_size.py = PASS
+```
+
+Proof lineage sau live soak được record tách bạch:
+
+```text
+live base fingerprint       = 629dfd66b50e58c396dd89c93882159df053e0e85ea000ffeed2c7c2deee13c2
+post-observability fingerprint = b516e25578765b114c21df369ca9a2f4f3a1735227a051e5092b06de04639960
+fingerprinted files         = 34
+delta from live base        = execution_resources.py + test_execution_resources.py only
+```
+
+Không gán artifact live cũ cho byte-for-byte source mới. Live 10-cycle evidence vẫn là base proof; delta chỉ đổi bounded selection của sanitized operator snapshot, không đổi admission, claim, process lifecycle, Connector route hoặc LSP provider. Vì vậy full governor file 20/20 và focused regression là sufficient changed-behavior proof; không restart topology/rerun live soak chỉ để làm nghi thức.
+
+Projection quan sát lúc `2026-08-16 21:18 +07:00`, `run_id=ae9ac4714f3748008b2cb5830c2efd68` ở `REPLAN`, là run chẩn đoán observability này, không phải P2/P3 soak. Check cũ dùng selector `-k "snapshot or active"` khi chưa có test mang tên tương ứng nên pytest trả exit `5` với `19 deselected`; run đó không ghi source (`modified_files=[]`). Continuation hiện tại đã triển khai và prove objective, nhưng không manually edit ledger/task-state hoặc giả lập `ACCEPTING/CHECKPOINTED` cho historical run. `.coding-tools/task-state.json` là volatile projection và đã chuyển sang run concurrent khác sau observation này; causal history phải đọc từ ledger.
+
+Delivery policy cũng được reconcile theo `AGENTS.md`: SQLite ledger là first-class volatile runtime evidence, không phải source để commit. Selective source delivery phải loại `.coding-tools/orchestration/ledger.sqlite3`, WAL/SHM và projections, đồng thời giữ source fingerprint/report checksum trong maintained documentation. Commit/push vẫn chờ authorization riêng.

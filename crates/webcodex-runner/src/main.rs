@@ -29,10 +29,12 @@ use shell_protocol::{
     ShellAgentShellRequest, ShellClientCapabilities, ShellClientRegisterRequest,
     ShellClientRegisterResponse, ShellCommandExecutionState, ShellJobContext, ShellJobInventory,
     ShellJobLogSnapshot, ShellJobSnapshot, ShellJobStreamSnapshot, ShellJobValidationProgress,
-    ShellJobValidationStep, ShellProfileSummaryEntry, ShellProfilesSummary,
-    AGENT_PROTOCOL_VERSION_POLLING_V1, JOB_INVENTORY_MAX_ACTIVE_JOBS,
+    ShellJobValidationSourceIdentity, ShellJobValidationStep, ShellProfileSummaryEntry,
+    ShellProfilesSummary, AGENT_PROTOCOL_VERSION_POLLING_V1, JOB_INVENTORY_MAX_ACTIVE_JOBS,
     JOB_INVENTORY_MAX_SERIALIZED_BYTES, JOB_INVENTORY_MAX_TERMINAL_JOBS,
-    JOB_SNAPSHOT_STREAM_MAX_BYTES, JOB_TERMINAL_RETENTION_SECS, VALIDATION_STEP_SPAWN_FAILED_CODE,
+    JOB_SNAPSHOT_STREAM_MAX_BYTES, JOB_TERMINAL_RETENTION_SECS, VALIDATION_SOURCE_DIRTY_CODE,
+    VALIDATION_SOURCE_DRIFT_CODE, VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE,
+    VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE, VALIDATION_STEP_SPAWN_FAILED_CODE,
     VALIDATION_STEP_WAIT_FAILED_CODE, VALIDATION_TOOL_UNAVAILABLE_CODE,
 };
 
@@ -1546,6 +1548,7 @@ fn agent_register_capabilities(cfg: &AgentConfig) -> ShellClientCapabilities {
     // inferred from `ssh_shell` + `persistent_shell`.
     capabilities.ssh_persistent_shell = SshConnectionPool::is_available() && cfg!(unix);
     capabilities.structured_validation_argv = true;
+    capabilities.exact_source_validation = true;
     capabilities.structured_process_argv = true;
     capabilities.structured_script_payload = true;
     capabilities.structured_execution_jobs = true;
@@ -2004,6 +2007,22 @@ fn validation_failed_step(status: &str, error: Option<&str>, step_name: &str) ->
             .and_then(validation_infrastructure_failure_code)
             .is_none())
     .then(|| step_name.to_string())
+}
+
+fn validation_source_guard(
+    cwd: &Path,
+    source_identity: &ShellJobValidationSourceIdentity,
+    shutdown: Option<&AtomicBool>,
+) -> Result<(), &'static str> {
+    let current = webcodex_runner::project_git_source_state(cwd, shutdown)
+        .ok_or(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE)?;
+    if current.head != source_identity.expected_git_head {
+        return Err(VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE);
+    }
+    if source_identity.require_clean_worktree && current.dirty {
+        return Err(VALIDATION_SOURCE_DIRTY_CODE);
+    }
+    Ok(())
 }
 
 fn validation_module_available(
@@ -3376,6 +3395,11 @@ impl JobManager {
             );
             return;
         }
+        let validation_source_identity = request
+            .job_context
+            .as_ref()
+            .and_then(|context| context.validation.as_ref())
+            .and_then(|metadata| metadata.source_identity.clone());
         let sandbox_mode = request.sandbox.clone();
         let inspect_scratch = match sandbox_mode.as_deref() {
             None => None,
@@ -3509,6 +3533,24 @@ impl JobManager {
             self.shutdown_rejection(&request);
             return;
         };
+        if let Some(source_identity) = validation_source_identity.as_ref() {
+            if let Err(error) = validation_source_guard(
+                &cwd_path,
+                source_identity,
+                Some(self.shutting_down.as_ref()),
+            ) {
+                self.fail_job(
+                    &request,
+                    error.to_string(),
+                    Some(ShellJobValidationProgress {
+                        completed: 0,
+                        current_step: None,
+                        failed_step: None,
+                    }),
+                );
+                return;
+            }
+        }
         let start = Instant::now();
         let mut command = commands.pop_front().expect("validated non-empty plan");
         let spawn = ManagedChild::spawn(&mut command);
@@ -3575,6 +3617,8 @@ impl JobManager {
         let lifecycle = Arc::clone(&self.lifecycle);
         let shutting_down = Arc::clone(&self.shutting_down);
         let manager = self.clone_for_worker();
+        let validation_cwd = cwd_path.clone();
+        let validation_source_identity_for_worker = validation_source_identity.clone();
         let inspect_scratch_guard = inspect_scratch;
         let worker_guard = self.workers.enter();
         std::thread::spawn(move || {
@@ -3584,7 +3628,7 @@ impl JobManager {
             let _inspect_scratch_guard = inspect_scratch_guard;
             let timeout_secs = request.timeout_secs.min(policy.max_timeout_secs).max(1);
             let mut step_index = 0;
-            let (final_status, out, err, final_progress) = loop {
+            let (mut final_status, out, err, mut final_progress) = loop {
                 const OUTPUT_CHANNEL_CAPACITY: usize = 64;
                 let (tx, rx) = mpsc::sync_channel::<OutputChunk>(OUTPUT_CHANNEL_CAPACITY);
                 let mut readers = Vec::new();
@@ -3748,6 +3792,30 @@ impl JobManager {
                     let mut next_command = commands
                         .pop_front()
                         .expect("one command per validation step");
+                    if let Some(source_identity) = validation_source_identity_for_worker.as_ref() {
+                        if validation_source_guard(
+                            &validation_cwd,
+                            source_identity,
+                            Some(shutting_down.as_ref()),
+                        )
+                        .is_err()
+                        {
+                            break (
+                                (
+                                    "failed".to_string(),
+                                    None,
+                                    Some(VALIDATION_SOURCE_DRIFT_CODE.to_string()),
+                                ),
+                                out,
+                                err,
+                                validation.then_some(ShellJobValidationProgress {
+                                    completed: step_index,
+                                    current_step: None,
+                                    failed_step: None,
+                                }),
+                            );
+                        }
+                    }
                     let spawn = ManagedChild::spawn(&mut next_command);
                     let mut next = match spawn {
                         Ok(child) => child,
@@ -3838,6 +3906,28 @@ impl JobManager {
                 });
                 break (step_status, out, err, progress);
             };
+            if validation && final_status.0 == "completed" {
+                if let Some(source_identity) = validation_source_identity_for_worker.as_ref() {
+                    if validation_source_guard(
+                        &validation_cwd,
+                        source_identity,
+                        Some(shutting_down.as_ref()),
+                    )
+                    .is_err()
+                    {
+                        final_status = (
+                            "failed".to_string(),
+                            None,
+                            Some(VALIDATION_SOURCE_DRIFT_CODE.to_string()),
+                        );
+                        final_progress = Some(ShellJobValidationProgress {
+                            completed: steps.len(),
+                            current_step: None,
+                            failed_step: None,
+                        });
+                    }
+                }
+            }
             manager.update_and_send(
                 &job_id,
                 RunnerJobDelta {

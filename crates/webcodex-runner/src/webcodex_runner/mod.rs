@@ -60,7 +60,7 @@ pub(crate) use projects::{
 };
 pub(crate) use projects::{
     handle_project_lifecycle_op, handle_project_op_with_temporary_projects_root,
-    handle_resolve_or_register_project, AgentProjectCache,
+    handle_resolve_or_register_project, project_git_source_state, AgentProjectCache,
 };
 pub(crate) use shell::{
     configured_prepared_shell_job_command, configured_shell_job_command,

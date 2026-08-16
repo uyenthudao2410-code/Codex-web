@@ -33,6 +33,330 @@ async fn poll_start_validation_job(
     (request, job_id)
 }
 
+#[tokio::test]
+async fn exact_source_capable_validation_attaches_full_clean_head_identity() {
+    let client_id = "vhandoff-exact-source";
+    let runtime = runtime_with_agent_project(client_id)
+        .with_validation_sync_wait(std::time::Duration::from_millis(50));
+    let caps = ShellClientCapabilities {
+        async_shell_jobs: true,
+        structured_validation_argv: true,
+        exact_source_validation: true,
+        ..Default::default()
+    };
+    let expected_head = "0123456789abcdef0123456789abcdef01234567";
+    let mut project_summary = registered_project("agent-proj", "/tmp/agent-proj");
+    project_summary.git_head = Some(expected_head.to_string());
+    project_summary.git_dirty = Some(false);
+    register_agent_with_projects(&runtime, client_id, None, caps, vec![project_summary]).await;
+    let project = agent_test_project_id(client_id);
+
+    let task = tokio::spawn({
+        let runtime = runtime.clone();
+        async move {
+            runtime
+                .cargo_check(project, None, None, None, None, None, None, Some(600))
+                .await
+        }
+    });
+    let (request, job_id) = poll_start_validation_job(&runtime, client_id).await;
+    let source_identity = request
+        .job_context
+        .as_ref()
+        .and_then(|context| context.validation.as_ref())
+        .and_then(|validation| validation.source_identity.as_ref())
+        .expect("exact-source capable Runner must receive validation source identity");
+    assert_eq!(source_identity.expected_git_head, expected_head);
+    assert!(source_identity.require_clean_worktree);
+
+    runtime
+        .shell_clients
+        .update_job(cargo_test_update(
+            client_id,
+            &request.request_id,
+            &job_id,
+            "completed",
+            "Finished `dev` profile [unoptimized + debuginfo] target(s)\n",
+            "",
+            Some(0),
+            completed_progress(),
+            true,
+        ))
+        .await
+        .unwrap();
+    let result = task.await.unwrap();
+    assert!(result.success, "{:?}", result.error);
+}
+
+#[tokio::test]
+async fn exact_source_capable_dirty_validation_fails_before_enqueue() {
+    let client_id = "vhandoff-exact-source-dirty";
+    let runtime = runtime_with_agent_project(client_id);
+    let caps = ShellClientCapabilities {
+        async_shell_jobs: true,
+        structured_validation_argv: true,
+        exact_source_validation: true,
+        ..Default::default()
+    };
+    let mut project_summary = registered_project("agent-proj", "/tmp/agent-proj");
+    project_summary.git_head = Some("0123456789abcdef0123456789abcdef01234567".to_string());
+    project_summary.git_dirty = Some(true);
+    register_agent_with_projects(&runtime, client_id, None, caps, vec![project_summary]).await;
+    let project = agent_test_project_id(client_id);
+
+    let result = runtime
+        .cargo_check(project, None, None, None, None, None, None, Some(600))
+        .await;
+    assert!(!result.success);
+    assert_eq!(result.output["command_started"], false);
+    assert_eq!(result.output["failure_kind"], "validation_source_dirty");
+    assert!(next_patch_agent_request(&runtime, client_id)
+        .await
+        .is_none());
+    assert!(runtime.shell_clients.list_jobs(Some(10)).await.is_empty());
+}
+
+fn server_first_validation_caps(server_compute: bool) -> ShellClientCapabilities {
+    ShellClientCapabilities {
+        async_shell_jobs: true,
+        structured_validation_argv: true,
+        exact_source_validation: true,
+        server_compute,
+        ..Default::default()
+    }
+}
+
+fn clean_project_at_head(head: &str) -> crate::shell_protocol::ShellAgentProjectSummary {
+    let mut project = registered_project("agent-proj", "/tmp/agent-proj");
+    project.git_head = Some(head.to_string());
+    project.git_dirty = Some(false);
+    project
+}
+
+#[tokio::test]
+async fn server_first_validation_dispatches_to_distinct_opted_in_exact_target() {
+    let runtime = runtime_with_agent_project("server-first-source")
+        .with_validation_sync_wait(std::time::Duration::from_millis(50));
+    let head = "0123456789abcdef0123456789abcdef01234567";
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        "server-first-source",
+        None,
+        server_first_validation_caps(false),
+        vec![clean_project_at_head(head)],
+        Some(1),
+    )
+    .await;
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        "server-first-compute",
+        None,
+        server_first_validation_caps(true),
+        vec![clean_project_at_head(head)],
+        Some(2),
+    )
+    .await;
+    let project = agent_test_project_id("server-first-source");
+    let task = tokio::spawn({
+        let runtime = runtime.clone();
+        async move {
+            runtime
+                .cargo_check(project, None, None, None, None, None, None, Some(600))
+                .await
+        }
+    });
+    let (request, job_id) = poll_start_validation_job(&runtime, "server-first-compute").await;
+    assert!(next_patch_agent_request(&runtime, "server-first-source")
+        .await
+        .is_none());
+    assert_eq!(
+        request
+            .job_context
+            .as_ref()
+            .and_then(|context| context.runtime_project_id.as_deref()),
+        Some("agent:server-first-compute:agent-proj")
+    );
+    let source_identity = request
+        .job_context
+        .as_ref()
+        .and_then(|context| context.validation.as_ref())
+        .and_then(|validation| validation.source_identity.as_ref())
+        .expect("remote compute validation must preserve source identity");
+    assert_eq!(source_identity.expected_git_head, head);
+    assert!(source_identity.require_clean_worktree);
+    runtime
+        .shell_clients
+        .update_job(cargo_test_update(
+            "server-first-compute",
+            &request.request_id,
+            &job_id,
+            "completed",
+            "Finished `dev` profile [unoptimized + debuginfo] target(s)\n",
+            "",
+            Some(0),
+            completed_progress(),
+            true,
+        ))
+        .await
+        .unwrap();
+    assert!(task.await.unwrap().success);
+}
+
+#[tokio::test]
+async fn server_first_validation_never_selects_source_runner_as_compute_target() {
+    let runtime = runtime_with_agent_project("server-first-self")
+        .with_validation_sync_wait(std::time::Duration::from_millis(50));
+    let head = "1123456789abcdef0123456789abcdef01234567";
+    register_agent_with_projects_and_concurrency(
+        &runtime,
+        "server-first-self",
+        None,
+        server_first_validation_caps(true),
+        vec![clean_project_at_head(head)],
+        Some(2),
+    )
+    .await;
+    let project = agent_test_project_id("server-first-self");
+    let task = tokio::spawn({
+        let runtime = runtime.clone();
+        async move {
+            runtime
+                .cargo_check(project, None, None, None, None, None, None, Some(600))
+                .await
+        }
+    });
+    let (request, job_id) = poll_start_validation_job(&runtime, "server-first-self").await;
+    runtime
+        .shell_clients
+        .update_job(cargo_test_update(
+            "server-first-self",
+            &request.request_id,
+            &job_id,
+            "completed",
+            "Finished `dev` profile\n",
+            "",
+            Some(0),
+            completed_progress(),
+            true,
+        ))
+        .await
+        .unwrap();
+    assert!(task.await.unwrap().success);
+}
+
+#[tokio::test]
+async fn ineligible_server_compute_candidates_fall_back_to_source_runner() {
+    let head = "2123456789abcdef0123456789abcdef01234567";
+    for case in ["dirty", "mismatch", "unknown-capacity", "not-opted-in"] {
+        let source_id = format!("server-first-source-{case}");
+        let target_id = format!("server-first-target-{case}");
+        let runtime = runtime_with_agent_project(&source_id)
+            .with_validation_sync_wait(std::time::Duration::from_millis(50));
+        register_agent_with_projects_and_concurrency(
+            &runtime,
+            &source_id,
+            None,
+            server_first_validation_caps(false),
+            vec![clean_project_at_head(head)],
+            Some(1),
+        )
+        .await;
+        let mut target_project = clean_project_at_head(head);
+        let mut target_caps = server_first_validation_caps(true);
+        let target_capacity = match case {
+            "dirty" => {
+                target_project.git_dirty = Some(true);
+                Some(2)
+            }
+            "mismatch" => {
+                target_project.git_head =
+                    Some("3123456789abcdef0123456789abcdef01234567".to_string());
+                Some(2)
+            }
+            "unknown-capacity" => None,
+            "not-opted-in" => {
+                target_caps.server_compute = false;
+                Some(2)
+            }
+            _ => unreachable!(),
+        };
+        register_agent_with_projects_and_concurrency(
+            &runtime,
+            &target_id,
+            None,
+            target_caps,
+            vec![target_project],
+            target_capacity,
+        )
+        .await;
+        let project = agent_test_project_id(&source_id);
+        let task = tokio::spawn({
+            let runtime = runtime.clone();
+            async move {
+                runtime
+                    .cargo_check(project, None, None, None, None, None, None, Some(600))
+                    .await
+            }
+        });
+        let (request, job_id) = poll_start_validation_job(&runtime, &source_id).await;
+        assert!(next_patch_agent_request(&runtime, &target_id)
+            .await
+            .is_none());
+        runtime
+            .shell_clients
+            .update_job(cargo_test_update(
+                &source_id,
+                &request.request_id,
+                &job_id,
+                "completed",
+                "Finished `dev` profile\n",
+                "",
+                Some(0),
+                completed_progress(),
+                true,
+            ))
+            .await
+            .unwrap();
+        assert!(task.await.unwrap().success, "fallback case {case}");
+    }
+}
+
+#[test]
+fn server_first_auto_offload_scope_excludes_fmt_short_and_sandboxed_validation() {
+    use crate::tool_runtime::compute_placement::validation_auto_offload_eligible;
+
+    assert!(validation_auto_offload_eligible(
+        "cargo_check",
+        600,
+        90,
+        None
+    ));
+    assert!(validation_auto_offload_eligible(
+        "cargo_test",
+        600,
+        90,
+        None
+    ));
+    assert!(!validation_auto_offload_eligible(
+        "cargo_fmt",
+        600,
+        90,
+        None
+    ));
+    assert!(!validation_auto_offload_eligible(
+        "cargo_check",
+        90,
+        90,
+        None
+    ));
+    assert!(!validation_auto_offload_eligible(
+        "cargo_check",
+        600,
+        90,
+        Some(crate::command_sandbox::INSPECT_SANDBOX_MODE)
+    ));
+}
+
 async fn wait_for_agent_request(
     runtime: &ToolRuntime,
     client_id: &str,

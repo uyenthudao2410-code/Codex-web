@@ -124,19 +124,28 @@ def validate_temporary_target(repository: Path, target: Path) -> Path:
     return target
 
 
-def managed_active_heavy_count(ledger_path: Path) -> int:
+def active_heavy_claim_count(ledger_path: Path) -> int:
     if not ledger_path.exists():
         return 0
     uri = f"file:{ledger_path.as_posix()}?mode=ro"
     try:
         connection = sqlite3.connect(uri, uri=True)
         try:
-            row = connection.execute(
-                """SELECT COUNT(*) FROM managed_process_jobs
-                   WHERE resource_class='HEAVY'
-                     AND lifecycle_state IN (?,?,?,?)""",
-                ACTIVE_LIFECYCLES,
+            claims_exist = connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='checkout_resource_claims'"
             ).fetchone()
+            if claims_exist:
+                row = connection.execute(
+                    """SELECT COUNT(*) FROM checkout_resource_claims
+                       WHERE resource_class='HEAVY' AND lifecycle_state='active'"""
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    """SELECT COUNT(*) FROM managed_process_jobs
+                       WHERE resource_class='HEAVY'
+                         AND lifecycle_state IN (?,?,?,?)""",
+                    ACTIVE_LIFECYCLES,
+                ).fetchone()
         finally:
             connection.close()
         return int(row[0] or 0) if row else 0
@@ -242,12 +251,12 @@ def soft_cleanup(
     ]
     if not targets:
         raise HygieneError("soft cleanup requires at least one explicit temporary target")
-    active_heavy = managed_active_heavy_count(
+    active_heavy = active_heavy_claim_count(
         repository / ".coding-tools/orchestration/ledger.sqlite3"
     )
     guards = process_observer(targets)
     if active_heavy:
-        raise HygieneError("soft cleanup blocked by an active managed HEAVY owner")
+        raise HygieneError("soft cleanup blocked by an active HEAVY scheduling claim")
     if guards.get("observed") is not True:
         raise HygieneError("soft cleanup blocked because process ownership is unavailable")
     if int(guards.get("active_build_process_count", 0) or 0):
@@ -281,7 +290,7 @@ def soft_cleanup(
         "removed": removed,
         "skipped": skipped,
         "bytes_removed": sum(int(row["bytes_removed"]) for row in removed),
-        "active_managed_heavy_count": active_heavy,
+        "active_heavy_claim_count": active_heavy,
         "process_guards": guards,
         "hard_cleanup_performed": False,
     }

@@ -643,12 +643,24 @@ pub(in crate::tool_runtime::tests) async fn register_agent_with_projects(
     caps: ShellClientCapabilities,
     projects: Vec<ShellAgentProjectSummary>,
 ) {
+    register_agent_with_projects_and_concurrency(runtime, client_id, owner, caps, projects, None)
+        .await;
+}
+
+pub(in crate::tool_runtime::tests) async fn register_agent_with_projects_and_concurrency(
+    runtime: &ToolRuntime,
+    client_id: &str,
+    owner: Option<&str>,
+    caps: ShellClientCapabilities,
+    projects: Vec<ShellAgentProjectSummary>,
+    job_concurrency_limit: Option<usize>,
+) {
     runtime
         .shell_clients
         .register(ShellClientRegisterRequest {
             process_started_at: None,
             build: None,
-            job_concurrency_limit: None,
+            job_concurrency_limit,
             job_inventory: None,
             client_id: client_id.to_string(),
             agent_instance_id: "inst".to_string(),

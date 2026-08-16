@@ -525,6 +525,32 @@ impl LspSupervisor {
         )
     }
 
+    pub(crate) fn request_with_document_and_encoding(
+        &self,
+        validated_project_root: &Path,
+        kind: LspServerKind,
+        document_uri: &str,
+        language_id: &str,
+        text: &str,
+        method: &str,
+        params: Value,
+        allow_server_start: bool,
+    ) -> Result<(Value, PositionEncoding), LspError> {
+        self.request_with_timeout_and_encoding_inner(
+            validated_project_root,
+            kind,
+            method,
+            params,
+            self.inner.config.request_timeout,
+            Some(DocumentOpen {
+                uri: document_uri,
+                language_id,
+                text,
+            }),
+            allow_server_start,
+        )
+    }
+
     pub(crate) fn prepare_document(
         &self,
         validated_project_root: &Path,
@@ -662,6 +688,7 @@ impl LspSupervisor {
             params,
             self.inner.config.request_timeout,
             None,
+            true,
         )
     }
 
@@ -681,6 +708,7 @@ impl LspSupervisor {
             params,
             timeout,
             document,
+            true,
         )
         .map(|(value, _)| value)
     }
@@ -693,26 +721,33 @@ impl LspSupervisor {
         params: Value,
         timeout: Duration,
         document: Option<DocumentOpen<'_>>,
+        allow_server_start: bool,
     ) -> Result<(Value, PositionEncoding), LspError> {
         let key = ProcessKey {
             project_root: canonical_project_root(validated_project_root)?,
             kind,
         };
         let mut last_error = None;
-        for attempt in 0..=1 {
-            let server = match self.get_or_start(&key, attempt == 1) {
-                Ok(server) => server,
-                Err(error) if attempt == 0 && error.permits_restart() => {
-                    last_error = Some(error);
-                    continue;
-                }
-                Err(error) if attempt == 1 && error.permits_restart() => {
-                    return Err(LspError::RestartExhausted(error.to_string()));
-                }
-                Err(error) => return Err(error),
+        let final_attempt = usize::from(allow_server_start);
+        for attempt in 0..=final_attempt {
+            let scope = LspRequestScope::from_method(method);
+            let (server, _operation) = if allow_server_start {
+                let server = match self.get_or_start(&key, attempt == 1) {
+                    Ok(server) => server,
+                    Err(error) if attempt == 0 && error.permits_restart() => {
+                        last_error = Some(error);
+                        continue;
+                    }
+                    Err(error) if attempt == 1 && error.permits_restart() => {
+                        return Err(LspError::RestartExhausted(error.to_string()));
+                    }
+                    Err(error) => return Err(error),
+                };
+                let operation = self.admit_operation(&key, &server, scope)?;
+                (server, operation)
+            } else {
+                self.get_existing_admitted(&key, scope)?
             };
-            let _operation =
-                self.admit_operation(&key, &server, LspRequestScope::from_method(method))?;
             if let Some(document) = document {
                 if let Err(error) = server.synchronize_document(document) {
                     if attempt == 0 && error.permits_restart() {
@@ -805,13 +840,23 @@ impl LspSupervisor {
         count
     }
 
-    fn admit_operation<'a>(
+    fn admit_operation(
         &self,
         key: &ProcessKey,
-        server: &'a ServerInstance,
+        server: &Arc<ServerInstance>,
         scope: LspRequestScope,
-    ) -> Result<ServerOperationGuard<'a>, LspError> {
-        let operation = server.begin_operation()?;
+    ) -> Result<OwnedServerOperationGuard, LspError> {
+        let operation = server.begin_owned_operation()?;
+        self.validate_admitted_operation(key, server, operation, scope)
+    }
+
+    fn validate_admitted_operation(
+        &self,
+        key: &ProcessKey,
+        server: &Arc<ServerInstance>,
+        operation: OwnedServerOperationGuard,
+        scope: LspRequestScope,
+    ) -> Result<OwnedServerOperationGuard, LspError> {
         let pressure = server
             .resource_snapshot(self.inner.memory_limits)
             .pressure_state;
@@ -1069,6 +1114,50 @@ impl LspSupervisor {
         Err(LspError::ProtocolError(
             "language server start coordination failed".to_string(),
         ))
+    }
+
+    /// Attach to an already-running server while the map lock still excludes
+    /// idle removal. Missing, starting, failed, crashed or draining instances
+    /// fail without spawning or restarting a process.
+    fn get_existing_admitted(
+        &self,
+        key: &ProcessKey,
+        scope: LspRequestScope,
+    ) -> Result<(Arc<ServerInstance>, OwnedServerOperationGuard), LspError> {
+        if self.inner.shutting_down.load(Ordering::SeqCst) {
+            return Err(LspError::ServerUnavailable);
+        }
+        let (server, operation) = {
+            let servers = lock_unpoison(&self.inner.servers);
+            let slot = servers.get(key).ok_or(LspError::ServerUnavailable)?;
+            let state = lock_unpoison(&slot.state);
+            let SlotState::Running(server) = &*state else {
+                return Err(LspError::ServerUnavailable);
+            };
+            if !server.is_usable() {
+                return Err(LspError::ServerExited);
+            }
+            let server = Arc::clone(server);
+            let operation = server.begin_owned_operation()?;
+            (server, operation)
+        };
+        let pressure = server
+            .resource_snapshot(self.inner.memory_limits)
+            .pressure_state;
+        let reason = match (pressure, scope) {
+            (LspMemoryPressure::Hard, _) => Some("LSP_MEMORY_HARD_LIMIT"),
+            (LspMemoryPressure::Soft, LspRequestScope::Workspace) => Some("LSP_MEMORY_PRESSURE"),
+            _ => None,
+        };
+        if let Some(reason) = reason {
+            drop(operation);
+            self.drain_server_if_idle(key, &server);
+            return Err(LspError::MemoryPressure {
+                state: pressure,
+                reason,
+            });
+        }
+        Ok((server, operation))
     }
 
     fn check_capacity(
@@ -1822,11 +1911,11 @@ struct OperationGate {
     active_operations: usize,
 }
 
-struct ServerOperationGuard<'a> {
-    server: &'a ServerInstance,
+struct OwnedServerOperationGuard {
+    server: Arc<ServerInstance>,
 }
 
-impl Drop for ServerOperationGuard<'_> {
+impl Drop for OwnedServerOperationGuard {
     fn drop(&mut self) {
         let mut gate = lock_unpoison(&self.server.operation_gate);
         gate.active_operations = gate.active_operations.saturating_sub(1);
@@ -2023,8 +2112,14 @@ impl ServerInstance {
         Ok(())
     }
 
-    fn request(&self, method: &str, params: Value, timeout: Duration) -> Result<Value, LspError> {
-        let _operation = self.begin_operation()?;
+    #[cfg(test)]
+    fn request(
+        self: &Arc<Self>,
+        method: &str,
+        params: Value,
+        timeout: Duration,
+    ) -> Result<Value, LspError> {
+        let _operation = self.begin_owned_operation()?;
         self.request_admitted(method, params, timeout)
     }
 
@@ -2054,13 +2149,15 @@ impl ServerInstance {
         }
     }
 
-    fn begin_operation(&self) -> Result<ServerOperationGuard<'_>, LspError> {
+    fn begin_owned_operation(self: &Arc<Self>) -> Result<OwnedServerOperationGuard, LspError> {
         let mut gate = lock_unpoison(&self.operation_gate);
         if gate.draining || self.shutdown_started.load(Ordering::SeqCst) {
             return Err(LspError::ServerExited);
         }
         gate.active_operations = gate.active_operations.saturating_add(1);
-        Ok(ServerOperationGuard { server: self })
+        Ok(OwnedServerOperationGuard {
+            server: Arc::clone(self),
+        })
     }
 
     /// Atomically reject new operations only when no admitted operation is

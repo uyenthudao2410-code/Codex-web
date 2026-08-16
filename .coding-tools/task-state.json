@@ -1,10 +1,259 @@
 {
   "version": 2,
-  "task_id": "6a0bc99273394af384151751043c039b",
-  "orchestration": {},
-  "objective": "Run a workspace command",
-  "status": "active",
-  "steps": [],
-  "current_step": "Execute command",
-  "current_command": {
-    "command": "git add -A -- . \":(exclude).coding-tools/orchestration/ledger.sqlite3-shm\" \":(exclude).coding-tools/orchestration/ledger.sqlite3-wal\" && echo ---UNMERGED--- && git diff --cached --name-only --diff-filter=U && echo ---LEDGER--- && git diff --cached --name-only -- .coding-tools/orchestration/ledger.sqlite3 && echo ---TRANSIENT--- && git status --short -- .coding-tools/orchestration/ledger.sqlite3-shm .codin
+  "task_id": "a6e6acf1968b4010b7080ff147880c3f",
+  "orchestration": {
+    "run_id": "c70a500f5c384e4f8d9af68e84bee882",
+    "wave_id": "76d5d901ad6c4614a514ec1741b9c132",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "cf6cb6ddbf29d90515d003ce72490ffda985c37f",
+    "worktree_fp": "07ddd79675f14e94f7d23908e4f51022aa36d2122cbeb73590f9d8d777cfabe7",
+    "contract_fp": ""
+  },
+  "objective": "Complete the existing R2A exact-source canary run c70a500f5c384e4f8d9af68e84bee882 without further source changes. Current-source inspection proves the previously missing compatibility literals now exist: exact_source_validation is explicitly false in legacy/compatibility transport and test literals, while the current runner advertises true only from implemented runtime capability. Run one clean proof wave only: cargo fmt check and cargo check --tests. Do not run root cargo test or any linker-heavy monolithic suite. Preserve all unrelated R2B and lifecycle WIP. If both checks pass, transition to acceptance.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-16T14:29:45.137Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-16T14:29:45.137Z"
+    }
+  ],
+  "current_step": "Completed",
+  "current_command": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+  "created_at": "2026-08-16T14:28:23.448Z",
+  "updated_at": "2026-08-16T14:31:36.852Z",
+  "events": [
+    {
+      "time": "2026-08-16T14:28:23.448Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-16T14:28:23.690Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/reconcile_execution_resources.py --workspace . --repair-owned-codex-sidecar",
+        "session_id": "xc-swFcAk48tcnbceNLI8fXX"
+      }
+    },
+    {
+      "time": "2026-08-16T14:28:24.306Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/reconcile_execution_resources.py --workspace . --repair-owned-codex-sidecar",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-16T14:28:37.249Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "orchestration"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T14:28:37.588Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "RUNTIME_BUSY"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:07.899Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:33.440Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:33.923Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:34.756Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:34.756Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:36.940Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:37.238Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:37.950Z",
+      "event": "command_started",
+      "details": {
+        "command": "cargo fmt --all -- --check",
+        "session_id": "nW1w-aPezp4nhEph7BDow7Cx"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:42.740Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cargo fmt --all -- --check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:43.563Z",
+      "event": "command_started",
+      "details": {
+        "command": "cargo check --tests -q",
+        "session_id": "_RRg3MSaWqxHU30DwkBMJ7Jh"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:44.987Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cargo check --tests -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:45.136Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:45.137Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:45.260Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:45.260Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T14:29:45.723Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-16T14:30:30.898Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-16T14:30:32.198Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-16T14:30:32.198Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

@@ -73,6 +73,7 @@ fn test_config(projects_dir: PathBuf) -> AgentConfig {
         poll_interval_ms: 1000,
         capabilities: None,
         max_concurrent_jobs: None,
+        lsp_idle_ttl_seconds: None,
         policy: unrestricted_test_policy(),
         shell: ShellConfig::default(),
         ssh: SshConfig::default(),
@@ -971,8 +972,40 @@ allow_cwd_anywhere = true
 
     let cfg = load_config(&path).unwrap();
     assert_eq!(cfg.shell, ShellConfig::default());
+    assert_eq!(cfg.lsp_idle_ttl_seconds, None);
     assert_eq!(cfg.shell.max_persistent_shells, 8);
     assert_eq!(cfg.shell.persistent_shell_idle_timeout_secs, 30 * 60);
+}
+
+#[test]
+fn agent_config_profile_lsp_idle_ttl_is_bounded() {
+    for (seconds, accepted) in [
+        (0, false),
+        (1, true),
+        (2, true),
+        (86_400, true),
+        (86_401, false),
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("agent.toml");
+        std::fs::write(
+            &path,
+            format!(
+                "server_url = \"http://127.0.0.1:8000\"\ntoken = \"test-token\"\nclient_id = \"agent-1\"\nlsp_idle_ttl_seconds = {seconds}\n\n[policy]\nallow_cwd_anywhere = true\n"
+            ),
+        )
+        .unwrap();
+
+        let result = load_config(&path);
+        assert_eq!(result.is_ok(), accepted, "seconds={seconds}");
+        if accepted {
+            assert_eq!(result.unwrap().lsp_idle_ttl_seconds, Some(seconds));
+        } else {
+            assert!(result
+                .unwrap_err()
+                .contains("lsp_idle_ttl_seconds must be between 1 and 86400"));
+        }
+    }
 }
 
 #[test]

@@ -21,7 +21,7 @@ except ImportError:  # Optional desktop signal; durable admission still works wi
     psutil = None  # type: ignore[assignment]
 
 from .command_parse import command_executables, shlex_split
-from .orchestration_ledger import utc_now
+from .orchestration_ledger import resource_claim_owner_hash, utc_now
 from .processes import attach_managed_process, terminate_process_group
 
 
@@ -47,6 +47,7 @@ _CARGO_LIGHT_SUBCOMMANDS = frozenset({
     "version",
 })
 _STARTING_RECONCILIATION_GRACE_SECONDS = 30.0
+_SEMANTIC_CLAIM_TTL_SECONDS = 120.0
 _RUST_ANALYZER_FOREIGN_RSS_BYTES = 1024 * 1024 * 1024
 _PROCESS_MANAGED_LOCK = threading.RLock()
 _PROCESS_MANAGED_PROCESSES: dict[
@@ -79,6 +80,37 @@ class ManagedProcessAdmission:
     owner: str
     checkout_id: str
     resource_class: str
+
+
+@dataclass
+class SemanticNativeLease:
+    decision: dict[str, Any]
+    _governor: Any
+    _claim_id: str = ""
+    _owner_id_hash: str = ""
+    _released: bool = False
+
+    def __enter__(self) -> "SemanticNativeLease":
+        return self
+
+    def __exit__(self, _exc_type: object, _exc: object, _traceback: object) -> None:
+        self.release()
+
+    def __getitem__(self, key: str) -> Any:
+        return self.decision[key]
+
+    def public_decision(self) -> dict[str, Any]:
+        return dict(self.decision)
+
+    def release(self) -> None:
+        if self._released:
+            return
+        self._released = True
+        if self._claim_id:
+            self._governor._release_semantic_claim(
+                self._claim_id,
+                self._owner_id_hash,
+            )
 
 
 def classify_resource_class(command: str, requested: object = "") -> str:
@@ -325,6 +357,161 @@ class ExecutionResourceGovernor:
             "metadata": json.loads(row["metadata_json"] or "{}"),
         }
 
+    def _claim_rows(self, *, active_only: bool = False) -> list[dict[str, Any]]:
+        clauses = ["checkout_id=?"]
+        params: list[Any] = [self.checkout_id]
+        if active_only:
+            clauses.append("lifecycle_state='active'")
+        with self.ledger._lock, self.ledger._connect() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM checkout_resource_claims WHERE {' AND '.join(clauses)} ORDER BY acquired_at",
+                params,
+            ).fetchall()
+        return [
+            {
+                "claim_id": str(row["claim_id"]),
+                "checkout_id": str(row["checkout_id"]),
+                "resource_class": str(row["resource_class"]),
+                "owner_type": str(row["owner_type"]),
+                "owner_id_hash": str(row["owner_id_hash"]),
+                "lifecycle_state": str(row["lifecycle_state"]),
+                "acquired_at": str(row["acquired_at"]),
+                "expires_at": float(row["expires_at"] or 0),
+                "updated_at": str(row["updated_at"]),
+            }
+            for row in rows
+        ]
+
+    @staticmethod
+    def _public_claim(row: dict[str, Any] | None) -> dict[str, Any] | None:
+        if row is None:
+            return None
+        return {
+            key: row.get(key)
+            for key in (
+                "claim_id",
+                "resource_class",
+                "owner_type",
+                "lifecycle_state",
+                "acquired_at",
+                "expires_at",
+                "updated_at",
+            )
+        }
+
+    @staticmethod
+    def _expire_semantic_claims_in(connection: sqlite3.Connection) -> int:
+        now = utc_now()
+        cursor = connection.execute(
+            """UPDATE checkout_resource_claims
+               SET lifecycle_state='expired',updated_at=?
+               WHERE lifecycle_state='active' AND owner_type='NATIVE_SEMANTIC'
+                 AND expires_at>0 AND expires_at<=?""",
+            (now, time.time()),
+        )
+        return max(0, int(cursor.rowcount or 0))
+
+    @staticmethod
+    def _release_terminal_managed_claims_in(
+        connection: sqlite3.Connection,
+        checkout_id: str,
+    ) -> int:
+        placeholders = ",".join("?" for _ in ACTIVE_LIFECYCLES)
+        claim_rows = connection.execute(
+            """SELECT owner_id_hash FROM checkout_resource_claims
+               WHERE checkout_id=? AND owner_type='MANAGED_JOB'
+                 AND resource_class='HEAVY' AND lifecycle_state='active'""",
+            (str(checkout_id),),
+        ).fetchall()
+        unmatched = {str(row["owner_id_hash"]) for row in claim_rows}
+        if not unmatched:
+            return 0
+        active_rows = connection.execute(
+            f"""SELECT job_id FROM managed_process_jobs
+                WHERE checkout_id=? AND resource_class='HEAVY'
+                  AND lifecycle_state IN ({placeholders})""",
+            (str(checkout_id), *sorted(ACTIVE_LIFECYCLES)),
+        ).fetchall()
+        for row in active_rows:
+            unmatched.discard(resource_claim_owner_hash("MANAGED_JOB", str(row["job_id"])))
+        if not unmatched:
+            return 0
+        terminal_rows = connection.execute(
+            f"""SELECT job_id FROM managed_process_jobs
+                WHERE checkout_id=? AND resource_class='HEAVY'
+                  AND lifecycle_state NOT IN ({placeholders})""",
+            (str(checkout_id), *sorted(ACTIVE_LIFECYCLES)),
+        ).fetchall()
+        released = 0
+        now = utc_now()
+        for row in terminal_rows:
+            owner_hash = resource_claim_owner_hash("MANAGED_JOB", str(row["job_id"]))
+            if owner_hash not in unmatched:
+                continue
+            cursor = connection.execute(
+                """UPDATE checkout_resource_claims
+                   SET lifecycle_state='released',updated_at=?
+                   WHERE owner_type='MANAGED_JOB' AND owner_id_hash=?
+                     AND lifecycle_state='active'""",
+                (
+                    now,
+                    owner_hash,
+                ),
+            )
+            released += max(0, int(cursor.rowcount or 0))
+            unmatched.discard(owner_hash)
+            if not unmatched:
+                break
+        return released
+
+    def _reconcile_inactive_claims(self) -> int:
+        with self.ledger._lock, self.ledger._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            expired = self._expire_semantic_claims_in(connection)
+            released = self._release_terminal_managed_claims_in(connection, self.checkout_id)
+            return expired + released
+
+    def _active_heavy_claim(self) -> dict[str, Any] | None:
+        return next(
+            (
+                row
+                for row in self._claim_rows(active_only=True)
+                if row["resource_class"] == "HEAVY"
+            ),
+            None,
+        )
+
+    def _release_semantic_claim(self, claim_id: str, owner_id_hash: str) -> None:
+        now = utc_now()
+        with self.ledger._lock, self.ledger._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                """UPDATE checkout_resource_claims
+                   SET lifecycle_state='released',updated_at=?
+                   WHERE claim_id=? AND owner_type='NATIVE_SEMANTIC'
+                     AND owner_id_hash=? AND lifecycle_state='active'""",
+                (now, str(claim_id), str(owner_id_hash)),
+            )
+
+    @staticmethod
+    def _release_managed_claim_in(
+        connection: sqlite3.Connection,
+        job_id: str,
+        *,
+        lifecycle_state: str = "released",
+    ) -> None:
+        connection.execute(
+            """UPDATE checkout_resource_claims
+               SET lifecycle_state=?,updated_at=?
+               WHERE owner_type='MANAGED_JOB' AND owner_id_hash=?
+                 AND lifecycle_state='active'""",
+            (
+                str(lifecycle_state),
+                utc_now(),
+                resource_claim_owner_hash("MANAGED_JOB", str(job_id)),
+            ),
+        )
+
     def _emit(self, row: dict[str, Any], event_type: str, **payload: Any) -> None:
         run_id = str(row.get("run_id") or "")
         wave_id = str(row.get("wave_id") or "")
@@ -489,13 +676,14 @@ class ExecutionResourceGovernor:
 
         return self._foreign_heavy_processes()
 
-    def semantic_native_admission(self, *, mode: str, cost: str) -> dict[str, Any]:
-        """Return a read-only native-semantic admission decision.
-
-        This deliberately does not reserve the HEAVY semaphore and does not
-        create a managed-process row: a persistent LSP remains owned by the
-        Connector/Runner process tree, not by an orchestration wave.
-        """
+    def semantic_native_claim(
+        self,
+        *,
+        mode: str,
+        cost: str,
+        resource_status: dict[str, Any] | None = None,
+    ) -> SemanticNativeLease:
+        """Atomically admit semantic work without taking process ownership."""
 
         normalized_mode = str(mode or "").strip().lower()
         normalized_cost = str(cost or "").strip().upper()
@@ -511,10 +699,8 @@ class ExecutionResourceGovernor:
             )
 
         self.reconcile()
-        active = self._rows(active_only=True)
-        active_heavy_count = sum(
-            1 for row in active if row["resource_class"] == "HEAVY"
-        )
+        active_claim = self._active_heavy_claim()
+        active_heavy_count = int(active_claim is not None)
         pressure = self._host_pressure()
         foreign = self._foreign_heavy_processes()
         foreign_heavy_present = bool(foreign)
@@ -529,13 +715,52 @@ class ExecutionResourceGovernor:
             for item in foreign
         )
 
+        provider = resource_status if isinstance(resource_status, dict) else {}
+        provider_pressure = str(provider.get("pressure_state") or "UNKNOWN").upper()
+        provider_lifecycle = str(provider.get("lifecycle_state") or "UNKNOWN").upper()
+        provider_warm = provider.get("warm") if isinstance(provider.get("warm"), bool) else None
         reason_code = ""
         if active_heavy_count:
             reason_code = "HEAVY_SLOT_BUSY"
         elif pressure.get("pressured"):
             reason_code = "HOST_RESOURCE_PRESSURE"
+        elif provider_pressure == "HARD":
+            reason_code = "LSP_RESOURCE_PRESSURE"
+        elif normalized_mode == "workspace" and provider_pressure == "SOFT":
+            reason_code = "LSP_RESOURCE_PRESSURE"
         elif foreign_conflict:
             reason_code = "UNOWNED_EXECUTION_PROCESS"
+        claim_id = ""
+        owner_id_hash = ""
+        if not reason_code and normalized_cost == "HEAVY":
+            claim_id = uuid.uuid4().hex
+            owner_id_hash = resource_claim_owner_hash("NATIVE_SEMANTIC", claim_id)
+            now = utc_now()
+            try:
+                with self.ledger._lock, self.ledger._connect() as connection:
+                    connection.execute("BEGIN IMMEDIATE")
+                    self._expire_semantic_claims_in(connection)
+                    connection.execute(
+                        """INSERT INTO checkout_resource_claims(
+                               claim_id,checkout_id,resource_class,owner_type,owner_id_hash,
+                               lifecycle_state,acquired_at,expires_at,updated_at
+                           ) VALUES(?,?,?,?,?,'active',?,?,?)""",
+                        (
+                            claim_id,
+                            self.checkout_id,
+                            "HEAVY",
+                            "NATIVE_SEMANTIC",
+                            owner_id_hash,
+                            now,
+                            time.time() + _SEMANTIC_CLAIM_TTL_SECONDS,
+                            now,
+                        ),
+                    )
+            except sqlite3.IntegrityError:
+                claim_id = ""
+                owner_id_hash = ""
+                reason_code = "HEAVY_SLOT_BUSY"
+                active_heavy_count = 1
         allowed = not reason_code
         decision = {
             "allowed": allowed,
@@ -546,12 +771,21 @@ class ExecutionResourceGovernor:
             "host_pressured": pressure.get("pressured") is True,
             "host_pressure_observed": pressure.get("observed") is True,
             "foreign_heavy_present": foreign_heavy_present,
+            "lsp_lifecycle_state": provider_lifecycle,
+            "lsp_warm": provider_warm,
+            "lsp_pressure_state": provider_pressure,
+            "claim_acquired": bool(claim_id),
         }
         with self._lock:
             self._last_semantic_admission = dict(decision)
             counter = "allowed" if allowed else "rejected"
             self._semantic_admission_counts[counter] += 1
-        return decision
+        return SemanticNativeLease(
+            decision=decision,
+            _governor=self,
+            _claim_id=claim_id,
+            _owner_id_hash=owner_id_hash,
+        )
 
     def _active_write_fence_count(self, run_id: str, wave_id: str) -> int:
         with self.ledger._lock, self.ledger._connect() as connection:
@@ -588,19 +822,29 @@ class ExecutionResourceGovernor:
 
         self.reconcile()
         if resource == "HEAVY":
-            active = self._rows(active_only=True)
-            heavy = next((row for row in active if row["resource_class"] == "HEAVY"), None)
-            if heavy is not None:
+            active_claim = self._active_heavy_claim()
+            if active_claim is not None:
+                heavy = next(
+                    (
+                        row
+                        for row in self._rows(active_only=True)
+                        if row["resource_class"] == "HEAVY"
+                    ),
+                    None,
+                )
                 code = (
                     "UNOWNED_EXECUTION_PROCESS"
-                    if heavy["lifecycle_state"] == "orphaned"
+                    if heavy is not None and heavy["lifecycle_state"] == "orphaned"
                     else "HEAVY_SLOT_BUSY"
                 )
                 raise ExecutionResourceError(
                     code,
                     "Another HEAVY execution owns this checkout's global resource slot.",
                     retryable=True,
-                    details={"active_job": self._public_row(heavy)},
+                    details={
+                        "active_job": self._public_row(heavy),
+                        "active_claim": self._public_claim(active_claim),
+                    },
                 )
             pressure = self._host_pressure()
             if pressure.get("pressured"):
@@ -629,6 +873,23 @@ class ExecutionResourceGovernor:
         try:
             with self.ledger._lock, self.ledger._connect() as connection:
                 connection.execute("BEGIN IMMEDIATE")
+                if resource == "HEAVY":
+                    self._expire_semantic_claims_in(connection)
+                    connection.execute(
+                        """INSERT INTO checkout_resource_claims(
+                               claim_id,checkout_id,resource_class,owner_type,owner_id_hash,
+                               lifecycle_state,acquired_at,expires_at,updated_at
+                           ) VALUES(?,?,?,?,?,'active',?,0,?)""",
+                        (
+                            uuid.uuid4().hex,
+                            self.checkout_id,
+                            "HEAVY",
+                            "MANAGED_JOB",
+                            resource_claim_owner_hash("MANAGED_JOB", job_id),
+                            now,
+                            now,
+                        ),
+                    )
                 connection.execute(
                     """INSERT INTO managed_process_jobs(
                         job_id,run_id,wave_id,command_id,owner,checkout_id,resource_class,
@@ -651,6 +912,7 @@ class ExecutionResourceGovernor:
                     ),
                 )
         except sqlite3.IntegrityError as exc:
+            active_claim = self._active_heavy_claim()
             active = self._rows(active_only=True)
             heavy = next((row for row in active if row["resource_class"] == "HEAVY"), None)
             code = "UNOWNED_EXECUTION_PROCESS" if heavy and heavy["lifecycle_state"] == "orphaned" else "HEAVY_SLOT_BUSY"
@@ -658,7 +920,10 @@ class ExecutionResourceGovernor:
                 code,
                 "Another HEAVY execution owns this checkout's global resource slot.",
                 retryable=True,
-                details={"active_job": self._public_row(heavy) if heavy else None},
+                details={
+                    "active_job": self._public_row(heavy) if heavy else None,
+                    "active_claim": self._public_claim(active_claim),
+                },
             ) from exc
 
         admission = ManagedProcessAdmission(
@@ -714,10 +979,12 @@ class ExecutionResourceGovernor:
             if exit_code is None:
                 exit_code = owned_process.poll()
         with self.ledger._lock, self.ledger._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute("SELECT * FROM managed_process_jobs WHERE job_id=?", (str(job_id),)).fetchone()
             if row is None:
                 return
             if str(row["lifecycle_state"]) not in ACTIVE_LIFECYCLES:
+                self._release_managed_claim_in(connection, str(job_id))
                 return
             connection.execute(
                 """UPDATE managed_process_jobs
@@ -725,6 +992,7 @@ class ExecutionResourceGovernor:
                    WHERE job_id=?""",
                 (terminal, now, now, exit_code, str(job_id)),
             )
+            self._release_managed_claim_in(connection, str(job_id))
         item = self._row(row)
         self._emit(item, "managed_process_terminal", lifecycle_state=terminal, exit_code=exit_code)
 
@@ -735,13 +1003,30 @@ class ExecutionResourceGovernor:
         return self.reconcile(restart=True)
 
     def reconcile(self, *, restart: bool = False) -> dict[str, int]:
+        self._reconcile_inactive_claims()
         counts = {"quiesced": 0, "orphaned": 0}
         rows = self._rows(active_only=True)
         for row in rows:
+            owner_process_matches = row["process_instance_id"] == self.process_instance_id
+            owner_runtime_matches = row["runtime_instance_id"] == self.runtime_instance_id
             pid = int(row["root_pid"])
-            token = str(row["root_process_token"])
             with self._lock:
                 owned_process = self._owned_processes.get(row["job_id"])
+            if pid == 0 and owned_process is None:
+                if self._row_age_seconds(row) > _STARTING_RECONCILIATION_GRACE_SECONDS:
+                    # Admission is durable before spawn. If no process was
+                    # ever bound after the grace window there is no live tree
+                    # to preserve, regardless of which runtime admitted it.
+                    self._set_reconciled_state(
+                        row,
+                        "quiesced",
+                        reason="stale_start_unbound",
+                    )
+                    counts["quiesced"] += 1
+                # A fresh unbound admission is authoritative scheduling state
+                # during the grace window, including for this runtime.
+                continue
+            token = str(row["root_process_token"])
             alive = process_is_alive(pid)
             if alive and token:
                 observed = process_identity_token(pid)
@@ -757,15 +1042,16 @@ class ExecutionResourceGovernor:
                     self._set_reconciled_state(row, "quiesced", reason="root_process_gone")
                 counts["quiesced"] += 1
                 continue
-            owner_process_missing = row["process_instance_id"] != self.process_instance_id
-            stale_start = (
-                pid == 0
-                and owned_process is None
-                and self._row_age_seconds(row) > _STARTING_RECONCILIATION_GRACE_SECONDS
-            )
+            if not owner_process_matches and not owner_runtime_matches:
+                # A live process owned by another logical runtime remains
+                # authoritative. Crossing that ownership boundary is allowed
+                # only above, when liveness or the durable identity token
+                # proves the original process is gone or its PID was recycled.
+                continue
+            owner_process_missing = not owner_process_matches
             handle_missing = alive and owned_process is None
-            if owner_process_missing or stale_start or handle_missing:
-                state = "orphaned" if alive or pid == 0 else "quiesced"
+            if owner_process_missing or handle_missing:
+                state = "orphaned" if alive else "quiesced"
                 self._set_reconciled_state(
                     row,
                     state,
@@ -786,6 +1072,7 @@ class ExecutionResourceGovernor:
         now = utc_now()
         finished_at = now if state == "quiesced" else None
         with self.ledger._lock, self.ledger._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             connection.execute(
                 """UPDATE managed_process_jobs
                    SET lifecycle_state=?,updated_at=?,finished_at=COALESCE(?,finished_at),
@@ -793,6 +1080,8 @@ class ExecutionResourceGovernor:
                    WHERE job_id=?""",
                 (state, now, finished_at, reason, row["job_id"]),
             )
+            if state == "quiesced":
+                self._release_managed_claim_in(connection, row["job_id"])
         self._emit(row, "managed_process_reconciled", lifecycle_state=state, reason=reason)
 
     def teardown_wave(self, run_id: str, wave_id: str, *, reason: str, grace_seconds: float = 1.0) -> dict[str, Any]:
@@ -839,9 +1128,10 @@ class ExecutionResourceGovernor:
     def assert_wave_quiescent(self, run_id: str, wave_id: str) -> None:
         self.reconcile()
         active = self._rows(run_id=str(run_id), wave_id=str(wave_id), active_only=True)
+        active_claims = self._claim_rows(active_only=True)
         foreign = self._foreign_heavy_processes()
         active_write_fences = self._active_write_fence_count(run_id, wave_id)
-        if active or foreign or active_write_fences:
+        if active or active_claims or foreign or active_write_fences:
             raise ExecutionResourceError(
                 "WAVE_NOT_QUIESCENT",
                 "The prior orchestration wave or checkout still has active execution ownership.",
@@ -850,6 +1140,7 @@ class ExecutionResourceGovernor:
                     "run_id": run_id,
                     "wave_id": wave_id,
                     "active_jobs": [self._public_row(row) for row in active],
+                    "active_claims": [self._public_claim(row) for row in active_claims],
                     "foreign_heavy_processes": foreign,
                     "active_write_fence_count": active_write_fences,
                 },
@@ -879,19 +1170,32 @@ class ExecutionResourceGovernor:
         self.reconcile()
         rows = self._rows()
         active = [row for row in rows if row["lifecycle_state"] in ACTIVE_LIFECYCLES]
-        visible = rows[-max(1, min(int(limit), 100)) :]
+        bounded_limit = max(1, min(int(limit), 100))
+        terminal = [row for row in rows if row["lifecycle_state"] not in ACTIVE_LIFECYCLES]
+        visible_active = active[-bounded_limit:]
+        remaining = bounded_limit - len(visible_active)
+        visible_terminal = terminal[-remaining:] if remaining else []
+        visible = [*visible_active, *visible_terminal]
+        claims = self._claim_rows()
+        active_claims = [row for row in claims if row["lifecycle_state"] == "active"]
+        visible_claims = claims[-bounded_limit:]
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "checkout_id": self.checkout_id,
             "heavy_concurrency_limit": 1,
             "active_command_count": len(active),
             "active_heavy_count": sum(1 for row in active if row["resource_class"] == "HEAVY"),
+            "active_claim_count": len(active_claims),
+            "active_heavy_claim_count": sum(
+                1 for row in active_claims if row["resource_class"] == "HEAVY"
+            ),
             "orphaned_count": sum(1 for row in active if row["lifecycle_state"] == "orphaned"),
-            "quiescent": not active,
-            "quiescence_scope": "managed_processes",
+            "quiescent": not active and not active_claims,
+            "quiescence_scope": "managed_processes_and_scheduling_claims",
             "host_pressure": dict(self._last_pressure),
             "semantic_native_admission": dict(self._last_semantic_admission),
             "semantic_native_admission_counts": dict(self._semantic_admission_counts),
             "recovery": dict(self.recovery),
             "jobs": [self._public_row(row) for row in visible],
+            "claims": [self._public_claim(row) for row in visible_claims],
         }

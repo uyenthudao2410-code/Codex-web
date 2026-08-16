@@ -83,6 +83,14 @@ pub enum AgentLspRequest {
         #[serde(default = "default_document_symbols_limit")]
         limit: usize,
     },
+    /// Internal warm-path variant used by the Connector semantic adapter.
+    /// The Runner must fail instead of starting or restarting a language
+    /// server when no usable existing instance can admit the request.
+    DocumentSymbolsExisting {
+        path: String,
+        #[serde(default = "default_document_symbols_limit")]
+        limit: usize,
+    },
     DocumentDiagnostics {
         path: String,
         #[serde(default = "default_document_diagnostics_limit")]
@@ -204,6 +212,44 @@ pub enum LspCommandSource {
     Path,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LspResourceLifecycleState {
+    Stopped,
+    Starting,
+    Running,
+    Failed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LspResourcePressureState {
+    Normal,
+    Soft,
+    Hard,
+    Unknown,
+}
+
+/// Bounded, content-free process/resource projection for one language server.
+/// It intentionally omits PID, executable path, project path, source text,
+/// queries, stderr, environment and credential material.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LspResourceStatus {
+    pub lifecycle_state: LspResourceLifecycleState,
+    pub warm: Option<bool>,
+    pub pressure_state: LspResourcePressureState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub process_instance_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub working_set_bytes: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub peak_working_set_bytes: Option<u64>,
+    pub pending_request_count: usize,
+    pub restart_count: u64,
+    pub drain_count: u64,
+    pub observed_at: i64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LspServerStatusEntry {
     pub language: String,
@@ -215,6 +261,8 @@ pub struct LspServerStatusEntry {
     pub source: Option<LspCommandSource>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position_encoding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource: Option<LspResourceStatus>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -534,6 +582,10 @@ mod tests {
         let cases = vec![
             AgentLspRequest::Status,
             AgentLspRequest::DocumentSymbols {
+                path: "src/main.rs".to_string(),
+                limit: 50,
+            },
+            AgentLspRequest::DocumentSymbolsExisting {
                 path: "src/main.rs".to_string(),
                 limit: 50,
             },

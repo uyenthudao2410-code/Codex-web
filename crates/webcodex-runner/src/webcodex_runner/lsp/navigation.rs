@@ -14,16 +14,16 @@ use super::language::{
 };
 use super::position::{lsp_to_public, public_to_lsp, LineCache, MAX_LSP_DOCUMENT_BYTES};
 use super::supervisor::{
-    classify_uri_against_project_root, LspError, LspServerStatus, LspSupervisor, PositionEncoding,
-    ProjectUriClassification,
+    classify_uri_against_project_root, LspError, LspMemoryPressure, LspServerStatus, LspSupervisor,
+    PositionEncoding, ProjectUriClassification,
 };
 use crate::lsp_bridge::{
     bound_error_message, error_codes, redact_absolute_paths, AgentLspPayload, AgentLspRequest,
     AgentLspResultEnvelope, DocumentDiagnosticsResult, DocumentDiagnosticsStatus,
     DocumentSymbolsResult, HoverResult, LocationsResult, LspAvailabilityStatus,
-    LspServerStatusEntry, LspStatusResult, PublicDiagnostic, PublicHover, PublicLocation,
-    PublicPosition, PublicRange, PublicSymbol, PublicWorkspaceSymbol, WorkspaceSymbolsResult,
-    AGENT_LSP_REQUEST_KIND,
+    LspResourceLifecycleState, LspResourcePressureState, LspResourceStatus, LspServerStatusEntry,
+    LspStatusResult, PublicDiagnostic, PublicHover, PublicLocation, PublicPosition, PublicRange,
+    PublicSymbol, PublicWorkspaceSymbol, WorkspaceSymbolsResult, AGENT_LSP_REQUEST_KIND,
 };
 use crate::shell_protocol::ShellAgentShellRequest;
 use serde_json::{json, Value};
@@ -95,8 +95,25 @@ fn execute_lsp(
             supervisor,
         ))),
         AgentLspRequest::DocumentSymbols { path, limit } => {
-            let result =
-                document_symbols(&payload.project_id, &project_root, supervisor, path, *limit)?;
+            let result = document_symbols(
+                &payload.project_id,
+                &project_root,
+                supervisor,
+                path,
+                *limit,
+                true,
+            )?;
+            Ok(AgentLspResultEnvelope::ok(result))
+        }
+        AgentLspRequest::DocumentSymbolsExisting { path, limit } => {
+            let result = document_symbols(
+                &payload.project_id,
+                &project_root,
+                supervisor,
+                path,
+                *limit,
+                false,
+            )?;
             Ok(AgentLspResultEnvelope::ok(result))
         }
         AgentLspRequest::DocumentDiagnostics { path, limit } => {
@@ -253,6 +270,56 @@ fn lsp_server_status_entry(
         }
     };
     let source = info.as_ref().map(|entry| entry.source);
+    let observed_at = chrono::Utc::now().timestamp();
+    let process = supervisor.project_process_snapshot(project_root, profile.kind);
+    let lifecycle_state = match status {
+        LspAvailabilityStatus::Initializing => LspResourceLifecycleState::Starting,
+        LspAvailabilityStatus::Running => LspResourceLifecycleState::Running,
+        LspAvailabilityStatus::Crashed => LspResourceLifecycleState::Failed,
+        LspAvailabilityStatus::Available | LspAvailabilityStatus::Unavailable => {
+            LspResourceLifecycleState::Stopped
+        }
+    };
+    let resource = LspResourceStatus {
+        lifecycle_state,
+        warm: match lifecycle_state {
+            LspResourceLifecycleState::Running => {
+                process.as_ref().map(|snapshot| snapshot.lifecycle_usable)
+            }
+            _ => Some(false),
+        },
+        pressure_state: process
+            .as_ref()
+            .map(|snapshot| match snapshot.pressure_state {
+                LspMemoryPressure::Normal => LspResourcePressureState::Normal,
+                LspMemoryPressure::Soft => LspResourcePressureState::Soft,
+                LspMemoryPressure::Hard => LspResourcePressureState::Hard,
+                LspMemoryPressure::Unknown => LspResourcePressureState::Unknown,
+            })
+            .unwrap_or(LspResourcePressureState::Unknown),
+        process_instance_id: process
+            .as_ref()
+            .map(|snapshot| snapshot.process_instance_id.clone()),
+        working_set_bytes: process
+            .as_ref()
+            .and_then(|snapshot| snapshot.working_set_bytes),
+        peak_working_set_bytes: process
+            .as_ref()
+            .and_then(|snapshot| snapshot.peak_working_set_bytes),
+        pending_request_count: process
+            .as_ref()
+            .map(|snapshot| snapshot.pending_request_count)
+            .unwrap_or(0),
+        restart_count: process
+            .as_ref()
+            .map(|snapshot| snapshot.restart_count)
+            .unwrap_or(0),
+        drain_count: process
+            .as_ref()
+            .map(|snapshot| snapshot.drain_count)
+            .unwrap_or(0),
+        observed_at,
+    };
     LspServerStatusEntry {
         language: profile.language_id.to_string(),
         server: profile.server_name.to_string(),
@@ -261,6 +328,7 @@ fn lsp_server_status_entry(
         status,
         source,
         position_encoding,
+        resource: Some(resource),
     }
 }
 
@@ -291,6 +359,7 @@ fn document_symbols(
     supervisor: &LspSupervisor,
     relative_path: &str,
     limit: usize,
+    allow_server_start: bool,
 ) -> Result<DocumentSymbolsResult, AgentLspResultEnvelope> {
     let limit = limit.clamp(1, 500);
     let ResolvedSourceFile {
@@ -300,14 +369,12 @@ fn document_symbols(
     } = resolve_source_file(project_root, relative_path)?;
     let uri = file_uri(&file)?;
     let text = read_document_text(&file)?;
-    // Take the encoding from prepare_document like goto/references do: the
-    // post-request slot lookup could race a slot transition and silently fall
-    // back to UTF-16 while the server negotiated another encoding.
-    let encoding = supervisor
-        .prepare_document(project_root, profile.kind, &uri, language_id, &text)
-        .map_err(map_lsp_error)?;
-    let value = supervisor
-        .request_with_document(
+    // Synchronize the document and request symbols under one admitted
+    // operation. For the warm-only variant, admission is attached while the
+    // supervisor map still excludes idle teardown; absence therefore fails
+    // without a cold start.
+    let (value, encoding) = supervisor
+        .request_with_document_and_encoding(
             project_root,
             profile.kind,
             &uri,
@@ -315,6 +382,7 @@ fn document_symbols(
             &text,
             "textDocument/documentSymbol",
             json!({ "textDocument": { "uri": uri } }),
+            allow_server_start,
         )
         .map_err(map_lsp_error)?;
     let mut cache = LineCache::new();

@@ -133,6 +133,7 @@ fn status_result(
             status,
             source: Some(LspCommandSource::Path),
             position_encoding: position_encoding.map(str::to_string),
+            resource: None,
         }],
         warnings: Vec::new(),
     }

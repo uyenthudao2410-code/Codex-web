@@ -31,6 +31,7 @@ fn test_agent_config(server_url: String) -> AgentConfig {
             ..ShellClientCapabilities::default()
         }),
         max_concurrent_jobs: Some(1),
+        lsp_idle_ttl_seconds: None,
         // Transport tests run jobs in a temp dir and are not about the
         // filesystem boundary; AgentPolicy::default() is fail-closed.
         policy: AgentPolicy {
@@ -45,6 +46,19 @@ fn test_agent_config(server_url: String) -> AgentConfig {
         ssh: Default::default(),
         tool_providers: Default::default(),
     }
+}
+
+#[test]
+fn profile_lsp_idle_ttl_overrides_only_the_supervisor_idle_reaper() {
+    let mut cfg = test_agent_config("http://127.0.0.1:1".to_string());
+    cfg.lsp_idle_ttl_seconds = Some(2);
+
+    let lsp = lsp_supervisor_config(&cfg);
+    assert_eq!(lsp.idle_ttl, Duration::from_secs(2));
+    assert_eq!(
+        LspSupervisorConfig::default().idle_ttl,
+        Duration::from_secs(15 * 60)
+    );
 }
 
 fn polling_agent_config(server_url: String, projects_dir: PathBuf) -> AgentConfig {

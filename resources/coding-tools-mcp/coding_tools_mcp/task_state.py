@@ -53,6 +53,27 @@ def classify_command(command: str) -> str:
     return "command"
 
 
+def command_payload_succeeded(payload: dict[str, Any]) -> bool:
+    """Return true only for a normal successful command terminal state."""
+    status = str(payload.get("status") or "").strip().lower()
+    if bool(payload.get("timed_out")) or bool(payload.get("killed")):
+        return False
+    if status in {
+        "timeout",
+        "timed_out",
+        "terminated",
+        "killed",
+        "cancelled",
+        "canceled",
+        "failed",
+        "error",
+    }:
+        return False
+    if status and status not in {"exited", "completed", "passed"}:
+        return False
+    return payload.get("exit_code") == 0
+
+
 def _text(value: Any, limit: int = MAX_TEXT) -> str:
     return str(value or "")[:limit]
 
@@ -404,7 +425,7 @@ class TaskStateStore:
         kind = str(current.get("kind", classify_command(command)))
         result = {
             "command": command,
-            "status": "passed" if payload.get("exit_code") == 0 else "failed",
+            "status": "passed" if command_payload_succeeded(payload) else "failed",
             "exit_code": payload.get("exit_code"),
             "duration_ms": payload.get("elapsed_ms"),
             "summary": _text(payload.get("summary") or payload.get("stderr") or payload.get("stdout"), 2000),

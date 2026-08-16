@@ -15,6 +15,8 @@ use std::sync::atomic::Ordering;
 
 pub(crate) const INTERNAL_SEMANTIC_ROUTE: &str = "/api/connector/internal/semantic/localize";
 pub(crate) const INTERNAL_SEMANTIC_SUBPATH: &str = "internal/semantic/localize";
+pub(crate) const INTERNAL_SEMANTIC_STATUS_ROUTE: &str = "/api/connector/internal/semantic/status";
+pub(crate) const INTERNAL_SEMANTIC_STATUS_SUBPATH: &str = "internal/semantic/status";
 const MAX_SEMANTIC_QUERIES: usize = 8;
 const MAX_SEMANTIC_RESULTS_PER_QUERY: usize = 50;
 const MAX_DOCUMENT_SYMBOL_VISITS: usize = 1_000;
@@ -29,6 +31,20 @@ pub(crate) struct SemanticLocalizeInput {
     pub queries: Vec<String>,
     #[serde(default)]
     pub max_results: Option<usize>,
+    #[serde(default = "default_semantic_resource_class")]
+    pub resource_class: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SemanticStatusInput {
+    pub workspace_sha256: String,
+    #[serde(default)]
+    pub path: Option<String>,
+}
+
+fn default_semantic_resource_class() -> String {
+    "HEAVY".to_string()
 }
 
 impl ConnectorRuntime {
@@ -37,27 +53,8 @@ impl ConnectorRuntime {
         auth: &AuthContext,
         input: SemanticLocalizeInput,
     ) -> ConnectorCallOutcome {
-        if !auth.is_project_credential()
-            || auth.project_grant_id.as_deref() != Some(self.context.project_grant_id.as_str())
-        {
-            return ConnectorCallOutcome::error(
-                403,
-                "project_credential_required",
-                "native semantic localization requires this project's dedicated credential",
-                false,
-                false,
-                None,
-                None,
-                false,
-            );
-        }
-        if !auth.has_scope(SCOPE_PROJECT_READ) {
-            return ConnectorCallOutcome::scope_denied(SCOPE_PROJECT_READ);
-        }
-        if !valid_sha256(&input.workspace_sha256) {
-            return invalid_semantic_input(
-                "workspace_sha256 must be 64 lowercase hexadecimal characters",
-            );
+        if let Err(outcome) = self.validate_semantic_access(auth, &input.workspace_sha256) {
+            return outcome;
         }
         if input.queries.is_empty() || input.queries.len() > MAX_SEMANTIC_QUERIES {
             return invalid_semantic_input("queries must contain 1..=8 entries");
@@ -70,6 +67,19 @@ impl ConnectorRuntime {
             Ok(path) => path,
             Err(message) => return invalid_semantic_input(message),
         };
+        let resource_class = input.resource_class.trim().to_ascii_uppercase();
+        if !matches!(resource_class.as_str(), "MEDIUM" | "HEAVY") {
+            return invalid_semantic_input("resource_class must be MEDIUM or HEAVY");
+        }
+        if resource_class == "MEDIUM"
+            && path_scope
+                .as_deref()
+                .is_none_or(|path| !is_document_scope(path))
+        {
+            return invalid_semantic_input(
+                "MEDIUM native semantic requests require one supported document",
+            );
+        }
         let mut queries = Vec::with_capacity(input.queries.len());
         for query in input.queries {
             let query = query.trim();
@@ -77,36 +87,6 @@ impl ConnectorRuntime {
                 return invalid_semantic_input("each query must be 1..=200 bytes after trimming");
             }
             queries.push(query.to_string());
-        }
-
-        let expected_workspace = match crate::project_context::portable_project_root_sha256(
-            Path::new(&self.context.executor_root),
-        ) {
-            Ok(value) => value,
-            Err(_) => {
-                return ConnectorCallOutcome::error(
-                    409,
-                    "semantic_workspace_unavailable",
-                    "the configured project workspace is unavailable",
-                    true,
-                    false,
-                    None,
-                    None,
-                    false,
-                )
-            }
-        };
-        if input.workspace_sha256 != expected_workspace {
-            return ConnectorCallOutcome::error(
-                403,
-                "semantic_workspace_mismatch",
-                "the semantic request is not bound to this connector workspace",
-                false,
-                false,
-                None,
-                None,
-                false,
-            );
         }
 
         if let Some(document_path) = path_scope.as_deref().filter(|path| is_document_scope(path)) {
@@ -119,7 +99,8 @@ impl ConnectorRuntime {
                         arguments: json!({
                             "project": self.context.executor_project.clone(),
                             "path": document_path,
-                            "limit": MAX_SEMANTIC_RESULTS_PER_QUERY
+                            "limit": MAX_SEMANTIC_RESULTS_PER_QUERY,
+                            "require_existing_server": resource_class == "MEDIUM"
                         }),
                     },
                     ToolCallContext {
@@ -299,6 +280,218 @@ impl ConnectorRuntime {
             "semantic_concurrency": concurrency,
             "results": rows
         }))
+    }
+
+    pub(crate) async fn semantic_resource_status(
+        &self,
+        auth: &AuthContext,
+        input: SemanticStatusInput,
+    ) -> ConnectorCallOutcome {
+        if let Err(outcome) = self.validate_semantic_access(auth, &input.workspace_sha256) {
+            return outcome;
+        }
+        let path_scope = match normalize_scope_path(input.path.as_deref()) {
+            Ok(path) => path,
+            Err(message) => return invalid_semantic_input(message),
+        };
+        let outcome = self
+            .tools
+            .call_tool_with_context(
+                KernelToolCallRequest {
+                    tool_name: "lsp_status".to_string(),
+                    arguments: json!({
+                        "project": self.context.executor_project.clone()
+                    }),
+                },
+                ToolCallContext {
+                    transport: ToolTransport::Api,
+                    session_id: None,
+                    auth: Some(auth),
+                    window: None,
+                    record_oauth_scope_denials: false,
+                },
+            )
+            .await;
+        let projection = outcome
+            .result
+            .filter(|result| result.success)
+            .map(|result| semantic_resource_projection(&result.output, path_scope.as_deref()))
+            .unwrap_or_else(unknown_semantic_resource_projection);
+        self.semantic_lsp_warm.store(
+            projection.get("warm").and_then(Value::as_bool) == Some(true),
+            Ordering::Release,
+        );
+        ConnectorCallOutcome::success_project(json!({
+            "schema_version": 1,
+            "provider": "webcodex_native_lsp",
+            "read_only": true,
+            "lsp_resource": projection
+        }))
+    }
+
+    fn validate_semantic_access(
+        &self,
+        auth: &AuthContext,
+        workspace_sha256: &str,
+    ) -> Result<(), ConnectorCallOutcome> {
+        if !auth.is_project_credential()
+            || auth.project_grant_id.as_deref() != Some(self.context.project_grant_id.as_str())
+        {
+            return Err(ConnectorCallOutcome::error(
+                403,
+                "project_credential_required",
+                "native semantic localization requires this project's dedicated credential",
+                false,
+                false,
+                None,
+                None,
+                false,
+            ));
+        }
+        if !auth.has_scope(SCOPE_PROJECT_READ) {
+            return Err(ConnectorCallOutcome::scope_denied(SCOPE_PROJECT_READ));
+        }
+        if !valid_sha256(workspace_sha256) {
+            return Err(invalid_semantic_input(
+                "workspace_sha256 must be 64 lowercase hexadecimal characters",
+            ));
+        }
+        let expected_workspace = crate::project_context::portable_project_root_sha256(Path::new(
+            &self.context.executor_root,
+        ))
+        .map_err(|_| {
+            ConnectorCallOutcome::error(
+                409,
+                "semantic_workspace_unavailable",
+                "the configured project workspace is unavailable",
+                true,
+                false,
+                None,
+                None,
+                false,
+            )
+        })?;
+        if workspace_sha256 != expected_workspace {
+            return Err(ConnectorCallOutcome::error(
+                403,
+                "semantic_workspace_mismatch",
+                "the semantic request is not bound to this connector workspace",
+                false,
+                false,
+                None,
+                None,
+                false,
+            ));
+        }
+        Ok(())
+    }
+}
+
+fn semantic_resource_projection(status: &Value, path_scope: Option<&str>) -> Value {
+    let expected_language = path_scope.and_then(semantic_language_for_path).or_else(|| {
+        status
+            .get("detected_languages")
+            .and_then(Value::as_array)
+            .and_then(|languages| languages.first())
+            .and_then(Value::as_str)
+    });
+    let servers = status
+        .get("servers")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
+    let server = expected_language
+        .and_then(|language| {
+            servers
+                .iter()
+                .find(|server| server.get("language").and_then(Value::as_str) == Some(language))
+        })
+        .or_else(|| {
+            servers
+                .iter()
+                .find(|server| server.get("running").and_then(Value::as_bool) == Some(true))
+        })
+        .or_else(|| servers.first());
+    let Some(server) = server else {
+        return unknown_semantic_resource_projection();
+    };
+    let status_label = server
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let resource = server.get("resource").filter(|value| value.is_object());
+    let lifecycle_state = resource
+        .and_then(|value| value.get("lifecycle_state"))
+        .and_then(Value::as_str)
+        .map(str::to_ascii_uppercase)
+        .filter(|value| {
+            matches!(
+                value.as_str(),
+                "STOPPED" | "STARTING" | "RUNNING" | "FAILED"
+            )
+        })
+        .unwrap_or_else(|| match status_label {
+            "available" | "unavailable" => "STOPPED".to_string(),
+            "initializing" => "STARTING".to_string(),
+            "running" => "RUNNING".to_string(),
+            "crashed" => "FAILED".to_string(),
+            _ => "UNKNOWN".to_string(),
+        });
+    let warm = resource
+        .and_then(|value| value.get("warm"))
+        .and_then(Value::as_bool)
+        .or_else(|| (lifecycle_state != "RUNNING").then_some(false));
+    let pressure_state = resource
+        .and_then(|value| value.get("pressure_state"))
+        .and_then(Value::as_str)
+        .map(str::to_ascii_uppercase)
+        .filter(|value| matches!(value.as_str(), "NORMAL" | "SOFT" | "HARD" | "UNKNOWN"))
+        .unwrap_or_else(|| "UNKNOWN".to_string());
+    let process_instance_id = resource
+        .and_then(|value| value.get("process_instance_id"))
+        .and_then(Value::as_str)
+        .filter(|value| value.len() <= 128);
+    json!({
+        "lifecycle_state": lifecycle_state,
+        "warm": warm,
+        "pressure_state": pressure_state,
+        "process_instance_id": process_instance_id,
+        "working_set_bytes": resource.and_then(|value| value.get("working_set_bytes")).and_then(Value::as_u64),
+        "peak_working_set_bytes": resource.and_then(|value| value.get("peak_working_set_bytes")).and_then(Value::as_u64),
+        "pending_request_count": resource.and_then(|value| value.get("pending_request_count")).and_then(Value::as_u64).unwrap_or(0),
+        "restart_count": resource.and_then(|value| value.get("restart_count")).and_then(Value::as_u64).unwrap_or(0),
+        "drain_count": resource.and_then(|value| value.get("drain_count")).and_then(Value::as_u64).unwrap_or(0),
+        "observed_at": resource.and_then(|value| value.get("observed_at")).and_then(Value::as_i64).unwrap_or_else(|| chrono::Utc::now().timestamp())
+    })
+}
+
+fn unknown_semantic_resource_projection() -> Value {
+    json!({
+        "lifecycle_state": "UNKNOWN",
+        "warm": null,
+        "pressure_state": "UNKNOWN",
+        "process_instance_id": null,
+        "working_set_bytes": null,
+        "peak_working_set_bytes": null,
+        "pending_request_count": 0,
+        "restart_count": 0,
+        "drain_count": 0,
+        "observed_at": chrono::Utc::now().timestamp()
+    })
+}
+
+fn semantic_language_for_path(path: &str) -> Option<&'static str> {
+    match Path::new(path)
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "rs" => Some("rust"),
+        "py" | "pyi" => Some("python"),
+        "ts" | "mts" | "cts" | "tsx" | "js" | "mjs" | "cjs" | "jsx" => Some("typescript"),
+        _ => None,
     }
 }
 
@@ -491,6 +684,7 @@ mod tests {
             path: Some("src".to_string()),
             queries: vec!["ToolRuntime".to_string()],
             max_results: Some(10),
+            resource_class: "HEAVY".to_string(),
         }
     }
 
@@ -592,6 +786,88 @@ mod tests {
             .await;
         assert_eq!(outcome.http_status, 409);
         assert_eq!(outcome.body["error"]["code"], "native_lsp_unavailable");
+    }
+
+    #[tokio::test]
+    async fn native_semantic_status_projects_bounded_running_resources() {
+        let (_temp, connector) = connector();
+        register_semantic_agent(&connector, true).await;
+        let registry = connector.tools.shell_clients.clone();
+        let responder = tokio::spawn(async move {
+            let request = loop {
+                if let Some(request) = registry
+                    .poll(ShellAgentPollRequest {
+                        client_id: "hosted".to_string(),
+                        agent_instance_id: "semantic-instance".to_string(),
+                        projects: None,
+                    })
+                    .await
+                    .unwrap()
+                {
+                    break request;
+                }
+                tokio::task::yield_now().await;
+            };
+            assert!(matches!(
+                request.lsp.as_ref().map(|payload| &payload.request),
+                Some(AgentLspRequest::Status)
+            ));
+            let result = json!({
+                "project": "demo",
+                "detected_languages": ["rust"],
+                "servers": [{
+                    "language": "rust",
+                    "server": "rust-analyzer",
+                    "available": true,
+                    "running": true,
+                    "status": "running",
+                    "resource": {
+                        "lifecycle_state": "running",
+                        "warm": true,
+                        "pressure_state": "normal",
+                        "process_instance_id": "opaque-instance-1",
+                        "working_set_bytes": 1234,
+                        "peak_working_set_bytes": 2345,
+                        "pending_request_count": 0,
+                        "restart_count": 1,
+                        "drain_count": 0,
+                        "observed_at": 42
+                    }
+                }],
+                "warnings": []
+            });
+            registry
+                .complete(ShellAgentResultRequest {
+                    client_id: "hosted".to_string(),
+                    agent_instance_id: "semantic-instance".to_string(),
+                    request_id: request.request_id,
+                    exit_code: Some(0),
+                    stdout: Some(AgentLspResultEnvelope::ok(result).to_stdout_json()),
+                    stderr: Some(String::new()),
+                    duration_ms: Some(1),
+                    error: None,
+                })
+                .await
+                .unwrap();
+        });
+        let input = SemanticStatusInput {
+            workspace_sha256: crate::project_context::portable_project_root_sha256(Path::new(
+                &connector.context.executor_root,
+            ))
+            .unwrap(),
+            path: Some("src/tool_runtime/runtime.rs".to_string()),
+        };
+        let outcome = connector.semantic_resource_status(&auth("u1"), input).await;
+        responder.await.unwrap();
+        assert!(outcome.ok, "{}", outcome.body);
+        let resource = &outcome.body["data"]["lsp_resource"];
+        assert_eq!(resource["lifecycle_state"], "RUNNING");
+        assert_eq!(resource["warm"], true);
+        assert_eq!(resource["pressure_state"], "NORMAL");
+        assert_eq!(resource["working_set_bytes"], 1234);
+        let serialized = outcome.body.to_string();
+        assert!(!serialized.contains(&connector.context.executor_root));
+        assert!(!serialized.contains(PROJECT_CREDENTIAL));
     }
 
     #[tokio::test]
@@ -708,7 +984,7 @@ mod tests {
             let payload = request.lsp.expect("typed LSP payload");
             assert!(matches!(
                 payload.request,
-                AgentLspRequest::DocumentSymbols { ref path, limit }
+                AgentLspRequest::DocumentSymbolsExisting { ref path, limit }
                     if path == "src/tool_runtime/runtime.rs" && limit == MAX_SEMANTIC_RESULTS_PER_QUERY
             ));
             let result = json!({
@@ -783,6 +1059,7 @@ mod tests {
 
         let mut input = valid_input(&connector);
         input.path = Some("src/tool_runtime/runtime.rs".to_string());
+        input.resource_class = "MEDIUM".to_string();
         input.queries = vec![
             "ToolRuntime".to_string(),
             "Unrelated".to_string(),

@@ -216,6 +216,7 @@ fn is_project_console_path(path: &str) -> bool {
 fn is_project_connector_path(path: &str) -> bool {
     path == "/api/connector/readiness"
         || path == crate::connector_runtime::semantic_bridge::INTERNAL_SEMANTIC_ROUTE
+        || path == crate::connector_runtime::semantic_bridge::INTERNAL_SEMANTIC_STATUS_ROUTE
         || crate::connector_runtime::surface::CAPABILITY_NAMES
             .iter()
             .any(|name| crate::connector_runtime::surface::route_for(name) == Some(path))
@@ -521,6 +522,12 @@ mod connector_surface_tests {
             true,
             &user,
             crate::connector_runtime::semantic_bridge::INTERNAL_SEMANTIC_ROUTE,
+        )
+        .is_ok());
+        assert!(enforce_project_connector_surface(
+            true,
+            &user,
+            crate::connector_runtime::semantic_bridge::INTERNAL_SEMANTIC_STATUS_ROUTE,
         )
         .is_ok());
         let forged_internal = format!(

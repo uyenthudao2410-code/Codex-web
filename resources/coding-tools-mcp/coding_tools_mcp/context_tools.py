@@ -16,7 +16,14 @@ from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH
-from .semantic_localization import run_semantic_localization, semantic_provider_status
+from .task_state import command_payload_succeeded
+from .semantic_localization import (
+    run_semantic_localization,
+    semantic_provider_resource_status,
+    semantic_provider_status,
+    semantic_resource_cost,
+    semantic_scope_mode,
+)
 from .tool_contract import AGENT_EXECUTION_ROUTES, tool_metadata_contract
 from .tool_schema import EVALUATION_SCHEMA_VERSION
 
@@ -24,12 +31,6 @@ from .tool_schema import EVALUATION_SCHEMA_VERSION
 _CONTEXT_BUNDLE_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _CONTEXT_BUNDLE_CACHE_LOCK = threading.Lock()
 CONTEXT_BUNDLE_CACHE_TTL_SECONDS = 30
-NATIVE_SEMANTIC_DOCUMENT_SUFFIXES = frozenset({
-    ".rs", ".py", ".pyi", ".ts", ".mts", ".cts", ".tsx",
-    ".js", ".mjs", ".cjs", ".jsx",
-})
-
-
 class ContextToolsMixin:
     def workspace_context(self, args: dict[str, Any]) -> dict[str, Any]:
         detail = str(args.get("detail", "compact")).lower()
@@ -240,27 +241,32 @@ class ContextToolsMixin:
                     and (self.workspace.root / candidate_path).is_file()
                 ):
                     semantic_path = candidate
-            normalized_semantic_path = semantic_path.replace("\\", "/")
-            semantic_candidate = Path(normalized_semantic_path)
-            semantic_is_document = (
-                normalized_semantic_path != "."
-                and not semantic_candidate.is_absolute()
-                and ".." not in semantic_candidate.parts
-                and semantic_candidate.suffix.lower() in NATIVE_SEMANTIC_DOCUMENT_SUFFIXES
-                and (self.workspace.root / semantic_candidate).is_file()
+            semantic_mode = semantic_scope_mode(self.workspace.root, semantic_path)
+            lsp_resource = semantic_provider_resource_status(
+                self.semantic_localizer,
+                workspace=self.workspace.root,
+                path=semantic_path,
             )
-            # The native bridge uses document symbols only for a supported
-            # existing source file. Directory, missing, and unsupported-file
-            # scopes fall through to workspace symbols and must retain HEAVY
-            # admission semantics.
-            semantic_mode = "single_file" if semantic_is_document else "workspace"
-            semantic_cost = "MEDIUM" if semantic_mode == "single_file" else "HEAVY"
-            semantic_admission = self.execution_resource_governor.semantic_native_admission(
+            semantic_cost = semantic_resource_cost(semantic_mode, lsp_resource)
+            semantic_batch: dict[str, Any] | None = None
+            with self.execution_resource_governor.semantic_native_claim(
                 mode=semantic_mode,
                 cost=semantic_cost,
-            )
+                resource_status=lsp_resource,
+            ) as semantic_lease:
+                semantic_admission = semantic_lease.public_decision()
+                if semantic_admission["allowed"]:
+                    semantic_batch = run_semantic_localization(
+                        self.semantic_localizer,
+                        workspace=self.workspace.root,
+                        path=semantic_path,
+                        queries=queries,
+                        max_results=max_matches,
+                        resource_class=semantic_cost,
+                    )
             semantic_status = dict(semantic_status)
             semantic_status["admission"] = dict(semantic_admission)
+            semantic_status["resource"] = dict(lsp_resource)
             composite_operations.append({
                 "id": "semantic-admission:0",
                 "stage": "localize",
@@ -270,16 +276,10 @@ class ContextToolsMixin:
                 "cost": semantic_admission["cost"],
                 "reason_code": semantic_admission["reason_code"],
             })
-            if semantic_admission["allowed"]:
-                semantic_batch = run_semantic_localization(
-                    self.semantic_localizer,
-                    workspace=self.workspace.root,
-                    path=semantic_path,
-                    queries=queries,
-                    max_results=max_matches,
-                )
+            if semantic_batch is not None:
                 semantic_status = dict(semantic_batch.get("provider") or semantic_status)
                 semantic_status["admission"] = dict(semantic_admission)
+                semantic_status["resource"] = dict(lsp_resource)
                 fallback_pairs = []
                 for item in semantic_batch.get("results", []):
                     if not isinstance(item, dict):
@@ -467,6 +467,22 @@ class ContextToolsMixin:
 
     def _run_continuous_check(self, command: str, workdir: str, timeout_ms: int) -> dict[str, Any]:
         started = time.time()
+
+        def cancellation_requested() -> bool:
+            checker = getattr(self, "_background_operation_cancelled", None)
+            return bool(checker()) if callable(checker) else False
+
+        if cancellation_requested():
+            return {
+                "command": command,
+                "status": "cancelled",
+                "exit_code": None,
+                "duration_ms": 0,
+                "summary": "Background workflow runtime budget expired before the check started.",
+                "session_id": None,
+                "cancelled": True,
+                "timed_out": True,
+            }
         payload = self.exec_command({
             "cmd": command,
             "workdir": workdir,
@@ -478,6 +494,20 @@ class ContextToolsMixin:
         terminal_tool = "exec_command"
         terminal_args: dict[str, Any] = {"cmd": command}
         while payload.get("status") == "running":
+            if cancellation_requested():
+                session_id = str(payload.get("session_id") or "")
+                if session_id:
+                    try:
+                        self.kill_session({"session_id": session_id})
+                    except Exception:
+                        pass
+                payload = {
+                    **payload,
+                    "status": "cancelled",
+                    "timed_out": True,
+                    "killed": True,
+                }
+                break
             terminal_args = {
                 "session_id": str(payload.get("session_id", "")),
                 "chars": "",
@@ -487,6 +517,9 @@ class ContextToolsMixin:
             }
             payload = self.write_stdin(terminal_args)
             terminal_tool = "write_stdin"
+        cancelled = cancellation_requested()
+        if cancelled:
+            payload = {**payload, "status": "cancelled", "timed_out": True}
         try:
             # These internal calls intentionally bypass _call_tool_sync, so
             # explicitly close the TaskState command lifecycle once with the
@@ -495,13 +528,25 @@ class ContextToolsMixin:
         except Exception:
             # Check truth must not depend on auxiliary task-state persistence.
             pass
+        payload_status = str(payload.get("status") or "").strip().lower()
+        timed_out = bool(payload.get("timed_out")) or payload_status in {"timeout", "timed_out"}
+        if command_payload_succeeded(payload) and not cancelled:
+            check_status = "passed"
+        elif cancelled:
+            check_status = "cancelled"
+        elif timed_out:
+            check_status = "timed_out"
+        else:
+            check_status = "failed"
         return {
             "command": command,
-            "status": "passed" if payload.get("exit_code") == 0 else str(payload.get("status") or "failed"),
+            "status": check_status,
             "exit_code": payload.get("exit_code"),
             "duration_ms": int((time.time() - started) * 1000),
             "summary": str(payload.get("summary") or payload.get("stderr") or payload.get("stdout") or "")[:8000],
             "session_id": payload.get("session_id"),
+            "cancelled": cancelled,
+            "timed_out": timed_out,
         }
 
     def apply_changes_and_verify(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -547,6 +592,10 @@ class ContextToolsMixin:
                 return
             self.orchestration_control.record_failure(ctx, code, payload=details)
             self._project_orchestration(ctx, event="orchestration_failure_projected")
+
+        def background_cancelled() -> bool:
+            checker = getattr(self, "_background_operation_cancelled", None)
+            return bool(checker()) if callable(checker) else False
 
         first_stage = workflow_steps[0]["id"]
         first_text = {
@@ -635,9 +684,40 @@ class ContextToolsMixin:
 
         command_results: list[dict[str, Any]] = []
         timeout_ms = min(max(int(args.get("timeout_ms", 600000)), 1000), 600000)
+
+        def cancelled_workflow_result(stage_id: str) -> dict[str, Any]:
+            failure = "Background workflow runtime budget expired; remaining proof execution was cancelled."
+            set_stage(stage_id, "Workflow runtime budget exceeded", failed=True)
+            record_failure("WORKFLOW_RUNTIME_EXCEEDED", stage=stage_id)
+            self.task_state.update({
+                "status": "waiting",
+                "failure": failure,
+                "current_step": "Replan required",
+                "next_step": "Replan from the runtime-budget cancellation; do not retry the unchanged proof command.",
+            })
+            return {
+                "ok": False,
+                "status": "cancelled",
+                "objective": objective,
+                "patch_results": patch_results,
+                "affected_files": affected_files,
+                "check_results": command_results,
+                "build_report": None,
+                "proof_summary": current_proof_summary(),
+                "error": {
+                    "code": "WORKFLOW_RUNTIME_EXCEEDED",
+                    "message": failure,
+                    "category": "policy",
+                    "retryable": False,
+                    "details": {"stage": stage_id},
+                },
+            }
+
         if checks:
             set_stage("checks", "Running requested checks")
         for command in checks:
+            if background_cancelled():
+                return cancelled_workflow_result("checks")
             if ctx is None:
                 result = self._run_continuous_check(command, workdir, timeout_ms)
             else:
@@ -666,10 +746,14 @@ class ContextToolsMixin:
                 upstream_proof_ids.append(proof_id)
                 observe_proof_cache(result)
             command_results.append(result)
-            if result.get("exit_code") != 0:
-                failure = f"Check failed: {command}"
+            if result.get("status") != "passed":
+                if result.get("cancelled") or background_cancelled():
+                    return cancelled_workflow_result("checks")
+                proof_timed_out = bool(result.get("timed_out"))
+                failure_code = "PROOF_TIMEOUT" if proof_timed_out else "CHECK_FAILED"
+                failure = f"Proof timed out: {command}" if proof_timed_out else f"Check failed: {command}"
                 set_stage("checks", "Requested check failed", failed=True)
-                record_failure("CHECK_FAILED", command_hash=hashlib.sha256(command.encode("utf-8")).hexdigest())
+                record_failure(failure_code, command_hash=hashlib.sha256(command.encode("utf-8")).hexdigest())
                 self.task_state.update({"status": "waiting", "failure": failure, "current_step": "Replan required", "next_step": "Replan from the failed check; do not retry unchanged."})
                 return {
                     "ok": False,
@@ -680,11 +764,13 @@ class ContextToolsMixin:
                     "check_results": command_results,
                     "build_report": None,
                     "proof_summary": current_proof_summary(),
-                    "error": {"code": "CHECK_FAILED", "message": failure, "category": "runtime", "retryable": True, "details": {}},
+                    "error": {"code": failure_code, "message": failure, "category": "runtime", "retryable": True, "details": {}},
                 }
 
         build_report = None
         if verification != "none":
+            if background_cancelled():
+                return cancelled_workflow_result("verify")
             set_stage("verify", "Testing and building")
             verify_args = {
                 "path": str(args.get("path", ".")),
@@ -744,6 +830,9 @@ class ContextToolsMixin:
                     "proof_summary": current_proof_summary(),
                     "error": build_report.get("error"),
                 }
+
+        if background_cancelled():
+            return cancelled_workflow_result("verify" if verification != "none" else "finalize")
 
         diff = None
         if bool(args.get("include_diff", True)) and affected_files:

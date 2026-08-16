@@ -5,6 +5,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -101,6 +102,43 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
         self.governor.complete(light.job_id, lifecycle_state="exited", exit_code=0)
         self.governor.complete(first.job_id, lifecycle_state="exited", exit_code=0)
 
+    def test_snapshot_prioritizes_active_jobs_over_newer_terminal_history(self) -> None:
+        run_id, wave_id = self._owner()
+        active = self.governor.admit(
+            command="git status --short",
+            command_id="older-active",
+            run_id=run_id,
+            wave_id=wave_id,
+            resource_class="LIGHT",
+        )
+        terminal_job_ids: list[str] = []
+        try:
+            for index in range(5):
+                terminal = self.governor.admit(
+                    command="git status --short",
+                    command_id=f"terminal-{index}",
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    resource_class="LIGHT",
+                )
+                terminal_job_ids.append(terminal.job_id)
+                self.governor.complete(
+                    terminal.job_id,
+                    lifecycle_state="exited",
+                    exit_code=0,
+                )
+
+            snapshot = self.governor.snapshot(limit=3)
+
+            self.assertEqual(snapshot["active_command_count"], 1)
+            self.assertEqual(snapshot["active_heavy_count"], 0)
+            self.assertEqual(
+                [row["job_id"] for row in snapshot["jobs"]],
+                [active.job_id, *terminal_job_ids[-2:]],
+            )
+        finally:
+            self.governor.complete(active.job_id, lifecycle_state="exited", exit_code=0)
+
     def test_resource_classification_distinguishes_cargo_metadata_and_builds(self) -> None:
         self.assertEqual(classify_resource_class("cargo metadata --no-deps"), "LIGHT")
         self.assertEqual(classify_resource_class("cargo fmt --check"), "MEDIUM")
@@ -163,7 +201,7 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
                 )
         self.assertEqual(foreign.exception.code, "UNOWNED_EXECUTION_PROCESS")
 
-    def test_semantic_native_admission_is_read_only_and_recovers_after_heavy(self) -> None:
+    def test_semantic_native_claim_is_separate_from_process_ownership_and_recovers(self) -> None:
         run_id, wave_id = self._owner()
         heavy = self.governor.admit(
             command="cargo test",
@@ -181,10 +219,11 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
             ),
             patch.object(self.governor, "_foreign_heavy_processes", return_value=[]),
         ):
-            denied = self.governor.semantic_native_admission(
+            denied_lease = self.governor.semantic_native_claim(
                 mode="workspace",
                 cost="HEAVY",
             )
+            denied = denied_lease.public_decision()
         self.assertFalse(denied["allowed"])
         self.assertEqual(denied["reason_code"], "HEAVY_SLOT_BUSY")
         self.assertEqual(denied["active_heavy_count"], 1)
@@ -202,19 +241,21 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
             ),
             patch.object(self.governor, "_foreign_heavy_processes", return_value=[]),
         ):
-            allowed = self.governor.semantic_native_admission(
+            with self.governor.semantic_native_claim(
                 mode="workspace",
                 cost="HEAVY",
-            )
-        self.assertTrue(allowed["allowed"])
-        self.assertEqual(allowed["reason_code"], "ALLOWED")
+            ) as allowed_lease:
+                allowed = allowed_lease.public_decision()
+                self.assertTrue(allowed["allowed"])
+                self.assertTrue(allowed["claim_acquired"])
+                self.assertEqual(allowed["reason_code"], "ALLOWED")
         snapshot = self.governor.snapshot()
         self.assertEqual(
             snapshot["semantic_native_admission_counts"],
             {"allowed": 1, "rejected": 1},
         )
 
-    def test_semantic_native_admission_reason_priority_is_deterministic(self) -> None:
+    def test_semantic_native_claim_reason_priority_is_deterministic(self) -> None:
         with (
             patch.object(
                 self.governor,
@@ -223,10 +264,10 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
             ),
             patch.object(self.governor, "_foreign_heavy_processes", return_value=[]),
         ):
-            pressured = self.governor.semantic_native_admission(
+            pressured = self.governor.semantic_native_claim(
                 mode="single_file",
                 cost="MEDIUM",
-            )
+            ).public_decision()
         self.assertEqual(pressured["reason_code"], "HOST_RESOURCE_PRESSURE")
 
         with (
@@ -243,10 +284,10 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
                 ],
             ),
         ):
-            foreign = self.governor.semantic_native_admission(
+            foreign = self.governor.semantic_native_claim(
                 mode="single_file",
                 cost="MEDIUM",
-            )
+            ).public_decision()
         self.assertEqual(foreign["reason_code"], "UNOWNED_EXECUTION_PROCESS")
 
         with (
@@ -267,17 +308,185 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
                 ],
             ),
         ):
-            focused = self.governor.semantic_native_admission(
+            focused = self.governor.semantic_native_claim(
                 mode="single_file",
                 cost="MEDIUM",
-            )
-            workspace = self.governor.semantic_native_admission(
+            ).public_decision()
+            workspace = self.governor.semantic_native_claim(
                 mode="workspace",
                 cost="HEAVY",
-            )
+            ).public_decision()
         self.assertTrue(focused["allowed"])
         self.assertTrue(focused["foreign_heavy_present"])
         self.assertEqual(workspace["reason_code"], "UNOWNED_EXECUTION_PROCESS")
+
+    def test_atomic_semantic_and_managed_heavy_claim_barrier_100_iterations(self) -> None:
+        run_id, wave_id = self._owner()
+        other = ExecutionResourceGovernor(
+            self.root,
+            self.ledger,
+            process_instance_id="process-two",
+            runtime_instance_id="runtime-two",
+        )
+        for governor in (self.governor, other):
+            governor._host_pressure = lambda: {"observed": True, "pressured": False}  # type: ignore[method-assign]
+            governor._foreign_heavy_processes = lambda: []  # type: ignore[method-assign]
+
+        for iteration in range(100):
+            barrier = threading.Barrier(3)
+            release = threading.Event()
+            semantic_done = threading.Event()
+            managed_done = threading.Event()
+            results: dict[str, object] = {}
+
+            def semantic_lane() -> None:
+                barrier.wait()
+                with self.governor.semantic_native_claim(
+                    mode="single_file",
+                    cost="HEAVY",
+                    resource_status={
+                        "lifecycle_state": "STOPPED",
+                        "warm": False,
+                        "pressure_state": "UNKNOWN",
+                    },
+                ) as lease:
+                    results["semantic"] = lease.public_decision()
+                    semantic_done.set()
+                    release.wait(timeout=5)
+
+            def managed_lane() -> None:
+                barrier.wait()
+                admission = None
+                try:
+                    admission = other.admit(
+                        command="cargo test",
+                        command_id=f"barrier-managed-{iteration}",
+                        run_id=run_id,
+                        wave_id=wave_id,
+                        resource_class="HEAVY",
+                    )
+                    results["managed"] = "allowed"
+                except ExecutionResourceError as exc:
+                    results["managed"] = exc.code
+                finally:
+                    managed_done.set()
+                release.wait(timeout=5)
+                if admission is not None:
+                    other.complete(admission.job_id, lifecycle_state="exited", exit_code=0)
+
+            semantic_thread = threading.Thread(target=semantic_lane)
+            managed_thread = threading.Thread(target=managed_lane)
+            semantic_thread.start()
+            managed_thread.start()
+            barrier.wait()
+            self.assertTrue(semantic_done.wait(timeout=5), iteration)
+            self.assertTrue(managed_done.wait(timeout=5), iteration)
+            semantic_allowed = bool(
+                isinstance(results.get("semantic"), dict)
+                and results["semantic"].get("allowed") is True  # type: ignore[union-attr]
+            )
+            managed_allowed = results.get("managed") == "allowed"
+            self.assertEqual(int(semantic_allowed) + int(managed_allowed), 1, (iteration, results))
+            self.assertEqual(len(self.governor._claim_rows(active_only=True)), 1, iteration)
+            loser = results.get("managed") if semantic_allowed else results["semantic"]["reason_code"]  # type: ignore[index]
+            self.assertEqual(loser, "HEAVY_SLOT_BUSY", (iteration, results))
+            release.set()
+            semantic_thread.join(timeout=5)
+            managed_thread.join(timeout=5)
+            self.assertFalse(semantic_thread.is_alive(), iteration)
+            self.assertFalse(managed_thread.is_alive(), iteration)
+            self.assertEqual(self.governor._claim_rows(active_only=True), [], iteration)
+
+        with self.governor.semantic_native_claim(
+            mode="workspace",
+            cost="HEAVY",
+        ) as retry:
+            self.assertTrue(retry["allowed"])
+            self.assertTrue(retry["claim_acquired"])
+
+    def test_semantic_claim_releases_on_exception_and_expiry_is_owner_safe(self) -> None:
+        self.governor._host_pressure = lambda: {"observed": True, "pressured": False}  # type: ignore[method-assign]
+        self.governor._foreign_heavy_processes = lambda: []  # type: ignore[method-assign]
+        with self.assertRaisesRegex(RuntimeError, "provider failed"):
+            with self.governor.semantic_native_claim(
+                mode="workspace",
+                cost="HEAVY",
+            ) as lease:
+                self.assertTrue(lease["claim_acquired"])
+                raise RuntimeError("provider failed")
+        self.assertEqual(self.governor._claim_rows(active_only=True), [])
+
+        stale = self.governor.semantic_native_claim(mode="workspace", cost="HEAVY")
+        stale_claim = self.governor._claim_rows(active_only=True)[0]
+        with self.ledger._lock, self.ledger._connect() as connection:
+            connection.execute(
+                "UPDATE checkout_resource_claims SET expires_at=? WHERE claim_id=?",
+                (time.time() - 1, stale_claim["claim_id"]),
+            )
+        self.governor.reconcile()
+        with self.governor.semantic_native_claim(mode="workspace", cost="HEAVY") as current:
+            self.assertTrue(current["allowed"])
+            stale.release()
+            self.assertEqual(len(self.governor._claim_rows(active_only=True)), 1)
+        self.assertEqual(self.governor._claim_rows(active_only=True), [])
+
+    def test_reconcile_releases_backfilled_claim_after_older_runtime_terminalizes_job(self) -> None:
+        run_id, wave_id = self._owner()
+        admission = self.governor.admit(
+            command="cargo test",
+            command_id="cross-version-terminal",
+            run_id=run_id,
+            wave_id=wave_id,
+            resource_class="HEAVY",
+        )
+        with self.ledger._lock, self.ledger._connect() as connection:
+            connection.execute(
+                """UPDATE managed_process_jobs
+                   SET lifecycle_state='exited',finished_at=updated_at
+                   WHERE job_id=?""",
+                (admission.job_id,),
+            )
+        self.assertEqual(len(self.governor._claim_rows(active_only=True)), 1)
+
+        self.governor.reconcile()
+
+        self.assertEqual(self.governor._claim_rows(active_only=True), [])
+        with (
+            patch.object(
+                self.governor,
+                "_host_pressure",
+                return_value={"observed": True, "pressured": False},
+            ),
+            patch.object(self.governor, "_foreign_heavy_processes", return_value=[]),
+        ):
+            with self.governor.semantic_native_claim(mode="workspace", cost="HEAVY") as lease:
+                self.assertTrue(lease["allowed"])
+                self.assertTrue(lease["claim_acquired"])
+
+    def test_semantic_claim_respects_lsp_pressure_policy(self) -> None:
+        self.governor._host_pressure = lambda: {"observed": True, "pressured": False}  # type: ignore[method-assign]
+        self.governor._foreign_heavy_processes = lambda: []  # type: ignore[method-assign]
+
+        hard = self.governor.semantic_native_claim(
+            mode="single_file",
+            cost="MEDIUM",
+            resource_status={"pressure_state": "HARD"},
+        ).public_decision()
+        soft_workspace = self.governor.semantic_native_claim(
+            mode="workspace",
+            cost="HEAVY",
+            resource_status={"pressure_state": "SOFT"},
+        ).public_decision()
+        with self.governor.semantic_native_claim(
+            mode="single_file",
+            cost="MEDIUM",
+            resource_status={"pressure_state": "SOFT"},
+        ) as soft_focused:
+            self.assertTrue(soft_focused["allowed"])
+
+        self.assertEqual(hard["reason_code"], "LSP_RESOURCE_PRESSURE")
+        self.assertEqual(soft_workspace["reason_code"], "LSP_RESOURCE_PRESSURE")
+        self.assertEqual(self.governor._claim_rows(active_only=True), [])
 
     def test_replan_tears_down_descendants_but_not_another_wave(self) -> None:
         control = OrchestrationControl(
@@ -372,7 +581,7 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
             self.root,
             self.ledger,
             process_instance_id="process-two",
-            runtime_instance_id="runtime-two",
+            runtime_instance_id="runtime-one",
         )
         self.assertEqual(restarted.recovery["orphaned"], 1)
         with self.assertRaises(ExecutionResourceError) as orphaned:
@@ -395,6 +604,106 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
             resource_class="HEAVY",
         )
         restarted.complete(replacement.job_id, lifecycle_state="exited", exit_code=0)
+
+    def test_restart_quiesces_stale_unbound_start_from_prior_runtime_and_releases_claim(self) -> None:
+        run_id, wave_id = self._owner()
+        admission = self.governor.admit(
+            command="cargo test",
+            command_id="stale-unbound-heavy",
+            run_id=run_id,
+            wave_id=wave_id,
+            resource_class="HEAVY",
+        )
+        with self.ledger._lock, self.ledger._connect() as connection:
+            connection.execute(
+                """UPDATE managed_process_jobs
+                   SET started_at='2000-01-01T00:00:00+00:00',
+                       updated_at='2000-01-01T00:00:00+00:00'
+                   WHERE job_id=?""",
+                (admission.job_id,),
+            )
+
+        restarted = ExecutionResourceGovernor(
+            self.root,
+            self.ledger,
+            process_instance_id="process-two",
+            runtime_instance_id="runtime-two",
+        )
+
+        self.assertEqual(restarted.recovery["quiesced"], 1)
+        row = next(item for item in restarted._rows() if item["job_id"] == admission.job_id)
+        self.assertEqual(row["lifecycle_state"], "quiesced")
+        self.assertEqual(restarted.snapshot()["active_command_count"], 0)
+        self.assertEqual(restarted._claim_rows(active_only=True), [])
+
+    def test_restart_preserves_fresh_unbound_start_from_prior_runtime_during_grace(self) -> None:
+        admission = self.governor.admit(
+            command="git status --short",
+            command_id="fresh-unbound-light",
+            resource_class="LIGHT",
+        )
+        restarted = ExecutionResourceGovernor(
+            self.root,
+            self.ledger,
+            process_instance_id="process-two",
+            runtime_instance_id="runtime-two",
+        )
+        try:
+            row = next(item for item in restarted._rows() if item["job_id"] == admission.job_id)
+            self.assertEqual(row["lifecycle_state"], "starting")
+            self.assertEqual(restarted.snapshot()["active_command_count"], 1)
+        finally:
+            self.governor.complete(admission.job_id, lifecycle_state="spawn_failed")
+
+    def test_restart_preserves_fresh_unbound_start_from_same_runtime_during_grace(self) -> None:
+        admission = self.governor.admit(
+            command="git status --short",
+            command_id="fresh-unbound-same-runtime",
+            resource_class="LIGHT",
+        )
+        same_runtime = ExecutionResourceGovernor(
+            self.root,
+            self.ledger,
+            process_instance_id="process-one",
+            runtime_instance_id="runtime-one",
+        )
+        try:
+            row = next(item for item in same_runtime._rows() if item["job_id"] == admission.job_id)
+            self.assertEqual(row["lifecycle_state"], "starting")
+            self.assertEqual(same_runtime.snapshot()["active_command_count"], 1)
+        finally:
+            self.governor.complete(admission.job_id, lifecycle_state="spawn_failed")
+
+    def test_restart_quiesces_dead_foreign_bound_row_and_releases_claim(self) -> None:
+        run_id, wave_id = self._owner()
+        admission = self.governor.admit(
+            command="cargo test",
+            command_id="dead-foreign-heavy",
+            run_id=run_id,
+            wave_id=wave_id,
+            resource_class="HEAVY",
+        )
+        with self.ledger._lock, self.ledger._connect() as connection:
+            connection.execute(
+                """UPDATE managed_process_jobs
+                   SET lifecycle_state='running',root_pid=2147483647,
+                       root_process_token='definitely-dead-process'
+                   WHERE job_id=?""",
+                (admission.job_id,),
+            )
+
+        restarted = ExecutionResourceGovernor(
+            self.root,
+            self.ledger,
+            process_instance_id="process-two",
+            runtime_instance_id="runtime-two",
+        )
+
+        self.assertEqual(restarted.recovery["quiesced"], 1)
+        row = next(item for item in restarted._rows() if item["job_id"] == admission.job_id)
+        self.assertEqual(row["lifecycle_state"], "quiesced")
+        self.assertEqual(restarted.snapshot()["active_command_count"], 0)
+        self.assertEqual(restarted._claim_rows(active_only=True), [])
 
     def test_reconnect_in_same_process_retains_teardown_handle(self) -> None:
         run_id, wave_id = self._owner()

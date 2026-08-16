@@ -502,6 +502,28 @@ fn run_git_capture(path: &str, args: &[&str], shutdown: Option<&AtomicBool>) -> 
     Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ProjectGitSourceState {
+    pub head: String,
+    pub dirty: bool,
+}
+
+pub(crate) fn project_git_source_state(
+    path: &Path,
+    shutdown: Option<&AtomicBool>,
+) -> Option<ProjectGitSourceState> {
+    let path = path.to_string_lossy();
+    let head = run_git_capture(&path, &["rev-parse", "HEAD"], shutdown)?;
+    if !webcodex_core::shell_protocol::valid_exact_git_oid(&head) {
+        return None;
+    }
+    let status = run_git_capture(&path, &["status", "--porcelain=v1"], shutdown)?;
+    Some(ProjectGitSourceState {
+        head,
+        dirty: !status.trim().is_empty(),
+    })
+}
+
 fn project_revision(project: &AgentProjectFile) -> String {
     let normalized = toml::to_string(project).unwrap_or_default();
     format!("sha256:{:x}", Sha256::digest(normalized.as_bytes()))
@@ -530,13 +552,9 @@ fn agent_project_summary_with_shutdown(
             &["rev-parse", "--abbrev-ref", "HEAD"],
             shutdown,
         );
-        let head = run_git_capture(
-            &resolved_path,
-            &["log", "-1", "--pretty=format:%h"],
-            shutdown,
-        );
-        let dirty = run_git_capture(&resolved_path, &["status", "--short"], shutdown)
-            .map(|status| !status.trim().is_empty());
+        let source = project_git_source_state(Path::new(&resolved_path), shutdown);
+        let head = source.as_ref().map(|source| source.head.clone());
+        let dirty = source.as_ref().map(|source| source.dirty);
         (branch, head, dirty)
     } else {
         (None, None, None)

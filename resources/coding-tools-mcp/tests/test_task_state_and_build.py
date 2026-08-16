@@ -125,6 +125,29 @@ class TaskStateTests(unittest.TestCase):
             self.assertEqual(restored["test_results"][-1]["status"], "passed")
             self.assertEqual(restored["modified_files"], [{"path": "src/app.js", "operation": "update", "updated_at": restored["modified_files"][0]["updated_at"]}])
 
+    def test_timeout_payload_with_exit_zero_is_never_recorded_as_passed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = TaskStateStore(root)
+            store.update({"objective": "Timeout must fail closed"})
+            store.record_command_started("python -m pytest -q", "timeout-command", ".")
+            store.record_tool_result(
+                "exec_command",
+                {"cmd": "python -m pytest -q"},
+                {
+                    "ok": True,
+                    "status": "timeout",
+                    "session_id": "timeout-command",
+                    "exit_code": 0,
+                    "elapsed_ms": 1000,
+                    "timed_out": True,
+                    "summary": "terminated at deadline",
+                },
+            )
+            state = store.get()
+            self.assertEqual(state["test_results"][-1]["status"], "failed")
+            self.assertEqual(state["status"], "failed")
+
     def test_agent_workflow_records_nested_execution_affected_files_for_final_acceptance(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -681,8 +704,8 @@ class ToolModeTests(unittest.TestCase):
             def status(self):
                 return {"available": True, "provider": "native-lsp-test", "read_only": True}
 
-            def localize(self, *, workspace, path, queries, max_results):
-                del workspace, max_results
+            def localize(self, *, workspace, path, queries, max_results, resource_class):
+                del workspace, max_results, resource_class
                 semantic_paths.append(path)
                 return [
                     {
@@ -736,8 +759,8 @@ class ToolModeTests(unittest.TestCase):
                     "read_only": True,
                 }
 
-            def localize(self, *, workspace, path, queries, max_results):
-                del workspace, max_results
+            def localize(self, *, workspace, path, queries, max_results, resource_class):
+                del workspace, max_results, resource_class
                 semantic_calls.append(path)
                 return [
                     {
@@ -874,6 +897,58 @@ class ToolModeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_prepare_coding_context_releases_heavy_claim_after_provider_exception(self) -> None:
+        class FailingSemanticStub:
+            def status(self):
+                return {
+                    "available": True,
+                    "provider": "native-lsp-test",
+                    "read_only": True,
+                }
+
+            def localize(self, *, workspace, path, queries, max_results, resource_class):
+                del workspace, path, queries, max_results, resource_class
+                raise RuntimeError("provider failed")
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "semantic.py").write_text("fallback_token = 2\n", encoding="utf-8")
+            runtime = Runtime(root, semantic_localizer=FailingSemanticStub())
+            try:
+                with (
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "_host_pressure",
+                        return_value={"observed": True, "pressured": False},
+                    ),
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "_foreign_heavy_processes",
+                        return_value=[],
+                    ),
+                ):
+                    result = runtime.prepare_coding_context(
+                        {
+                            "objective": "provider exception fallback",
+                            "queries": ["fallback_token"],
+                            "path": ".",
+                            "max_files": 2,
+                            "force_refresh": True,
+                        }
+                    )
+                localization = result["composite_read"]["execution"]["localization"]
+                self.assertEqual(
+                    localization["provider"]["reason"],
+                    "SEMANTIC_PROVIDER_CALL_FAILED",
+                )
+                self.assertEqual(localization["text_fallback_queries"], 1)
+                self.assertEqual(
+                    runtime.execution_resource_governor._claim_rows(active_only=True),
+                    [],
+                )
+            finally:
+                runtime.close()
+
     def test_continuous_check_terminalizes_internal_command_bookkeeping(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp), permission_mode="dangerous")
@@ -889,6 +964,87 @@ class ToolModeTests(unittest.TestCase):
                 self.assertIsInstance(artifact, dict)
                 self.assertFalse(artifact["restart_safe"])
                 self.assertTrue(artifact["streams"]["stdout"]["output_ref"].startswith("command:"))
+            finally:
+                runtime.close()
+
+    def test_continuous_check_timeout_exit_zero_is_not_proof_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                runtime.task_state.update({"objective": "Timeout proof classification", "status": "active"})
+                terminal = {
+                    "ok": True,
+                    "status": "timeout",
+                    "session_id": "timeout-proof",
+                    "exit_code": 0,
+                    "elapsed_ms": 25,
+                    "timed_out": True,
+                    "summary": "deadline",
+                }
+                with patch.object(runtime, "exec_command", return_value=terminal):
+                    result = runtime._run_continuous_check("python -m pytest -q", ".", 30_000)
+                self.assertEqual(result["status"], "timed_out")
+                self.assertTrue(result["timed_out"])
+                self.assertEqual(runtime.task_state.get()["test_results"][-1]["status"], "failed")
+            finally:
+                runtime.close()
+
+    def test_cancelled_check_stops_following_checks_and_never_finalizes_success(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                cancelled = {
+                    "command": "first",
+                    "status": "cancelled",
+                    "exit_code": 0,
+                    "duration_ms": 1,
+                    "summary": "budget expired",
+                    "session_id": "cancelled-proof",
+                    "cancelled": True,
+                    "timed_out": True,
+                }
+                with patch.object(runtime, "_run_continuous_check", return_value=cancelled) as check:
+                    result = runtime.apply_changes_and_verify({
+                        "objective": "Stop proof sequence on cancellation",
+                        "checks": ["first", "second"],
+                        "verification": "none",
+                        "include_diff": False,
+                    })
+                self.assertFalse(result["ok"])
+                self.assertEqual(result["status"], "cancelled")
+                self.assertEqual(result["error"]["code"], "WORKFLOW_RUNTIME_EXCEEDED")
+                self.assertEqual(check.call_count, 1)
+                self.assertEqual(runtime.task_state.get()["current_step"], "Replan required")
+            finally:
+                runtime.close()
+
+    def test_aborted_canonical_run_repairs_stale_awaiting_acceptance_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                state = runtime.task_state.update({
+                    "objective": "Repair stale acceptance UI",
+                    "status": "waiting",
+                    "current_step": "Awaiting acceptance",
+                    "next_step": "Accept stale proof",
+                })
+                ctx = runtime.orchestration_control.begin(
+                    objective="Repair stale acceptance UI",
+                    task_id=str(state["task_id"]),
+                    execution_mode="mcp_only",
+                    base_head="test-head",
+                    worktree_fp="test-worktree",
+                )
+                stale = ctx.projection()
+                stale["orchestration_state"] = "ACCEPTING"
+                runtime.task_state.set_orchestration_projection(stale, event="test_stale_acceptance")
+                runtime.orchestration_control.transition(ctx, "ABORTED", reason="test_timeout")
+                self.assertTrue(runtime._reconcile_task_orchestration_projection())
+                repaired = runtime.task_state.get()
+                self.assertEqual(repaired["orchestration"]["orchestration_state"], "ABORTED")
+                self.assertEqual(repaired["status"], "stopped")
+                self.assertEqual(repaired["current_step"], "Aborted")
+                self.assertNotEqual(repaired["current_step"], "Awaiting acceptance")
             finally:
                 runtime.close()
 

@@ -147,6 +147,40 @@ class BackgroundBudgetWatchdogTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_background_runtime_budget_is_propagated_to_worker_cancellation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                cancellation_seen = __import__("threading").Event()
+
+                def cooperative_handler(args: dict) -> dict:
+                    del args
+                    deadline = time.monotonic() + 3
+                    while time.monotonic() < deadline:
+                        if runtime._background_operation_cancelled():
+                            cancellation_seen.set()
+                            return {"ok": False, "status": "cancelled"}
+                        time.sleep(0.01)
+                    return {"ok": True, "summary": "unexpected late completion"}
+
+                with (
+                    patch.dict(runtime._tool_handlers, {"server_info": cooperative_handler}),
+                    patch("coding_tools_mcp.server.validate_arguments", lambda *args, **kwargs: None),
+                    patch("coding_tools_mcp.server.BACKGROUND_BUDGET_POLL_SECONDS", 0.01),
+                ):
+                    operation, done = runtime._start_background_tool(
+                        "server_info",
+                        {"timeout_seconds": 1},
+                        request_id=None,
+                    )
+                    self.assertTrue(done.wait(3))
+                    self.assertTrue(cancellation_seen.wait(1))
+                    snapshot = runtime._background_operation_snapshot(operation)
+                    self.assertEqual(snapshot["status"], "failed")
+                    self.assertEqual((snapshot.get("error") or {}).get("code"), "WORKFLOW_RUNTIME_EXCEEDED")
+            finally:
+                runtime.close()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,7 +7,13 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .errors import ToolFailure
-from .semantic_localization import run_semantic_localization
+from .semantic_localization import (
+    run_semantic_localization,
+    semantic_provider_resource_status,
+    semantic_provider_status,
+    semantic_resource_cost,
+    semantic_scope_mode,
+)
 
 
 CODE_MODE_BINDING_SCHEMA_VERSION = 1
@@ -270,13 +276,44 @@ class CodeModeHostBindingProxy:
         path = self._resolve_primary_workspace_path(arguments.get("path"))
         queries = _bounded_strings(arguments.get("queries"), name="queries", maximum_items=8, maximum_bytes=200)
         max_results = _bounded_int(arguments.get("max_results"), default=20, minimum=1, maximum=50, name="max_results")
-        raw = run_semantic_localization(
+        mode = semantic_scope_mode(self._runtime.workspace.root, path)
+        resource = semantic_provider_resource_status(
             self._runtime.semantic_localizer,
             workspace=self._runtime.workspace.root,
             path=path,
-            queries=queries,
-            max_results=max_results,
         )
+        resource_class = semantic_resource_cost(mode, resource)
+        with self._runtime.execution_resource_governor.semantic_native_claim(
+            mode=mode,
+            cost=resource_class,
+            resource_status=resource,
+        ) as lease:
+            admission = lease.public_decision()
+            if admission["allowed"]:
+                raw = run_semantic_localization(
+                    self._runtime.semantic_localizer,
+                    workspace=self._runtime.workspace.root,
+                    path=path,
+                    queries=queries,
+                    max_results=max_results,
+                    resource_class=resource_class,
+                )
+            else:
+                provider = semantic_provider_status(self._runtime.semantic_localizer)
+                provider["reason"] = admission["reason_code"]
+                raw = {
+                    "provider": provider,
+                    "results": [
+                        {
+                            "query_index": index,
+                            "query": query,
+                            "handled": False,
+                            "definitive": False,
+                            "matches": [],
+                        }
+                        for index, query in enumerate(queries)
+                    ],
+                }
         status = raw.get("provider") if isinstance(raw.get("provider"), dict) else {}
         safe_status = {
             key: status.get(key)
@@ -302,4 +339,9 @@ class CodeModeHostBindingProxy:
                 safe_match["path"] = safe_path
                 projected["matches"].append(safe_match)
             rows.append(projected)
-        return {"provider": safe_status, "results": rows}
+        return {
+            "provider": safe_status,
+            "resource": resource,
+            "admission": admission,
+            "results": rows,
+        }

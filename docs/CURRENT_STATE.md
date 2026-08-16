@@ -127,6 +127,8 @@ Coding Tools MCP uses semantic-first localization when the native WebCodex LSP p
 
 The current worktree also contains LSP process telemetry/resource-governance work: process instance identity, PID/start identity, current and peak working set, pending-request state, memory-pressure classification, restart/drain counters, bounded idle reaping, and soft/hard pressure behavior. Pressure policy is internal and testable; it must not be documented as one universal production memory number derived from a historical sample.
 
+At Git HEAD `cf6cb6dd` on 2026-08-16, the current worktree completed one 10-cycle real Connector/Runner/rust-analyzer acceptance window. The fingerprinted report records distinct process identities for every cold restart, final `STOPPED`, zero active HEAVY claim/write fence/stale run/orphan/overlap, and p95 peak LSP working set below 30 MiB on this Windows host. This host-scoped sample supports keeping the existing 2 GiB/3 GiB soft/hard defaults; it is evidence for this acceptance window, not a universal memory guarantee. The source remains unreleased until the intended changes are selectively delivered through the normal Git/release boundary.
+
 Until the exact change set has final acceptance and, where required, controlled activation/package validation, describe this as **implemented in the current worktree**, not automatically as a released feature.
 
 ## 8. Validation and release boundary

@@ -19,6 +19,7 @@ DEFAULT_UNAVAILABLE_REASON = "NATIVE_LSP_BINDING_NOT_CONFIGURED"
 INVALID_BINDING_REASON = "NATIVE_LSP_BINDING_INVALID"
 NATIVE_LSP_PROVIDER = "webcodex_native_lsp"
 NATIVE_LSP_ENDPOINT_PATH = "/api/connector/internal/semantic/localize"
+NATIVE_LSP_STATUS_ENDPOINT_PATH = "/api/connector/internal/semantic/status"
 NATIVE_LSP_URL_ENV = f"{ENV_PREFIX}_NATIVE_LSP_URL"
 NATIVE_LSP_CREDENTIAL_FILE_ENV = f"{ENV_PREFIX}_NATIVE_LSP_CREDENTIAL_FILE"
 # The Rust ToolRuntime gives one agent LSP request a 30s wait budget plus a
@@ -36,6 +37,52 @@ _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1"})
 _BINDING_STATES = frozenset({"unconfigured", "partial", "invalid", "configured"})
 _BINDING_COMPONENTS = frozenset({"binding_file", "workspace", "origin", "credential_file"})
 _MACHINE_BINDING_FIELDS = frozenset({"schema_version", "workspace_sha256", "origin", "credential_file"})
+NATIVE_SEMANTIC_DOCUMENT_SUFFIXES = frozenset({
+    ".rs", ".py", ".pyi", ".ts", ".mts", ".cts", ".tsx",
+    ".js", ".mjs", ".cjs", ".jsx",
+})
+
+
+def unknown_semantic_resource_status(*, reason: str = "LSP_RESOURCE_STATUS_UNKNOWN") -> dict[str, Any]:
+    return {
+        "lifecycle_state": "UNKNOWN",
+        "warm": None,
+        "pressure_state": "UNKNOWN",
+        "process_instance_id": None,
+        "working_set_bytes": None,
+        "peak_working_set_bytes": None,
+        "pending_request_count": 0,
+        "restart_count": 0,
+        "drain_count": 0,
+        "observed_at": None,
+        "observed": False,
+        "reason": str(reason or "LSP_RESOURCE_STATUS_UNKNOWN")[:120],
+    }
+
+
+def semantic_scope_mode(workspace: Path, path: str) -> str:
+    normalized = str(path or ".").strip().replace("\\", "/")
+    candidate = Path(normalized)
+    if (
+        normalized != "."
+        and not candidate.is_absolute()
+        and ".." not in candidate.parts
+        and candidate.suffix.lower() in NATIVE_SEMANTIC_DOCUMENT_SUFFIXES
+        and (workspace / candidate).is_file()
+    ):
+        return "single_file"
+    return "workspace"
+
+
+def semantic_resource_cost(mode: str, resource_status: dict[str, Any]) -> str:
+    if (
+        str(mode or "").strip().lower() == "single_file"
+        and resource_status.get("lifecycle_state") == "RUNNING"
+        and resource_status.get("warm") is True
+        and resource_status.get("pressure_state") == "NORMAL"
+    ):
+        return "MEDIUM"
+    return "HEAVY"
 
 
 def _semantic_binding_status(
@@ -91,9 +138,14 @@ class UnavailableSemanticLocalizationProvider:
         path: str,
         queries: list[str],
         max_results: int,
+        resource_class: str,
     ) -> list[dict[str, Any]]:
-        del workspace, path, queries, max_results
+        del workspace, path, queries, max_results, resource_class
         return []
+
+    def resource_status(self, *, workspace: Path, path: str) -> dict[str, Any]:
+        del workspace, path
+        return unknown_semantic_resource_status(reason=self.reason)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -278,6 +330,7 @@ class NativeRustSemanticLocalizationProvider:
         path: str,
         queries: list[str],
         max_results: int,
+        resource_class: str,
     ) -> list[dict[str, Any]]:
         if not 1 <= len(queries) <= 8:
             raise ValueError("native semantic query count is out of bounds")
@@ -295,18 +348,62 @@ class NativeRustSemanticLocalizationProvider:
             or "\x00" in scope
         ):
             raise ValueError("native semantic scope is invalid")
-        body = json.dumps(
+        normalized_resource_class = str(resource_class or "").strip().upper()
+        if normalized_resource_class not in {"MEDIUM", "HEAVY"}:
+            raise ValueError("native semantic resource class is invalid")
+        data = self._request_data(
+            NATIVE_LSP_ENDPOINT_PATH,
             {
                 "workspace_sha256": portable_workspace_sha256(workspace),
                 "path": scope,
                 "queries": clean_queries,
                 "max_results": bounded_results,
+                "resource_class": normalized_resource_class,
             },
+        )
+        if (
+            data.get("schema_version") != 1
+            or data.get("provider") != NATIVE_LSP_PROVIDER
+            or data.get("read_only") is not True
+            or not isinstance(data.get("results"), list)
+        ):
+            raise RuntimeError("native semantic response contract mismatch")
+        return data["results"]
+
+    def resource_status(self, *, workspace: Path, path: str) -> dict[str, Any]:
+        scope = str(path or ".").strip().replace("\\", "/")
+        if (
+            scope.startswith("/")
+            or (len(scope) >= 2 and scope[1] == ":")
+            or ".." in scope.split("/")
+            or "\x00" in scope
+        ):
+            raise ValueError("native semantic scope is invalid")
+        data = self._request_data(
+            NATIVE_LSP_STATUS_ENDPOINT_PATH,
+            {
+                "workspace_sha256": portable_workspace_sha256(workspace),
+                "path": scope,
+            },
+        )
+        resource = data.get("lsp_resource")
+        if (
+            data.get("schema_version") != 1
+            or data.get("provider") != NATIVE_LSP_PROVIDER
+            or data.get("read_only") is not True
+            or not isinstance(resource, dict)
+        ):
+            raise RuntimeError("native semantic status response contract mismatch")
+        return resource
+
+    def _request_data(self, endpoint_path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        body = json.dumps(
+            payload,
             ensure_ascii=False,
             separators=(",", ":"),
         ).encode("utf-8")
         request = urllib.request.Request(
-            self._origin + NATIVE_LSP_ENDPOINT_PATH,
+            self._origin + endpoint_path,
             data=body,
             method="POST",
             headers={
@@ -328,17 +425,9 @@ class NativeRustSemanticLocalizationProvider:
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise RuntimeError("native semantic response was invalid") from exc
         data = envelope.get("data") if isinstance(envelope, dict) else None
-        if (
-            not isinstance(envelope, dict)
-            or envelope.get("ok") is not True
-            or not isinstance(data, dict)
-            or data.get("schema_version") != 1
-            or data.get("provider") != NATIVE_LSP_PROVIDER
-            or data.get("read_only") is not True
-            or not isinstance(data.get("results"), list)
-        ):
+        if not isinstance(envelope, dict) or envelope.get("ok") is not True or not isinstance(data, dict):
             raise RuntimeError("native semantic response contract mismatch")
-        return data["results"]
+        return data
 
 
 def semantic_localizer_from_env(workspace: Path | None = None) -> Any:
@@ -454,6 +543,52 @@ def semantic_provider_status(provider: Any) -> dict[str, Any]:
     return result
 
 
+def semantic_provider_resource_status(
+    provider: Any,
+    *,
+    workspace: Path,
+    path: str,
+) -> dict[str, Any]:
+    """Read and sanitize content-free LSP resource status without starting it."""
+
+    if provider is None or not hasattr(provider, "resource_status"):
+        return unknown_semantic_resource_status(reason="LSP_RESOURCE_STATUS_UNSUPPORTED")
+    try:
+        raw = provider.resource_status(workspace=workspace, path=path)
+    except Exception:
+        return unknown_semantic_resource_status(reason="LSP_RESOURCE_STATUS_FAILED")
+    if not isinstance(raw, dict):
+        return unknown_semantic_resource_status(reason="LSP_RESOURCE_STATUS_INVALID")
+    lifecycle = str(raw.get("lifecycle_state") or "UNKNOWN").strip().upper()
+    if lifecycle not in {"STOPPED", "STARTING", "RUNNING", "FAILED", "UNKNOWN"}:
+        lifecycle = "UNKNOWN"
+    pressure = str(raw.get("pressure_state") or "UNKNOWN").strip().upper()
+    if pressure not in {"NORMAL", "SOFT", "HARD", "UNKNOWN"}:
+        pressure = "UNKNOWN"
+    warm = raw.get("warm") if isinstance(raw.get("warm"), bool) else None
+    process_instance_id = str(raw.get("process_instance_id") or "").strip()
+    if not process_instance_id or len(process_instance_id) > 128:
+        process_instance_id = None
+
+    def optional_count(key: str) -> int | None:
+        value = raw.get(key)
+        return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+
+    return {
+        "lifecycle_state": lifecycle,
+        "warm": warm,
+        "pressure_state": pressure,
+        "process_instance_id": process_instance_id,
+        "working_set_bytes": optional_count("working_set_bytes"),
+        "peak_working_set_bytes": optional_count("peak_working_set_bytes"),
+        "pending_request_count": optional_count("pending_request_count") or 0,
+        "restart_count": optional_count("restart_count") or 0,
+        "drain_count": optional_count("drain_count") or 0,
+        "observed_at": optional_count("observed_at"),
+        "observed": True,
+    }
+
+
 def _normalize_match(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
@@ -479,6 +614,7 @@ def run_semantic_localization(
     path: str,
     queries: list[str],
     max_results: int,
+    resource_class: str,
 ) -> dict[str, Any]:
     """Call one read-only provider batch and normalize results for deterministic fallback."""
     status = semantic_provider_status(provider)
@@ -490,6 +626,7 @@ def run_semantic_localization(
             path=path,
             queries=list(queries),
             max_results=max(1, int(max_results)),
+            resource_class=str(resource_class or "").strip().upper(),
         )
     except Exception as exc:
         failed = dict(status)

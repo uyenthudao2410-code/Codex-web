@@ -378,6 +378,8 @@ mod tests {
                     persistent_shell: false,
                     ssh_persistent_shell: false,
                     structured_validation_argv: true,
+                    exact_source_validation: false,
+                    server_compute: false,
                     structured_process_argv: true,
                     structured_script_payload: false,
                     structured_execution_jobs: false,

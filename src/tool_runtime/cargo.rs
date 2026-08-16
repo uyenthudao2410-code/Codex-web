@@ -1,5 +1,6 @@
 use serde_json::{json, Value};
 
+use super::compute_placement::validation_auto_offload_eligible;
 use super::helpers::{
     bounded_tail, command_outcome_unknown_message, command_rejected_message,
     command_timeout_message, looks_like_command_timeout, normalize_local_status,
@@ -20,8 +21,9 @@ use super::{ExecutionPurpose, ToolRuntime};
 use crate::auth::AuthContext;
 use crate::shell_client::ShellJobStartMetadata;
 use crate::shell_protocol::{
-    ShellCommandExecutionState, ShellJobOpRequest, ShellJobValidationMetadata,
-    ShellJobValidationStep,
+    valid_exact_git_oid, ShellCommandExecutionState, ShellJobOpRequest, ShellJobValidationMetadata,
+    ShellJobValidationSourceIdentity, ShellJobValidationStep, VALIDATION_SOURCE_DIRTY_CODE,
+    VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE, VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE,
 };
 
 const CARGO_STDIO_TAIL_CHARS: usize = 12_000;
@@ -215,6 +217,47 @@ fn reject_structured_cargo_ssh_resource(ssh_resource: Option<&str>) -> Option<To
             "use the named runner host through run_shell or run_job instead.",
         ))
     })
+}
+
+fn agent_validation_source_identity(
+    client: &crate::shell_protocol::ShellClientView,
+    runtime_project_id: &str,
+) -> Result<Option<ShellJobValidationSourceIdentity>, &'static str> {
+    if !client.capabilities.exact_source_validation {
+        return Ok(None);
+    }
+    let Some(rest) = runtime_project_id.strip_prefix("agent:") else {
+        return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE);
+    };
+    let Some((runtime_client_id, agent_project_id)) = rest.split_once(':') else {
+        return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE);
+    };
+    if runtime_client_id != client.client_id {
+        return Err(VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE);
+    }
+    let Some(project) = client
+        .projects
+        .iter()
+        .find(|project| project.id == agent_project_id && !project.disabled)
+    else {
+        return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE);
+    };
+    match project.git_dirty {
+        Some(false) => {}
+        Some(true) => return Err(VALIDATION_SOURCE_DIRTY_CODE),
+        None => return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE),
+    }
+    let Some(expected_git_head) = project
+        .git_head
+        .as_deref()
+        .filter(|head| valid_exact_git_oid(head))
+    else {
+        return Err(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE);
+    };
+    Ok(Some(ShellJobValidationSourceIdentity {
+        expected_git_head: expected_git_head.to_string(),
+        require_clean_worktree: true,
+    }))
 }
 
 impl ToolRuntime {
@@ -609,16 +652,18 @@ impl ToolRuntime {
         };
         // Pre-execution validation happens before any execution is created, so
         // a rejection never leaves a Job or a running process behind.
-        let resolved = match self
-            .resolve_project_for_auth(&request.project, request.auth)
+        let resolved_project = match self
+            .resolve_project_input_for_auth(&request.project, request.auth)
             .await
         {
-            Ok(config) => config,
+            Ok(resolved) => resolved,
             Err(e) => return ToolResult::err(command_rejected_message(
                 e.to_message(),
                 "verify the project id with list_projects, then retry with a registered project.",
             )),
         };
+        let resolved_project_id = resolved_project.resolved_id.clone();
+        let resolved = resolved_project.config;
         let purpose = match adapter.validation_kind() {
             "test" => ExecutionPurpose::Test,
             "format" => ExecutionPurpose::Format,
@@ -722,6 +767,7 @@ impl ToolRuntime {
                 self.run_readonly_validation_agent(
                     tool_name,
                     &request.project,
+                    &resolved_project_id,
                     &resolved,
                     cwd.as_deref(),
                     &command,
@@ -802,6 +848,7 @@ impl ToolRuntime {
         &self,
         tool_name: &str,
         project: &str,
+        runtime_project_id: &str,
         config: &crate::projects::ProjectConfig,
         cwd: Option<&str>,
         command: &str,
@@ -815,7 +862,7 @@ impl ToolRuntime {
         sandbox: Option<&str>,
         auth: Option<&AuthContext>,
     ) -> ToolResult {
-        let client_id = match config.agent_client_id() {
+        let source_client_id = match config.agent_client_id() {
             Ok(id) => id.to_string(),
             Err(e) => {
                 return ToolResult::err(command_rejected_message(
@@ -824,17 +871,53 @@ impl ToolRuntime {
                 ))
             }
         };
-        let effective_cwd = match super::helpers::resolve_agent_cwd(config, cwd) {
-            Ok(cwd) => cwd,
-            Err(error) => {
+        let source_client = match self.shell_clients.get_client_view(&source_client_id).await {
+            Some(client) => client,
+            None => {
                 return ToolResult::err(command_rejected_message(
-                    error,
-                    "choose '.', an existing project-relative cwd, or a path inside the registered project root.",
-                ))
+                    "the selected Runner is no longer registered",
+                    "confirm the selected Runner is still registered and connected, then retry.",
+                ));
             }
         };
-        let resolved_cwd = super::helpers::project_relative_agent_cwd(config, &effective_cwd)
-            .unwrap_or_else(|_| ".".to_string());
+        let source_identity = match agent_validation_source_identity(
+            &source_client,
+            runtime_project_id,
+        ) {
+            Ok(source_identity) => source_identity,
+            Err(error_code) => {
+                return ToolResult::err_with_output(
+                    command_rejected_message(
+                        error_code,
+                        "refresh the Runner project state and retry only with a clean checkout at a full Git HEAD.",
+                    ),
+                    json!({
+                        "execution_source": tool_name,
+                        "command_started": false,
+                        "command_completed": false,
+                        "failure_kind": error_code,
+                        "tool_failure": true,
+                    }),
+                );
+            }
+        };
+        let remote_target =
+            if validation_auto_offload_eligible(tool_name, timeout_secs, sync_wait_secs, sandbox) {
+                match source_identity.as_ref() {
+                    Some(identity) => {
+                        self.select_server_preferred_validation_target(
+                            runtime_project_id,
+                            &identity.expected_git_head,
+                            purpose.as_str(),
+                            auth,
+                        )
+                        .await
+                    }
+                    None => None,
+                }
+            } else {
+                None
+            };
         let actual_shell = "configured";
         // The validation step is derived from the same options the tool would
         // have run synchronously, so the promoted Job executes the identical
@@ -858,6 +941,50 @@ impl ToolRuntime {
                 ))
             }
         };
+        let target_project = match (remote_target.as_ref(), source_identity.as_ref()) {
+            (Some(target), Some(identity))
+                if self
+                    .revalidate_server_preferred_validation_target(
+                        runtime_project_id,
+                        &identity.expected_git_head,
+                        purpose.as_str(),
+                        target,
+                        auth,
+                    )
+                    .await =>
+            {
+                self.resolve_project_input_for_auth(&target.runtime_project_id, auth)
+                    .await
+                    .ok()
+                    .filter(|resolved| resolved.resolved_id == target.runtime_project_id)
+            }
+            _ => None,
+        };
+        let (execution_runtime_project_id, execution_config) = match target_project.as_ref() {
+            Some(target) => (target.resolved_id.as_str(), &target.config),
+            None => (runtime_project_id, config),
+        };
+        let client_id = match execution_config.agent_client_id() {
+            Ok(id) => id.to_string(),
+            Err(error) => {
+                return ToolResult::err(command_rejected_message(
+                    error,
+                    "refresh the agent project registry with list_projects, then retry.",
+                ));
+            }
+        };
+        let effective_cwd = match super::helpers::resolve_agent_cwd(execution_config, cwd) {
+            Ok(cwd) => cwd,
+            Err(error) => {
+                return ToolResult::err(command_rejected_message(
+                    error,
+                    "choose '.', an existing project-relative cwd, or a path inside the registered project root.",
+                ))
+            }
+        };
+        let resolved_cwd =
+            super::helpers::project_relative_agent_cwd(execution_config, &effective_cwd)
+                .unwrap_or_else(|_| ".".to_string());
         let job = match self
             .shell_clients
             .start_job_with_metadata_for_auth(
@@ -876,7 +1003,7 @@ impl ToolRuntime {
                 },
                 "tool_runtime".to_string(),
                 ShellJobStartMetadata {
-                    project_id: Some(project.to_string()),
+                    project_id: Some(execution_runtime_project_id.to_string()),
                     session_id: session_id.clone(),
                     ssh_resource: ssh_resource.map(str::to_string),
                     project_cwd: Some(resolved_cwd.clone()),
@@ -890,6 +1017,7 @@ impl ToolRuntime {
                         effective_timeout_secs: timeout_secs,
                         sync_wait_secs,
                         adapter: adapter.tool_identity().to_string(),
+                        source_identity,
                     }),
                     visibility: crate::shell_client::ShellJobVisibility::HiddenUntilHandoff,
                     sandbox: sandbox.map(str::to_string),

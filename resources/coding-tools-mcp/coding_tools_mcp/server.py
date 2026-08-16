@@ -762,6 +762,27 @@ class Runtime(
                 "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
                 "failure": None,
             })
+        elif canonical_state == "REPLAN":
+            desired_task.update({
+                "status": "waiting",
+                "current_step": "Replan required",
+                "next_step": "Replan from the durable failure or cancellation; do not retry an unchanged wave.",
+                "failure": state.get("failure"),
+            })
+        elif canonical_state == "BLOCKED":
+            desired_task.update({
+                "status": "failed",
+                "current_step": "Blocked",
+                "next_step": "Resolve the durable blocker before starting another execution wave.",
+                "failure": state.get("failure"),
+            })
+        elif canonical_state == "ABORTED":
+            desired_task.update({
+                "status": "stopped",
+                "current_step": "Aborted",
+                "next_step": "Resume with a new or replanned wave from the current source state; do not reuse stale proof.",
+                "failure": state.get("failure"),
+            })
         current_projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
         projection_changed = any(current_projection.get(key) != repaired.get(key) for key in repaired)
         task_changed = any(
@@ -1597,6 +1618,10 @@ class Runtime(
             payload["result"] = operation["result"]
         return payload
 
+    def _background_operation_cancelled(self) -> bool:
+        event = getattr(self.request_context, "background_cancel_event", None)
+        return bool(event is not None and event.is_set())
+
     def _start_background_tool(
         self,
         name: str,
@@ -1606,6 +1631,7 @@ class Runtime(
     ) -> tuple[dict[str, Any], threading.Event]:
         operation_id = secrets.token_urlsafe(12)
         done = threading.Event()
+        cancel_event = threading.Event()
         try:
             timeout_seconds = min(int(arguments.get("timeout_seconds", 600)), 3600)
         except (TypeError, ValueError):
@@ -1622,6 +1648,7 @@ class Runtime(
             "result": None,
             "error": None,
             "budget": budget,
+            "cancel_event": cancel_event,
             "finalized": False,
         }
         current_task = self.task_state.get()
@@ -1641,6 +1668,8 @@ class Runtime(
         )
 
         def worker() -> None:
+            previous_cancel_event = getattr(self.request_context, "background_cancel_event", None)
+            self.request_context.background_cancel_event = cancel_event
             try:
                 operation["result"] = self._call_tool_sync(name, arguments, request_id=request_id)
             except Exception as exc:  # noqa: BLE001 - background errors must become inspectable state
@@ -1651,6 +1680,13 @@ class Runtime(
                     "retryable": False,
                 }
             finally:
+                if previous_cancel_event is None:
+                    try:
+                        del self.request_context.background_cancel_event
+                    except AttributeError:
+                        pass
+                else:
+                    self.request_context.background_cancel_event = previous_cancel_event
                 if not operation.get("finalized"):
                     operation["finalized"] = True
                     result = operation.get("result")
@@ -1681,6 +1717,7 @@ class Runtime(
                     budget.check()
                 except ToolFailure as exc:
                     if not operation.get("finalized"):
+                        cancel_event.set()
                         operation["finalized"] = True
                         operation["error"] = {
                             "code": exc.code,

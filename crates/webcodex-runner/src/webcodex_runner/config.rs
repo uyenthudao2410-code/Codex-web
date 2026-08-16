@@ -44,6 +44,10 @@ pub(crate) struct AgentConfig {
     pub(crate) capabilities: Option<ShellClientCapabilities>,
     #[serde(default)]
     pub(crate) max_concurrent_jobs: Option<usize>,
+    /// Optional profile-scoped override for the LSP idle reaper. Omission
+    /// preserves the production default in `LspSupervisorConfig`.
+    #[serde(default)]
+    pub(crate) lsp_idle_ttl_seconds: Option<u64>,
     #[serde(default)]
     pub(crate) policy: AgentPolicy,
     /// Transport selection: `"websocket"` (default), `"polling"`, `"quic"`,
@@ -473,6 +477,7 @@ pub(crate) fn restart_required_fields(
         client_id,
         display_name,
         hostname,
+        lsp_idle_ttl_seconds,
         max_concurrent_jobs,
         owner,
         poll_interval_ms,
@@ -891,6 +896,12 @@ pub(crate) fn load_config(path: &Path) -> Result<AgentConfig, String> {
     }
     if cfg.websocket_connect_timeout_secs == 0 {
         return Err("websocket_connect_timeout_secs must be > 0".to_string());
+    }
+    if cfg
+        .lsp_idle_ttl_seconds
+        .is_some_and(|seconds| !(1..=86_400).contains(&seconds))
+    {
+        return Err("lsp_idle_ttl_seconds must be between 1 and 86400".to_string());
     }
     if let Some(root) = cfg.temporary_projects_root.as_ref() {
         if root.as_os_str().is_empty() || !root.is_absolute() {

@@ -1551,10 +1551,7 @@ mod validation_tests {
                 .current_dir(root)
                 .status()
                 .unwrap_or_else(|error| panic!("failed to run git {args:?}: {error}"));
-            assert!(
-                status.success(),
-                "git {args:?} failed with status {status}"
-            );
+            assert!(status.success(), "git {args:?} failed with status {status}");
         };
 
         run(&["init", "-q"]);

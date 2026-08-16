@@ -348,6 +348,35 @@ fn document_symbols_hierarchical_and_budget() {
 }
 
 #[test]
+fn document_symbols_existing_never_cold_starts_and_reuses_warm_server() {
+    let _serial = super::serialize_fake_lsp_test();
+    let fixture = NavFixture::new("normal");
+    let warm_only = || AgentLspPayload {
+        project_id: "demo".into(),
+        request: AgentLspRequest::DocumentSymbolsExisting {
+            path: "src/main.rs".into(),
+            limit: 10,
+        },
+    };
+
+    let cold = fixture.request(warm_only());
+    assert_eq!(cold["success"], false, "{cold}");
+    assert_eq!(cold["error"]["code"], "lsp_server_unavailable", "{cold}");
+
+    let started = fixture.request(AgentLspPayload {
+        project_id: "demo".into(),
+        request: AgentLspRequest::DocumentSymbols {
+            path: "src/main.rs".into(),
+            limit: 10,
+        },
+    });
+    assert_eq!(started["success"], true, "{started}");
+
+    let warm = fixture.request(warm_only());
+    assert_eq!(warm["success"], true, "{warm}");
+}
+
+#[test]
 fn document_symbols_symbol_information_fallback() {
     let _serial = super::serialize_fake_lsp_test();
     let fixture = NavFixture::new("symbol_information");
@@ -1390,6 +1419,10 @@ fn lsp_status_reports_every_registered_language_server() {
         .unwrap();
     assert_eq!(pyright["language"], "python");
     assert_eq!(pyright["available"], true, "{pyright}");
+    assert_eq!(pyright["resource"]["lifecycle_state"], "stopped");
+    assert_eq!(pyright["resource"]["warm"], false);
+    assert_eq!(pyright["resource"]["pressure_state"], "unknown");
+    assert!(pyright["resource"].get("process_instance_id").is_none());
 }
 
 /// Resolve a real language server for an ignored end-to-end smoke test: the

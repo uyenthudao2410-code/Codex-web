@@ -31,10 +31,17 @@ pub(crate) fn document_symbols_input_schema() -> Value {
             "Maximum symbol nodes to return (default 100, clamped to 1..500).",
             false,
         ),
+        (
+            "require_existing_server",
+            "boolean",
+            "When true, fail without starting or restarting a language server.",
+            false,
+        ),
     ]));
     schema["properties"]["limit"]["minimum"] = json!(1);
     schema["properties"]["limit"]["maximum"] = json!(500);
     schema["properties"]["limit"]["default"] = json!(100);
+    schema["properties"]["require_existing_server"]["default"] = json!(false);
     schema
 }
 

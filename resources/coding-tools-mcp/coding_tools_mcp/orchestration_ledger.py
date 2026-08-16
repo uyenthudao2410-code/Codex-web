@@ -17,7 +17,7 @@ from typing import Any, Iterable
 from .artifact_refs import handoff_capsule_artifact_ref, proof_artifact_ref
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 _MAX_TEXT = 16_000
 HANDOFF_CAPSULE_MAX_BYTES = 8_192
 _SECRET_KEY_RE = re.compile(r"(authorization|credential|password|passwd|secret|token|api[_-]?key|private[_-]?key)", re.I)
@@ -56,6 +56,11 @@ _SENSITIVE_PAYLOAD_KEYS = {
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def resource_claim_owner_hash(owner_type: str, owner_id: str) -> str:
+    material = f"webcodex-resource-claim-v1\0{str(owner_type).upper()}\0{owner_id}"
+    return hashlib.sha256(material.encode("utf-8", errors="replace")).hexdigest()
 
 
 def _json(value: Any) -> str:
@@ -574,12 +579,51 @@ class OrchestrationLedger:
                     ON managed_process_jobs(run_id, wave_id, lifecycle_state, updated_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_managed_process_checkout_state
                     ON managed_process_jobs(checkout_id, resource_class, lifecycle_state, updated_at DESC);
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_managed_process_one_heavy_checkout
-                    ON managed_process_jobs(checkout_id)
-                    WHERE resource_class='HEAVY'
-                      AND lifecycle_state IN ('starting','running','terminating','orphaned');
+                DROP INDEX IF EXISTS idx_managed_process_one_heavy_checkout;
+                CREATE TABLE IF NOT EXISTS checkout_resource_claims (
+                    claim_id TEXT PRIMARY KEY,
+                    checkout_id TEXT NOT NULL,
+                    resource_class TEXT NOT NULL,
+                    owner_type TEXT NOT NULL,
+                    owner_id_hash TEXT NOT NULL,
+                    lifecycle_state TEXT NOT NULL,
+                    acquired_at TEXT NOT NULL,
+                    expires_at REAL NOT NULL DEFAULT 0,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_checkout_resource_claim_state
+                    ON checkout_resource_claims(checkout_id, lifecycle_state, updated_at DESC);
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_checkout_resource_one_active_heavy
+                    ON checkout_resource_claims(checkout_id)
+                    WHERE resource_class='HEAVY' AND lifecycle_state='active';
                 """
             )
+            now = utc_now()
+            active_jobs = connection.execute(
+                """SELECT job_id,checkout_id FROM managed_process_jobs
+                   WHERE resource_class='HEAVY'
+                     AND lifecycle_state IN ('starting','running','terminating','orphaned')"""
+            ).fetchall()
+            for row in active_jobs:
+                job_id = str(row["job_id"])
+                claim_id = hashlib.sha256(
+                    f"webcodex-managed-claim-v1\0{job_id}".encode("utf-8", errors="replace")
+                ).hexdigest()
+                connection.execute(
+                    """INSERT OR IGNORE INTO checkout_resource_claims(
+                           claim_id,checkout_id,resource_class,owner_type,owner_id_hash,
+                           lifecycle_state,acquired_at,expires_at,updated_at
+                       ) VALUES(?,?,?,?,?,'active',?,0,?)""",
+                    (
+                        claim_id,
+                        str(row["checkout_id"]),
+                        "HEAVY",
+                        "MANAGED_JOB",
+                        resource_claim_owner_hash("MANAGED_JOB", job_id),
+                        now,
+                        now,
+                    ),
+                )
             connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 
     def create_run(

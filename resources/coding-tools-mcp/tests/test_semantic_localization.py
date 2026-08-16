@@ -24,7 +24,9 @@ from coding_tools_mcp.semantic_localization import (
     portable_workspace_sha256,
     run_semantic_localization,
     semantic_localizer_from_env,
+    semantic_provider_resource_status,
     semantic_provider_status,
+    semantic_resource_cost,
 )
 
 
@@ -324,12 +326,14 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
                     path="src",
                     queries=["ToolRuntime"],
                     max_results=10,
+                    resource_class="HEAVY",
                 )
             request = captured["request"]
             body = json.loads(request.data.decode("utf-8"))
             self.assertEqual(captured["timeout"], NATIVE_LSP_TIMEOUT_SECONDS)
             self.assertGreater(captured["timeout"], 32.0)
             self.assertEqual(body["workspace_sha256"], portable_workspace_sha256(workspace))
+            self.assertEqual(body["resource_class"], "HEAVY")
             self.assertNotIn(str(workspace), request.data.decode("utf-8"))
             self.assertEqual(request.full_url, "http://127.0.0.1:45819/api/connector/internal/semantic/localize")
             self.assertEqual(request.get_header("Authorization"), f"Bearer {VALID_CREDENTIAL}")
@@ -342,6 +346,81 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
                 "origin_configured": True,
                 "credential_file_configured": True,
             })
+
+    def test_resource_status_is_bounded_and_drives_cold_warm_classification(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            workspace = Path(temp)
+            (workspace / "src").mkdir()
+            (workspace / "src/main.rs").write_text("fn main() {}\n", encoding="utf-8")
+            provider = NativeRustSemanticLocalizationProvider(
+                origin="http://127.0.0.1:45819",
+                credential=VALID_CREDENTIAL,
+            )
+            payload = {
+                "ok": True,
+                "data": {
+                    "schema_version": 1,
+                    "provider": NATIVE_LSP_PROVIDER,
+                    "read_only": True,
+                    "lsp_resource": {
+                        "lifecycle_state": "RUNNING",
+                        "warm": True,
+                        "pressure_state": "NORMAL",
+                        "process_instance_id": "opaque-one",
+                        "working_set_bytes": 123,
+                        "peak_working_set_bytes": 456,
+                        "pending_request_count": 0,
+                        "restart_count": 1,
+                        "drain_count": 0,
+                        "observed_at": 42,
+                    },
+                },
+            }
+            captured = {}
+
+            def fake_open(request, timeout):
+                captured["request"] = request
+                captured["timeout"] = timeout
+                return _Response(json.dumps(payload).encode("utf-8"))
+
+            with patch.object(provider._opener, "open", side_effect=fake_open):
+                status = semantic_provider_resource_status(
+                    provider,
+                    workspace=workspace,
+                    path="src/main.rs",
+                )
+            self.assertEqual(status["lifecycle_state"], "RUNNING")
+            self.assertTrue(status["warm"])
+            self.assertEqual(status["pressure_state"], "NORMAL")
+            self.assertEqual(semantic_resource_cost("single_file", status), "MEDIUM")
+            self.assertEqual(semantic_resource_cost("workspace", status), "HEAVY")
+            request = captured["request"]
+            self.assertEqual(
+                request.full_url,
+                "http://127.0.0.1:45819/api/connector/internal/semantic/status",
+            )
+            request_body = request.data.decode("utf-8")
+            self.assertNotIn(str(workspace), request_body)
+            self.assertNotIn(VALID_CREDENTIAL, request_body)
+
+            unavailable = semantic_provider_resource_status(
+                object(),
+                workspace=workspace,
+                path="src/main.rs",
+            )
+            self.assertEqual(unavailable["lifecycle_state"], "UNKNOWN")
+            self.assertEqual(semantic_resource_cost("single_file", unavailable), "HEAVY")
+            self.assertEqual(
+                semantic_resource_cost(
+                    "single_file",
+                    {
+                        "lifecycle_state": "STOPPED",
+                        "warm": False,
+                        "pressure_state": "NORMAL",
+                    },
+                ),
+                "HEAVY",
+            )
 
     def test_transport_failure_falls_back_without_secret_or_path_leak(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -357,6 +436,7 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
                     path=".",
                     queries=["needle"],
                     max_results=10,
+                    resource_class="HEAVY",
                 )
             self.assertFalse(projected["provider"]["available"])
             self.assertEqual(projected["provider"]["reason"], "SEMANTIC_PROVIDER_CALL_FAILED")
@@ -380,6 +460,7 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
                     path=".",
                     queries=["needle"],
                     max_results=10,
+                    resource_class="HEAVY",
                 )
             self.assertFalse(projected["provider"]["available"])
             self.assertEqual(projected["provider"]["reason"], "SEMANTIC_PROVIDER_CALL_FAILED")
@@ -396,6 +477,7 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
                     path="C:/repo/src",
                     queries=["needle"],
                     max_results=10,
+                    resource_class="HEAVY",
                 )
 
             payload = {
@@ -418,6 +500,7 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
                     path=".",
                     queries=["needle"],
                     max_results=10,
+                    resource_class="HEAVY",
                 )
             self.assertFalse(projected["provider"]["available"])
             self.assertEqual(projected["provider"]["reason"], "SEMANTIC_PROVIDER_CALL_FAILED")

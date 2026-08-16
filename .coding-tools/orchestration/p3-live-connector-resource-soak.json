@@ -1,0 +1,372 @@
+{
+  "artifacts": {
+    "connector": "sha256:c4306afe77ed17a4e281fdaad40cb79bfb18f946d55777e60106041e7515557d",
+    "runner": "sha256:7d6c4a013016d717cacd71d678a1a34b59ca0d7ab3f7c88d531cf2f64029b0a7",
+    "rust_analyzer_version": "rust-analyzer 1.92.0 (ded5c06c 2025-12-08)"
+  },
+  "atomic_conflict": {
+    "loser_reason_code": "HEAVY_SLOT_BUSY",
+    "managed_allowed": true,
+    "semantic_allowed": false,
+    "semantic_latency_ms": null
+  },
+  "cycles": [
+    {
+      "cold_latency_ms": 875,
+      "cycle": 1,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29593600,
+      "process_instance_id": "08a54c6555e9fb2e3462b0ac",
+      "restart_count": 0,
+      "warm_latency_ms": 563,
+      "working_set_bytes": 14573568,
+      "workspace_latency_ms": 8577
+    },
+    {
+      "cold_latency_ms": 843,
+      "cycle": 2,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29466624,
+      "process_instance_id": "112dcf20409cc9780398c953",
+      "restart_count": 1,
+      "warm_latency_ms": 625,
+      "working_set_bytes": 14454784,
+      "workspace_latency_ms": 7125
+    },
+    {
+      "cold_latency_ms": 781,
+      "cycle": 3,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29581312,
+      "process_instance_id": "b9cab4572a0c295c5831b15c",
+      "restart_count": 2,
+      "warm_latency_ms": 813,
+      "working_set_bytes": 13959168,
+      "workspace_latency_ms": 8547
+    },
+    {
+      "cold_latency_ms": 780,
+      "cycle": 4,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29421568,
+      "process_instance_id": "458f3691d185bcc7dd935699",
+      "restart_count": 3,
+      "warm_latency_ms": 561,
+      "working_set_bytes": 14053376,
+      "workspace_latency_ms": 7389
+    },
+    {
+      "cold_latency_ms": 780,
+      "cycle": 5,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29356032,
+      "process_instance_id": "6deafba5cb30270b33e8a4b6",
+      "restart_count": 4,
+      "warm_latency_ms": 531,
+      "working_set_bytes": 14286848,
+      "workspace_latency_ms": 8860
+    },
+    {
+      "cold_latency_ms": 813,
+      "cycle": 6,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29204480,
+      "process_instance_id": "957fb4a542abed69970c65ee",
+      "restart_count": 5,
+      "warm_latency_ms": 561,
+      "working_set_bytes": 13979648,
+      "workspace_latency_ms": 7469
+    },
+    {
+      "cold_latency_ms": 796,
+      "cycle": 7,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29351936,
+      "process_instance_id": "89f33a03520a7b2354ac71aa",
+      "restart_count": 6,
+      "warm_latency_ms": 609,
+      "working_set_bytes": 14135296,
+      "workspace_latency_ms": 7264
+    },
+    {
+      "cold_latency_ms": 781,
+      "cycle": 8,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29310976,
+      "process_instance_id": "d55acd9e65eeeac7e37c6bbc",
+      "restart_count": 7,
+      "warm_latency_ms": 546,
+      "working_set_bytes": 13971456,
+      "workspace_latency_ms": 7311
+    },
+    {
+      "cold_latency_ms": 905,
+      "cycle": 9,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29483008,
+      "process_instance_id": "833c927859402fbd37bd3ea5",
+      "restart_count": 8,
+      "warm_latency_ms": 547,
+      "working_set_bytes": 14057472,
+      "workspace_latency_ms": 7750
+    },
+    {
+      "cold_latency_ms": 828,
+      "cycle": 10,
+      "drain_count": 0,
+      "peak_working_set_bytes": 29065216,
+      "process_instance_id": "7346e7b7f5858fc156d98c71",
+      "restart_count": 9,
+      "warm_latency_ms": 609,
+      "working_set_bytes": 13852672,
+      "workspace_latency_ms": 7656
+    }
+  ],
+  "final_active_claim_count": 0,
+  "final_lsp_resource": {
+    "drain_count": 0,
+    "lifecycle_state": "STOPPED",
+    "observed": true,
+    "observed_at": 1786888662,
+    "peak_working_set_bytes": null,
+    "pending_request_count": 0,
+    "pressure_state": "UNKNOWN",
+    "process_instance_id": null,
+    "restart_count": 0,
+    "warm": false,
+    "working_set_bytes": null
+  },
+  "finished_at": "2026-08-16T13:57:44.451Z",
+  "git_head": "cf6cb6ddbf29d90515d003ce72490ffda985c37f",
+  "hard_acceptance": {
+    "active_heavy_claim_zero": true,
+    "active_write_fences_zero": true,
+    "atomic_conflict_exactly_one_winner": true,
+    "fault_injection_claim_released": true,
+    "final_lsp_stopped": true,
+    "heavy_overlap_detected_count_zero": true,
+    "minimum_lifecycle_cycles_passed": true,
+    "orphan_process_count_zero": true,
+    "stale_orchestration_runs_zero": true
+  },
+  "idle_teardown_count": 10,
+  "initial_lsp_resource": {
+    "drain_count": 0,
+    "lifecycle_state": "STOPPED",
+    "observed": true,
+    "observed_at": 1786888431,
+    "peak_working_set_bytes": null,
+    "pending_request_count": 0,
+    "pressure_state": "UNKNOWN",
+    "process_instance_id": null,
+    "restart_count": 0,
+    "warm": false,
+    "working_set_bytes": null
+  },
+  "ledger_health": {
+    "active_heavy_claim_count": 0,
+    "active_run_count": 5,
+    "active_write_fence_count": 0,
+    "heavy_overlap_detected_count": 0,
+    "observed": true,
+    "orphan_process_count": 0,
+    "stale_orchestration_run_count": 0
+  },
+  "metrics": {
+    "claim_wait_ms": {
+      "count": 10,
+      "max": 1968,
+      "median": 1803,
+      "min": 1296,
+      "p95": 1968
+    },
+    "cold_semantic_latency_ms": {
+      "count": 10,
+      "max": 905,
+      "median": 804,
+      "min": 780,
+      "p95": 905
+    },
+    "lsp_peak_working_set_bytes": {
+      "count": 10,
+      "max": 29593600,
+      "median": 29388800,
+      "min": 29065216,
+      "p95": 29593600
+    },
+    "lsp_working_set_bytes": {
+      "count": 10,
+      "max": 14573568,
+      "median": 14055424,
+      "min": 13852672,
+      "p95": 14573568
+    },
+    "peak_working_set_unknown_count": 0,
+    "warm_semantic_latency_ms": {
+      "count": 10,
+      "max": 813,
+      "median": 562,
+      "min": 531,
+      "p95": 813
+    },
+    "working_set_unknown_count": 0,
+    "workspace_semantic_latency_ms": {
+      "count": 10,
+      "max": 8860,
+      "median": 7562,
+      "min": 7125,
+      "p95": 8860
+    }
+  },
+  "mode": "real_connector_runner_rust_analyzer",
+  "passed": true,
+  "schema_version": 1,
+  "scope": {
+    "cycles": 10,
+    "file": "src/connector_runtime/semantic_bridge.rs",
+    "query": "semantic_resource_status"
+  },
+  "source_fingerprint": {
+    "algorithm": "sha256(path_nul_file_sha256_lf)",
+    "files": [
+      {
+        "path": "crates/webcodex-process/Cargo.toml",
+        "sha256": "5b8958757438bb5b83a79d2a756585570896a8e7e61da8ff88c83c3f997f7261"
+      },
+      {
+        "path": "crates/webcodex-process/src/lib.rs",
+        "sha256": "e2714e5fb53613253bdab18f9ef5c41307803fbdc6d8f9dc59834519c0896aa2"
+      },
+      {
+        "path": "crates/webcodex-process/src/unix.rs",
+        "sha256": "48a4b639b711561a62fc2eff22a2cc954b35bc63ae528696450359e540be52c6"
+      },
+      {
+        "path": "crates/webcodex-process/src/windows.rs",
+        "sha256": "49f9ceecf7ad4d56a09ad3654ee1db9dbee27c8ac2f4062516c612b37ccbc005"
+      },
+      {
+        "path": "crates/webcodex-process/tests/managed_child.rs",
+        "sha256": "6d0ddbf2051feb86ec223ddbf05da5bc32838faa8917e43ba4086365c4d6e375"
+      },
+      {
+        "path": "crates/webcodex-runner/src/main_tests.rs",
+        "sha256": "03a873c1c8548bde34f9ba8ce8cf495472997a906ab55a7eb742ad08f83833f6"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/config.rs",
+        "sha256": "6ef86caf62ca95e1d4bc6bf69bb500b15fd08619625d76017abaebdc1dabca2b"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/lsp/mod.rs",
+        "sha256": "8375e365b5c780deb8ca3b3c1de850ed82740a483849014fb6253bf7be4af218"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs",
+        "sha256": "cb05cb6c24d6b1dd29f11e366eed8e96f5ff949be6e9028e3d2595559b392b3c"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/lsp/navigation.rs",
+        "sha256": "d1bee3daf7b98efa119952650aad8412d9d353e3a9dc5c2e59012830a67f7b86"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+        "sha256": "7919bf7cf2109525747fcc0c7b994f430b09d1cc2271617f804cbf321de0cebc"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/transport.rs",
+        "sha256": "534e5876b394c0bc019eed6f8bcebc97b37dadd3d2017d1edd0e27fa667a5201"
+      },
+      {
+        "path": "crates/webcodex-runner/src/webcodex_runner/transport_tests.rs",
+        "sha256": "b483811db66463815cc8e4888de5f9484c5a8289de6bb33f604feec918057025"
+      },
+      {
+        "path": "crates/webcodex-core/src/lsp_bridge.rs",
+        "sha256": "e626d420b1441f7c571cab46ce67a9f7dae50bcc4e3db8cd205e78b0361bed94"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+        "sha256": "6704091b483dafa228c16cd0e191df5a51346e733978125b26dc893ade2f37af"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/code_mode.py",
+        "sha256": "590f8d200364846da6d9db207e28c7a0fc3816767029f3683982c01ae8cf3fb8"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+        "sha256": "f833abf51f3f9eab2a224f6f627a088e81db6c0b55a888ff43d17b5830547d21"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+        "sha256": "4187bdb0bf02900f941279e7cfce7db5604e13ba5b4e7c7cb8118d5ce88e20d2"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/semantic_localization.py",
+        "sha256": "ac2c2ab4fbe591b8072faa036d4ac97c617a55ad384ddcd34b6c488d2508b05e"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+        "sha256": "7f74bc1037c92d8db764d4f50b8e64273cbab0152376daa7555f28ada1424f45"
+      },
+      {
+        "path": "resources/coding-tools-mcp/scripts/resource_hygiene.py",
+        "sha256": "94ea3197a09769807b8da88afebfb20852d831f67082dd71f360bddefdb7d9f4"
+      },
+      {
+        "path": "resources/coding-tools-mcp/scripts/run_live_connector_resource_soak.py",
+        "sha256": "12981454758228449a3a8c703edd1ea65641453446604f3ccc90ef08360c7554"
+      },
+      {
+        "path": "resources/coding-tools-mcp/scripts/run_resource_hardening_soak.py",
+        "sha256": "0269cf9c8373aecddc54cb48b0d0e307ed6ae58de27989c2ba374c498eacc2aa"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_execution_resources.py",
+        "sha256": "eea8c4d96e9c2799698bd4f9014af2351f05a7ea20f5802e3f547befb06c25d7"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_live_connector_resource_soak_script.py",
+        "sha256": "56f852f21c2f270f679cdaee152ce830277e9fab4c6ba91b262ac62b5d76240a"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_resource_hygiene_script.py",
+        "sha256": "cde86f59df10f5e1c4f14fd1fe753cb418fa94f184da179ac4e1d69fce2a7678"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+        "sha256": "f76f29ee14fae5b6c7dcdbd24aa98880823c6930666fe1c3e1b20e4fb4d27fdf"
+      },
+      {
+        "path": "src/auth/middleware.rs",
+        "sha256": "26fce2d35dcbf81d22482630be8fb15a1e473fb8db70fbaf553db1a8abde2cff"
+      },
+      {
+        "path": "src/connector_runtime/http.rs",
+        "sha256": "0064401a705d34bb19c0112603da56a416c85b58ceccfa56a249b941a4cfaa07"
+      },
+      {
+        "path": "src/connector_runtime/semantic_bridge.rs",
+        "sha256": "40e45e20a207da945cef50b8ac89dd18d722029e5ad6efc56dfa6f2be6edb918"
+      },
+      {
+        "path": "src/tool_runtime/lsp_tools.rs",
+        "sha256": "ec88ba29473418b3a6050ae4218bd5da5b3fcc7c25c3c11aef2e418cf9b0d6bc"
+      },
+      {
+        "path": "src/tool_runtime/registry/input_schemas/lsp.rs",
+        "sha256": "451dbf39e443b36bdda219df0f7dd64e4552f5e743e601e4b0a54816e1e918fa"
+      },
+      {
+        "path": "src/tool_runtime/semantic_navigation.rs",
+        "sha256": "1a3bc347047cc959f296625f28dfaf8ad8253315e3d72116e6125a19f2d11b44"
+      },
+      {
+        "path": "src/tool_runtime/tool_call.rs",
+        "sha256": "168528b42efbc4bad274344f3cab3a04a8463e847c4226ea4d2e31c87849b33e"
+      }
+    ],
+    "sha256": "629dfd66b50e58c396dd89c93882159df053e0e85ea000ffeed2c7c2deee13c2"
+  },
+  "started_at": "2026-08-16T13:53:50.219Z"
+}

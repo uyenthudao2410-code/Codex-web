@@ -1,5 +1,6 @@
 //! Runtime observability metadata injected into `ToolRuntime`.
 
+use super::compute_placement::{compact_compute_projection, compute_runtime_projection};
 use super::helpers::normalize_local_status;
 use super::jobs::local_jobs_visible_to_auth;
 use super::local_jobs::ACTIVE_JOB_STATUSES;
@@ -147,6 +148,7 @@ impl ToolRuntime {
 
         let now = chrono::Utc::now().timestamp();
         let agent_jobs = self.shell_clients.list_all_jobs_for_auth(auth).await;
+        let compute = compute_runtime_projection(&clients, &agent_jobs, now);
 
         // -- agents summary ---------------------------------------------------
         // Build a trimmed client list so the summary never leaks per-request
@@ -318,6 +320,7 @@ impl ToolRuntime {
             "agents": agents,
             "connection_layers": connection_layers,
             "version_compatibility": version_compatibility,
+            "compute": compute,
             "jobs": jobs,
             "tools": tools,
             "authority": permissions::authority_profile_payload(),
@@ -369,6 +372,7 @@ pub(crate) fn compact_runtime_status(status: &Value) -> Value {
             "running_count": status.pointer("/jobs/running_count").cloned().unwrap_or(Value::Null),
             "queued_count": status.pointer("/jobs/queued_count").cloned().unwrap_or(Value::Null),
         },
+        "compute": compact_compute_projection(status.get("compute")),
         "agents": {
             "count": status.pointer("/agents/count").cloned().unwrap_or_else(|| json!(0)),
             "online_count": status.pointer("/agents/online_count").cloned().unwrap_or_else(|| json!(0)),

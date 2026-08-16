@@ -104,7 +104,7 @@ class ResourceHygieneScriptTests(unittest.TestCase):
                     },
                 )
 
-    def test_active_managed_heavy_owner_blocks_soft_cleanup(self) -> None:
+    def test_active_heavy_claim_or_legacy_managed_owner_blocks_soft_cleanup(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "repository"
             target = Path(temp) / "worktree/target"
@@ -126,7 +126,7 @@ class ResourceHygieneScriptTests(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 resource_hygiene.HygieneError,
-                "active managed HEAVY",
+                "active HEAVY scheduling claim",
             ):
                 resource_hygiene.soft_cleanup(
                     root,

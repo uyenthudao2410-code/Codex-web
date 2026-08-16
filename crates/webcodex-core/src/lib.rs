@@ -3,6 +3,7 @@
 pub mod apply_edits_shared;
 pub mod artifact_policy;
 pub mod build_info;
+pub mod compute_placement;
 pub mod lsp_bridge;
 pub mod sensitive_paths;
 pub mod shell_protocol;

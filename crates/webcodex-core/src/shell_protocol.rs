@@ -47,6 +47,11 @@ fn default_transport_polling() -> String {
 pub const AGENT_PROTOCOL_VERSION_POLLING_V1: &str = "polling-v1";
 pub const VALIDATION_STEP_SPAWN_FAILED_CODE: &str = "validation_step_spawn_failed";
 pub const VALIDATION_TOOL_UNAVAILABLE_CODE: &str = "validation_tool_unavailable";
+pub const VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE: &str =
+    "validation_source_identity_unavailable";
+pub const VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE: &str = "validation_source_identity_mismatch";
+pub const VALIDATION_SOURCE_DIRTY_CODE: &str = "validation_source_dirty";
+pub const VALIDATION_SOURCE_DRIFT_CODE: &str = "validation_source_drift";
 /// The step ran, but the executor lost the ability to reap it — `waitpid`
 /// answered with an error rather than a status. Distinct from a spawn
 /// failure because the process did start, and distinct from a step failure
@@ -67,8 +72,18 @@ pub fn validation_infrastructure_failure_code(error: &str) -> Option<&'static st
         VALIDATION_STEP_SPAWN_FAILED_CODE => Some(VALIDATION_STEP_SPAWN_FAILED_CODE),
         VALIDATION_TOOL_UNAVAILABLE_CODE => Some(VALIDATION_TOOL_UNAVAILABLE_CODE),
         VALIDATION_STEP_WAIT_FAILED_CODE => Some(VALIDATION_STEP_WAIT_FAILED_CODE),
+        VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE => {
+            Some(VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE)
+        }
+        VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE => Some(VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE),
+        VALIDATION_SOURCE_DIRTY_CODE => Some(VALIDATION_SOURCE_DIRTY_CODE),
+        VALIDATION_SOURCE_DRIFT_CODE => Some(VALIDATION_SOURCE_DRIFT_CODE),
         _ => None,
     }
+}
+
+pub fn valid_exact_git_oid(value: &str) -> bool {
+    matches!(value.len(), 40 | 64) && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 /// Maximum byte length of the single argv value that may follow `cargo test`.
@@ -115,6 +130,11 @@ pub const SHELL_CLIENT_CAPABILITY_PERSISTENT_SHELL: &str = "persistent_shell";
 /// must reject the request rather than silently opening a local shell.
 pub const SHELL_CLIENT_CAPABILITY_SSH_PERSISTENT_SHELL: &str = "ssh_persistent_shell";
 pub const SHELL_CLIENT_CAPABILITY_STRUCTURED_VALIDATION_ARGV: &str = "structured_validation_argv";
+pub const SHELL_CLIENT_CAPABILITY_EXACT_SOURCE_VALIDATION: &str = "exact_source_validation";
+/// Operator opt-in allowing this Runner to be selected as a server-first
+/// compute target. Missing on older Runners defaults to false; the binary
+/// never infers this role from hostname, transport, or observed load.
+pub const SHELL_CLIENT_CAPABILITY_SERVER_COMPUTE: &str = "server_compute";
 /// General model-facing native process execution with a typed executable and
 /// argv. This is deliberately independent from structured Cargo validation:
 /// older Runners may support validation argv without accepting arbitrary
@@ -156,6 +176,8 @@ pub const SHELL_CLIENT_CAPABILITY_NAMES: &[&str] = &[
     SHELL_CLIENT_CAPABILITY_PERSISTENT_SHELL,
     SHELL_CLIENT_CAPABILITY_SSH_PERSISTENT_SHELL,
     SHELL_CLIENT_CAPABILITY_STRUCTURED_VALIDATION_ARGV,
+    SHELL_CLIENT_CAPABILITY_EXACT_SOURCE_VALIDATION,
+    SHELL_CLIENT_CAPABILITY_SERVER_COMPUTE,
     SHELL_CLIENT_CAPABILITY_STRUCTURED_PROCESS_ARGV,
     SHELL_CLIENT_CAPABILITY_STRUCTURED_SCRIPT_PAYLOAD,
     SHELL_CLIENT_CAPABILITY_STRUCTURED_EXECUTION_JOBS,
@@ -217,6 +239,13 @@ pub struct ShellClientCapabilities {
     /// Missing on older agents and therefore fail-closed.
     #[serde(default)]
     pub structured_validation_argv: bool,
+    /// The Runner can enforce an exact clean Git HEAD immediately before
+    /// structured validation and before publishing successful proof.
+    #[serde(default)]
+    pub exact_source_validation: bool,
+    /// Explicit operator opt-in for server-first compute placement.
+    #[serde(default)]
+    pub server_compute: bool,
     /// General native executable + argv requests. Missing on older agents and
     /// therefore false; the Server must fail closed without a shell fallback.
     #[serde(default)]
@@ -292,6 +321,8 @@ impl Default for ShellClientCapabilities {
             persistent_shell: false,
             ssh_persistent_shell: false,
             structured_validation_argv: false,
+            exact_source_validation: false,
+            server_compute: false,
             structured_process_argv: false,
             structured_script_payload: false,
             structured_execution_jobs: false,
@@ -1524,6 +1555,19 @@ pub struct ShellJobValidationProgress {
 /// terminal projection, and server restart reconciliation. This is internal
 /// protocol metadata; it is not a model input and never contains shell text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobValidationSourceIdentity {
+    pub expected_git_head: String,
+    #[serde(default = "default_shell_true")]
+    pub require_clean_worktree: bool,
+}
+
+impl ShellJobValidationSourceIdentity {
+    pub fn is_valid(&self) -> bool {
+        valid_exact_git_oid(&self.expected_git_head) && self.require_clean_worktree
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShellJobValidationMetadata {
     pub tool: String,
     pub kind: String,
@@ -1531,6 +1575,8 @@ pub struct ShellJobValidationMetadata {
     pub effective_timeout_secs: u64,
     pub sync_wait_secs: u64,
     pub adapter: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_identity: Option<ShellJobValidationSourceIdentity>,
 }
 
 impl ShellJobValidationMetadata {
@@ -1545,6 +1591,10 @@ impl ShellJobValidationMetadata {
             && self.steps[0].name == self.kind
             && self.effective_timeout_secs >= 1
             && self.sync_wait_secs <= self.effective_timeout_secs
+            && self
+                .source_identity
+                .as_ref()
+                .is_none_or(ShellJobValidationSourceIdentity::is_valid)
     }
 }
 
@@ -2260,6 +2310,8 @@ mod envelope_tests {
                 persistent_shell: true,
                 ssh_persistent_shell: true,
                 structured_validation_argv: true,
+                exact_source_validation: true,
+                server_compute: false,
                 structured_process_argv: true,
                 structured_script_payload: true,
                 structured_execution_jobs: true,
@@ -2338,6 +2390,7 @@ mod envelope_tests {
         // a legacy/older runner that omits the field fails closed.
         assert!(!capabilities.ssh_shell);
         assert!(!capabilities.ssh_persistent_shell);
+        assert!(!capabilities.exact_source_validation);
         assert!(!capabilities.structured_execution_jobs);
         assert!(!capabilities.project_path_registration);
         assert!(!ShellClientCapabilities::default().ssh_persistent_shell);

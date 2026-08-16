@@ -414,6 +414,7 @@ mod tests {
                 status: LspAvailabilityStatus::Crashed,
                 source: None,
                 position_encoding: None,
+                resource: None,
             }],
             warnings: Vec::new(),
         }

@@ -2,7 +2,7 @@ use super::config::{
     max_concurrent_jobs, projects_dir, validate_quic_config, AgentConfig, HotAgentConfig,
     QuicClientConfig, ReloadableAgentConfig,
 };
-use super::lsp::LspSupervisor;
+use super::lsp::{LspSupervisor, LspSupervisorConfig};
 use super::projects::AgentProjectCache;
 use super::shutdown::{
     ActivityTracker, BackgroundThreads, ShutdownCoordinator, ShutdownDeadline, ShutdownPhaseResult,
@@ -163,7 +163,7 @@ impl AgentRuntimeState {
         // never a second SSH configuration or connection pool.
         let persistent_shells = PersistentShellManager::new(&cfg.shell, jobs.ssh_pool.clone());
         Self {
-            lsp: LspSupervisor::default(),
+            lsp: LspSupervisor::new(lsp_supervisor_config(cfg)),
             config: Arc::new(ReloadableAgentConfig::new(cfg.clone(), path)),
             jobs,
             persistent_shells,
@@ -363,6 +363,14 @@ impl AgentRuntimeState {
         ));
         phases
     }
+}
+
+fn lsp_supervisor_config(cfg: &AgentConfig) -> LspSupervisorConfig {
+    let mut config = LspSupervisorConfig::default();
+    if let Some(seconds) = cfg.lsp_idle_ttl_seconds {
+        config.idle_ttl = Duration::from_secs(seconds);
+    }
+    config
 }
 
 fn shutdown_phase(

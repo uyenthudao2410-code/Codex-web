@@ -126,6 +126,24 @@ COORDINATION_LANE_OUTPUT_SCHEMA = {
 
 
 class CoordinationMixin:
+    def _activation_owned_codex_sidecar_rows(self, managed: dict[str, Any]) -> list[dict[str, Any]]:
+        bridge_job_id = str(getattr(self._codex_bridge, "_managed_job_id", "") or "")
+        if not bridge_job_id:
+            return []
+        jobs = managed.get("jobs") if isinstance(managed.get("jobs"), list) else []
+        return [
+            row
+            for row in jobs
+            if isinstance(row, dict)
+            and str(row.get("job_id") or "") == bridge_job_id
+            and str(row.get("owner") or "") == "codex-app-server"
+            and str(row.get("command_id") or "").startswith("codex-app-server-")
+            and str(row.get("resource_class") or "") == "MEDIUM"
+            and not str(row.get("run_id") or "")
+            and not str(row.get("wave_id") or "")
+            and str(row.get("lifecycle_state") or "") in {"starting", "running", "terminating", "orphaned"}
+        ]
+
     def _activation_cleanup_locked(self) -> None:
         fence = self.activation_fence
         if fence and int(fence.get("expires_at_unix_ms") or 0) <= int(time.time() * 1000):
@@ -188,7 +206,11 @@ class CoordinationMixin:
                 if str(item.get("status") or "") == "running"
             )
             managed = self.execution_resource_governor.snapshot(limit=100)
-            managed_active = int(managed.get("active_command_count") or 0)
+            owned_codex_sidecars = self._activation_owned_codex_sidecar_rows(managed)
+            managed_active = max(
+                0,
+                int(managed.get("active_command_count") or 0) - len(owned_codex_sidecars),
+            )
             foreign_heavy = self.execution_resource_governor.foreign_heavy_processes()
             active_lanes = len(self.orchestration_ledger.list_agent_lanes(lifecycle="active"))
             active_tool_calls = max(0, int(self.active_tool_calls) - max(0, int(ignore_active_tool_calls)))
@@ -249,6 +271,22 @@ class CoordinationMixin:
                         "run_id": run_id,
                         "orchestration_state": orchestration_state,
                         "counts": counts,
+                    }
+
+            if prepare and owned_codex_sidecars:
+                self._codex_bridge.close()
+                refreshed_managed = self.execution_resource_governor.snapshot(limit=100)
+                remaining_managed = int(refreshed_managed.get("active_command_count") or 0)
+                if remaining_managed:
+                    failed_counts = dict(counts)
+                    failed_counts["active_managed_processes"] = remaining_managed
+                    return {
+                        "safe": False,
+                        "code": "RUNTIME_BUSY",
+                        "reason": "internal_service_quiescence_failed",
+                        "run_id": run_id,
+                        "orchestration_state": orchestration_state,
+                        "counts": failed_counts,
                     }
 
             result = {

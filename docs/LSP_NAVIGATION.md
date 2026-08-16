@@ -144,7 +144,7 @@ Result boundaries:
 | Limit | Value |
 |---|---|
 | Servers per project / per agent | 1 / 4 |
-| Idle TTL | 15 minutes, enforced by a background reaper thread |
+| Idle TTL | 15 minutes by default, enforced by a background reaper thread; an isolated Agent profile may set top-level `lsp_idle_ttl_seconds` to `1..=86400` (restart required) |
 | Request / initialize / shutdown timeouts | 10 s / 15 s / 2 s |
 | Startup probe deadline | 2 s (single deadline, server-side) |
 | Diagnostics publication wait | 2 s after document sync; on expiry the result is a successful stale/empty snapshot with `fresh=false`, `timed_out=true` |
@@ -162,6 +162,12 @@ Servers start lazily on the first navigation request per project, restart at
 most once per request on recoverable failures, and are reaped when idle past
 the TTL or when their connection becomes unusable, freeing capacity without
 an agent restart.
+
+`lsp_idle_ttl_seconds` is a startup-owned Agent profile setting. It exists for
+bounded operational profiles such as lifecycle soak tests; omitting it keeps
+the 15-minute production default. Invalid zero or over-24-hour values fail
+configuration loading, and a reload that changes it is reported as requiring
+a Runner restart.
 
 Document synchronization is disk-backed full-text sync: on every request that
 targets a file, the agent re-reads the file from disk and sends `didOpen` (or

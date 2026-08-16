@@ -5,7 +5,7 @@ mod protocol;
 mod supervisor;
 
 pub(crate) use navigation::{handle_lsp_request, is_lsp_request_kind};
-pub(crate) use supervisor::LspSupervisor;
+pub(crate) use supervisor::{LspSupervisor, LspSupervisorConfig};
 
 // The documented Windows ManagedChild spawn path uses a system-wide Toolhelp
 // thread snapshot. Fake LSP tests use deliberately tight protocol deadlines,

@@ -25,13 +25,21 @@ impl ToolRuntime {
                 project,
                 path,
                 limit,
+                require_existing_server,
                 session_id: _,
             } => {
                 self.call_agent_lsp(
                     project,
-                    AgentLspRequest::DocumentSymbols {
-                        path,
-                        limit: clamp_document_symbols_limit(limit),
+                    if require_existing_server {
+                        AgentLspRequest::DocumentSymbolsExisting {
+                            path,
+                            limit: clamp_document_symbols_limit(limit),
+                        }
+                    } else {
+                        AgentLspRequest::DocumentSymbols {
+                            path,
+                            limit: clamp_document_symbols_limit(limit),
+                        }
                     },
                 )
                 .await
@@ -301,7 +309,8 @@ impl ToolRuntime {
 fn validate_agent_lsp_result(request: &AgentLspRequest, result: Value) -> Result<Value, String> {
     let result = match request {
         AgentLspRequest::Status => roundtrip_typed_result::<LspStatusResult>(result),
-        AgentLspRequest::DocumentSymbols { .. } => {
+        AgentLspRequest::DocumentSymbols { .. }
+        | AgentLspRequest::DocumentSymbolsExisting { .. } => {
             roundtrip_typed_result::<DocumentSymbolsResult>(result)
         }
         AgentLspRequest::DocumentDiagnostics { .. } => {

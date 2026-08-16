@@ -25,18 +25,35 @@ FINGERPRINT_PATHS = (
     "crates/webcodex-process/src/unix.rs",
     "crates/webcodex-process/src/windows.rs",
     "crates/webcodex-process/tests/managed_child.rs",
+    "crates/webcodex-runner/src/main_tests.rs",
+    "crates/webcodex-runner/src/webcodex_runner/config.rs",
+    "crates/webcodex-runner/src/webcodex_runner/lsp/mod.rs",
     "crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs",
+    "crates/webcodex-runner/src/webcodex_runner/lsp/navigation.rs",
     "crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+    "crates/webcodex-runner/src/webcodex_runner/transport.rs",
+    "crates/webcodex-runner/src/webcodex_runner/transport_tests.rs",
+    "crates/webcodex-core/src/lsp_bridge.rs",
     "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+    "resources/coding-tools-mcp/coding_tools_mcp/code_mode.py",
     "resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+    "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
     "resources/coding-tools-mcp/coding_tools_mcp/semantic_localization.py",
     "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
     "resources/coding-tools-mcp/scripts/resource_hygiene.py",
+    "resources/coding-tools-mcp/scripts/run_live_connector_resource_soak.py",
     "resources/coding-tools-mcp/scripts/run_resource_hardening_soak.py",
     "resources/coding-tools-mcp/tests/test_execution_resources.py",
+    "resources/coding-tools-mcp/tests/test_live_connector_resource_soak_script.py",
     "resources/coding-tools-mcp/tests/test_resource_hygiene_script.py",
     "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+    "src/auth/middleware.rs",
+    "src/connector_runtime/http.rs",
     "src/connector_runtime/semantic_bridge.rs",
+    "src/tool_runtime/lsp_tools.rs",
+    "src/tool_runtime/registry/input_schemas/lsp.rs",
+    "src/tool_runtime/semantic_navigation.rs",
+    "src/tool_runtime/tool_call.rs",
 )
 
 
@@ -140,11 +157,20 @@ def ledger_health(repository: Path) -> dict[str, Any]:
     try:
         connection = sqlite3.connect(uri, uri=True)
         try:
-            active_heavy = connection.execute(
-                """SELECT COUNT(*) FROM managed_process_jobs
-                   WHERE resource_class='HEAVY'
-                     AND lifecycle_state IN ('starting','running','terminating','orphaned')"""
-            ).fetchone()[0]
+            claims_exist = connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='checkout_resource_claims'"
+            ).fetchone()
+            if claims_exist:
+                active_heavy = connection.execute(
+                    """SELECT COUNT(*) FROM checkout_resource_claims
+                       WHERE resource_class='HEAVY' AND lifecycle_state='active'"""
+                ).fetchone()[0]
+            else:
+                active_heavy = connection.execute(
+                    """SELECT COUNT(*) FROM managed_process_jobs
+                       WHERE resource_class='HEAVY'
+                         AND lifecycle_state IN ('starting','running','terminating','orphaned')"""
+                ).fetchone()[0]
             orphaned = connection.execute(
                 """SELECT COUNT(*) FROM managed_process_jobs
                    WHERE lifecycle_state='orphaned'"""
@@ -221,7 +247,7 @@ def ledger_health(repository: Path) -> dict[str, Any]:
         return {"observed": False, "error": "ledger_query_failed"}
     return {
         "observed": True,
-        "active_managed_heavy_count": int(active_heavy),
+        "active_heavy_claim_count": int(active_heavy),
         "orphan_process_count": int(orphaned),
         "active_write_fence_count": int(active_fences),
         "active_run_count": int(active_runs),
@@ -367,7 +393,7 @@ def main(argv: list[str] | None = None) -> int:
         "checks_passed": all(result["passed"] for result in results),
         "orphan_process_count_zero": health.get("orphan_process_count") == 0,
         "heavy_overlap_detected_count_zero": health.get("heavy_overlap_detected_count") == 0,
-        "active_managed_heavy_zero": health.get("active_managed_heavy_count") == 0,
+        "active_heavy_claim_zero": health.get("active_heavy_claim_count") == 0,
         "active_write_fences_zero": health.get("active_write_fence_count") == 0,
         "stale_orchestration_runs_zero": health.get("stale_orchestration_run_count") == 0,
     }

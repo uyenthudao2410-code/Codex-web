@@ -1,6 +1,9 @@
 //! REST adapter for the canonical connector capabilities.
 
-use super::semantic_bridge::{SemanticLocalizeInput, INTERNAL_SEMANTIC_SUBPATH};
+use super::semantic_bridge::{
+    SemanticLocalizeInput, SemanticStatusInput, INTERNAL_SEMANTIC_STATUS_SUBPATH,
+    INTERNAL_SEMANTIC_SUBPATH,
+};
 use super::{ConnectorCallOutcome, ConnectorRuntime, ConnectorRuntimeSlot, ConnectorTransport};
 use crate::auth::AuthContext;
 use salvo::prelude::*;
@@ -11,6 +14,7 @@ pub(crate) fn routes() -> Router {
     Router::with_path("connector")
         .push(Router::with_path("readiness").post(readiness))
         .push(Router::with_path(INTERNAL_SEMANTIC_SUBPATH).post(semantic_localize))
+        .push(Router::with_path(INTERNAL_SEMANTIC_STATUS_SUBPATH).post(semantic_status))
         .push(Router::with_path("task/start").post(task_start))
         .push(Router::with_path("task/list").post(task_list))
         .push(Router::with_path("task/resume").post(task_resume))
@@ -79,6 +83,62 @@ async fn semantic_localize(req: &mut Request, depot: &mut Depot, res: &mut Respo
         }
     };
     render(res, runtime.semantic_localize(auth, input).await);
+}
+
+#[handler]
+async fn semantic_status(req: &mut Request, depot: &mut Depot, res: &mut Response) {
+    let Some(runtime) = runtime(depot) else {
+        render(
+            res,
+            ConnectorCallOutcome::error(
+                404,
+                "connector_surface_disabled",
+                "this project has not been configured",
+                false,
+                true,
+                Some("Run webcodex setup, then webcodex run."),
+                None,
+                false,
+            ),
+        );
+        return;
+    };
+    let Some(auth) = depot.obtain::<AuthContext>().ok() else {
+        render(
+            res,
+            ConnectorCallOutcome::error(
+                401,
+                "authentication_required",
+                "native semantic resource status requires authentication",
+                false,
+                false,
+                None,
+                None,
+                false,
+            ),
+        );
+        return;
+    };
+    let input = match req.parse_json::<SemanticStatusInput>().await {
+        Ok(input) => input,
+        Err(_) => {
+            render(
+                res,
+                ConnectorCallOutcome::error(
+                    400,
+                    "invalid_arguments",
+                    "native semantic resource status requires a valid bounded JSON request",
+                    false,
+                    false,
+                    None,
+                    None,
+                    true,
+                ),
+            );
+            return;
+        }
+    };
+    render(res, runtime.semantic_resource_status(auth, input).await);
 }
 
 #[handler]
@@ -240,21 +300,25 @@ mod tests {
 
     #[tokio::test]
     async fn internal_semantic_route_is_served_but_not_model_advertised() {
-        let route = crate::connector_runtime::semantic_bridge::INTERNAL_SEMANTIC_ROUTE;
-        assert!(crate::connector_runtime::surface::CAPABILITY_NAMES
-            .iter()
-            .all(|name| crate::connector_runtime::surface::route_for(name) != Some(route)));
+        let routes = [
+            crate::connector_runtime::semantic_bridge::INTERNAL_SEMANTIC_ROUTE,
+            crate::connector_runtime::semantic_bridge::INTERNAL_SEMANTIC_STATUS_ROUTE,
+        ];
         let openapi = crate::connector_runtime::surface::build_openapi_spec(
             "https://connector.example".to_string(),
         );
-        assert!(openapi["paths"].get(route).is_none());
-
         let service = Service::new(Router::with_path("api").push(super::routes()));
-        let mut response = TestClient::post(format!("http://127.0.0.1{route}"))
-            .json(&serde_json::json!({}))
-            .send(&service)
-            .await;
-        let body = response.take_string().await.unwrap_or_default();
-        assert!(body.contains("connector_surface_disabled"), "{body}");
+        for route in routes {
+            assert!(crate::connector_runtime::surface::CAPABILITY_NAMES
+                .iter()
+                .all(|name| crate::connector_runtime::surface::route_for(name) != Some(route)));
+            assert!(openapi["paths"].get(route).is_none());
+            let mut response = TestClient::post(format!("http://127.0.0.1{route}"))
+                .json(&serde_json::json!({}))
+                .send(&service)
+                .await;
+            let body = response.take_string().await.unwrap_or_default();
+            assert!(body.contains("connector_surface_disabled"), "{body}");
+        }
     }
 }

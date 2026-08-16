@@ -95,6 +95,107 @@ class ActivationPreflightTests(unittest.TestCase):
                 runtime.active_tool_calls = 0
                 runtime.close()
 
+    def test_owned_codex_sidecar_is_quiesced_only_when_prepare_fences_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            admission = runtime.execution_resource_governor.admit(
+                command="codex app-server",
+                command_id="codex-app-server-test-owned",
+                owner="codex-app-server",
+                resource_class="MEDIUM",
+            )
+            runtime._codex_bridge._managed_job_id = admission.job_id
+            operation_id = "activation-codex-sidecar-0001"
+
+            def close_sidecar() -> None:
+                runtime.execution_resource_governor.complete(
+                    admission.job_id,
+                    lifecycle_state="closed",
+                    exit_code=0,
+                )
+                runtime._codex_bridge._managed_job_id = ""
+
+            try:
+                inspected = runtime.activation_preflight()
+                self.assertTrue(inspected["safe"])
+                self.assertEqual(inspected["counts"]["active_managed_processes"], 0)
+                with patch.object(runtime._codex_bridge, "close", side_effect=close_sidecar) as close:
+                    prepared = runtime.activation_preflight(
+                        operation_id=operation_id,
+                        expires_at_unix_ms=int(time.time() * 1000) + 30_000,
+                        prepare=True,
+                    )
+                self.assertTrue(prepared["safe"])
+                self.assertTrue(prepared["fenced"])
+                close.assert_called_once_with()
+                self.assertEqual(
+                    runtime.execution_resource_governor.snapshot()["active_command_count"],
+                    0,
+                )
+                self.assertTrue(runtime.cancel_activation(operation_id))
+            finally:
+                runtime._codex_bridge._managed_job_id = ""
+                runtime.execution_resource_governor.complete(
+                    admission.job_id,
+                    lifecycle_state="closed",
+                    exit_code=0,
+                )
+                runtime.close()
+
+    def test_ordinary_medium_managed_work_still_blocks_activation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            admission = runtime.execution_resource_governor.admit(
+                command="provider work",
+                command_id="ordinary-medium-work",
+                owner="opencode-provider",
+                resource_class="MEDIUM",
+            )
+            try:
+                result = runtime.activation_preflight()
+                self.assertFalse(result["safe"])
+                self.assertEqual(result["code"], "RUNTIME_BUSY")
+                self.assertEqual(result["counts"]["active_managed_processes"], 1)
+            finally:
+                runtime.execution_resource_governor.complete(
+                    admission.job_id,
+                    lifecycle_state="closed",
+                    exit_code=0,
+                )
+                runtime.close()
+
+    def test_codex_sidecar_prepare_fails_closed_when_close_does_not_terminalize_job(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            admission = runtime.execution_resource_governor.admit(
+                command="codex app-server",
+                command_id="codex-app-server-test-stuck",
+                owner="codex-app-server",
+                resource_class="MEDIUM",
+            )
+            runtime._codex_bridge._managed_job_id = admission.job_id
+            try:
+                self.assertTrue(runtime.activation_preflight()["safe"])
+                with patch.object(runtime._codex_bridge, "close", return_value=None):
+                    refused = runtime.activation_preflight(
+                        operation_id="activation-codex-sidecar-0002",
+                        expires_at_unix_ms=int(time.time() * 1000) + 30_000,
+                        prepare=True,
+                    )
+                self.assertFalse(refused["safe"])
+                self.assertEqual(refused["code"], "RUNTIME_BUSY")
+                self.assertEqual(refused["reason"], "internal_service_quiescence_failed")
+                self.assertEqual(refused["counts"]["active_managed_processes"], 1)
+                self.assertIsNone(runtime.activation_fence)
+            finally:
+                runtime._codex_bridge._managed_job_id = ""
+                runtime.execution_resource_governor.complete(
+                    admission.job_id,
+                    lifecycle_state="closed",
+                    exit_code=0,
+                )
+                runtime.close()
+
     def test_accepting_requires_explicit_preservation_and_valid_integrity(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp))

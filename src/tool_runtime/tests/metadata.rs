@@ -114,6 +114,8 @@ async fn register_agent_projects_for_auth(
                     persistent_shell: false,
                     ssh_persistent_shell: false,
                     structured_validation_argv: true,
+                    exact_source_validation: false,
+                    server_compute: false,
                     structured_process_argv: true,
                     structured_script_payload: false,
                     structured_execution_jobs: false,
@@ -1899,6 +1901,17 @@ async fn runtime_status_agent_summary_includes_protocol_version() {
         clients[0]["job_concurrency"],
         json!({"limit": 4, "running": 0, "queued": 0})
     );
+    let compute = &result.output["compute"];
+    assert_eq!(compute["schema_version"], 1);
+    assert_eq!(compute["mode"], "server_preferred");
+    assert_eq!(compute["policy"], "server_first_clean_head_validation_v1");
+    assert_eq!(compute["dispatch_enabled"], true);
+    assert_eq!(compute["summary"]["runner_count"], 1);
+    assert_eq!(compute["summary"]["known_capacity_count"], 1);
+    assert_eq!(compute["summary"]["available_capacity_count"], 1);
+    assert_eq!(compute["runners"][0]["client_id"], "agent-1");
+    assert_eq!(compute["runners"][0]["job_concurrency"]["limit"], 4);
+    assert!(compute["runners"][0].get("path").is_none());
     let health_clients = agents["summary"]["clients"].as_array().unwrap();
     assert_eq!(health_clients.len(), 1);
     assert_eq!(health_clients[0]["client_id"], "agent-1");
