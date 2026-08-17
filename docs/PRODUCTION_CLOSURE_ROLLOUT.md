@@ -43,7 +43,7 @@ The goal is to finish the current product without adding unnecessary architectur
 | ID | Priority | Workstream | Status | Completion gate |
 |---|---|---|---|---|
 | P0.1 | P0 | Repository/runtime-evidence hygiene | **COMPLETE / DELIVERED** | one-shot files ignored/untracked; source-root clean; ledger preserved |
-| P0.2 | P0 | Installed Windows Recovery Supervisor acceptance | **IN PROGRESS — SECOND INSTALLED BLOCKER REMEDIATED / SOURCE DELIVERY PENDING** | exact installer; real Scheduled Task healthy; `Action Once` observes existing host; rollback proven; persistence explicitly proven or externally blocked |
+| P0.2 | P0 | Installed Windows Recovery Supervisor acceptance | **CURRENT-SESSION COMPLETE / PERSISTENCE EXTERNAL** | exact installer + real Scheduled Task + `Action Once` + rollback proven; reboot/logon persistence explicitly remains external/unverified |
 | P0.3 | P0 | Production Recovery fault matrix | PENDING | controlled isolated/installed fault cases pass with no foreign adoption, duplicate owner/listener, orphan, or state corruption |
 | P1.1 | P1 | Exact-fingerprint release candidate | PENDING | source + MCP + Recovery E2E + packaged + installer/provenance gates pass on one exact accepted fingerprint |
 | P1.2 | P1 | Representative routing economics | PENDING | homogeneous accepted paired cohorts by task class/oracle/environment with measured quality/time/cost |
@@ -240,7 +240,7 @@ Rollback was executed immediately and verified:
 
 The acceptance application itself remains installed only as a stale controlled comparison artifact until replacement by the next exact-HEAD installer.
 
-### 6.5 Sparse persisted-state compatibility remediation — SOURCE ACCEPTED / DELIVERY PENDING
+### 6.5 Sparse persisted-state compatibility remediation — COMPLETE / DELIVERED
 
 Implementation is deliberately minimal:
 
@@ -280,25 +280,53 @@ EOCL acceptance:
 - final state: `CHECKPOINTED`;
 - integrity check: PASS (`checked=76`).
 
-Delivery is pending for this source/doc/ledger/report boundary. The old `A81A...` installer is now intentionally marked **STALE FOR FINAL ACCEPTANCE** because its supervisor bytes predate this remediation.
+Delivered commit:
 
-### 6.6 Remaining installed acceptance sequence
+- `acaa3582 fix: normalize recovery supervisor persisted state`
+- pushed/aligned with `origin/main` before the final P0.2 installer build.
 
-After sparse-state remediation is delivered on an exact HEAD:
+The old `A81A...` installer is intentionally retained as **STALE HISTORICAL EVIDENCE ONLY** because its supervisor bytes predate this remediation.
 
-1. commit/push the remediation with this living plan, canonical ledger, and accepted EOCL report;
-2. rebuild one fresh NSIS installer from that exact delivered HEAD and record installer SHA-256/size;
-3. assert packaged Recovery Supervisor hash equals current source hash `E0B906C1...` (or the exact source hash after delivery if EOCL/report-only changes do not affect source);
-4. silently uninstall/remove the stale controlled acceptance application and verify the target is gone;
-5. install the fresh package to `%LOCALAPPDATA%\WebMcpAcceptance-0.3.4`;
-6. install real `WebMCP Recovery Supervisor` from the installed package;
-7. prove Task action/principal/triggers/manifest/executable identity;
-8. prove the continuous supervisor reaches `healthy` without changing the already healthy Recovery Host ownership;
-9. stop the task process in a bounded way, run installed `Action Once`, and prove it observes the existing exact Recovery Host PID/instance without spawning/killing anything;
-10. restart the task and prove healthy again;
-11. prove current-session primary/recovery MCP/Tunnel listeners and device ownership are coherent;
-12. prove supervisor uninstall/rollback again when the installed-session acceptance boundary is complete;
-13. perform true logon/reboot resurrection only if the current control topology can survive and verify it. Otherwise record the exact external persistence acceptance blocker; never infer PASS.
+### 6.6 Final exact-HEAD installed acceptance — CURRENT-SESSION COMPLETE
+
+Exact source/artifact used for final current-session acceptance:
+
+- HEAD: `acaa3582052ab6836ade7b55bd1ff2178ebc5117`;
+- installer: `dist/web-mcp-assistant-setup-0.3.4.exe`;
+- installer size: `128670108` bytes;
+- installer SHA-256: `0371F160B33621556F16F537297D60E5575690BE076BE053A5802E2A1532C879`;
+- Recovery Supervisor source/package SHA-256: `E0B906C1EC9AB5C3E9F1F52BA7B3D05F6FEFE42259F15A48AB3077A730076420`;
+- exact packaged resource projection: `249` files, `exact_source=true`;
+- accepted build run `c6235e7dfefe4df9938bf6d0b4c11bca`, wave `b344e00d5ef64bc49668727834bf9e30` -> `CHECKPOINTED`.
+
+Installed-session evidence:
+
+- stale NSIS self-delete residue was proven to be an empty target with no process before conditional removal: run `1151d304b5864708ad6f694d9fd91b6c`, wave `fc5cc270eec8419b93c57e78b2871d0f`;
+- fresh controlled installation and exact installed Supervisor hash: run `dfc0f3be347540989489dbf10574b48f`, wave `9406a7adde4b4fadb459237cd6fba1ce`;
+- real Scheduled Task principal/action/triggers/manifest identity: run `44add57e789e4b14bcef1588f0e371b9`, wave `730ddc9e526b4c4981ca1c82e257196c`; raw Task Scheduler `UserId=Admin` and Windows identity `DESKTOP-63643J4\Admin` resolved to the same canonical SID;
+- continuous Supervisor reached `healthy` on the existing Recovery Host without replacement;
+- installed `Action Once` observed the exact existing Recovery Host and returned `last_spawned_pid=null`; scheduled-loop resume again reached `healthy`: run `f8219ca3acf8470ca39a86bedf546dad`, wave `6682903e59f549b3b721275a99788fe8`;
+- authenticated product-native Recovery Host IPC plus independent Recovery/listener checks proved primary `mcpRunning/nativeAlive/tunnelRunning/fullyReady=true`, Recovery Host/MCP/Tunnel healthy, exact device lifecycle identity, and one expected listener each on ports `18766`, `18767`, `18082`, and `18083`: run `0d3dc1349077416680946c08c76875ef`, wave `68c8cab1593f46249c3f801d7e85cdcf` -> `CHECKPOINTED`;
+- acceptance baseline Recovery Host remained PID `32536`, instance `399ea2ec2d751b606a2ffe7788727ac6` throughout the installed-session proof;
+- mandatory Supervisor rollback removed the Scheduled Task and `%LOCALAPPDATA%\WebMcpRecoverySupervisor`, persisted status returned to `uninstalled`, the controlled acceptance app was preserved for isolated packaged fault testing, and primary/recovery runtime health remained intact;
+- final rollback verification: run `f64f9aac35d8459e903524953b3e0943`, wave `855626394161448fa5ea98ed60c61c62`, accepted P0.2 proof fingerprint `886ab2d4e0bbee7c89d62fb7124a979aae241f6cd849983193efa77899697d2f` -> `CHECKPOINTED`.
+
+Harness/control observations explicitly excluded from product-regression classification:
+
+- Task Scheduler normalizes the same-user principal string (`Admin` vs `DESKTOP-63643J4\Admin`); canonical SID equality proved identity;
+- anonymous `GET /__control/health` correctly returned `401 Unauthorized`; final proof used shipped authenticated Recovery Host IPC;
+- a temporary Electron `safeStorage` helper produced no result and was abandoned/cleaned rather than used as evidence;
+- one post-rollback PowerShell check used the reserved automatic `$PID` variable and failed with `VariableNotWritable`; the corrected `$ownerPid` read-only check passed without repeating rollback.
+
+Current external state after P0.2 rollback:
+
+- `WebMCP Recovery Supervisor` Scheduled Task: absent;
+- `%LOCALAPPDATA%\WebMcpRecoverySupervisor`: absent;
+- persisted Supervisor state: `uninstalled`;
+- `%LOCALAPPDATA%\WebMcpAcceptance-0.3.4`: preserved for P0.3 isolated packaged fault testing;
+- development Recovery Host, primary/recovery MCP, and both Tunnels: healthy/coherent at final proof.
+
+**Persistence boundary:** true reboot/logon resurrection has not been executed from a control topology that can survive and independently verify the reboot/logon result. It remains an explicit external acceptance item and is not inferred from the current-session proof.
 
 ## 7. P0.3 — Recovery fault matrix
 
@@ -464,16 +492,26 @@ Evaluate before implementing:
 - Scoped diff hygiene: PASS.
 - Remediated source SHA-256: `E0B906C1EC9AB5C3E9F1F52BA7B3D05F6FEFE42259F15A48AB3077A730076420`.
 - EOCL run `274bd626bfb44943afedb3e755002ad0`, wave `62183559c12943ec8e9a9dec25c4f257` -> `CHECKPOINTED`.
-- Delivery pending before rebuilding final P0.2 installer.
+- Delivered as `acaa3582 fix: normalize recovery supervisor persisted state`; `origin/main` aligned before the final P0.2 installer build.
+
+### 2026-08-17 — P0.2 current-session installed acceptance complete
+
+- Fresh exact-HEAD installer from `acaa3582`: `128670108` bytes, SHA-256 `0371F160B33621556F16F537297D60E5575690BE076BE053A5802E2A1532C879`.
+- Packaged Supervisor exactly matched source SHA-256 `E0B906C1...`; exact packaged resource projection passed for 249 files.
+- Real same-user Limited Scheduled Task reached continuous `healthy` on the existing Recovery Host.
+- Installed `Action Once` observed PID `32536` / instance `399ea2ec2d751b606a2ffe7788727ac6` with no replacement; scheduled-loop resume returned healthy again.
+- Product-native authenticated Recovery Host IPC + independent listener/Recovery checks proved primary/recovery planes coherent and fully ready.
+- Mandatory Supervisor rollback PASS: task/root absent, status `uninstalled`, controlled acceptance app preserved, runtime remained healthy.
+- Final accepted rollback proof: run `f64f9aac35d8459e903524953b3e0943`, wave `855626394161448fa5ea98ed60c61c62`, proof fingerprint `886ab2d4e0bbee7c89d62fb7124a979aae241f6cd849983193efa77899697d2f` -> `CHECKPOINTED`.
+- True reboot/logon persistence remains an external/unverified acceptance boundary; no persistence PASS is inferred.
 
 ## 13. Next action
 
-1. commit/push the sparse-state remediation with this control plan, canonical `ledger.sqlite3`, and accepted EOCL report; exclude volatile projections and SQLite sidecars;
-2. rebuild a fresh NSIS installer from the new exact delivered HEAD and assert packaged supervisor bytes match current source;
-3. replace the stale controlled acceptance installation;
-4. rerun P0.2 real Scheduled Task/current-session acceptance and rollback proof;
-5. run the F1-F9 Recovery fault matrix, using an isolated packaged real-process harness for destructive cases that could sever the active Coding MCP control plane;
-6. freeze source and execute the exact-fingerprint RC gate;
-7. evaluate representative routing evidence and record either selective promotion or `KEEP_DETERMINISTIC`;
-8. assess semantic localization binding; configure/benchmark only if the required external binding exists, otherwise record exact `BLOCKED_CONFIG`;
-9. update this file with final evidence and external persistence/config blockers, then make the final selective delivery commit/push including the canonical ledger.
+1. selectively deliver this accepted P0.2 evidence boundary with the living plan, canonical `ledger.sqlite3`, and relevant accepted reports while preserving unrelated concurrent work and excluding SQLite sidecars/runtime projections;
+2. execute P0.3 F1-F9, reusing exact existing deterministic/E2E coverage where sufficient and using an isolated packaged real-process harness for destructive cases that could sever the active Coding MCP control plane;
+3. update this file with per-case fault evidence, post-case ownership/listener/orphan invariants, and any minimal remediation required by a reproducible fault;
+4. freeze source and execute the exact-fingerprint RC gate, rebuilding the final NSIS artifact only after the source/test surface is frozen;
+5. evaluate representative routing evidence; if comparable accepted cohorts are insufficient or cost remains unknown, record `KEEP_DETERMINISTIC / NO_PROMOTION` rather than manufacture evidence;
+6. close semantic localization as `BLOCKED_CONFIG` unless the required external origin + credential-file binding exists, and benchmark it only if that binding is actually available;
+7. record the true reboot/logon persistence boundary as external/unverified unless it is independently executed and observed;
+8. make the final selective delivery commit/push including the canonical ledger and accepted closure reports; do not create a release/tag/publish artifact without separate authorization.
