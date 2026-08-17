@@ -1,280 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "e087adcd887345ef8babd36bdc7d92a8",
-    "orchestration": {
-      "run_id": "d5e9ba94d8a846cc9a2447f9f9b0c913",
-      "wave_id": "75f6d55a952f47e5a38753205ac05ef5",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "55a00cf04726298c787b18be36c1764408bf9b39",
-      "worktree_fp": "35b3a0b30b34d640d63bd8c7f8788f30a9794172d5ebca3fb3e0a5585d264a07",
-      "contract_fp": ""
-    },
-    "objective": "Continue the prepared local real-process Server-First R3 canary design. Read only the exact current E2E harness patterns and validation sync-wait knob. Inspect scripts/e2e_zero_config_ws.sh and scripts/e2e_reconnect_ws.sh for server startup, temp auth/open mode, Runner config, readiness loops, runtime tool-call helper, and cleanup. Search production runtime for validation_sync_wait / SYNC_VALIDATION_WAIT_SECS / any env override. Also verify whether bash is available on this Windows host. Do not mutate files or start server/runner processes yet; no external network, no credentials.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "checks",
-        "text": "Run requested checks",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:36:50.800Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:36:50.800Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-16T23:35:33.454Z",
-    "updated_at": "2026-08-16T23:37:22.131Z",
-    "events": [
-      {
-        "time": "2026-08-16T23:35:33.454Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Prepare a local real-process Server-First R3 canary using only loopback and temp directories. Inspect maintained/current E2E scripts and server/runner CLI for the smallest existing pattern to start one local WebCodex server plus two local webcodex-runner processes, register the same logical project id from two separate clean-base checkouts, opt only the compute runner into [capabilities] server_compute=true, make the source checkout dirty, submit cargo_check with sufficient timeout to use durable validation Job/server-first placement, and query job_status/job_log to verify source_snapshot_identity while authoritative source checkout stays unchanged. Prefer adapting an existing script rather than adding a new harness. Do not mutate or run processes in prepare. Do not use external network or real credentials."
-        }
-      },
-      {
-        "time": "2026-08-16T23:35:34.805Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:35:45.504Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:35:45.513Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:41.353Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:41.853Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:42.925Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:42.928Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:43.486Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:43.751Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:44.472Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$a=Get-Content 'scripts/e2e_zero_config_ws.sh'; $a[0..260]\"",
-          "session_id": "m_w0p84DszVrjER7Qalsjcv9"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:45.285Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$a=Get-Content 'scripts/e2e_zero_config_ws.sh'; $a[0..260]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:46.336Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$a=Get-Content 'scripts/e2e_reconnect_ws.sh'; $a[0..260]\"",
-          "session_id": "E4cMWynIVTsWU2zt9dSwxL4F"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:46.686Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$a=Get-Content 'scripts/e2e_reconnect_ws.sh'; $a[0..260]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:47.707Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 8 \"validation_sync_wait|SYNC_VALIDATION_WAIT_SECS|sync_wait_secs|VALIDATION_SYNC\" src crates scripts docs",
-          "session_id": "-VZOtrTeXiuV2Q_ZJe8IaGvu"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:48.319Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 8 \"validation_sync_wait|SYNC_VALIDATION_WAIT_SECS|sync_wait_secs|VALIDATION_SYNC\" src crates scripts docs",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:49.230Z",
-        "event": "command_started",
-        "details": {
-          "command": "where.exe bash",
-          "session_id": "EP4qabfByPzdXM9d41I7Qjaz"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:50.501Z",
-        "event": "command_finished",
-        "details": {
-          "command": "where.exe bash",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:50.786Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:50.800Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:50.987Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:50.989Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:51.138Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T23:36:55.241Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:37:21.998Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:37:22.001Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T23:37:34.777Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "fca2a532018a4ea19451450b7cd5228e",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -48495,6 +48221,405 @@
       }
     ],
     "archived_at": "2026-08-17T07:31:57.895Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "501e51e2708a415b80c925249664596d",
+    "orchestration": {
+      "run_id": "62c3ae7e5b5641729d099365e345db6e",
+      "wave_id": "c4f7035d39394c43b9503cfec53d665c",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "24825cd82406a24828aaceec5cb846d0fbaeec1a",
+      "worktree_fp": "012d9346e3517674b86bba5b05c7e317445a2ba03589a29437e07ba0aba30c03",
+      "contract_fp": ""
+    },
+    "objective": "Harden only the Windows live-supervisor E2E test cleanup proven flaky during broad validation. The spawned MCP child has stderr piped; wait for ChildProcess 'close' rather than 'exit' after every explicit kill so stdio/OS handles are fully closed before recursive temp-tree removal. Keep the existing bounded rmSync Windows retries. Do not change product runtime or weaken cleanup failures. Prove the full live-supervisor E2E file repeatedly to catch the prior EPERM race, then run diff hygiene.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:33:42.643Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:33:42.643Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:33:42.643Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [
+      {
+        "command": "npm test && git diff --check",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 20490,
+        "summary": "exit 0 | 20.5s | 229 lines | tail: \"warning: in the working copy of '.coding-tools/evaluation/chatweb-host-observations.jsonl', LF will be replaced by CR...\"",
+        "finished_at": "2026-08-17T07:34:13.399Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "V3s32f7l4-y9JJQdIk5C9jd8"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 20315,
+          "command_id": "V3s32f7l4-y9JJQdIk5C9jd8",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:V3s32f7l4-y9JJQdIk5C9jd8:stdout",
+              "total_stream_bytes": 20166,
+              "total_retained_bytes": 20166,
+              "head_retained_bytes": 20166,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:V3s32f7l4-y9JJQdIk5C9jd8:stderr",
+              "total_stream_bytes": 149,
+              "total_retained_bytes": 149,
+              "head_retained_bytes": 149,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "tests/live-supervisor-e2e.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:33:42.987Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-17T07:31:57.949Z",
+    "updated_at": "2026-08-17T07:34:32.075Z",
+    "events": [
+      {
+        "time": "2026-08-17T07:31:57.949Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:32:07.516Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached ",
+          "session_id": "frHCebRF-oNei4mkWJX8FL-p"
+        }
+      },
+      {
+        "time": "2026-08-17T07:32:16.280Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached ",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:32:28.054Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:32:28.695Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:32:28.695Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-17T07:32:56.579Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:20.882Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:22.081Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:22.764Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:22.765Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:23.455Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:23.699Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:24.554Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/live-supervisor-e2e.test.js",
+          "session_id": "GZWlqtVGu5kc8QUgZxExtGye"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:26.727Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/live-supervisor-e2e.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:27.837Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"1..5 | ForEach-Object { node --test tests/live-supervisor-e2e.test.js; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }\"",
+          "session_id": "qkJAw0l-aJfbv_ECCOH4lRsU"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:40.129Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"1..5 | ForEach-Object { node --test tests/live-supervisor-e2e.test.js; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:41.480Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- tests/live-supervisor-e2e.test.js",
+          "session_id": "q2jLzfw0raKd77wGdX7gVFAM"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:41.960Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- tests/live-supervisor-e2e.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:42.635Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:42.643Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:42.821Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:42.821Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:42.987Z",
+        "event": "files_modified",
+        "details": {
+          "count": 1
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:45.270Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:33:53.153Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm test && git diff --check",
+          "session_id": "V3s32f7l4-y9JJQdIk5C9jd8"
+        }
+      },
+      {
+        "time": "2026-08-17T07:34:01.865Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "FINAL_ACCEPTANCE_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:34:11.342Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:34:13.399Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm test && git diff --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:34:21.704Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:34:26.917Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:34:26.917Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-17T07:34:37.126Z",
     "archive_reason": "superseded"
   }
 ]

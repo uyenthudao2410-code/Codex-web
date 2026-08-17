@@ -125,7 +125,7 @@ test('live supervisor recovers only the tunnel and never kills a healthy MCP', a
   } finally {
     if (mcp.exitCode === null && mcp.signalCode === null) {
       mcp.kill();
-      await new Promise((resolve) => mcp.once('exit', resolve));
+      await new Promise((resolve) => mcp.once('close', resolve));
     }
     removeTempTree(workspace);
   }
@@ -154,7 +154,7 @@ test('live supervisor escalates and force-restarts a hung live MCP after repeate
   } finally {
     if (mcp.exitCode === null && mcp.signalCode === null) {
       mcp.kill();
-      await new Promise((resolve) => mcp.once('exit', resolve));
+      await new Promise((resolve) => mcp.once('close', resolve));
     }
     removeTempTree(workspace);
   }
@@ -167,7 +167,7 @@ test('live supervisor full-restarts when the owned MCP process has exited', asyn
   try {
     await waitForHealth(port);
     mcp.kill();
-    await new Promise((resolve) => mcp.once('exit', resolve));
+    await new Promise((resolve) => mcp.once('close', resolve));
     const { orchestrator, calls } = makeHarness(mcp, port, false, 'mcp_process_exited');
     orchestrator.heartbeatFailures = 2;
     orchestrator.heartbeatFailureKind = 'mcp_process_exited';
@@ -177,7 +177,7 @@ test('live supervisor full-restarts when the owned MCP process has exited', asyn
   } finally {
     if (mcp.exitCode === null && mcp.signalCode === null) {
       mcp.kill();
-      await new Promise((resolve) => mcp.once('exit', resolve));
+      await new Promise((resolve) => mcp.once('close', resolve));
     }
     removeTempTree(workspace);
   }

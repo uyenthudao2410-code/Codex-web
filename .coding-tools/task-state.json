@@ -1,55 +1,55 @@
 {
   "version": 2,
-  "task_id": "501e51e2708a415b80c925249664596d",
+  "task_id": "7235102ed0dc48c7a2bdece7c8104158",
   "orchestration": {},
-  "objective": "Deliver the accepted P3 organic host-turn correlation lifetime fix to origin/main. Include canonical ledger and accepted EOCL report; exclude transient SQLite WAL/SHM sidecars. Then continue with the unrelated Windows live-supervisor teardown EPERM reliability issue discovered by broad validation.",
+  "objective": "Deliver the accepted Windows live-supervisor E2E cleanup hardening to origin/main. Include canonical ledger and accepted report, exclude transient SQLite sidecars, and do not modify product runtime or external system configuration.",
   "status": "active",
   "steps": [
     {
       "id": "stage",
-      "text": "Checkpoint ledger and stage accepted P3 fix",
+      "text": "Checkpoint ledger and stage accepted test-only change",
       "status": "in_progress",
-      "updated_at": "2026-08-17T07:31:57.949Z"
+      "updated_at": "2026-08-17T07:34:37.174Z"
     },
     {
       "id": "commit",
-      "text": "Commit accepted host-correlation fix",
+      "text": "Create Git commit",
       "status": "pending",
-      "updated_at": "2026-08-17T07:31:57.949Z"
+      "updated_at": "2026-08-17T07:34:37.174Z"
     },
     {
       "id": "push",
       "text": "Push origin/main",
       "status": "pending",
-      "updated_at": "2026-08-17T07:31:57.949Z"
+      "updated_at": "2026-08-17T07:34:37.174Z"
     },
     {
-      "id": "flake",
-      "text": "Investigate and harden Windows cleanup flake",
+      "id": "verify",
+      "text": "Verify final branch/worktree and remaining boundaries",
       "status": "pending",
-      "updated_at": "2026-08-17T07:31:57.949Z"
+      "updated_at": "2026-08-17T07:34:37.174Z"
     }
   ],
-  "current_step": "Checkpoint ledger and stage accepted P3 fix",
+  "current_step": "Checkpoint ledger and stage test-harness hardening",
   "current_command": {
-    "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached --name-only); if(-not ($staged -contains '.coding-tools/orchestration/ledger.sqlite3')){throw 'LEDGER_NOT_STAGED'}; if($staged -match 'ledger\\.sqlite3-(wal|shm)$'){throw 'SQLITE_SIDECAR_STAGED'}; & git diff --cached --check; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; Write-Output ('STAGED_COUNT=' + $staged.Count); & git commit -m 'fix: preserve organic host correlation'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git push origin main; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git status -sb; & git log -3 --oneline --decorate\"",
+    "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached --name-only); if(-not ($staged -contains '.coding-tools/orchestration/ledger.sqlite3')){throw 'LEDGER_NOT_STAGED'}; if($staged -match 'ledger\\.sqlite3-(wal|shm)$'){throw 'SQLITE_SIDECAR_STAGED'}; & git diff --cached --check; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; Write-Output ('STAGED_COUNT=' + $staged.Count); & git commit -m 'test: stabilize live supervisor cleanup'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git push origin main; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git status -sb; & git log -4 --oneline --decorate\"",
     "kind": "command",
-    "session_id": "frHCebRF-oNei4mkWJX8FL-p",
+    "session_id": "NEMMEWCwiZXnImqzB9hvjMDW",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-17T07:32:07.516Z"
+    "started_at": "2026-08-17T07:34:44.556Z"
   },
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "Commit/push, then harden Windows temp cleanup if source confirms a reusable fix",
-  "created_at": "2026-08-17T07:31:57.949Z",
-  "updated_at": "2026-08-17T07:32:07.516Z",
+  "next_step": "Commit/push and verify final project state",
+  "created_at": "2026-08-17T07:34:37.174Z",
+  "updated_at": "2026-08-17T07:34:44.556Z",
   "events": [
     {
-      "time": "2026-08-17T07:31:57.949Z",
+      "time": "2026-08-17T07:34:37.174Z",
       "event": "task_started",
       "details": {
         "fields": [
@@ -64,11 +64,11 @@
       }
     },
     {
-      "time": "2026-08-17T07:32:07.516Z",
+      "time": "2026-08-17T07:34:44.556Z",
       "event": "command_started",
       "details": {
         "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached ",
-        "session_id": "frHCebRF-oNei4mkWJX8FL-p"
+        "session_id": "NEMMEWCwiZXnImqzB9hvjMDW"
       }
     }
   ]
