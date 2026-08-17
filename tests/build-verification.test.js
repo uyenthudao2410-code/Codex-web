@@ -4,7 +4,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { detectProject, collectArtifacts, requireWorkspace } = require('../electron/services/buildVerificationService');
-const { assertSanitizedPackagedResources } = require('../scripts/verify-packaged-resources');
+const { assertSanitizedPackagedResources, assertExactPackagedResources } = require('../scripts/verify-packaged-resources');
+const { cleanDistRoot } = require('../scripts/clean-dist');
 
 test('build verification detects Electron package scripts', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'web-mcp-build-'));
@@ -52,6 +53,45 @@ test('electron packaging excludes volatile resource evidence and validates the p
     assert.ok(codingResources.filter?.includes(filter), `missing packaging sanitation filter: ${filter}`);
   }
   assert.equal(packageJson.build?.afterPack, 'scripts/verify-packaged-resources.js');
+  assert.match(packageJson.scripts?.dist || '', /node scripts\/clean-dist\.js/);
+  assert.match(packageJson.scripts?.['dist:dir'] || '', /node scripts\/clean-dist\.js/);
+});
+
+test('dist cleaner removes stale package output before Electron Builder runs', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'web-mcp-dist-clean-'));
+  try {
+    fs.mkdirSync(path.join(root, 'dist', 'win-unpacked'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'dist', 'win-unpacked', 'stale.txt'), 'stale');
+    const removed = cleanDistRoot(root);
+    assert.equal(removed, path.join(root, 'dist'));
+    assert.equal(fs.existsSync(removed), false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('packaged resources must be byte-identical to the current allowed source projection', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'web-mcp-packaged-exact-'));
+  const source = path.join(root, 'source');
+  const packaged = path.join(root, 'packaged');
+  try {
+    fs.mkdirSync(path.join(source, 'recovery-supervisor'), { recursive: true });
+    fs.mkdirSync(path.join(packaged, 'recovery-supervisor'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'recovery-supervisor', 'recovery-supervisor.ps1'), 'current');
+    fs.mkdirSync(path.join(source, 'coding-tools-mcp', '.coding-tools'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'coding-tools-mcp', '.coding-tools', 'performance.json'), 'runtime-only');
+    fs.writeFileSync(path.join(packaged, 'recovery-supervisor', 'recovery-supervisor.ps1'), 'current');
+    assert.equal(assertExactPackagedResources(source, packaged).exact_source, true);
+
+    fs.writeFileSync(path.join(packaged, 'recovery-supervisor', 'recovery-supervisor.ps1'), 'stale');
+    assert.throws(() => assertExactPackagedResources(source, packaged), /source mismatch/);
+
+    fs.writeFileSync(path.join(packaged, 'recovery-supervisor', 'recovery-supervisor.ps1'), 'current');
+    fs.rmSync(path.join(packaged, 'recovery-supervisor', 'recovery-supervisor.ps1'));
+    assert.throws(() => assertExactPackagedResources(source, packaged), /missing from current source projection/);
+
+    fs.writeFileSync(path.join(packaged, 'recovery-supervisor', 'recovery-supervisor.ps1'), 'current');
+    fs.writeFileSync(path.join(packaged, 'stale-resource.txt'), 'unexpected');
+    assert.throws(() => assertExactPackagedResources(source, packaged), /not present in current source/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test('packaged resource sanitation rejects raw reports and Python cache metadata', () => {

@@ -5,6 +5,7 @@ const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
+const { assertExactPackagedResources } = require('./verify-packaged-resources');
 
 const root = path.resolve(__dirname, '..');
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -12,6 +13,7 @@ const unpackedRoot = path.join(root, 'dist', 'win-unpacked');
 const executable = path.join(unpackedRoot, `${packageJson.build.productName}.exe`);
 const packagedResources = path.join(unpackedRoot, 'resources', 'resources');
 const supervisorScript = path.join(packagedResources, 'recovery-supervisor', 'recovery-supervisor.ps1');
+const sourceSupervisorScript = path.join(root, 'resources', 'recovery-supervisor', 'recovery-supervisor.ps1');
 const productionDescriptor = path.join(process.env.APPDATA || '', 'web-mcp-assistant', 'recovery-host.json');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -112,6 +114,8 @@ async function main() {
     path.join(packagedResources, 'coding-tools-mcp', 'coding_tools_mcp', 'server.py')
   ];
   for (const file of required) assert(fs.existsSync(file), `PACKAGED_RESOURCE_MISSING:${path.basename(file)}`);
+  assertExactPackagedResources(path.join(root, 'resources'), packagedResources);
+  assert(sha256File(supervisorScript) === sha256File(sourceSupervisorScript), 'PACKAGED_RECOVERY_SUPERVISOR_SOURCE_MISMATCH');
 
   const productionBefore = descriptorIdentity(readJson(productionDescriptor));
   const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-packaged-recovery-'));
