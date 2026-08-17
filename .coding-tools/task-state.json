@@ -1,18 +1,18 @@
 {
   "version": 2,
-  "task_id": "e12600a584ff45a7bdde31cb82218d40",
+  "task_id": "5ba312792b5646149ca7fe3ff0064677",
   "orchestration": {},
   "objective": "Run a workspace command",
   "status": "active",
   "steps": [],
   "current_step": "Execute command",
   "current_command": {
-    "command": "git status --short -- .coding-tools && git add -A -- .coding-tools && git add -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/scripts/compare_route_policies.py resources/coding-tools-mcp/tests/test_orchestration_ledger.py && npm run check:coding-tools-history && npm run check:coding-tools-delivery && git add -A -- .coding-tools && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git commit -m \"Harden P1 ITT analysis before P3\" && git push origin main",
+    "command": "npm run check:coding-tools-history && powershell -NoProfile -Command \"$shm='.coding-tools/orchestration/ledger.sqlite3-shm'; $wal='.coding-tools/orchestration/ledger.sqlite3-wal'; $deadline=(Get-Date).AddSeconds(10); while(((Test-Path $shm) -or (Test-Path $wal)) -and ((Get-Date) -lt $deadline)){ Start-Sleep -Milliseconds 25 }; if((Test-Path $shm) -or (Test-Path $wal)){ exit 3 }\" && git add -A -- .coding-tools && git add -- docs/research/260818_P3_SERVER_FIRST_PAIRED_EXPERIMENT_MANIFEST.md && npm run check:coding-tools-delivery && powershell -NoProfile -Command \"$shm='.coding-tools/orchestration/ledger.sqlite3-shm'; $wal='.coding-tools/orchestration/ledger.sqlite3-wal'; $deadline=(Get-Date).AddSeconds(10); while(((Test-Path $shm) -or (Test-Path $wal)) -and ((Get-Date) -lt $deadline)){ Start-Sleep -Milliseconds 25 }; if((Test-Path $shm) -or (Test-Path $wal)){ exit 3 }\" && git add -A -- .coding-tools && npm run check:coding-tools-delivery && git diff --cached --check && git commit -m \"Freeze P3 server-first pilot manifest\" && git push origin main",
     "kind": "command",
-    "session_id": "dSVosTQrZsa4AiAFJ7Klt9l_",
+    "session_id": "5F6MQOSRhi03hTiVnsuoNWev",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-17T20:13:40.106Z"
+    "started_at": "2026-08-17T20:20:48.705Z"
   },
   "test_results": [],
   "build_results": [],
@@ -20,22 +20,22 @@
   "modified_files": [],
   "failure": null,
   "next_step": "",
-  "created_at": "2026-08-17T20:13:39.894Z",
-  "updated_at": "2026-08-17T20:13:40.106Z",
+  "created_at": "2026-08-17T20:20:48.438Z",
+  "updated_at": "2026-08-17T20:20:48.705Z",
   "events": [
     {
-      "time": "2026-08-17T20:13:39.894Z",
+      "time": "2026-08-17T20:20:48.438Z",
       "event": "task_auto_started",
       "details": {
         "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-17T20:13:40.106Z",
+      "time": "2026-08-17T20:20:48.705Z",
       "event": "command_started",
       "details": {
-        "command": "git status --short -- .coding-tools && git add -A -- .coding-tools && git add -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/scripts/compare_route_policies.py resources/coding-tools-mcp/tests/test_orchestration_ledger.py && npm run check:coding-tools-history && npm run check:coding-tools-delivery && git add -A -- .coding-tools && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git commit -m \"Harden P1 IT",
-        "session_id": "dSVosTQrZsa4AiAFJ7Klt9l_"
+        "command": "npm run check:coding-tools-history && powershell -NoProfile -Command \"$shm='.coding-tools/orchestration/ledger.sqlite3-shm'; $wal='.coding-tools/orchestration/ledger.sqlite3-wal'; $deadline=(Get-Date).AddSeconds(10); while(((Test-Path $shm) -or (Test-Path $wal)) -and ((Get-Date) -lt $deadline)){ Start-Sleep -Milliseconds 25 }; if((Test-Path $shm) -or (Test-Path $wal)){ exit 3 }\" && git add -A -- .coding-tools && git add -- docs/research/260818_P3_SERVER_FIRST_PAIRED_EXPERIMENT_MANIFEST.md && npm",
+        "session_id": "5F6MQOSRhi03hTiVnsuoNWev"
       }
     }
   ]
