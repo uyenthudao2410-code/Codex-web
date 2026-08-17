@@ -27,6 +27,7 @@ npm test
 npm run test:mcp
 npm run test:all
 npm run test:recovery:e2e
+npm run test:recovery:packaged
 npm run canary:opencode-flash:preflight
 ```
 
@@ -67,6 +68,8 @@ npm run dist:dir
 ```
 
 Output root is `dist\`. `package.json` currently names the installer `web-mcp-assistant-setup-${version}.${ext}` and uses `scripts/verify-packaged-resources.js` as `afterPack`. Verify bundled resources and packaged behavior from the exact accepted source.
+
+For Recovery changes, `npm run test:recovery:packaged` is the safe isolated packaged-runtime lane. It intentionally does not install/uninstall the Windows Recovery Supervisor Scheduled Task and therefore does not replace an installed-logon/session smoke when that OS boundary is part of the release.
 
 ## 10. Post-package smoke and publish
 

@@ -188,9 +188,19 @@ process thật trong data root tạm, kill client thứ nhất rồi xác nhận
 attach lại cùng Recovery Host, process identity của Coding MCP/Tunnel stand-in và
 gateway.
 
-Các boundary còn cần chứng minh theo từng thay đổi là packaged Windows/login
-acceptance, production fault matrix, cấu hình tunnel thứ hai khi môi trường yêu
-cầu remote recovery, và live controlled activation của exact source revision.
+Lane `npm run test:recovery:packaged` build `dist/win-unpacked` từ đúng source
+hiện tại rồi chạy executable đóng gói bằng argv `--recovery-host` trong Electron
+user-data root tạm. Lane này kiểm tra resource đóng gói, device identity,
+`independent_mcp_tunnel_v1`, Recovery MCP thật trên cổng tạm, packaged Recovery
+Supervisor healthy ping, live-owner fail-closed và executable-hash fail-closed.
+Nó không cài Scheduled Task, không sửa production AppData và xác nhận descriptor
+Recovery production giữ nguyên trước/sau cleanup.
+
+Các boundary còn cần chứng minh theo từng release/thay đổi là installed Windows
+logon/session behavior khi release yêu cầu, các production-only fault scenario
+không an toàn để giả lập trong isolation, cấu hình tunnel thứ hai khi môi trường
+yêu cầu remote recovery, và live controlled activation khi component đang chạy
+cần nạp source revision mới.
 Remote recovery exposure rộng hơn break-glass surface hiện tại vẫn là future
 scope nếu có nhu cầu. Source implementation chưa có nghĩa là process đang sống đã
 load code mới; activation thực tế vẫn phải được chứng minh sau gate kiểm thử.

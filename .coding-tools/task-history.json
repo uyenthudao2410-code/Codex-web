@@ -1,1702 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "82ba5f98ba754708a38955d60bb2d087",
-    "orchestration": {
-      "run_id": "ba05091042874f8e9cd8e049c2971086",
-      "wave_id": "87d2523fa1284cdb886314a0f0d5d584",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "276e789475b728eb44ad4750ac0725fed719a790",
-      "worktree_fp": "1cf1fb5d2dd79a18a7ab4078f965afed27dcd942a8282c41d6d4b1cd29f930e5",
-      "contract_fp": ""
-    },
-    "objective": "Runner production defense-in-depth only. Extend prepare_validation_source_snapshot to accept optional ShellJobValidationSourceSnapshotIdentity. Identity without snapshot stdin fails validation_source_snapshot_unavailable. With Execute(snapshot), existing clean source_identity remains mutually exclusive; optional snapshot identity must be valid and exactly match base_git_head/snapshot_sha256/entry_count before project lookup/materialization, otherwise validation_source_identity_mismatch. Identity absent remains accepted for rolling compatibility. Wire optional identity from job_context.validation in JobManager caller. No tests/capability/server/placement/public API changes in this wave. Run cargo fmt --all -- --check and cargo check -p webcodex-runner -q.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:07:13.679Z"
-      },
-      {
-        "id": "checks",
-        "text": "Run requested checks",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:07:13.679Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:07:13.679Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [
-      {
-        "path": "crates/webcodex-runner/src/main.rs",
-        "operation": "update",
-        "updated_at": "2026-08-16T23:07:14.046Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-16T23:04:27.142Z",
-    "updated_at": "2026-08-16T23:08:06.273Z",
-    "events": [
-      {
-        "time": "2026-08-16T23:04:27.142Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Prepare the final source-only R3 hardening after safe SourceSnapshot proof identity is accepted. Inspect only the Runner validation snapshot execution seam and focused Runner tests. Extend Runner defense-in-depth so optional job_context.validation.source_snapshot_identity, when present, must exactly match the parsed Execute(snapshot) base_git_head/snapshot_sha256/entry_count before materialization; source_snapshot_identity without snapshot stdin must fail closed; clean source_identity remains mutually exclusive. Preserve rolling compatibility: Execute(snapshot) from an older Server with source_snapshot_identity=None remains valid because raw snapshot validation/digest guards already enforce correctness. Add the smallest focused Runner test for identity match success and identity mismatch/no-spawn failure, reusing existing source_snapshot_validation_job fixtures. No capability, server, placement, public API, commit/push/restart/deploy changes in prepare."
-        }
-      },
-      {
-        "time": "2026-08-16T23:04:27.854Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:04:38.422Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:04:38.426Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T23:04:52.036Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='crates/webcodex-runner/src/main.rs'; $a=Get-Content $p; $a[2035..2115]; '--- caller ---'; $a[3475..3545]; '--- tests refs ---'; rg -n -C 18 'source_snapshot_validation_job_' crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs\"",
-          "session_id": "8Z9XEjUMuKjeY1awg2TWBJ2F"
-        }
-      },
-      {
-        "time": "2026-08-16T23:05:03.853Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='crates/webcodex-runner/src/main.rs'; $a=Get-Content $p; $a[2035..2115]; '--- caller ---'; $a[3475..3545]; '--- tests refs ---'; rg -n -C 18 'source_snapshot_validation_job_' crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:05:14.618Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs'; $a=Get-Content $p; $a[2265..2350]; '--- imports ---'; $a[0..45]\"",
-          "session_id": "OeMO8zL0tzZzuWQUbzc3Xjna"
-        }
-      },
-      {
-        "time": "2026-08-16T23:05:15.273Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs'; $a=Get-Content $p; $a[2265..2350]; '--- imports ---'; $a[0..45]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:05:29.464Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A 65 \"fn test_job_context\" crates/webcodex-runner/src/main.rs crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs",
-          "session_id": "eI_Axo0_MyAQrwPhHE8mK6rc"
-        }
-      },
-      {
-        "time": "2026-08-16T23:05:29.859Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A 65 \"fn test_job_context\" crates/webcodex-runner/src/main.rs crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:05:53.106Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='crates/webcodex-runner/src/main.rs'; $a=Get-Content $p; $a[15..48]\"",
-          "session_id": "cXse0hMd8wsFcmPjM_MnyIxy"
-        }
-      },
-      {
-        "time": "2026-08-16T23:05:53.935Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$p='crates/webcodex-runner/src/main.rs'; $a=Get-Content $p; $a[15..48]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:25.472Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "PATCH_CONTEXT_AMBIGUOUS"
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:41.552Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:42.104Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:43.055Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:43.056Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:43.720Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:43.977Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:44.802Z",
-        "event": "command_started",
-        "details": {
-          "command": "cargo fmt --all -- --check",
-          "session_id": "8zIMPVRKnQZSHPtZg_x-HQFb"
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:50.427Z",
-        "event": "command_finished",
-        "details": {
-          "command": "cargo fmt --all -- --check",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:06:51.502Z",
-        "event": "command_started",
-        "details": {
-          "command": "cargo check -p webcodex-runner -q",
-          "session_id": "PBcVCPY1xc7cWsxRhrF2CRUk"
-        }
-      },
-      {
-        "time": "2026-08-16T23:07:12.901Z",
-        "event": "command_finished",
-        "details": {
-          "command": "cargo check -p webcodex-runner -q",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:07:13.677Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:07:13.679Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:07:13.832Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:07:13.835Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:07:14.046Z",
-        "event": "files_modified",
-        "details": {
-          "count": 1
-        }
-      },
-      {
-        "time": "2026-08-16T23:07:17.240Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:06.200Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:06.207Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T23:08:28.750Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "729d909550f44412a735de91beb9a719",
-    "orchestration": {
-      "run_id": "a79931084bb34541b3d36875b5fc7417",
-      "wave_id": "c3449a8400f946ac94377c382b5cad5b",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "276e789475b728eb44ad4750ac0725fed719a790",
-      "worktree_fp": "de289566ea1dd97395930e7221ae46cbd360adb48bde55087ed4ca79cc463ae4",
-      "contract_fp": ""
-    },
-    "objective": "Runner proof wave for the already-compiled SourceSnapshot proof-identity defense. Modify only crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs. Add snapshot_validation_identity(fixture). Rename the existing run_source_snapshot_validation_job implementation to run_source_snapshot_validation_job_with_identity with an optional ShellJobValidationSourceSnapshotIdentity; when Some, attach ShellJobValidationMetadata to the existing test_job_context using the exact steps, no clean source_identity, and the supplied source_snapshot_identity. Restore the old helper name as a wrapper passing None so existing drift test proves rolling compatibility with older Server metadata. Change the existing success snapshot test to call the identity-aware helper with the exact fixture identity. Add source_snapshot_validation_job_rejects_mismatched_proof_identity_before_spawn: mutate one SHA digest nibble while keeping a valid lowercase 64-hex digest, run one cargo check step, assert terminal failed with VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE, exit_code None, validation progress completed=0/current_step=None/failed_step=None, manifest marker absent (no Cargo spawn), and authoritative checkout/status unchanged. Run cargo fmt --all -- --check and cargo test -p webcodex-runner --bin webcodex-runner source_snapshot_validation_job_ -- --nocapture. No production/server/capability/placement/public API changes, commit/push/restart/deploy.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:10:00.437Z"
-      },
-      {
-        "id": "checks",
-        "text": "Run requested checks",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:10:00.437Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:10:00.437Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [
-      {
-        "command": "cargo test -p webcodex-runner --bin webcodex-runner source_snapshot_validation_job_ -- --nocapture",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": null,
-        "summary": "exit 0 | 0.0s | 132 lines | tail: 'Blocking waiting for file lock on package cache'",
-        "finished_at": "2026-08-16T23:09:59.721Z",
-        "artifact_ref": {
-          "schema_version": 1,
-          "kind": "command_output",
-          "scope": "runtime_retained",
-          "source": "command",
-          "locator": {
-            "command_id": "b5da35rXm7QExm4LZG5PHm47"
-          },
-          "durability": "process_runtime",
-          "restart_safe": false,
-          "content_addressed": false,
-          "retrieval": {
-            "tool": "command_control",
-            "action": "read"
-          },
-          "size_bytes": 5490,
-          "command_id": "b5da35rXm7QExm4LZG5PHm47",
-          "streams": {
-            "stdout": {
-              "output_ref": "command:b5da35rXm7QExm4LZG5PHm47:stdout",
-              "total_stream_bytes": 467,
-              "total_retained_bytes": 467,
-              "head_retained_bytes": 467,
-              "tail_retained_bytes": 0,
-              "evicted_gap_bytes": 0,
-              "evicted_bytes_total": 0
-            },
-            "stderr": {
-              "output_ref": "command:b5da35rXm7QExm4LZG5PHm47:stderr",
-              "total_stream_bytes": 5023,
-              "total_retained_bytes": 5023,
-              "head_retained_bytes": 5023,
-              "tail_retained_bytes": 0,
-              "evicted_gap_bytes": 0,
-              "evicted_bytes_total": 0
-            }
-          }
-        }
-      }
-    ],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [
-      {
-        "path": "crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs",
-        "operation": "update",
-        "updated_at": "2026-08-16T23:10:00.751Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-16T23:08:28.806Z",
-    "updated_at": "2026-08-16T23:10:28.088Z",
-    "events": [
-      {
-        "time": "2026-08-16T23:08:28.806Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Runner proof wave for the already-compiled SourceSnapshot proof-identity defense. Modify only crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs. Add snapshot_validation_identity(fixture). Rename the existing run_source_snapshot_validation_job implementation to run_source_snapshot_validation_job_with_identity with an optional ShellJobValidationSourceSnapshotIdentity; when Some, attach ShellJobValidationMetadata to the existing test_job_context using the exact steps, no clean source_identity, and the supplied source_snapshot_identity. Restore the old helper name as a wrapper passing None so existing drift test proves rolling compatibility with older Server metadata. Change the existing success snapshot test to call the identity-aware helper with the exact fixture identity. Add source_snapshot_validation_job_rejects_mismatched_proof_identity_before_spawn: mutate one SHA digest nibble while keeping a valid lowercase 64-hex digest, run one cargo check step, assert terminal failed with VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE, exit_code None, validation progress completed=0/current_step=None/failed_step=None, manifest marker absent (no Cargo spawn), and authoritative checkout/status unchanged. Run cargo fmt --all -- --check and cargo test -p webcodex-runner --bin webcodex-runner source_snapshot_validation_job_ -- --nocapture. No production/server/capability/placement/public API changes, commit/push/restart/deploy."
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:29.519Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:29.525Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:30.685Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:31.268Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:31.282Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:32.065Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:32.352Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:33.119Z",
-        "event": "command_started",
-        "details": {
-          "command": "cargo fmt --all -- --check",
-          "session_id": "N4j2OhLjgI27Ov9Fy_9t0F9I"
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:39.025Z",
-        "event": "command_finished",
-        "details": {
-          "command": "cargo fmt --all -- --check",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:08:40.026Z",
-        "event": "command_started",
-        "details": {
-          "command": "cargo test -p webcodex-runner --bin webcodex-runner source_snapshot_validation_job_ -- --nocapture",
-          "session_id": "b5da35rXm7QExm4LZG5PHm47"
-        }
-      },
-      {
-        "time": "2026-08-16T23:09:59.721Z",
-        "event": "command_finished",
-        "details": {
-          "command": "cargo test -p webcodex-runner --bin webcodex-runner source_snapshot_validation_job_ -- --nocapture",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:00.435Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:00.437Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:00.602Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:00.606Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:00.751Z",
-        "event": "files_modified",
-        "details": {
-          "count": 2
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:03.250Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:28.015Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:28.023Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T23:10:43.266Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "97c6610e174f4c4a931fa243a2b67581",
-    "orchestration": {
-      "run_id": "7e1daab0cf474d6b971cb1446662f070",
-      "wave_id": "42ffc6187fc74353b0dea7ed2397a0e1",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "276e789475b728eb44ad4750ac0725fed719a790",
-      "worktree_fp": "6ac3b39b262c0b9aab28ffb89e4078dfcd904ccb7e67c1c37807f334ad3a93b7",
-      "contract_fp": ""
-    },
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Network access is denied by default.",
-    "next_step": "",
-    "created_at": "2026-08-16T23:10:43.305Z",
-    "updated_at": "2026-08-16T23:18:24.400Z",
-    "events": [
-      {
-        "time": "2026-08-16T23:10:43.305Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:43.532Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --check",
-          "session_id": "Jk-3pw65kgKoAirW2h335fns"
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:44.148Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --check",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:53.585Z",
-        "event": "command_started",
-        "details": {
-          "command": "git status --short --branch",
-          "session_id": "2wdL4i7YAwSi05MeVO-af-IV"
-        }
-      },
-      {
-        "time": "2026-08-16T23:10:54.183Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git status --short --branch",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:17:47.145Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:17:57.194Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:17:57.198Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:09.364Z",
-        "event": "command_started",
-        "details": {
-          "command": "git rev-parse HEAD && git log -3 --oneline --decorate && git status --short && git diff --name-status",
-          "session_id": "N831H01H4NqILZ7wUj0NhSRF"
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:10.445Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git rev-parse HEAD && git log -3 --oneline --decorate && git status --short && git diff --name-status",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:24.400Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --unified=1 -- Cargo.toml crates/webcodex-agent-config/src/lib.rs crates/webcodex-core/src/compute_placement.rs crates/webcodex-core/src/shell_protocol.rs crates/webcodex-core/src/source_snapshot.rs crates/webcodex-runner/src/main.rs crates/webcodex-runner/src/webcodex_runner/dispatch.rs crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs crates/webcodex-runner/src/webcodex_runner/source_snapshot.rs resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/codin",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:24.400Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "PERMISSION_REQUIRED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T23:18:38.164Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "f9b4d5f40e2a4f30a36e4607c8db36e0",
-    "orchestration": {
-      "run_id": "7e1daab0cf474d6b971cb1446662f070",
-      "wave_id": "42ffc6187fc74353b0dea7ed2397a0e1",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "276e789475b728eb44ad4750ac0725fed719a790",
-      "worktree_fp": "6ac3b39b262c0b9aab28ffb89e4078dfcd904ccb7e67c1c37807f334ad3a93b7",
-      "contract_fp": ""
-    },
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-16T23:18:38.205Z",
-    "updated_at": "2026-08-16T23:19:15.432Z",
-    "events": [
-      {
-        "time": "2026-08-16T23:18:38.206Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:38.621Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --unified=3 -- src/connector_runtime/connector_runtime_tests.rs",
-          "session_id": "rLntfA0me9RgR0RlE1as6l0b"
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:39.405Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --unified=3 -- src/connector_runtime/connector_runtime_tests.rs",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:41.245Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:50.445Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --unified=3 -- resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/tests/test_task_state_and_build.py",
-          "session_id": "UInZlzv4trBxR8jwmfp1U_G0"
-        }
-      },
-      {
-        "time": "2026-08-16T23:18:50.836Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --unified=3 -- resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/tests/test_task_state_and_build.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:01.462Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --unified=3 -- Cargo.toml src/lib.rs",
-          "session_id": "k-Z80tR3IuT-DITZ1nksq_kz"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:01.813Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --unified=3 -- Cargo.toml src/lib.rs",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:14.793Z",
-        "event": "command_started",
-        "details": {
-          "command": "git ls-files --stage tests/r3b2_snapshot_validation.rs src/internal_r3b2_test_support.rs && git check-ignore -v tests/r3b2_snapshot_validation.rs src/internal_r3b2_test_support.rs",
-          "session_id": "e0cjg4czRPvBKsL8lZdwObiP"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:15.432Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git ls-files --stage tests/r3b2_snapshot_validation.rs src/internal_r3b2_test_support.rs && git check-ignore -v tests/r3b2_snapshot_validation.rs src/internal_r3b2_test_support.rs",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T23:19:26.261Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "a8a03f8604c24fba88c4e039b1ad7870",
-    "orchestration": {
-      "run_id": "7e1daab0cf474d6b971cb1446662f070",
-      "wave_id": "9ff1e48cb21e40f6a3f39836b92f1114",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "276e789475b728eb44ad4750ac0725fed719a790",
-      "worktree_fp": "6ac3b39b262c0b9aab28ffb89e4078dfcd904ccb7e67c1c37807f334ad3a93b7",
-      "contract_fp": ""
-    },
-    "objective": "Diagnose the Git index.lock that blocked the requested local commit. Read only: inspect .git/index.lock metadata and enumerate live git.exe processes. Also confirm no staged changes were created. Do not delete the lock, stage, commit, mutate source, push, reset, restore, clean, restart, or deploy.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "checks",
-        "text": "Run requested checks",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:23:23.407Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:23:23.407Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-16T23:19:26.298Z",
-    "updated_at": "2026-08-16T23:23:57.026Z",
-    "events": [
-      {
-        "time": "2026-08-16T23:19:26.298Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:26.514Z",
-        "event": "command_started",
-        "details": {
-          "command": "cmd /d /c \"if exist tests\\r3b2_snapshot_validation.rs (echo test_exists) else (echo test_missing) & if exist src\\internal_r3b2_test_support.rs (echo support_exists) else (echo support_missing) & git status --short --untracked-files=all -- tests/r3b2_snapshot_validation.rs src/internal_r3b2_test_support.rs\"",
-          "session_id": "9KS7YAmaYyYTbVr_AvY6KAZu"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:26.780Z",
-        "event": "command_finished",
-        "details": {
-          "command": "cmd /d /c \"if exist tests\\r3b2_snapshot_validation.rs (echo test_exists) else (echo test_missing) & if exist src\\internal_r3b2_test_support.rs (echo support_exists) else (echo support_missing) & git status --short --untracked-files=all -- tests/r3b2_snapshot_validation.rs src/internal_r3b2_test_support.rs\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:27.246Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:38.028Z",
-        "event": "command_started",
-        "details": {
-          "command": "cmd /d /c \"if exist src\\internal_r3b2_test_support.rs echo support_exists & git status --short --untracked-files=all -- tests/r3b2_snapshot_validation.rs src/internal_r3b2_test_support.rs\"",
-          "session_id": "7PEYERx4feEAlV7AVpcqUkBh"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:38.511Z",
-        "event": "command_finished",
-        "details": {
-          "command": "cmd /d /c \"if exist src\\internal_r3b2_test_support.rs echo support_exists & git status --short --untracked-files=all -- tests/r3b2_snapshot_validation.rs src/internal_r3b2_test_support.rs\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:49.393Z",
-        "event": "command_started",
-        "details": {
-          "command": "git status --short --untracked-files=all",
-          "session_id": "OfwLPui4U-PK9W4SvhYD7sir"
-        }
-      },
-      {
-        "time": "2026-08-16T23:19:49.788Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git status --short --untracked-files=all",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:24.278Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:24.939Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:25.653Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:25.654Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:26.409Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:26.778Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:27.264Z",
-        "event": "execution_exception",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:27.272Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:27.274Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:20:27.464Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "PERMISSION_REQUIRED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:13.952Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:14.442Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:14.993Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:14.998Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:15.626Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:15.844Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:17.485Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$s=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('LmNvZGluZy10b29scy9vcmNoZXN0cmF0aW9uL2xlZGdlci5zcWxpdGUzCkNhcmdvLnRvbWwKY3JhdGVzL3dlYmNvZGV4LWFnZW50LWNvbmZpZy9zcmMvbGliLnJzCmNyYXRlcy93ZWJjb2RleC1jb3JlL3NyYy9jb21wdXRlX3BsYWNlbWVudC5ycwpjcmF0ZXMvd2ViY29kZXgtY29yZS9zcmMvc2hlbGxfcHJvdG9jb2wucnMKY3JhdGVzL3dlYmNvZGV4LWNvcmUvc3JjL3NvdXJjZV9zbmFwc2hvdC5ycwpjcmF0ZXMvd2ViY29kZXgtcnVubmVyL3NyYy9tYWluLnJzCmNyYXRlcy93ZWJjb2RleC1ydW5uZXIvc3JjL3dlYmNvZGV4X3J1bm5l",
-          "session_id": "Nk8qrEOfu-GH5UNWzVoC-Wgw"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:21.012Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$s=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('LmNvZGluZy10b29scy9vcmNoZXN0cmF0aW9uL2xlZGdlci5zcWxpdGUzCkNhcmdvLnRvbWwKY3JhdGVzL3dlYmNvZGV4LWFnZW50LWNvbmZpZy9zcmMvbGliLnJzCmNyYXRlcy93ZWJjb2RleC1jb3JlL3NyYy9jb21wdXRlX3BsYWNlbWVudC5ycwpjcmF0ZXMvd2ViY29kZXgtY29yZS9zcmMvc2hlbGxfcHJvdG9jb2wucnMKY3JhdGVzL3dlYmNvZGV4LWNvcmUvc3JjL3NvdXJjZV9zbmFwc2hvdC5ycwpjcmF0ZXMvd2ViY29kZXgtcnVubmVyL3NyYy9tYWluLnJzCmNyYXRlcy93ZWJjb2RleC1ydW5uZXIvc3JjL3dlYmNvZGV4X3J1bm5l",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:21.247Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:21.644Z",
-        "event": "orchestration_failure_projected",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:21.646Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:21.648Z",
-        "event": "execution_failed",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:21.864Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:25.245Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:22:36.813Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "command_control",
-          "code": "INVALID_ARGUMENT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:01.278Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$lock=Get-Item '.git\\index.lock' -ErrorAction SilentlyContinue; if($lock){$lock | Select-Object FullName,Length,LastWriteTimeUtc}; Get-Process git -ErrorAction SilentlyContinue | Select-Object Id,StartTime,Path\"",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:01.278Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "EXECUTION_OWNER_INVALID"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:05.245Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:16.914Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:17.427Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:17.979Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:17.985Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:18.704Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:19.055Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:19.670Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$lock=Get-Item '.git\\index.lock' -ErrorAction SilentlyContinue; if($lock){$lock | Select-Object FullName,Length,CreationTimeUtc,LastWriteTimeUtc | Format-List}else{'NO_INDEX_LOCK'}; $p=Get-Process git -ErrorAction SilentlyContinue; if($p){$p | Select-Object Id,StartTime,Path | Format-Table -AutoSize}else{'NO_GIT_PROCESS'}\"",
-          "session_id": "eu5WG7AXSgumMq7Hq_a2YHdo"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:20.522Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$lock=Get-Item '.git\\index.lock' -ErrorAction SilentlyContinue; if($lock){$lock | Select-Object FullName,Length,CreationTimeUtc,LastWriteTimeUtc | Format-List}else{'NO_INDEX_LOCK'}; $p=Get-Process git -ErrorAction SilentlyContinue; if($p){$p | Select-Object Id,StartTime,Path | Format-Table -AutoSize}else{'NO_GIT_PROCESS'}\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:21.364Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --cached --name-status",
-          "session_id": "rsOet89-MpbXJmyXx0iPhHet"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:21.787Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --cached --name-status",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:22.720Z",
-        "event": "command_started",
-        "details": {
-          "command": "git status --short --branch",
-          "session_id": "gop9zwOa9ti_Wr7MdDel5IZg"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:23.155Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git status --short --branch",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:23.404Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:23.407Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:23.559Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:23.562Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:23.777Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:27.255Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:56.913Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:23:56.914Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T23:24:24.727Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "373594f75ba54035a5c315b0ea055ee6",
-    "orchestration": {
-      "run_id": "41a549fad8304630975159f78af11d8e",
-      "wave_id": "2c04c7e342ad442faa3525d45c1d0732",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "276e789475b728eb44ad4750ac0725fed719a790",
-      "worktree_fp": "6ac3b39b262c0b9aab28ffb89e4078dfcd904ccb7e67c1c37807f334ad3a93b7",
-      "contract_fp": ""
-    },
-    "objective": "Complete the requested local commit now that the blocking Git index.lock has been proven stale. Remove only .git/index.lock after guarding that it is zero bytes and older than any observed live Git process by hours; then stage exactly the encoded allowlist of task-related files plus mandatory .coding-tools/orchestration/ledger.sqlite3, verify staged whitespace and names, commit with message 'feat: complete server-first compute orchestration', and report commit contents/remaining worktree. Do not stage WAL/SHM, volatile .coding-tools projections, generated reports, or any unlisted file. Do not push, release, deploy, restart, reset, restore, or clean.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "checks",
-        "text": "Run requested checks",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:24:40.431Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-16T23:24:40.431Z"
-      }
-    ],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
-    "created_at": "2026-08-16T23:24:24.765Z",
-    "updated_at": "2026-08-16T23:25:19.330Z",
-    "events": [
-      {
-        "time": "2026-08-16T23:24:24.765Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Complete the requested local commit now that the blocking Git index.lock has been proven stale. Remove only .git/index.lock after guarding that it is zero bytes and older than any observed live Git process by hours; then stage exactly the encoded allowlist of task-related files plus mandatory .coding-tools/orchestration/ledger.sqlite3, verify staged whitespace and names, commit with message 'feat: complete server-first compute orchestration', and report commit contents/remaining worktree. Do not stage WAL/SHM, volatile .coding-tools projections, generated reports, or any unlisted file. Do not push, release, deploy, restart, reset, restore, or clean."
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:25.394Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:25.493Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:25.910Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:26.726Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:26.733Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:27.293Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:27.561Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:28.294Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$lock=Get-Item '.git\\index.lock' -ErrorAction Stop; if($lock.Length -ne 0){throw 'index.lock is not zero bytes'}; if($lock.LastWriteTimeUtc -gt [DateTime]::UtcNow.AddMinutes(-30)){throw 'index.lock is not old enough to be proven stale'}; Remove-Item '.git\\index.lock' -Force; $s=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('LmNvZGluZy10b29scy9vcmNoZXN0cmF0aW9uL2xlZGdlci5zcWxpdGUzCkNhcmdvLnRvbWwKY3JhdGVzL3dlYmNvZGV4LWFnZW50LWNvbmZpZy9zcmMvbGliLnJzCmNy",
-          "session_id": "cFQva0oAJlKo7TAz74R0afDT"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:31.078Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$lock=Get-Item '.git\\index.lock' -ErrorAction Stop; if($lock.Length -ne 0){throw 'index.lock is not zero bytes'}; if($lock.LastWriteTimeUtc -gt [DateTime]::UtcNow.AddMinutes(-30)){throw 'index.lock is not old enough to be proven stale'}; Remove-Item '.git\\index.lock' -Force; $s=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('LmNvZGluZy10b29scy9vcmNoZXN0cmF0aW9uL2xlZGdlci5zcWxpdGUzCkNhcmdvLnRvbWwKY3JhdGVzL3dlYmNvZGV4LWFnZW50LWNvbmZpZy9zcmMvbGliLnJzCmNy",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:31.944Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --cached --check",
-          "session_id": "IGn-XC4cm1W1VO6iQJdWK1wS"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:32.456Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --cached --check",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:33.440Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --cached --name-status",
-          "session_id": "BvAWPWTHZpYi4nLCjynmo-xX"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:33.764Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --cached --name-status",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:34.701Z",
-        "event": "command_started",
-        "details": {
-          "command": "git commit -m \"feat: complete server-first compute orchestration\"",
-          "session_id": "kW_qZnscwwthr_NqIhTkKELR"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:37.313Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git commit -m \"feat: complete server-first compute orchestration\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:38.421Z",
-        "event": "command_started",
-        "details": {
-          "command": "git rev-parse HEAD && git show --name-status --format=oneline --no-renames HEAD",
-          "session_id": "T4TbKyOG_JjF_j0rU0kRQwoM"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:38.859Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git rev-parse HEAD && git show --name-status --format=oneline --no-renames HEAD",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:39.748Z",
-        "event": "command_started",
-        "details": {
-          "command": "git status --short --branch --untracked-files=all",
-          "session_id": "UpJd-pPazn1l7KeXGiO9pjEy"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:40.182Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git status --short --branch --untracked-files=all",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:40.426Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:40.431Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:40.664Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:40.667Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:40.806Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-16T23:24:41.245Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-16T23:25:19.264Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-16T23:25:19.266Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-16T23:25:36.909Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "44413c9bfd4a444584f5952d45d8d9e7",
     "orchestration": {
       "run_id": "4007a86bcf83401a8cc5798a073af808",
@@ -49798,6 +48102,1345 @@
       }
     ],
     "archived_at": "2026-08-17T07:13:51.259Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "bbb8443213934c559ef1714fa6cae307",
+    "orchestration": {
+      "run_id": "18777430dd894b33adb8acf4b11ddab4",
+      "wave_id": "970fe67955dd491694439907229c278c",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f1b38e6ca8d63c2d07357f0fc88aa1631021c6b1",
+      "worktree_fp": "f267748441ab698ca7151a45c8bd1db0d3e1dd1691eb89bfaa9508031a7bbefc",
+      "contract_fp": ""
+    },
+    "objective": "Stage, commit, and push the accepted Recovery/Device Identity delivery boundary to origin/main. Include the canonical .coding-tools/orchestration/ledger.sqlite3 and generated EOCL reports/evidence; exclude only transient SQLite -wal/-shm sidecars. Preserve the accepted source exactly.",
+    "status": "stopped",
+    "steps": [
+      {
+        "id": "stage",
+        "text": "Checkpoint SQLite ledger and stage accepted files",
+        "status": "in_progress",
+        "updated_at": "2026-08-17T07:13:51.311Z"
+      },
+      {
+        "id": "commit",
+        "text": "Create delivery commit",
+        "status": "pending",
+        "updated_at": "2026-08-17T07:13:51.311Z"
+      },
+      {
+        "id": "push",
+        "text": "Push origin/main",
+        "status": "pending",
+        "updated_at": "2026-08-17T07:13:51.311Z"
+      },
+      {
+        "id": "verify",
+        "text": "Verify local/remote commit and residual worktree state",
+        "status": "pending",
+        "updated_at": "2026-08-17T07:13:51.311Z"
+      }
+    ],
+    "current_step": "Aborted",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Diagnostic reconciliation complete. P2/P3 LSP/resource hardening is already closed; routing and auto-handoff are intentional evidence gates. Terminalizing this read-only PREPARE run before starting the next independent packaged-Windows Recovery acceptance wave.",
+    "next_step": "Resume with a new or replanned wave from the current source state; do not reuse stale proof.",
+    "created_at": "2026-08-17T07:13:51.310Z",
+    "updated_at": "2026-08-17T07:15:15.769Z",
+    "events": [
+      {
+        "time": "2026-08-17T07:13:51.311Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:13:58.529Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached ",
+          "session_id": "_Ag0dn0IvjTqCkR0vhMSx4j1"
+        }
+      },
+      {
+        "time": "2026-08-17T07:14:09.137Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached ",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:14:26.900Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:14:33.422Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:14:33.422Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-17T07:15:07.191Z",
+        "event": "task_orchestration_aborted",
+        "details": {
+          "state": "ABORTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:15:07.191Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:15:15.647Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-17T07:15:23.334Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "70b39986e85c497dbbe6a3ba8e84dc3c",
+    "orchestration": {
+      "run_id": "382f03fa927e4fc0aced5c4f7833c612",
+      "wave_id": "37134ed5baf64f2fbcb2c2b4d6d4211b",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f1b38e6ca8d63c2d07357f0fc88aa1631021c6b1",
+      "worktree_fp": "f267748441ab698ca7151a45c8bd1db0d3e1dd1691eb89bfaa9508031a7bbefc",
+      "contract_fp": ""
+    },
+    "objective": "Build the exact-source unpacked Windows Electron package for HEAD f1b38e6c as the first packaged-Recovery acceptance artifact. Do not mutate source, publish, install, or launch it yet. The electron-builder afterPack sanitation hook must run successfully.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:17:59.773Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:17:59.773Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-17T07:15:23.376Z",
+    "updated_at": "2026-08-17T07:18:13.161Z",
+    "events": [
+      {
+        "time": "2026-08-17T07:15:23.376Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:15:31.219Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:15:32.090Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:15:32.096Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-17T07:16:33.155Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:16:33.737Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:16:33.753Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:12.173Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:12.799Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:13.356Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:13.356Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:13.975Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:14.164Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:15.105Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dist:dir",
+          "session_id": "KVjqVfEUxkTl15iz4z_VlhJQ"
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:57.633Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dist:dir",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:59.771Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:17:59.773Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:18:00.146Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:18:00.147Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:18:00.551Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-17T07:18:11.400Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:18:13.133Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:18:13.135Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-17T07:18:37.029Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "9d18989fb8584511a170ddea898e258e",
+    "orchestration": {},
+    "objective": "Run an isolated packaged Recovery Host acceptance probe against dist/win-unpacked from exact HEAD f1b38e6c. Verify --user-data-dir maps runtime data to a temp root, packaged Recovery Host/device identity and packaged Recovery MCP become healthy on isolated ports, packaged Recovery Supervisor Action Once recognizes the healthy host, and fail-closed live-owner/hash-mismatch cases do not spawn or kill anything. Do not mutate source, install Scheduled Tasks, or touch production AppData.",
+    "status": "failed",
+    "steps": [
+      {
+        "id": "isolation",
+        "text": "Prove packaged user-data isolation and host health",
+        "status": "in_progress",
+        "updated_at": "2026-08-17T07:18:37.078Z"
+      },
+      {
+        "id": "supervisor",
+        "text": "Prove packaged Recovery Supervisor healthy ping",
+        "status": "pending",
+        "updated_at": "2026-08-17T07:18:37.078Z"
+      },
+      {
+        "id": "faults",
+        "text": "Prove packaged supervisor fail-closed fault cases",
+        "status": "pending",
+        "updated_at": "2026-08-17T07:18:37.078Z"
+      },
+      {
+        "id": "cleanup",
+        "text": "Terminate only isolated packaged processes and verify production descriptor unchanged",
+        "status": "pending",
+        "updated_at": "2026-08-17T07:18:37.078Z"
+      }
+    ],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Verify packaged supervisor and fail-closed fault cases",
+    "created_at": "2026-08-17T07:18:37.078Z",
+    "updated_at": "2026-08-17T07:19:15.646Z",
+    "events": [
+      {
+        "time": "2026-08-17T07:18:37.078Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:19:13.654Z",
+        "event": "command_started",
+        "details": {
+          "command": "node -",
+          "session_id": "8K20mZ_TiWxYd6RXP86Rd-Rm"
+        }
+      },
+      {
+        "time": "2026-08-17T07:19:15.646Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-17T07:19:33.226Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "66c8d5e4480a419a8f464cd3cf0cfde1",
+    "orchestration": {
+      "run_id": "1e82559fa91a498ab0cd92c3d33522d7",
+      "wave_id": "4b8f4d87edc941bfa8ba65aa81c8d6c5",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f1b38e6ca8d63c2d07357f0fc88aa1631021c6b1",
+      "worktree_fp": "f267748441ab698ca7151a45c8bd1db0d3e1dd1691eb89bfaa9508031a7bbefc",
+      "contract_fp": ""
+    },
+    "objective": "Fix the packaged Recovery Supervisor UTF-8 manifest decoding defect proven by the win-unpacked acceptance probe. Write-JsonAtomic emits UTF-8 without BOM, so Read-BoundedJson must decode explicitly as UTF-8 instead of relying on Windows PowerShell 5.1 Get-Content default encoding. Add a focused Windows regression using a packaged-mode manifest whose executable/app_root contain the actual Vietnamese-style Unicode product path; prove Action Once parses it and remains degraded rather than falsely reporting executable missing. Preserve all manifest validation, fail-closed spawn/hash rules, and source behavior otherwise.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:20:30.570Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:20:30.570Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:20:30.570Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "resources/recovery-supervisor/recovery-supervisor.ps1",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:20:31.581Z"
+      },
+      {
+        "path": "tests/recovery-supervisor.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:20:31.581Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-17T07:19:34.196Z",
+    "updated_at": "2026-08-17T07:20:44.142Z",
+    "events": [
+      {
+        "time": "2026-08-17T07:19:34.196Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-17T07:19:35.055Z",
+        "event": "command_started",
+        "details": {
+          "command": "node -",
+          "session_id": "z9mHLv0EMpcAOPx1fYUDswYW"
+        }
+      },
+      {
+        "time": "2026-08-17T07:19:40.850Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:15.177Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:16.476Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:17.184Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:17.184Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:17.995Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:18.182Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:19.057Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/recovery-supervisor.test.js",
+          "session_id": "tG2dQbAcYNOJCXBhKLll_r1p"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:27.952Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:29.377Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js",
+          "session_id": "pQD4KYHHi9XSDEbxmhzdxViJ"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:29.812Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:30.568Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:30.570Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:30.935Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:30.935Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:31.581Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:42.589Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:44.107Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:44.107Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-17T07:20:54.089Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "12b174520e614d3099eb4a0c5464c71b",
+    "orchestration": {
+      "run_id": "5873510e7d06415195a1bdaaa346686f",
+      "wave_id": "bd902d6d4b2542499a67442e5d3d1ec1",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f1b38e6ca8d63c2d07357f0fc88aa1631021c6b1",
+      "worktree_fp": "879d7fab0a8c6ef6824f23191f250b18818d31471a0ed0c17c155eb19e159d6d",
+      "contract_fp": ""
+    },
+    "objective": "Rebuild dist/win-unpacked from the accepted UTF-8 Recovery Supervisor fix on top of HEAD f1b38e6c. This package must include the fixed supervisor bytes and pass electron-builder afterPack sanitation. Do not publish, install, tag, or alter the live production runtime.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:21:27.576Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:21:27.576Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-17T07:20:54.135Z",
+    "updated_at": "2026-08-17T07:21:36.118Z",
+    "events": [
+      {
+        "time": "2026-08-17T07:20:54.135Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Rebuild dist/win-unpacked from the accepted UTF-8 Recovery Supervisor fix on top of HEAD f1b38e6c. This package must include the fixed supervisor bytes and pass electron-builder afterPack sanitation. Do not publish, install, tag, or alter the live production runtime."
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:55.015Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:56.383Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:56.937Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:56.938Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:57.584Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:57.801Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:20:58.662Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dist:dir",
+          "session_id": "78CshkiWW0iK3edQADXOcq3o"
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:27.245Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dist:dir",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:27.576Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:27.576Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:27.754Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:27.763Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:27.904Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:34.219Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:36.080Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:21:36.093Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-17T07:22:01.521Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "4d436826d8f44165a5ec4e579f9daf43",
+    "orchestration": {
+      "run_id": "e37776b239db4b3f97521f22a4cbc3c0",
+      "wave_id": "1ca7063d5966422d9d3c6a192a6cba13",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f1b38e6ca8d63c2d07357f0fc88aa1631021c6b1",
+      "worktree_fp": "879d7fab0a8c6ef6824f23191f250b18818d31471a0ed0c17c155eb19e159d6d",
+      "contract_fp": ""
+    },
+    "objective": "Codify the proven isolated packaged Recovery acceptance as a reusable release lane and synchronize maintained documentation. Add scripts/packaged-recovery-smoke.js and npm run test:recovery:packaged. The lane must build win-unpacked, verify required packaged resources, launch the packaged executable with fixed --recovery-host plus isolated --user-data-dir and free Recovery ports, prove authenticated Recovery Host/device identity/recovery_plane_mode/Recovery MCP, run the packaged Recovery Supervisor Action Once for healthy, live-owner fail-closed, and executable-hash mismatch fail-closed cases, kill only PIDs recorded in the isolated temp root, and assert the production Recovery descriptor identity did not change. Never install/uninstall Scheduled Tasks, never print tokens, and never touch production settings/state. Update CURRENT_STATE/ROADMAP/RECOVERY_HOST/TESTING/RELEASE_CHECKLIST to record packaged isolation acceptance, remove the stale implication that LSP resource hardening is still open, and keep actual installed-logon/production-fault/release publication as separate boundaries.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:25:46.687Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:25:46.687Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-17T07:25:46.687Z"
+      }
+    ],
+    "current_step": "Completed",
+    "current_command": null,
+    "test_results": [
+      {
+        "command": "npm test",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 225 lines | tail: 'source root clean'",
+        "finished_at": "2026-08-17T07:25:28.471Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "p00hG1hywi-X3PTEF2DL_Ib6"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 20071,
+          "command_id": "p00hG1hywi-X3PTEF2DL_Ib6",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:p00hG1hywi-X3PTEF2DL_Ib6:stdout",
+              "total_stream_bytes": 20071,
+              "total_retained_bytes": 20071,
+              "head_retained_bytes": 20071,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:p00hG1hywi-X3PTEF2DL_Ib6:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "scripts/packaged-recovery-smoke.js",
+        "operation": "add",
+        "updated_at": "2026-08-17T07:25:47.005Z"
+      },
+      {
+        "path": "package.json",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:25:47.005Z"
+      },
+      {
+        "path": "docs/CURRENT_STATE.md",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:25:47.005Z"
+      },
+      {
+        "path": "docs/ROADMAP.md",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:25:47.005Z"
+      },
+      {
+        "path": "docs/RECOVERY_HOST.md",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:25:47.005Z"
+      },
+      {
+        "path": "docs/TESTING.md",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:25:47.005Z"
+      },
+      {
+        "path": "docs/RELEASE_CHECKLIST.md",
+        "operation": "update",
+        "updated_at": "2026-08-17T07:25:47.005Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+    "created_at": "2026-08-17T07:22:01.569Z",
+    "updated_at": "2026-08-17T07:26:01.915Z",
+    "events": [
+      {
+        "time": "2026-08-17T07:22:01.569Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-17T07:22:01.845Z",
+        "event": "command_started",
+        "details": {
+          "command": "node -",
+          "session_id": "Og65FTCC2FpJteJC0erbpM0T"
+        }
+      },
+      {
+        "time": "2026-08-17T07:22:07.229Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:22:21.337Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:22:28.587Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:22:28.587Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-17T07:23:52.747Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:52.449Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:53.187Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:53.770Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:53.771Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:54.986Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:55.182Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:56.009Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --check scripts/packaged-recovery-smoke.js",
+          "session_id": "2ah_wj9eq72ljMehxKcC8WjU"
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:56.489Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --check scripts/packaged-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:24:57.628Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/recovery-supervisor.test.js",
+          "session_id": "w7DMAViYmixxGdaKZOJjYRxL"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:06.627Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:07.975Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm test",
+          "session_id": "p00hG1hywi-X3PTEF2DL_Ib6"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:28.471Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm test",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:29.671Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run test:recovery:packaged",
+          "session_id": "u3neS7MHOH5ACXAvIICQhZXh"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:43.925Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run test:recovery:packaged",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:45.114Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check",
+          "session_id": "4yD0MzBdXon81y-Dn1CyVIVk"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:45.972Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:46.687Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:46.687Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:46.848Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:46.849Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:25:47.005Z",
+        "event": "files_modified",
+        "details": {
+          "count": 7
+        }
+      },
+      {
+        "time": "2026-08-17T07:26:00.418Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-17T07:26:01.863Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-17T07:26:01.865Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-17T07:26:15.854Z",
     "archive_reason": "superseded"
   }
 ]

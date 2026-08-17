@@ -44,7 +44,7 @@ function Write-JsonAtomic([string]$Path,$Value) {
 function Read-BoundedJson([string]$Path,[int]$MaxBytes,[switch]$Required) {
   if(-not(Test-Path -LiteralPath $Path -PathType Leaf)){if($Required){throw "Required JSON file missing: $Path"};return $null}
   if((Get-Item -LiteralPath $Path).Length -gt $MaxBytes){throw "JSON file exceeded bound: $Path"}
-  try { Get-Content -Raw -LiteralPath $Path|ConvertFrom-Json } catch { throw "JSON file invalid: $Path" }
+  try { [IO.File]::ReadAllText($Path,[Text.Encoding]::UTF8)|ConvertFrom-Json } catch { throw "JSON file invalid: $Path" }
 }
 function Test-AbsoluteSafePath([string]$Value) {
   if([string]::IsNullOrWhiteSpace($Value)-or -not[IO.Path]::IsPathRooted($Value)){return $false}

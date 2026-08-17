@@ -12,6 +12,7 @@ Run only the lane relevant to the changed boundary; documentation-only changes d
 | Coding Tools MCP | `npm run test:mcp` | Runs the Python MCP pytest suite from its correct package root. |
 | Desktop + MCP | `npm run test:all` | Use for cross-boundary changes or release readiness, not every edit. |
 | Recovery process boundary | `npm run test:recovery:e2e` | Required when Recovery Host/process ownership behavior changes. |
+| Packaged Recovery boundary | `npm run test:recovery:packaged` | Builds `win-unpacked`, runs packaged Recovery Host/Supervisor in isolated user data, proves fail-closed fault cases, and never installs a Scheduled Task. |
 | OpenCode provider readiness | `npm run canary:opencode-flash:preflight` | Zero provider dispatch; safe readiness/contract preflight. |
 | Windows package | `npm run dist` | Runs current NSIS packaging path; package proof is separate from source tests. |
 

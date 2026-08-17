@@ -1,55 +1,55 @@
 {
   "version": 2,
-  "task_id": "bbb8443213934c559ef1714fa6cae307",
+  "task_id": "a4f9f07235014200bee6f4678610759b",
   "orchestration": {},
-  "objective": "Stage, commit, and push the accepted Recovery/Device Identity delivery boundary to origin/main. Include the canonical .coding-tools/orchestration/ledger.sqlite3 and generated EOCL reports/evidence; exclude only transient SQLite -wal/-shm sidecars. Preserve the accepted source exactly.",
+  "objective": "Deliver the accepted packaged-Recovery UTF-8 fix, reusable isolated package acceptance lane, and maintained documentation updates to origin/main. Include the canonical orchestration ledger and generated accepted-wave reports; exclude transient SQLite WAL/SHM sidecars. Do not publish/tag/release the installer.",
   "status": "active",
   "steps": [
     {
       "id": "stage",
-      "text": "Checkpoint SQLite ledger and stage accepted files",
+      "text": "Checkpoint ledger and stage accepted source/evidence",
       "status": "in_progress",
-      "updated_at": "2026-08-17T07:13:51.311Z"
+      "updated_at": "2026-08-17T07:26:15.909Z"
     },
     {
       "id": "commit",
-      "text": "Create delivery commit",
+      "text": "Create Git commit",
       "status": "pending",
-      "updated_at": "2026-08-17T07:13:51.311Z"
+      "updated_at": "2026-08-17T07:26:15.909Z"
     },
     {
       "id": "push",
       "text": "Push origin/main",
       "status": "pending",
-      "updated_at": "2026-08-17T07:13:51.311Z"
+      "updated_at": "2026-08-17T07:26:15.909Z"
     },
     {
       "id": "verify",
-      "text": "Verify local/remote commit and residual worktree state",
+      "text": "Verify remote synchronization and residual runtime-only dirt",
       "status": "pending",
-      "updated_at": "2026-08-17T07:13:51.311Z"
+      "updated_at": "2026-08-17T07:26:15.909Z"
     }
   ],
-  "current_step": "Checkpoint ledger and stage accepted delivery",
+  "current_step": "Checkpoint ledger and stage accepted package-acceptance changes",
   "current_command": {
-    "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached --name-only); if(-not ($staged -contains '.coding-tools/orchestration/ledger.sqlite3')){throw 'LEDGER_NOT_STAGED'}; if($staged -match 'ledger\\.sqlite3-(wal|shm)$'){throw 'SQLITE_SIDECAR_STAGED'}; Write-Output ('STAGED_COUNT=' + $staged.Count); Write-Output 'LEDGER_STAGED=TRUE'; Write-Output 'SQLITE_SIDECARS_STAGED=FALSE'; & git status --short; & git commit -m 'fix: complete device-aware recovery activation'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git push origin main; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git status -sb; & git log -1 --oneline --decorate\"",
+    "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & git status --short; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached --name-only); if(-not ($staged -contains '.coding-tools/orchestration/ledger.sqlite3')){throw 'LEDGER_NOT_STAGED'}; if($staged -match 'ledger\\.sqlite3-(wal|shm)$'){throw 'SQLITE_SIDECAR_STAGED'}; Write-Output ('STAGED_COUNT=' + $staged.Count); Write-Output 'LEDGER_STAGED=TRUE'; Write-Output 'SQLITE_SIDECARS_STAGED=FALSE'; & git diff --cached --check; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git commit -m 'fix: harden packaged recovery acceptance'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git push origin main; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git status -sb; & git log -2 --oneline --decorate\"",
     "kind": "command",
-    "session_id": "_Ag0dn0IvjTqCkR0vhMSx4j1",
+    "session_id": "XQzv943h4tn2f9mk3NMuFPn4",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-17T07:13:58.529Z"
+    "started_at": "2026-08-17T07:26:22.997Z"
   },
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "Commit and push main, then verify remote synchronization",
-  "created_at": "2026-08-17T07:13:51.310Z",
-  "updated_at": "2026-08-17T07:13:58.529Z",
+  "next_step": "Commit, push, and verify origin/main",
+  "created_at": "2026-08-17T07:26:15.909Z",
+  "updated_at": "2026-08-17T07:26:22.997Z",
   "events": [
     {
-      "time": "2026-08-17T07:13:51.311Z",
+      "time": "2026-08-17T07:26:15.910Z",
       "event": "task_started",
       "details": {
         "fields": [
@@ -64,11 +64,11 @@
       }
     },
     {
-      "time": "2026-08-17T07:13:58.529Z",
+      "time": "2026-08-17T07:26:22.997Z",
       "event": "command_started",
       "details": {
-        "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=@(& git diff --cached ",
-        "session_id": "_Ag0dn0IvjTqCkR0vhMSx4j1"
+        "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; & git status --short; & python -c \\\"import sqlite3; p=r'.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect(p); print(c.execute('PRAGMA wal_checkpoint(FULL)').fetchall()); c.close()\\\"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; & git add -A -- . ':(exclude).coding-tools/orchestration/ledger.sqlite3-wal' ':(exclude).coding-tools/orchestration/ledger.sqlite3-shm'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; $staged=",
+        "session_id": "XQzv943h4tn2f9mk3NMuFPn4"
       }
     }
   ]

@@ -4,7 +4,7 @@ This roadmap describes the current **Tools-Codex-web Windows Desktop Execution H
 
 ## Current baseline
 
-The maintained product boundary now includes Electron Execution Control Center; one shared Coding Tools MCP Runtime; ChatWeb primary-tunnel access; Codex Desktop thin-proxy access into the same authority; the verified `smart-v3` eight-tool surface; EOCL/controller/write-fencing/proof/handoff/observation/restart controls; Recovery Host + Windows Recovery Supervisor + independent Recovery MCP/Tunnel source implementation; bounded Codex/OpenCode provider lanes; semantic-first localization; and current-worktree LSP process telemetry/resource governance.
+The maintained product boundary now includes Electron Execution Control Center; one shared Coding Tools MCP Runtime; ChatWeb primary-tunnel access; Codex Desktop thin-proxy access into the same authority; the verified `smart-v3` eight-tool surface; EOCL/controller/write-fencing/proof/handoff/observation/restart controls; Recovery Host + Windows Recovery Supervisor + independent Recovery MCP/Tunnel; bounded Codex/OpenCode provider lanes; semantic-first localization; closed LSP process telemetry/resource governance; and an isolated packaged-Windows Recovery acceptance lane.
 
 ## Policy already decided
 
@@ -22,7 +22,7 @@ The maintained product boundary now includes Electron Execution Control Center; 
 
 - Keep source proof, controlled activation, live canary and packaged/released claims separate.
 - Verify exact running revision/process identity after controlled activation when current Recovery/Coding MCP/Electron changes require live proof.
-- Complete relevant packaged-Windows/login and production fault-matrix checks for Recovery before calling that boundary release-complete.
+- The isolated packaged-Windows Recovery Host/Supervisor lane is covered by `npm run test:recovery:packaged`; before calling a release complete, still prove any required installed Windows logon/session behavior and production-only fault scenarios that cannot safely be represented in isolation.
 - Keep restart/activation fail-closed around active commands, background work, provider/agent lanes and EOCL acceptance.
 
 ### P2 — representative routing economics
@@ -32,11 +32,10 @@ The maintained product boundary now includes Electron Execution Control Center; 
 - Keep automatic non-deterministic routing disabled until the evidence gate is actually satisfied.
 - Real paid OpenCode Flash terminal canary requires explicit external-cost authorization; preflight remains the default zero-dispatch check.
 
-### P2 — validate LSP resource hardening
+### Closed — LSP resource hardening
 
-- Finish focused/process-level acceptance of current-worktree LSP process identity, memory-pressure and reaper behavior.
-- Confirm soft pressure degrades broad semantic work without killing active requests; hard pressure fails closed before unsafe growth.
-- Calibrate policy from representative measurements instead of one historical ~GiB observation.
+- Process identity, memory-pressure telemetry, reaper behavior, cold restart identity and live Connector/Runner/rust-analyzer soak were closed in the 2026-08-16 P2/P3 acceptance window.
+- The host-scoped evidence supported keeping the existing 2 GiB/3 GiB soft/hard defaults; future changes require new representative evidence rather than reopening the completed wave from stale roadmap wording.
 
 ### P3 — operationalize evidence without inflating architecture
 

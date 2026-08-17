@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-16
+> **Status date:** 2026-08-17
 > **Desktop package:** `web-mcp-assistant 0.3.4`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every dirty-worktree change has been packaged or deployed.
 
@@ -121,13 +121,15 @@ The Recovery Tunnel must use a distinct tunnel identity from the primary Coding 
 
 Implementation in source is not the same as a packaged/live proof. Recovery changes still require the relevant process-boundary, activation, packaged-Windows/login, and fault-matrix acceptance appropriate to the change.
 
+The current checkout now also has a repeatable isolated packaged-Windows Recovery lane: `npm run test:recovery:packaged`. It builds `dist/win-unpacked`, launches the packaged `--recovery-host` under a temporary Electron user-data root, proves device identity plus independent Recovery MCP, exercises the packaged Recovery Supervisor in healthy and fail-closed fault cases, cleans only isolated PIDs, and verifies that the production Recovery descriptor identity is unchanged. This is packaged runtime evidence, not publication of an installer and not a substitute for an actual installed-logon/session smoke when that boundary is required for release.
+
 ## 7. Semantic localization and LSP resource policy
 
 Coding Tools MCP uses semantic-first localization when the native WebCodex LSP provider is available and falls back to bounded text search per query when semantic localization is unavailable, denied by resource admission, or cannot handle a query.
 
 The current worktree also contains LSP process telemetry/resource-governance work: process instance identity, PID/start identity, current and peak working set, pending-request state, memory-pressure classification, restart/drain counters, bounded idle reaping, and soft/hard pressure behavior. Pressure policy is internal and testable; it must not be documented as one universal production memory number derived from a historical sample.
 
-At Git HEAD `cf6cb6dd` on 2026-08-16, the current worktree completed one 10-cycle real Connector/Runner/rust-analyzer acceptance window. The fingerprinted report records distinct process identities for every cold restart, final `STOPPED`, zero active HEAVY claim/write fence/stale run/orphan/overlap, and p95 peak LSP working set below 30 MiB on this Windows host. This host-scoped sample supports keeping the existing 2 GiB/3 GiB soft/hard defaults; it is evidence for this acceptance window, not a universal memory guarantee. The source remains unreleased until the intended changes are selectively delivered through the normal Git/release boundary.
+The P2/P3 LSP/resource hardening was technically closed on 2026-08-16. Its 10-cycle real Connector/Runner/rust-analyzer acceptance window recorded distinct process identities for every cold restart, final `STOPPED`, zero active HEAVY claim/write fence/stale run/orphan/overlap, and p95 peak LSP working set below 30 MiB on this Windows host. This host-scoped sample supports keeping the existing 2 GiB/3 GiB soft/hard defaults; it is evidence for that acceptance window, not a universal memory guarantee.
 
 Until the exact change set has final acceptance and, where required, controlled activation/package validation, describe this as **implemented in the current worktree**, not automatically as a released feature.
 
@@ -140,6 +142,7 @@ npm test
 npm run test:mcp
 npm run test:all
 npm run test:recovery:e2e
+npm run test:recovery:packaged
 npm run canary:opencode-flash:preflight
 npm run dist
 npm run dist:dir
