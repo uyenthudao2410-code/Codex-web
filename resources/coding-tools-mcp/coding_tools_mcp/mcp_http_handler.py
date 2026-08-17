@@ -40,7 +40,7 @@ from .protocol import (
     response_id,
     validate_rpc_envelope,
 )
-from .tool_schema import tool_annotations, tool_definition
+from .tool_schema import tool_annotations
 from .transport_http import (
     STATELESS_HTTP_2026_ENV,
     HTTPSessionManager,
@@ -298,6 +298,9 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "tool_contract": dict(runtime.tool_contract),
                 "workspace_generation": runtime.workspace_generation,
                 "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
+                "device_id": str(os.environ.get(f"{ENV_PREFIX}_DEVICE_ID", "")).strip() or None,
+                "device_instance_id": str(os.environ.get(f"{ENV_PREFIX}_DEVICE_INSTANCE_ID", "")).strip() or None,
+                "device_display_name": str(os.environ.get(f"{ENV_PREFIX}_DEVICE_DISPLAY_NAME", "")).strip() or None,
                 "active_commands": active_commands,
                 "retained_outputs": retained_outputs,
                 "legacy_session_alias_uses": runtime.legacy_session_alias_uses,

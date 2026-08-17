@@ -4,7 +4,6 @@ import hashlib
 from contextlib import contextmanager
 import json
 import math
-import os
 import re
 import sqlite3
 import threading

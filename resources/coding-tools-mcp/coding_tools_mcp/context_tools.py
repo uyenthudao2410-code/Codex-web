@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import secrets
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import time
@@ -11,10 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .build_verify import verify_build as run_build_verification
 from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
-from .patching import parse_patch
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH
 from .task_state import command_payload_succeeded
 from .semantic_localization import (
@@ -24,8 +20,7 @@ from .semantic_localization import (
     semantic_resource_cost,
     semantic_scope_mode,
 )
-from .tool_contract import AGENT_EXECUTION_ROUTES, tool_metadata_contract
-from .tool_schema import EVALUATION_SCHEMA_VERSION
+from .tool_contract import tool_metadata_contract
 
 
 _CONTEXT_BUNDLE_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}

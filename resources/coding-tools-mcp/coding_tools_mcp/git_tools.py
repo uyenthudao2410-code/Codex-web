@@ -5,10 +5,10 @@ import difflib
 import hashlib
 import hmac
 import json
-from pathlib import Path
 from typing import Any
 
 from .errors import ToolFailure
+from .patching import read_text_preserve_newlines
 from .fs_utils import truncation_fields
 from .git_utils import (
     DIFF_CONTINUATION_OPERATION,

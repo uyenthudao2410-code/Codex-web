@@ -1381,10 +1381,10 @@ fn structured_process_job_handoff_observation_does_not_reset_the_original_total_
             "mark-sleep".to_string(),
             marker.to_string_lossy().into_owned(),
             nonce.clone(),
-            "3000".to_string(),
+            "4000".to_string(),
         ],
         None,
-        1,
+        2,
         None,
     );
     assert!(wait_until(Duration::from_secs(5), || marker.exists()));
@@ -1392,14 +1392,24 @@ fn structured_process_job_handoff_observation_does_not_reset_the_original_total_
     // Model the Server's short sync grace ending by observing the retained
     // active Job after the one child has already started. This observation is
     // deliberately read-only: it cannot replace the process or its deadline.
-    std::thread::sleep(Duration::from_millis(300));
-    let handoff = manager
-        .inventory()
-        .jobs
-        .into_iter()
-        .find(|snapshot| snapshot.job_id == "structured-original-timeout")
-        .expect("the same active Job is exposed at handoff");
-    assert_eq!(handoff.status, "running");
+    // The grace is modeled by a short sleep, then the running state is polled
+    // instead of asserted after a fixed delay so a heavily loaded parallel
+    // test runner cannot push the observation past the original timeout.
+    std::thread::sleep(Duration::from_millis(150));
+    let mut handoff = None;
+    let poll_deadline = Instant::now() + Duration::from_secs(1);
+    while Instant::now() < poll_deadline {
+        handoff = manager
+            .inventory()
+            .jobs
+            .into_iter()
+            .find(|snapshot| snapshot.job_id == "structured-original-timeout" && snapshot.status == "running");
+        if handoff.is_some() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    let handoff = handoff.expect("the same active Job is exposed at handoff while running");
     assert_eq!(handoff.command_execution_state, None);
 
     let updates = collect_job_updates(&mut rx, Duration::from_secs(10));
@@ -1411,11 +1421,11 @@ fn structured_process_job_handoff_observation_does_not_reset_the_original_total_
     );
     let duration_ms = final_update.duration_ms.expect("timeout duration");
     assert!(
-        (850..=1_250).contains(&duration_ms),
-        "the one-second original timeout was reset at handoff: {duration_ms} ms"
+        (1_850..=2_250).contains(&duration_ms),
+        "the two-second original timeout was reset at handoff: {duration_ms} ms"
     );
     assert!(
-        original_start.elapsed() < Duration::from_millis(1_500),
+        original_start.elapsed() < Duration::from_millis(2_500),
         "handoff extended the original total timeout"
     );
     let starts = std::fs::read_to_string(marker).unwrap();

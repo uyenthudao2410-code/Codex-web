@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 import os
 import secrets
-import shutil
 import time
 from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .codex_bridge import CodexBridgeError
-from .envutils import ENV_PREFIX
 from .errors import ToolFailure
-from .fs_utils import is_relative_to
 from .git_utils import DIFF_CONTINUATION_OPERATION
 from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch

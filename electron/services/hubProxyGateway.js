@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const defaultPaths = require('../paths');
 const { writeJsonAtomic } = require('./jsonStore');
+const { runtimeDeviceIdentity } = require('./deviceIdentity');
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
@@ -107,12 +108,13 @@ function summarizeLatencySamples(values, statusCounts = {}, failures = 0) {
 }
 
 class HubProxyGateway {
-  constructor({ settings, secrets, log, descriptorPath, paths = defaultPaths, owner = 'recovery-host' }) {
+  constructor({ settings, secrets, log, descriptorPath, paths = defaultPaths, owner = 'recovery-host', deviceIdentity = null, deviceInstanceId = '' }) {
     this.settings = settings;
     this.secrets = secrets;
     this.log = log;
     this.descriptorPath = descriptorPath || paths.hubProxyDescriptorFile();
     this.owner = String(owner || 'recovery-host');
+    this.device = (deviceIdentity || deviceInstanceId) ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId) : null;
     this.server = null;
     this.token = '';
     this.port = 0;
@@ -152,6 +154,7 @@ class HubProxyGateway {
       token: this.token,
       owner: this.owner,
       owner_pid: process.pid,
+      ...(this.device ? { instance_id: this.device.deviceInstanceId, device_id: this.device.deviceId, device_instance_id: this.device.deviceInstanceId, device_display_name: this.device.displayName } : {}),
       created_at: new Date().toISOString()
     };
   }

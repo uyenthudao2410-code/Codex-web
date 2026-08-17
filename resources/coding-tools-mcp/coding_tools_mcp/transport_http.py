@@ -10,9 +10,6 @@ from typing import Any
 
 from .envutils import ENV_PREFIX, truthy_env
 
-from dataclasses import dataclass
-from typing import Any
-
 
 HTTP_SESSION_TTL_SECONDS = 60 * 60
 MAX_TRACKED_SESSION_ALIASES = 512

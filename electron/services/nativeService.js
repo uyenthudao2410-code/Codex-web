@@ -7,6 +7,7 @@ const defaultPaths = require('../paths');
 const { readJson, updateJsonAtomic, ensureParent } = require('./jsonStore');
 const { rotateLog } = require('./logService');
 const { ComponentRevisionTracker } = require('./componentRevision');
+const { classifyStoredDeviceOwner } = require('./deviceIdentity');
 
 function isAlive(pid) {
   if (!Number.isInteger(pid)) return false;
@@ -35,19 +36,30 @@ function runtimeFingerprint(settings) {
 
 function currentRuntimeState(input = {}) {
   const allowed = new Set([
-    'manualStop', 'tunnelPid', 'tunnelStartedAt',
+    'manualStop', 'tunnelPid', 'tunnelStartedAt', 'tunnelId', 'tunnelFingerprint',
+    'tunnelDeviceId', 'tunnelDeviceInstanceId',
     'nativePid', 'nativeFingerprint', 'nativeWorkspace', 'nativePort',
-    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId', 'startedAt',
+    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId',
+    'nativeDeviceId', 'nativeDeviceInstanceId', 'startedAt',
     'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt'
   ]);
   return Object.fromEntries(Object.entries(input).filter(([key]) => allowed.has(key)));
 }
 
 class NativeService {
-  constructor(log, paths = defaultPaths, revisionTracker = null) {
+  constructor(log, paths = defaultPaths, revisionTracker = null, device = null) {
     this.log = log;
     this.paths = paths;
     this.revisions = revisionTracker || new ComponentRevisionTracker({ paths });
+    this.device = device;
+  }
+
+  assertOwnedLive(state) {
+    if (!this.device || !isAlive(state.nativePid)) return;
+    const ownership = classifyStoredDeviceOwner(state.nativeDeviceId, this.device.deviceId);
+    if (ownership === 'owned') return;
+    const code = ownership === 'foreign' ? 'NATIVE_PROCESS_FOREIGN_DEVICE' : 'NATIVE_PROCESS_OWNER_UNVERIFIED';
+    throw Object.assign(new Error(ownership === 'foreign' ? 'Coding MCP process state belongs to another device; refusing to adopt or terminate it.' : 'Coding MCP process state predates device ownership metadata; refusing to adopt or terminate the live process.'), { code, ownerDeviceId: String(state.nativeDeviceId || '') || null, expectedDeviceId: this.device.deviceId });
   }
 
   async start(settings, token, progress, options = {}) {
@@ -66,6 +78,7 @@ class NativeService {
         diskRevision
       });
     }
+    this.assertOwnedLive(current);
     if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint) {
       const updatePending = Boolean(current.nativeCodeRevision && current.nativeCodeRevision !== diskRevision);
       this.log.info('MCP Portable đã chạy trong thư mục làm việc mục tiêu', { pid: current.nativePid, workspace: settings.workspace });
@@ -98,6 +111,11 @@ class NativeService {
       CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: this.paths.supervisorRequestFile(),
       CODING_TOOLS_MCP_CODE_REVISION: diskRevision
     };
+    if (this.device) {
+      env.CODING_TOOLS_MCP_DEVICE_ID = this.device.deviceId;
+      env.CODING_TOOLS_MCP_DEVICE_INSTANCE_ID = this.device.deviceInstanceId;
+      env.CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME = this.device.displayName;
+    }
     const bundledTools = path.join(this.paths.resourcesRoot(), 'tools');
     const vendoredPython = path.join(this.paths.resourcesRoot(), 'coding-tools-mcp', 'python_vendor');
     env.PATH = [bundledTools, process.env.PATH || ''].filter(Boolean).join(path.delimiter);
@@ -139,6 +157,8 @@ class NativeService {
       nativeToolMode: 'smart',
       nativeCommand: command,
       nativeCodeRevision: diskRevision,
+      nativeDeviceId: this.device?.deviceId || '',
+      nativeDeviceInstanceId: this.device?.deviceInstanceId || '',
       startedAt: new Date().toISOString(),
       nativeInstanceId: instanceId
     }));
@@ -149,6 +169,7 @@ class NativeService {
   async stop() {
     const state = readJson(this.paths.stateFile(), {});
     const alive = isAlive(state.nativePid);
+    this.assertOwnedLive(state);
     try {
       if (alive) {
         const { run } = require('./commandRunner');
@@ -164,7 +185,9 @@ class NativeService {
         nativePort: null,
         nativePermissionMode: '',
         nativeInstanceId: '',
-        nativeCodeRevision: ''
+        nativeCodeRevision: '',
+        nativeDeviceId: '',
+        nativeDeviceInstanceId: ''
       }));
     }
   }
@@ -184,6 +207,7 @@ class NativeService {
   async status(settings = null) {
     const state = readJson(this.paths.stateFile(), {});
     if (!isAlive(state.nativePid)) return false;
+    if (this.device && classifyStoredDeviceOwner(state.nativeDeviceId, this.device.deviceId) !== 'owned') return false;
     return !settings || state.nativeFingerprint === runtimeFingerprint(settings);
   }
 

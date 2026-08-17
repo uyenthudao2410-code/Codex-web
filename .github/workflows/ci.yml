@@ -1,9 +1,11 @@
 name: CI
 
-on:
-  push:
-    branches: [main]
-  pull_request:
+"on":
+  # CI only runs when a release is being prepared: trigger manually from the
+  # Actions tab (Run workflow). Push/PR triggers are disabled to keep GitHub
+  # Actions minutes at zero during ordinary development; local validation
+  # (unittest discover + module-size check + cargo test) covers daily work.
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always

@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { NativeService, runtimeFingerprint, currentRuntimeState } = require('../electron/services/nativeService');
@@ -20,7 +21,44 @@ test.beforeEach(() => {
   fs.rmSync(supervisorRequestPath, { force: true });
   fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
 });
-const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
+const { RuntimeOrchestrator, readMcpHealth, parseGitStatusPorcelainV2 } = require('../electron/services/runtimeOrchestrator');
+const { classifyStoredDeviceOwner } = require('../electron/services/deviceIdentity');
+
+test('Coding MCP health is trusted only when workspace and device_id both match', async (t) => {
+  const token = 'token';
+  const server = http.createServer((request, response) => { assert.equal(request.headers.authorization, `Bearer ${token}`); const body = JSON.stringify({ ready: true, workspace: 'C:\\work\\one', device_id: 'device-a' }); response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }); response.end(body); });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const port = server.address().port;
+  assert.ok(await readMcpHealth(port, token, 'C:\\work\\one', 'device-a'));
+  assert.equal(await readMcpHealth(port, token, 'C:\\work\\one', 'device-b'), null);
+  assert.equal(await readMcpHealth(port, token, 'C:\\work\\other', 'device-a'), null);
+});
+
+test('Git and persistent-device ownership helpers project exact local identity state', () => {
+  const clean = parseGitStatusPorcelainV2(`# branch.oid ${'a'.repeat(40)}\n# branch.head main\n`);
+  assert.deepEqual(clean, { available: true, branch: 'main', head: 'a'.repeat(40), head_short: 'aaaaaaaa', dirty: false });
+  const dirty = parseGitStatusPorcelainV2(`# branch.oid ${'b'.repeat(40)}\n# branch.head feature/device\n1 .M N... 100644 100644 100644 a b file.js\n? new.txt\n`);
+  assert.equal(dirty.dirty, true);
+  const deviceId = '12345678-1234-4123-8123-123456789abc';
+  assert.equal(classifyStoredDeviceOwner(deviceId, deviceId), 'owned');
+  assert.equal(classifyStoredDeviceOwner('', deviceId), 'legacy');
+  assert.equal(classifyStoredDeviceOwner('87654321-4321-4321-8321-cba987654321', deviceId), 'foreign');
+});
+
+test('device-aware process services keep legacy or foreign live owners fail-closed in source contract', () => {
+  const nativeSource = fs.readFileSync(path.join(__dirname, '..', 'electron', 'services', 'nativeService.js'), 'utf8');
+  const tunnelSource = fs.readFileSync(path.join(__dirname, '..', 'electron', 'services', 'tunnelService.js'), 'utf8');
+  const recoverySource = fs.readFileSync(path.join(__dirname, '..', 'electron', 'services', 'recoveryPlaneService.js'), 'utf8');
+  for (const source of [nativeSource, tunnelSource, recoverySource]) assert.match(source, /classifyStoredDeviceOwner/);
+  assert.match(nativeSource, /NATIVE_PROCESS_OWNER_UNVERIFIED/);
+  assert.match(nativeSource, /NATIVE_PROCESS_FOREIGN_DEVICE/);
+  assert.match(tunnelSource, /TUNNEL_PROCESS_OWNER_UNVERIFIED/);
+  assert.match(tunnelSource, /TUNNEL_PROCESS_FOREIGN_DEVICE/);
+  assert.match(recoverySource, /\$\{kind\}_OWNER_UNVERIFIED/);
+  assert.match(recoverySource, /assertOwnedLive\(state\.recoveryMcpPid/);
+  assert.match(recoverySource, /assertOwnedLive\(state\.recoveryTunnelPid/);
+});
 
 function recoveryHarness(status) {
   const calls = { restart: 0, tunnel: 0 };
@@ -79,8 +117,27 @@ test('background runtime processes are hidden and detached from Recovery Host li
 
 test('runtime state migration keeps only current native and tunnel fields', () => {
   assert.deepEqual(
-    currentRuntimeState({ nativePid: 1, tunnelPid: 2, nativeCodeRevision: 'abc', obsoletePid: 3 }),
-    { nativePid: 1, tunnelPid: 2, nativeCodeRevision: 'abc' }
+    currentRuntimeState({
+      nativePid: 1,
+      tunnelPid: 2,
+      tunnelStartedAt: '2026-08-17T00:00:00.000Z',
+      tunnelId: 'tunnel-device-a',
+      tunnelFingerprint: 'f'.repeat(64),
+      tunnelDeviceId: '12345678-1234-4123-8123-123456789abc',
+      tunnelDeviceInstanceId: 'device-instance-0001',
+      nativeCodeRevision: 'abc',
+      obsoletePid: 3
+    }),
+    {
+      nativePid: 1,
+      tunnelPid: 2,
+      tunnelStartedAt: '2026-08-17T00:00:00.000Z',
+      tunnelId: 'tunnel-device-a',
+      tunnelFingerprint: 'f'.repeat(64),
+      tunnelDeviceId: '12345678-1234-4123-8123-123456789abc',
+      tunnelDeviceInstanceId: 'device-instance-0001',
+      nativeCodeRevision: 'abc'
+    }
   );
 });
 

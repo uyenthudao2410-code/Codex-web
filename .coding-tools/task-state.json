@@ -1,57 +1,44 @@
 {
   "version": 2,
-  "task_id": "673a5073a1ce431b82d406e3b5e88c7c",
-  "orchestration": {},
-  "objective": "Commit all 10 currently visible Git changes in E:\\Github\\Tools-Codex-web, including .coding-tools/orchestration/ledger.sqlite3 and current .coding-tools deletions/updates, then push main to origin/main. Preserve history and do not force-push.",
-  "status": "active",
-  "steps": [
-    {
-      "id": "deliver",
-      "text": "Stage exact current change set, commit, and push origin/main",
-      "status": "in_progress",
-      "updated_at": "2026-08-17T00:16:06.115Z"
-    }
-  ],
-  "current_step": "Short exact stage, commit, push",
-  "current_command": {
-    "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; git add -- crates/webcodex-runner/src/main_tests.rs deploy/webcodex-runner.toml.example scripts/e2e_server_first_snapshot_ws.ps1; if($LASTEXITCODE -ne 0){throw 'stable git add failed'}; $p=@('.coding-tools/orchestration/ledger.sqlite3','.coding-tools/performance.json','.coding-tools/task-history.json','.coding-tools/task-state.json'); $h=@(git hash-object -w -- $p); if($LASTEXITCODE -ne 0 -or $h.Count -ne 4){throw 'runtime hash-object failed'}; for($i=0;$i -lt 4;$i++){git update-index --add --cacheinfo ('100644,'+$h[$i].Trim()+','+$p[$i]); if($LASTEXITCODE -ne 0){throw ('update-index failed: '+$p[$i])}}; git update-index --force-remove -- .coding-tools/evaluation/chatweb-host-turn-pending.json .coding-tools/orchestration/ledger.sqlite3-shm .coding-tools/orchestration/ledger.sqlite3-wal; if($LASTEXITCODE -ne 0){throw 'force-remove failed'}; git diff --cached --check; if($LASTEXITCODE -ne 0){throw 'cached whitespace check failed'}; $staged=@(git diff --cached --name-only); if($staged.Count -ne 10){Write-Output ('STAGED_COUNT='+$staged.Count); $staged; throw 'unexpected staged count'}; if(-not ($staged -contains '.coding-tools/orchestration/ledger.sqlite3')){throw 'ledger missing from index'}; git commit -m 'chore: sync current project state'; if($LASTEXITCODE -ne 0){throw 'git commit failed'}; git push origin main; if($LASTEXITCODE -ne 0){throw 'git push failed'}; Write-Output ('HEAD='+(git rev-parse HEAD).Trim()); Write-Output 'PUSH_OK'\"",
-    "kind": "command",
-    "session_id": "E2TCgGmfgtsJVDll2bNBtodT",
-    "workdir": ".",
-    "status": "running",
-    "started_at": "2026-08-17T00:16:15.971Z"
+  "task_id": "a683c496a57e4df8b60e0d3fe4ebc2ec",
+  "orchestration": {
+    "run_id": "3dc5bc71877d4b87b96b1e16bc33f684",
+    "wave_id": "061fa278e9cf48dea40512a3584e0288",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "3a3abaff72a8e6382e4c362865becba069e4ecfc",
+    "worktree_fp": "0a46b9bebfefaf1cbe99da73aa83e222b9572113efd575aa1c01c90ee0d5247f",
+    "contract_fp": ""
   },
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "Report final HEAD and remote sync",
-  "created_at": "2026-08-17T00:16:06.115Z",
-  "updated_at": "2026-08-17T00:16:15.971Z",
+  "next_step": "",
+  "created_at": "2026-08-17T04:26:52.963Z",
+  "updated_at": "2026-08-17T04:26:55.565Z",
   "events": [
     {
-      "time": "2026-08-17T00:16:06.115Z",
-      "event": "task_started",
+      "time": "2026-08-17T04:26:52.963Z",
+      "event": "task_auto_started",
       "details": {
-        "fields": [
-          "current_step",
-          "failure",
-          "new_task",
-          "next_step",
-          "objective",
-          "status",
-          "steps"
-        ]
+        "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-17T00:16:15.971Z",
+      "time": "2026-08-17T04:26:53.233Z",
       "event": "command_started",
       "details": {
-        "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; git add -- crates/webcodex-runner/src/main_tests.rs deploy/webcodex-runner.toml.example scripts/e2e_server_first_snapshot_ws.ps1; if($LASTEXITCODE -ne 0){throw 'stable git add failed'}; $p=@('.coding-tools/orchestration/ledger.sqlite3','.coding-tools/performance.json','.coding-tools/task-history.json','.coding-tools/task-state.json'); $h=@(git hash-object -w -- $p); if($LASTEXITCODE -ne 0 -or $h.Count -ne 4){throw 'runtime hash-objec",
-        "session_id": "E2TCgGmfgtsJVDll2bNBtodT"
-      }
-    }
-  ]
-}
+        "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py' -Pattern 'process_instance_id','device_id','__control/health','workspace' -Context 6,10 | Select-Object -First 120 | ForEach-Object { $_.ToString() }\"",
+        "session_id": "hLxjlL

@@ -18,6 +18,7 @@ class RuntimePaths {
   dataRoot() { return this.dataRootPath; }
   resourcesRoot() { return this.resourcesRootPath; }
   appRoot() { return this.appRootPath; }
+  deviceFile() { return path.join(this.dataRootPath, 'device.json'); }
   settingsFile() { return path.join(this.dataRootPath, 'settings.json'); }
   secretsFile() { return path.join(this.dataRootPath, 'secrets.bin'); }
   stateFile() { return path.join(this.dataRootPath, 'runtime-state.json'); }

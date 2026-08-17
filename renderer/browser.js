@@ -84,6 +84,22 @@ function renderServiceState(state) {
   recoveryElement.dataset.state = presentation.state;
   recoveryElement.title = presentation.title;
   recoveryElement.setAttribute('aria-label', presentation.title);
+  const device = state?.device || null;
+  const deviceButton = $('#deviceState');
+  const deviceName = String(device?.display_name || state?.recoveryHost?.device_display_name || 'Thiết bị');
+  const deviceId = String(device?.device_id || state?.recoveryHost?.device_id || '');
+  deviceButton.classList.toggle('ready', Boolean(deviceId) && device?.online !== false);
+  deviceButton.classList.toggle('error', !deviceId);
+  $('#deviceStateName').textContent = deviceName;
+  deviceButton.title = deviceId ? `Thiết bị hiện tại · ${deviceId}` : 'Không xác định được device_id';
+  const git = device?.git || {};
+  const gitElement = $('#gitState');
+  const gitText = git.available ? `${git.branch || 'detached'} @ ${git.head_short || 'no-head'}${git.dirty ? ' *' : ''}` : 'Git n/a';
+  $('#gitStateText').textContent = gitText;
+  gitElement.classList.toggle('ready', Boolean(git.available) && git.dirty === false);
+  gitElement.classList.toggle('warn', Boolean(git.available) && git.dirty === true);
+  gitElement.classList.toggle('error', false);
+  gitElement.title = git.available ? `Git: ${gitText}${git.dirty ? ' · dirty' : ' · clean'}` : 'Git: không có dữ liệu';
   renderWorkspaceHealth();
 }
 
@@ -239,6 +255,7 @@ document.addEventListener('click', (event) => {
   }
 });
 $('#managerButton').onclick = () => api.openManager();
+$('#deviceState').onclick = () => api.openManager();
 $('#workspaceSelect').onchange = () => { const workspace = $('#workspaceSelect').value; $('#workspaceSelect').value = ''; if (workspace) switchWorkspace(workspace, true); };
 $('#pauseTask').onclick = async () => { try { unwrap(await api.pauseTask()); await refreshTask(); } catch (error) { $('#switchState').textContent = error.message; } };
 $('#resumeTask').onclick = async () => { try { unwrap(await api.resumeTask()); await refreshTask(); } catch (error) { $('#switchState').textContent = error.message; } };

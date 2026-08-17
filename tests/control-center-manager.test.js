@@ -9,7 +9,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 test('manager primary navigation is operator-first while advanced tools remain reachable from System', () => {
   const html = read('renderer/index.html');
   const nav = html.match(/<nav class="nav-list"[\s\S]*?<\/nav>/)?.[0] || '';
-  for (const page of ['overview', 'routing', 'traffic', 'task', 'deploy', 'workspace', 'system']) {
+  for (const page of ['overview', 'routing', 'traffic', 'task', 'device', 'deploy', 'workspace', 'system']) {
     assert.match(nav, new RegExp(`data-page="${page}"`), `missing primary page ${page}`);
   }
   for (const legacy of ['build', 'health', 'guide', 'logs', 'settings']) {
@@ -22,6 +22,16 @@ test('manager primary navigation is operator-first while advanced tools remain r
   assert.match(html, /data-page-view="routing"/);
   assert.match(html, /data-page-view="traffic"/);
   assert.match(html, /data-page-view="system"/);
+});
+
+test('manager exposes truthful current-device identity, Git and existing safe runtime controls', () => {
+  const html = read('renderer/index.html');
+  const app = read('renderer/app.js');
+  for (const id of ['topDeviceButton', 'deviceDisplayName', 'deviceId', 'deviceInstanceId', 'deviceWorkspace', 'deviceGitState', 'deviceCodingState', 'deviceRecoveryState', 'deviceCodingTunnelId', 'deviceRecoveryTunnelId', 'deviceRefresh', 'deviceStart', 'deviceRestart', 'deviceStop', 'deviceRepair']) assert.match(html, new RegExp(`id="${id}"`), `missing device UI id ${id}`);
+  assert.match(html, /Local only|local-only/i);
+  assert.match(app, /renderDevice\(/);
+  assert.match(app, /runRuntime\('restart'\)/);
+  assert.match(app, /repairHealth\(\)/);
 });
 
 test('manager Command Center and Live Routing expose the truthful nine-node topology', () => {

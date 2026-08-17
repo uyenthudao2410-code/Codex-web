@@ -1,49 +1,47 @@
 from __future__ import annotations
 
-import argparse
-import base64
-import copy
-import ctypes
-import hashlib
-import html
-import difflib
-import fnmatch
-import functools
-import hmac
-import http.server
-import json
-import marshal
-import math
-import mimetypes
-import os
-import posixpath
-import re
-import secrets
-import shlex
-import shutil
-import signal
-import stat
-import subprocess
-import sys
-import tempfile
-import threading
-import time
-import urllib.parse
-import zipfile
-from collections.abc import Callable, Iterator
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+import argparse  # noqa: F401  # composition-root namespace
+import base64  # noqa: F401  # composition-root namespace
+import copy  # noqa: F401  # composition-root namespace
+import ctypes  # noqa: F401  # composition-root namespace
+import hashlib  # noqa: F401  # composition-root namespace
+import html  # noqa: F401  # composition-root namespace
+import difflib  # noqa: F401  # composition-root namespace
+import fnmatch  # noqa: F401  # composition-root namespace
+import functools  # noqa: F401  # composition-root namespace
+import hmac  # noqa: F401  # composition-root namespace
+import http.server  # noqa: F401  # composition-root namespace
+import json  # noqa: F401  # composition-root namespace
+import marshal  # noqa: F401  # composition-root namespace
+import math  # noqa: F401  # composition-root namespace
+import mimetypes  # noqa: F401  # composition-root namespace
+import os  # noqa: F401  # composition-root namespace
+import posixpath  # noqa: F401  # composition-root namespace
+import re  # noqa: F401  # composition-root namespace
+import secrets  # noqa: F401  # composition-root namespace
+import shlex  # noqa: F401  # composition-root namespace
+import shutil  # noqa: F401  # composition-root namespace
+import signal  # noqa: F401  # composition-root namespace
+import stat  # noqa: F401  # composition-root namespace
+import subprocess  # noqa: F401  # composition-root namespace
+import sys  # noqa: F401  # composition-root namespace
+import tempfile  # noqa: F401  # composition-root namespace
+import threading  # noqa: F401  # composition-root namespace
+import time  # noqa: F401  # composition-root namespace
+import urllib.parse  # noqa: F401  # composition-root namespace
+import zipfile  # noqa: F401  # composition-root namespace
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, cast
+from typing import Any
 
-from . import __version__
-from .budget_control import BudgetDeadline, RetryPolicy
-from .envutils import ENV_PREFIX, truthy_env
-from .errors import JsonRpcError, ToolFailure
-from .execution_resources import ExecutionResourceGovernor
-from .landlock_exec import libc_syscall
-from .oauth import (
+from . import __version__  # noqa: F401  # composition-root namespace
+from .budget_control import BudgetDeadline, RetryPolicy  # noqa: F401  # composition-root namespace
+from .envutils import ENV_PREFIX, truthy_env  # noqa: F401  # composition-root namespace
+from .errors import JsonRpcError, ToolFailure  # noqa: F401  # composition-root namespace
+from .execution_resources import ExecutionResourceGovernor  # noqa: F401  # composition-root namespace
+from .landlock_exec import libc_syscall  # noqa: F401  # composition-root namespace
+from .oauth import (  # noqa: F401  # composition-root namespace
     OAUTH_CODE_TTL_SECONDS,
     OAUTH_MAX_BODY_BYTES,
     MAX_PENDING_CODES,
@@ -54,7 +52,7 @@ from .oauth import (
     validate_access_token,
     verify_pkce,
 )
-from .patching import (
+from .patching import (  # noqa: F401  # composition-root namespace
     AtomicPatchCommitter,
     FileBaseline,
     StagedFile,
@@ -62,7 +60,7 @@ from .patching import (
     parse_patch,
     read_text_preserve_newlines,
 )
-from .processes import (
+from .processes import (  # noqa: F401  # composition-root namespace
     HARD_KILL_SIGNAL,
     SESSION_BUFFER_BYTES,
     ExecSession,
@@ -71,7 +69,7 @@ from .processes import (
     start_session_watchdog,
     terminate_process_group,
 )
-from .protocol import (
+from .protocol import (  # noqa: F401  # composition-root namespace
     LEGACY_PROTOCOL_VERSIONS,
     PROTOCOL_VERSION,
     STATELESS_PROTOCOL_VERSION,
@@ -83,74 +81,69 @@ from .protocol import (
     response_id,
     validate_rpc_envelope,
 )
-from .project_context import ProjectContext, load_project_context
-from .build_verify import verify_build as run_build_verification
-from .artifact_refs import build_file_artifact_ref
-from .codex_bridge import CodexAppServerBridge, CodexBridgeError
-from .code_mode import CodeModeHostBindingProxy
-from .document_tools import create_docx, create_text_document, convert_document, extract_document
-from .opencode_provider import ALLOWED_OPENCODE_MODELS, OpenCodeProviderAdapter, OpenCodeProviderError
-from .provider_routing import recommendation_id, recommend_shadow_route
-from .semantic_localization import (
+from .project_context import ProjectContext, load_project_context  # noqa: F401  # composition-root namespace
+from .build_verify import verify_build as run_build_verification  # noqa: F401  # composition-root namespace
+from .artifact_refs import build_file_artifact_ref  # noqa: F401  # composition-root namespace
+from .codex_bridge import CodexAppServerBridge, CodexBridgeError  # noqa: F401  # composition-root namespace
+from .code_mode import CodeModeHostBindingProxy  # noqa: F401  # composition-root namespace
+from .document_tools import create_docx, create_text_document, convert_document, extract_document  # noqa: F401  # composition-root namespace
+from .opencode_provider import ALLOWED_OPENCODE_MODELS, OpenCodeProviderAdapter, OpenCodeProviderError  # noqa: F401  # composition-root namespace
+from .provider_routing import recommendation_id, recommend_shadow_route  # noqa: F401  # composition-root namespace
+from .semantic_localization import (  # noqa: F401  # composition-root namespace
     run_semantic_localization,
     semantic_localizer_from_env,
     semantic_provider_status,
 )
-from .task_state import TaskStateStore
-from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, utc_now
-from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class
-from .orchestration_ledger import OrchestrationLedger, fingerprint_paths
-from .orchestration_report import OrchestrationReport
-from .proof_ledger import ProofLedger
-from .telemetry import SessionTelemetry
-from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head
-from .tool_results import make_tool_result, model_visible_text_bytes
-from .tool_contract import (
+from .task_state import TaskStateStore  # noqa: F401  # composition-root namespace
+from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, utc_now  # noqa: F401  # composition-root namespace
+from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class  # noqa: F401  # composition-root namespace
+from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
+from .orchestration_report import OrchestrationReport  # noqa: F401  # composition-root namespace
+from .proof_ledger import ProofLedger  # noqa: F401  # composition-root namespace
+from .telemetry import SessionTelemetry  # noqa: F401  # composition-root namespace
+from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head  # noqa: F401  # composition-root namespace
+from .tool_results import make_tool_result, model_visible_text_bytes  # noqa: F401  # composition-root namespace
+from .tool_contract import (  # noqa: F401  # composition-root namespace
     AGENT_EXECUTION_ROUTES,
     SMART_COMPAT_TOOL_NAMES,
     SMART_TOOL_PROFILE,
     TOOL_CONTRACT_RUNTIME,
     TOOL_CONTRACT_SCHEMA_VERSION,
-    TOOL_METADATA_OWNERSHIP,
     TOOL_MODE_ALLOWLISTS,
     TOOL_REGISTRY,
-    TOOL_RISK_CLASSES,
     ToolSpec,
     tool_metadata_contract,
 )
-from .usage_events import usage_event_from_provider_delegation
-from .provider_traffic import ProviderTrafficGovernor
-from .transport_http import HTTPSessionManager
-from .transport_stdio import serve_stdio
-from .file_tools import FileToolsMixin
-from .exec_tools import ExecToolsMixin
-from .git_tools import GitToolsMixin
-from .session_control import SessionControlMixin
-from .document_tools import DocumentToolsMixin
-from .task_state import TaskStateToolsMixin
-from .git_utils import DIFF_CONTINUATION_OPERATION
-from .processes import EXEC_PREVIEW_BYTES, PRINCIPAL_MAX_RETAINED_OUTPUT_BYTES
-from .exec_tools import permission_failure_diagnostics
-from .processes import hidden_process_popen_kwargs
-from .mcp_http_handler import HUB_CLIENT_ID_RE, SERVER_NAME, SERVER_TITLE, HUB_CONTROLLER_LEASE_SECONDS, MCPHandler, MCP_ENDPOINT_PATH, RuntimeHTTPServer, is_loopback_bind_host, server_card_payload
-from .agent_candidate import AGENT_CANDIDATE_PACKET_MAX_CHARS, AGENT_CANDIDATE_SNIPPET_MAX_COUNT, AGENT_EXTERNAL_REVIEW_ENV, AGENT_REVIEW_DEADLINE_MS, AgentCandidateMixin
-from .context_tools import ContextToolsMixin
-from .workflow_tools import AgentWorkflowMixin
-from .coordination import CoordinationMixin
-from .context_tools import ContextToolsMixin
-from .workflow_tools import AgentWorkflowMixin
-from .coordination import CoordinationMixin
+from .usage_events import usage_event_from_provider_delegation  # noqa: F401  # composition-root namespace
+from .provider_traffic import ProviderTrafficGovernor  # noqa: F401  # composition-root namespace
+
+from .transport_stdio import serve_stdio  # noqa: F401  # composition-root namespace
+from .file_tools import FileToolsMixin  # noqa: F401  # composition-root namespace
+from .fs_utils import ResolvedPath  # noqa: F401  # composition-root namespace
+from .exec_tools import ExecToolsMixin  # noqa: F401  # composition-root namespace
+from .git_tools import GitToolsMixin  # noqa: F401  # composition-root namespace
+from .session_control import SessionControlMixin  # noqa: F401  # composition-root namespace
+from .document_tools import DocumentToolsMixin  # noqa: F401  # composition-root namespace
+from .task_state import TaskStateToolsMixin  # noqa: F401  # composition-root namespace
+
+
+from .exec_tools import permission_failure_diagnostics  # noqa: F401  # composition-root namespace
+from .processes import hidden_process_popen_kwargs  # noqa: F401  # composition-root namespace
+from .mcp_http_handler import HUB_CLIENT_ID_RE, SERVER_NAME, SERVER_TITLE, HUB_CONTROLLER_LEASE_SECONDS, MCPHandler, MCP_ENDPOINT_PATH, RuntimeHTTPServer, is_loopback_bind_host, server_card_payload  # noqa: F401  # compatibility re-export
+from .agent_candidate import AGENT_CANDIDATE_PACKET_MAX_CHARS, AGENT_CANDIDATE_SNIPPET_MAX_COUNT, AGENT_EXTERNAL_REVIEW_ENV, AGENT_REVIEW_DEADLINE_MS, AgentCandidateMixin  # noqa: F401  # compatibility re-export
+from .context_tools import ContextToolsMixin  # noqa: F401  # composition-root namespace
+from .workflow_tools import AgentWorkflowMixin  # noqa: F401  # composition-root namespace
+from .coordination import CoordinationMixin  # noqa: F401  # composition-root namespace
 
 # Re-exports from extracted modules (refactor: keep server.py namespace stable)
-from .command_parse import DESTRUCTIVE_RE, INLINE_SCRIPT_PERMISSION, NETWORK_RE, SHELL_EXPANSION_RE, command_executables, explicit_command_path_candidates, inline_script_command, is_literal_network_reference_command, shlex_split, strip_heredoc_payloads
-from .fs_utils import DEFAULT_EXCLUDED_NAMES, cached_which, entry_for_path, file_entry, find_literal, is_relative_to, matches_any_glob, normalize_rel_display, path_batches, search_match_item, sort_value, truncate_bytes, walk_files
-from .git_utils import parse_branch_line, parse_git_blame_porcelain, redact_for_trace, require_git, validate_git_ref
-from .image_utils import IMAGE_RESIZE_MAX_DIMENSION, identify_image, resize_image_bytes, should_resize_image
-from .landlock_exec import SPECIAL_DEVICE_PATHS, guard_allow_roots, landlock_exec_argv, landlock_status_payload, landlock_unavailable_warning, open_landlock_ruleset
-from .runtime_config import PERMISSION_MODE_CAPABILITIES, PERMISSION_MODE_CHOICES, RuntimePolicy, SHELL_ENV_INHERIT_CHOICES, ShellEnvPolicy, WINDOWS_CORE_ENV_NAMES, env_int, env_pattern_matches, fallback_runtime_dir_for_workspace, is_core_command_env_name, is_filtered_env_var, runtime_dir_for_workspace, runtime_policy_from_args
-from .tool_schema import DIFF_CONTINUATION_TOKEN_MAX_CHARS, EVALUATION_SCHEMA_VERSION, input_schemas, tool_annotations, tool_definition, validate_arguments
-from .transport_http import STATELESS_HTTP_2026_ENV, _decode_mcp_name_header, _first_form_value, _first_header_value, _forwarded_header_param, _http_base_for_bind_host, _request_mcp_name, _safe_external_host, stateless_http_2026_enabled
-
+from .command_parse import DESTRUCTIVE_RE, INLINE_SCRIPT_PERMISSION, NETWORK_RE, SHELL_EXPANSION_RE, command_executables, explicit_command_path_candidates, inline_script_command, is_literal_network_reference_command, shlex_split, strip_heredoc_payloads  # noqa: F401  # compatibility re-export
+from .fs_utils import DEFAULT_EXCLUDED_NAMES, cached_which, entry_for_path, file_entry, find_literal, is_relative_to, matches_any_glob, normalize_rel_display, path_batches, search_match_item, sort_value, truncate_bytes, walk_files  # noqa: F401  # compatibility re-export
+from .git_utils import parse_branch_line, parse_git_blame_porcelain, redact_for_trace, require_git, validate_git_ref  # noqa: F401  # compatibility re-export
+from .image_utils import IMAGE_RESIZE_MAX_DIMENSION, identify_image, resize_image_bytes, should_resize_image  # noqa: F401  # compatibility re-export
+from .landlock_exec import SPECIAL_DEVICE_PATHS, guard_allow_roots, landlock_exec_argv, landlock_status_payload, landlock_unavailable_warning, open_landlock_ruleset  # noqa: F401  # compatibility re-export
+from .runtime_config import PERMISSION_MODE_CAPABILITIES, PERMISSION_MODE_CHOICES, RuntimePolicy, SHELL_ENV_INHERIT_CHOICES, ShellEnvPolicy, WINDOWS_CORE_ENV_NAMES, env_int, env_pattern_matches, fallback_runtime_dir_for_workspace, is_core_command_env_name, is_filtered_env_var, runtime_dir_for_workspace, runtime_policy_from_args  # noqa: F401  # compatibility re-export
+from .tool_schema import DIFF_CONTINUATION_TOKEN_MAX_CHARS, EVALUATION_SCHEMA_VERSION, input_schemas, tool_annotations, tool_definition, validate_arguments  # noqa: F401  # compatibility re-export
+from .transport_http import STATELESS_HTTP_2026_ENV, _decode_mcp_name_header, _first_form_value, _first_header_value, _forwarded_header_param, _http_base_for_bind_host, _request_mcp_name, _safe_external_host, stateless_http_2026_enabled  # noqa: F401  # compatibility re-export
 
 
 
@@ -196,10 +189,7 @@ PROCESS_BACKGROUND_OPERATIONS_LOCK = threading.RLock()
 
 
 
-
 # Documented kill_session status enum; guarded by test_schema_drift.
-
-
 
 
 
@@ -287,18 +277,6 @@ _WORKSPACE_PREHEAT_STARTED: set[str] = set()
 
 
 
-
-
-
-
-
-
-
-@dataclass
-class ResolvedPath:
-    display: str
-    path: Path
-    existed: bool
 
 
 class Workspace:
@@ -2795,7 +2773,6 @@ class Runtime(
 
 
 
-
     def request_permissions(self, args: dict[str, Any]) -> dict[str, Any]:
         if self.dangerously_skip_all_permissions:
             return {
@@ -2875,10 +2852,6 @@ class Runtime(
             "warnings": warnings,
         }
         return payload
-
-
-
-
 
 
 

@@ -4,11 +4,12 @@ import fnmatch
 import os
 import shutil
 from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head
+from .textutils import TextTruncation, truncate_text_head
 
 
 DEFAULT_EXCLUDED_NAMES = {
@@ -193,3 +194,9 @@ def truncation_fields(truncation: TextTruncation) -> dict[str, Any]:
         "output_lines": truncation.output_lines,
         "output_bytes": truncation.output_bytes,
     }
+
+@dataclass
+class ResolvedPath:
+    display: str
+    path: Path
+    existed: bool

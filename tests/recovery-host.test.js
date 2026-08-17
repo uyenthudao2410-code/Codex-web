@@ -5,6 +5,7 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
+const { DEVICE_ID_PATTERN, loadOrCreateDeviceIdentity } = require('../electron/services/deviceIdentity');
 const { ComponentRevisionTracker } = require('../electron/services/componentRevision');
 const { RecoveryActionStore } = require('../electron/services/recoveryActionStore');
 const { RecoveryIpcClient, RecoveryIpcServer } = require('../electron/services/recoveryIpc');
@@ -58,6 +59,7 @@ function unauthorizedCall(descriptor) {
 
 test('RuntimePaths resolves backend state without importing Electron APIs', (t) => {
   const paths = fixture(t);
+  assert.equal(paths.deviceFile(), path.join(paths.dataRoot(), 'device.json'));
   assert.equal(paths.settingsFile(), path.join(paths.dataRoot(), 'settings.json'));
   assert.equal(path.basename(paths.appRoot()), 'app');
   assert.equal(paths.recoveryHostDescriptorFile(), path.join(paths.dataRoot(), 'recovery-host.json'));
@@ -65,13 +67,37 @@ test('RuntimePaths resolves backend state without importing Electron APIs', (t) 
   assert.equal(paths.tunnelExecutable(), path.join(paths.resourcesRoot(), 'tools', 'tunnel-client.exe'));
 });
 
+test('device identity is stable per install, unique across installs, and corruption fails closed', (t) => {
+  const firstPaths = fixture(t);
+  const secondPaths = fixture(t);
+  const first = loadOrCreateDeviceIdentity(firstPaths);
+  const repeated = loadOrCreateDeviceIdentity(firstPaths);
+  const second = loadOrCreateDeviceIdentity(secondPaths);
+
+  assert.match(first.device_id, DEVICE_ID_PATTERN);
+  assert.equal(repeated.device_id, first.device_id);
+  assert.notEqual(second.device_id, first.device_id);
+  assert.ok(first.display_name);
+
+  fs.writeFileSync(firstPaths.deviceFile(), '{not-json', 'utf8');
+  assert.throws(() => loadOrCreateDeviceIdentity(firstPaths), { code: 'DEVICE_IDENTITY_INVALID' });
+});
+
 test('Recovery IPC is loopback-only, authenticated, bounded, and allowlisted', async (t) => {
   const paths = fixture(t);
   let mutations = 0;
+  const deviceIdentity = {
+    version: 1,
+    device_id: '12345678-1234-4123-8123-123456789abc',
+    display_name: 'Recovery IPC test device',
+    created_at: '2026-08-17T00:00:00.000Z'
+  };
   const server = new RecoveryIpcServer({
     paths,
     instanceId: 'instance-one',
     startedAt: new Date().toISOString(),
+    deviceIdentity,
+    deviceInstanceId: 'device-instance-test-0001',
     log: { warn() {} },
     handlers: {
       'recovery.ping': async () => ({ ready: true }),
@@ -88,6 +114,8 @@ test('Recovery IPC is loopback-only, authenticated, bounded, and allowlisted', a
   await assert.rejects(client.call('shell.run', ['whoami']), { code: 'ACTION_NOT_ALLOWED' });
   assert.equal(descriptor.host, '127.0.0.1');
   assert.equal(descriptor.owner, 'recovery-host');
+  assert.equal(descriptor.device_id, deviceIdentity.device_id);
+  assert.equal(descriptor.device_instance_id, 'device-instance-test-0001');
 });
 
 test('Recovery Host lock rejects a second live owner and replaces a dead owner', (t) => {
@@ -141,8 +169,17 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   await host.superviseOnce();
   const client = new RecoveryIpcClient({ paths });
   const snapshot = await client.snapshot();
+  const persistedDevice = loadOrCreateDeviceIdentity(paths);
+  const descriptor = JSON.parse(fs.readFileSync(paths.recoveryHostDescriptorFile(), 'utf8'));
   assert.equal(snapshot.status.fullyReady, true);
   assert.equal(snapshot.recoveryHost.state, 'healthy');
+  assert.equal(snapshot.recoveryHost.device_id, persistedDevice.device_id);
+  assert.equal(snapshot.recoveryHost.device_instance_id, host.instanceId);
+  assert.equal(snapshot.device.scope, 'current_device_only');
+  assert.equal(snapshot.device.device_id, persistedDevice.device_id);
+  assert.equal(snapshot.device.device_instance_id, host.instanceId);
+  assert.equal(descriptor.device_id, persistedDevice.device_id);
+  assert.equal(descriptor.device_instance_id, host.instanceId);
   assert.equal(snapshot.recoveryHost.code_revision.state, 'current');
   assert.equal(snapshot.recoveryHost.code_revision.update_pending, false);
   assert.equal(calls.gatewayStart, 1);
@@ -267,6 +304,8 @@ test('Recovery Host replacement hands off ownership without stopping Coding MCP 
   }
   assert.equal(oldHost.activation.status('replacement-operation-0001').state, 'completed');
   assert.equal(replacementHost.running, true);
+  assert.equal(replacementHost.deviceIdentity.device_id, oldHost.deviceIdentity.device_id);
+  assert.notEqual(replacementHost.deviceInstanceId, oldHost.deviceInstanceId);
   assert.equal(calls.runtimeStop, 0);
   assert.equal(calls.oldExit, 1);
   assert.equal(calls.cancelFence, 1);

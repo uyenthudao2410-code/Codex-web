@@ -20,6 +20,7 @@ module.exports = {
   appRoot: () => current().appRoot(),
   resourcesRoot: () => current().resourcesRoot(),
   dataRoot: () => current().dataRoot(),
+  deviceFile: () => current().deviceFile(),
   settingsFile: () => current().settingsFile(),
   secretsFile: () => current().secretsFile(),
   stateFile: () => current().stateFile(),

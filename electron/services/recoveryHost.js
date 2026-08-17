@@ -6,6 +6,7 @@ const { HealthService } = require('./healthService');
 const { HubProxyGateway } = require('./hubProxyGateway');
 const { RecoveryIpcServer } = require('./recoveryIpc');
 const { ensureParent } = require('./jsonStore');
+const { loadOrCreateDeviceIdentity, normalizeDeviceIdentity } = require('./deviceIdentity');
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { RecoveryActivation } = require('./recoveryActivation');
 const { AcceptedCodeActivationController } = require('./recoveryActionStore');
@@ -75,7 +76,8 @@ class RecoveryHost {
   constructor({
     paths, settings, secrets, environment, log, orchestrator, healthService, gateway, ipcServerFactory,
     revisionTracker = null, actionStore = null, spawnRecoveryReplacement = null, spawnElectronUi = null,
-    exitProcess = null, replacement = null, autoActivationController = null, recoveryPlaneService = null
+    exitProcess = null, replacement = null, autoActivationController = null, recoveryPlaneService = null,
+    deviceIdentity = null
   }) {
     this.paths = paths;
     this.settings = settings;
@@ -83,6 +85,10 @@ class RecoveryHost {
     this.environment = environment;
     this.log = log;
     this.instanceId = crypto.randomBytes(16).toString('hex');
+    this.deviceInstanceId = this.instanceId;
+    this.deviceIdentity = deviceIdentity
+      ? normalizeDeviceIdentity(deviceIdentity)
+      : loadOrCreateDeviceIdentity(paths);
     this.startedAt = new Date().toISOString();
     this.lastProgress = null;
     this.lastPublishedStatus = null;
@@ -94,12 +100,14 @@ class RecoveryHost {
       secrets,
       environment,
       log,
+      deviceIdentity: this.deviceIdentity,
+      deviceInstanceId: this.deviceInstanceId,
       revisionTracker: this.revisions,
       emitProgress: (payload) => { this.lastProgress = payload; },
       emitStatus: (payload) => { this.lastPublishedStatus = payload; }
     });
     this.healthService = healthService || new HealthService({ settings, secrets, environment, orchestrator: this.orchestrator });
-    this.gateway = gateway || new HubProxyGateway({ paths, settings, secrets, log, owner: 'recovery-host' });
+    this.gateway = gateway || new HubProxyGateway({ paths, settings, secrets, log, owner: 'recovery-host', deviceIdentity: this.deviceIdentity, deviceInstanceId: this.deviceInstanceId });
     this.ipcServerFactory = ipcServerFactory || ((options) => new RecoveryIpcServer(options));
     this.ipcServer = null;
     this.supervisionTimer = null;
@@ -124,7 +132,12 @@ class RecoveryHost {
       beginRecoveryHandoff: (operationId) => this.scheduleRecoveryHandoff(operationId)
     });
     this.autoActivation = autoActivationController || new AcceptedCodeActivationController({ paths, settings, revisions: this.revisions, activation: this.activation, log });
-    this.recoveryPlane = recoveryPlaneService || new RecoveryPlaneService({ paths, log });
+    this.recoveryPlane = recoveryPlaneService || new RecoveryPlaneService({
+      paths,
+      log,
+      deviceIdentity: this.deviceIdentity,
+      deviceInstanceId: this.deviceInstanceId
+    });
   }
 
   hostStatus() {
@@ -144,6 +157,9 @@ class RecoveryHost {
       state: this.running ? 'healthy' : 'starting',
       pid: process.pid,
       instance_id: this.instanceId,
+      device_id: this.deviceIdentity.device_id,
+      device_instance_id: this.deviceInstanceId,
+      device_display_name: this.deviceIdentity.display_name,
       started_at: this.startedAt,
       watchdog_interval_ms: SUPERVISION_INTERVAL_MS,
       gateway: this.gateway?.server ? 'healthy' : 'stopped',
@@ -165,7 +181,13 @@ class RecoveryHost {
 
   decorate(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
-    return { ...value, recoveryHost: this.hostStatus() };
+    const recoveryHost = this.hostStatus();
+    let currentSettings = {};
+    try { currentSettings = this.settings.load() || {}; } catch {}
+    const device = value.device && typeof value.device === 'object' ? value.device : {};
+    const coding = device.coding && typeof device.coding === 'object' ? device.coding : { mcp_running: Boolean(value.mcpRunning ?? value.status?.runtimeRunning), native_alive: Boolean(value.nativeAlive ?? value.status?.runtimeRunning), tunnel_running: Boolean(value.tunnelRunning ?? value.status?.tunnelRunning), tunnel_id: String(currentSettings.tunnelId || '') || null, ownership: 'device_id' };
+    const plane = recoveryHost.recovery_plane || {};
+    return { ...value, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost };
   }
 
   handlers() {
@@ -230,7 +252,9 @@ class RecoveryHost {
         handlers: this.handlers(),
         log: this.log,
         instanceId: this.instanceId,
-        startedAt: this.startedAt
+        startedAt: this.startedAt,
+        deviceIdentity: this.deviceIdentity,
+        deviceInstanceId: this.deviceInstanceId
       });
       await this.ipcServer.start();
       this.running = true;

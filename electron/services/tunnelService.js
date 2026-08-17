@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 const defaultPaths = require('../paths');
@@ -6,11 +7,25 @@ const { rotateLog } = require('./logService');
 const { canConnect } = require('./environmentService');
 const { run } = require('./commandRunner');
 const { isAlive } = require('./nativeService');
+const { classifyStoredDeviceOwner } = require('./deviceIdentity');
+
+function tunnelFingerprint(settings, deviceId = '') {
+  return crypto.createHash('sha256').update(JSON.stringify({ device_id: String(deviceId || ''), tunnel_id: String(settings.tunnelId || ''), mcp_port: Number(settings.mcpPort), health_port: Number(settings.healthPort) })).digest('hex');
+}
 
 class TunnelService {
-  constructor(log, paths = defaultPaths) {
+  constructor(log, paths = defaultPaths, device = null) {
     this.log = log;
     this.paths = paths;
+    this.device = device;
+  }
+
+  assertOwnedLive(state) {
+    if (!this.device || !isAlive(state.tunnelPid)) return;
+    const ownership = classifyStoredDeviceOwner(state.tunnelDeviceId, this.device.deviceId);
+    if (ownership === 'owned') return;
+    const code = ownership === 'foreign' ? 'TUNNEL_PROCESS_FOREIGN_DEVICE' : 'TUNNEL_PROCESS_OWNER_UNVERIFIED';
+    throw Object.assign(new Error(ownership === 'foreign' ? 'Coding Tunnel process state belongs to another device; refusing to adopt or terminate it.' : 'Coding Tunnel process state predates device ownership metadata; refusing to adopt or terminate the live process.'), { code, ownerDeviceId: String(state.tunnelDeviceId || '') || null, expectedDeviceId: this.device.deviceId });
   }
 
   async start(settings, runtimeApiKey, token, progress) {
@@ -51,6 +66,10 @@ class TunnelService {
     updateJsonAtomic(this.paths.stateFile(), (state) => ({
       ...state,
       tunnelPid: child.pid,
+      tunnelId: settings.tunnelId,
+      tunnelFingerprint: tunnelFingerprint(settings, this.device?.deviceId || ''),
+      tunnelDeviceId: this.device?.deviceId || '',
+      tunnelDeviceInstanceId: this.device?.deviceInstanceId || '',
       tunnelStartedAt: new Date().toISOString()
     }));
     for (let index = 0; index < 30; index += 1) {
@@ -65,16 +84,24 @@ class TunnelService {
 
   async stop() {
     const state = readJson(this.paths.stateFile(), {});
-    if (!isAlive(state.tunnelPid)) return false;
+    const alive = isAlive(state.tunnelPid);
+    this.assertOwnedLive(state);
+    if (!alive) {
+      updateJsonAtomic(this.paths.stateFile(), (value) => ({ ...value, tunnelPid: null, tunnelId: '', tunnelFingerprint: '', tunnelDeviceId: '', tunnelDeviceInstanceId: '' }));
+      return false;
+    }
     await run('taskkill.exe', ['/PID', String(state.tunnelPid), '/T', '/F'], { allowFailure: true });
-    updateJsonAtomic(this.paths.stateFile(), (value) => ({ ...value, tunnelPid: null }));
+    updateJsonAtomic(this.paths.stateFile(), (value) => ({ ...value, tunnelPid: null, tunnelId: '', tunnelFingerprint: '', tunnelDeviceId: '', tunnelDeviceInstanceId: '' }));
     return true;
   }
 
   async status(settings) {
     const state = readJson(this.paths.stateFile(), {});
-    return isAlive(state.tunnelPid) && await canConnect('127.0.0.1', settings.healthPort, 400);
+    if (!isAlive(state.tunnelPid)) return false;
+    if (this.device && classifyStoredDeviceOwner(state.tunnelDeviceId, this.device.deviceId) !== 'owned') return false;
+    if (state.tunnelFingerprint !== tunnelFingerprint(settings, this.device?.deviceId || '')) return false;
+    return await canConnect('127.0.0.1', settings.healthPort, 400);
   }
 }
 
-module.exports = { TunnelService };
+module.exports = { TunnelService, tunnelFingerprint };

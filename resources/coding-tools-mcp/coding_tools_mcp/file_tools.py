@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-import stat
+import shutil
 import subprocess
 import threading
 from pathlib import Path
@@ -10,6 +10,7 @@ from typing import Any
 
 from .errors import ToolFailure
 from .fs_utils import (
+    ResolvedPath,
     DEFAULT_EXCLUDED_NAMES,
     cached_which,
     entry_for_path,

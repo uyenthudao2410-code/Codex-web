@@ -61,7 +61,8 @@ def public_snapshot(data_root: Path) -> dict[str, Any]:
     recovery_mcp_pid = plane.get("recoveryMcpPid")
     recovery_tunnel_pid = plane.get("recoveryTunnelPid")
     return {
-        "recovery_host": {"pid": host_pid if isinstance(host_pid, int) else None, "alive": process_alive(host_pid), "instance_id": str(host.get("instance_id") or "") or None},
+        "device": {"scope": "current_device_only", "device_id": str(host.get("device_id") or plane.get("device_id") or "") or None, "device_instance_id": str(host.get("device_instance_id") or plane.get("device_instance_id") or "") or None, "display_name": str(host.get("device_display_name") or "") or None},
+        "recovery_host": {"pid": host_pid if isinstance(host_pid, int) else None, "alive": process_alive(host_pid), "instance_id": str(host.get("instance_id") or "") or None, "device_id": str(host.get("device_id") or "") or None, "device_instance_id": str(host.get("device_instance_id") or "") or None},
         "primary_runtime": {
             "coding_mcp_pid": native_pid if isinstance(native_pid, int) else None,
             "coding_mcp_alive": process_alive(native_pid),
@@ -84,12 +85,16 @@ def public_snapshot(data_root: Path) -> dict[str, Any]:
     }
 
 
-def recovery_host_call(data_root: Path, action: str) -> dict[str, Any]:
+def recovery_host_call(data_root: Path, action: str, expected_device_id: str = "", expected_device_instance_id: str = "") -> dict[str, Any]:
     if action != "health.repair":
         raise RuntimeError("Recovery MCP only permits the fixed health.repair action.")
     descriptor = read_json(data_root / "recovery-host.json", 16 * 1024)
     if descriptor.get("version") != 1 or descriptor.get("host") != "127.0.0.1" or descriptor.get("owner") != "recovery-host" or not process_alive(descriptor.get("owner_pid")):
         raise RuntimeError("Recovery Host descriptor identity is unavailable.")
+    if expected_device_id and str(descriptor.get("device_id") or "") != expected_device_id:
+        raise RuntimeError("Recovery Host descriptor belongs to another device.")
+    if expected_device_instance_id and str(descriptor.get("device_instance_id") or "") != expected_device_instance_id:
+        raise RuntimeError("Recovery Host descriptor belongs to another device lifecycle.")
     try:
         port = int(descriptor.get("port"))
     except (TypeError, ValueError) as exc:
@@ -143,10 +148,13 @@ class RecoveryMcpServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, address: tuple[str, int], token: str, data_root: Path):
+    def __init__(self, address: tuple[str, int], token: str, data_root: Path, device_id: str = "", device_instance_id: str = "", device_display_name: str = ""):
         super().__init__(address, RecoveryMcpHandler)
         self.auth_token = token
         self.data_root = data_root
+        self.device_id = device_id
+        self.device_instance_id = device_instance_id
+        self.device_display_name = device_display_name
         self.session_id = secrets.token_urlsafe(24)
 
 
@@ -177,7 +185,7 @@ class RecoveryMcpHandler(BaseHTTPRequestHandler):
         if self.path != "/healthz":
             self._send_json(404, {"error": "not_found"})
             return
-        self._send_json(200, {"ok": True, "service": "recovery-mcp", "mode": RECOVERY_PLANE_MODE, "pid": os.getpid()})
+        self._send_json(200, {"ok": True, "service": "recovery-mcp", "mode": RECOVERY_PLANE_MODE, "pid": os.getpid(), "device_id": self.server.device_id or None, "device_instance_id": self.server.device_instance_id or None, "device_display_name": self.server.device_display_name or None})
 
     def do_DELETE(self) -> None:  # noqa: N802
         if self.path != "/mcp":
@@ -244,7 +252,7 @@ class RecoveryMcpHandler(BaseHTTPRequestHandler):
                 elif name == "repair_primary_runtime":
                     if arguments.get("confirm") is not True:
                         raise ValueError("repair_primary_runtime requires confirm=true")
-                    result = tool_result(recovery_host_call(self.server.data_root, "health.repair"))
+                    result = tool_result(recovery_host_call(self.server.data_root, "health.repair", self.server.device_id, self.server.device_instance_id))
                 else:
                     raise KeyError("Unknown Recovery MCP tool")
             else:
@@ -275,7 +283,7 @@ def main() -> int:
         raise SystemExit("WEBCODEX_RECOVERY_AUTH_TOKEN is required.")
     data_root = Path(args.data_root).resolve()
     data_root.mkdir(parents=True, exist_ok=True)
-    server = RecoveryMcpServer((args.host, args.port), token, data_root)
+    server = RecoveryMcpServer((args.host, args.port), token, data_root, os.environ.get("WEBCODEX_RECOVERY_DEVICE_ID", "").strip(), os.environ.get("WEBCODEX_RECOVERY_DEVICE_INSTANCE_ID", "").strip(), os.environ.get("WEBCODEX_RECOVERY_DEVICE_DISPLAY_NAME", "").strip()[:120])
     try:
         server.serve_forever(poll_interval=0.5)
     finally:

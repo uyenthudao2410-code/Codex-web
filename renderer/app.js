@@ -16,7 +16,8 @@ function createPreviewApi() {
       workspace: { configured: true, exists: true }, ports: { mcpListening: true, tunnelListening: true }
     },
     status: { busy: false, runtimeRunning: true, tunnelRunning: true, fullyReady: true, localMcpUrl: 'http://127.0.0.1:18766/mcp', tunnelUiUrl: 'http://127.0.0.1:18082/ui' },
-    recoveryHost: { recovery_plane: { tunnel: { state: 'not_configured', configured: false, pid: null } } }
+    device: { scope: 'current_device_only', registry: 'local', device_id: '12345678-1234-4123-8123-123456789abc', device_instance_id: 'preview-device-instance-0001', display_name: 'Máy bàn', online: true, workspace: previewSettings.workspace, coding: { mcp_running: true, native_alive: true, tunnel_running: true, tunnel_id: 'tunnel_demo', ownership: 'device_id' }, recovery: { host_running: true, mcp_running: true, tunnel_running: false, tunnel_state: 'not_configured', tunnel_id: null }, git: { available: true, branch: 'main', head: 'cf6cb6ddbf29d90515d003ce72490ffda985c37f', head_short: 'cf6cb6dd', dirty: true } },
+    recoveryHost: { device_id: '12345678-1234-4123-8123-123456789abc', device_instance_id: 'preview-device-instance-0001', device_display_name: 'Máy bàn', recovery_plane: { tunnel: { state: 'not_configured', configured: false, pid: null } } }
   };
   const ok = (data) => Promise.resolve({ ok: true, data });
   return {
@@ -33,6 +34,7 @@ function createPreviewApi() {
 
 const pageMeta = {
   overview: ['EXECUTION CONTROL', 'Command Center', 'Runtime, clients, routing, authority and proof in one operational view.'],
+  device: ['DEVICE CONTROL', 'Thiết bị hiện tại', 'Định danh thiết bị, ownership, Coding/Recovery, Tunnel và Git của máy đang chạy Recovery Host.'],
   routing: ['EXECUTION FABRIC', 'Live Routing', 'Theo dõi frontend, provider/model delegation, controller, writer và continuity theo evidence thật.'],
   traffic: ['TRAFFIC & USAGE', 'Traffic & Usage', 'Theo dõi admission, capacity, usage provenance và cooldown từ Execution Hub read model hiện có.'],
   deploy: ['CONNECTIONS', 'Connections', 'Quản lý Runtime API Key, OpenAI Tunnel và tuyến mạng.'],
@@ -79,7 +81,7 @@ function toast(title, message = '', type = 'success') {
 function setBusy(value, overlay = false) {
   state.busy = value;
   $('#busyOverlay').classList.toggle('visible', value && overlay);
-  ['#topStartButton', '#heroStartButton', '#deployNow', '#overviewRestart', '#overviewStop'].forEach((selector) => {
+  ['#topStartButton', '#heroStartButton', '#deployNow', '#overviewRestart', '#overviewStop', '#deviceStart', '#deviceRestart', '#deviceStop', '#deviceRepair'].forEach((selector) => {
     const element = $(selector);
     if (element) element.disabled = value;
   });
@@ -117,6 +119,34 @@ function renderRecoveryTunnelSettings(source) {
   }
   const detail = $('#recoveryTunnelSettingsStatus');
   if (detail) detail.textContent = presentation.detail;
+}
+
+function renderDevice(source) {
+  const device = source?.device || {};
+  const settings = source?.settings || state.snapshot?.settings || {};
+  const recoveryHost = source?.recoveryHost || {};
+  const displayName = String(device.display_name || recoveryHost.device_display_name || 'Thiết bị hiện tại');
+  const deviceId = String(device.device_id || recoveryHost.device_id || '');
+  const instanceId = String(device.device_instance_id || recoveryHost.device_instance_id || '');
+  const online = device.online !== false && Boolean(deviceId);
+  const git = device.git || {};
+  const gitLabel = git.available ? `${git.branch || 'detached'} @ ${git.head_short || 'no-head'}${git.dirty ? ' · dirty' : ' · clean'}` : 'Không phải Git repo / chưa có dữ liệu';
+  const coding = device.coding || {};
+  const recovery = device.recovery || {};
+  const top = $('#topDeviceButton');
+  if (top) { top.classList.remove('ready', 'warn'); top.classList.add(online ? (coding.mcp_running ? 'ready' : 'warn') : 'warn'); top.title = deviceId ? `Current device: ${deviceId}` : 'Device identity unavailable'; }
+  if ($('#topDeviceName')) $('#topDeviceName').textContent = displayName;
+  if ($('#topDeviceMeta')) $('#topDeviceMeta').textContent = `${device.registry || 'local'} · ${deviceId ? deviceId.slice(0, 8) : 'unknown'} · ${git.available ? `${git.branch || 'detached'} @ ${git.head_short || 'no-head'}` : 'Git n/a'}`;
+  if ($('#deviceDisplayName')) $('#deviceDisplayName').textContent = displayName;
+  if ($('#deviceOnline')) { $('#deviceOnline').textContent = online ? 'Online' : 'Unknown'; $('#deviceOnline').classList.toggle('neutral', !online); }
+  if ($('#deviceId')) { $('#deviceId').textContent = deviceId || '—'; $('#deviceId').title = deviceId; }
+  if ($('#deviceInstanceId')) { $('#deviceInstanceId').textContent = instanceId || '—'; $('#deviceInstanceId').title = instanceId; }
+  if ($('#deviceWorkspace')) { $('#deviceWorkspace').textContent = device.workspace || settings.workspace || '—'; $('#deviceWorkspace').title = device.workspace || settings.workspace || ''; }
+  if ($('#deviceGitState')) $('#deviceGitState').textContent = gitLabel;
+  if ($('#deviceCodingState')) $('#deviceCodingState').textContent = coding.mcp_running && coding.tunnel_running ? 'Coding ready' : coding.mcp_running ? 'MCP ready · Tunnel down' : 'Coding stopped';
+  if ($('#deviceRecoveryState')) $('#deviceRecoveryState').textContent = recovery.mcp_running && recovery.tunnel_running ? 'Recovery ready' : recovery.mcp_running ? `Recovery MCP ready · ${recovery.tunnel_state || 'Tunnel down'}` : 'Recovery unavailable';
+  if ($('#deviceCodingTunnelId')) $('#deviceCodingTunnelId').textContent = `Tunnel: ${coding.tunnel_id || settings.tunnelId || 'chưa cấu hình'}`;
+  if ($('#deviceRecoveryTunnelId')) $('#deviceRecoveryTunnelId').textContent = `Tunnel: ${recovery.tunnel_id || settings.recoveryTunnelId || 'chưa cấu hình'}`;
 }
 
 function navigate(page) {
@@ -282,6 +312,7 @@ function renderSnapshot(snapshot, options = {}) {
   state.selectedWorkspace = settings.workspace;
   const ready = status.fullyReady;
   renderRecoveryTunnelSettings(snapshot);
+  renderDevice(snapshot);
 
   $('#sideRuntimeText').textContent = ready ? 'Dịch vụ sẵn sàng' : status.runtimeRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
   setDot($('#sideRuntimeDot'), ready ? 'ready' : status.runtimeRunning ? 'warn' : 'error');
@@ -638,7 +669,9 @@ function applyHeartbeat(status) {
   state.snapshot.status.tunnelRunning = Boolean(status.tunnelRunning);
   state.snapshot.status.fullyReady = Boolean(status.fullyReady);
   if (status.recoveryHost) state.snapshot.recoveryHost = status.recoveryHost;
+  if (status.device) state.snapshot.device = status.device;
   renderRecoveryTunnelSettings(state.snapshot);
+  renderDevice(state.snapshot);
   const ready = state.snapshot.status.fullyReady;
   $('#sideMcp').textContent = status.mcpRunning ? 'ON' : 'OFF';
   $('#sideTunnel').textContent = status.tunnelRunning ? 'ON' : 'OFF';
@@ -696,6 +729,11 @@ function bindEvents() {
   }));
 
   $('#refreshButton').addEventListener('click', () => refreshSnapshot());
+  $('#deviceRefresh')?.addEventListener('click', () => refreshSnapshot());
+  $('#deviceStart')?.addEventListener('click', () => runRuntime('start'));
+  $('#deviceRestart')?.addEventListener('click', () => runRuntime('restart'));
+  $('#deviceStop')?.addEventListener('click', () => runRuntime('stop'));
+  $('#deviceRepair')?.addEventListener('click', async () => { await repairHealth(); await refreshSnapshot(); });
   $('#topStartButton').addEventListener('click', () => runRuntime(state.snapshot?.status.fullyReady ? 'restart' : 'start'));
   $('#heroStartButton').addEventListener('click', () => state.snapshot?.status.fullyReady ? runRuntime('restart') : navigate('deploy'));
   $('#overviewRestart').addEventListener('click', () => runRuntime('restart'));

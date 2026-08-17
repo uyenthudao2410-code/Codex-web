@@ -15,6 +15,7 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/commandRunner.js',
       'electron/services/componentRevision.js',
       'electron/services/config.js',
+      'electron/services/deviceIdentity.js',
       'electron/services/environmentService.js',
       'electron/services/healthService.js',
       'electron/services/hubProxyGateway.js',

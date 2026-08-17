@@ -24,6 +24,7 @@
         <button class="nav-item" data-page="routing"><span class="nav-icon">RT</span><span>Live Routing</span></button>
         <button class="nav-item" data-page="traffic"><span class="nav-icon">TU</span><span>Traffic & Usage</span></button>
         <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tasks & Proof</span></button>
+        <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Thiết bị</span></button>
         <button class="nav-item" data-page="deploy"><span class="nav-icon">CN</span><span>Connections</span></button>
         <button class="nav-item" data-page="workspace"><span class="nav-icon">WS</span><span>Workspace</span></button>
         <button class="nav-item" data-page="system"><span class="nav-icon">SY</span><span>System</span></button>
@@ -45,6 +46,7 @@
       <header class="topbar">
         <div><p class="eyebrow" id="pageEyebrow">TRUNG TÂM ĐIỀU HÀNH</p><h1 id="pageTitle">Tổng quan Vận hành</h1><p id="pageSubtitle">Xem tập trung MCP cục bộ, OpenAI Tunnel và môi trường triển khai.</p></div>
         <div class="top-actions">
+          <button class="device-summary-button" id="topDeviceButton" data-nav="device" title="Mở quản lý thiết bị hiện tại"><i></i><span><b id="topDeviceName">Thiết bị hiện tại</b><small id="topDeviceMeta">Local · đang kiểm tra</small></span></button>
           <button class="icon-button" id="themeToggle" title="Chuyển chủ đề">◐</button>
           <button class="secondary-button" id="refreshButton">Kiểm tra lại</button>
           <button class="primary-button" id="topStartButton">Khởi động nhanh</button>
@@ -322,6 +324,12 @@
             <article class="cc-card"><div class="cc-card-head"><div><h3>Capacity & routing policy</h3><p>Cooldown and automatic-routing state from the same runtime read model used by routing.</p></div></div><div id="trafficCapacity" class="cc-card-body cc-list"><div class="cc-empty">No capacity evidence.</div></div></article>
             <article class="cc-card"><div class="cc-card-head"><div><h3>Evidence planes</h3><p>Provider token truth and MCP model-visible bytes remain separate measurement planes.</p></div></div><div id="trafficEvidence" class="cc-card-body cc-list"><div class="cc-empty">No usage evidence.</div></div></article>
           </div>
+        </section>
+
+        <section class="page" data-page-view="device">
+          <div class="section-header"><div><span class="section-kicker">DEVICE CONTROL</span><h2>Thiết bị hiện tại</h2><p>Định danh thiết bị, runtime, Tunnel và Git của máy đang chạy Recovery Host này. Phạm vi hiện tại là local-only; M2 Device Registry sẽ bổ sung danh sách nhiều máy sau.</p></div><div class="inline-actions"><span id="deviceScopeBadge" class="security-chip">Local only</span><button class="secondary-button" id="deviceRefresh">Làm mới</button></div></div>
+          <div class="device-overview-grid"><article class="panel device-identity-card"><div class="panel-title"><div><span class="section-kicker">IDENTITY</span><h3 id="deviceDisplayName">Thiết bị hiện tại</h3><p>device_id bền vững theo cài đặt; device_instance_id đổi theo lifecycle Recovery Host.</p></div><span id="deviceOnline" class="soft-badge neutral">Đang kiểm tra</span></div><div class="device-kv-grid"><div><span>Device ID</span><code id="deviceId">—</code></div><div><span>Device instance</span><code id="deviceInstanceId">—</code></div><div><span>Workspace</span><code id="deviceWorkspace">—</code></div><div><span>Git</span><code id="deviceGitState">Không có dữ liệu</code></div></div></article><article class="panel"><div class="panel-title"><div><span class="section-kicker">OWNERSHIP</span><h3>Runtime trên thiết bị này</h3><p>Process/tunnel chỉ được điều khiển khi persistent device_id khớp.</p></div></div><div class="device-service-grid"><div class="device-service-card"><span>Coding</span><b id="deviceCodingState">Đang kiểm tra</b><small id="deviceCodingTunnelId">Tunnel: —</small></div><div class="device-service-card"><span>Recovery</span><b id="deviceRecoveryState">Đang kiểm tra</b><small id="deviceRecoveryTunnelId">Tunnel: —</small></div></div><div class="notice warning"><b>Ranh giới hiện tại</b><p>Trang này chỉ kiểm soát thiết bị đang chạy ứng dụng. Không tự suy đoán hay gửi thao tác tới máy khác cho đến khi M2 shared Device Registry/session pinning tồn tại.</p></div></article></div>
+          <article class="panel device-actions-panel"><div><span class="section-kicker">CURRENT DEVICE ACTIONS</span><h3>Điều khiển an toàn</h3><p>Dùng đúng các workflow Recovery Host đã có; không tạo destructive action xuyên thiết bị.</p></div><div class="device-actions"><button class="secondary-button" id="deviceStart">Khởi động</button><button class="secondary-button" id="deviceRestart">Khởi động lại</button><button class="danger-button" id="deviceStop">Dừng</button><button class="primary-button" id="deviceRepair">Kiểm tra & sửa chữa</button></div></article>
         </section>
 
         <section class="page" data-page-view="system">

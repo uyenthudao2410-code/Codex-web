@@ -14,6 +14,8 @@ test('0.3.3 keeps the top chrome height unchanged and exposes quick authorized-r
   assert.match(main, /toolbarHeight:\s*112/);
   assert.match(browserCss, /\.workspace-health-popover\{position:absolute/);
   assert.match(browserHtml, /id="workspaceHealthPopover"/);
+  assert.match(browserHtml, /id="deviceState"/);
+  assert.match(browserHtml, /id="gitState"/);
   assert.match(browserHtml, /id="addAuthorizedRootQuick"/);
   assert.match(browserHtml, /id="addWorkspace"/);
 });

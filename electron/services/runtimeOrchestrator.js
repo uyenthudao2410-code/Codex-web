@@ -10,6 +10,8 @@ const { resolveProxy } = require('./proxyService');
 const defaultPaths = require('../paths');
 const { readJson, updateJsonAtomic } = require('./jsonStore');
 const { ComponentRevisionTracker } = require('./componentRevision');
+const { run } = require('./commandRunner');
+const { runtimeDeviceIdentity } = require('./deviceIdentity');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -26,7 +28,7 @@ function assertActivationDeadline(expiresAtUnixMs, boundary, processMutated = fa
 const MAX_DEFERRED_RECOVERIES = 6;
 const MAX_SUPERVISOR_REQUEST_AGE_MS = 60_000;
 
-function readMcpHealth(port, token, expectedWorkspace = '') {
+function readMcpHealth(port, token, expectedWorkspace = '', expectedDeviceId = '') {
   return new Promise((resolve) => {
     const request = http.request({
       host: '127.0.0.1',
@@ -45,7 +47,8 @@ function readMcpHealth(port, token, expectedWorkspace = '') {
           const payload = JSON.parse(body);
           const workspaceMatches = !expectedWorkspace
             || workspaceKey(payload.workspace) === workspaceKey(expectedWorkspace);
-          resolve(payload.ready === true && workspaceMatches ? payload : null);
+          const deviceMatches = !expectedDeviceId || String(payload.device_id || '').toLowerCase() === String(expectedDeviceId).toLowerCase();
+          resolve(payload.ready === true && workspaceMatches && deviceMatches ? payload : null);
         } catch {
           resolve(null);
         }
@@ -57,8 +60,22 @@ function readMcpHealth(port, token, expectedWorkspace = '') {
   });
 }
 
-async function probeMcp(port, token, expectedWorkspace = '') {
-  return Boolean(await readMcpHealth(port, token, expectedWorkspace));
+async function probeMcp(port, token, expectedWorkspace = '', expectedDeviceId = '') {
+  return Boolean(await readMcpHealth(port, token, expectedWorkspace, expectedDeviceId));
+}
+
+function parseGitStatusPorcelainV2(value) {
+  const lines = String(value || '').split(/\r?\n/).filter(Boolean);
+  let branch = null;
+  let head = null;
+  let repo = false;
+  let dirty = false;
+  for (const line of lines) {
+    if (line.startsWith('# branch.head ')) { repo = true; const raw = line.slice('# branch.head '.length).trim(); branch = raw && raw !== '(detached)' ? raw : 'detached'; }
+    else if (line.startsWith('# branch.oid ')) { repo = true; const raw = line.slice('# branch.oid '.length).trim(); if (/^[0-9a-f]{40,64}$/i.test(raw)) head = raw.toLowerCase(); }
+    else if (!line.startsWith('#')) dirty = true;
+  }
+  return { available: repo, branch, head, head_short: head ? head.slice(0, 8) : null, dirty: repo ? dirty : null };
 }
 
 function readMcpActivationPreflight(port, token) {
@@ -197,7 +214,7 @@ function controlMcpActivation(port, token, payload) {
 }
 
 class RuntimeOrchestrator {
-  constructor({ settings, secrets, environment, log, emitProgress, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null }) {
+  constructor({ settings, secrets, environment, log, emitProgress, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null, deviceIdentity = null, deviceInstanceId = '' }) {
     this.settingsStore = settings;
     this.secrets = secrets;
     this.environment = environment;
@@ -206,8 +223,12 @@ class RuntimeOrchestrator {
     this.emitStatus = emitStatus;
     this.paths = paths;
     this.revisions = revisionTracker || new ComponentRevisionTracker({ paths });
-    this.native = new NativeService(log, paths, this.revisions);
-    this.tunnel = new TunnelService(log, paths);
+    this.device = (deviceIdentity || deviceInstanceId) ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId) : null;
+    this.native = new NativeService(log, paths, this.revisions, this.device);
+    this.tunnel = new TunnelService(log, paths, this.device);
+    this.gitStatusCache = null;
+    this.gitStatusCacheAt = 0;
+    this.gitStatusWorkspace = '';
     this.busy = false;
     this.snapshotCache = null;
     this.snapshotCacheAt = 0;
@@ -251,6 +272,27 @@ class RuntimeOrchestrator {
       lastStartFailure: this.lastStartFailure,
       deferredRecoveryCount: this.deferredRecoveryCount
     };
+  }
+
+  async gitStatus(workspace) {
+    const target = String(workspace || '').trim();
+    if (!target) return { available: false, branch: null, head: null, head_short: null, dirty: null };
+    if (this.gitStatusCache && this.gitStatusWorkspace === target && Date.now() - this.gitStatusCacheAt < 10_000) return this.gitStatusCache;
+    let status = { available: false, branch: null, head: null, head_short: null, dirty: null };
+    try {
+      const git = process.platform === 'win32' ? 'git.exe' : 'git';
+      const result = await run(git, ['-C', target, 'status', '--porcelain=v2', '--branch', '--untracked-files=normal'], { allowFailure: true, timeoutMs: 2000 });
+      if (result.code === 0) status = parseGitStatusPorcelainV2(result.stdout);
+    } catch {}
+    this.gitStatusCache = status;
+    this.gitStatusCacheAt = Date.now();
+    this.gitStatusWorkspace = target;
+    return status;
+  }
+
+  deviceProjection(settings, { mcpHealth = null, nativeAlive = false, tunnelRunning = false, git = null } = {}) {
+    if (!this.device) return null;
+    return { scope: 'current_device_only', registry: 'local', device_id: this.device.deviceId, device_instance_id: this.device.deviceInstanceId, display_name: this.device.displayName, online: true, workspace: String(settings?.workspace || ''), coding: { mcp_running: Boolean(mcpHealth), native_alive: Boolean(nativeAlive), tunnel_running: Boolean(tunnelRunning), tunnel_id: String(settings?.tunnelId || '') || null, endpoint_device_instance_id: String(mcpHealth?.device_instance_id || '') || null, ownership: 'device_id' }, git: git || { available: false, branch: null, head: null, head_short: null, dirty: null } };
   }
 
   codingMcpRevisionStatus() {
@@ -306,7 +348,7 @@ class RuntimeOrchestrator {
   async currentMcpHealth() {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
-    return token ? readMcpHealth(settings.mcpPort, token, settings.workspace) : null;
+    return token ? readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '') : null;
   }
 
   async cancelCodeActivation(operationId) {
@@ -437,7 +479,7 @@ class RuntimeOrchestrator {
   async acknowledgeConnectorContract() {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
-    const health = token ? await readMcpHealth(settings.mcpPort, token, settings.workspace) : null;
+    const health = token ? await readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '') : null;
     if (!health?.tool_contract) throw new Error('Coding Tools MCP chưa chạy hoặc chưa cung cấp tool contract fingerprint.');
     this.acknowledgeConnectorContractHash(health.tool_contract);
     this.invalidateSnapshot();
@@ -565,7 +607,7 @@ class RuntimeOrchestrator {
       this.progress('mcp-health', 64, 'Đang xác minh Coding Tools MCP');
       let ready = false;
       for (let index = 0; index < 35; index += 1) {
-        if (await probeMcp(settings.mcpPort, token, settings.workspace)) { ready = true; break; }
+        if (await probeMcp(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '')) { ready = true; break; }
         if (!(await this.native.status(settings))) {
           throw new Error('Tiến trình Coding Tools MCP đã thoát sớm. Vui lòng xem mcp.log trong nhật ký vận hành để biết lỗi khởi động chi tiết.');
         }
@@ -663,7 +705,7 @@ class RuntimeOrchestrator {
       const next = this.settingsStore.save({ workspace, recentWorkspaces });
       await this.native.markWorkspace(next);
       this.progress('workspace-health', 80, 'Đang xác minh thư mục làm việc mới');
-      const ready = await probeMcp(next.mcpPort, token, workspace);
+      const ready = await probeMcp(next.mcpPort, token, workspace, this.device?.deviceId || '');
       if (!ready) throw new Error('Thư mục làm việc mới không khớp với thư mục thực tế của MCP.');
       this.progress('workspace-complete', 100, 'Đã chuyển thư mục làm việc, cả MCP và Tunnel đều không cần khởi động lại');
       this.invalidateSnapshot();
@@ -711,17 +753,20 @@ class RuntimeOrchestrator {
   async lightweightSnapshot() {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
-    const [mcpRunning, nativeAlive, tunnelRunning] = await Promise.all([
-      token ? probeMcp(settings.mcpPort, token, settings.workspace) : Promise.resolve(false),
+    const [mcpHealth, nativeAlive, tunnelRunning, git] = await Promise.all([
+      token ? readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '') : Promise.resolve(null),
       this.native.status().catch(() => false),
-      this.tunnel.status(settings).catch(() => false)
+      this.tunnel.status(settings).catch(() => false),
+      this.gitStatus(settings.workspace)
     ]);
+    const mcpRunning = Boolean(mcpHealth);
     return {
       workspace: settings.workspace,
       mcpRunning,
       nativeAlive,
       tunnelRunning,
       fullyReady: mcpRunning && tunnelRunning,
+      device: this.deviceProjection(settings, { mcpHealth, nativeAlive, tunnelRunning, git }),
       codeRevision: { codingMcp: this.codingMcpRevisionStatus() },
       ...this.recoveryStatus()
     };
@@ -851,16 +896,19 @@ class RuntimeOrchestrator {
     const settings = this.settingsStore.load();
     const environment = await this.environment.inspect(settings);
     const token = this.secrets.get('mcpAuthToken');
-    const health = token
-      ? await readMcpHealth(settings.mcpPort, token, settings.workspace)
-      : null;
+    const [health, tunnelRunning, git] = await Promise.all([
+      token ? readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '') : Promise.resolve(null),
+      this.tunnel.status(settings).catch(() => false),
+      this.gitStatus(settings.workspace)
+    ]);
     const runtimeRunning = Boolean(health);
     const connectorContract = this.connectorContractStatus(health?.tool_contract || null);
-    const tunnelRunning = await this.tunnel.status(settings).catch(() => false);
+    const nativeAlive = await this.native.status().catch(() => false);
     return this.publishSnapshot({
       settings,
       secrets: this.secrets.status(),
       environment,
+      device: this.deviceProjection(settings, { mcpHealth: health, nativeAlive, tunnelRunning, git }),
       status: {
         busy: this.busy,
         runtimeRunning,
@@ -883,4 +931,4 @@ class RuntimeOrchestrator {
   }
 }
 
-module.exports = { RuntimeOrchestrator, probeMcp, readMcpHealth, setMcpAuthorizedRoots };
+module.exports = { RuntimeOrchestrator, probeMcp, readMcpHealth, parseGitStatusPorcelainV2, setMcpAuthorizedRoots };

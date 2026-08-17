@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const http = require('node:http');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
+const { runtimeDeviceIdentity } = require('./deviceIdentity');
 
 const MAX_DESCRIPTOR_BYTES = 16 * 1024;
 const MAX_REQUEST_BYTES = 64 * 1024;
@@ -68,12 +69,15 @@ function isProcessAlive(pid) {
 }
 
 class RecoveryIpcServer {
-  constructor({ paths, handlers, log, instanceId, startedAt }) {
+  constructor({ paths, handlers, log, instanceId, startedAt, deviceIdentity = null, deviceInstanceId = '' }) {
     this.paths = paths;
     this.handlers = handlers;
     this.log = log;
     this.instanceId = instanceId;
     this.startedAt = startedAt;
+    this.device = (deviceIdentity || deviceInstanceId)
+      ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId)
+      : null;
     this.server = null;
     this.port = 0;
     this.token = '';
@@ -88,6 +92,11 @@ class RecoveryIpcServer {
       owner: 'recovery-host',
       owner_pid: process.pid,
       instance_id: this.instanceId,
+      ...(this.device ? {
+        device_id: this.device.deviceId,
+        device_instance_id: this.device.deviceInstanceId,
+        device_display_name: this.device.displayName
+      } : {}),
       started_at: this.startedAt
     };
   }
