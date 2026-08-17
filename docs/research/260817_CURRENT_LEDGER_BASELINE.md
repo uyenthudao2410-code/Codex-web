@@ -985,3 +985,229 @@ No P1 closure evidence authorizes an implicit runtime restart, release publicati
 ---
 
 **End of current P1 closure baseline.**
+
+---
+
+# 19. Pre-P3 P0/P1/P2 readiness addendum — 2026-08-18
+
+**Fresh canonical capture:** `2026-08-17T19:29:22.080878Z` (~02:29 ICT, 2026-08-18)
+
+**Update policy:** append-only. Sections 1–18 remain historical snapshots. For decisions immediately before P3, this section is the current baseline and supersedes older statements that still show zero synthetic enrollment or P2 as not started.
+
+## 19.1 P0 intermittent TaskGroup boundary remediation
+
+A real source boundary was closed after the intermittent `ExceptionGroup: unhandled errors in a TaskGroup` symptom reappeared on orchestration paths while `workspace_context` could remain healthy.
+
+```text
+source HEAD at P0 run  775d92716f90ada3cfa909d8f0069c46d204ab51
+run_id                 cbffed4e2bee4ff4af90a43708407d3d
+wave_id                adf0bbcb34844192adcaef633f655db8
+state                  CHECKPOINTED
+accepted_at            2026-08-17T19:18:21.812Z
+integrity              40 / 40 OK
+proof fingerprint      981220b6988f838a239f513bf62d957e06a706b25563ec500459ac114575e10b
+```
+
+Accepted source surface:
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/errors.py
+resources/coding-tools-mcp/coding_tools_mcp/server.py
+resources/coding-tools-mcp/tests/test_exception_group_boundary.py
+```
+
+Behavioral boundary now enforced in source:
+
+- nested exception groups are flattened into bounded child evidence;
+- a single causal `ToolFailure` preserves its original code/category/retryability/details;
+- mixed/multi-child groups become typed `ASYNC_TASK_GROUP_FAILED` with `category=runtime`;
+- `Runtime.call_tool()` records the structured failure/result/trace instead of leaking a raw exception group to transport;
+- the public smart-v3 tool contract remains unchanged.
+
+Proofs actually run:
+
+```text
+module-size check                                                    PASS
+scoped git diff --check                                              PASS
+python -m unittest tests.test_exception_group_boundary tests.test_efficiency_runtime
+                                                                     PASS
+```
+
+**Activation caveat:** the source fix is durable and CHECKPOINTED, but the currently running Coding MCP process was **not implicitly restarted** by this closure. Therefore P0 is source-fixed but live activation of this exact fix remains a required pre-P3 lifecycle gate: explicitly restart the runtime, verify instance identity changes, then require `workspace_context(detail=full)` and `agent_workflow prepare` to complete without raw `ExceptionGroup`, while the 8-tool contract remains unchanged.
+
+## 19.2 P1 synthetic instrumentation smoke — plumbing is now observed
+
+Two synthetic pairs / four deterministic read-only runs were enrolled solely to validate measurement plumbing. The task was the same exact read-only Git HEAD oracle; provenance was `synthetic`, so these rows are excluded from representative efficacy/regret promotion evidence.
+
+| Pair | Arm | Run | Wave | Outcome |
+|---|---|---|---|---|
+| `P1-SMOKE-20260818-001` | control | `af3fae9c6fc24bae9c7beb4a6f3ebf4a` | `54e3e9dd50a54149b8e79f45b4f61919` | CHECKPOINTED + quality recorded |
+| `P1-SMOKE-20260818-001` | treatment | `f3dcd9802298423db4acd8994feddae9` | `9d2e3ee52cd54a0e960532b709e8f728` | CHECKPOINTED + quality recorded |
+| `P1-SMOKE-20260818-002` | control | `878cd06eaee04f9cb7332a71d814dfa4` | `19cca92d99974d42906a3aacb52f6fbd` | CHECKPOINTED + quality recorded |
+| `P1-SMOKE-20260818-002` | treatment | `cdcee59d186c4a0ea0f3d0cb7c7adf7a` | `9b393d0774e248e59443dffb684afd4c` | CHECKPOINTED + quality recorded |
+
+All four rows preserve explicit `pair_id`, policy, `task_class=instrumentation_smoke`, exact `oracle_id`, environment, cache stratum, order index, `controller.started_at` and `source=client_reported`. All four quality outcomes explicitly record oracle pass, zero critical/noncritical defects, no manual fix, no regression escape and no rollback.
+
+Fresh reporter result:
+
+```text
+run_count                              579
+accepted                               350
+aborted                                173
+completed                                7
+stale                                   49
+
+pair_tagged_runs                         4
+unique_pair_ids                          2
+eligible_experimental_runs               4
+controller observed                      4 / 4
+controller started_at                    4 / 4
+controller source                        4 / 4 client_reported
+controller token usage                   0 / 4 observed
+controller monetary cost                 0 / 4 observed
+promotion_economics                      HOLD
+hold_reason                              controller_cost_coverage_incomplete
+
+quality outcome events                   4
+experimental runs with outcome           4 / 4
+experimental quality coverage            1.0
+promotion_quality                        eligible_for_analysis
+quality source                           synthetic_instrumentation_smoke
+representative regret tagged_runs_scanned 0
+automatic promotion                      false
+```
+
+The `0/4` token/cost values are **coverage counts**, not evidence that token usage or monetary cost equals zero. Missing values remain unknown. The smoke proves the pair/controller-start/quality plumbing but deliberately does not prove economics or treatment efficacy.
+
+Host-correlation status at the same capture:
+
+```text
+host_spans_total                    55
+host_spans_with_run_binding         19
+historical host binding rate        34.5455%
+causally eligible host runs          3
+eligible runs with exact host span   2
+eligible-run host coverage          66.6667%
+```
+
+With `N=3`, this remains instrumentation evidence, not a production coverage KPI.
+
+## 19.3 Fresh organic accepted-result baseline
+
+Synthetic rows are excluded from the organic/model-free rework cohort.
+
+```text
+accepted runs scanned               346
+explicit model-route excluded        16
+organic/model-free accepted         330
+first-pass accepted                 209  (63.3333%)
+repaired accepted                   121  (36.6667%)
+replan count                        220
+first-pass TTAR p50                  52,875 ms
+first-pass TTAR p90                 431,210 ms
+repaired TTAR p50                   251,271 ms
+repaired TTAR p90                 1,067,959 ms
+repaired/first-pass p50 multiplier  4.75217x
+repaired/first-pass p90 multiplier  2.476656x
+```
+
+Rework therefore remains the largest observed economic burden even after the measurement smoke: repaired median accepted-result latency is still about **4.75x** first-pass median.
+
+## 19.4 P2 final readiness metrics
+
+The P2 diagnostic implementation is CHECKPOINTED, and a final reporting wave added two explicit readiness metrics without reclassifying ambiguous failures or imputing unknown oracle values.
+
+```text
+P2 main run                 d8231d2e1d384197912fe48d8eb97906
+P2 main wave                38c2df6ff6ff42348006c2133b32b666
+P2 final-readiness run      16c46b4098d14cfba2207226a3ad650f
+P2 final-readiness wave     50dc3fd12732494d9597e08b8ee5dd74
+P2 final-readiness state    CHECKPOINTED
+accepted_at                 2026-08-17T19:28:14.054Z
+proof fingerprint           f886182e40ff200f5254821570e7468e9c162bfd294c7859e0e64fcd8944a25f
+```
+
+Fresh P2 readiness summary:
+
+```text
+accepted representative/model-free runs       330
+failure_observed events on repaired runs       223
+mapped causal events                           105
+unclassified structured events                 118
+causal-classification coverage                 47.0852%
+largest unclassified class                     CHECK_FAILED (71)
+
+oracle eligible runs                           330
+oracle observed                                 57
+oracle strong                                    2
+oracle not strong                               55
+oracle unknown                                 273
+oracle-observation coverage                    17.2727%
+```
+
+Interpretation:
+
+- `CHECK_FAILED=71` remains the largest causal blind spot; it is deliberately not relabeled as `oracle_weakness`, `wrong_root_cause`, or `missing_requirement` without stronger evidence.
+- planned cause counts equal to zero are **not proof of absence**; they mean no currently structured evidence mapped to that family.
+- oracle coverage is too sparse to explain workflow repair differences historically; P3 must record strong-oracle eligibility prospectively.
+
+Current feature hotspot:
+
+```text
+feature n                    102
+first-pass                    50  (49.0196%)
+repaired                      52  (50.9804%)
+replans                      100
+oracle observed                3
+oracle unknown                99
+first-pass p50            44,724 ms
+repaired p50             253,123 ms
+```
+
+Bugfix remains another material economic stratum (`n=67`, repaired `23/67 = 34.3284%`, repaired p50 `298,213 ms`). Diagnose has a lower repair rate but a very expensive repaired p90 (`1,934,424 ms`). Test-failure remains a small strong-oracle candidate stratum with a large median repair penalty.
+
+P2 countermeasures remain scientifically fail-closed:
+
+```text
+patch_preflight        HOLD / not causally estimable
+workdir_resolution     HOLD / not causally estimable
+semantic_localization  HOLD / not causally estimable
+exact_source           HOLD / not causally estimable
+recovery_fencing       HOLD / not causally estimable
+```
+
+Patch preflight has direct guardrail evidence (`70` known no-write failures stopped before run creation), but no intervention has a frozen comparable pre-intervention epoch sufficient to claim an accepted-result causal effect.
+
+## 19.5 Current phase boundary before P3
+
+```text
+P0 source remediation                    CLOSED / CHECKPOINTED
+P0 live activation of new source         PENDING EXPLICIT RESTART + LIVE VERIFY
+P1 measurement contracts                 CLOSED
+P1 synthetic plumbing smoke              PASS: 2 pairs / 4 runs / 4 quality outcomes
+P1 controller timing/source plumbing     PASS
+P1 token/cost economics                  UNKNOWN / HOLD
+P1 representative efficacy population    STILL ABSENT
+P2 diagnostic/readiness                  CLOSED / CHECKPOINTED
+P2 causal remediation efficacy           NOT PROVEN / HOLD
+P3                                       NOT STARTED
+```
+
+## 19.6 Mandatory P3 entry gate
+
+Before the first representative server-first pair:
+
+1. explicitly restart/activate Coding MCP so the P0 ExceptionGroup normalization source is live;
+2. verify new process/server instance identities and keep the smart-v3 public tool count at eight;
+3. require fresh `workspace_context(detail=full)` and `agent_workflow prepare` to pass without raw `ExceptionGroup` leakage;
+4. freeze one P3 experiment manifest before observing treatment outcomes;
+5. enroll every pair intention-to-treat with exact `pair_id`, policy/version, representative provenance, replicate/task class, source/task/oracle/environment identity, cache stratum and randomized/order index;
+6. record explicit quality outcomes for every assigned replicate where the study contract requires them;
+7. freeze the missing-data policy before treatment. If controller monetary cost remains unavailable, do not make CAR/cost-per-accepted-result promotion claims from that cohort;
+8. keep automatic model/placement promotion disabled until the class-specific evidence gate passes.
+
+The first P3 cohort remains a **10–20 representative-pair instrumentation/variance/break-even pilot**, not confirmatory production proof. P3 must use intention-to-treat assignment rather than P2's accepted-only diagnostic denominator.
+
+---
+
+**End of pre-P3 P0/P1/P2 readiness addendum.**

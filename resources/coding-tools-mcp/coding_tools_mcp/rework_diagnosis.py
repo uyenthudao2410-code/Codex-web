@@ -338,6 +338,13 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
     overall_events = {cause: int(overall_cause_events.get(cause, 0)) for cause in PLANNED_REPAIR_CAUSES}
     overall_runs = {cause: len(overall_cause_runs.get(cause, set())) for cause in PLANNED_REPAIR_CAUSES}
     included = sum(int(item["n"]) for item in buckets.values())
+    mapped_failure_events = sum(overall_events.values())
+    unclassified_failure_events = sum(int(count) for count in overall_unclassified.values())
+    classified_failure_events = mapped_failure_events + unclassified_failure_events
+    oracle_observed_runs = sum(int(item["oracle_observed"]) for item in buckets.values())
+    oracle_strong_runs = sum(int(item["oracle_strong"]) for item in buckets.values())
+    oracle_not_strong_runs = sum(int(item["oracle_not_strong"]) for item in buckets.values())
+    oracle_unknown_runs = sum(int(item["oracle_unknown"]) for item in buckets.values())
     return {
         "schema_version": 1,
         "cohort": "accepted_representative_chatweb_mcp_model_free",
@@ -351,6 +358,31 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
             "event_counts": overall_events,
             "affected_run_counts": overall_runs,
             "unclassified_structured_failure_classes": dict(sorted(overall_unclassified.items())),
+        },
+        "causal_classification": {
+            "basis": "failure_observed_events_on_repaired_accepted_runs",
+            "total_failure_events": classified_failure_events,
+            "mapped_failure_events": mapped_failure_events,
+            "unclassified_failure_events": unclassified_failure_events,
+            "mapped_event_coverage": (
+                round(mapped_failure_events / classified_failure_events, 6)
+                if classified_failure_events
+                else None
+            ),
+            "largest_unclassified_failure_class": (
+                overall_unclassified.most_common(1)[0][0] if overall_unclassified else None
+            ),
+            "unclassified_zero_means_absent": False,
+        },
+        "oracle_observation": {
+            "measurement": "oracle_preflight.strong_oracle",
+            "eligible_runs": included,
+            "observed_runs": oracle_observed_runs,
+            "strong_runs": oracle_strong_runs,
+            "not_strong_runs": oracle_not_strong_runs,
+            "unknown_runs": oracle_unknown_runs,
+            "coverage": round(oracle_observed_runs / included, 6) if included else None,
+            "unknown_not_imputed": True,
         },
         "preflight_avoided": {
             **preflight_avoided,
@@ -367,6 +399,7 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
             "repair_cause_requires_structured_failure_evidence": True,
             "unknown_scope_or_oracle_not_imputed": True,
             "unmatched_structured_failures_remain_unclassified": True,
+            "zero_planned_cause_without_evidence_is_not_proof_of_absence": True,
             "countermeasure_effect_requires_comparable_pre_post_or_paired_evidence": True,
             "scope_path_cap_censored_runs_excluded_from_scope_percentiles": True,
         },

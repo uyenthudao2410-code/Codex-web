@@ -1,155 +1,61 @@
 {
   "version": 2,
-  "task_id": "03c8d6da35fe426681326b064ca6877d",
+  "task_id": "e90d512563314dcaa120c6aba5d5c24f",
   "orchestration": {},
   "objective": "Run a workspace command",
   "status": "waiting",
   "steps": [],
   "current_step": "Waiting for model",
-  "current_command": null,
+  "current_command": {
+    "command": "git add .coding-tools/task-state.json .coding-tools/performance.json .coding-tools/orchestration/ledger.sqlite3 .coding-tools/evaluation/chatweb-host-observations.jsonl .coding-tools/task-history.json && git diff --cached --check && git commit -m \"Close P0 P1 P2 pre-P3 readiness\" && git push origin main",
+    "kind": "command",
+    "session_id": "bJF8IDFXDZDLg2DTX_pCTeVw",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-17T19:43:49.955Z"
+  },
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
   "next_step": "",
-  "created_at": "2026-08-17T18:50:12.994Z",
-  "updated_at": "2026-08-17T18:57:36.232Z",
+  "created_at": "2026-08-17T19:43:17.419Z",
+  "updated_at": "2026-08-17T19:43:49.955Z",
   "events": [
     {
-      "time": "2026-08-17T18:50:12.994Z",
+      "time": "2026-08-17T19:43:17.419Z",
       "event": "task_auto_started",
       "details": {
         "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-17T18:50:13.220Z",
+      "time": "2026-08-17T19:43:17.655Z",
       "event": "command_started",
       "details": {
-        "command": "python resources/coding-tools-mcp/scripts/report_p2_rework_diagnosis.py --workspace .",
-        "session_id": "SomUxK7Oa9K8dnmkmaqHQ8vK"
+        "command": "git status --short --untracked-files=all",
+        "session_id": "6iCXlAqVK_wYJ8qLbDhwERIW"
       }
     },
     {
-      "time": "2026-08-17T18:50:24.720Z",
+      "time": "2026-08-17T19:43:17.956Z",
       "event": "command_finished",
       "details": {
-        "command": "python resources/coding-tools-mcp/scripts/report_p2_rework_diagnosis.py --workspace .",
+        "command": "git status --short --untracked-files=all",
         "status": "passed"
       }
     },
     {
-      "time": "2026-08-17T18:52:59.057Z",
+      "time": "2026-08-17T19:43:34.455Z",
       "event": "command_started",
       "details": {
-        "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace . > tmp\\p2-current-ledger-baseline.json",
-        "session_id": "QY9ibiswrfW6dkyqJWSc3h9P"
+        "command": "git add .coding-tools/evaluation/chatweb-host-observations.jsonl .coding-tools/evaluation/chatweb-host-turn-binding.json .coding-tools/orchestration/ledger.sqlite3 .coding-tools/orchestration/reports .coding-tools/performance.json .coding-tools/task-history.json .coding-tools/task-state.json docs/research/260817_CURRENT_LEDGER_BASELINE.md docs/research/260818_P2_REWORK_DIAGNOSIS_CLOSURE_AND_P3_HANDOFF.md docs/research/260818_PRE_P3_P0_P1_P2_FINAL_READINESS.md resources/coding-tools-mcp/coding_to",
+        "session_id": "WnzOYnRZCIVF7tR2QBI-gWtl"
       }
     },
     {
-      "time": "2026-08-17T18:53:15.866Z",
+      "time": "2026-08-17T19:43:36.578Z",
       "event": "command_finished",
       "details": {
-        "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace . > tmp\\p2-current-ledger-baseline.json",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-17T18:53:33.940Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -e \"\\\"captured_at\\\"\" -e \"\\\"run_count\\\"\" -e \"\\\"status_counts\\\"\" -e \"\\\"accepted_runs\\\"\" -e \"\\\"first_pass_accepted\\\"\" -e \"\\\"repaired_accepted\\\"\" -e \"\\\"eligible_experimental_runs\\\"\" -e \"\\\"eligible_runs_total\\\"\" -e \"\\\"eligible_runs_with_host_span\\\"\" -e \"\\\"eligible_run_host_coverage\\\"\" -e \"\\\"pair_tagged_runs\\\"\" -e \"\\\"quality_outcome_events\\\"\" -e \"\\\"promotion_economics\\\"\" -e \"\\\"promotion_quality\\\"\" tmp\\p2-current-ledger-baseline.json",
-        "session_id": "QfBb7Lj5-OF5iDdiIsEiVJ-I"
-      }
-    },
-    {
-      "time": "2026-08-17T18:53:34.135Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -e \"\\\"captured_at\\\"\" -e \"\\\"run_count\\\"\" -e \"\\\"status_counts\\\"\" -e \"\\\"accepted_runs\\\"\" -e \"\\\"first_pass_accepted\\\"\" -e \"\\\"repaired_accepted\\\"\" -e \"\\\"eligible_experimental_runs\\\"\" -e \"\\\"eligible_runs_total\\\"\" -e \"\\\"eligible_runs_with_host_span\\\"\" -e \"\\\"eligible_run_host_coverage\\\"\" -e \"\\\"pair_tagged_runs\\\"\" -e \"\\\"quality_outcome_events\\\"\" -e \"\\\"promotion_economics\\\"\" -e \"\\\"promotion_quality\\\"\" tmp\\p2-current-ledger-baseline.json",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-17T18:53:42.515Z",
-      "event": "command_started",
-      "details": {
-        "command": "type tmp\\p2-current-ledger-baseline.json",
-        "session_id": "WhjjZitFpin9l9M1tI6Mxu8S"
-      }
-    },
-    {
-      "time": "2026-08-17T18:53:42.769Z",
-      "event": "command_finished",
-      "details": {
-        "command": "type tmp\\p2-current-ledger-baseline.json",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-17T18:53:47.820Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -A 80 \"\\\"organic_rework\\\"\" tmp\\p2-current-ledger-baseline.json && rg -n -A 35 \"\\\"population\\\"\" tmp\\p2-current-ledger-baseline.json && rg -n -A 55 \"\\\"host_binding\\\"\" tmp\\p2-current-ledger-baseline.json",
-        "session_id": "keJowN_5cULT2BmmE3fsoUKw"
-      }
-    },
-    {
-      "time": "2026-08-17T18:53:48.070Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -A 80 \"\\\"organic_rework\\\"\" tmp\\p2-current-ledger-baseline.json && rg -n -A 35 \"\\\"population\\\"\" tmp\\p2-current-ledger-baseline.json && rg -n -A 55 \"\\\"host_binding\\\"\" tmp\\p2-current-ledger-baseline.json",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-17T18:53:53.723Z",
-      "event": "command_started",
-      "details": {
-        "command": "git log -18 --date=iso --pretty=format:\"%h %ad %s\" && echo. && echo ---DIFF-FILES--- && git diff --stat && echo ---EVAL-DIFF--- && git diff -- resources/coding-tools-mcp/coding_tools_mcp/evaluation_report.py resources/coding-tools-mcp/tests/test_evaluation_report.py",
-        "session_id": "zvLFFIzmmdL8YLhfe9Ev26n1"
-      }
-    },
-    {
-      "time": "2026-08-17T18:53:56.992Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git log -18 --date=iso --pretty=format:\"%h %ad %s\" && echo. && echo ---DIFF-FILES--- && git diff --stat && echo ---EVAL-DIFF--- && git diff -- resources/coding-tools-mcp/coding_tools_mcp/evaluation_report.py resources/coding-tools-mcp/tests/test_evaluation_report.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-17T18:54:04.305Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -A 105 \"\\\"run_count\\\": 572\" tmp\\p2-current-ledger-baseline.json",
-        "session_id": "bzwboQjc6q66-pkNqQv5ukxs"
-      }
-    },
-    {
-      "time": "2026-08-17T18:54:04.552Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -A 105 \"\\\"run_count\\\": 572\" tmp\\p2-current-ledger-baseline.json",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-17T18:54:05.602Z",
-      "event": "command_started",
-      "details": {
-        "command": "echo ---B9B7EE--- && git show --stat --oneline --decorate --no-renames b9b7ee12 && echo ---DELTA-SINCE-REPORT--- && git diff --name-status db4e295c..b9b7ee12 && echo ---DOCS-IN-DELTA--- && git diff --name-only db4e295c..b9b7ee12 -- docs resources/coding-tools-mcp | findstr /I \"P0 P1 P2 ledger baseline evaluation rework observation\"",
-        "session_id": "xPXutvJm6tyuLElHukdvLOw9"
-      }
-    },
-    {
-      "time": "2026-08-17T18:54:07.131Z",
-      "event": "command_finished",
-      "details": {
-        "command": "echo ---B9B7EE--- && git show --stat --oneline --decorate --no-renames b9b7ee12 && echo ---DELTA-SINCE-REPORT--- && git diff --name-status db4e295c..b9b7ee12 && echo ---DOCS-IN-DELTA--- && git diff --name-only db4e295c..b9b7ee12 -- docs resources/coding-tools-mcp | findstr /I \"P0 P1 P2 ledger baseline evaluation rework observation\"",
-        "status": "passed"
-      }
-    }
-  ]
-}
+        "command": "git add .coding-tools/evaluation/chatweb-host-observations.jso

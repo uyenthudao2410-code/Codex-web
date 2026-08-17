@@ -93,6 +93,18 @@ class ReworkDiagnosisTests(unittest.TestCase):
             )
             self.assertEqual(report['overall_repair_causes']['event_counts']['wrong_root_cause'], 0)
             self.assertEqual(report['overall_repair_causes']['event_counts']['oracle_weakness'], 0)
+            self.assertEqual(report['causal_classification']['total_failure_events'], 2)
+            self.assertEqual(report['causal_classification']['mapped_failure_events'], 1)
+            self.assertEqual(report['causal_classification']['unclassified_failure_events'], 1)
+            self.assertEqual(report['causal_classification']['mapped_event_coverage'], 0.5)
+            self.assertEqual(report['causal_classification']['largest_unclassified_failure_class'], 'CHECK_FAILED')
+            self.assertEqual(report['oracle_observation']['eligible_runs'], 3)
+            self.assertEqual(report['oracle_observation']['observed_runs'], 2)
+            self.assertEqual(report['oracle_observation']['strong_runs'], 1)
+            self.assertEqual(report['oracle_observation']['not_strong_runs'], 1)
+            self.assertEqual(report['oracle_observation']['unknown_runs'], 1)
+            self.assertEqual(report['oracle_observation']['coverage'], 0.666667)
+            self.assertTrue(report['oracle_observation']['unknown_not_imputed'])
             self.assertEqual(report['preflight_avoided']['count'], 1)
             patch_preflight = next(
                 item for item in report['countermeasure_evaluation'] if item['intervention'] == 'patch_preflight'
@@ -101,6 +113,7 @@ class ReworkDiagnosisTests(unittest.TestCase):
             self.assertIsNone(patch_preflight['effect_estimate'])
             self.assertEqual(patch_preflight['status'], 'hold_not_causally_estimable')
             self.assertTrue(report['policy']['not_a_causal_treatment_effect_estimate'])
+            self.assertTrue(report['policy']['zero_planned_cause_without_evidence_is_not_proof_of_absence'])
 
 
 if __name__ == '__main__':

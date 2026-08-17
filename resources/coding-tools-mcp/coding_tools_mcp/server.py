@@ -38,7 +38,7 @@ from typing import Any
 from . import __version__  # noqa: F401  # composition-root namespace
 from .budget_control import BudgetDeadline, RetryPolicy  # noqa: F401  # composition-root namespace
 from .envutils import ENV_PREFIX, truthy_env  # noqa: F401  # composition-root namespace
-from .errors import JsonRpcError, ToolFailure  # noqa: F401  # composition-root namespace
+from .errors import JsonRpcError, ToolFailure, normalize_exception_group  # noqa: F401  # composition-root namespace
 from .execution_resources import ExecutionResourceGovernor  # noqa: F401  # composition-root namespace
 from .landlock_exec import libc_syscall  # noqa: F401  # composition-root namespace
 from .oauth import (  # noqa: F401  # composition-root namespace
@@ -1813,6 +1813,8 @@ class Runtime(
         request_id: str | int | None = None,
     ) -> dict[str, Any]:
         args = dict(arguments or {})
+        dispatch_started_wall_utc = utc_now()
+        dispatch_started_at = time.monotonic()
         try:
             self._activation_enter_tool_call(name, args)
         except ToolFailure as exc:
@@ -1841,6 +1843,28 @@ class Runtime(
                     args["idempotency_key"] = derived_key
             try:
                 result = self._call_tool_dispatch(name, args, request_id=request_id)
+            except ExceptionGroup as exc:
+                failure = normalize_exception_group(exc)
+                self._idempotency_finish(name, args, exc=failure)
+                payload = {
+                    "ok": False,
+                    "error": {
+                        "code": failure.code,
+                        "message": failure.message,
+                        "category": failure.category,
+                        "retryable": failure.retryable,
+                        "details": failure.details,
+                    },
+                }
+                self._record_task_tool_result(name, args, payload)
+                self.emit_tool_trace(
+                    name,
+                    args,
+                    payload,
+                    dispatch_started_at,
+                    started_wall_utc=dispatch_started_wall_utc,
+                )
+                return make_tool_result(name, payload, is_error=True)
             except Exception as exc:
                 self._idempotency_finish(name, args, exc=exc)
                 raise
@@ -2148,16 +2172,24 @@ class Runtime(
             self.emit_tool_trace(name, args, payload, started_at, started_wall_utc=started_wall_utc)
             return make_tool_result(name, payload, is_error=True)
         except Exception as exc:  # noqa: BLE001 - tool failures must stay structured
-            payload = {
-                "ok": False,
-                "error": {
+            if isinstance(exc, ExceptionGroup):
+                grouped = normalize_exception_group(exc)
+                error = {
+                    "code": grouped.code,
+                    "message": grouped.message,
+                    "category": grouped.category,
+                    "retryable": grouped.retryable,
+                    "details": grouped.details,
+                }
+            else:
+                error = {
                     "code": "INTERNAL_ERROR",
                     "message": str(exc),
                     "category": "internal",
                     "retryable": False,
                     "details": {},
-                },
-            }
+                }
+            payload = {"ok": False, "error": error}
             if spec.error_status:
                 payload["status"] = spec.error_status
             self._record_task_tool_result(name, args, payload)
