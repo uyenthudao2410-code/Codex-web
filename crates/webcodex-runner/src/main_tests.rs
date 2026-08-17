@@ -89,6 +89,26 @@ fn runtime_config(cfg: &AgentConfig) -> Arc<ReloadableAgentConfig> {
 }
 
 #[test]
+fn server_compute_registration_defaults_to_false() {
+    let cfg = test_config(PathBuf::new());
+    let capabilities = agent_register_capabilities(&cfg);
+    assert!(!capabilities.server_compute);
+    assert!(capabilities.source_snapshot_validation);
+}
+
+#[test]
+fn server_compute_registration_preserves_explicit_opt_in() {
+    let mut cfg = test_config(PathBuf::new());
+    cfg.capabilities = Some(ShellClientCapabilities {
+        server_compute: true,
+        ..Default::default()
+    });
+    let capabilities = agent_register_capabilities(&cfg);
+    assert!(capabilities.server_compute);
+    assert!(capabilities.source_snapshot_validation);
+}
+
+#[test]
 fn bounded_response_body_reader_stops_after_limit_plus_one() {
     let mut reader = std::io::Cursor::new(vec![b'x'; 66]);
     let body = read_bounded_response_body(&mut reader, None, 64).unwrap();

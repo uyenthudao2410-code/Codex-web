@@ -78,6 +78,9 @@ shell = true
 jobs = true
 async_jobs = true
 async_shell_jobs = true
+# Explicit server-first compute opt-in. Ordinary/source Runners keep this false;
+# set true only on a dedicated compute target.
+server_compute = false
 # ssh_shell is detected from the local OpenSSH executable at Runner startup.
 
 [policy]
