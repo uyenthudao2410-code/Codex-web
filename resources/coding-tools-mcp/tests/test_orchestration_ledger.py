@@ -275,6 +275,176 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertIsNone(regret["predicted_policy_score"]["coverage"])
             self.assertIsNone(regret["scalar_regret"]["value"])
 
+    def test_paired_policy_evaluation_accepts_server_first_policy_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            def accepted(policy: str) -> None:
+                run_id = ledger.create_run(
+                    objective="same portable strong-oracle validation",
+                    metadata={
+                        "workflow": "test_failure",
+                        "evaluation": {
+                            "pair_id": "p3-server-first-pair",
+                            "policy": policy,
+                            "policy_version": "v1",
+                            "task_class": "portable_strong_oracle_validation",
+                            "oracle_id": "p3-oracle-v1",
+                            "provenance": "representative",
+                            "task_spec_fp": "p3-task-fp",
+                            "environment_fp": "p3-env-fp",
+                            "tool_contract_fp": "p3-tool-fp",
+                            "evaluation_schema_fp": "p3-eval-fp",
+                            "runtime_version": "0.4.3",
+                            "cache_stratum": "cold",
+                        },
+                    },
+                )
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only",
+                    base_head="p3-head",
+                    worktree_fp="p3-tree",
+                    contract_fp="p3-contract",
+                )
+                ledger.append_event(
+                    run_id,
+                    wave_id=wave_id,
+                    event_type="route_selected",
+                    state_after="READY",
+                    payload={"requested": "deterministic", "resolved": "deterministic"},
+                )
+                ledger.record_quality_outcome(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    outcome={"source": "p3-test-oracle", "oracle_pass": True, "critical_defect_count": 0},
+                )
+                ledger.record_checkpoint(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    git_head="p3-head",
+                    proof_fingerprint=f"proof-{policy}",
+                    metadata={"accepted_by": "chatweb"},
+                )
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+
+            accepted("LOCAL_FIRST_V1")
+            accepted("SERVER_FIRST_DETERMINISTIC_V1")
+
+            comparison = ledger.paired_policy_evaluation(
+                baseline_policy="LOCAL_FIRST_V1",
+                candidate_policies=("SERVER_FIRST_DETERMINISTIC_V1",),
+                min_pairs=1,
+                min_task_classes=1,
+            )
+            result = comparison["results"][0]
+            self.assertEqual(comparison["baseline_policy"], "local_first_v1")
+            self.assertEqual(comparison["candidate_policies"], ["server_first_deterministic_v1"])
+            self.assertEqual(result["candidate_policy"], "server_first_deterministic_v1")
+            self.assertEqual(result["pair_count"], 1)
+            self.assertEqual(result["task_classes"], ["portable_strong_oracle_validation"])
+            self.assertFalse(result["automatic_activation"])
+
+    def test_paired_policy_evaluation_keeps_nonaccepted_server_first_run_in_itt_denominator(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            def assigned(policy: str, *, accepted: bool, repaired: bool) -> None:
+                run_id = ledger.create_run(
+                    objective="same portable strong-oracle validation",
+                    metadata={
+                        "workflow": "test_failure",
+                        "evaluation": {
+                            "pair_id": "p3-itt-pair",
+                            "policy": policy,
+                            "policy_version": "v1",
+                            "task_class": "portable_strong_oracle_validation",
+                            "oracle_id": "p3-oracle-v1",
+                            "provenance": "representative",
+                            "task_spec_fp": "p3-itt-task-fp",
+                            "environment_fp": "p3-itt-env-fp",
+                            "tool_contract_fp": "p3-itt-tool-fp",
+                            "evaluation_schema_fp": "p3-itt-eval-fp",
+                            "runtime_version": "0.4.3",
+                            "cache_stratum": "cold",
+                        },
+                    },
+                )
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only",
+                    base_head="p3-itt-head",
+                    worktree_fp="p3-itt-tree",
+                    contract_fp="p3-itt-contract",
+                )
+                ledger.append_event(
+                    run_id,
+                    wave_id=wave_id,
+                    event_type="route_selected",
+                    state_after="READY",
+                    payload={"requested": "deterministic", "resolved": "deterministic"},
+                )
+                terminal_wave_id = wave_id
+                if repaired:
+                    ledger.append_event(
+                        run_id,
+                        wave_id=wave_id,
+                        event_type="failure_observed",
+                        state_before="EXECUTING",
+                        state_after="REPLAN",
+                        payload={"failure_class": "CHECK_FAILED"},
+                    )
+                    ledger.finish_wave(wave_id, status="replanned")
+                    terminal_wave_id = ledger.create_wave(
+                        run_id,
+                        execution_mode="mcp_only",
+                        base_head="p3-itt-head",
+                        worktree_fp="p3-itt-tree",
+                        contract_fp="p3-itt-contract",
+                    )
+                if accepted:
+                    ledger.record_quality_outcome(
+                        run_id=run_id,
+                        wave_id=terminal_wave_id,
+                        outcome={"source": "p3-test-oracle", "oracle_pass": True, "critical_defect_count": 0},
+                    )
+                    ledger.record_checkpoint(
+                        run_id=run_id,
+                        wave_id=terminal_wave_id,
+                        git_head="p3-itt-head",
+                        proof_fingerprint=f"proof-{policy}",
+                        metadata={"accepted_by": "chatweb"},
+                    )
+                    ledger.finish_wave(terminal_wave_id, status="accepted")
+                    ledger.finish_run(run_id, status="accepted")
+                else:
+                    ledger.finish_wave(terminal_wave_id, status="aborted")
+                    ledger.finish_run(run_id, status="aborted")
+
+            assigned("LOCAL_FIRST_V1", accepted=True, repaired=False)
+            assigned("SERVER_FIRST_DETERMINISTIC_V1", accepted=False, repaired=True)
+
+            comparison = ledger.paired_policy_evaluation(
+                baseline_policy="LOCAL_FIRST_V1",
+                candidate_policies=("SERVER_FIRST_DETERMINISTIC_V1",),
+                min_pairs=1,
+                min_task_classes=1,
+            )
+            result = comparison["results"][0]
+            self.assertEqual(result["pair_count"], 1)
+            self.assertEqual(result["accepted_pair_count"], 0)
+            self.assertEqual(result["baseline_acceptance_rate"], 1.0)
+            self.assertEqual(result["candidate_acceptance_rate"], 0.0)
+            self.assertEqual(result["baseline_first_pass_rate"], 1.0)
+            self.assertEqual(result["candidate_first_pass_rate"], 0.0)
+            self.assertEqual(result["baseline_repair_rate"], 0.0)
+            self.assertEqual(result["candidate_repair_rate"], 1.0)
+            self.assertTrue(result["analysis_population"]["intention_to_treat"])
+            self.assertFalse(result["analysis_population"]["survivor_filter"])
+            self.assertEqual(result["tta_ms"]["candidate_p50"], None)
+            self.assertIn("quality_floor_non_regression_not_proven", result["hold_reasons"])
+
     def test_paired_policy_evaluation_reports_component_regret_for_observed_dominance(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))

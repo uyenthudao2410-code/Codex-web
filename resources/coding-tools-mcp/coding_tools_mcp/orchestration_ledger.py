@@ -2227,6 +2227,8 @@ class OrchestrationLedger:
                     "candidate_accepted": bool(candidate.get("accepted")),
                     "baseline_first_pass": bool(base.get("first_pass_accepted")),
                     "candidate_first_pass": bool(candidate.get("first_pass_accepted")),
+                    "baseline_repaired": int((base.get("mcp") or {}).get("replan_count") or 0) > 0,
+                    "candidate_repaired": int((candidate.get("mcp") or {}).get("replan_count") or 0) > 0,
                     "baseline_tta_ms": base_tta,
                     "candidate_tta_ms": candidate_tta,
                     "tta_delta_ms": (
@@ -2314,8 +2316,18 @@ class OrchestrationLedger:
                 "hold_reasons": list(dict.fromkeys(reasons)),
                 "pair_count": len(pair_rows),
                 "accepted_pair_count": len(accepted_pairs),
+                "baseline_acceptance_rate": round(sum(1 for row in pair_rows if row["baseline_accepted"]) / len(pair_rows), 6) if pair_rows else None,
                 "candidate_acceptance_rate": round(sum(1 for row in pair_rows if row["candidate_accepted"]) / len(pair_rows), 6) if pair_rows else None,
+                "baseline_first_pass_rate": round(sum(1 for row in pair_rows if row["baseline_first_pass"]) / len(pair_rows), 6) if pair_rows else None,
                 "candidate_first_pass_rate": round(sum(1 for row in pair_rows if row["candidate_first_pass"]) / len(pair_rows), 6) if pair_rows else None,
+                "baseline_repair_rate": round(sum(1 for row in pair_rows if row["baseline_repaired"]) / len(pair_rows), 6) if pair_rows else None,
+                "candidate_repair_rate": round(sum(1 for row in pair_rows if row["candidate_repaired"]) / len(pair_rows), 6) if pair_rows else None,
+                "analysis_population": {
+                    "basis": "explicit_representative_comparable_pairs_status_independent",
+                    "intention_to_treat": True,
+                    "survivor_filter": False,
+                    "tta_condition": "both_actions_accepted",
+                },
                 "task_classes": task_classes,
                 "task_class_count": len(task_classes),
                 "tta_ms": {

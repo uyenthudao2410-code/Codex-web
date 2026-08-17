@@ -1,18 +1,18 @@
 {
   "version": 2,
-  "task_id": "e90d512563314dcaa120c6aba5d5c24f",
+  "task_id": "e12600a584ff45a7bdde31cb82218d40",
   "orchestration": {},
   "objective": "Run a workspace command",
-  "status": "waiting",
+  "status": "active",
   "steps": [],
-  "current_step": "Waiting for model",
+  "current_step": "Execute command",
   "current_command": {
-    "command": "git add .coding-tools/task-state.json .coding-tools/performance.json .coding-tools/orchestration/ledger.sqlite3 .coding-tools/evaluation/chatweb-host-observations.jsonl .coding-tools/task-history.json && git diff --cached --check && git commit -m \"Close P0 P1 P2 pre-P3 readiness\" && git push origin main",
+    "command": "git status --short -- .coding-tools && git add -A -- .coding-tools && git add -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/scripts/compare_route_policies.py resources/coding-tools-mcp/tests/test_orchestration_ledger.py && npm run check:coding-tools-history && npm run check:coding-tools-delivery && git add -A -- .coding-tools && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git commit -m \"Harden P1 ITT analysis before P3\" && git push origin main",
     "kind": "command",
-    "session_id": "bJF8IDFXDZDLg2DTX_pCTeVw",
+    "session_id": "dSVosTQrZsa4AiAFJ7Klt9l_",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-17T19:43:49.955Z"
+    "started_at": "2026-08-17T20:13:40.106Z"
   },
   "test_results": [],
   "build_results": [],
@@ -20,42 +20,23 @@
   "modified_files": [],
   "failure": null,
   "next_step": "",
-  "created_at": "2026-08-17T19:43:17.419Z",
-  "updated_at": "2026-08-17T19:43:49.955Z",
+  "created_at": "2026-08-17T20:13:39.894Z",
+  "updated_at": "2026-08-17T20:13:40.106Z",
   "events": [
     {
-      "time": "2026-08-17T19:43:17.419Z",
+      "time": "2026-08-17T20:13:39.894Z",
       "event": "task_auto_started",
       "details": {
         "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-17T19:43:17.655Z",
+      "time": "2026-08-17T20:13:40.106Z",
       "event": "command_started",
       "details": {
-        "command": "git status --short --untracked-files=all",
-        "session_id": "6iCXlAqVK_wYJ8qLbDhwERIW"
+        "command": "git status --short -- .coding-tools && git add -A -- .coding-tools && git add -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/scripts/compare_route_policies.py resources/coding-tools-mcp/tests/test_orchestration_ledger.py && npm run check:coding-tools-history && npm run check:coding-tools-delivery && git add -A -- .coding-tools && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git commit -m \"Harden P1 IT",
+        "session_id": "dSVosTQrZsa4AiAFJ7Klt9l_"
       }
-    },
-    {
-      "time": "2026-08-17T19:43:17.956Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git status --short --untracked-files=all",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-17T19:43:34.455Z",
-      "event": "command_started",
-      "details": {
-        "command": "git add .coding-tools/evaluation/chatweb-host-observations.jsonl .coding-tools/evaluation/chatweb-host-turn-binding.json .coding-tools/orchestration/ledger.sqlite3 .coding-tools/orchestration/reports .coding-tools/performance.json .coding-tools/task-history.json .coding-tools/task-state.json docs/research/260817_CURRENT_LEDGER_BASELINE.md docs/research/260818_P2_REWORK_DIAGNOSIS_CLOSURE_AND_P3_HANDOFF.md docs/research/260818_PRE_P3_P0_P1_P2_FINAL_READINESS.md resources/coding-tools-mcp/coding_to",
-        "session_id": "WnzOYnRZCIVF7tR2QBI-gWtl"
-      }
-    },
-    {
-      "time": "2026-08-17T19:43:36.578Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git add .coding-tools/evaluation/chatweb-host-observations.jso
+    }
+  ]
+}

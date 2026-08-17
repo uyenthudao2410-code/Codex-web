@@ -18,7 +18,13 @@ def main() -> int:
     )
     parser.add_argument("--workspace", default=".", help="Workspace containing .coding-tools/orchestration/ledger.sqlite3")
     parser.add_argument("--baseline-policy", default="chatweb_mcp")
-    parser.add_argument("--candidate-policy", action="append", dest="candidate_policies", choices=("mini", "luna"))
+    parser.add_argument(
+        "--candidate-policy",
+        action="append",
+        dest="candidate_policies",
+        metavar="POLICY",
+        help="Candidate policy identifier; repeat for multiple policies. Defaults to mini and luna when omitted.",
+    )
     parser.add_argument("--min-pairs", type=int, default=10)
     parser.add_argument("--min-task-classes", type=int, default=3)
     parser.add_argument("--limit", type=int, default=500)
