@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .orchestration_ledger import OrchestrationLedger
+from .rework_diagnosis import stratified_rework_diagnosis
 
 
 HOST_JOURNAL_RELATIVE = Path('.coding-tools') / 'evaluation' / 'chatweb-host-observations.jsonl'
@@ -185,6 +186,7 @@ def current_ledger_baseline_report(workspace: Path) -> dict[str, Any]:
         'ledger_path': str(root / '.coding-tools' / 'orchestration' / 'ledger.sqlite3'),
         'population': ledger.current_baseline_summary(),
         'organic_rework': ledger.organic_rework_summary(limit=5000),
+        'p2_rework_diagnosis': stratified_rework_diagnosis(ledger, limit=5000),
         'routing_placement_regret': routing_regret,
         'host_visible': host_visible_summary(root),
         'host_binding': host_binding_summary(root, ledger=ledger),

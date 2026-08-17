@@ -69,6 +69,9 @@ class EvaluationReportTests(unittest.TestCase):
 
             report = current_ledger_baseline_report(root)
             population = report['population']
+            self.assertIn('p2_rework_diagnosis', report)
+            self.assertEqual(report['p2_rework_diagnosis']['accepted_runs'], 1)
+            self.assertTrue(report['p2_rework_diagnosis']['policy']['not_a_causal_treatment_effect_estimate'])
             self.assertEqual(population['run_count'], 2)
             self.assertEqual(population['run_status_counts'], {'accepted': 1, 'active': 1})
             self.assertEqual(population['replan_transitions'], 1)
