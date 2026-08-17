@@ -13,6 +13,7 @@ const { AcceptedCodeActivationController } = require('./recoveryActionStore');
 
 const SUPERVISION_INTERVAL_MS = 5000;
 const REPLACEMENT_WAIT_MS = 15_000;
+const HANDOFF_SUPERVISION_DRAIN_MS = 10_000;
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -111,6 +112,7 @@ class RecoveryHost {
     this.ipcServerFactory = ipcServerFactory || ((options) => new RecoveryIpcServer(options));
     this.ipcServer = null;
     this.supervisionTimer = null;
+    this.supervisionInFlight = null;
     this.lastSupervisionStatus = null;
     this.lastRecoveryPlaneStatus = null;
     this.ownsLock = false;
@@ -119,6 +121,7 @@ class RecoveryHost {
     this.exitProcess = exitProcess || (() => {});
     this.handoffStarted = false;
     this.replacementWaitMs = REPLACEMENT_WAIT_MS;
+    this.handoffSupervisionDrainMs = HANDOFF_SUPERVISION_DRAIN_MS;
     this.activation = new RecoveryActivation({
       paths,
       revisions: this.revisions,
@@ -214,22 +217,54 @@ class RecoveryHost {
   }
 
   async superviseOnce() {
-    let runtime = null;
+    if (!this.running || this.handoffStarted) return this.lastSupervisionStatus;
+    if (this.supervisionInFlight) return this.supervisionInFlight;
+    const operation = (async () => {
+      let runtime = null;
+      try {
+        runtime = await this.orchestrator.supervise();
+        this.lastSupervisionStatus = runtime;
+      } catch (error) {
+        this.log.error(error.message, { stage: 'recovery-host-supervise' });
+      }
+      await this.ensureRecoveryPlane();
+      return runtime;
+    })();
+    this.supervisionInFlight = operation;
     try {
-      runtime = await this.orchestrator.supervise();
-      this.lastSupervisionStatus = runtime;
-    } catch (error) {
-      this.log.error(error.message, { stage: 'recovery-host-supervise' });
+      return await operation;
+    } finally {
+      if (this.supervisionInFlight === operation) this.supervisionInFlight = null;
     }
-    await this.ensureRecoveryPlane();
-    return runtime;
   }
 
-  async ensureRecoveryPlane() {
+  async drainSupervisionForHandoff() {
+    const operation = this.supervisionInFlight;
+    if (!operation) return true;
+    let timer = null;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(Object.assign(
+        new Error('Recovery Host supervision did not quiesce before replacement handoff.'),
+        { code: 'RECOVERY_SUPERVISION_BUSY' }
+      )), Math.max(100, Number(this.handoffSupervisionDrainMs) || HANDOFF_SUPERVISION_DRAIN_MS));
+      timer.unref?.();
+    });
+    try {
+      await Promise.race([operation, timeout]);
+      return true;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  async ensureRecoveryPlane(options = {}) {
     try {
       const current = this.settings.load();
       const authToken = await this.orchestrator.ensureToken();
       const runtimeApiKey = this.secrets.get('runtimeApiKey');
+      if (options.legacyMigrationPlan?.required && typeof this.recoveryPlane.applyLegacyOwnershipMigration === 'function') {
+        await this.recoveryPlane.applyLegacyOwnershipMigration(options.legacyMigrationPlan);
+      }
       this.lastRecoveryPlaneStatus = await this.recoveryPlane.ensure(current, { authToken, runtimeApiKey });
     } catch (error) {
       this.lastRecoveryPlaneStatus = { state: 'unavailable', error_code: String(error?.code || 'RECOVERY_PLANE_UNAVAILABLE'), checked_at: new Date().toISOString() };
@@ -258,21 +293,50 @@ class RecoveryHost {
       });
       await this.ipcServer.start();
       this.running = true;
-      await this.ensureRecoveryPlane();
+      let primaryLegacyMigration = { required: false };
+      let recoveryLegacyMigration = { required: false };
+      if (this.replacement?.operationId) {
+        this.activation.verifyRecoveryReplacement(this.replacement.operationId);
+        const current = this.settings.load();
+        const recoveryMigrationSupported = typeof this.recoveryPlane.preflightLegacyOwnershipMigration === 'function'
+          && typeof this.orchestrator.ensureToken === 'function';
+        const authToken = recoveryMigrationSupported ? await this.orchestrator.ensureToken() : '';
+        [primaryLegacyMigration, recoveryLegacyMigration] = await Promise.all([
+          typeof this.orchestrator.preflightLegacyDeviceMigration === 'function'
+            ? this.orchestrator.preflightLegacyDeviceMigration()
+            : Promise.resolve({ required: false }),
+          recoveryMigrationSupported
+            ? this.recoveryPlane.preflightLegacyOwnershipMigration(current, authToken)
+            : Promise.resolve({ required: false })
+        ]);
+        await this.activation.completeRecoveryReplacement(
+          this.replacement.operationId,
+          this.replacement.expectedOldInstanceId,
+          {
+            primaryLegacyMigrationRequired: primaryLegacyMigration.required === true,
+            recoveryLegacyMigrationRequired: recoveryLegacyMigration.required === true
+          }
+        );
+      }
+
+      let primaryMigrationFailed = false;
+      if (primaryLegacyMigration.required && typeof this.orchestrator.applyLegacyDeviceMigration === 'function') {
+        try {
+          await this.orchestrator.applyLegacyDeviceMigration(primaryLegacyMigration);
+        } catch (error) {
+          primaryMigrationFailed = true;
+          this.log.error(error.message, { stage: 'legacy-primary-device-migration', code: error?.code || '' });
+        }
+      }
+      await this.ensureRecoveryPlane({ legacyMigrationPlan: recoveryLegacyMigration });
       this.supervisionTimer = setInterval(() => { this.superviseOnce(); }, SUPERVISION_INTERVAL_MS);
       this.supervisionTimer.unref();
       this.log.info('Recovery Host đã sở hữu Coding runtime, watchdog và local gateway', {
         hostPid: process.pid,
         hostInstanceId: this.instanceId
       });
-      if (this.replacement?.operationId) {
-        await this.activation.completeRecoveryReplacement(
-          this.replacement.operationId,
-          this.replacement.expectedOldInstanceId
-        );
-      }
       const current = this.settings.load();
-      if (current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
+      if (!primaryMigrationFailed && current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
         const observed = await this.orchestrator.lightweightSnapshot().catch(() => null);
         this.lastSupervisionStatus = observed;
         if (!observed?.nativeAlive && !observed?.tunnelRunning) {
@@ -306,6 +370,18 @@ class RecoveryHost {
   }
 
   async performRecoveryHandoff(operationId) {
+    try {
+      await this.drainSupervisionForHandoff();
+    } catch (error) {
+      await this.orchestrator.cancelCodeActivation(operationId).catch(() => false);
+      this.activation.actions.finish(operationId, 'failed', null, {
+        code: String(error?.code || 'RECOVERY_SUPERVISION_BUSY'),
+        message: 'Recovery Host supervision was still mutating runtime state; replacement handoff was not allowed to release ownership.'
+      });
+      this.handoffStarted = false;
+      this.log.error(error.message, { stage: 'recovery-host-handoff-quiesce', operationId, code: error?.code || '' });
+      return;
+    }
     await this.stop();
     const deadline = Date.now() + this.replacementWaitMs;
     while (Date.now() < deadline) {
@@ -351,5 +427,6 @@ module.exports = {
   releaseRecoveryHostLock,
   isProcessAlive,
   SUPERVISION_INTERVAL_MS,
+  HANDOFF_SUPERVISION_DRAIN_MS,
   waitForReplacementLockRelease
 };

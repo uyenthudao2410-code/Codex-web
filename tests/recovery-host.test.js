@@ -6,8 +6,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const { DEVICE_ID_PATTERN, loadOrCreateDeviceIdentity } = require('../electron/services/deviceIdentity');
-const { ComponentRevisionTracker } = require('../electron/services/componentRevision');
+const { ComponentRevisionTracker, hashComponentRevision, recoveryHostLegacyV1Revision, RECOVERY_HOST_LEGACY_V1_CONTRACT } = require('../electron/services/componentRevision');
 const { RecoveryActionStore } = require('../electron/services/recoveryActionStore');
+const { RecoveryActivation } = require('../electron/services/recoveryActivation');
 const { RecoveryIpcClient, RecoveryIpcServer } = require('../electron/services/recoveryIpc');
 const {
   RecoveryHost,
@@ -310,6 +311,159 @@ test('Recovery Host replacement hands off ownership without stopping Coding MCP 
   assert.equal(calls.oldExit, 1);
   assert.equal(calls.cancelFence, 1);
   await replacementHost.stop();
+});
+
+test('Recovery Host handoff drains in-flight supervision before releasing ownership', async (t) => {
+  const paths = fixture(t);
+  const oldRevision = 'a'.repeat(64);
+  const newRevision = 'b'.repeat(64);
+  let releaseRecoveryEnsure;
+  let recoveryEnsureCalls = 0;
+  let recoveryEnsureStarted;
+  const recoveryEnsureStartedPromise = new Promise((resolve) => { recoveryEnsureStarted = resolve; });
+  const recoveryPlaneService = {
+    preflightLegacyOwnershipMigration: async () => ({ required: false }),
+    applyLegacyOwnershipMigration: async () => false,
+    ensure: async () => {
+      recoveryEnsureCalls += 1;
+      if (recoveryEnsureCalls === 1) return { state: 'healthy' };
+      if (recoveryEnsureCalls === 2) {
+        recoveryEnsureStarted();
+        await new Promise((resolve) => { releaseRecoveryEnsure = resolve; });
+      }
+      return { state: 'healthy' };
+    }
+  };
+  const orchestrator = {
+    isManuallyStopped: () => false,
+    supervise: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
+    lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
+    codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
+    inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
+    prepareCodeActivation: async () => ({ safe: true, code: 'READY', fenced: true }),
+    cancelCodeActivation: async () => true,
+    ensureToken: async () => 'x'.repeat(32),
+    preflightLegacyDeviceMigration: async () => ({ required: false }),
+    start: async () => ({}),
+    snapshot: async () => ({}),
+    switchWorkspace: async () => ({}),
+    updateAuthorizedRoots: async () => ({}),
+    acknowledgeConnectorContract: async () => ({})
+  };
+  const revisionTracker = {
+    captureRunning: () => oldRevision,
+    status: (_component, supplied) => ({
+      running_revision: supplied || null,
+      disk_revision: newRevision,
+      update_pending: supplied !== newRevision,
+      state: supplied === newRevision ? 'current' : 'update_pending'
+    })
+  };
+  const gateway = {
+    server: null,
+    start: async function start() { this.server = {}; },
+    stop: async function stop() { this.server = null; }
+  };
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ autoStartServices: false }) },
+    secrets: { get: () => 'runtime-key' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+    orchestrator,
+    healthService: { inspect: async () => ({}), repair: async () => ({}) },
+    gateway,
+    ipcServerFactory: () => ({ start: async () => ({}), stop: async () => true }),
+    revisionTracker,
+    recoveryPlaneService,
+    spawnRecoveryReplacement: async () => process.pid,
+    exitProcess: () => {}
+  });
+  host.replacementWaitMs = 50;
+  host.handoffSupervisionDrainMs = 1000;
+  t.after(async () => {
+    releaseRecoveryEnsure?.();
+    await host.stop();
+  });
+  await host.start();
+
+  const supervision = host.superviseOnce();
+  await recoveryEnsureStartedPromise;
+  const now = Date.now();
+  const operationId = 'replacement-supervision-drain-0001';
+  assert.equal((await host.activation.activate({
+    operation_id: operationId,
+    component: 'recovery_host',
+    requested_at_unix_ms: now,
+    expires_at_unix_ms: now + 60_000,
+    expected_disk_revision: newRevision,
+    allow_acceptance_pending: false
+  })).state, 'accepted');
+
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.equal(fs.existsSync(paths.recoveryHostLockFile()), true, 'handoff must keep ownership while old supervision is still mutating Recovery Plane');
+  const callsBefore = recoveryEnsureCalls;
+  await host.superviseOnce();
+  assert.equal(recoveryEnsureCalls, callsBefore, 'handoff fence must suppress new supervision work');
+
+  releaseRecoveryEnsure();
+  await supervision;
+  let status = host.activation.status(operationId);
+  for (let index = 0; index < 100 && status.state === 'accepted'; index += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    status = host.activation.status(operationId);
+  }
+  assert.equal(status.state, 'failed');
+  assert.equal(status.error.code, 'RECOVERY_REPLACEMENT_FAILED');
+  assert.equal(host.running, true, 'old host must resume when no replacement takes ownership');
+  assert.equal(host.ownsLock, true);
+});
+
+test('Recovery Host verifies replacement revision before any legacy device migration', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'electron', 'services', 'recoveryHost.js'), 'utf8');
+  const verify = source.indexOf('verifyRecoveryReplacement(this.replacement.operationId)');
+  const primaryPreflight = source.indexOf('preflightLegacyDeviceMigration()');
+  const recoveryPreflight = source.indexOf('preflightLegacyOwnershipMigration(current, authToken)');
+  const complete = source.indexOf('completeRecoveryReplacement(');
+  const primaryApply = source.indexOf('applyLegacyDeviceMigration(primaryLegacyMigration)');
+  assert.ok(verify >= 0 && primaryPreflight > verify && recoveryPreflight > verify);
+  assert.ok(complete > verify && primaryApply > complete);
+});
+
+test('Recovery replacement accepts the pinned legacy revision contract and rejects added-file tampering', (t) => {
+  const paths = fixture(t);
+  const relative = 'electron/services/deviceIdentity.js';
+  const target = path.join(paths.appRoot(), ...relative.split('/'));
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(path.join(__dirname, '..', ...relative.split('/')), target);
+  const currentRevision = hashComponentRevision(paths.appRoot(), 'recovery_host').revision;
+  const legacyRevision = recoveryHostLegacyV1Revision(paths.appRoot()).revision;
+  const now = Date.now();
+  const operationId = 'legacy-revision-bridge-0001';
+  const actions = new RecoveryActionStore({ paths, now: () => now });
+  actions.begin({
+    operation_id: operationId,
+    component: 'recovery_host',
+    requested_at_unix_ms: now,
+    expires_at_unix_ms: now + 60_000,
+    expected_disk_revision: legacyRevision,
+    allow_acceptance_pending: true
+  });
+  const activation = new RecoveryActivation({
+    paths,
+    revisions: { status: () => ({ running_revision: currentRevision, disk_revision: currentRevision, update_pending: false, state: 'current' }) },
+    orchestrator: {},
+    log: {},
+    recoveryInstanceId: 'legacy-bridge-instance-0001',
+    recoveryRunningRevision: currentRevision,
+    actionStore: actions,
+    now: () => now
+  });
+  const verified = activation.verifyRecoveryReplacement(operationId);
+  assert.equal(verified.revisionContract, RECOVERY_HOST_LEGACY_V1_CONTRACT);
+  assert.equal(verified.legacyBridge.revision, legacyRevision);
+  fs.appendFileSync(target, '\n// tampered after activation request\n');
+  assert.throws(() => activation.verifyRecoveryReplacement(operationId), { code: 'REVISION_VERIFICATION_FAILED' });
 });
 
 test('Recovery Host resumes ownership and releases the fence when replacement does not start', async (t) => {

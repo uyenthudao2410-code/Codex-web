@@ -547,6 +547,31 @@ class AcceptedCodeActivationController {
     return true;
   }
 
+  supersedeStaleActiveIntents(state, currentHead) {
+    if (!state.active_checkpoint_id) return { changed: false, awaiting_operation: false };
+    const stale = state.intents.filter((item) => item.checkpoint_id === state.active_checkpoint_id
+      && !TERMINAL_INTENT_STATES.has(String(item.state || ''))
+      && String(item.accepted_head || '') !== String(currentHead || ''));
+    if (!stale.length) return { changed: false, awaiting_operation: false };
+    if (stale.some((item) => String(item.current_operation_id || ''))) {
+      return { changed: false, awaiting_operation: true };
+    }
+    const updatedAt = new Date(this.now()).toISOString();
+    for (const intent of stale) {
+      Object.assign(intent, {
+        state: 'superseded',
+        current_operation_id: null,
+        error: {
+          code: 'BASE_HEAD_CHANGED',
+          message: 'Git HEAD changed before automatic activation; the stale intent was superseded.'
+        },
+        updated_at: updatedAt
+      });
+    }
+    this.saveState(state);
+    return { changed: true, awaiting_operation: false };
+  }
+
   async discover() {
     const rawWorkspace = String(this.settings.load()?.workspace || '').trim();
     if (!rawWorkspace) return false;
@@ -554,6 +579,9 @@ class AcceptedCodeActivationController {
     if (!fs.existsSync(workspace)) return false;
     const state = this.loadState();
     const forced = await this.forcedStatusProvider(workspace);
+    const headDrift = this.supersedeStaleActiveIntents(state, forced.head);
+    if (headDrift.awaiting_operation) return false;
+    if (headDrift.changed && state.active_checkpoint_id && !this.markActiveProcessed(state)) return false;
     await this.ensureBaseline(workspace, state, forced);
     if (state.active_checkpoint_id) {
       if (!this.markActiveProcessed(state)) return false;
@@ -683,7 +711,7 @@ class AcceptedCodeActivationController {
       await this.discover();
       const state = this.loadState();
       const active = state.intents.filter((item) => item.checkpoint_id === state.active_checkpoint_id);
-      const intent = active.find((item) => item.state !== 'completed');
+      const intent = active.find((item) => !TERMINAL_INTENT_STATES.has(String(item.state || '')));
       if (intent) await this.processIntent(state, intent);
       this.lastError = null; return true;
     } catch (error) {

@@ -13,6 +13,10 @@ const RECOVERY_MCP_START_ATTEMPTS = 30;
 // tunnel-client defaults to a 30s control-plane long poll plus a 5s deadline guardrail.
 // Keep startup bounded, but allow the first successful poll to complete before declaring failure.
 const RECOVERY_TUNNEL_START_ATTEMPTS = 90;
+const LEGACY_CANDIDATE_STABILIZATION_ATTEMPTS = 4;
+const LEGACY_CANDIDATE_STABILIZATION_DELAY_MS = 250;
+
+function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 function sha256(value) { return crypto.createHash('sha256').update(value).digest('hex'); }
 function fileSha256(file) { return sha256(fs.readFileSync(file)); }
@@ -67,10 +71,146 @@ async function recoveryTunnelReady(paths, port, pid) {
 }
 
 class RecoveryPlaneService {
-  constructor({ paths, log, deviceIdentity = null, deviceInstanceId = '' }) { this.paths = paths; this.log = log; this.device = (deviceIdentity || deviceInstanceId) ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId) : null; this.lastStatus = null; this.ensureInFlight = null; }
+  constructor({ paths, log, deviceIdentity = null, deviceInstanceId = '' }) { this.paths = paths; this.log = log; this.device = (deviceIdentity || deviceInstanceId) ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId) : null; this.lastStatus = null; this.ensureInFlight = null; this.legacyCandidateStabilizationAttempts = LEGACY_CANDIDATE_STABILIZATION_ATTEMPTS; this.legacyCandidateStabilizationDelayMs = LEGACY_CANDIDATE_STABILIZATION_DELAY_MS; }
   readState() { return readJson(this.paths.recoveryPlaneStateFile(), {}); }
   updateState(patch) { updateJsonAtomic(this.paths.recoveryPlaneStateFile(), (value) => ({ ...value, version: 1, ...patch, updatedAt: new Date().toISOString() })); }
   assertOwnedLive(pid, storedDeviceId, kind) { if (!this.device || !isAlive(pid)) return; const ownership = classifyStoredDeviceOwner(storedDeviceId, this.device.deviceId); if (ownership === 'owned') return; const code = ownership === 'foreign' ? `${kind}_FOREIGN_DEVICE` : `${kind}_OWNER_UNVERIFIED`; throw Object.assign(new Error(ownership === 'foreign' ? `${kind} process state belongs to another device; refusing to adopt or terminate it.` : `${kind} process state predates device ownership metadata; refusing to adopt or terminate the live process.`), { code, ownerDeviceId: String(storedDeviceId || '') || null, expectedDeviceId: this.device.deviceId }); }
+
+  legacyCandidateMigrationError(message = 'Legacy Recovery Tunnel candidate ownership could not be proven for this install.') {
+    return Object.assign(new Error(message), { code: 'RECOVERY_TUNNEL_CANDIDATE_LEGACY_MIGRATION_UNVERIFIED' });
+  }
+
+  async stabilizeLegacyTunnelCandidate(settings, authToken, initialState, probes = {}) {
+    const initialPid = Number(initialState.recoveryTunnelCandidatePid || 0);
+    if (!initialPid || !isAlive(initialPid)) return initialState;
+    const legacyFingerprint = recoveryTunnelFingerprint(settings, authToken, '');
+    const initialOwnership = classifyStoredDeviceOwner(initialState.recoveryTunnelCandidateDeviceId, this.device.deviceId);
+    if (initialOwnership === 'foreign') {
+      throw Object.assign(new Error('Recovery Tunnel candidate belongs to another device.'), { code: 'RECOVERY_TUNNEL_FOREIGN_DEVICE' });
+    }
+    if (initialOwnership !== 'legacy') return initialState;
+    if (String(initialState.recoveryTunnelCandidateFingerprint || '') !== legacyFingerprint) {
+      throw this.legacyCandidateMigrationError();
+    }
+
+    const ready = probes.tunnelReady || recoveryTunnelReady;
+    const sleep = probes.wait || wait;
+    const attempts = Math.max(1, Number(this.legacyCandidateStabilizationAttempts) || LEGACY_CANDIDATE_STABILIZATION_ATTEMPTS);
+    const delayMs = Math.max(0, Number(this.legacyCandidateStabilizationDelayMs) || 0);
+    let state = initialState;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      if (attempt > 0) state = this.readState();
+      const candidatePid = Number(state.recoveryTunnelCandidatePid || 0);
+      if (!candidatePid) return state;
+      if (candidatePid !== initialPid) {
+        throw this.legacyCandidateMigrationError('Recovery Tunnel candidate changed during legacy ownership proof.');
+      }
+      const ownership = classifyStoredDeviceOwner(state.recoveryTunnelCandidateDeviceId, this.device.deviceId);
+      if (ownership === 'foreign') {
+        throw Object.assign(new Error('Recovery Tunnel candidate belongs to another device.'), { code: 'RECOVERY_TUNNEL_FOREIGN_DEVICE' });
+      }
+      if (ownership === 'owned') return state;
+      if (ownership !== 'legacy' || String(state.recoveryTunnelCandidateFingerprint || '') !== legacyFingerprint) {
+        throw this.legacyCandidateMigrationError();
+      }
+      if (!isAlive(candidatePid)) return state;
+      if (await ready(this.paths, settings.recoveryHealthPort, candidatePid)) return state;
+      if (attempt + 1 < attempts && delayMs > 0) await sleep(delayMs);
+    }
+    throw this.legacyCandidateMigrationError();
+  }
+
+  async preflightLegacyOwnershipMigration(settings, authToken, probes = {}) {
+    if (!this.device) return { required: false, recoveryMcpPid: null, recoveryTunnelPid: null, recoveryTunnelCandidatePid: null };
+    let state = this.readState();
+    let candidatePid = Number(state.recoveryTunnelCandidatePid || 0);
+    if (candidatePid > 0 && isAlive(candidatePid)) {
+      const candidateOwnership = classifyStoredDeviceOwner(state.recoveryTunnelCandidateDeviceId, this.device.deviceId);
+      if (candidateOwnership === 'legacy') {
+        state = await this.stabilizeLegacyTunnelCandidate(settings, authToken, state, probes);
+      }
+    }
+    const plan = { required: false, recoveryMcpPid: null, recoveryTunnelPid: null, recoveryTunnelCandidatePid: null };
+    const recoveryMcpPid = Number(state.recoveryMcpPid || 0);
+    if (recoveryMcpPid > 0 && isAlive(recoveryMcpPid)) {
+      const ownership = classifyStoredDeviceOwner(state.recoveryMcpDeviceId, this.device.deviceId);
+      if (ownership === 'foreign') throw Object.assign(new Error('Recovery MCP belongs to another device.'), { code: 'RECOVERY_MCP_FOREIGN_DEVICE' });
+      if (ownership === 'legacy') {
+        const health = await (probes.mcpHealth || recoveryMcpHealth)(settings.recoveryMcpPort, authToken);
+        if (!health || Number(health.pid) !== recoveryMcpPid || Number(state.recoveryMcpPort) !== Number(settings.recoveryMcpPort)) {
+          throw Object.assign(new Error('Legacy Recovery MCP ownership could not be proven for this install.'), { code: 'RECOVERY_MCP_LEGACY_MIGRATION_UNVERIFIED' });
+        }
+        plan.recoveryMcpPid = recoveryMcpPid;
+        plan.required = true;
+      }
+    }
+    const recoveryTunnelPid = Number(state.recoveryTunnelPid || 0);
+    if (recoveryTunnelPid > 0 && isAlive(recoveryTunnelPid)) {
+      const ownership = classifyStoredDeviceOwner(state.recoveryTunnelDeviceId, this.device.deviceId);
+      if (ownership === 'foreign') throw Object.assign(new Error('Recovery Tunnel belongs to another device.'), { code: 'RECOVERY_TUNNEL_FOREIGN_DEVICE' });
+      if (ownership === 'legacy') {
+        const ready = await (probes.tunnelReady || recoveryTunnelReady)(this.paths, settings.recoveryHealthPort, recoveryTunnelPid);
+        if (!ready) throw Object.assign(new Error('Legacy Recovery Tunnel ownership could not be proven for this install.'), { code: 'RECOVERY_TUNNEL_LEGACY_MIGRATION_UNVERIFIED' });
+        plan.recoveryTunnelPid = recoveryTunnelPid;
+        plan.required = true;
+      }
+    }
+    candidatePid = Number(state.recoveryTunnelCandidatePid || 0);
+    if (candidatePid > 0 && isAlive(candidatePid)) {
+      const candidateOwnership = classifyStoredDeviceOwner(state.recoveryTunnelCandidateDeviceId, this.device.deviceId);
+      if (candidateOwnership === 'foreign') {
+        throw Object.assign(new Error('Recovery Tunnel candidate belongs to another device.'), { code: 'RECOVERY_TUNNEL_FOREIGN_DEVICE' });
+      }
+      if (candidateOwnership === 'legacy') {
+        const legacyFingerprint = recoveryTunnelFingerprint(settings, authToken, '');
+        const ready = state.recoveryTunnelCandidateFingerprint === legacyFingerprint
+          && await (probes.tunnelReady || recoveryTunnelReady)(this.paths, settings.recoveryHealthPort, candidatePid);
+        if (!ready) {
+          throw this.legacyCandidateMigrationError();
+        }
+        plan.recoveryTunnelCandidatePid = candidatePid;
+        plan.required = true;
+      }
+    }
+    return plan;
+  }
+
+  async applyLegacyOwnershipMigration(plan) {
+    if (!plan?.required || !this.device) return false;
+    const state = this.readState();
+    const patch = {};
+    if (plan.recoveryMcpPid) {
+      if (Number(state.recoveryMcpPid) !== Number(plan.recoveryMcpPid)
+        || classifyStoredDeviceOwner(state.recoveryMcpDeviceId, this.device.deviceId) !== 'legacy') {
+        throw Object.assign(new Error('Recovery MCP changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
+      }
+      patch.recoveryMcpDeviceId = this.device.deviceId;
+      patch.recoveryMcpDeviceInstanceId = this.device.deviceInstanceId;
+    }
+    if (plan.recoveryTunnelPid) {
+      if (Number(state.recoveryTunnelPid) !== Number(plan.recoveryTunnelPid)
+        || classifyStoredDeviceOwner(state.recoveryTunnelDeviceId, this.device.deviceId) !== 'legacy') {
+        throw Object.assign(new Error('Recovery Tunnel changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
+      }
+      patch.recoveryTunnelDeviceId = this.device.deviceId;
+      patch.recoveryTunnelDeviceInstanceId = this.device.deviceInstanceId;
+    }
+    if (plan.recoveryTunnelCandidatePid) {
+      if (Number(state.recoveryTunnelCandidatePid) !== Number(plan.recoveryTunnelCandidatePid)
+        || classifyStoredDeviceOwner(state.recoveryTunnelCandidateDeviceId, this.device.deviceId) !== 'legacy') {
+        throw Object.assign(new Error('Recovery Tunnel candidate changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
+      }
+      patch.recoveryTunnelCandidateDeviceId = this.device.deviceId;
+      patch.recoveryTunnelCandidateDeviceInstanceId = this.device.deviceInstanceId;
+    }
+    this.updateState(patch);
+    this.log?.info?.('Legacy Recovery Plane ownership proven; rotating services into device-aware mode', {
+      recoveryMcpPid: plan.recoveryMcpPid || null,
+      recoveryTunnelPid: plan.recoveryTunnelPid || null,
+      deviceId: this.device.deviceId
+    });
+    return true;
+  }
 
   async deactivateOwnedTunnel(state, { configured, tunnelState, errorCode = null }) {
     this.assertOwnedLive(state.recoveryTunnelPid, state.recoveryTunnelDeviceId, 'RECOVERY_TUNNEL');
@@ -146,7 +286,6 @@ class RecoveryPlaneService {
     const current = state.recoveryTunnelFingerprint === fingerprint && await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, state.recoveryTunnelPid);
     if (current) return { state: 'healthy', configured: true, pid: state.recoveryTunnelPid, health_port: settings.recoveryHealthPort, replaced: false };
 
-    const listenerPid = await recoveryTunnelListenerPid(settings.recoveryHealthPort);
     const candidatePid = Number(state.recoveryTunnelCandidatePid || 0);
     this.assertOwnedLive(candidatePid, state.recoveryTunnelCandidateDeviceId, 'RECOVERY_TUNNEL');
     const matchingCandidate = candidatePid > 0 && state.recoveryTunnelCandidateFingerprint === fingerprint && isAlive(candidatePid);
@@ -164,6 +303,15 @@ class RecoveryPlaneService {
       this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null });
     }
 
+    if (candidatePid > 0 && isAlive(candidatePid)) {
+      await stopExactTree(candidatePid);
+      this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null });
+    }
+    if (isAlive(state.recoveryTunnelPid)) {
+      await stopExactTree(state.recoveryTunnelPid);
+      this.updateState({ recoveryTunnelPid: null, recoveryTunnelFingerprint: null, recoveryTunnelDeviceId: null, recoveryTunnelDeviceInstanceId: null });
+    }
+
     const refreshedListenerPid = await recoveryTunnelListenerPid(settings.recoveryHealthPort);
     if (refreshedListenerPid) {
       const errorCode = 'RECOVERY_TUNNEL_HEALTH_PORT_IN_USE';
@@ -171,8 +319,6 @@ class RecoveryPlaneService {
       throw Object.assign(new Error('Recovery Tunnel health port is owned by an unrecognized process; refusing to replace or adopt it.'), { code: errorCode });
     }
 
-    if (isAlive(state.recoveryTunnelPid)) await stopExactTree(state.recoveryTunnelPid);
-    this.updateState({ recoveryTunnelPid: null, recoveryTunnelFingerprint: null, recoveryTunnelDeviceId: null, recoveryTunnelDeviceInstanceId: null });
     ensureParent(this.paths.recoveryTunnelLogFile());
     rotateLog(this.paths.recoveryTunnelLogFile());
     const output = fs.openSync(this.paths.recoveryTunnelLogFile(), 'a');

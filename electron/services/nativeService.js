@@ -10,7 +10,7 @@ const { ComponentRevisionTracker } = require('./componentRevision');
 const { classifyStoredDeviceOwner } = require('./deviceIdentity');
 
 function isAlive(pid) {
-  if (!Number.isInteger(pid)) return false;
+  if (!Number.isInteger(pid) || pid <= 0) return false;
   try { process.kill(pid, 0); return true; } catch { return false; }
 }
 

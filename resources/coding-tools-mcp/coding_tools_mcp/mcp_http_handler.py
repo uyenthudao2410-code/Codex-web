@@ -311,7 +311,11 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             if not self.is_authorized():
                 self.send_unauthorized(head_only=head_only)
                 return
-            self.send_json(self.runtime.activation_preflight(), head_only=head_only)
+            result = self.runtime.activation_preflight()
+            self.send_json(
+                {**result, "workspace": str(self.runtime.workspace.root)},
+                head_only=head_only,
+            )
             return
         if normalized == "/__control/orchestration":
             if not self.is_authorized():

@@ -14,6 +14,33 @@ from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 
 
 class ActivationPreflightTests(unittest.TestCase):
+    def test_get_control_activation_keeps_workspace_identity_when_busy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            runtime = Runtime(root, auth_token="activation-token")
+            runtime.active_tool_calls = 1
+            server = RuntimeHTTPServer(("127.0.0.1", 0), MCPHandler, runtime, runtime_factory=None)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            port = int(server.server_address[1])
+            try:
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/__control/activation", headers={
+                    "Authorization": "Bearer activation-token",
+                })
+                response = connection.getresponse()
+                result = json.loads(response.read())
+                connection.close()
+                self.assertEqual(response.status, 200)
+                self.assertFalse(result["safe"])
+                self.assertEqual(result["code"], "RUNTIME_BUSY")
+                self.assertEqual(result["workspace"], str(root))
+            finally:
+                runtime.active_tool_calls = 0
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
     def test_authenticated_control_endpoint_prepares_and_cancels_fence(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp), auth_token="activation-token")

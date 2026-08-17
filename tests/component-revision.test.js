@@ -4,7 +4,13 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
-const { ComponentRevisionTracker, hashComponentRevision } = require('../electron/services/componentRevision');
+const {
+  ComponentRevisionTracker,
+  hashComponentRevision,
+  recoveryHostLegacyV1Revision,
+  RECOVERY_HOST_LEGACY_V1_CONTRACT,
+  RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS
+} = require('../electron/services/componentRevision');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-component-revision-'));
@@ -93,4 +99,20 @@ test('Coding MCP revision resolves from resourcesRoot independently of packaged 
   assert.equal(disk.file_count, 2);
   assert.equal(disk.missing_files, 0);
   assert.ok(disk.total_bytes > 0);
+});
+
+test('Recovery Host legacy revision bridge pins added device identity bytes', (t) => {
+  const { appRoot } = fixture(t);
+  const relative = 'electron/services/deviceIdentity.js';
+  const target = path.join(appRoot, ...relative.split('/'));
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(path.join(__dirname, '..', ...relative.split('/')), target);
+  const bridge = recoveryHostLegacyV1Revision(appRoot);
+  assert.equal(bridge.contract, RECOVERY_HOST_LEGACY_V1_CONTRACT);
+  assert.deepEqual(bridge.pinned_added_files, [{
+    path: relative,
+    sha256: RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS[relative]
+  }]);
+  fs.appendFileSync(target, '\n// tampered after legacy authorization\n');
+  assert.throws(() => recoveryHostLegacyV1Revision(appRoot), { code: 'REVISION_BRIDGE_DIGEST_MISMATCH' });
 });

@@ -5,6 +5,10 @@ const path = require('node:path');
 const DEFAULT_REFRESH_INTERVAL_MS = 30_000;
 const MAX_COMPONENT_FILES = 4096;
 const MAX_COMPONENT_BYTES = 64 * 1024 * 1024;
+const RECOVERY_HOST_LEGACY_V1_CONTRACT = 'recovery_host_legacy_v1_without_device_identity';
+const RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS = Object.freeze({
+  'electron/services/deviceIdentity.js': 'ede358714afa4d35a2fc939f56051859922acdc3693a40563234bf81a650a4ee'
+});
 
 const COMPONENT_SPECS = Object.freeze({
   recovery_host: Object.freeze({
@@ -162,6 +166,49 @@ function hashComponentRevision(appRoot, component, specs = COMPONENT_SPECS) {
   };
 }
 
+function recoveryHostLegacyV1Revision(appRoot) {
+  const root = path.resolve(String(appRoot || ''));
+  if (!path.isAbsolute(root)) {
+    throw Object.assign(new Error('Recovery Host legacy revision root is invalid.'), { code: 'REVISION_INPUT_INVALID' });
+  }
+  const pinnedAddedFiles = [];
+  const currentFiles = new Set((COMPONENT_SPECS.recovery_host.files || []).map(normalizedRelative));
+  for (const [relativeValue, expectedSha256] of Object.entries(RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS)) {
+    const relative = normalizedRelative(relativeValue);
+    if (!currentFiles.has(relative)) {
+      throw Object.assign(new Error('Recovery Host legacy revision bridge no longer matches the current component manifest.'), { code: 'REVISION_BRIDGE_CONTRACT_INVALID' });
+    }
+    const absolute = path.resolve(root, relative);
+    if (!withinRoot(root, absolute)) {
+      throw Object.assign(new Error('Recovery Host legacy revision bridge path escaped the application root.'), { code: 'REVISION_PATH_INVALID' });
+    }
+    let content;
+    try { content = fs.readFileSync(absolute); }
+    catch {
+      throw Object.assign(new Error('Recovery Host legacy revision bridge file is unavailable.'), { code: 'REVISION_BRIDGE_FILE_MISSING' });
+    }
+    const actualSha256 = crypto.createHash('sha256').update(content).digest('hex');
+    if (actualSha256 !== expectedSha256) {
+      throw Object.assign(new Error('Recovery Host legacy revision bridge file digest changed.'), {
+        code: 'REVISION_BRIDGE_DIGEST_MISMATCH',
+        details: { path: relative, expected_sha256: expectedSha256, actual_sha256: actualSha256 }
+      });
+    }
+    pinnedAddedFiles.push({ path: relative, sha256: actualSha256 });
+  }
+  const addedPaths = new Set(Object.keys(RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS).map(normalizedRelative));
+  const legacyRecoveryHostSpec = Object.freeze({
+    ...COMPONENT_SPECS.recovery_host,
+    files: Object.freeze((COMPONENT_SPECS.recovery_host.files || []).filter((relative) => !addedPaths.has(normalizedRelative(relative))))
+  });
+  const legacySpecs = { ...COMPONENT_SPECS, recovery_host: legacyRecoveryHostSpec };
+  return {
+    ...hashComponentRevision(root, 'recovery_host', legacySpecs),
+    contract: RECOVERY_HOST_LEGACY_V1_CONTRACT,
+    pinned_added_files: pinnedAddedFiles
+  };
+}
+
 class ComponentRevisionTracker {
   constructor({ paths, specs = COMPONENT_SPECS, refreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS, now = () => Date.now() }) {
     this.paths = paths;
@@ -213,6 +260,9 @@ module.exports = {
   ComponentRevisionTracker,
   componentOwnsPath,
   hashComponentRevision,
+  recoveryHostLegacyV1Revision,
+  RECOVERY_HOST_LEGACY_V1_CONTRACT,
+  RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS,
   DEFAULT_REFRESH_INTERVAL_MS,
   MAX_COMPONENT_FILES,
   MAX_COMPONENT_BYTES

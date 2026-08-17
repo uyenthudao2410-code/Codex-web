@@ -1,5 +1,6 @@
 const { RecoveryActionStore, OPERATION_ID_PATTERN } = require('./recoveryActionStore');
 const { isProcessAlive } = require('./recoveryIpc');
+const { recoveryHostLegacyV1Revision } = require('./componentRevision');
 
 const COMPONENTS = new Set(['coding_mcp', 'electron_ui', 'recovery_host']);
 const REVISION_PATTERN = /^[a-f0-9]{64}$/;
@@ -72,6 +73,7 @@ class RecoveryActivation {
     beginRecoveryHandoff = null,
     now = () => Date.now()
   }) {
+    this.paths = paths;
     this.revisions = revisions;
     this.orchestrator = orchestrator;
     this.log = log;
@@ -273,15 +275,39 @@ class RecoveryActivation {
     };
   }
 
-  async completeRecoveryReplacement(operationId, oldInstanceId) {
+  verifyRecoveryReplacement(operationId) {
     const record = this.actions.get(operationId);
     if (!record || record.component !== 'recovery_host' || record.state !== 'accepted') {
       throw activationError('ACTIVATION_OPERATION_MISMATCH', 'Recovery replacement operation is not pending.');
     }
     const revision = this.recoveryRevisionStatus();
-    if (revision.running_revision !== record.expected_disk_revision || revision.update_pending) {
+    if (!revision.running_revision || revision.running_revision !== revision.disk_revision || revision.update_pending) {
       throw activationError('REVISION_VERIFICATION_FAILED', 'Replacement Recovery Host did not load the expected revision.');
     }
+    let revisionContract = 'current';
+    let legacyBridge = null;
+    if (revision.running_revision !== record.expected_disk_revision) {
+      try {
+        legacyBridge = recoveryHostLegacyV1Revision(this.paths.appRoot());
+      } catch (error) {
+        throw activationError('REVISION_VERIFICATION_FAILED', 'Replacement Recovery Host legacy revision bridge verification failed.', {
+          bridge_error_code: String(error?.code || 'REVISION_BRIDGE_FAILED')
+        });
+      }
+      if (legacyBridge.revision !== record.expected_disk_revision) {
+        throw activationError('REVISION_VERIFICATION_FAILED', 'Replacement Recovery Host did not load source authorized by the legacy revision contract.', {
+          expected_legacy_revision: record.expected_disk_revision,
+          observed_legacy_revision: legacyBridge.revision,
+          current_revision: revision.running_revision
+        });
+      }
+      revisionContract = legacyBridge.contract;
+    }
+    return { record, revision, revisionContract, legacyBridge };
+  }
+
+  async completeRecoveryReplacement(operationId, oldInstanceId, options = {}) {
+    const { revision, revisionContract } = this.verifyRecoveryReplacement(operationId);
     await this.orchestrator.cancelCodeActivation(operationId).catch(() => false);
     return this.actions.finish(operationId, 'completed', {
       activated: true,
@@ -289,9 +315,14 @@ class RecoveryActivation {
       new_instance_id: this.recoveryInstanceId,
       old_revision: null,
       new_revision: revision.running_revision,
+      revision_contract: revisionContract,
       health_verified: true,
-      coding_mcp_preserved: true,
-      tunnel_preserved: true
+      coding_mcp_preserved: options.primaryLegacyMigrationRequired !== true,
+      tunnel_preserved: options.primaryLegacyMigrationRequired !== true,
+      legacy_device_migration: {
+        primary_required: options.primaryLegacyMigrationRequired === true,
+        recovery_required: options.recoveryLegacyMigrationRequired === true
+      }
     });
   }
 }

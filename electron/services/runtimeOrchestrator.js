@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { NativeService } = require('./nativeService');
+const { NativeService, isAlive, runtimeFingerprint } = require('./nativeService');
 const { TunnelService } = require('./tunnelService');
 const { validateRuntimeSettings, mergeRecentWorkspaces, workspaceKey } = require('./config');
 const { canConnect } = require('./environmentService');
@@ -11,7 +11,7 @@ const defaultPaths = require('../paths');
 const { readJson, updateJsonAtomic } = require('./jsonStore');
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { run } = require('./commandRunner');
-const { runtimeDeviceIdentity } = require('./deviceIdentity');
+const { runtimeDeviceIdentity, classifyStoredDeviceOwner } = require('./deviceIdentity');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -78,6 +78,25 @@ function parseGitStatusPorcelainV2(value) {
   return { available: repo, branch, head, head_short: head ? head.slice(0, 8) : null, dirty: repo ? dirty : null };
 }
 
+function parseLoopbackListenerPid(value, port) {
+  const target = `127.0.0.1:${Number(port)}`;
+  const matches = new Set();
+  for (const line of String(value || '').split(/\r?\n/)) {
+    const fields = line.trim().split(/\s+/);
+    if (fields.length < 5 || String(fields[0]).toUpperCase() !== 'TCP') continue;
+    if (fields[1] !== target || String(fields[3]).toUpperCase() !== 'LISTENING') continue;
+    const pid = Number(fields[4]);
+    if (Number.isInteger(pid) && pid > 0) matches.add(pid);
+  }
+  return matches.size === 1 ? [...matches][0] : null;
+}
+
+async function loopbackListenerPid(port) {
+  const result = await run('netstat.exe', ['-ano', '-p', 'tcp'], { allowFailure: true, timeoutMs: 3000 });
+  if (result.code !== 0) return null;
+  return parseLoopbackListenerPid(result.stdout, port);
+}
+
 function readMcpActivationPreflight(port, token) {
   return new Promise((resolve, reject) => {
     const request = http.request({
@@ -98,7 +117,12 @@ function readMcpActivationPreflight(port, token) {
           reject(Object.assign(new Error('Coding MCP activation preflight is unavailable.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
           return;
         }
-        resolve(parsed);
+        const workspace = String(parsed.workspace || '').trim();
+        if (!workspace) {
+          reject(Object.assign(new Error('Coding MCP activation preflight omitted workspace identity.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
+          return;
+        }
+        resolve({ ...parsed, workspace });
       });
     });
     request.on('timeout', () => request.destroy(Object.assign(new Error('Coding MCP activation preflight timed out.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' })));
@@ -293,6 +317,102 @@ class RuntimeOrchestrator {
   deviceProjection(settings, { mcpHealth = null, nativeAlive = false, tunnelRunning = false, git = null } = {}) {
     if (!this.device) return null;
     return { scope: 'current_device_only', registry: 'local', device_id: this.device.deviceId, device_instance_id: this.device.deviceInstanceId, display_name: this.device.displayName, online: true, workspace: String(settings?.workspace || ''), coding: { mcp_running: Boolean(mcpHealth), native_alive: Boolean(nativeAlive), tunnel_running: Boolean(tunnelRunning), tunnel_id: String(settings?.tunnelId || '') || null, endpoint_device_instance_id: String(mcpHealth?.device_instance_id || '') || null, ownership: 'device_id' }, git: git || { available: false, branch: null, head: null, head_short: null, dirty: null } };
+  }
+
+  async preflightLegacyDeviceMigration(probes = {}) {
+    if (!this.device) return { required: false, nativePid: null, tunnelPid: null };
+    const settings = this.settingsStore.load();
+    const state = readJson(this.paths.stateFile(), {});
+    const plan = { required: false, nativePid: null, tunnelPid: null };
+    const listenerPid = probes.listenerPid || loopbackListenerPid;
+
+    if (isAlive(Number(state.nativePid))) {
+      const ownership = classifyStoredDeviceOwner(state.nativeDeviceId, this.device.deviceId);
+      if (ownership === 'foreign') {
+        throw Object.assign(new Error('Legacy migration refused because Coding MCP belongs to another device.'), { code: 'NATIVE_PROCESS_FOREIGN_DEVICE' });
+      }
+      if (ownership === 'legacy') {
+        const token = await this.ensureToken();
+        const healthProbe = probes.mcpHealth || readMcpHealth;
+        const [health, ownerPid] = await Promise.all([
+          healthProbe(settings.mcpPort, token, settings.workspace, ''),
+          listenerPid(settings.mcpPort)
+        ]);
+        const exactState = state.nativeFingerprint === runtimeFingerprint(settings)
+          && workspaceKey(state.nativeWorkspace || '') === workspaceKey(settings.workspace)
+          && Number(state.nativePort) === Number(settings.mcpPort);
+        const healthDeviceId = String(health?.device_id || '').toLowerCase();
+        if (!exactState || Number(ownerPid) !== Number(state.nativePid) || !health
+          || (healthDeviceId && healthDeviceId !== this.device.deviceId.toLowerCase())) {
+          throw Object.assign(new Error('Legacy Coding MCP ownership could not be proven for this install.'), { code: 'NATIVE_LEGACY_MIGRATION_UNVERIFIED' });
+        }
+        plan.nativePid = Number(state.nativePid);
+        plan.required = true;
+      }
+    }
+
+    if (isAlive(Number(state.tunnelPid))) {
+      const ownership = classifyStoredDeviceOwner(state.tunnelDeviceId, this.device.deviceId);
+      if (ownership === 'foreign') {
+        throw Object.assign(new Error('Legacy migration refused because Coding Tunnel belongs to another device.'), { code: 'TUNNEL_PROCESS_FOREIGN_DEVICE' });
+      }
+      if (ownership === 'legacy') {
+        const ownerPid = await listenerPid(settings.healthPort);
+        let healthy = false;
+        if (Number(ownerPid) === Number(state.tunnelPid)) {
+          if (probes.tunnelHealth) healthy = await probes.tunnelHealth(settings, Number(state.tunnelPid));
+          else {
+            const result = await run(this.paths.tunnelExecutable(), [
+              'health', '--port', String(settings.healthPort), '--pid', String(state.tunnelPid),
+              '--require-control-plane-poll', '--json'
+            ], { allowFailure: true, timeoutMs: 3000 });
+            healthy = result.code === 0;
+          }
+        }
+        if (!healthy) {
+          throw Object.assign(new Error('Legacy Coding Tunnel ownership could not be proven for this install.'), { code: 'TUNNEL_LEGACY_MIGRATION_UNVERIFIED' });
+        }
+        plan.tunnelPid = Number(state.tunnelPid);
+        plan.required = true;
+      }
+    }
+
+    if (plan.required) {
+      if (!this.secrets.get('runtimeApiKey')) throw Object.assign(new Error('Runtime API Key is required before legacy device migration.'), { code: 'LEGACY_MIGRATION_RUNTIME_KEY_MISSING' });
+      if (!settings.tunnelId) throw Object.assign(new Error('Tunnel ID is required before legacy device migration.'), { code: 'LEGACY_MIGRATION_TUNNEL_ID_MISSING' });
+    }
+    return plan;
+  }
+
+  async applyLegacyDeviceMigration(plan) {
+    if (!plan?.required || !this.device) return false;
+    updateJsonAtomic(this.paths.stateFile(), (value) => {
+      const next = { ...value };
+      if (plan.nativePid) {
+        if (Number(value.nativePid) !== Number(plan.nativePid)
+          || classifyStoredDeviceOwner(value.nativeDeviceId, this.device.deviceId) !== 'legacy') {
+          throw Object.assign(new Error('Coding MCP changed after legacy migration preflight.'), { code: 'LEGACY_MIGRATION_STATE_CHANGED' });
+        }
+        next.nativeDeviceId = this.device.deviceId;
+        next.nativeDeviceInstanceId = this.device.deviceInstanceId;
+      }
+      if (plan.tunnelPid) {
+        if (Number(value.tunnelPid) !== Number(plan.tunnelPid)
+          || classifyStoredDeviceOwner(value.tunnelDeviceId, this.device.deviceId) !== 'legacy') {
+          throw Object.assign(new Error('Coding Tunnel changed after legacy migration preflight.'), { code: 'LEGACY_MIGRATION_STATE_CHANGED' });
+        }
+        next.tunnelDeviceId = this.device.deviceId;
+        next.tunnelDeviceInstanceId = this.device.deviceInstanceId;
+      }
+      return next;
+    });
+    this.log.info('Legacy primary runtime ownership proven; restarting with device identity', {
+      nativePid: plan.nativePid || null,
+      tunnelPid: plan.tunnelPid || null,
+      deviceId: this.device.deviceId
+    });
+    await this.restart({ automatic: true });
+    return true;
   }
 
   codingMcpRevisionStatus() {
@@ -931,4 +1051,4 @@ class RuntimeOrchestrator {
   }
 }
 
-module.exports = { RuntimeOrchestrator, probeMcp, readMcpHealth, parseGitStatusPorcelainV2, setMcpAuthorizedRoots };
+module.exports = { RuntimeOrchestrator, probeMcp, readMcpHealth, readMcpActivationPreflight, parseGitStatusPorcelainV2, parseLoopbackListenerPid, loopbackListenerPid, setMcpAuthorizedRoots };

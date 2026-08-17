@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
-const { NativeService, runtimeFingerprint, currentRuntimeState } = require('../electron/services/nativeService');
+const { NativeService, isAlive, runtimeFingerprint, currentRuntimeState } = require('../electron/services/nativeService');
 const { normalizeProxyValue } = require('../electron/services/proxyService');
 const runtimePaths = require('../electron/paths');
 const runtimeStatePath = path.join(os.tmpdir(), `webcodex-runtime-lifecycle-${process.pid}.json`);
@@ -21,8 +21,16 @@ test.beforeEach(() => {
   fs.rmSync(supervisorRequestPath, { force: true });
   fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
 });
-const { RuntimeOrchestrator, readMcpHealth, parseGitStatusPorcelainV2 } = require('../electron/services/runtimeOrchestrator');
+const { RuntimeOrchestrator, readMcpHealth, readMcpActivationPreflight, parseGitStatusPorcelainV2, parseLoopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
 const { classifyStoredDeviceOwner } = require('../electron/services/deviceIdentity');
+
+test('process liveness rejects missing and non-positive PIDs before OS probing', () => {
+  assert.equal(isAlive(null), false);
+  assert.equal(isAlive(undefined), false);
+  assert.equal(isAlive(0), false);
+  assert.equal(isAlive(-1), false);
+  assert.equal(isAlive(1.5), false);
+});
 
 test('Coding MCP health is trusted only when workspace and device_id both match', async (t) => {
   const token = 'token';
@@ -35,6 +43,29 @@ test('Coding MCP health is trusted only when workspace and device_id both match'
   assert.equal(await readMcpHealth(port, token, 'C:\\work\\other', 'device-a'), null);
 });
 
+test('Coding MCP activation preflight requires workspace identity even for a refusal', async (t) => {
+  const token = 'token';
+  let includeWorkspace = false;
+  const server = http.createServer((request, response) => {
+    assert.equal(request.url, '/__control/activation');
+    assert.equal(request.headers.authorization, `Bearer ${token}`);
+    const payload = { safe: false, code: 'RUNTIME_BUSY', reason: 'active_runtime_work' };
+    if (includeWorkspace) payload.workspace = 'C:\\work\\one';
+    const body = JSON.stringify(payload);
+    response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
+    response.end(body);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const port = server.address().port;
+  await assert.rejects(readMcpActivationPreflight(port, token), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
+  includeWorkspace = true;
+  const result = await readMcpActivationPreflight(port, token);
+  assert.equal(result.safe, false);
+  assert.equal(result.code, 'RUNTIME_BUSY');
+  assert.equal(result.workspace, 'C:\\work\\one');
+});
+
 test('Git and persistent-device ownership helpers project exact local identity state', () => {
   const clean = parseGitStatusPorcelainV2(`# branch.oid ${'a'.repeat(40)}\n# branch.head main\n`);
   assert.deepEqual(clean, { available: true, branch: 'main', head: 'a'.repeat(40), head_short: 'aaaaaaaa', dirty: false });
@@ -44,6 +75,8 @@ test('Git and persistent-device ownership helpers project exact local identity s
   assert.equal(classifyStoredDeviceOwner(deviceId, deviceId), 'owned');
   assert.equal(classifyStoredDeviceOwner('', deviceId), 'legacy');
   assert.equal(classifyStoredDeviceOwner('87654321-4321-4321-8321-cba987654321', deviceId), 'foreign');
+  assert.equal(parseLoopbackListenerPid('  TCP    127.0.0.1:18766    0.0.0.0:0    LISTENING    4321\r\n', 18766), 4321);
+  assert.equal(parseLoopbackListenerPid('  TCP    127.0.0.1:18766    0.0.0.0:0    LISTENING    4321\r\n  TCP    127.0.0.1:18766    0.0.0.0:0    LISTENING    9999\r\n', 18766), null);
 });
 
 test('device-aware process services keep legacy or foreign live owners fail-closed in source contract', () => {
@@ -58,6 +91,9 @@ test('device-aware process services keep legacy or foreign live owners fail-clos
   assert.match(recoverySource, /\$\{kind\}_OWNER_UNVERIFIED/);
   assert.match(recoverySource, /assertOwnedLive\(state\.recoveryMcpPid/);
   assert.match(recoverySource, /assertOwnedLive\(state\.recoveryTunnelPid/);
+  assert.match(recoverySource, /preflightLegacyOwnershipMigration/);
+  assert.match(recoverySource, /RECOVERY_MCP_LEGACY_MIGRATION_UNVERIFIED/);
+  assert.match(recoverySource, /RECOVERY_TUNNEL_LEGACY_MIGRATION_UNVERIFIED/);
 });
 
 function recoveryHarness(status) {

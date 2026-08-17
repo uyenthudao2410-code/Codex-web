@@ -435,3 +435,120 @@ test('legacy V2 baseline rows inherit the legacy head without trusting changed n
   assert.equal(state.baseline.components.recovery_host.head, legacyHead);
   assert.equal(state.baseline.components.recovery_host.revision, 'b'.repeat(64));
 });
+
+test('automatic activation skips terminal intents and advances the next pending component', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => ({ safe: true, code: 'READY' }),
+    activate: async () => ({ state: 'completed' }),
+    status: () => null
+  });
+  controller.discover = async () => false;
+  const checkpointId = 'checkpoint-terminal-skip-0001';
+  const state = controller.loadState();
+  state.active_checkpoint_id = checkpointId;
+  state.intents = [
+    { checkpoint_id: checkpointId, component: 'recovery_host', state: 'failed' },
+    { checkpoint_id: checkpointId, component: 'coding_mcp', state: 'blocked' },
+    { checkpoint_id: checkpointId, component: 'electron_ui', state: 'pending' }
+  ];
+  controller.saveState(state);
+  const processed = [];
+  controller.processIntent = async (current, intent) => {
+    processed.push(intent.component);
+    intent.state = 'completed';
+    controller.saveState(current);
+  };
+  await controller.tick();
+  assert.deepEqual(processed, ['electron_ui']);
+});
+
+test('stale active checkpoint is superseded and current-head accepted work can progress', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const oldHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  let preflights = 0;
+  let activations = 0;
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => { preflights += 1; return { safe: true, code: 'READY' }; },
+    activate: async () => { activations += 1; return { state: 'completed', result: { activated: true } }; },
+    status: () => { throw new Error('stale intent without an operation must not be polled'); }
+  });
+  const initial = controller.loadState();
+  await controller.ensureBaseline(workspace, initial, await gitStatus(workspace, true));
+
+  write(path.join(workspace, 'renderer', 'control-center.js'), 'module.exports = { currentHead: true };\n');
+  git(workspace, ['add', '.']);
+  git(workspace, ['commit', '-m', 'current accepted head']);
+  const newHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  insertAcceptedCheckpoint(workspace, {
+    checkpointId: 'checkpoint-current-head-0002',
+    runId: 'run-current-head-0002',
+    waveId: 'wave-current-head-0002',
+    head: newHead,
+    files: ['renderer/control-center.js'],
+    createdAt: '2026-01-01T00:00:06.000Z'
+  });
+
+  const stale = controller.loadState();
+  stale.active_checkpoint_id = 'checkpoint-auto-activation-0001';
+  stale.intents = [
+    { checkpoint_id: 'checkpoint-auto-activation-0001', component: 'recovery_host', state: 'failed', accepted_head: oldHead, current_operation_id: null },
+    { checkpoint_id: 'checkpoint-auto-activation-0001', component: 'coding_mcp', state: 'blocked', accepted_head: oldHead, current_operation_id: null },
+    { checkpoint_id: 'checkpoint-auto-activation-0001', component: 'electron_ui', state: 'pending', accepted_head: oldHead, current_operation_id: null }
+  ];
+  controller.saveState(stale);
+
+  await controller.tick();
+  const state = controller.loadState();
+  const oldUi = state.intents.find((item) => item.checkpoint_id === 'checkpoint-auto-activation-0001' && item.component === 'electron_ui');
+  const current = state.intents.find((item) => item.checkpoint_id === 'checkpoint-current-head-0002');
+  assert.notEqual(oldHead, newHead);
+  assert.equal(oldUi.state, 'superseded');
+  assert.equal(oldUi.error.code, 'BASE_HEAD_CHANGED');
+  assert.equal(state.processed_checkpoint_ids.includes('checkpoint-auto-activation-0001'), true);
+  assert.equal(current.state, 'completed');
+  assert.equal(current.accepted_head, newHead);
+  assert.equal(preflights, 1);
+  assert.equal(activations, 1);
+  assert.equal(controller.status().last_error, null);
+});
+
+test('stale awaiting intent with an in-flight operation is reconciled instead of superseded', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const oldHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  let statusCalls = 0;
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => { throw new Error('in-flight stale intent must not start another activation'); },
+    activate: async () => { throw new Error('in-flight stale intent must not start another activation'); },
+    status: (operationId) => {
+      statusCalls += 1;
+      assert.equal(operationId, 'auto_inflight_operation_0001');
+      return { state: 'accepted', expires_at_unix_ms: Date.now() + 60_000 };
+    }
+  });
+  const initial = controller.loadState();
+  await controller.ensureBaseline(workspace, initial, await gitStatus(workspace, true));
+  write(path.join(workspace, 'README-test-head.txt'), 'new head\n');
+  git(workspace, ['add', '.']);
+  git(workspace, ['commit', '-m', 'head changes while operation is active']);
+
+  const state = controller.loadState();
+  state.active_checkpoint_id = 'checkpoint-inflight-old-head';
+  state.intents = [{
+    checkpoint_id: 'checkpoint-inflight-old-head',
+    component: 'recovery_host',
+    state: 'awaiting',
+    accepted_head: oldHead,
+    current_operation_id: 'auto_inflight_operation_0001',
+    attempt: 1
+  }];
+  controller.saveState(state);
+
+  await controller.tick();
+  const after = controller.loadState();
+  assert.equal(statusCalls, 1);
+  assert.equal(after.intents[0].state, 'awaiting');
+  assert.equal(after.intents[0].current_operation_id, 'auto_inflight_operation_0001');
+  assert.equal(after.active_checkpoint_id, 'checkpoint-inflight-old-head');
+  assert.equal(controller.status().last_error, null);
+});
