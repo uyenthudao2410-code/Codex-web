@@ -36,6 +36,14 @@ __pycache__/
 /.coding-tools/ci-windows-fix/
 /ci-windows-fix2/
 
+# Volatile Coding Tools runtime coordination state. These one-shot correlation
+# files and SQLite sidecars are runtime-only; the canonical ledger database
+# itself remains intentionally tracked.
+/.coding-tools/evaluation/chatweb-host-turn-pending.json
+/.coding-tools/evaluation/chatweb-host-turn-binding.json
+/.coding-tools/orchestration/ledger.sqlite3-wal
+/.coding-tools/orchestration/ledger.sqlite3-shm
+
 # Frontend dependencies
 /frontend/node_modules
 
