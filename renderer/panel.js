@@ -220,6 +220,65 @@ const routerEdgeIds = {
   deepseek: 'routerEdgeDeepSeek'
 };
 
+const routerGeometry = {
+  chatweb: { from: 'routerChatWeb', to: 'routerHub', fromSide: 'right', toSide: 'left', toRatio: 0.24 },
+  desktop: { from: 'routerDesktop', to: 'routerHub', fromSide: 'right', toSide: 'left', toRatio: 0.5 },
+  opencode: { from: 'routerOpenCode', to: 'routerHub', fromSide: 'right', toSide: 'left', toRatio: 0.76 },
+  fast: { from: 'routerHub', to: 'routerFast', fromSide: 'right', toSide: 'left', fromRatio: 0.18 },
+  deepseek: { from: 'routerHub', to: 'routerDeepSeek', fromSide: 'right', toSide: 'left', fromRatio: 0.38 },
+  terra: { from: 'routerHub', to: 'routerTerra', fromSide: 'right', toSide: 'left', fromRatio: 0.62 },
+  sol: { from: 'routerHub', to: 'routerSol', fromSide: 'right', toSide: 'left', fromRatio: 0.82 },
+  writer: { from: 'routerHub', to: 'routerWriter', fromSide: 'bottom', toSide: 'top', fromRatio: 0.5, toRatio: 0.5 }
+};
+
+let routerGeometryFrame = 0;
+
+function routerAnchor(element, side, ratio, fabricRect) {
+  const rect = element.getBoundingClientRect();
+  const x = rect.left - fabricRect.left;
+  const y = rect.top - fabricRect.top;
+  const anchorRatio = Number.isFinite(ratio) ? ratio : 0.5;
+  if (side === 'left') return { x, y: y + rect.height * anchorRatio };
+  if (side === 'right') return { x: x + rect.width, y: y + rect.height * anchorRatio };
+  if (side === 'top') return { x: x + rect.width * anchorRatio, y };
+  return { x: x + rect.width * anchorRatio, y: y + rect.height };
+}
+
+function routerCurve(start, end, vertical = false) {
+  if (vertical) {
+    const bend = Math.max(22, Math.min(72, Math.abs(end.y - start.y) * 0.45));
+    return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} C ${start.x.toFixed(1)} ${(start.y + bend).toFixed(1)}, ${end.x.toFixed(1)} ${(end.y - bend).toFixed(1)}, ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
+  }
+  const bend = Math.max(30, Math.min(120, Math.abs(end.x - start.x) * 0.46));
+  return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} C ${(start.x + bend).toFixed(1)} ${start.y.toFixed(1)}, ${(end.x - bend).toFixed(1)} ${end.y.toFixed(1)}, ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
+}
+
+function updateRouterGeometry() {
+  const fabric = document.getElementById('routerFabric');
+  const overlay = document.getElementById('routingOverlay');
+  if (!fabric || !overlay) return;
+  const fabricRect = fabric.getBoundingClientRect();
+  if (!fabricRect.width || !fabricRect.height) return;
+  overlay.setAttribute('viewBox', `0 0 ${fabricRect.width.toFixed(1)} ${fabricRect.height.toFixed(1)}`);
+  for (const [key, geometry] of Object.entries(routerGeometry)) {
+    const from = document.getElementById(geometry.from);
+    const to = document.getElementById(geometry.to);
+    const edge = document.getElementById(routerEdgeIds[key]);
+    if (!from || !to || !edge) continue;
+    const start = routerAnchor(from, geometry.fromSide, geometry.fromRatio, fabricRect);
+    const end = routerAnchor(to, geometry.toSide, geometry.toRatio, fabricRect);
+    edge.setAttribute('d', routerCurve(start, end, geometry.fromSide === 'bottom' || geometry.toSide === 'top'));
+  }
+}
+
+function scheduleRouterGeometry() {
+  if (routerGeometryFrame) cancelAnimationFrame(routerGeometryFrame);
+  routerGeometryFrame = requestAnimationFrame(() => {
+    routerGeometryFrame = 0;
+    updateRouterGeometry();
+  });
+}
+
 const routerStateRank = { offline: 0, connected: 1, waiting: 2, blocked: 3, active: 4 };
 
 function mergeRouterState(current, next) {
@@ -312,7 +371,8 @@ function renderRouterFabric(data) {
   const activeRoutes = Object.values(routeStates).filter((state) => state === 'active').length;
   const onlineClients = [chatweb, desktop, opencode].filter((client) => client?.online).length;
   $('#routerSummary').textContent = `${onlineClients}/3 clients · ${activeRoutes} route active`;
-  $('#routerSummary').className = `badge ${hubState === 'active' ? 'active' : hubOnline ? 'waiting' : 'stopped'}`;
+  $('#routerSummary').className = `router-kpi badge ${hubState === 'active' ? 'active' : hubOnline ? 'waiting' : 'stopped'}`;
+  scheduleRouterGeometry();
 }
 
 function renderEvents(events) {
@@ -491,6 +551,16 @@ $('#toChatWebButton').onclick = () => transferController('chatweb');
 $('#copyCodexConfigButton').onclick = () => copyCodexConfig();
 $('#refreshButton').onclick = () => { refreshOrchestration(true); refreshHealth(true); };
 
+const routerResizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(scheduleRouterGeometry) : null;
+if (routerResizeObserver) {
+  ['routerFabric', ...Object.values(routerNodeIds)].forEach((id) => {
+    const element = document.getElementById(id);
+    if (element) routerResizeObserver.observe(element);
+  });
+} else {
+  window.addEventListener('resize', scheduleRouterGeometry);
+}
+
 document.addEventListener('visibilitychange', () => {
   document.body.classList.toggle('is-hidden', document.hidden);
   if (!document.hidden) {
@@ -501,6 +571,7 @@ document.addEventListener('visibilitychange', () => {
 
 refreshHealth();
 refreshOrchestration();
+scheduleRouterGeometry();
 setInterval(refreshOrchestration, 2000);
 setInterval(refreshHealth, 5000);
 setInterval(tick, 1000);

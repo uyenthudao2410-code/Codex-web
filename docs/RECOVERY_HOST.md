@@ -13,6 +13,7 @@ Electron UI --authenticated loopback IPC--> Recovery Host
                                                +--> RuntimeOrchestrator
                                                +--> Coding MCP/Tunnel
                                                +--> Execution Hub gateway
+                                               +--> Electron UI recovery watchdog
                                                +--> bounded watchdog
 ```
 
@@ -49,6 +50,13 @@ implementation trong current worktree** và được Recovery Host supervise; Re
 Tunnel phải có tunnel ID riêng, không reuse Coding Tunnel để tránh cùng failure
 domain.
 
+Recovery Host mới là owner của recovery boundary cho Electron UI. Sau khi một UI
+đã đăng ký instance/PID hợp lệ, watchdog 5 giây có thể mở lại UI bằng launcher argv
+cố định nếu process đó biến mất ngoài ý muốn. Watchdog không tự mở UI khi host chỉ
+chạy headless và chưa từng nhận registration trong host instance hiện tại. Mỗi lần
+launch có registration grace/cooldown, giới hạn số lần trong cửa sổ thời gian và
+circuit break để tránh crash loop.
+
 ## Phase 3B independent Recovery MCP/Tunnel
 
 Recovery Host supervise một break-glass data plane riêng: Python
@@ -77,6 +85,12 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
 
 - Mở ứng dụng bình thường: UI kiểm tra descriptor rồi khởi động một Recovery
   Host nếu chưa có host healthy.
+- Nếu UI đã đăng ký rồi bị crash/kill ngoài ý muốn, Recovery Host giữ Coding và
+  Recovery planes nguyên trạng rồi spawn lại duy nhất Electron UI bằng executable
+  và argv nội bộ cố định.
+- Thao tác operator quit gửi authenticated `client.suppress_ui_recovery` cho đúng
+  UI instance trước khi thoát. Suppression được lưu trong user-data và sống qua
+  Recovery Host replacement; registration UI hợp lệ kế tiếp sẽ xóa suppression.
 - `startWithWindows`: Windows login item được cấu hình với `--recovery-host`,
   nên host có thể khởi động trước UI và giữ runtime resident.
 - Chạy trực tiếp trong bản development: `electron . --recovery-host`.
@@ -125,6 +139,12 @@ Electron UI đăng ký instance/PID/revision sau khi attach host và lặp lại
 heartbeat. PID chỉ dùng để xác minh registration còn sống, không bao giờ được
 dùng làm remote kill target. `recoveryHost.electron_ui_revision` vì thế phản ánh
 đúng UI revision đang chạy hoặc `unknown` khi chưa có registration.
+
+`recoveryHost.electron_ui_recovery` phản ánh watchdog riêng cho UI (`healthy`,
+`waiting_for_registration`, `cooldown`, `suppressed`, `circuit_suppressed`, ...),
+không nhập trạng thái đó vào Coding MCP/Tunnel. Controlled electron code activation
+có ưu tiên hơn crash recovery; khi activation đang `accepted`, watchdog không spawn
+UI thứ hai và chờ luồng activation/re-registration hoàn tất.
 
 Hash dùng manifest component cố định, giới hạn tối đa file/bytes và cache 30
 giây. Nó không gọi Git, không đưa `.coding-tools` hoặc toàn repository vào

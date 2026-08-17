@@ -14,6 +14,11 @@ const { AcceptedCodeActivationController } = require('./recoveryActionStore');
 const SUPERVISION_INTERVAL_MS = 5000;
 const REPLACEMENT_WAIT_MS = 15_000;
 const HANDOFF_SUPERVISION_DRAIN_MS = 10_000;
+const UI_RECOVERY_REGISTRATION_TIMEOUT_MS = 15_000;
+const UI_RECOVERY_COOLDOWN_MS = 20_000;
+const UI_RECOVERY_WINDOW_MS = 10 * 60_000;
+const UI_RECOVERY_ATTEMPT_LIMIT = 4;
+const UI_RECOVERY_CIRCUIT_BREAK_MS = 5 * 60_000;
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -122,6 +127,16 @@ class RecoveryHost {
     this.handoffStarted = false;
     this.replacementWaitMs = REPLACEMENT_WAIT_MS;
     this.handoffSupervisionDrainMs = HANDOFF_SUPERVISION_DRAIN_MS;
+    this.spawnElectronUi = spawnElectronUi;
+    this.uiRecoveryAttempts = [];
+    this.uiRecoveryPendingUntil = 0;
+    this.uiRecoveryNextAttemptAt = 0;
+    this.uiRecoveryCircuitUntil = 0;
+    this.uiRecoveryLastLaunchPid = 0;
+    this.uiRecoveryLastErrorCode = '';
+    this.uiRecoveryLastState = 'untracked';
+    this.uiRecoveryLaunchInFlight = null;
+    this.uiRecoveryInitialGraceUntil = 0;
     this.activation = new RecoveryActivation({
       paths,
       revisions: this.revisions,
@@ -134,6 +149,12 @@ class RecoveryHost {
       spawnElectronUi,
       beginRecoveryHandoff: (operationId) => this.scheduleRecoveryHandoff(operationId)
     });
+    if (this.activation.uiRecoveryPreferenceStatus().suppressed) {
+      this.uiRecoveryLastState = 'suppressed';
+    } else {
+      this.uiRecoveryInitialGraceUntil = Date.now() + UI_RECOVERY_REGISTRATION_TIMEOUT_MS;
+      this.uiRecoveryLastState = 'awaiting_initial_registration';
+    }
     this.autoActivation = autoActivationController || new AcceptedCodeActivationController({ paths, settings, revisions: this.revisions, activation: this.activation, log });
     this.recoveryPlane = recoveryPlaneService || new RecoveryPlaneService({
       paths,
@@ -141,6 +162,120 @@ class RecoveryHost {
       deviceIdentity: this.deviceIdentity,
       deviceInstanceId: this.deviceInstanceId
     });
+  }
+
+  resetUiRecoveryTracking(state = 'healthy') {
+    this.uiRecoveryAttempts = [];
+    this.uiRecoveryPendingUntil = 0;
+    this.uiRecoveryNextAttemptAt = 0;
+    this.uiRecoveryCircuitUntil = 0;
+    this.uiRecoveryInitialGraceUntil = 0;
+    this.uiRecoveryLastErrorCode = '';
+    this.uiRecoveryLastState = state;
+  }
+
+  uiRecoveryStatus() {
+    const now = Date.now();
+    const preference = this.activation.uiRecoveryPreferenceStatus();
+    const presence = this.activation.uiPresence();
+    this.uiRecoveryAttempts = this.uiRecoveryAttempts.filter((time) => time >= now - UI_RECOVERY_WINDOW_MS);
+    let state = this.uiRecoveryLastState;
+    if (preference.suppressed) state = 'suppressed';
+    else if (presence.alive) state = 'healthy';
+    else if (this.activation.hasPendingUiActivation()) state = 'activation_pending';
+    else if (!presence.tracked && this.uiRecoveryInitialGraceUntil > now) state = 'awaiting_initial_registration';
+    else if (this.uiRecoveryCircuitUntil > now) state = 'circuit_suppressed';
+    else if (this.uiRecoveryPendingUntil > now) state = 'waiting_for_registration';
+    else if (this.uiRecoveryNextAttemptAt > now) state = 'cooldown';
+    else if (!presence.alive) state = 'missing';
+    return {
+      state,
+      registered: presence.tracked,
+      alive: presence.alive,
+      suppressed: preference.suppressed,
+      suppression_reason: preference.reason || '',
+      attempts_in_window: this.uiRecoveryAttempts.length,
+      last_launch_pid: this.uiRecoveryLastLaunchPid || null,
+      initial_registration_grace_until_unix_ms: this.uiRecoveryInitialGraceUntil || null,
+      pending_registration_until_unix_ms: this.uiRecoveryPendingUntil || null,
+      next_attempt_at_unix_ms: this.uiRecoveryNextAttemptAt || null,
+      circuit_suppressed_until_unix_ms: this.uiRecoveryCircuitUntil || null,
+      last_error_code: this.uiRecoveryLastErrorCode || null
+    };
+  }
+
+  async superviseElectronUi() {
+    if (this.uiRecoveryLaunchInFlight) return this.uiRecoveryLaunchInFlight;
+    const operation = (async () => {
+      const now = Date.now();
+      const preference = this.activation.uiRecoveryPreferenceStatus();
+      const presence = this.activation.uiPresence();
+      this.uiRecoveryAttempts = this.uiRecoveryAttempts.filter((time) => time >= now - UI_RECOVERY_WINDOW_MS);
+      if (preference.suppressed) {
+        this.uiRecoveryLastState = 'suppressed';
+        return this.uiRecoveryStatus();
+      }
+      if (presence.alive) {
+        this.resetUiRecoveryTracking('healthy');
+        return this.uiRecoveryStatus();
+      }
+      if (this.activation.hasPendingUiActivation()) {
+        this.uiRecoveryLastState = 'activation_pending';
+        return this.uiRecoveryStatus();
+      }
+      if (!presence.tracked && this.uiRecoveryInitialGraceUntil > now) {
+        this.uiRecoveryLastState = 'awaiting_initial_registration';
+        return this.uiRecoveryStatus();
+      }
+      if (typeof this.spawnElectronUi !== 'function') {
+        this.uiRecoveryLastState = 'unavailable';
+        this.uiRecoveryLastErrorCode = 'UI_RECOVERY_LAUNCHER_UNAVAILABLE';
+        return this.uiRecoveryStatus();
+      }
+      if (this.uiRecoveryCircuitUntil > now) {
+        this.uiRecoveryLastState = 'circuit_suppressed';
+        return this.uiRecoveryStatus();
+      }
+      if (this.uiRecoveryPendingUntil > now) {
+        this.uiRecoveryLastState = 'waiting_for_registration';
+        return this.uiRecoveryStatus();
+      }
+      if (this.uiRecoveryNextAttemptAt > now) {
+        this.uiRecoveryLastState = 'cooldown';
+        return this.uiRecoveryStatus();
+      }
+      if (this.uiRecoveryAttempts.length >= UI_RECOVERY_ATTEMPT_LIMIT) {
+        this.uiRecoveryCircuitUntil = now + UI_RECOVERY_CIRCUIT_BREAK_MS;
+        this.uiRecoveryLastState = 'circuit_suppressed';
+        return this.uiRecoveryStatus();
+      }
+      this.uiRecoveryAttempts.push(now);
+      try {
+        const pid = await this.spawnElectronUi({});
+        this.uiRecoveryLastLaunchPid = Number(pid || 0);
+        this.uiRecoveryPendingUntil = now + UI_RECOVERY_REGISTRATION_TIMEOUT_MS;
+        this.uiRecoveryNextAttemptAt = now + UI_RECOVERY_COOLDOWN_MS;
+        this.uiRecoveryLastErrorCode = '';
+        this.uiRecoveryLastState = 'launch_started';
+        this.log.info('Recovery Host started a replacement Electron UI after unexpected UI loss', {
+          launchPid: this.uiRecoveryLastLaunchPid || null,
+          attemptsInWindow: this.uiRecoveryAttempts.length
+        });
+      } catch (error) {
+        this.uiRecoveryPendingUntil = 0;
+        this.uiRecoveryNextAttemptAt = now + UI_RECOVERY_COOLDOWN_MS;
+        this.uiRecoveryLastErrorCode = String(error?.code || 'UI_RECOVERY_LAUNCH_FAILED');
+        this.uiRecoveryLastState = 'launch_failed';
+        this.log.error(error.message, { stage: 'electron-ui-recovery', code: this.uiRecoveryLastErrorCode });
+      }
+      return this.uiRecoveryStatus();
+    })();
+    this.uiRecoveryLaunchInFlight = operation;
+    try {
+      return await operation;
+    } finally {
+      if (this.uiRecoveryLaunchInFlight === operation) this.uiRecoveryLaunchInFlight = null;
+    }
   }
 
   hostStatus() {
@@ -168,6 +303,7 @@ class RecoveryHost {
       gateway: this.gateway?.server ? 'healthy' : 'stopped',
       code_revision: codeRevision,
       electron_ui_revision: this.activation.uiRevisionStatus(),
+      electron_ui_recovery: this.uiRecoveryStatus(),
       auto_activation: this.autoActivation?.status?.() || null,
       recovery_plane_mode: 'independent_mcp_tunnel_v1',
       recovery_plane: this.lastRecoveryPlaneStatus,
@@ -200,7 +336,16 @@ class RecoveryHost {
       'code.activation_preflight': async (request) => this.activation.preflight(request),
       'code.activate_update': async (request) => this.activation.activate(request),
       'code.activation_status': async (operationId) => this.activation.status(operationId),
-      'client.register_ui_revision': async (registration) => this.activation.registerUi(registration),
+      'client.register_ui_revision': async (registration) => {
+        const result = this.activation.registerUi(registration);
+        this.resetUiRecoveryTracking('healthy');
+        return result;
+      },
+      'client.suppress_ui_recovery': async (intent) => {
+        const result = this.activation.suppressUiRecovery(intent);
+        this.resetUiRecoveryTracking('suppressed');
+        return result;
+      },
       'runtime.snapshot': async (options = {}) => this.decorate(await this.orchestrator.snapshot(options)),
       'runtime.lightweight_snapshot': async () => this.decorate(await this.orchestrator.lightweightSnapshot()),
       'runtime.start': async (options = {}) => this.decorate(await this.orchestrator.start(options)),
@@ -228,6 +373,7 @@ class RecoveryHost {
         this.log.error(error.message, { stage: 'recovery-host-supervise' });
       }
       await this.ensureRecoveryPlane();
+      await this.superviseElectronUi();
       return runtime;
     })();
     this.supervisionInFlight = operation;
@@ -428,5 +574,8 @@ module.exports = {
   isProcessAlive,
   SUPERVISION_INTERVAL_MS,
   HANDOFF_SUPERVISION_DRAIN_MS,
+  UI_RECOVERY_REGISTRATION_TIMEOUT_MS,
+  UI_RECOVERY_COOLDOWN_MS,
+  UI_RECOVERY_ATTEMPT_LIMIT,
   waitForReplacementLockRelease
 };

@@ -1,0 +1,28 @@
+RECOVERY_HOST_DESCRIPTOR
+
+
+Pid      : 34400
+Instance : 7a0b017a7093c1637c42d4960a7e1040
+Port     : 62930
+
+
+
+RECOVERY_HOST_PROCESS
+
+
+Id         : 34400
+StartTime  : 8/17/2026 5:51:18 PM
+Responding : True
+
+
+
+FOREGROUND_UI
+
+
+ProcessId    : 19468
+CreationDate : 8/17/2026 5:51:34 PM
+CommandLine  : E:\DEV\Tools-Codex-web\node_modules\electron\dist\electron.exe E:\DEV\Tools-Codex-web
+
+
+
+RECOVERY_STATUS

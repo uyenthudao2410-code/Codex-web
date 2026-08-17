@@ -9,7 +9,7 @@ const { DEVICE_ID_PATTERN, loadOrCreateDeviceIdentity } = require('../electron/s
 const { ComponentRevisionTracker, hashComponentRevision, recoveryHostLegacyV1Revision, RECOVERY_HOST_LEGACY_V1_CONTRACT } = require('../electron/services/componentRevision');
 const { RecoveryActionStore } = require('../electron/services/recoveryActionStore');
 const { RecoveryActivation } = require('../electron/services/recoveryActivation');
-const { RecoveryIpcClient, RecoveryIpcServer } = require('../electron/services/recoveryIpc');
+const { RecoveryIpcClient, RecoveryIpcServer, RPC_ACTIONS } = require('../electron/services/recoveryIpc');
 const {
   RecoveryHost,
   acquireRecoveryHostLock,
@@ -34,6 +34,37 @@ function fixture(t) {
   fs.mkdirSync(appRoot, { recursive: true });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return createRuntimePaths({ dataRoot, resourcesRoot, appRoot });
+}
+
+function uiRecoveryFixture(t, { paths = fixture(t), revision = 'a'.repeat(64), spawnElectronUi = async () => 0 } = {}) {
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ autoStartServices: false }) },
+    secrets: {},
+    environment: {},
+    log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+    orchestrator: {
+      codingMcpRevisionStatus: () => ({
+        running_revision: revision,
+        disk_revision: revision,
+        update_pending: false,
+        state: 'current'
+      })
+    },
+    healthService: {},
+    gateway: {},
+    revisionTracker: {
+      captureRunning: () => revision,
+      status: (_component, running) => ({
+        running_revision: running || null,
+        disk_revision: revision,
+        update_pending: false,
+        state: running ? 'current' : 'unknown'
+      })
+    },
+    spawnElectronUi
+  });
+  return { host, paths, revision };
 }
 
 function unauthorizedCall(descriptor) {
@@ -191,6 +222,114 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   assert.equal(calls.gatewayStop, 1);
   assert.equal(fs.existsSync(paths.recoveryHostLockFile()), false);
   assert.equal(fs.existsSync(paths.recoveryHostDescriptorFile()), false);
+});
+
+test('new unsuppressed Recovery Host relaunches UI after initial registration grace expires', async (t) => {
+  let launches = 0;
+  const { host } = uiRecoveryFixture(t, {
+    spawnElectronUi: async () => { launches += 1; return 42000 + launches; }
+  });
+
+  assert.equal(host.uiRecoveryStatus().state, 'awaiting_initial_registration');
+  assert.ok(host.uiRecoveryStatus().initial_registration_grace_until_unix_ms > Date.now());
+  await host.superviseElectronUi();
+  assert.equal(launches, 0, 'initial grace must allow an already-running UI to re-register after host replacement');
+
+  host.uiRecoveryInitialGraceUntil = 0;
+  await Promise.all([host.superviseElectronUi(), host.superviseElectronUi()]);
+  assert.equal(launches, 1, 'missing UI must be relaunched by Recovery Host itself after grace');
+  assert.equal(host.uiRecoveryStatus().state, 'waiting_for_registration');
+  await host.superviseElectronUi();
+  assert.equal(launches, 1, 'registration grace/cooldown must prevent duplicate UI launches');
+});
+
+test('Recovery Host relaunches a previously registered UI when its process dies unexpectedly', async (t) => {
+  let launches = 0;
+  const { host, revision } = uiRecoveryFixture(t, {
+    revision: 'b'.repeat(64),
+    spawnElectronUi: async () => { launches += 1; return 42500 + launches; }
+  });
+  host.activation.uiRegistration = {
+    instance_id: 'lost-electron-ui-0001',
+    pid: 99999999,
+    revision,
+    started_at_unix_ms: Date.now() - 1000,
+    registered_at_unix_ms: Date.now() - 900
+  };
+  host.uiRecoveryInitialGraceUntil = 0;
+
+  await Promise.all([host.superviseElectronUi(), host.superviseElectronUi()]);
+  assert.equal(launches, 1);
+  assert.equal(host.uiRecoveryStatus().registered, true);
+  assert.equal(host.uiRecoveryStatus().alive, false);
+  assert.equal(host.uiRecoveryStatus().state, 'waiting_for_registration');
+});
+
+test('explicit operator quit suppression survives Recovery Host replacement and blocks default-armed recovery', async (t) => {
+  const paths = fixture(t);
+  let launches = 0;
+  const options = {
+    paths,
+    revision: 'c'.repeat(64),
+    spawnElectronUi: async () => { launches += 1; return 43000 + launches; }
+  };
+  const { host, revision } = uiRecoveryFixture(t, options);
+  const first = {
+    instance_id: 'electron-ui-live-0001',
+    pid: process.pid,
+    revision,
+    started_at_unix_ms: Date.now()
+  };
+  await host.handlers()['client.register_ui_revision'](first);
+  await assert.rejects(
+    Promise.resolve().then(() => host.handlers()['client.suppress_ui_recovery']({
+      instance_id: 'wrong-electron-ui-0001',
+      reason: 'operator_quit'
+    })),
+    { code: 'UI_RECOVERY_INSTANCE_MISMATCH' }
+  );
+  const suppression = await host.handlers()['client.suppress_ui_recovery']({
+    instance_id: first.instance_id,
+    reason: 'operator_quit'
+  });
+  assert.equal(suppression.suppressed, true);
+
+  const { host: replacementHost } = uiRecoveryFixture(t, options);
+  assert.equal(replacementHost.activation.uiRecoveryPreferenceStatus().suppressed, true);
+  assert.equal(replacementHost.uiRecoveryStatus().state, 'suppressed');
+  replacementHost.uiRecoveryInitialGraceUntil = 0;
+  await replacementHost.superviseElectronUi();
+  assert.equal(launches, 0, 'explicit operator quit must remain off across Recovery Host replacement');
+
+  await replacementHost.handlers()['client.register_ui_revision']({
+    instance_id: 'electron-ui-live-0002',
+    pid: process.pid,
+    revision,
+    started_at_unix_ms: Date.now()
+  });
+  assert.equal(replacementHost.activation.uiRecoveryPreferenceStatus().suppressed, false);
+  assert.equal(replacementHost.uiRecoveryStatus().state, 'healthy');
+});
+
+test('UI watchdog defers to a pending controlled electron activation', async (t) => {
+  let launches = 0;
+  const { host, revision } = uiRecoveryFixture(t, {
+    revision: 'd'.repeat(64),
+    spawnElectronUi: async () => { launches += 1; return 44000; }
+  });
+  host.uiRecoveryInitialGraceUntil = 0;
+  const now = Date.now();
+  host.activation.actions.begin({
+    operation_id: 'operation-ui-pending-0001',
+    component: 'electron_ui',
+    requested_at_unix_ms: now,
+    expires_at_unix_ms: now + 30_000,
+    expected_disk_revision: revision,
+    allow_acceptance_pending: false
+  });
+  await host.superviseElectronUi();
+  assert.equal(launches, 0);
+  assert.equal(host.uiRecoveryStatus().state, 'activation_pending');
 });
 
 test('Recovery Host reports a source change as pending without restarting itself', (t) => {
@@ -596,4 +735,7 @@ test('Electron main delegates runtime ownership to Recovery Host', () => {
   assert.match(host, /orchestrator\.supervise\(\)/);
   assert.match(main, /assertActivationDeadline\(\{ expiresAtUnixMs: result\.expires_at_unix_ms \}, 'before_ui_relaunch'\)/);
   assert.match(main, /orchestrator\.activationStatus\(result\.operation_id\)/);
+  assert.match(main, /suppressUiRecovery\(reason\)/);
+  assert.match(main, /quitUi\('operator_quit'\)/);
+  assert.equal(RPC_ACTIONS.includes('client.suppress_ui_recovery'), true);
 });

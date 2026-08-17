@@ -17,6 +17,7 @@ const RPC_ACTIONS = Object.freeze([
   'code.activate_update',
   'code.activation_status',
   'client.register_ui_revision',
+  'client.suppress_ui_recovery',
   'runtime.snapshot',
   'runtime.lightweight_snapshot',
   'runtime.start',
@@ -34,6 +35,7 @@ const RPC_ACTIONS = Object.freeze([
 const MUTATING_ACTIONS = new Set([
   'code.activate_update',
   'client.register_ui_revision',
+  'client.suppress_ui_recovery',
   'runtime.start',
   'runtime.stop',
   'runtime.restart',
@@ -292,6 +294,7 @@ class RecoveryIpcClient {
   activateUpdate(request) { return this.call('code.activate_update', [request]); }
   activationStatus(operationId) { return this.call('code.activation_status', [operationId]); }
   registerUiRevision(registration) { return this.call('client.register_ui_revision', [registration]); }
+  suppressUiRecovery(intent) { return this.call('client.suppress_ui_recovery', [intent]); }
   snapshot(options = {}) { return this.call('runtime.snapshot', [options]); }
   lightweightSnapshot() { return this.call('runtime.lightweight_snapshot'); }
   supervise() { return this.lightweightSnapshot(); }

@@ -5,22 +5,36 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
-const { panelInset, panelBounds, chatBounds, PANEL_WIDTH, MIN_CHAT_WIDTH } = require('../electron/services/panelLayout');
+const {
+  panelInset,
+  panelBounds,
+  chatBounds,
+  PANEL_WIDTH,
+  PANEL_WIDTH_RATIO,
+  PANEL_MIN_WIDTH,
+  PANEL_MAX_WIDTH,
+  MIN_CHAT_WIDTH
+} = require('../electron/services/panelLayout');
 
 test('panel layout keeps chat usable and shrinks gracefully on narrow windows', () => {
   assert.equal(PANEL_WIDTH, 510);
+  assert.equal(PANEL_WIDTH_RATIO, 0.45);
+  assert.equal(PANEL_MIN_WIDTH, PANEL_WIDTH);
+  assert.equal(PANEL_MAX_WIDTH, 880);
   assert.equal(panelInset(1360, false), 0);
-  assert.equal(panelInset(1360, true), PANEL_WIDTH);
+  assert.equal(panelInset(1360, true), 612);
+  assert.equal(panelInset(1920, true), 864);
+  assert.equal(panelInset(2560, true), PANEL_MAX_WIDTH);
   assert.equal(panelInset(900, true), 900 - MIN_CHAT_WIDTH);
   assert.equal(panelInset(400, true), 0);
   assert.equal(panelInset(1200, true, { panelWidth: 500, minChatWidth: 600 }), 500);
 
   const bounds = panelBounds(1360, 900, 112, true);
-  assert.deepEqual(bounds, { x: 1360 - PANEL_WIDTH, y: 112, width: PANEL_WIDTH, height: 900 - 112 });
+  assert.deepEqual(bounds, { x: 748, y: 112, width: 612, height: 900 - 112 });
   assert.equal(panelBounds(1360, 900, 112, false), null);
 
   const chat = chatBounds(1360, 900, 112, true);
-  assert.deepEqual(chat, { x: 0, y: 112, width: 1360 - PANEL_WIDTH, height: 900 - 112 });
+  assert.deepEqual(chat, { x: 0, y: 112, width: 748, height: 900 - 112 });
   const chatClosed = chatBounds(1360, 900, 112, false);
   assert.deepEqual(chatClosed, { x: 0, y: 112, width: 1360, height: 900 - 112 });
 });
@@ -71,6 +85,13 @@ test('control panel renders task plus multi-client authority and continuity cont
   }
   assert.match(html, /Operator Control Panel/);
   assert.match(html, /Executive Summary/);
+  assert.match(html, /class="dashboard-card executive-card hero-summary"/);
+  assert.match(html, /class="hero-kpi-grid"/);
+  assert.equal((html.match(/class="summary-kpi-card /g) || []).length, 4, 'Executive Summary phải có đúng bốn KPI hero cards');
+  assert.match(html, /id="taskPercent"/);
+  assert.match(html, /id="eventCount"/);
+  assert.match(html, /id="routerSummary"/);
+  assert.match(html, /id="hubStatus"/);
   assert.match(html, /Alerts &amp; Decisions/);
   assert.match(html, /Capacity &amp; Authority/);
   assert.match(html, /Quick Controls/);
@@ -79,6 +100,30 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.ok(routingIndex > html.indexOf('Executive Summary'), 'Live Routing phải nằm sau phần tóm tắt đầu trang');
   assert.ok(routingIndex < html.indexOf('id="continuitySection"'), 'Live Routing phải được đẩy lên trước Alerts & Decisions');
   assert.ok(routingIndex < html.indexOf('Quick Controls'), 'Live Routing không được nằm gần cuối panel');
+  assert.match(html, /class="dashboard-card router-card panel-section hero-routing"/);
+  assert.match(html, /class="router-fabric routing-stage"/);
+  assert.match(html, /class="routing-column routing-frontends"/);
+  assert.match(html, /class="routing-hub-column"/);
+  assert.match(html, /class="routing-column routing-lanes"/);
+  assert.match(html, />FRONTENDS</);
+  assert.match(html, />EXECUTION HUB</);
+  assert.match(html, />COMPUTE LANES</);
+  assert.match(html, /Delegated model work/);
+  assert.match(html, /MCP Write &amp; Proof/);
+  assert.match(html, /single writer · fence/);
+  const hubColumn = html.slice(html.indexOf('class="routing-hub-column"'), html.indexOf('class="routing-column routing-lanes"'));
+  const laneColumn = html.slice(html.indexOf('class="routing-column routing-lanes"'), html.indexOf('class="router-legend"'));
+  assert.match(hubColumn, /id="routerWriter"/, 'MCP writer/proof authority phải nằm cùng control-plane column với Execution Hub');
+  assert.doesNotMatch(laneColumn, /id="routerWriter"/, 'MCP writer không được trình bày như một compute/model lane');
+  assert.match(html, /id="routingOverlay" class="router-links"/);
+  assert.match(html, /<path id="routerEdgeChatWeb"/);
+  assert.doesNotMatch(html, /<line id="routerEdge/);
+  assert.doesNotMatch(html, /viewBox="0 0 1000 380"/);
+  assert.doesNotMatch(html, /d="M245 75/);
+  assert.match(html, /class="hub-role">RUNTIME AUTHORITY/);
+  assert.match(html, /<details class="dashboard-card continuity-section advisory-card" id="continuitySection">/);
+  assert.match(html, /class="section-heading compact advisory-summary"/);
+  assert.match(html, /<details class="dashboard-card recent-card panel-section secondary-disclosure" id="eventsSection">/);
   assert.match(html, /id="advancedOperations"/);
   const js = read('renderer/panel.js');
   assert.match(js, /refreshOrchestration/);
@@ -99,7 +144,18 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(js, /renderProofs/);
   assert.match(js, /renderHub/);
   assert.match(js, /renderRouterFabric/);
+  assert.match(js, /const routerGeometry = \{/);
+  assert.match(js, /getBoundingClientRect\(\)/);
+  assert.match(js, /function updateRouterGeometry\(\)/);
+  assert.match(js, /function scheduleRouterGeometry\(\)/);
+  assert.match(js, /requestAnimationFrame/);
+  assert.match(js, /new ResizeObserver\(scheduleRouterGeometry\)/);
+  assert.match(js, /\['routerFabric', \.\.\.Object\.values\(routerNodeIds\)\]\.forEach\(\(id\) => \{/);
+  assert.match(js, /routerResizeObserver\.observe\(element\)/);
+  assert.match(js, /overlay\.setAttribute\('viewBox'/);
+  assert.match(js, /edge\.setAttribute\('d', routerCurve/);
   assert.match(js, /delegationRouterLane/);
+  assert.match(js, /className = `router-kpi badge \$\{hubState === 'active'/);
   assert.match(js, /clientFor\(data, 'opencode', 'opencode'\)/);
   assert.match(js, /SAFE TO ROTATE CHATWEB: YES/);
   assert.match(js, /host không expose mức sử dụng/);
@@ -123,12 +179,43 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(css, /\.continuity-callout\.unsafe/);
   assert.match(css, /\.router-fabric/);
   assert.match(css, /\.operator-dashboard/);
-  assert.match(css, /\.executive-grid/);
+  assert.match(css, /\.hero-summary/);
+  assert.match(css, /\.hero-kpi-grid/);
+  assert.match(css, /\.summary-kpi-card/);
+  assert.match(css, /\.hero-routing/);
+  assert.match(css, /\.routing-stage\.router-fabric/);
+  assert.match(css, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(css, /@media \(max-width: 430px\)/);
   assert.match(css, /\.quick-control-grid/);
   assert.match(css, /\.advanced-ops/);
+  assert.match(css, /\.advisory-card/);
+  assert.match(css, /@keyframes hubBreath/);
+  assert.match(css, /@keyframes dashboardEnter/);
+  assert.match(css, /@keyframes liveBeacon/);
   assert.match(css, /body\.is-hidden \.router-edge\.active/);
   assert.match(css, /@keyframes routerFlow/);
   assert.match(css, /prefers-reduced-motion: reduce/);
+  assert.match(css, /Operator Control Panel v4: readability fix/);
+  assert.match(css, /Operator Control Panel v5: balanced type scale and explicit authority topology/);
+  assert.match(css, /\.lane-stack \{[\s\S]*?grid-template-rows: repeat\(4, minmax\(0, 1fr\)\);/);
+  assert.match(css, /\.routing-stage \.router-node\.writer-authority/);
+  assert.match(css, /html, body \{[\s\S]*?font-size: 13px;/);
+  assert.match(css, /\.hero-heading h2 \{[\s\S]*?font-size: 16px;/);
+  assert.match(css, /\.routing-stage \.router-node\.hub \{[\s\S]*?flex-direction: column;/);
+  assert.match(css, /\.routing-stage \.router-node\.hub b \{[\s\S]*?font-size: 14px;[\s\S]*?white-space: nowrap;/);
+  const v6 = css.slice(css.indexOf('Operator Control Panel v6:'));
+  assert.ok(v6.length > 0, 'panel.css phải có compact/dynamic routing v6 overrides');
+  assert.match(v6, /\.hero-summary \{[\s\S]*?min-height: 0;[\s\S]*?padding: 12px 14px !important;/);
+  assert.match(v6, /\.summary-kpi-card \{[\s\S]*?min-height: 82px;/);
+  assert.match(v6, /\.hero-routing \{ min-height: 500px;/);
+  assert.match(v6, /\.routing-stage \.router-links \{[\s\S]*?inset: 0;[\s\S]*?width: 100%;[\s\S]*?height: 100%;/);
+  assert.match(v6, /\.routing-hub-column \{[\s\S]*?grid-template-rows: 32px minmax\(0, 1fr\) auto auto 64px;/);
+  const v7 = css.slice(css.indexOf('Operator Control Panel v7:'));
+  assert.ok(v7.length > 0, 'panel.css phải có final screenshot-fit v7 overrides');
+  assert.match(v7, /@media \(min-width: 500px\) \{[\s\S]*?\.hero-kpi-grid \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
+  assert.match(v7, /\.summary-kpi-card \.kpi-copy > span \{[\s\S]*?white-space: nowrap;[\s\S]*?text-overflow: ellipsis;/);
+  assert.match(v7, /@media \(max-width: 499px\) \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(v7, /@media \(max-width: 350px\) \{[\s\S]*?grid-template-columns: 1fr;/);
 });
 
 test('browser toolbar offers the control panel toggle', () => {

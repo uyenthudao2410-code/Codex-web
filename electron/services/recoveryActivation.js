@@ -1,12 +1,17 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const { RecoveryActionStore, OPERATION_ID_PATTERN } = require('./recoveryActionStore');
 const { isProcessAlive } = require('./recoveryIpc');
 const { recoveryHostLegacyV1Revision } = require('./componentRevision');
+const { readJson, writeJsonAtomic } = require('./jsonStore');
 
 const COMPONENTS = new Set(['coding_mcp', 'electron_ui', 'recovery_host']);
 const REVISION_PATTERN = /^[a-f0-9]{64}$/;
 const INSTANCE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 const MAX_REQUEST_TTL_MS = 60_000;
 const CLOCK_SKEW_MS = 5_000;
+const UI_RECOVERY_STATE_VERSION = 1;
+const UI_RECOVERY_EXIT_REASONS = new Set(['operator_quit', 'runtime_stop']);
 
 function activationError(code, message, details = {}) {
   return Object.assign(new Error(message), { code, details });
@@ -85,6 +90,84 @@ class RecoveryActivation {
     this.beginRecoveryHandoff = beginRecoveryHandoff;
     this.now = now;
     this.uiRegistration = null;
+    this.uiRecoveryStateFile = path.join(paths.dataRoot(), 'electron-ui-recovery.json');
+    this.uiRecoveryPreference = this.loadUiRecoveryPreference();
+  }
+
+  loadUiRecoveryPreference() {
+    if (!fs.existsSync(this.uiRecoveryStateFile)) {
+      return { version: UI_RECOVERY_STATE_VERSION, suppressed: false, reason: '', updated_at_unix_ms: 0 };
+    }
+    const value = readJson(this.uiRecoveryStateFile, null);
+    const updatedAt = Number(value?.updated_at_unix_ms || 0);
+    if (value?.version !== UI_RECOVERY_STATE_VERSION || typeof value?.suppressed !== 'boolean'
+      || !Number.isSafeInteger(updatedAt) || updatedAt < 0) {
+      return {
+        version: UI_RECOVERY_STATE_VERSION,
+        suppressed: true,
+        reason: 'state_invalid',
+        updated_at_unix_ms: this.now(),
+        error_code: 'UI_RECOVERY_STATE_INVALID'
+      };
+    }
+    return {
+      version: UI_RECOVERY_STATE_VERSION,
+      suppressed: value.suppressed,
+      reason: String(value.reason || '').slice(0, 80),
+      updated_at_unix_ms: updatedAt
+    };
+  }
+
+  writeUiRecoveryPreference(suppressed, reason = '') {
+    const next = {
+      version: UI_RECOVERY_STATE_VERSION,
+      suppressed: suppressed === true,
+      reason: suppressed === true ? String(reason || '').slice(0, 80) : '',
+      updated_at_unix_ms: this.now()
+    };
+    writeJsonAtomic(this.uiRecoveryStateFile, next);
+    try { fs.chmodSync(this.uiRecoveryStateFile, 0o600); } catch { /* best effort on Windows */ }
+    this.uiRecoveryPreference = next;
+    return this.uiRecoveryPreferenceStatus();
+  }
+
+  uiRecoveryPreferenceStatus() {
+    return {
+      ...this.uiRecoveryPreference,
+      state: this.uiRecoveryPreference?.suppressed ? 'suppressed' : 'enabled'
+    };
+  }
+
+  uiPresence() {
+    const registration = this.uiRegistration;
+    return {
+      tracked: Boolean(registration),
+      alive: Boolean(registration && isProcessAlive(registration.pid)),
+      instance_id: registration?.instance_id || null,
+      pid: registration?.pid || null,
+      registered_at_unix_ms: registration?.registered_at_unix_ms || null
+    };
+  }
+
+  hasPendingUiActivation() {
+    return Boolean(this.actions.load().actions.find((item) => (
+      item.component === 'electron_ui'
+      && item.state === 'accepted'
+      && Number(item.expires_at_unix_ms || 0) > this.now()
+    )));
+  }
+
+  suppressUiRecovery(input) {
+    const value = exactObject(input, new Set(['instance_id', 'reason']), 'UI recovery suppression');
+    const intent = { instance_id: String(value.instance_id || ''), reason: String(value.reason || '') };
+    const presence = this.uiPresence();
+    if (!INSTANCE_ID_PATTERN.test(intent.instance_id) || !UI_RECOVERY_EXIT_REASONS.has(intent.reason)) {
+      throw activationError('INVALID_UI_RECOVERY_INTENT', 'Electron UI recovery suppression intent is invalid.');
+    }
+    if (!presence.tracked || !presence.alive || presence.instance_id !== intent.instance_id) {
+      throw activationError('UI_RECOVERY_INSTANCE_MISMATCH', 'Electron UI recovery suppression must match the live registered UI instance.');
+    }
+    return this.writeUiRecoveryPreference(true, intent.reason);
   }
 
   recoveryRevisionStatus() {
@@ -92,12 +175,12 @@ class RecoveryActivation {
   }
 
   uiRevisionStatus() {
-    if (this.uiRegistration && !isProcessAlive(this.uiRegistration.pid)) this.uiRegistration = null;
+    const presence = this.uiPresence();
     try {
-      return this.revisions.status('electron_ui', this.uiRegistration?.revision || null);
+      return this.revisions.status('electron_ui', presence.alive ? this.uiRegistration?.revision || null : null);
     } catch (error) {
       return {
-        running_revision: this.uiRegistration?.revision || null,
+        running_revision: presence.alive ? this.uiRegistration?.revision || null : null,
         disk_revision: null,
         update_pending: null,
         state: 'unavailable',
@@ -250,6 +333,9 @@ class RecoveryActivation {
       throw activationError('INVALID_UI_REGISTRATION', 'Electron UI registration is invalid or the process is not alive.');
     }
     this.uiRegistration = registration;
+    if (this.uiRecoveryPreference?.suppressed || this.uiRecoveryPreference?.error_code) {
+      this.writeUiRecoveryPreference(false, '');
+    }
     const pending = this.actions.load().actions.find((item) => (
       item.component === 'electron_ui'
       && item.state === 'accepted'
@@ -332,5 +418,6 @@ module.exports = {
   normalizeActivationRequest,
   COMPONENTS,
   REVISION_PATTERN,
-  MAX_REQUEST_TTL_MS
+  MAX_REQUEST_TTL_MS,
+  UI_RECOVERY_EXIT_REASONS
 };

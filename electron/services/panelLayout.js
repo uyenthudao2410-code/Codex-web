@@ -1,8 +1,18 @@
 const PANEL_WIDTH = 510;
+const PANEL_WIDTH_RATIO = 0.45;
+const PANEL_MIN_WIDTH = PANEL_WIDTH;
+const PANEL_MAX_WIDTH = 880;
 const MIN_CHAT_WIDTH = 560;
 
+function targetPanelWidth(width, options = {}) {
+  const explicitWidth = Number(options.panelWidth);
+  if (explicitWidth > 0) return Math.floor(explicitWidth);
+  const viewportWidth = Math.max(0, Math.floor(width));
+  return Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, Math.round(viewportWidth * PANEL_WIDTH_RATIO)));
+}
+
 function panelInset(width, visible, options = {}) {
-  const panelWidth = Number(options.panelWidth) || PANEL_WIDTH;
+  const panelWidth = targetPanelWidth(width, options);
   const minChatWidth = Number(options.minChatWidth) || MIN_CHAT_WIDTH;
   if (!visible) return 0;
   return Math.min(panelWidth, Math.max(0, Math.floor(width) - minChatWidth));
@@ -29,4 +39,14 @@ function chatBounds(width, height, toolbarHeight, visible, options = {}) {
   };
 }
 
-module.exports = { PANEL_WIDTH, MIN_CHAT_WIDTH, panelInset, panelBounds, chatBounds };
+module.exports = {
+  PANEL_WIDTH,
+  PANEL_WIDTH_RATIO,
+  PANEL_MIN_WIDTH,
+  PANEL_MAX_WIDTH,
+  MIN_CHAT_WIDTH,
+  targetPanelWidth,
+  panelInset,
+  panelBounds,
+  chatBounds
+};

@@ -88,6 +88,11 @@ Current Desktop release guidance: [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHE
 
 Use these documents as sources of truth **inside their subsystem scope** instead of copying invariants into every task prompt. If they conflict with the current Desktop boundary, follow Section 0 precedence.
 
-## 7. Report the completed state
+## 7. Report progress and completed state
 
-Report the outcome, changed files or external resources, validation performed, final Git and job state, material deviations, and remaining risks. State whether push, release, deployment, or service operations were performed. Tool output is evidence, not a substitute for engineering judgment.
+- Every material work wave or batch **must end with an operator-visible status checkpoint**. Tool cards, raw tool output, and internal orchestration state are evidence; none of them is a substitute for the status report or may be the final visible state by itself.
+- Emit a checkpoint when a wave completes; when a blocker causes `BLOCKED`, `REPLAN`, or `ABORTED`; before pausing or handing work to another controller; and before a task or session stops.
+- Each checkpoint must state: what was completed or changed; the current Git/run/external-system state and strongest proof; any blocker or failure classification; remaining work; and the exact next action.
+- During long tool sequences, report at meaningful wave boundaries instead of after every tool call. If work will continue automatically, say so explicitly before continuing.
+- Never stop silently because a tool returned, failed, timed out, requested acceptance, or changed orchestration state. Reconcile or terminalize that boundary when safe, then report it. If work cannot continue, name the exact approval, evidence, or external action required.
+- The final report must include the outcome, changed files or external resources, validation performed, final Git and job state, material deviations, remaining risks, and whether push, release, deployment, or service operations occurred.

@@ -53,6 +53,7 @@ const uiInstanceId = crypto.randomBytes(16).toString('hex');
 const uiStartedAtUnixMs = Date.now();
 const uiRunningRevision = recoveryHostMode ? null : uiRevisionTracker.captureRunning('electron_ui');
 let uiRestartScheduled = false;
+let uiExitInFlight = false;
 
 function codeActivationRequest(component, allowAcceptancePending = false) {
   const allowed = new Set(['coding_mcp', 'electron_ui', 'recovery_host']);
@@ -90,6 +91,33 @@ async function registerUiRevision() {
     app.exit(0);
   }
   return result;
+}
+
+async function suppressUiRecovery(reason) {
+  if (recoveryHostMode || !orchestrator || typeof orchestrator.suppressUiRecovery !== 'function') return false;
+  try {
+    await orchestrator.suppressUiRecovery({ instance_id: uiInstanceId, reason });
+    return true;
+  } catch (error) {
+    log.warn('Không thể ghi ý định tắt Electron UI vào Recovery Host', {
+      stage: 'ui-recovery-suppression',
+      code: error?.code || '',
+      reason
+    });
+    return false;
+  }
+}
+
+async function quitUi(reason, { stopRuntime = false } = {}) {
+  if (uiExitInFlight) return false;
+  uiExitInFlight = true;
+  await suppressUiRecovery(reason);
+  if (stopRuntime && orchestrator) {
+    await orchestrator.stop().catch((error) => log.error(error.message, { stage: 'close' }));
+  }
+  forceQuit = true;
+  app.quit();
+  return true;
 }
 
 function appIconPath() {
@@ -334,7 +362,7 @@ function createTray() {
     { label: 'Mở Trợ lý Web MCP', click: () => showChatWindow() },
     { label: 'Mở Cấu hình Quản lý', click: () => { showChatWindow(); openManagerWindow(); } },
     { type: 'separator' },
-    { label: 'Thoát Trợ lý (Giữ dịch vụ MCP)', click: () => { forceQuit = true; app.quit(); } }
+    { label: 'Thoát Trợ lý (Giữ dịch vụ MCP)', click: () => { void quitUi('operator_quit'); } }
   ]));
   tray.on('click', () => showChatWindow());
   tray.on('double-click', () => showChatWindow());
@@ -422,14 +450,10 @@ function createChatWindow() {
       return;
     }
     if (!orchestrator) {
-      forceQuit = true;
-      app.quit();
+      void quitUi('operator_quit');
       return;
     }
-    orchestrator.stop().catch((error) => log.error(error.message, { stage: 'close' })).finally(() => {
-      forceQuit = true;
-      app.quit();
-    });
+    void quitUi('runtime_stop', { stopRuntime: true });
   });
   return chatWindow;
 }

@@ -912,6 +912,68 @@ class RuntimeOrchestrator {
     this.invalidateSnapshot();
   }
 
+  async recoverMcpOnly() {
+    const settings = this.settingsStore.load();
+    this.validate(settings);
+    const token = await this.ensureToken();
+    const before = readJson(this.paths.stateFile(), {});
+    const oldNativePid = Number(before.nativePid || 0);
+    const tunnelPid = Number(before.tunnelPid || 0);
+
+    if (isAlive(oldNativePid)) {
+      throw Object.assign(new Error('Coding MCP process is still alive; refusing dead-process recovery.'), {
+        code: 'MCP_PROCESS_STILL_ALIVE'
+      });
+    }
+    if (await canConnect('127.0.0.1', settings.mcpPort, 350)) {
+      throw Object.assign(new Error(`Cổng cục bộ ${settings.mcpPort} đang bị tiến trình khác chiếm dụng; từ chối nhận hoặc dừng tiến trình không xác định.`), {
+        code: 'MCP_PORT_IN_USE'
+      });
+    }
+
+    let started = null;
+    try {
+      started = await this.native.start(settings, token, this.progress.bind(this));
+      let health = null;
+      let ownedPid = 0;
+      for (let index = 0; index < 35; index += 1) {
+        const state = readJson(this.paths.stateFile(), {});
+        ownedPid = Number(state.nativePid || 0);
+        health = await readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '');
+        if (health && ownedPid > 0 && isAlive(ownedPid) && await loopbackListenerPid(settings.mcpPort) === ownedPid) break;
+        health = null;
+        if (!(await this.native.status(settings))) {
+          throw Object.assign(new Error('Coding Tools MCP exited during MCP-only recovery.'), { code: 'MCP_RECOVERY_PROCESS_EXITED' });
+        }
+        await wait(1000);
+      }
+      if (!health || ownedPid <= 0) {
+        throw Object.assign(new Error('Coding Tools MCP did not pass exact identity and listener ownership checks during MCP-only recovery.'), {
+          code: 'MCP_RECOVERY_NOT_READY'
+        });
+      }
+      const after = readJson(this.paths.stateFile(), {});
+      this.log.info('Coding Tools MCP đã được khôi phục mà không khởi động lại OpenAI Tunnel', {
+        oldPid: oldNativePid || null,
+        newPid: ownedPid,
+        tunnelPid: tunnelPid || null,
+        tunnelStatePreserved: Number(after.tunnelPid || 0) === tunnelPid
+      });
+      this.invalidateSnapshot();
+      return {
+        old_pid: oldNativePid || null,
+        new_pid: ownedPid,
+        tunnel_pid: tunnelPid || null,
+        tunnel_preserved: Number(after.tunnelPid || 0) === tunnelPid,
+        health_verified: true
+      };
+    } catch (error) {
+      if (started && started.reused !== true) await this.native.stop().catch(() => false);
+      this.invalidateSnapshot();
+      throw error;
+    }
+  }
+
   async supervise() {
     const supervisorRequest = await this.serviceSupervisorRestartRequest();
     if (supervisorRequest) {
@@ -989,7 +1051,7 @@ class RuntimeOrchestrator {
           };
         }
       } else {
-        await this.restart({ automatic: true });
+        await this.recoverMcpOnly();
       }
       this.heartbeatFailures = 0;
       this.recoveryAttempts = 0;

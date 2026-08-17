@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 const { NativeService, isAlive, runtimeFingerprint, currentRuntimeState } = require('../electron/services/nativeService');
 const { normalizeProxyValue } = require('../electron/services/proxyService');
 const runtimePaths = require('../electron/paths');
@@ -97,7 +98,7 @@ test('device-aware process services keep legacy or foreign live owners fail-clos
 });
 
 function recoveryHarness(status) {
-  const calls = { restart: 0, tunnel: 0 };
+  const calls = { restart: 0, tunnel: 0, mcp: 0 };
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ autoStartServices: true }) },
     secrets: { get: () => '' },
@@ -108,6 +109,7 @@ function recoveryHarness(status) {
   orchestrator.lightweightSnapshot = async () => ({ ...status });
   orchestrator.restart = async () => { calls.restart += 1; };
   orchestrator.recoverTunnelOnly = async () => { calls.tunnel += 1; };
+  orchestrator.recoverMcpOnly = async () => { calls.mcp += 1; };
   orchestrator.isManuallyStopped = () => false;
   orchestrator.heartbeatFailures = 2;
   orchestrator.heartbeatFailureKind = status.mcpRunning
@@ -555,6 +557,42 @@ test('supervisor does not kill a live MCP process after transient health failure
   assert.equal(result.recoveryReason, 'mcp_process_alive_health_unavailable');
 });
 
+test('supervisor fail-closes before replacement when the recorded owned PID is still alive but MCP health is unavailable', async (t) => {
+  const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+    windowsHide: true,
+    stdio: 'ignore'
+  });
+  await new Promise((resolve, reject) => {
+    child.once('spawn', resolve);
+    child.once('error', reject);
+  });
+  t.after(async () => {
+    fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
+    if (isAlive(child.pid)) child.kill();
+    if (child.exitCode === null && child.signalCode === null) {
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, 3000);
+        child.once('close', () => { clearTimeout(timer); resolve(); });
+      });
+    }
+  });
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false, nativePid: child.pid }), 'utf8');
+  assert.equal(isAlive(child.pid), true);
+  const { orchestrator, calls } = recoveryHarness({
+    fullyReady: false,
+    mcpRunning: false,
+    nativeAlive: true,
+    tunnelRunning: true
+  });
+  const result = await orchestrator.supervise();
+  assert.equal(result.recoveryDeferred, true);
+  assert.equal(result.recoveryReason, 'mcp_process_alive_health_unavailable');
+  assert.equal(calls.mcp, 0);
+  assert.equal(calls.tunnel, 0);
+  assert.equal(calls.restart, 0);
+  assert.equal(isAlive(child.pid), true, 'live recorded owner must remain alive at the fail-closed defer boundary');
+});
+
 test('supervisor defers recovery when both health checks fail but MCP process remains alive', async () => {
   const { orchestrator, calls } = recoveryHarness({
     fullyReady: false,
@@ -568,7 +606,7 @@ test('supervisor defers recovery when both health checks fail but MCP process re
   assert.equal(result.recoveryDeferred, true);
 });
 
-test('supervisor performs a full restart only after the owned MCP process exits', async () => {
+test('supervisor recovers only Coding MCP after the owned MCP process exits', async () => {
   const { orchestrator, calls } = recoveryHarness({
     fullyReady: false,
     mcpRunning: false,
@@ -577,7 +615,42 @@ test('supervisor performs a full restart only after the owned MCP process exits'
   });
   await orchestrator.supervise();
   assert.equal(calls.tunnel, 0);
-  assert.equal(calls.restart, 1);
+  assert.equal(calls.mcp, 1);
+  assert.equal(calls.restart, 0);
+});
+
+test('MCP-only recovery refuses an unexpectedly occupied MCP port without touching Tunnel', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-mcp-only-port-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const stateFile = path.join(root, 'runtime-state.json');
+  fs.writeFileSync(stateFile, JSON.stringify({ manualStop: false, nativePid: null, tunnelPid: 4242 }), 'utf8');
+  const server = http.createServer((_request, response) => response.end('occupied'));
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const port = server.address().port;
+  const orchestrator = new RuntimeOrchestrator({
+    paths: { stateFile: () => stateFile },
+    settings: { load: () => ({ workspace: root, mcpPort: port }) },
+    secrets: { get: () => 'token', set() {} },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.validate = () => {};
+  let nativeStarts = 0;
+  let tunnelTouches = 0;
+  orchestrator.native = {
+    start: async () => { nativeStarts += 1; },
+    stop: async () => { throw new Error('native stop must not run before a new MCP was started'); }
+  };
+  orchestrator.tunnel = {
+    start: async () => { tunnelTouches += 1; },
+    stop: async () => { tunnelTouches += 1; }
+  };
+  await assert.rejects(orchestrator.recoverMcpOnly(), { code: 'MCP_PORT_IN_USE' });
+  assert.equal(nativeStarts, 0);
+  assert.equal(tunnelTouches, 0);
+  assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).tunnelPid, 4242);
 });
 
 test('supervisor requires three consecutive failures of the same kind', async () => {
