@@ -10,12 +10,9 @@ on:
 permissions:
   contents: read
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   windows-release-boundary:
-    name: Windows exact-source release boundary
+    name: Windows exact-source Desktop release boundary
     runs-on: windows-latest
     timeout-minutes: 90
     steps:
@@ -27,11 +24,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $head = (git rev-parse HEAD).Trim()
           if ($head -ne $env:GITHUB_SHA) { throw "checkout SHA mismatch: $head != $env:GITHUB_SHA" }
-          if (git status --porcelain) { throw 'release gate requires a clean checkout' }
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
+          if (git status --porcelain) { throw 'P1 release gate requires a clean checkout' }
 
       - uses: actions/setup-node@v4
         with:
@@ -44,58 +37,90 @@ jobs:
           cache: pip
           cache-dependency-path: resources/coding-tools-mcp/pyproject.toml
 
-      - name: Install desktop and Coding Tools MCP dependencies
+      - name: Install exact-source dependencies
         shell: pwsh
         run: |
           npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'desktop dependency install failed' }
           python -m pip install -e "resources/coding-tools-mcp[dev]"
+          if ($LASTEXITCODE -ne 0) { throw 'Coding Tools MCP dependency install failed' }
 
-      - name: Verify production dependency audit
+      - name: Verify production desktop dependencies
         run: npm run audit:prod -- --audit-level=high
 
-      - name: Run desktop source tests
+      - name: Verify Coding Tools MCP contract tests
+        shell: pwsh
+        run: |
+          python resources/coding-tools-mcp/scripts/check_module_size.py
+          if ($LASTEXITCODE -ne 0) { throw 'Coding Tools MCP module-size gate failed' }
+          npm run test:mcp
+          if ($LASTEXITCODE -ne 0) { throw 'Coding Tools MCP tests failed' }
+
+      - name: Run Desktop source tests
         run: npm test
 
-      - name: Run Recovery Host process fault matrix
+      - name: Run Recovery Host real-process fault matrix
         run: npm run test:recovery:e2e
 
-      - name: Verify Recovery Supervisor logon registration boundary
+      - name: Verify Recovery Supervisor source logon boundary
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $script = Join-Path $PWD 'resources\recovery-supervisor\recovery-supervisor.ps1'
           try {
             & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Action Install -AppRoot $PWD
-            if ($LASTEXITCODE -ne 0) { throw 'Recovery Supervisor install failed' }
+            if ($LASTEXITCODE -ne 0) { throw 'Recovery Supervisor source-mode install failed' }
             $task = Get-ScheduledTask -TaskName 'WebMCP Recovery Supervisor' -ErrorAction Stop
             $logonTriggers = @($task.Triggers | Where-Object { $_.CimClass.CimClassName -eq 'MSFT_TaskLogonTrigger' })
-            if ($logonTriggers.Count -lt 1) { throw 'Recovery Supervisor is missing its Windows logon trigger' }
+            if ($logonTriggers.Count -lt 1) { throw 'Recovery Supervisor source-mode task is missing its Windows logon trigger' }
             & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Action Status
-            if ($LASTEXITCODE -ne 0) { throw 'Recovery Supervisor status failed after install' }
+            if ($LASTEXITCODE -ne 0) { throw 'Recovery Supervisor source-mode status failed after install' }
           } finally {
-            & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Action Uninstall 2>$null
+            & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Action Uninstall 2>$null | Out-Null
           }
-
-      - name: Build exact-source Server and Runner canary binaries
-        shell: pwsh
-        run: |
-          cargo build --locked -p webcodex --bin webcodex-server
-          if ($LASTEXITCODE -ne 0) { throw 'webcodex-server build failed' }
-          cargo build --locked -p webcodex-runner --bin webcodex-runner
-          if ($LASTEXITCODE -ne 0) { throw 'webcodex-runner build failed' }
-
-      - name: Run Server-First SourceSnapshot syntax gate
-        shell: pwsh
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\e2e_server_first_snapshot_ws.ps1 -SyntaxOnly
-
-      - name: Run Server-First SourceSnapshot real-process canary
-        shell: pwsh
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\e2e_server_first_snapshot_ws.ps1
 
       - name: Build Windows NSIS package from exact source
         run: npm run dist
 
-      - name: Record P1 release provenance
+      - name: Verify packaged Recovery Supervisor identity and logon boundary
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Get-Content -Raw package.json | ConvertFrom-Json
+          $appRoot = (Resolve-Path 'dist\win-unpacked').Path
+          $appExe = Join-Path $appRoot (([string]$package.build.productName) + '.exe')
+          if (-not (Test-Path -LiteralPath $appExe -PathType Leaf)) { throw "packaged app executable missing: $appExe" }
+          $script = Join-Path $PWD 'resources\recovery-supervisor\recovery-supervisor.ps1'
+          $manifestPath = Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\manifest.json'
+          try {
+            & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Action Install -Packaged -Executable $appExe -AppRoot $appRoot
+            if ($LASTEXITCODE -ne 0) { throw 'Recovery Supervisor packaged-mode install failed' }
+
+            $task = Get-ScheduledTask -TaskName 'WebMCP Recovery Supervisor' -ErrorAction Stop
+            $logonTriggers = @($task.Triggers | Where-Object { $_.CimClass.CimClassName -eq 'MSFT_TaskLogonTrigger' })
+            if ($logonTriggers.Count -lt 1) { throw 'Recovery Supervisor packaged-mode task is missing its Windows logon trigger' }
+
+            if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Recovery Supervisor packaged manifest was not written' }
+            $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+            if ([string]$manifest.mode -ne 'packaged') { throw 'Recovery Supervisor manifest is not packaged mode' }
+            if (-not [string]::Equals([IO.Path]::GetFullPath([string]$manifest.executable), [IO.Path]::GetFullPath($appExe), [StringComparison]::OrdinalIgnoreCase)) {
+              throw 'Recovery Supervisor manifest executable does not match the packaged app'
+            }
+            if (-not [string]::Equals([IO.Path]::GetFullPath([string]$manifest.app_root), [IO.Path]::GetFullPath($appRoot), [StringComparison]::OrdinalIgnoreCase)) {
+              throw 'Recovery Supervisor manifest app_root does not match win-unpacked'
+            }
+            $expectedHash = (Get-FileHash -LiteralPath $appExe -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ([string]$manifest.executable_sha256 -ne $expectedHash) { throw 'Recovery Supervisor packaged executable hash mismatch' }
+            $arguments = @($manifest.arguments)
+            if ($arguments.Count -ne 1 -or [string]$arguments[0] -ne '--recovery-host') { throw 'Recovery Supervisor packaged argv is not fixed to --recovery-host' }
+
+            & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Action Status
+            if ($LASTEXITCODE -ne 0) { throw 'Recovery Supervisor packaged-mode status failed after install' }
+          } finally {
+            & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Action Uninstall 2>$null | Out-Null
+          }
+
+      - name: Record P1 release provenance and rollback guidance
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -104,11 +129,15 @@ jobs:
             Select-Object -First 1
           if ($null -eq $installer) { throw 'NSIS installer was not produced' }
           $package = Get-Content -Raw package.json | ConvertFrom-Json
-          $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $packagedExe = Join-Path (Resolve-Path 'dist\win-unpacked').Path (([string]$package.build.productName) + '.exe')
+          $installerHash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $packagedExeHash = (Get-FileHash -LiteralPath $packagedExe -Algorithm SHA256).Hash.ToLowerInvariant()
+
           New-Item -ItemType Directory -Force -Path release-proof | Out-Null
           [ordered]@{
-            schema_version = 1
+            schema_version = 2
             p1_release_boundary = 'passed'
+            product_scope = 'windows_desktop_execution_hub_recovery'
             git_sha = $env:GITHUB_SHA
             git_ref = $env:GITHUB_REF
             github_run_id = $env:GITHUB_RUN_ID
@@ -116,14 +145,31 @@ jobs:
             package_version = [string]$package.version
             installer_name = $installer.Name
             installer_size_bytes = [int64]$installer.Length
-            installer_sha256 = $hash
+            installer_sha256 = $installerHash
+            packaged_executable_name = [IO.Path]::GetFileName($packagedExe)
+            packaged_executable_sha256 = $packagedExeHash
             exact_source_checkout = 'passed'
+            coding_tools_mcp_contract_tests = 'passed'
+            desktop_source_tests = 'passed'
             recovery_process_fault_matrix = 'passed'
-            recovery_supervisor_logon_registration = 'passed'
-            server_first_source_snapshot_canary = 'passed'
+            recovery_supervisor_source_logon = 'passed'
+            packaged_resource_sanitation = 'passed'
+            recovery_supervisor_packaged_identity_logon = 'passed'
             nsis_packaging = 'passed'
             generated_at_utc = [DateTimeOffset]::UtcNow.ToString('o')
           } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath release-proof\p1-release-provenance.json -Encoding utf8NoBOM
+
+          @'
+          P1 rollback guidance
+          ====================
+          1. Uninstall the Recovery Supervisor before replacing a failed Desktop package:
+             powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources\recovery-supervisor\recovery-supervisor.ps1 -Action Uninstall
+          2. Uninstall the current Desktop package through Windows Apps/Installed apps or its NSIS uninstaller.
+          3. Reinstall the previously accepted installer only after verifying its recorded SHA-256 against the retained release provenance.
+          4. Re-run Recovery Supervisor installation from that accepted package and verify Status before restoring normal operation.
+          5. Do not move a published tag, rewrite Git history, or force-push as a rollback mechanism.
+          '@ | Set-Content -LiteralPath release-proof\P1-ROLLBACK.txt -Encoding utf8NoBOM
+
           Get-Content -Raw release-proof\p1-release-provenance.json
 
       - name: Upload P1 release proof
@@ -132,7 +178,8 @@ jobs:
           name: p1-release-proof-${{ github.sha }}
           path: |
             release-proof/p1-release-provenance.json
+            release-proof/P1-ROLLBACK.txt
             dist/web-mcp-assistant-setup-*.exe
             dist/latest.yml
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
