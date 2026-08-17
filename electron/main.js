@@ -396,8 +396,7 @@ function createChatWindow() {
         } catch (error) {
           log.warn('Không thể ghi explicit host observation vào EOCL ledger', { error: safeMessage(error) });
         } finally {
-          chatEvaluationJournal.clearPendingTurn(workspace, event);
-          if (event.run_id && event.wave_id) chatEvaluationJournal.consumeBinding(workspace, event);
+          chatEvaluationJournal.finalizeCorrelation(workspace, event);
         }
       }
     }

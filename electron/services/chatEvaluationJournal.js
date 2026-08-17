@@ -202,6 +202,17 @@ class ChatEvaluationJournal {
     if (!event || !binding || event.turn_id !== binding.turn_id || event.trace_id !== binding.trace_id) return false;
     try { fs.rmSync(bindingTurnPath(workspace), { force: true }); return true; } catch { return false; }
   }
+
+  finalizeCorrelation(workspace, observation) {
+    const event = normalizeHostObservation(observation);
+    if (!event || event.event_type !== 'host_turn_span') {
+      return { pending_cleared: false, binding_consumed: false };
+    }
+    return {
+      pending_cleared: this.clearPendingTurn(workspace, event),
+      binding_consumed: Boolean(event.run_id && event.wave_id) && this.consumeBinding(workspace, event)
+    };
+  }
 }
 
 function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {

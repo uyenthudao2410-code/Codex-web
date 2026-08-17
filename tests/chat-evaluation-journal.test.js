@@ -95,6 +95,42 @@ test('host correlation state is one-shot, content-free, and exact-identity match
   assert.equal(fs.existsSync(pendingTurnPath(workspace)), false);
 });
 
+test('host correlation pending identity survives until the completed host turn span', () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'chat-correlation-lifetime-'));
+  const journal = new ChatEvaluationJournal();
+  const user = {
+    schema_version: HOST_OBSERVATION_SCHEMA_VERSION,
+    event_type: 'user_turn_visible', observation_id: 'u1', navigation_epoch: 1,
+    clock_domain: 'electron-renderer:1', monotonic_ms: 10, wall_time_ms: 1000,
+    trace_id: 'trace-1', turn_id: 'turn-1', observer_plane: 'electron_chatgpt_dom', measurement: 'observed_host_visible'
+  };
+  const assistant = {
+    ...user,
+    event_type: 'assistant_response_first_visible', observation_id: 'a1', monotonic_ms: 25, wall_time_ms: 1015
+  };
+  const span = {
+    schema_version: HOST_OBSERVATION_SCHEMA_VERSION,
+    event_type: 'host_turn_span', span_id: 'u1->a1', user_observation_id: 'u1', assistant_observation_id: 'a1',
+    navigation_epoch: 1, clock_domain: 'electron-renderer:1', start_ms: 10, end_ms: 25,
+    trace_id: 'trace-1', turn_id: 'turn-1', observer_plane: 'electron_chatgpt_dom', measurement: 'observed_user_visible_to_first_assistant_visible'
+  };
+
+  assert.equal(journal.stagePendingTurns(workspace, [user]), 1);
+  assert.deepEqual(journal.finalizeCorrelation(workspace, user), { pending_cleared: false, binding_consumed: false });
+  assert.equal(fs.existsSync(pendingTurnPath(workspace)), true);
+  assert.deepEqual(journal.finalizeCorrelation(workspace, assistant), { pending_cleared: false, binding_consumed: false });
+  assert.equal(fs.existsSync(pendingTurnPath(workspace)), true);
+
+  fs.writeFileSync(bindingTurnPath(workspace), JSON.stringify({
+    schema_version: HOST_CORRELATION_SCHEMA_VERSION,
+    turn_id: 'turn-1', trace_id: 'trace-1', run_id: 'run-1', wave_id: 'wave-1', bound_at_unix_ms: Date.now()
+  }));
+  const [linked] = journal.attachExplicitBindings(workspace, [span]);
+  assert.deepEqual(journal.finalizeCorrelation(workspace, linked), { pending_cleared: true, binding_consumed: true });
+  assert.equal(fs.existsSync(pendingTurnPath(workspace)), false);
+  assert.equal(fs.existsSync(bindingTurnPath(workspace)), false);
+});
+
 test('ChatGPT observer uses renderer monotonic clock and never reads message content', () => {
   const script = buildChatEvaluationObserverScript({ navigationEpoch: 3, clockDomain: 'electron-renderer:3' });
   assert.match(script, /performance\.now\(\)/);
@@ -144,6 +180,7 @@ test('ChatViewController drains host observations to a best-effort main callback
   assert.match(controller, /\.finally\(\(\) => \{/);
   assert.match(main, /new ChatEvaluationJournal\(\)/);
   assert.match(main, /chatEvaluationJournal\.append\(workspace, correlated\)/);
+  assert.match(main, /chatEvaluationJournal\.finalizeCorrelation\(workspace, event\)/);
   assert.match(main, /action: 'observation'/);
   assert.match(main, /run_id: event\.run_id/);
   assert.match(main, /wave_id: event\.wave_id/);
