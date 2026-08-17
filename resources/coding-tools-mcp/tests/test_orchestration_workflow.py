@@ -51,7 +51,15 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
                 "include_diff": False,
             })
             self.assertEqual(result["orchestration"]["orchestration_state"], "ACCEPTING")
+            accepting_report = result["orchestration"]["completion_report"]
+            self.assertTrue(accepting_report["operator_visible_required"])
+            self.assertEqual(accepting_report["accepted_or_not"], "PENDING_FINAL_ACCEPTANCE")
+            self.assertEqual(accepting_report["report_contract"], [
+                "WHAT CHANGED", "CURRENT STATE", "SOURCE / RUN / WAVE ID", "PROOF ACTUALLY RUN",
+                "ACCEPTED OR NOT", "WHAT REMAINS", "NEXT CRITICAL ACTION",
+            ])
             audit = runtime.task_control({"action": "audit", "run_id": result["orchestration"]["run_id"], "limit": 100})
+            self.assertEqual(audit["completion_report"]["accepted_or_not"], "PENDING_FINAL_ACCEPTANCE")
             self.assertEqual(len(audit["audit"]["waves"]), 2)
             self.assertTrue(audit["audit"]["integrity"]["ok"])
             self.assertEqual(audit["orchestration"]["wave_id"], result["orchestration"]["wave_id"])
@@ -74,6 +82,9 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
             self.assertTrue(accepted["accepted"])
             self.assertEqual(accepted["orchestration"]["wave_id"], result["orchestration"]["wave_id"])
             self.assertEqual(accepted["orchestration"]["orchestration_state"], "CHECKPOINTED")
+            self.assertEqual(accepted["completion_report"]["accepted_or_not"], "ACCEPTED")
+            self.assertTrue(accepted["completion_report"]["operator_visible_required"])
+            self.assertIn("before starting another material wave", accepted["completion_report"]["next_critical_action"])
             runtime.close()
 
     def test_reject_requires_reason_and_keeps_same_run_in_replan(self) -> None:
@@ -97,6 +108,9 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
             self.assertTrue(rejected["rejected"])
             self.assertEqual(rejected["orchestration"]["orchestration_state"], "REPLAN")
             self.assertEqual(rejected["orchestration"]["run_id"], run_id)
+            self.assertEqual(rejected["completion_report"]["accepted_or_not"], "NOT_ACCEPTED_REPLAN_REQUIRED")
+            self.assertEqual(rejected["completion_report"]["blocker_or_failure"]["failure_class"], "SOL_REJECTED")
+            self.assertTrue(rejected["completion_report"]["operator_visible_required"])
             runtime.close()
 
     def test_reconnect_repairs_acceptance_projection_from_ledger(self) -> None:

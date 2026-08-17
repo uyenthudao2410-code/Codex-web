@@ -204,6 +204,19 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
     classified_error_samples = sum(error_class_counts.values())
     unknown_error_samples = int(error_class_counts.get("UNKNOWN", 0))
     unknown_error_share = round(unknown_error_samples / classified_error_samples, 6) if classified_error_samples else None
+    error_taxonomy_epoch = str(performance.get("error_taxonomy_epoch") or "").strip()
+    error_taxonomy_current_counts = _count_map(performance.get("error_taxonomy_current_counts"))
+    error_taxonomy_current_samples = sum(error_taxonomy_current_counts.values())
+    error_taxonomy_current_unknown_samples = int(error_taxonomy_current_counts.get("UNKNOWN", 0))
+    error_taxonomy_current_typed_samples = error_taxonomy_current_samples - error_taxonomy_current_unknown_samples
+    error_taxonomy_current_typed_coverage = (
+        round(error_taxonomy_current_typed_samples / error_taxonomy_current_samples, 6)
+        if error_taxonomy_current_samples else None
+    )
+    error_taxonomy_current_unknown_share = (
+        round(error_taxonomy_current_unknown_samples / error_taxonomy_current_samples, 6)
+        if error_taxonomy_current_samples else None
+    )
     phase_timing_samples = int(performance.get("phase_timing_samples", 0) or 0)
     phase_timing_ms = _count_map(performance.get("phase_timing_ms"))
     localization_samples = int(performance.get("localization_samples", 0) or 0)
@@ -247,6 +260,15 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
             "error_classified_samples": classified_error_samples,
             "error_unknown_samples": unknown_error_samples,
             "error_unknown_share": unknown_error_share,
+            "error_taxonomy_epoch": error_taxonomy_epoch or None,
+            "error_taxonomy_current_counts": error_taxonomy_current_counts,
+            "error_taxonomy_current_samples": error_taxonomy_current_samples,
+            "error_taxonomy_current_typed_samples": error_taxonomy_current_typed_samples,
+            "error_taxonomy_current_unknown_samples": error_taxonomy_current_unknown_samples,
+            "error_taxonomy_current_typed_coverage": error_taxonomy_current_typed_coverage,
+            "error_taxonomy_current_unknown_share": error_taxonomy_current_unknown_share,
+            "error_taxonomy_current_status": "observed" if error_taxonomy_current_samples else "no_current_epoch_samples",
+            "error_taxonomy_historical_backfill": False,
             "phase_timing_samples": phase_timing_samples,
             "phase_timing_ms": phase_timing_ms,
             "phase_timing_available": bool(phase_timing_samples and phase_timing_ms),
@@ -275,7 +297,8 @@ def build_snapshot(workspace: Path) -> dict[str, Any]:
             "PerformanceTrace v5 retains cumulative required-idempotency coverage for audit; when a named current policy epoch exists, production coverage gates use only post-policy required samples and never backfill historical misses",
             "optional idempotency covers side effects whose exact repeat can be intentional; it must not be forced into the required replay-protection gate",
             "v5 required/optional/error/phase counters begin with the activated v5 runtime epoch and are not retroactively inferred from v4 history",
-            "error_unknown_share is measured only over v5 classified error samples, not over historical errors that predate the taxonomy",
+            "cumulative error_class_counts remain an audit projection across v5 history; the named error_taxonomy_current_counts epoch is prospective-only and historical UNKNOWN observations are never backfilled",
+            "error_taxonomy_current_typed_coverage uses only current-epoch classified errors as its denominator; an empty current epoch remains null/no_current_epoch_samples rather than being treated as perfect coverage",
             "phase_timing_available reports measured phase samples only; missing provider/model timing is not estimated from EOCL execution windows",
             "proof-cache coverage uses eligible proof stages as the denominator; miss reasons classify cold, fingerprint, or stage-version invalidation without changing reuse semantics",
             "LSP/localization rates use only live composite-read measurements; cached replay is excluded by the Runtime extractor and unavailable semantic providers remain explicit fallback evidence",

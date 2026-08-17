@@ -99,6 +99,7 @@ from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, 
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class  # noqa: F401  # composition-root namespace
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
 from .orchestration_report import OrchestrationReport  # noqa: F401  # composition-root namespace
+from .operator_report import OPERATOR_REPORT_STATES, build_operator_completion_report  # noqa: F401  # composition-root namespace
 from .proof_ledger import ProofLedger  # noqa: F401  # composition-root namespace
 from .telemetry import SessionTelemetry  # noqa: F401  # composition-root namespace
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head  # noqa: F401  # composition-root namespace
@@ -729,7 +730,8 @@ class Runtime(
                 "status": "waiting",
                 "current_step": "Awaiting acceptance",
                 "next_step": (
-                    "Inspect the durable proof, then call task_control action=accept or reject; "
+                    "Present orchestration.completion_report to the operator, then inspect the durable proof and "
+                    "call task_control action=accept or reject; "
                     "do not retry completed tool calls."
                 ),
                 "failure": None,
@@ -737,29 +739,29 @@ class Runtime(
         elif canonical_state == "CHECKPOINTED":
             desired_task.update({
                 "status": "completed",
-                "current_step": "Completed",
-                "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+                "current_step": "Completed - operator report required",
+                "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
                 "failure": None,
             })
         elif canonical_state == "REPLAN":
             desired_task.update({
                 "status": "waiting",
-                "current_step": "Replan required",
-                "next_step": "Replan from the durable failure or cancellation; do not retry an unchanged wave.",
+                "current_step": "Replan required - operator report required",
+                "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
                 "failure": state.get("failure"),
             })
         elif canonical_state == "BLOCKED":
             desired_task.update({
                 "status": "failed",
-                "current_step": "Blocked",
-                "next_step": "Resolve the durable blocker before starting another execution wave.",
+                "current_step": "Blocked - operator report required",
+                "next_step": "Present orchestration.completion_report to the operator, then resolve the durable blocker before another execution wave.",
                 "failure": state.get("failure"),
             })
         elif canonical_state == "ABORTED":
             desired_task.update({
                 "status": "stopped",
-                "current_step": "Aborted",
-                "next_step": "Resume with a new or replanned wave from the current source state; do not reuse stale proof.",
+                "current_step": "Aborted - operator report required",
+                "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
                 "failure": state.get("failure"),
             })
         current_projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
@@ -2307,12 +2309,20 @@ class Runtime(
                 reports = self.orchestration_report.write_reports(ctx.run_id)
             except (OSError, ValueError, KeyError) as exc:
                 reports = {"error": str(exc)[:500]}
-        return {
+        result = {
             **ctx.projection(),
             "integrity": self.orchestration_ledger.verify_chain(ctx.run_id),
             "reports": reports,
             "final_acceptance_required": ctx.state == "ACCEPTING",
         }
+        if str(ctx.state or "").upper() in OPERATOR_REPORT_STATES:
+            result["completion_report"] = build_operator_completion_report(
+                ledger=self.orchestration_ledger,
+                ctx=ctx,
+                task_state=self.task_state.get(),
+                reports=reports,
+            )
+        return result
 
     def codex_bridge(self, args: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -2750,6 +2760,15 @@ class Runtime(
             return "VALIDATION"
         if category == "runtime":
             return "RUNTIME"
+        structured_category_classes = {
+            "filesystem": "FILESYSTEM",
+            "policy": "POLICY",
+            "not_found": "NOT_FOUND",
+            "internal": "INTERNAL",
+            "conflict": "CONFLICT",
+        }
+        if category in structured_category_classes:
+            return structured_category_classes[category]
         return "UNKNOWN"
 
     @staticmethod

@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
-from coding_tools_mcp.performance_trace import PerformanceTraceStore
+from coding_tools_mcp.performance_trace import ERROR_TAXONOMY_EPOCH, PerformanceTraceStore
 from coding_tools_mcp.server import Runtime, server_card_payload
 from coding_tools_mcp.task_state import TaskStateStore
 from coding_tools_mcp.tool_contract import CAPABILITY_PROFILES, TOOL_CONTRACT_RUNTIME
@@ -326,6 +326,39 @@ class EfficiencyRuntimeTests(unittest.TestCase):
         self.assertEqual(Runtime._error_class({"code": "PROVIDER_CAPACITY", "category": "runtime"}), "CAPACITY")
         self.assertEqual(Runtime._error_class({"code": "PERMISSION_REQUIRED", "category": "permission"}), "AUTHORITY_DENIED")
         self.assertEqual(Runtime._error_class({"code": "SOMETHING_NEW", "category": "runtime"}), "RUNTIME")
+        self.assertEqual(Runtime._error_class({"code": "WRITE_FAILED", "category": "filesystem"}), "FILESYSTEM")
+        self.assertEqual(Runtime._error_class({"code": "RULE_DENIED", "category": "policy"}), "POLICY")
+        self.assertEqual(Runtime._error_class({"code": "MISSING_RESOURCE", "category": "not_found"}), "NOT_FOUND")
+        self.assertEqual(Runtime._error_class({"code": "UNEXPECTED_STATE", "category": "internal"}), "INTERNAL")
+        self.assertEqual(Runtime._error_class({"code": "STATE_RACE", "category": "conflict"}), "CONFLICT")
+        self.assertEqual(Runtime._error_class({"code": "SOMETHING_NEW", "category": "novel"}), "UNKNOWN")
+
+    def test_error_taxonomy_epoch_preserves_cumulative_unknown_without_backfill(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state_dir = root / ".coding-tools"
+            state_dir.mkdir(parents=True)
+            (state_dir / "performance.json").write_text(json.dumps({
+                "version": 5,
+                "tool_calls": 463,
+                "errors": 463,
+                "error_class_counts": {"RUNTIME": 169, "UNKNOWN": 45},
+            }), encoding="utf-8")
+            store = PerformanceTraceStore(root)
+            migrated = store.get()
+            self.assertEqual(migrated["error_class_counts"], {"RUNTIME": 169, "UNKNOWN": 45})
+            self.assertEqual(migrated["error_taxonomy_epoch"], ERROR_TAXONOMY_EPOCH)
+            self.assertEqual(migrated["error_taxonomy_current_counts"], {})
+
+            observed = store.record(
+                tool="exec_command",
+                started_monotonic=1.0,
+                finished_monotonic=1.1,
+                ok=False,
+                error_class="FILESYSTEM",
+            )
+            self.assertEqual(observed["error_class_counts"], {"RUNTIME": 169, "UNKNOWN": 45, "FILESYSTEM": 1})
+            self.assertEqual(observed["error_taxonomy_current_counts"], {"FILESYSTEM": 1})
 
     def test_workspace_context_exposes_non_secret_runtime_activation_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {

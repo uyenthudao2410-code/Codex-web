@@ -309,6 +309,11 @@ class AgentWorkflowMixin:
                 if claimed_host_turn:
                     evaluation["trace_id"] = claimed_host_turn["trace_id"]
                     evaluation["turn_id"] = claimed_host_turn["turn_id"]
+                    run_metadata["host_correlation"] = {
+                        "schema_version": 1,
+                        "source": "electron_pending_host_turn",
+                        "eligible": True,
+                    }
             if evaluation:
                 environment_id = str(evaluation.pop("environment_id", "") or "").strip()
                 evaluation.update({
@@ -1014,7 +1019,7 @@ class AgentWorkflowMixin:
         self.task_state.update({
             "status": "waiting",
             "current_step": "Waiting for ChatWeb Sol acceptance",
-            "next_step": "Inspect diff/proof/review, then call task_control action=accept or reject.",
+            "next_step": "Present orchestration.completion_report to the operator, inspect diff/proof/review, then call task_control action=accept or reject.",
             "failure": None,
             "orchestration": ctx.projection(),
         }, event="final_acceptance_required")

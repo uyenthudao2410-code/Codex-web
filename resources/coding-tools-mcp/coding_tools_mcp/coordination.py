@@ -1125,9 +1125,11 @@ class CoordinationMixin:
                     summary = self.orchestration_ledger.export_summary(run_id)
                     summary["events"] = summary.get("events", [])[-limit:]
                     summary["proofs"] = summary.get("proofs", [])[-limit:]
+                orchestration_result = self._orchestration_result(ctx, write_reports=False)
                 return {
                     "state": state,
-                    "orchestration": self._orchestration_result(ctx, write_reports=False),
+                    "orchestration": orchestration_result,
+                    "completion_report": (orchestration_result or {}).get("completion_report"),
                     "audit": summary,
                     "resources": self.execution_resource_governor.snapshot(),
                     "reports": reports,
@@ -1165,15 +1167,17 @@ class CoordinationMixin:
                 self._project_orchestration(ctx, event="final_acceptance_recorded")
                 accepted_state = self.task_state.update({
                     "status": "completed",
-                    "current_step": "Completed",
-                    "next_step": "Start the next accepted behavior or checkpoint the repository according to project policy.",
+                    "current_step": "Completed - operator report required",
+                    "next_step": "Present completion_report to the operator before starting another material wave.",
                     "failure": None,
                     "orchestration": ctx.projection(),
                 }, event="task_accepted")
+                orchestration_result = self._orchestration_result(ctx)
                 return {
                     "accepted": True,
                     "state": accepted_state,
-                    "orchestration": self._orchestration_result(ctx),
+                    "orchestration": orchestration_result,
+                    "completion_report": (orchestration_result or {}).get("completion_report"),
                 }
             reason = str(args.get("reason", "")).strip()
             if not reason:
@@ -1191,15 +1195,17 @@ class CoordinationMixin:
             self._project_orchestration(ctx, event="final_acceptance_rejected")
             rejected_state = self.task_state.update({
                 "status": "waiting",
-                "current_step": "Replan required",
-                "next_step": "Provide replan_reason and a changed evidence/scope/strategy before another execution wave.",
+                "current_step": "Replan required - operator report required",
+                "next_step": "Present completion_report to the operator, then provide replan_reason and changed evidence/scope/strategy before another execution wave.",
                 "failure": reason,
                 "orchestration": ctx.projection(),
             }, event="task_rejected")
+            orchestration_result = self._orchestration_result(ctx)
             return {
                 "rejected": True,
                 "state": rejected_state,
-                "orchestration": self._orchestration_result(ctx),
+                "orchestration": orchestration_result,
+                "completion_report": (orchestration_result or {}).get("completion_report"),
             }
         if action == "operation":
             operation_id = str(args.get("operation_id", "")).strip()
@@ -1285,13 +1291,15 @@ class CoordinationMixin:
                         raise ToolFailure("ORCHESTRATION_ABORT_FAILED", str(exc), category="runtime", retryable=False, details={"run_id": explicit_run_id, "state": ctx.state, **getattr(exc, "details", {})}) from exc
                 current_state = self.task_state.get()
                 current_projection = current_state.get("orchestration") if isinstance(current_state.get("orchestration"), dict) else {}
+                orchestration_result = self._orchestration_result(ctx)
                 return {
                     "state": current_state,
                     "stopped": ctx.state == "ABORTED",
                     "already_terminal": ctx.state != "ABORTED",
                     "target_run_id": explicit_run_id,
                     "detached": str(current_projection.get("run_id") or "") != explicit_run_id,
-                    "orchestration": ctx.projection(),
+                    "orchestration": orchestration_result,
+                    "completion_report": (orchestration_result or {}).get("completion_report"),
                 }
             previous = self.task_state.get()
             aborted_projection = self._abort_task_orchestration(previous, reason="task_stopped")

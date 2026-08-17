@@ -187,7 +187,13 @@ function recoveryHostLegacyV1Revision(appRoot) {
     catch {
       throw Object.assign(new Error('Recovery Host legacy revision bridge file is unavailable.'), { code: 'REVISION_BRIDGE_FILE_MISSING' });
     }
-    const actualSha256 = crypto.createHash('sha256').update(content).digest('hex');
+    // Git may materialize text files as CRLF on Windows even though the
+    // canonical repository bytes are LF. The legacy bridge pins source
+    // semantics, not checkout-specific line endings, so normalize only this
+    // pinned text-file proof. Ordinary component revisions intentionally keep
+    // hashing the exact on-disk bytes above.
+    const canonicalContent = Buffer.from(content.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+    const actualSha256 = crypto.createHash('sha256').update(canonicalContent).digest('hex');
     if (actualSha256 !== expectedSha256) {
       throw Object.assign(new Error('Recovery Host legacy revision bridge file digest changed.'), {
         code: 'REVISION_BRIDGE_DIGEST_MISMATCH',

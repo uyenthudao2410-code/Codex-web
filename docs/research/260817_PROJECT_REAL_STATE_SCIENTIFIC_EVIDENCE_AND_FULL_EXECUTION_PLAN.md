@@ -171,6 +171,18 @@ Hệ quả phương pháp luận:
 - mọi claim “đang chạy live tốt” sau thời điểm lỗi trên phải được re-verify khi MCP truth plane trở lại;
 - lỗi này trở thành P0 remediation trước wave triển khai lớn tiếp theo.
 
+### 1.2.1 Current verification update — khoảng 21:00 ICT, 2026-08-17
+
+Phần trên được giữ nguyên như **chronology tại thời điểm report được tạo**. Sau đó trong cùng ngày, P0.1 đã re-verify lại trực tiếp trên Coding MCP truth plane hiện tại và lỗi `ExceptionGroup: unhandled errors in a TaskGroup` **không còn tái hiện**:
+
+- `workspace_context(detail=full)` PASS trên current runtime;
+- `document_workflow inspect` PASS trên chính tài liệu này;
+- `agent_workflow prepare` PASS ở cả initial wave và deterministic replan wave;
+- current runtime không có stale/orphaned orchestration/background-operation residue theo live truth snapshot;
+- public `smart-v3` contract vẫn đúng 8 tools, không đổi schema để né lỗi.
+
+Vì không còn retained child-exception provenance đủ mạnh để reconstruct chính xác lỗi lịch sử, P0.1 **không gán một source fix giả định**. Kết luận causal hiện tại được ghi chi tiết tại checkpoint P0.1 ở Phase P0 bên dưới.
+
 ## 1.3 Các số liệu có mốc thời gian khác nhau
 
 Ba lớp số liệu phải tách:
@@ -1368,6 +1380,8 @@ source=client_reported|provider_reported
 
 Không có thì `unknown`.
 
+**P1.3 update:** canonical coverage reporting for these fields is now closed with explicit experimental enrollment (`pair_id + policy + provenance`), trusted source attribution and fail-closed promotion economics. Current eligible experimental population is still zero, so live coverage rates correctly remain `null` rather than `0%`.
+
 ## 12.4 Quality outcome
 
 Mỗi accepted experimental run cần:
@@ -1504,48 +1518,322 @@ runtime instance identity known
 
 Do not start a new mutation wave while Runtime truth cannot be read reliably.
 
+### P0.1 execution checkpoint — 2026-08-17, khoảng 21:00 ICT
+
+**P0.1 DECISION: `ACCEPTED`.** Acceptance này là quyết định kỹ thuật của controller dựa trên acceptance criteria bên trên; wave ghi tài liệu này vẫn tuân theo EOCL checkpoint riêng.
+
+#### WHAT CHANGED
+
+- Không sửa production source cho P0.1 vì current failure không tái hiện và không có bằng chứng đủ để biện minh cho một speculative fix.
+- Giữ nguyên historical observation ở §1.2; bổ sung current verification để không biến dated research thành lịch sử giả.
+- Root-cause classification được hạ đúng mức bằng chứng thay vì coi generic `UNKNOWN/ExceptionGroup` là một diagnosed server defect.
+
+#### CURRENT STATE
+
+```text
+workspace_context                 PASS
+document_workflow inspect         PASS
+agent_workflow prepare            PASS
+stale/orphaned operations         0 observed in live truth snapshot
+runtime identity                  KNOWN
+smart-v3 public tool count        8
+public contract                   UNCHANGED
+historical TaskGroup symptom      NOT REPRODUCIBLE
+production source change          NONE
+```
+
+Một lỗi hiện tại khác, `SEMANTIC_PROVIDER_CALL_FAILED`, được semantic-first localization trả về theo typed/fallback path và text fallback vẫn chạy. Đây là nhánh LSP semantic-value/P4, **không phải** bằng chứng P0.1 còn lỗi TaskGroup.
+
+#### SOURCE / RUN / WAVE ID
+
+```text
+source HEAD                       db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+P0.1 run_id                       809f62e686934d9583250dda67a7954d
+initial wave_id                   3280b15f45cb45fa8a2e9d82bf7c2c8c
+deterministic replan wave_id      8e82874fd14d49cb9bbc99e7bff5c237
+runtime process_instance_id       BJ4zrld3FvC5f19g
+runtime server_instance_id        HXHbpMFeobFjEWdk
+smart-v3 contract SHA-256         4ddfa6bb982f46f02bdd448975ca64b3235a59379b379ec651bcc44000ac9aca
+```
+
+Initial `sol_xhigh` execution wave đi tới replan vì `PROMPT_TOO_LARGE` sau khi focused oracle đã PASS. Đây là candidate evidence-packet failure, không phải reproduction của TaskGroup bug. Wave được replan sang `deterministic / mcp_only` thay vì retry unchanged.
+
+#### PROOF ACTUALLY RUN
+
+1. Live `workspace_context(detail=full)` PASS và trả exact Git/runtime/contract identity; stale/orphan counters đều sạch ở snapshot dùng để accept P0.1.
+2. `document_workflow inspect` PASS trên file kế hoạch này, chứng minh document plane không còn symptom cùng family tại thời điểm closure.
+3. `agent_workflow prepare` PASS; deterministic replan prepare cũng PASS.
+4. Focused oracle đã chạy và PASS ở exact source HEAD trước documentation-only mutation:
+
+   ```text
+   python -m unittest tests.test_task_state_and_build tests.test_stateless_http_2026 tests.test_mcp_sdk_smoke
+   exit_code = 0
+   ```
+
+5. Current source inspection cho thấy:
+   - background worker bắt `Exception` và materialize typed `BACKGROUND_OPERATION_FAILED` thay vì để exception thoát khỏi operation state;
+   - HTTP `handle_rpc` luôn convert server-side exception thành JSON-RPC error response;
+   - reconnect path reconcile task projection từ durable ledger;
+   - expired tunnel session có compatibility recreation path;
+   - search current source không tìm thấy implementation literal `TaskGroup`/`ExceptionGroup`; các hit nằm trong chính research document.
+6. Git lineage kiểm tra hai hardening có vẻ liên quan nhất:
+
+   ```text
+   a051897449827e4753b16def1b693d867fad76e9  2026-08-13  process-scoped background operations
+   f64abe25a85e6abaa9fe9eeacd3665eb29a82515  2026-08-15  expired tunnel-session recreation
+   ```
+
+   Cả hai **đều có trước** observation ngày 2026-08-17, vì vậy không được dùng để claim rằng một trong hai chính là causal fix của incident này.
+
+#### CAUSAL CLASSIFICATION
+
+Strongest defensible statement:
+
+> Historical symptom được quan sát ở caller boundary dưới dạng async `TaskGroup/ExceptionGroup` wrapper; current server truth plane không tái hiện và retained evidence không còn child exception đủ chi tiết để xác định chính xác sub-cause.
+
+Classification hiện tại:
+
+```text
+likely boundary family     connector / transport / session asynchronous wrapper
+server defect proven       NO
+exact child exception      UNKNOWN DUE TO MISSING HISTORICAL PROVENANCE
+boundary confidence        MEDIUM
+exact-cause confidence     LOW
+speculative source fix     REJECTED
+```
+
+Điểm quan trọng: `UNKNOWN DUE TO MISSING HISTORICAL PROVENANCE` ở đây là **epistemic status của postmortem**, không phải permission để giữ một current runtime error class `UNKNOWN`. Nếu symptom tái xuất hiện, phải capture child exception/log/trace tại thời điểm xảy ra rồi mới sửa typed boundary tương ứng.
+
+#### ACCEPTED OR NOT
+
+`ACCEPTED` — toàn bộ acceptance criteria của P0.1 đã được chứng minh trên current runtime. Không còn stop-rule blocker cho bước kế tiếp.
+
+#### WHAT REMAINS
+
+- Không cố reconstruct quá khứ bằng suy đoán. Nếu TaskGroup symptom xuất hiện lại, capture connector/client stack, server/Recovery logs, request/session identity và child exception trong cùng incident window.
+- `SEMANTIC_PROVIDER_CALL_FAILED` vẫn cần xử lý ở P4 theo đúng scope riêng.
+- Formal release provenance reconciliation của P0.2 vẫn phải được ghi đầy đủ dù prior release run đã được checkpoint để giải phóng EOCL boundary trước P0.1.
+
+#### NEXT CRITICAL ACTION
+
+**P0.2 — Reconcile final artifact run:** đối chiếu exact RC/source fingerprint, installer/blockmap/latest.yml SHA, EOCL checkpoint/quiescence và release-control documentation; không rebuild nếu proof cho thấy artifact hiện tại đã exact và không drift.
+
 ## P0.2 Reconcile final artifact run
 
-Current run:
+**P0.2 DECISION: `CLOSED / ACCEPTED`.** Corrective release-provenance closure đã được ChatWeb/controller accept và EOCL checkpoint tại `2026-08-17T14:39:27Z` (khoảng 21:39 ICT). **P0.3 chưa được bắt đầu trong wave này.**
+
+### Vì sao cần corrective provenance build
+
+Run release cũ được dùng làm điểm reconcile ban đầu:
 
 ```text
 59b40e0a67694ad59385227f6dcfc4d4
-state = ACCEPTING
 ```
 
-### Actions
+Run này có build evidence lịch sử, nhưng exact final artifact bytes của nó **không còn được retained trong `dist/`**. Đối chiếu byte đã xác nhận `dist/` bị drift sang một bộ artifact khác. Vì vậy không được phép chỉ sửa projection hoặc ghi lại old SHA rồi coi như artifact cũ vẫn tồn tại; P0.2 cần một corrective build có provenance mới.
 
-- inspect accepted RC fingerprint;
-- verify artifact paths/hash match task-state;
-- verify no source drift after build;
-- accept or reject explicitly;
-- checkpoint EOCL;
-- verify quiescence;
-- update release control doc.
+### Root cause phát hiện trong corrective attempt đầu tiên
+
+Corrective build đầu tiên dừng ở test gate và phát hiện một bug thật tại Recovery Host legacy pinned-revision bridge:
+
+```text
+Git/index text bytes       LF
+Windows working-tree bytes CRLF
+legacy bridge behavior     SHA-256 raw working-tree bytes
+result                     false tamper / revision mismatch
+```
+
+Source Git vẫn clean, nhưng cùng logical text có EOL khác nhau trên Windows checkout nên pinned legacy proof bị sai.
+
+Fix được giới hạn đúng boundary:
+
+- `electron/services/componentRevision.js`: canonicalize duy nhất `CRLF -> LF` trước khi hash **legacy pinned text proof**;
+- normal component revision vẫn giữ **raw-byte semantics**;
+- `tests/component-revision.test.js`: thêm regression coverage cho CRLF acceptance, tamper rejection sau normalization và raw-byte semantics của revision thông thường.
+
+Focused checkpoint trước final build:
+
+```text
+run_id      10147ddcac554c2ba3be22c7bd70f59f
+focused     23/23 PASS
+```
+
+Không cập nhật expected digest một cách cơ học để làm test xanh; fix nằm ở canonicalization boundary gây false mismatch.
+
+### Canonical corrective final-build identity
+
+```text
+run_id                cdc2344c2d8b477e8599730d59746268
+wave_id               14a232a585b445d6a2c44f3cac28f7b4
+base HEAD             db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+worktree fingerprint  417975e837be9f200efd44c02b03fc9bd7a571dc89f6d036df0cef043670ed31
+```
+
+### PROOF ACTUALLY RUN
+
+Canonical audit của run trên có integrity sạch và required proofs xanh:
+
+```text
+precheck proof  53c1ae48d18d458c8eddba3b9903eda1  exit 0
+precheck proof  d152160a8c8b487fba7134a361b0572d  exit 0
+final proof     39399b3d83384ce4b3cd954536ec85d7  PASS
+command         npm run dist
+exit_code       0
+```
+
+Post-build source-scope check xác nhận:
+
+```text
+HEAD unchanged                  db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+product/test modified scope     electron/services/componentRevision.js
+                                tests/component-revision.test.js
+git diff --check               PASS
+unexpected product/package drift NONE OBSERVED
+```
+
+Build job đã terminal-exit sạch; không khởi chạy một build thứ hai sau proof PASS.
+
+### Final content-addressed artifacts
+
+| Artifact | Size (bytes) | SHA-256 |
+|---|---:|---|
+| `dist/web-mcp-assistant-setup-0.3.4.exe` | 128,679,337 | `CF8555C381F3B45989236BFD1BD4ADB3AAB2A3181ED2313E736F380BCEB35D57` |
+| `dist/web-mcp-assistant-setup-0.3.4.exe.blockmap` | 135,846 | `B02910158B0CD88772DE05FAC65FD58CD62DB8BEB5B312CE8B4ADEA6749CD11F` |
+| `dist/latest.yml` | 363 | `0016A7E6F14AFE07DB33D29ECBFBC3CDA2BAD6165C75ECCDA76F9A01309C72C5` |
+| `dist/win-unpacked/resources/app.asar` | 5,273,224 | `59FEC580356ACA2285BCDD2054DA2239FCED872906716231A90C460F51372FF5` |
+
+### EOCL closure
+
+```text
+final orchestration state  CHECKPOINTED
+accepted_at                2026-08-17T14:39:27Z
+integrity                  CLEAN
+mixed-fingerprint proof    NONE OBSERVED
+hidden second build        NO
+publication/upload         NOT PERFORMED
+install/restart            NOT PERFORMED
+stash/reset/clean          NOT PERFORMED
+P0.3 work                  NOT STARTED IN THIS WAVE
+```
+
+Một lookup sau successful build trước đó trả `ORCHESTRATION_RUN_NOT_FOUND` vì dùng **wrong/stale run lookup**, không phải vì build proof biến mất. Canonical run `cdc2344...` sau đó được reconcile và audit trực tiếp ở trạng thái `ACCEPTING`, đủ 3/3 proof PASS; vì vậy không duplicate rebuild. Run được accept chính thức và chuyển sang `CHECKPOINTED`.
 
 ### Acceptance
 
 ```text
-CHECKPOINTED
-artifact SHA recorded
-source base recorded
-no mixed-fingerprint proof
-no hidden second build required
+CHECKPOINTED                 PASS
+artifact SHA recorded        PASS
+source base recorded         PASS
+worktree fingerprint         RECORDED
+no mixed-fingerprint proof   PASS
+no hidden second build       PASS
 ```
+
+#### WHAT CHANGED
+
+- Corrected the Windows CRLF/LF false-tamper boundary in the Recovery legacy pinned revision bridge with regression coverage.
+- Rebuilt the final NSIS artifact only because previously accepted final bytes were no longer retained and current `dist/` had drifted.
+- Bound the new installer, blockmap, `latest.yml` and packaged `app.asar` to one canonical corrective run and accepted/checkpointed that run.
+
+#### CURRENT STATE
+
+P0.2 is closed against its stated acceptance criteria. This is a release-provenance closure, **not** a claim that P0.3 logon/reboot/fault-matrix/publication boundaries have already passed.
+
+#### ACCEPTED OR NOT
+
+`ACCEPTED / CHECKPOINTED`.
+
+#### WHAT REMAINS
+
+Only the next explicit release-contract decision in **P0.3** remains inside Phase P0: decide whether fresh-logon persistence, reboot persistence, production Recovery fault matrix and publication/upload are required boundaries for v0.3.4. Those requirements must be recorded before any additional release action.
+
+#### NEXT CRITICAL ACTION
+
+**P0.3 — Final release boundary decision.** Determine and record the release contract first; do not invent a reboot/logon/publication requirement after the fact and do not perform publication implicitly.
 
 ## P0.3 Final release boundary decision
 
-Explicitly decide whether v0.3.4 requires:
+**P0.3 DECISION: `CLOSED / ACCEPTED`.** Release contract cho v0.3.4 đã được quyết định và EOCL checkpoint tại `2026-08-17T14:48:01Z` (khoảng 21:48 ICT). Closure này là **contract decision + evidence checkpoint**, không phải thực hiện các lifecycle action không thuộc current release contract.
+
+### SOURCE / RUN / WAVE ID
 
 ```text
-installed current-session smoke      already evidenced
-fresh login/logon persistence        decision required
-reboot persistence                    decision required
-production Recovery fault matrix     decision required
-publication/upload                    separate action
+source HEAD             db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+run_id                  c675125eb066465282e6aeedeb7351d4
+final wave_id           e827a6a286cd414698b10b1cf2a45c5d
+worktree fingerprint    0e162adbf73707c084a32bece907ac22d7e742db984196e35a8f1ca930ed867f
+proof_id                278374c65eb247908fae8e85905611dc
+proof fingerprint       6c486d257e40ec8f97b40cac6447cb60471b36fc4c041f3283622f2727fbe802
+final state             CHECKPOINTED
+integrity               CLEAN
 ```
 
-Do not invent requirements after build; record release contract.
+### Release contract được chốt
+
+| Boundary | Quyết định v0.3.4 | Cơ sở |
+|---|---|---|
+| Installed current-session smoke | **REQUIRED / ALREADY EVIDENCED** | Packaged + installed current-session Recovery acceptance đã có từ các wave trước. |
+| Fresh login/logon persistence | **CONDITIONAL — không phải base-release blocker** | `startWithWindows` mặc định `false`; Windows login-item là opt-in từ persisted setting; Recovery Supervisor install là operator action riêng. Trước khi claim đường opt-in này hoạt động qua fresh logon, phải chạy installed fresh-logon/session smoke. |
+| Reboot persistence | **NOT REQUIRED cho current contract** | Maintained release guidance không định nghĩa reboot là gate mặc định; kiến trúc hiện tại là same-user session/logon, không phải Windows service/LocalSystem contract. Chỉ trở thành required khi có release claim tường minh về reboot survival. |
+| Production Recovery fault matrix | **CONDITIONAL** | Packaged/isolation acceptance đã cover packaged Supervisor healthy ping, live-owner fail-closed và executable-hash fail-closed. Chỉ các production-only scenario được nêu cụ thể và không thể test an toàn trong isolation mới trở thành gate của thay đổi/release tương ứng. |
+| Publication/upload | **SEPARATE AUTHORIZED ACTION — NOT PERFORMED** | Publication không phải closure mặc định; phải có yêu cầu + destination tường minh. User chưa yêu cầu publish/upload trong bước này. |
+
+Điểm phân biệt bắt buộc:
+
+> Base artifact v0.3.4 có thể đóng release boundary hiện tại mà không cần tự ý logoff/reboot. Điều này **không** đồng nghĩa opt-in startup/Supervisor persistence đã được chứng minh qua fresh logon hoặc reboot; nếu sau này release/support claim boundary đó, exact installed acceptance tương ứng phải chạy trước claim.
+
+### PROOF ACTUALLY RUN
+
+Evidence bundle của run đọc maintained release/recovery guidance và current implementation. Final deterministic proof:
+
+```text
+git grep -n "startWithWindows: false" -- electron/services/config.js renderer/app.js
+exit_code = 0
+status    = PASS
+```
+
+Proof này xác nhận current source/default/UI preview đều không bật Windows startup mặc định.
+
+Hai replan trong chronology của run không phải product regression:
+
+1. execute read-only đầu tiên bị workflow validation chặn vì không có check command;
+2. check `node -e` kế tiếp bị safe-mode chặn `INLINE_SCRIPT_PERMISSION_REQUIRED`;
+3. không nâng quyền/trusted mode; replan sang read-only `git grep`, PASS.
+
+### WHAT CHANGED
+
+- Không thay đổi production source.
+- Không thay đổi installer/artifact đã khóa ở P0.2.
+- Ghi rõ boundary nào là current gate, boundary nào conditional, và publication là action tách biệt.
+- Không biến một optional feature thành release blocker chỉ vì nó tồn tại trong kiến trúc.
+
+### CURRENT STATE
+
+```text
+P0 truth plane                  CLOSED for current acceptance scope
+P0.2 artifact provenance       CHECKPOINTED
+P0.3 release contract          CHECKPOINTED
+installed current-session      EVIDENCED
+fresh-logon claim              NOT MADE; CONDITIONAL PROOF REQUIRED IF CLAIMED
+reboot-survival claim          NOT PART OF CURRENT CONTRACT
+unspecified prod fault matrix  NOT A BLOCKER
+publication/upload             NOT REQUESTED / NOT PERFORMED
+```
+
+### ACCEPTED OR NOT
+
+`ACCEPTED / CHECKPOINTED` — P0.3 đã hoàn tất theo đúng mục tiêu là **quyết định release boundary trước khi hành động**, không phải chạy thêm lifecycle tests không có contract requirement.
+
+### WHAT REMAINS
+
+- Nếu sau này user/release contract bật hoặc quảng bá `startWithWindows`/installed Recovery Supervisor qua fresh logon, chạy installed fresh-logon smoke trước khi accept claim đó.
+- Nếu sau này có explicit “survives reboot” promise, thêm reboot acceptance đúng boundary.
+- Nếu có named production-only Recovery fault scenario không thể test an toàn trong isolation, chạy scenario đó như release gate của thay đổi liên quan.
+- Publication/upload vẫn chờ một yêu cầu riêng có destination rõ ràng.
+
+### NEXT CRITICAL ACTION
+
+**P1.1 — Re-run current ledger baseline after MCP recovery.** P0 đã đóng theo acceptance scope hiện tại; bước tiếp theo là tạo fresh canonical baseline từ current ledger/current HEAD/runtime instance thay vì tiếp tục dựa vào snapshot 16/08 hoặc HEAD `3a3abaff`.
 
 ---
 
@@ -1553,56 +1841,568 @@ Do not invent requirements after build; record release contract.
 
 ## P1.1 Re-run current ledger baseline after MCP recovery
 
-Generate one canonical report from **current** ledger:
+**P1.1 DECISION: `CLOSED / ACCEPTED`.** Fresh canonical baseline đã được sinh trực tiếp từ current ledger tại `2026-08-17T14:59:54.529034Z` (~21:59 ICT) và được ghi thành `docs/research/260817_CURRENT_LEDGER_BASELINE.md`. Snapshot này thay thế các count cũ ở HEAD `3a3abaff`/16-Aug cho quyết định ongoing, nhưng giữ các snapshot cũ làm chronology.
+
+### WHAT CHANGED
+
+P1.1 phát hiện repository đã có hai authority đúng nhưng tách rời:
 
 ```text
-total runs
-accepted/rejected/aborted
-first-pass/repaired
-TTAR p50/p90
-replan counts
-failure classes
-route counts
-pair counts
-quality outcomes
-controller timing/cost coverage
-host-bound span coverage
+report_rework_baseline.py   -> organic accepted-result rework / TTAR
+report_evaluation_plane.py  -> host-visible observation plane
 ```
 
-This replaces reliance on 3a3/16-Aug snapshots for ongoing decisions.
+Chưa có một canonical aggregate duy nhất cho run population/status, REPLAN/failure classes, route decisions, pair coverage, quality coverage, controller coverage và host binding. Vì vậy đã thêm **reporting adapter mỏng**, không tạo analytics database thứ hai và không thay runtime behavior:
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py
+  + OrchestrationLedger.current_baseline_summary()
+
+resources/coding-tools-mcp/coding_tools_mcp/evaluation_report.py
+  + host_binding_summary()
+  + current_ledger_baseline_report()
+
+resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py
+  + canonical JSON CLI
+
+resources/coding-tools-mcp/tests/test_evaluation_report.py
+  + regression coverage
+```
+
+Không đổi database schema, public MCP tool schema, routing policy, runtime lifecycle hay release artifacts.
+
+### SOURCE / RUN / WAVE ID
+
+```text
+source HEAD                         db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+runtime version                     0.4.3
+runtime process_instance_id         BJ4zrld3FvC5f19g
+runtime server_instance_id          HXHbpMFeobFjEWdk
+loaded behavior fingerprint         63cacbecb33383823780c7f7ad384c1a6236169df58f6d11e721ef51ac2d50a4
+smart-v3 contract SHA-256           4ddfa6bb982f46f02bdd448975ca64b3235a59379b379ec651bcc44000ac9aca
+P1.1 implementation run_id          967bb4c9007f4f8aac4f14eaf16ed521
+P1.1 implementation wave_id         3d1671ab31ed4924baf2f53d52cea8e6
+implementation proof_id             8e526630ba97470ca3e587e783e72c1d
+implementation proof fingerprint    c622ed5b93fbe13653f2004ae0a3ebb4fe7b1cecd717a2d5cb96e6042870b2a6
+implementation final state          CHECKPOINTED
+baseline capture command_id         SYtpm2rRDc2bpOCisuL4CAFz
+baseline report SHA-256             0c60b551db5c13e8be652791de0eb92a28cfeccf4632d2e1725f866b254ef80f
+```
+
+Baseline command được chạy **ngoài EOCL run** sau khi implementation run đã checkpoint, nên current population không bị tự chèn một measurement run `active`.
+
+### PROOF ACTUALLY RUN
+
+Implementation proof:
+
+```text
+python -m unittest tests.test_evaluation_report
+PASS
+```
+
+Additional repository guardrails:
+
+```text
+python scripts/check_module_size.py
+module-size budgets ok
+
+git diff --check -- coding_tools_mcp/orchestration_ledger.py coding_tools_mcp/evaluation_report.py tests/test_evaluation_report.py scripts/report_current_ledger_baseline.py
+PASS
+```
+
+Fresh canonical capture:
+
+```text
+python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace .
+exit_code = 0
+captured_at = 2026-08-17T14:59:54.529034Z
+```
+
+### CURRENT STATE — fresh canonical numbers
+
+#### Ledger population
+
+```text
+total runs = 559
+accepted   = 333
+aborted    = 170
+stale      = 49
+completed  = 7
+```
+
+#### Organic/model-free accepted-result cohort
+
+```text
+accepted scanned             = 333
+explicit model-route excluded = 16
+organic accepted              = 317
+first-pass accepted           = 201 (63.4069%)
+repaired accepted             = 116 (36.5931%)
+replan count                  = 213
+first-pass TTAR p50           = 49,320 ms
+first-pass TTAR p90           = 339,099 ms
+repaired TTAR p50             = 246,091 ms
+repaired TTAR p90             = 1,042,600 ms
+p50 repair multiplier         = 4.98968x
+p90 repair multiplier         = 3.074618x
+```
+
+Rework vẫn là leverage lớn: repaired median gần **5x** first-pass median.
+
+#### Canonical replan/failure events
+
+```text
+REPLAN transitions      = 381
+failure_observed events = 381
+```
+
+Largest event classes:
+
+```text
+CHECK_FAILED               106
+SOL_REJECTED                49
+PATCH_AMBIGUOUS             48
+BUILD_VERIFICATION_FAILED   46
+BASE_DRIFT                  36
+```
+
+Đây là **event counts**, không phải independent task failure rates.
+
+Preflight-avoided no-write patch failures hiện là 68:
+
+```text
+PATCH_CONTEXT_AMBIGUOUS = 44
+PATCH_CONTEXT_NOT_FOUND = 24
+```
+
+#### Route-selected population
+
+```text
+route_selected events = 687
+
+deterministic = 654
+sol_xhigh     = 17
+mini          = 7
+luna          = 6
+terra         = 3
+```
+
+Non-deterministic evidence vẫn quá nhỏ/heterogeneous để justify broad auto-routing promotion.
+
+#### Pair / quality / controller coverage
+
+```text
+pair-tagged runs          = 0
+unique pair ids           = 0
+quality outcome events    = 0
+quality run coverage      = 0 / 559 = 0%
+controller observed       = 0 / 559 = 0%
+controller started_at     = 0 / 559 = 0%
+controller token usage    = 0 / 559 = 0%
+controller monetary cost  = 0 / 559 = 0%
+```
+
+`0% coverage` **không có nghĩa cost = 0**; đây là measurement absence và unknown vẫn phải giữ unknown.
+
+#### Host-visible / binding
+
+```text
+current schema-v5 host turn spans   = 46
+spans with run+wave binding         = 17
+host binding rate                   = 36.9565%
+spans with trace+turn identity      = 17
+exact ledger correlations           = 17
+exact correlated run count          = 17
+```
+
+Host-visible timing:
+
+```text
+p50 = 339,908.2 ms
+p90 = 2,128,839.1 ms
+```
+
+Đây là Electron DOM `user turn visible -> first assistant visible`, **không phải model/provider latency**.
+
+P1.1 cố ý **không** tính:
+
+```text
+eligible_runs_with_host_span
+eligible_run_host_coverage
+```
+
+vì P1.2 phải định nghĩa controlled eligible-run denominator trước; không được nhìn dữ liệu rồi sửa denominator để làm coverage đẹp hơn.
+
+### ACCEPTED OR NOT
+
+`ACCEPTED / CLOSED` — P1.1 đã đạt mục tiêu tạo một fresh canonical current-ledger baseline có provenance rõ, dùng ledger làm causal source và không tạo một analytics plane mới.
+
+Detailed report:
+
+```text
+docs/research/260817_CURRENT_LEDGER_BASELINE.md
+SHA-256 0c60b551db5c13e8be652791de0eb92a28cfeccf4632d2e1725f866b254ef80f
+```
+
+### WHAT REMAINS
+
+P1.1 không giải quyết thay cho các measurement steps kế tiếp:
+
+- P1.2: định nghĩa controlled eligible-run denominator và tính exact host binding coverage;
+- P1.3: populate controller `started_at` / token usage / monetary cost nơi thực sự observable;
+- P1.4: bắt đầu quality-outcome population trên new experimental runs;
+- P1.5: giảm `UNKNOWN` bằng typed causal taxonomy.
+
+### NEXT CRITICAL ACTION
+
+**P1.2 — Host binding coverage metric.** Định nghĩa denominator trước khi measurement, sau đó report `host_spans_total`, `host_spans_with_run_binding`, `host_binding_rate`, `eligible_runs_with_host_span`, `eligible_run_host_coverage` bằng explicit identity; tuyệt đối không timestamp-proximity matching.
 
 ## P1.2 Host binding coverage metric
 
-Add/report:
+**P1.2 DECISION: `CLOSED / ACCEPTED`.** P1.2 defines the denominator before evaluating coverage and closes the measurement-contract gap without timestamp-proximity inference. **P1.3 remains `NOT STARTED`.**
+
+### WHAT CHANGED
+
+The runtime source now writes a durable eligibility marker only when a newly created run actually claims the pending organic Electron host identity:
+
+```text
+host_correlation.schema_version = 1
+host_correlation.source         = electron_pending_host_turn
+host_correlation.eligible       = true
+```
+
+Controlled calls that merely supply `trace_id`/`turn_id` do not receive this marker. The reporter uses this marker as the causal denominator and does not reinterpret old runs after observing their timestamps.
+
+Reporter output now includes:
 
 ```text
 host_spans_total
 host_spans_with_run_binding
 host_binding_rate
+eligible_runs_total
 eligible_runs_with_host_span
 eligible_run_host_coverage
+eligible_run_coverage_status
+eligible_run_coverage_basis
+historical_eligible_run_coverage_status
+timestamp_proximity_inference_forbidden
 ```
 
-Acceptance for scientific use should target near-complete coverage in controlled experiments, not organic all-history perfection.
+### CURRENT STATE
+
+Fresh closure verification:
+
+```text
+host_spans_total                    46
+host_spans_with_run_binding         17
+host_binding_rate                   36.9565%
+host_spans_with_trace_turn_identity 17
+exact_ledger_correlations           17
+exact_correlated_run_count          17
+
+eligible_runs_total                 0
+eligible_runs_with_host_span        0
+eligible_run_host_coverage          null
+eligible_run_coverage_status        no_instrumented_eligible_runs
+eligible_run_coverage_basis         server_owned_host_correlation_marker_v1
+historical_eligible_run_coverage    not_reconstructable_without_durable_eligibility_marker
+timestamp_proximity_inference       FORBIDDEN
+```
+
+The `0` eligible-run population is a typed “no instrumented eligible runs yet” state, **not** a 0% coverage result. The live MCP process has not been restarted/activated onto the new source, and P1.2 did not require an implicit restart.
+
+### SOURCE / RUN / WAVE ID
+
+Implementation:
+
+```text
+source HEAD         db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+run_id              18f59868b4164dc0a42e9600a3b5a37b
+wave_id             87f0749155104aab8c3e609ea481a27b
+proof_id            f395b8ea29424d759391fa34164256d0
+proof fingerprint   dd6537ba39f9ed963c723f45dd12631fa7e492991d18041929b8e1b43e15847c
+checkpoint_id       919f3da563434786847f76524beaca9f
+final state         CHECKPOINTED
+```
+
+Fresh closure verification:
+
+```text
+run_id              2d5264fdc2dc4f0fb20516008be2be98
+wave_id             0c17f716a2374c80809fc49ee6dc6397
+proof fingerprint   41af6a3e4b50454546752e11424d6dc5aac1e43257951db4320e64f7dffca063
+final state         CHECKPOINTED
+```
+
+### PROOF ACTUALLY RUN
+
+```text
+python -m unittest tests.test_evaluation_report                     9/9 PASS
+python scripts/check_module_size.py                                 PASS
+python scripts/report_current_ledger_baseline.py --workspace ../.. PASS
+scoped git diff --check on P1.2 source/test surface                 PASS
+ledger integrity                                                     PASS
+```
+
+Regression coverage explicitly checks:
+
+- eligible marker + matching host span => coverage 1.0;
+- eligible marker without host span => coverage 0.0;
+- timestamp proximity is never used;
+- an organic newly-created run claims exact pending host identity and gets the durable marker;
+- a controlled run with caller-supplied identity takes precedence and gets no marker;
+- an existing run does not later claim a pending host identity.
+
+### ACCEPTED OR NOT
+
+`ACCEPTED / CHECKPOINTED`.
+
+Acceptance is for the **scientific measurement contract and implementation**:
+
+- denominator defined causally before measurement;
+- explicit server-owned eligibility marker implemented;
+- controlled-identity leakage regression-covered;
+- history left non-reconstructable where evidence cannot support backfill;
+- fresh canonical reporter verified.
+
+Near-complete coverage remains the target for future **controlled experiments** once instrumented runs exist; organic all-history perfection is not required and cannot be manufactured retroactively.
+
+### WHAT REMAINS
+
+P1.2 itself has no remaining implementation blocker.
+
+A runtime restart/activation to begin producing new durable markers is a separate lifecycle action and was **not performed implicitly**. If explicitly authorized later, a post-activation organic turn can validate that the live process starts populating `eligible_runs_total`.
+
+P1.3 is intentionally not implemented in this wave.
+
+### NEXT CRITICAL ACTION
+
+After this P1.2 documentation closure, proceed to **P1.3 Controller Usage Coverage** only as a separate wave. Its contract is to populate/measure `controller.started_at`, token usage and monetary cost where genuinely observable, preserving missing values as unknown.
 
 ## P1.3 Controller usage coverage
 
-Report:
+**P1.3 DECISION: `CLOSED / ACCEPTED / CHECKPOINTED`.** The controller timing/usage/cost measurement contract is now explicit, causal and fail-closed. This closure does **not** claim that a paired experimental population already exists. **P1.4 was not started in this wave.**
+
+### WHAT CHANGED
+
+P1.3 reuses the existing `agent_workflow.evaluation.controller` schema and canonical orchestration ledger; it does not add a public MCP tool or a second analytics store.
+
+The canonical controller-coverage denominator is now:
 
 ```text
-eligible experimental runs
-with started_at
-with token usage
-with monetary cost
+explicit_evaluation_enrollment_v1
 ```
 
-No promotion economics if cost coverage is materially incomplete.
+A run enters the experimental denominator only when all enrollment identity is explicit:
+
+```text
+pair_id       nonempty
+policy        nonempty
+provenance    representative | benchmark | synthetic
+status        independent / intention-to-treat
+```
+
+Organic `trace_id`/`turn_id` identity alone does not make a run eligible for controller economics.
+
+Controller telemetry semantics are now explicit:
+
+```text
+started_at                 counts only when timestamp is parseable
+token usage                counts when >=1 token field is explicitly observed
+complete token usage       counts when all four token fields are explicitly observed
+monetary cost              counts when an explicit nonnegative numeric value exists
+source                     client_reported | provider_reported
+```
+
+`monetary_cost=0` is an observed zero. Missing cost is unknown. Missing token fields are unknown rather than silently converted to zero.
+
+Canonical reporting now includes:
+
+```text
+eligible_experimental_runs
+runs_observed
+runs_with_started_at
+runs_with_token_usage
+runs_with_complete_token_usage
+runs_with_monetary_cost
+runs_with_source
+source_counts
+observed_rate
+started_at_rate
+token_usage_rate
+complete_token_usage_rate
+monetary_cost_rate
+source_rate
+unknown_is_not_zero
+promotion_economics
+```
+
+Promotion economics is held when there is no eligible experimental population or when controller monetary-cost coverage is incomplete. P1.3 itself does not authorize automatic routing promotion.
+
+### CURRENT STATE
+
+Fresh canonical measurement after implementation acceptance:
+
+```text
+captured_at                       2026-08-17T16:35:47.073719Z (~23:35 ICT)
+denominator                       explicit_evaluation_enrollment_v1
+pair_tagged_runs                  0
+unique_pair_ids                   0
+eligible_experimental_runs        0
+runs_observed                     0
+runs_with_started_at              0
+runs_with_token_usage             0
+runs_with_complete_token_usage    0
+runs_with_monetary_cost           0
+runs_with_source                  0
+source_counts                     {}
+observed_rate                     null
+started_at_rate                   null
+token_usage_rate                  null
+complete_token_usage_rate         null
+monetary_cost_rate                null
+source_rate                       null
+unknown_is_not_zero               true
+promotion_economics.status        hold
+promotion_economics.hold_reasons  [no_eligible_experimental_runs]
+automatic_promotion               false
+```
+
+The `0` denominator means there is currently no explicitly enrolled paired experiment in the ledger. Therefore the coverage rates are correctly `null`, **not 0%**. This is measurement absence, not a zero-cost or zero-token result.
+
+When enrolled experimental runs exist, materially incomplete cost coverage keeps economics on hold via:
+
+```text
+controller_cost_coverage_incomplete
+```
+
+### SOURCE / RUN / WAVE ID
+
+```text
+source HEAD         db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+run_id              16ab815de8fa4976bd92ff35e21a4d6f
+wave_id             72524477cded4457858d1ae2e8426e12
+worktree fingerprint b4557a1b5fa4280fbf3c1c7f9a6ba92c485b37a76bad91cfb4333b152db50991
+proof fingerprint   a3a0cb55374bf6b062f11ccc93676ffee6928280ebda60ded68c45d32921950f
+final state         CHECKPOINTED
+accepted_at         2026-08-17T16:28:52.248Z
+```
+
+Implementation surface:
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py
+resources/coding-tools-mcp/tests/test_evaluation_report.py
+```
+
+No database schema, public MCP schema, routing policy, runtime lifecycle or release artifact was changed. No runtime restart was performed.
+
+### PROOF ACTUALLY RUN
+
+```text
+proof 78c33310b75342b3b1fb7b9660e82ddf
+python scripts/check_module_size.py
+PASS
+
+proof 4368aca06cf9461c8d0b5ae2f9460945
+git diff --check -- coding_tools_mcp/orchestration_ledger.py tests/test_evaluation_report.py
+PASS
+
+proof 8498a36382d942188f838ac083665b17
+python -m unittest tests.test_evaluation_report
+PASS / exit 0
+
+python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace .
+PASS / exit 0
+captured_at = 2026-08-17T16:35:47.073719Z
+```
+
+Regression coverage proves:
+
+- `pair_id + policy + provenance` enrollment is required;
+- status is not used to survivor-filter the denominator;
+- organic host trace/turn identity alone is excluded;
+- missing controller telemetry remains unknown;
+- partial token telemetry remains visibly partial;
+- explicit zero monetary cost is observed rather than treated as missing;
+- controller source provenance is restricted to declared trusted sources;
+- promotion economics stays on hold when monetary-cost coverage is incomplete.
+
+One duplicate implementation attempt hit `PATCH_CONTEXT_NOT_FOUND` after the intended source change had already been applied. The rejection happened at preflight/context matching, created no second mutation, and is not a product regression.
+
+### ACCEPTED OR NOT
+
+`ACCEPTED / CHECKPOINTED`.
+
+P1.3 is closed as a **measurement-integrity and reporting contract**. Current paired/controller population remains absent; no data was fabricated or backfilled to force a non-null coverage number.
+
+### WHAT REMAINS
+
+- Real representative/benchmark/synthetic experiments must explicitly enroll with `pair_id + policy + provenance` before they enter this denominator.
+- A trusted client/provider must populate `controller.started_at`, token fields and `monetary_cost` where actually observable.
+- Economics stays fail-closed until cost coverage is complete enough for the intended analysis.
+- P1.4 quality-outcome population remains separate and was not implemented here.
+
+### NEXT CRITICAL ACTION
+
+**P1.4 — Quality-outcome population.** Begin recording explicit quality outcomes on new experimental runs and preserve historical unknowns where no post-accept evidence exists. Do not infer quality from `accepted` state alone.
 
 ## P1.4 Quality-outcome population
 
-Start recording on new experimental runs immediately.
+**P1.4 DECISION: `CLOSED / ACCEPTED / CHECKPOINTED`.** Quality-outcome reporting is now explicit and fail-closed. Lifecycle `accepted` is never substituted for quality evidence; historical backfill requires exact evidence; the experimental denominator is `explicit_evaluation_enrollment_v1` (`pair_id + policy + provenance`, status-independent).
 
-For past organic tasks, backfill only when evidence exists; do not infer quality from “accepted” alone.
+### CURRENT STATE
+
+Fresh root-canonical capture after acceptance:
+
+```text
+captured_at                      2026-08-17T17:03:21.070238Z
+run_count                        567
+eligible_experimental_runs       0
+quality_outcome_events           0
+experimental_runs_with_outcome   0
+experimental_coverage_rate       null
+experimental_coverage_status     no_eligible_experimental_runs
+promotion_quality.status         hold
+promotion_quality.hold_reasons   [no_eligible_experimental_runs]
+automatic_promotion              false
+unknown_is_not_good              true
+```
+
+The null experimental coverage is measurement absence, **not** 0% quality. The all-history explicit-event coverage remains 0 because no exact historical quality events exist and P1.4 correctly refused to infer them from acceptance state.
+
+### SOURCE / RUN / WAVE ID
+
+```text
+source HEAD      db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+run_id           73f933ec87be4a36849fe8d4770a22d9
+final wave_id    d723ac8823a54982a6e8d742ac7f9c6c
+proof_id         21799528cd3d479da35147cabf0b3e8c
+final state      CHECKPOINTED
+integrity        261 / 261 OK
+```
+
+### PROOF ACTUALLY RUN
+
+```text
+python -m unittest tests.test_evaluation_report                    PASS
+python scripts/check_module_size.py                                PASS
+scoped git diff --check                                            PASS
+python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace .
+                                                                   PASS / exit 0
+```
+
+### ACCEPTED OR NOT
+
+`ACCEPTED / CHECKPOINTED`.
+
+### WHAT REMAINS
+
+Representative experimental population is still absent. New controlled experiments must explicitly enroll and record quality outcomes; old unknown quality remains unknown unless exact provenance exists.
+
+### NEXT CRITICAL ACTION
+
+**P1.5 — Error Taxonomy Cleanup.** Target causal classification coverage of `UNKNOWN`; do not optimize total error count and do not invent historical causes.
 
 ## P1.5 Error taxonomy cleanup
 
@@ -2048,8 +2848,8 @@ Each requires a measured bottleneck.
 
 6. Re-run current ledger baseline after MCP recovery.
 7. Compute host-binding coverage current.
-8. Populate controller timing/usage/cost where observable.
-9. Start quality-outcome capture.
+8. **DONE P1.3:** define/report controller timing/usage/cost coverage with explicit experimental enrollment and unknown-preserving semantics; current eligible population remains 0.
+9. **DONE P1.4:** explicit quality-outcome coverage + fail-closed promotion-quality contract; current eligible experimental population remains 0 and experimental coverage remains null.
 10. Add routing/placement regret reporting.
 11. Reduce `UNKNOWN` error class with typed causes.
 
@@ -2205,9 +3005,9 @@ KEEP / REVISE / REMOVE
 | Server-first source | Implemented | READY FOR EXPERIMENT | paired live canary |
 | Server-first economics | none sufficient | UNPROVEN | local-vs-server pairs |
 | Model auto-routing | tiny non-det sample | NOT READY | paired cohorts |
-| Host observation binding | mechanism now observed | PARTIALLY CLOSED | coverage metric + ledger population |
-| Controller cost | latest exact audit had 0 coverage | OPEN | provider/client measurement |
-| Quality outcomes | latest exact audit had 0 | OPEN | record from new experiments |
+| Host observation binding | causal denominator defined; current 17/46 span binding | P1.2 CLOSED / instrumented live population pending activation | P1.3 closed; live activation only if explicitly authorized |
+| Controller usage/cost | explicit enrollment/report contract closed; eligible experimental runs = 0, rates = null | P1.3 CLOSED / economics HOLD | populate trusted telemetry on future enrolled runs; P1.4 next |
+| Quality outcomes | explicit quality contract/reporting closed; current enrolled population = 0 and coverage = null | P1.4 CLOSED / promotion HOLD | populate exact outcomes on future enrolled experiments; do not backfill from accepted state |
 | Solution Economics | research only | READY FOR SHADOW | structured assessment + A/B |
 | Learned joint router | no causal dataset | HOLD | after P3/P6/P7 |
 
@@ -2296,6 +3096,7 @@ That is the scientifically defensible path from current Coding Web to the intend
 
 ## Current/recent audits
 
+- `docs/research/260817_CURRENT_LEDGER_BASELINE.md`
 - `docs/research/260817_PROJECT_STATE_AND_REMAINING_ISSUES_ASSESSMENT.md`
 - `docs/research/260816_CHATWEB_SERVER_FIRST_COMPUTE_ORCHESTRATION_RESEARCH.md`
 - `docs/research/260816_ACCEPTED_ENGINEERING_OUTCOME_SOLUTION_ECONOMICS_METHODOLOGY_AND_IMPLEMENTATION_PLAN.md`
@@ -2325,38 +3126,316 @@ That is the scientifically defensible path from current Coding Web to the intend
 
 # 32. Required next report
 
-Sau khi P0 truth plane được phục hồi, báo cáo tiếp theo không nên là một research essay mới. Nó nên là một **fresh measured baseline report** generated từ current ledger với exact current HEAD/runtime instance:
+P1.1 đã tạo fresh measured baseline report từ current ledger/current runtime:
 
 ```text
-CURRENT_LEDGER_BASELINE_YYYYMMDD
+docs/research/260817_CURRENT_LEDGER_BASELINE.md
+```
 
+Report hiện đã cover:
+
+```text
 - run population
 - accepted/first-pass/repaired
 - TTAR distributions
-- controller/host binding coverage
-- quality-outcome coverage
-- route/model cohorts
-- server/local placement cohorts
-- error taxonomy
-- LSP usefulness by task class
-- proof reuse
-- current release checkpoint
+- event-level failure/replan classes
+- route population
+- pair/quality/controller coverage
+- host span binding
+- current runtime/source provenance
 ```
 
-Từ đó mọi P3/P6/P7 experiment dùng cùng baseline authority.
+P1.2 đã đóng causal eligible-run denominator và exact host-binding coverage contract. P1.3 đã đóng explicit experimental controller-coverage denominator, provenance semantics và fail-closed economics gate. P1.4 đã đóng explicit quality-outcome reporting + fail-closed promotion-quality contract; current eligible experimental population vẫn là `0`, vì vậy experimental coverage được giữ `null` và historical accepted state không bị suy thành quality evidence. **P1.5 là measurement-integrity action kế tiếp** để giảm diagnostic `UNKNOWN` bằng typed causal taxonomy trước khi P3/P6/P7 dùng baseline cho causal experiments.
 
 ---
 
 # 33. Artifact note
 
-Tài liệu này được tạo dưới dạng artifact ngoài workspace vì current Coding MCP truth/document plane đang lỗi `ExceptionGroup/TaskGroup`. Không commit trực tiếp GitHub để tránh bypass one-Runtime/write-authority policy. Khi MCP được khôi phục, file này nên được đặt vào:
+Tài liệu này ban đầu được tạo dưới dạng artifact ngoài workspace khi current Coding MCP truth/document plane gặp `ExceptionGroup/TaskGroup`. Sau P0.1, truth/document plane đã được re-verify và tài liệu hiện được duy trì trực tiếp trong workspace qua Coding MCP authority.
+
+Current authoritative path:
 
 ```text
 docs/research/260817_PROJECT_REAL_STATE_SCIENTIFIC_EVIDENCE_AND_FULL_EXECUTION_PLAN.md
 ```
 
-và sau đó được cập nhật bằng fresh current-ledger baseline trước khi dùng làm production rollout authority.
-
 ---
 
 **End of current scientific assessment.**
+
+---
+
+# Addendum — P1 Measurement Integrity & Evaluation Readiness Closure
+
+**Current-state capture:** 2026-08-17T18:06:42.547322Z (~01:06 ICT, 2026-08-18)
+**Purpose:** append-only closure update. The dated sections above remain historical evidence. For **current P1 status and next-action decisions**, this addendum supersedes older statements above that still describe P1.5/P1.6 as pending.
+
+## A. Final P1 verdict
+
+```text
+P1 Measurement Integrity & Evaluation Readiness   CLOSED / CHECKPOINTED
+P1.1 canonical current-ledger baseline            CLOSED
+P1.2 causal host-binding denominator               CLOSED
+P1.3 controller usage/cost coverage contract       CLOSED
+P1.4 explicit quality-outcome contract             CLOSED
+P1.5 prospective typed error taxonomy              CLOSED / CHECKPOINTED
+P1.6 routing/placement regret reporting             CLOSED / CHECKPOINTED
+
+Empirical policy efficacy                           NOT YET PROVEN
+Automatic model/placement promotion                 HOLD
+Automatic activation from P1 evidence               false
+P2 work in this closure wave                        NOT STARTED
+```
+
+The key distinction is mandatory:
+
+> **P1 is closed as a measurement-integrity and evaluation-readiness phase, not as proof that any candidate route, placement policy, or orchestration policy is already faster, cheaper, or higher quality.**
+
+P1 now gives the project a causal measurement vocabulary and fail-closed reporting plane. It intentionally refuses to manufacture efficacy evidence where the representative experimental population is still absent.
+
+## B. P1.1–P1.6 closure matrix
+
+| Item | What is now closed | Fresh current evidence | Scientific interpretation |
+|---|---|---|---|
+| **P1.1** | Canonical current-ledger baseline/reporting adapter | Ledger is the causal source; current reporter completes successfully | One current measurement entry point exists without creating a second analytics database. |
+| **P1.2** | Server-owned causal eligible-run denominator for organic host binding | `eligible_runs_total=1`, `eligible_runs_with_host_span=1`, coverage `1.0`; overall span binding `18/51 = 35.2941%` | The causal marker path is now observed live, but **n=1 is instrumentation evidence, not a mature coverage estimate**. Historical eligibility remains non-reconstructable. |
+| **P1.3** | Explicit experimental controller timing/token/cost denominator and unknown-preserving semantics | `eligible_experimental_runs=0`; all controller coverage rates `null`; economics `HOLD` | Measurement contract is complete; economics evidence is absent. Missing cost/tokens are unknown, never zero. |
+| **P1.4** | Explicit quality-outcome population/reporting and fail-closed quality gate | `eligible_experimental_runs=0`, quality events `0`, experimental coverage `null`, promotion quality `HOLD` | Lifecycle `accepted` is not treated as quality evidence. No historical quality is fabricated. |
+| **P1.5** | Prospective typed causal taxonomy and epoch-aware reporting | Current taxonomy epoch has `0` samples; status `no_current_epoch_samples`. Supplemental cumulative projection still has `48/475` UNKNOWN and typed coverage `89.8947%` | Implementation is closed, but **no empirical post-epoch UNKNOWN reduction may yet be claimed**. Historical UNKNOWN is deliberately not backfilled. |
+| **P1.6** | Representative-pair routing/placement regret methodology and canonical report | Mini: `pair_count=0`, Luna: `pair_count=0`; both `HOLD`; predicted policy score `null`; scalar regret `null` | Regret can now be measured when real comparable pairs exist. Current data cannot rank Mini/Luna against the baseline. |
+
+## C. P1.5 durable closure — typed error taxonomy
+
+```text
+run_id      9b6b067d90244a71bf5835ba04b5543b
+wave_id     eda8944c29944a03a310fcfc8b51fa2c
+proof_id    55eedfd1e57347c287e89c84dca87953
+state       CHECKPOINTED
+```
+
+P1.5 uses a prospective taxonomy epoch and normalizes typed causal families including `FILESYSTEM`, `POLICY`, `NOT_FOUND`, `INTERNAL`, and `CONFLICT`. It keeps causal orchestration-ledger evidence separate from the supplemental `.coding-tools/performance.json` projection.
+
+Fresh P1 closure capture:
+
+```text
+cumulative supplemental projection samples     475
+UNKNOWN                                          48
+typed coverage                                  0.898947
+current taxonomy epoch samples                   0
+current epoch typed coverage                   null
+current epoch UNKNOWN share                    null
+current epoch status                           no_current_epoch_samples
+historical_backfill                            false
+historical_unknown_reclassification_forbidden  true
+```
+
+Therefore P1.5 closes the **taxonomy/instrumentation defect**, not the empirical outcome. No post-epoch reduction in UNKNOWN is claimed before current-epoch samples exist.
+
+## D. P1.6 durable closure — routing / placement regret
+
+```text
+source HEAD  db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc
+run_id       72616aa5d7a3409a83098d2243f48c48
+wave_id      da847ca77d7a4d19bc4af6e1377b3e3d
+proof_id     4ea919f98b544fb095457b2eac5da8b8
+state        CHECKPOINTED
+ledger       353 / 353 integrity records OK at acceptance
+```
+
+Accepted source/test receipts are bound to exactly four files:
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py
+resources/coding-tools-mcp/coding_tools_mcp/evaluation_report.py
+resources/coding-tools-mcp/tests/test_orchestration_ledger.py
+resources/coding-tools-mcp/tests/test_evaluation_report.py
+```
+
+Only **explicit, representative, identity-compatible paired runs** may enter regret analysis. Similar historical tasks and timestamp proximity are not accepted as counterfactuals.
+
+Observed dimensions remain separate: quality is maximized; TTAR and total cost are minimized. A best observed action exists only when one action weakly Pareto-dominates the other on all observed dimensions and is strictly better on at least one. Typed outcomes preserve incomplete/trade-off/no-dominance states rather than forcing a winner.
+
+Two fields deliberately remain unavailable today:
+
+```text
+predicted_policy_score = null  # unobserved_not_recorded
+scalar_regret          = null  # unavailable_without_calibrated_utility_weights
+```
+
+No scalar utility is invented from arbitrary weights. Component/vector regret is reported only against a real observed Pareto-best comparable action.
+
+Fresh current regret population:
+
+```text
+tagged_runs_scanned = 0
+
+Mini: pair_count=0, task_class_count=0, status=hold, pareto_status=indeterminate_no_pairs
+Luna: pair_count=0, task_class_count=0, status=hold, pareto_status=indeterminate_no_pairs
+```
+
+The implementation exposes governance starting points `min_pairs=10` and `min_task_classes=3`; these are **not** production statistical proof thresholds. The earlier methodology in this document still governs: an initial 10–20 pair cohort is an instrumentation/variance pilot, followed by power sizing and confirmatory analysis.
+
+## E. Fresh canonical P1 baseline after P1.6 checkpoint
+
+```text
+python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace .
+exit_code   = 0
+captured_at = 2026-08-17T18:06:42.547322Z
+```
+
+### E.1 Current orchestration population
+
+```text
+run_count = 571
+accepted  = 342
+aborted   = 172
+stale     = 49
+completed = 7
+active    = 1
+
+REPLAN transitions      = 387
+failure_observed events = 387
+```
+
+Largest failure-event classes are `CHECK_FAILED=106`, `SOL_REJECTED=50`, `PATCH_AMBIGUOUS=48`, `BUILD_VERIFICATION_FAILED=47`, and `BASE_DRIFT=40`. These are event counts, not independent task failure probabilities.
+
+### E.2 Organic/model-free accepted-result economics
+
+```text
+accepted runs scanned               342
+explicit model-route excluded        16
+organic/model-free accepted         326
+first-pass accepted                 206  (63.1902%)
+repaired accepted                   120  (36.8098%)
+replan count in repair population   219
+first-pass TTAR p50                  52,110 ms
+first-pass TTAR p90                 427,103 ms
+repaired TTAR p50                   250,672 ms
+repaired TTAR p90                 1,067,959 ms
+repaired/first-pass p50 multiplier  4.810439x
+repaired/first-pass p90 multiplier  2.500472x
+```
+
+> **Rework remains a dominant observed economic penalty: repaired median TTAR is about 4.81x first-pass median in the current model-free accepted cohort.** This remains observational cohort evidence, not treatment-effect proof.
+
+Preflight avoided 70 known no-write patch failures before run creation: `PATCH_CONTEXT_AMBIGUOUS=45`, `PATCH_CONTEXT_NOT_FOUND=25`.
+
+### E.3 Current route-selected population
+
+```text
+route_selected events = 698
+deterministic = 665
+sol_xhigh     = 17
+mini          = 7
+luna          = 6
+terra         = 3
+```
+
+These route events are operational history, **not** a valid paired-efficacy dataset. P1.6 correctly refuses to use them as regret counterfactuals.
+
+### E.4 Host-visible and causal host binding
+
+```text
+host turn spans                        51
+spans with run binding                 18
+overall host span binding rate         35.2941%
+exact ledger correlations              18
+causally eligible runs                  1
+eligible runs with exact host span       1
+eligible-run host coverage              1.0
+coverage basis                          server_owned_host_correlation_marker_v1
+```
+
+Host-visible duration is `user_turn_visible -> first_assistant_visible`: p50 `352,466.7 ms`, p90 `2,106,995.6 ms`. It is a DOM measurement, **not provider/model latency**. The fresh `1/1` causal eligible coverage proves the marker path has produced an observed sample; it does not establish mature production coverage.
+
+### E.5 Experimental efficacy population remains absent
+
+```text
+pair-tagged runs                        0
+unique pair ids                         0
+eligible experimental runs              0
+controller observed runs                0
+controller monetary-cost coverage      null
+controller token-usage coverage        null
+promotion_economics                    HOLD
+quality outcome events                  0
+experimental quality coverage          null
+promotion_quality                      HOLD
+Mini comparable regret pairs            0
+Luna comparable regret pairs            0
+routing/placement automatic activation false
+```
+
+This is the central P1 closure result: the project no longer lacks the *definitions* required for causal economics; it lacks the *representative treatment population* needed to estimate them.
+
+## F. Comprehensive scientific interpretation of P1
+
+P1 now proves that causal denominators are explicit; missing controller cost/tokens/quality stay unknown; historical uncertainty is retained instead of backfilled; lifecycle acceptance is not quality evidence; routing regret requires real representative comparable pairs; multi-objective trade-offs remain visible; and measurement readiness never grants routing/placement authority automatically.
+
+P1 does **not** prove that Mini, Luna, server-first, or any automatic routing policy is better or worse than its baseline. It does not establish cost per accepted result, candidate quality non-inferiority, or model latency from host-visible DOM spans. It also does not causally resolve the 48 legacy UNKNOWN observations.
+
+Current maturity classification:
+
+```text
+measurement definitions / semantics         HIGH
+causal identity / denominator integrity      HIGH
+unknown-preserving reporting                 HIGH
+host-binding instrumentation                 OBSERVED, VERY SMALL CAUSAL N
+controller economics population              ABSENT
+experimental quality population              ABSENT
+representative paired routing population     ABSENT
+empirical regret estimation                  HOLD
+automatic promotion readiness                HOLD
+```
+
+The correct transition is therefore:
+
+```text
+P1: build trustworthy measurement contracts        DONE
+        ↓
+P2+: create and analyze representative evidence    NEXT
+```
+
+not `P1 complete -> candidate policies proven`.
+
+## G. Current ordered boundary after P1 closure
+
+For current decision-making, stale P1 backlog entries earlier in this dated document are superseded as follows:
+
+```text
+P1.1  DONE  canonical current-ledger baseline
+P1.2  DONE  causal host-binding denominator
+P1.3  DONE  controller usage/cost coverage contract
+P1.4  DONE  explicit quality-outcome contract
+P1.5  DONE  prospective typed error taxonomy
+P1.6  DONE  routing/placement regret reporting
+
+P2.1  NEXT  stratified rework diagnosis
+```
+
+**P2.1 was not started by the P1 closure wave documented here.** The immediate research question after the P1 checkpoint is which rework strata dominate accepted-result economics and which existing intervention demonstrably reduces each causal rework class before more routing complexity is added.
+
+## H. P1 final evidence summary
+
+```text
+P1.5 run / wave / proof
+  9b6b067d90244a71bf5835ba04b5543b
+  eda8944c29944a03a310fcfc8b51fa2c
+  55eedfd1e57347c287e89c84dca87953
+
+P1.6 run / wave / proof
+  72616aa5d7a3409a83098d2243f48c48
+  da847ca77d7a4d19bc4af6e1377b3e3d
+  4ea919f98b544fb095457b2eac5da8b8
+
+P1.6 state = CHECKPOINTED
+P1.6 ledger integrity at acceptance = 353 / 353 OK
+fresh canonical reporter = PASS / exit 0
+captured_at = 2026-08-17T18:06:42.547322Z
+```
+
+No P1 closure evidence authorizes an implicit runtime restart, release publication, public tool-schema change, automatic route promotion, or P2 implementation.
+
+---
+
+**End of P1 closure addendum.**

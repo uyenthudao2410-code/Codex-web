@@ -15,12 +15,14 @@ MAX_IDLE_GAP_MS = 30 * 60 * 1000
 IDEMPOTENCY_POLICIES = frozenset({"none", "optional", "required"})
 IDEMPOTENCY_KEY_SOURCES = frozenset({"none", "explicit", "derived"})
 IDEMPOTENCY_POLICY_EPOCH = "task_epoch_v1"
+ERROR_TAXONOMY_EPOCH = "causal_error_taxonomy_v1"
 ERROR_CLASSES = frozenset({
     "CONTROL_PATH", "CONTROL_CWD", "CONTROL_SCHEMA", "CONTROL_CONNECTOR",
     "CAPACITY", "DEADLINE", "PROMPT_SIZE", "MODEL_CANDIDATE_INVALID",
     "BASE_DRIFT", "PATCH_AMBIGUOUS", "PROOF_INFRA", "PROOF_CODE_FAILURE",
     "AUTHORITY_DENIED", "USER_BLOCKED", "PROVIDER", "IDEMPOTENCY",
-    "VALIDATION", "RUNTIME", "UNKNOWN",
+    "VALIDATION", "RUNTIME", "FILESYSTEM", "POLICY", "NOT_FOUND",
+    "INTERNAL", "CONFLICT", "UNKNOWN",
 })
 PHASE_TIMING_KEYS = (
     "preflight_ms", "workspace_ms", "localization_ms", "packet_build_ms",
@@ -182,6 +184,9 @@ class PerformanceTraceStore:
                 state["idempotency_auto_key_calls"] += 1
             if measured_error_class:
                 state["error_class_counts"][measured_error_class] = int(state["error_class_counts"].get(measured_error_class, 0)) + 1
+                state["error_taxonomy_current_counts"][measured_error_class] = int(
+                    state["error_taxonomy_current_counts"].get(measured_error_class, 0)
+                ) + 1
             state["proof_cache_eligible"] += event["proof_cache_eligible"]
             state["proof_cache_hits"] += event["proof_cache_hits"]
             state["proof_cache_misses"] += event["proof_cache_misses"]
@@ -374,6 +379,8 @@ class PerformanceTraceStore:
             "idempotency_optional_key_calls": 0,
             "idempotency_auto_key_calls": 0,
             "error_class_counts": {},
+            "error_taxonomy_epoch": ERROR_TAXONOMY_EPOCH,
+            "error_taxonomy_current_counts": {},
             "proof_cache_eligible": 0,
             "proof_cache_hits": 0,
             "proof_cache_misses": 0,
@@ -416,6 +423,7 @@ class PerformanceTraceStore:
         except (OSError, ValueError):
             return state
         stored_policy_epoch = str(parsed.get("idempotency_policy_epoch") or "") if isinstance(parsed, dict) else ""
+        stored_taxonomy_epoch = str(parsed.get("error_taxonomy_epoch") or "") if isinstance(parsed, dict) else ""
         if isinstance(parsed, dict):
             state.update(parsed)
         state["version"] = self.schema_version
@@ -424,9 +432,12 @@ class PerformanceTraceStore:
             state["idempotency_current_policy_required_key_calls"] = 0
             state["idempotency_current_policy_by_operation"] = {}
         state["idempotency_policy_epoch"] = IDEMPOTENCY_POLICY_EPOCH
+        if stored_taxonomy_epoch != ERROR_TAXONOMY_EPOCH:
+            state["error_taxonomy_current_counts"] = {}
+        state["error_taxonomy_epoch"] = ERROR_TAXONOMY_EPOCH
         if not isinstance(state.get("recent"), list):
             state["recent"] = []
-        for key in ("execution_mode_counts", "route_resolved_counts", "orchestration_state_counts", "run_metrics", "proof_cache_miss_reasons", "error_class_counts", "idempotency_current_policy_by_operation"):
+        for key in ("execution_mode_counts", "route_resolved_counts", "orchestration_state_counts", "run_metrics", "proof_cache_miss_reasons", "error_class_counts", "error_taxonomy_current_counts", "idempotency_current_policy_by_operation"):
             if not isinstance(state.get(key), dict):
                 state[key] = {}
         if not isinstance(state.get("phase_timing_ms"), dict):
@@ -449,6 +460,7 @@ class PerformanceTraceStore:
                 state[key] = 0
         state["proof_cache_miss_reasons"] = self._normalize_count_map(state["proof_cache_miss_reasons"])
         state["error_class_counts"] = self._normalize_count_map(state["error_class_counts"])
+        state["error_taxonomy_current_counts"] = self._normalize_count_map(state["error_taxonomy_current_counts"])
         normalized_operations: dict[str, dict[str, Any]] = {}
         for raw_operation, raw_bucket in list(state["idempotency_current_policy_by_operation"].items())[:50]:
             operation = str(raw_operation or "").strip()[:120]

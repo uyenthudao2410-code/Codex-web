@@ -7,7 +7,7 @@
 - Base HEAD: `1516f0e5ebcf4086376bb5d144c5e70bbfcf383b`
 - Worktree fingerprint: `e98e149851b1f60b9f4d817090d546b7d52739e766782f2c22ff4b5c335693c0`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **accepted**
 
 ## Delegations
 
@@ -41,6 +41,26 @@
 | 14046 | 2026-08-17T12:00:20.887Z | managed_process_terminal |  |  | owner=default |
 | 14047 | 2026-08-17T12:00:22.205Z | proof_recorded |  |  | stage_id=verify:build; status=passed; cache_hit=False; input_fingerprint=1793b8237783156102725dc4b55ad75c8476ba513e1dc13b0d0ef31c8a25a8cc |
 | 14048 | 2026-08-17T12:00:22.433Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 14049 | 2026-08-17T13:46:18.857Z | managed_process_admitted |  |  | owner=default |
+| 14050 | 2026-08-17T13:46:19.117Z | managed_process_started |  |  | owner=default |
+| 14051 | 2026-08-17T13:46:19.614Z | managed_process_terminal |  |  | owner=default |
+| 14052 | 2026-08-17T13:46:30.355Z | managed_process_admitted |  |  | owner=default |
+| 14053 | 2026-08-17T13:46:30.575Z | managed_process_started |  |  | owner=default |
+| 14054 | 2026-08-17T13:46:30.955Z | managed_process_terminal |  |  | owner=default |
+| 14055 | 2026-08-17T13:46:54.645Z | managed_process_admitted |  |  | owner=default |
+| 14056 | 2026-08-17T13:46:54.866Z | managed_process_started |  |  | owner=default |
+| 14057 | 2026-08-17T13:46:55.655Z | managed_process_terminal |  |  | owner=default |
+| 14058 | 2026-08-17T13:47:34.321Z | managed_process_admitted |  |  | owner=default |
+| 14059 | 2026-08-17T13:47:34.520Z | managed_process_started |  |  | owner=default |
+| 14060 | 2026-08-17T13:47:34.888Z | managed_process_terminal |  |  | owner=default |
+| 14061 | 2026-08-17T13:48:26.219Z | managed_process_admitted |  |  | owner=default |
+| 14062 | 2026-08-17T13:48:26.474Z | managed_process_started |  |  | owner=default |
+| 14063 | 2026-08-17T13:48:27.987Z | managed_process_terminal |  |  | owner=default |
+| 14064 | 2026-08-17T13:50:47.051Z | managed_process_admitted |  |  | owner=default |
+| 14065 | 2026-08-17T13:50:47.251Z | managed_process_started |  |  | owner=default |
+| 14066 | 2026-08-17T13:50:53.156Z | managed_process_terminal |  |  | owner=default |
+| 14067 | 2026-08-17T14:00:52.737Z | state_transition | ACCEPTING | CHECKPOINTED | reason=controller_acceptance |
+| 14068 | 2026-08-17T14:00:53.010Z | wave_processes_quiesced |  |  | reason=orchestration_state:checkpointed |
 
 ## Proof
 
@@ -53,10 +73,10 @@
 
 | Checkpoint | Status | Git HEAD | Proof fingerprint | Accepted by |
 |---|---|---|---|---|
-| - | - | - | - | - |
+| 1f9a2169786f4cd0bf8000f103a4c849 | accepted | db4e295cdd2cf71c0a4d0b91f1e5dcb5f9e6e4dc | 1be75af0612b6c23f3708adf965c190b361f77ca13438d586a047a92c7c734fd | chatweb |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `22`
-- Chain head: `babdd90604cdb739bf4824b052b6b9857c5e7a1905e6c4075cc9c22068c0ab92`
+- Events checked: `42`
+- Chain head: `73419738f597b6491bda0cab2195ce59e864c064e06bcdda9d9a402e0e7cc2d0`

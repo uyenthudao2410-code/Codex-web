@@ -113,6 +113,13 @@ test('Recovery Host legacy revision bridge pins added device identity bytes', (t
     path: relative,
     sha256: RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS[relative]
   }]);
+  const canonicalText = fs.readFileSync(target, 'utf8').replace(/\r\n/g, '\n');
+  fs.writeFileSync(target, canonicalText.replace(/\n/g, '\r\n'), 'utf8');
+  assert.equal(
+    recoveryHostLegacyV1Revision(appRoot).pinned_added_files[0].sha256,
+    RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS[relative],
+    'checkout-only CRLF materialization must not invalidate the pinned legacy source contract'
+  );
   fs.appendFileSync(target, '\n// tampered after legacy authorization\n');
   assert.throws(() => recoveryHostLegacyV1Revision(appRoot), { code: 'REVISION_BRIDGE_DIGEST_MISMATCH' });
 });

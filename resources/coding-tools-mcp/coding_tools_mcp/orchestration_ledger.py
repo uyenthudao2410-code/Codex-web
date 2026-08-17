@@ -2052,6 +2052,133 @@ class OrchestrationLedger:
             rank = max(1, min(len(ordered), (len(ordered) * percentile + 99) // 100))
             return round(float(ordered[rank - 1]), 6)
 
+        def observed_regret_pair(
+            base: dict[str, Any],
+            candidate: dict[str, Any],
+            candidate_policy: str,
+        ) -> dict[str, Any]:
+            """Project regret only from one explicit representative causal pair."""
+
+            def observed_action(record: dict[str, Any]) -> dict[str, Any]:
+                quality = record.get("quality") if isinstance(record.get("quality"), dict) else {}
+                outcome = quality.get("outcome") if isinstance(quality.get("outcome"), dict) else {}
+                defects = quality.get("critical_defects") if isinstance(quality.get("critical_defects"), dict) else {}
+                defect_count = defects.get("count")
+                defect_value = (
+                    int(defect_count)
+                    if defects.get("status") == "known"
+                    and isinstance(defect_count, int)
+                    and not isinstance(defect_count, bool)
+                    and defect_count >= 0
+                    else None
+                )
+                quality_source = str(outcome.get("source") or "").strip() or None
+                oracle_pass = outcome.get("oracle_pass") if isinstance(outcome.get("oracle_pass"), bool) else None
+                tta = (record.get("milestones") or {}).get("time_to_accepted_ms")
+                tta_value = (
+                    float(tta)
+                    if record.get("accepted") is True
+                    and isinstance(tta, (int, float))
+                    and not isinstance(tta, bool)
+                    and tta >= 0
+                    else None
+                )
+                total_cost = record.get("total_monetary_cost") if isinstance(record.get("total_monetary_cost"), dict) else {}
+                cost = total_cost.get("value")
+                cost_value = (
+                    float(cost)
+                    if total_cost.get("complete") is True
+                    and isinstance(cost, (int, float))
+                    and not isinstance(cost, bool)
+                    and cost >= 0
+                    else None
+                )
+                return {
+                    "accepted": bool(record.get("accepted")),
+                    "first_pass_accepted": bool(record.get("first_pass_accepted")),
+                    "quality": {
+                        "source": quality_source,
+                        "oracle_pass": oracle_pass,
+                        "critical_defect_count": defect_value,
+                        "complete": bool(quality_source and defect_value is not None),
+                    },
+                    "time_to_accepted_ms": tta_value,
+                    "total_monetary_cost": cost_value,
+                    "total_monetary_cost_complete": bool(total_cost.get("complete")),
+                }
+
+            observed = {
+                baseline: observed_action(base),
+                candidate_policy: observed_action(candidate),
+            }
+            missing: list[str] = []
+            for action, evidence in observed.items():
+                if not (evidence.get("quality") or {}).get("complete"):
+                    missing.append(f"{action}:quality_outcome")
+                if evidence.get("time_to_accepted_ms") is None:
+                    missing.append(f"{action}:time_to_accepted_result")
+                if evidence.get("total_monetary_cost") is None:
+                    missing.append(f"{action}:total_monetary_cost")
+
+            best_action: str | None = None
+            status = "outcome_incomplete"
+            component_regret: dict[str, dict[str, float] | None] = {baseline: None, candidate_policy: None}
+            if not missing:
+                vectors = {
+                    action: {
+                        "critical_defect_count": float((evidence.get("quality") or {}).get("critical_defect_count")),
+                        "time_to_accepted_ms": float(evidence["time_to_accepted_ms"]),
+                        "total_monetary_cost": float(evidence["total_monetary_cost"]),
+                    }
+                    for action, evidence in observed.items()
+                }
+
+                def dominates(left: dict[str, float], right: dict[str, float]) -> bool:
+                    keys = ("critical_defect_count", "time_to_accepted_ms", "total_monetary_cost")
+                    return all(left[key] <= right[key] for key in keys) and any(left[key] < right[key] for key in keys)
+
+                if dominates(vectors[baseline], vectors[candidate_policy]):
+                    best_action = baseline
+                    status = "observed_pareto_dominance"
+                elif dominates(vectors[candidate_policy], vectors[baseline]):
+                    best_action = candidate_policy
+                    status = "observed_pareto_dominance"
+                elif vectors[baseline] == vectors[candidate_policy]:
+                    status = "no_dominance"
+                else:
+                    status = "tradeoff_requires_calibrated_utility"
+
+                if best_action is not None:
+                    best = vectors[best_action]
+                    for action, vector in vectors.items():
+                        component_regret[action] = {
+                            "critical_defect_count": round(vector["critical_defect_count"] - best["critical_defect_count"], 6),
+                            "time_to_accepted_ms": round(vector["time_to_accepted_ms"] - best["time_to_accepted_ms"], 6),
+                            "total_monetary_cost": round(vector["total_monetary_cost"] - best["total_monetary_cost"], 12),
+                        }
+
+            return {
+                "schema_version": 1,
+                "status": status,
+                "outcome_complete": not missing,
+                "missing_observations": missing,
+                "actual_outcomes": observed,
+                "best_observed_comparable_action": best_action,
+                "predicted_policy_score": {
+                    "measurement": "unobserved_not_recorded",
+                    "baseline": None,
+                    "candidate": None,
+                },
+                "regret_estimate": {
+                    "scalar": None,
+                    "scalar_status": "utility_weights_not_calibrated",
+                    "components_by_policy": component_regret,
+                    "component_basis": "observed_action_minus_best_observed_comparable_action",
+                },
+                "comparability_basis": "explicit_representative_pair_identity_and_pair_fingerprint",
+                "historical_or_similar_task_counterfactual_used": False,
+            }
+
         results: list[dict[str, Any]] = []
         for policy in candidates:
             pair_rows: list[dict[str, Any]] = []
@@ -2092,6 +2219,7 @@ class OrchestrationLedger:
                 candidate_credits = (candidate.get("external", {}).get("candidate_economics") or {}).get("estimated_credits")
                 if base_credits is None and str((base.get("route") or {}).get("resolved") or "") in {"deterministic", "mcp_deterministic", "unknown"}:
                     base_credits = 0.0
+                regret = observed_regret_pair(base, candidate, policy)
                 pair_rows.append({
                     "pair_id": pair_id,
                     "task_class": base_eval.get("task_class"),
@@ -2119,6 +2247,7 @@ class OrchestrationLedger:
                     "candidate_critical_defects": (candidate.get("quality") or {}).get("critical_defects"),
                     "baseline_total_cost": (base.get("total_monetary_cost") or {}).get("value"),
                     "candidate_total_cost": (candidate.get("total_monetary_cost") or {}).get("value"),
+                    "routing_placement_regret": regret,
                 })
 
             task_classes = sorted({str(row["task_class"]) for row in pair_rows if row.get("task_class")})
@@ -2128,6 +2257,25 @@ class OrchestrationLedger:
             candidate_ttas = [float(row["candidate_tta_ms"]) for row in accepted_pairs if isinstance(row.get("candidate_tta_ms"), (int, float))]
             external_credit_deltas = [float(row["external_candidate_credit_delta"]) for row in pair_rows if isinstance(row.get("external_candidate_credit_delta"), (int, float))]
             total_cost_pairs = [row for row in accepted_pairs if isinstance(row.get("baseline_total_cost"), (int, float)) and isinstance(row.get("candidate_total_cost"), (int, float))]
+            regret_pairs = [row["routing_placement_regret"] for row in pair_rows]
+            complete_regret_pairs = [item for item in regret_pairs if item.get("outcome_complete") is True]
+            best_action_pairs = [item for item in complete_regret_pairs if item.get("best_observed_comparable_action")]
+            tradeoff_pairs = [item for item in complete_regret_pairs if item.get("status") == "tradeoff_requires_calibrated_utility"]
+            no_dominance_pairs = [item for item in complete_regret_pairs if item.get("status") == "no_dominance"]
+            regret_hold_reasons: list[str] = []
+            if not pair_rows:
+                regret_measurement_status = "indeterminate_no_comparable_pairs"
+                regret_hold_reasons.append("no_comparable_pairs")
+            elif len(complete_regret_pairs) < len(pair_rows):
+                regret_measurement_status = "incomplete"
+                regret_hold_reasons.append("outcome_incomplete")
+            elif tradeoff_pairs:
+                regret_measurement_status = "tradeoff_requires_calibrated_utility"
+                regret_hold_reasons.append("utility_weights_not_calibrated")
+            elif best_action_pairs:
+                regret_measurement_status = "observed_component_regret"
+            else:
+                regret_measurement_status = "observed_no_dominance"
             reasons: list[str] = []
             if len(pair_rows) < max(1, int(min_pairs)):
                 reasons.append("insufficient_paired_results")
@@ -2189,6 +2337,28 @@ class OrchestrationLedger:
                     "complete": bool(pair_rows) and len(total_cost_pairs) == len(accepted_pairs) == len(pair_rows),
                     "reason": None if bool(pair_rows) and len(total_cost_pairs) == len(accepted_pairs) == len(pair_rows) else "controller_cost_unobserved",
                 },
+                "routing_placement_regret": {
+                    "status": "hold" if regret_hold_reasons else "observed",
+                    "measurement_status": regret_measurement_status,
+                    "hold_reasons": regret_hold_reasons,
+                    "comparable_pairs": len(pair_rows),
+                    "complete_outcome_pairs": len(complete_regret_pairs),
+                    "best_action_pairs": len(best_action_pairs),
+                    "tradeoff_pairs": len(tradeoff_pairs),
+                    "no_dominance_pairs": len(no_dominance_pairs),
+                    "predicted_policy_score": {
+                        "measurement": "unobserved_not_recorded",
+                        "eligible_pairs": len(pair_rows),
+                        "observed_pairs": 0,
+                        "coverage": 0.0 if pair_rows else None,
+                    },
+                    "scalar_regret": {
+                        "value": None,
+                        "measurement": "unavailable_without_calibrated_utility",
+                        "utility_weights_calibrated": False,
+                    },
+                    "automatic_activation": False,
+                },
                 "pareto_status": pareto_status,
                 "automatic_activation": False,
                 "pairs": pair_rows[:100],
@@ -2208,6 +2378,14 @@ class OrchestrationLedger:
             "excluded": excluded,
             "identity_mismatch_reasons": identity_mismatch_reasons,
             "results": results,
+            "regret_methodology": {
+                "source": "orchestration_ledger_explicit_representative_pairs",
+                "best_observed_action_rule": "weak_pareto_dominance_on_observed_quality_time_and_total_cost_with_one_strict_improvement",
+                "quality_metric": "critical_defect_count_from_explicit_quality_outcome",
+                "predicted_policy_score": "unobserved_not_recorded",
+                "scalar_regret": "unavailable_without_calibrated_utility_weights",
+                "historical_or_similar_task_counterfactual_forbidden": True,
+            },
             "automatic_activation": False,
             "controller_cost_policy": "unknown_is_not_zero",
             "model_free": True,
@@ -3660,6 +3838,313 @@ class OrchestrationLedger:
         with self._lock, self._connect() as connection:
             rows = connection.execute(query, params).fetchall()
         return [self._run_row(row) for row in rows]
+
+    def host_observation_eligible_runs(self) -> list[dict[str, str]]:
+        """Return runs with server-owned durable proof of an organic Electron host-turn claim."""
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                "SELECT run_id,metadata_json FROM runs ORDER BY started_at, run_id"
+            ).fetchall()
+        eligible: list[dict[str, str]] = []
+        for row in rows:
+            try:
+                metadata = json.loads(row["metadata_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                continue
+            marker = metadata.get("host_correlation") if isinstance(metadata.get("host_correlation"), dict) else {}
+            if (
+                marker.get("schema_version") != 1
+                or marker.get("source") != "electron_pending_host_turn"
+                or marker.get("eligible") is not True
+            ):
+                continue
+            evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+            trace_id = _bounded_text(evaluation.get("trace_id") or "", 128).strip()
+            turn_id = _bounded_text(evaluation.get("turn_id") or "", 128).strip()
+            if not trace_id or not turn_id:
+                continue
+            eligible.append({"run_id": str(row["run_id"] or ""), "trace_id": trace_id, "turn_id": turn_id})
+        return eligible
+
+    def current_baseline_summary(self) -> dict[str, Any]:
+        """Return content-free current population/coverage facts from the canonical ledger."""
+        with self._lock, self._connect() as connection:
+            run_rows = connection.execute(
+                "SELECT run_id,status,metadata_json FROM runs ORDER BY started_at, run_id"
+            ).fetchall()
+            event_rows = connection.execute(
+                """SELECT run_id,event_type,state_after,payload_json
+                   FROM events
+                   WHERE event_type IN ('failure_observed','route_selected','quality_outcome_recorded')
+                      OR state_after='REPLAN'
+                   ORDER BY seq"""
+            ).fetchall()
+
+        status_counts: dict[str, int] = {}
+        pair_tagged_runs = 0
+        pair_ids: set[str] = set()
+        eligible_experimental_runs = 0
+        experimental_run_ids: set[str] = set()
+        controller_started_runs = 0
+        controller_usage_runs = 0
+        controller_complete_usage_runs = 0
+        controller_cost_runs = 0
+        controller_observed_runs = 0
+        controller_source_runs = 0
+        controller_source_counts: dict[str, int] = {}
+        token_keys = ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens")
+        experimental_provenance = {"representative", "benchmark", "synthetic"}
+        for row in run_rows:
+            status = str(row["status"] or "unknown")
+            status_counts[status] = status_counts.get(status, 0) + 1
+            try:
+                metadata = json.loads(row["metadata_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                metadata = {}
+            evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+            pair_id = _bounded_text(evaluation.get("pair_id") or "", 128).strip()
+            if pair_id:
+                pair_tagged_runs += 1
+                pair_ids.add(pair_id)
+            policy = _bounded_text(evaluation.get("policy") or "", 100).strip().lower()
+            provenance = _bounded_text(evaluation.get("provenance") or "", 80).strip().lower()
+            eligible_experiment = bool(pair_id and policy and provenance in experimental_provenance)
+            if not eligible_experiment:
+                continue
+            eligible_experimental_runs += 1
+            experimental_run_ids.add(str(row["run_id"] or ""))
+            controller = evaluation.get("controller") if isinstance(evaluation.get("controller"), dict) else {}
+            source = _bounded_text(controller.get("source") or "", 64).strip().lower()
+            has_source = source in {"client_reported", "provider_reported"}
+            has_started = self._timestamp_millis(str(controller.get("started_at") or "")) is not None
+            usage_observed = [
+                isinstance(controller.get(key), int)
+                and not isinstance(controller.get(key), bool)
+                and int(controller.get(key)) >= 0
+                for key in token_keys
+            ]
+            has_usage = any(usage_observed)
+            has_complete_usage = all(usage_observed)
+            cost = controller.get("monetary_cost")
+            has_cost = isinstance(cost, (int, float)) and not isinstance(cost, bool) and float(cost) >= 0
+            controller_started_runs += int(has_started)
+            controller_usage_runs += int(has_usage)
+            controller_complete_usage_runs += int(has_complete_usage)
+            controller_cost_runs += int(has_cost)
+            controller_observed_runs += int(has_started or has_usage or has_cost)
+            controller_source_runs += int(has_source)
+            if has_source:
+                controller_source_counts[source] = controller_source_counts.get(source, 0) + 1
+
+        replan_transitions = 0
+        failure_event_count = 0
+        failure_classes: dict[str, int] = {}
+        route_event_count = 0
+        route_counts: dict[str, int] = {}
+        quality_event_count = 0
+        quality_runs: set[str] = set()
+        latest_quality_by_run: dict[str, dict[str, Any]] = {}
+        for row in event_rows:
+            event_type = str(row["event_type"] or "")
+            if str(row["state_after"] or "") == "REPLAN":
+                replan_transitions += 1
+            try:
+                payload = json.loads(row["payload_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                payload = {}
+            if event_type == "failure_observed":
+                failure_event_count += 1
+                failure_class = _bounded_text(payload.get("failure_class") or "UNKNOWN", 80).strip().upper() or "UNKNOWN"
+                failure_classes[failure_class] = failure_classes.get(failure_class, 0) + 1
+            elif event_type == "route_selected":
+                route_event_count += 1
+                route = _bounded_text(
+                    payload.get("resolved") or payload.get("route_resolved") or "unknown", 80
+                ).strip().lower() or "unknown"
+                route_counts[route] = route_counts.get(route, 0) + 1
+            elif event_type == "quality_outcome_recorded":
+                quality_event_count += 1
+                quality_run_id = str(row["run_id"] or "")
+                quality_runs.add(quality_run_id)
+                latest_quality_by_run[quality_run_id] = payload
+
+        run_count = len(run_rows)
+
+        def coverage(count: int) -> float | None:
+            return round(count / run_count, 6) if run_count else None
+
+        def experimental_coverage(count: int) -> float | None:
+            return round(count / eligible_experimental_runs, 6) if eligible_experimental_runs else None
+
+        experimental_quality_run_ids = experimental_run_ids & set(latest_quality_by_run)
+        quality_outcome_runs = len(experimental_quality_run_ids)
+        quality_oracle_runs = 0
+        quality_oracle_failed_runs = 0
+        quality_critical_defect_runs = 0
+        quality_critical_defect_nonzero_runs = 0
+        quality_noncritical_defect_runs = 0
+        quality_manual_fix_runs = 0
+        quality_manual_fix_required_runs = 0
+        quality_regression_escape_runs = 0
+        quality_regression_escape_true_runs = 0
+        quality_rollback_runs = 0
+        quality_rollback_required_runs = 0
+        quality_maintainability_runs = 0
+        quality_observation_window_runs = 0
+        quality_source_counts: dict[str, int] = {}
+        for quality_run_id in experimental_quality_run_ids:
+            outcome = latest_quality_by_run[quality_run_id]
+            source = _bounded_text(outcome.get("source") or "", 128).strip()
+            if source:
+                quality_source_counts[source] = quality_source_counts.get(source, 0) + 1
+            oracle_pass = outcome.get("oracle_pass")
+            if isinstance(oracle_pass, bool):
+                quality_oracle_runs += 1
+                quality_oracle_failed_runs += int(not oracle_pass)
+            critical_defects = outcome.get("critical_defect_count")
+            if isinstance(critical_defects, int) and not isinstance(critical_defects, bool) and critical_defects >= 0:
+                quality_critical_defect_runs += 1
+                quality_critical_defect_nonzero_runs += int(critical_defects > 0)
+            noncritical_defects = outcome.get("noncritical_defect_count")
+            if isinstance(noncritical_defects, int) and not isinstance(noncritical_defects, bool) and noncritical_defects >= 0:
+                quality_noncritical_defect_runs += 1
+            manual_fix_required = outcome.get("manual_fix_required")
+            if isinstance(manual_fix_required, bool):
+                quality_manual_fix_runs += 1
+                quality_manual_fix_required_runs += int(manual_fix_required)
+            regression_escape = outcome.get("regression_escape")
+            if isinstance(regression_escape, bool):
+                quality_regression_escape_runs += 1
+                quality_regression_escape_true_runs += int(regression_escape)
+            rollback_required = outcome.get("rollback_required")
+            if isinstance(rollback_required, bool):
+                quality_rollback_runs += 1
+                quality_rollback_required_runs += int(rollback_required)
+            maintainability = _bounded_text(outcome.get("maintainability_gate") or "", 32).strip().lower()
+            if maintainability in {"pass", "fail", "not_applicable", "unknown"}:
+                quality_maintainability_runs += 1
+            if _bounded_text(outcome.get("observation_window_end") or "", 128).strip():
+                quality_observation_window_runs += 1
+
+        quality_hold_reasons: list[str] = []
+        if eligible_experimental_runs == 0:
+            quality_hold_reasons.append("no_eligible_experimental_runs")
+        else:
+            if quality_outcome_runs < eligible_experimental_runs:
+                quality_hold_reasons.append("quality_outcome_coverage_incomplete")
+            if quality_oracle_runs < eligible_experimental_runs:
+                quality_hold_reasons.append("oracle_quality_evidence_incomplete")
+            if quality_critical_defect_runs < eligible_experimental_runs:
+                quality_hold_reasons.append("critical_defect_evidence_incomplete")
+            if quality_oracle_failed_runs:
+                quality_hold_reasons.append("oracle_failure_observed")
+            if quality_critical_defect_nonzero_runs:
+                quality_hold_reasons.append("critical_defect_observed")
+            if quality_regression_escape_true_runs:
+                quality_hold_reasons.append("regression_escape_observed")
+            if quality_rollback_required_runs:
+                quality_hold_reasons.append("rollback_required_observed")
+
+        promotion_hold_reasons: list[str] = []
+        if eligible_experimental_runs == 0:
+            promotion_hold_reasons.append("no_eligible_experimental_runs")
+        elif controller_cost_runs < eligible_experimental_runs:
+            promotion_hold_reasons.append("controller_cost_coverage_incomplete")
+
+        return {
+            "schema_version": 1,
+            "source": "orchestration_ledger",
+            "run_count": run_count,
+            "run_status_counts": dict(sorted(status_counts.items())),
+            "replan_transitions": replan_transitions,
+            "failure_events": {
+                "count": failure_event_count,
+                "classes": dict(sorted(failure_classes.items())),
+            },
+            "route_decisions": {
+                "count": route_event_count,
+                "resolved_counts": dict(sorted(route_counts.items())),
+                "basis": "route_selected_events",
+            },
+            "pairing": {
+                "pair_tagged_runs": pair_tagged_runs,
+                "unique_pair_ids": len(pair_ids),
+            },
+            "quality_outcomes": {
+                "event_count": quality_event_count,
+                "runs_with_outcome": len(quality_runs),
+                "run_coverage": coverage(len(quality_runs)),
+                "all_history_basis": "explicit_quality_outcome_recorded_events",
+                "eligible_experimental_runs": eligible_experimental_runs,
+                "experimental_runs_with_outcome": quality_outcome_runs,
+                "experimental_coverage_rate": experimental_coverage(quality_outcome_runs),
+                "experimental_coverage_status": "observed" if eligible_experimental_runs else "no_eligible_experimental_runs",
+                "runs_with_oracle_observation": quality_oracle_runs,
+                "runs_with_critical_defect_count": quality_critical_defect_runs,
+                "runs_with_noncritical_defect_count": quality_noncritical_defect_runs,
+                "runs_with_manual_fix_observation": quality_manual_fix_runs,
+                "runs_with_regression_escape_observation": quality_regression_escape_runs,
+                "runs_with_rollback_observation": quality_rollback_runs,
+                "runs_with_maintainability_gate": quality_maintainability_runs,
+                "runs_with_observation_window_end": quality_observation_window_runs,
+                "source_counts": dict(sorted(quality_source_counts.items())),
+                "oracle_failed_runs": quality_oracle_failed_runs,
+                "critical_defect_nonzero_runs": quality_critical_defect_nonzero_runs,
+                "manual_fix_required_runs": quality_manual_fix_required_runs,
+                "regression_escape_true_runs": quality_regression_escape_true_runs,
+                "rollback_required_runs": quality_rollback_required_runs,
+                "denominator": "explicit_evaluation_enrollment_v1",
+                "eligibility": {
+                    "requires_pair_id": True,
+                    "requires_policy": True,
+                    "allowed_provenance": sorted(experimental_provenance),
+                    "status_independent": True,
+                    "accepted_state_alone_is_not_quality_evidence": True,
+                    "historical_backfill_requires_exact_evidence": True,
+                },
+                "unknown_is_not_good": True,
+                "promotion_quality": {
+                    "status": "eligible_for_analysis" if not quality_hold_reasons else "hold",
+                    "hold_reasons": quality_hold_reasons,
+                    "requires_complete_quality_outcome_coverage": True,
+                    "requires_complete_oracle_coverage": True,
+                    "requires_complete_critical_defect_coverage": True,
+                    "automatic_promotion": False,
+                },
+            },
+            "controller_coverage": {
+                "eligible_experimental_runs": eligible_experimental_runs,
+                "runs_observed": controller_observed_runs,
+                "runs_with_started_at": controller_started_runs,
+                "runs_with_token_usage": controller_usage_runs,
+                "runs_with_complete_token_usage": controller_complete_usage_runs,
+                "runs_with_monetary_cost": controller_cost_runs,
+                "runs_with_source": controller_source_runs,
+                "source_counts": dict(sorted(controller_source_counts.items())),
+                "observed_rate": experimental_coverage(controller_observed_runs),
+                "started_at_rate": experimental_coverage(controller_started_runs),
+                "token_usage_rate": experimental_coverage(controller_usage_runs),
+                "complete_token_usage_rate": experimental_coverage(controller_complete_usage_runs),
+                "monetary_cost_rate": experimental_coverage(controller_cost_runs),
+                "source_rate": experimental_coverage(controller_source_runs),
+                "denominator": "explicit_evaluation_enrollment_v1",
+                "eligibility": {
+                    "requires_pair_id": True,
+                    "requires_policy": True,
+                    "allowed_provenance": sorted(experimental_provenance),
+                    "status_independent": True,
+                    "organic_trace_turn_identity_alone_is_ineligible": True,
+                },
+                "unknown_is_not_zero": True,
+                "promotion_economics": {
+                    "status": "eligible_for_analysis" if not promotion_hold_reasons else "hold",
+                    "hold_reasons": promotion_hold_reasons,
+                    "requires_complete_controller_cost_coverage": True,
+                    "automatic_promotion": False,
+                },
+            },
+            "content_free": True,
+        }
 
     def organic_rework_summary(
         self,

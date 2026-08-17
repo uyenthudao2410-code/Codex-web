@@ -19,6 +19,14 @@ These are the always-on rules for ordinary repository work. Read only the linked
 - Preserve unrelated work. Do not reset, rebase, restore, clean, or rewrite history unless the user explicitly requests that operation.
 - Inspect only the implementation, tests, documentation, and diff relevant to the task; do not bulk-read unrelated material.
 
+### `.coding-tools` retention invariant
+
+- Treat **every file under `.coding-tools/**`** as repository history/evidence that must remain version-controlled and be included when project state is committed/pushed. This includes `orchestration/ledger.sqlite3`, SQLite `-wal`/`-shm` sidecars, host-turn correlation state, task/performance projections, run/wave reports, logs, backups, and future telemetry artifacts.
+- Never add a `.coding-tools` path to `.gitignore`, `.git/info/exclude`, a global ignore rule, selective-staging exclusion, cleanup rule, or "runtime-only" delivery exception. Automation worktrees/nested repositories must live outside `.coding-tools`; a gitlink is not a substitute for preserving the files.
+- Before **every commit or push**, stage the complete current evidence tree with `git add -A -- .coding-tools`, then run `npm run check:coding-tools-delivery`. If the guard reports a new runtime mutation, restage `.coding-tools` and rerun the guard before delivery.
+- `npm run check:coding-tools-history` is the repository policy guard: it must pass with no ignored `.coding-tools` files and no nested Git repository/gitlink under that tree.
+- If credential/secret material is ever detected under `.coding-tools`, do **not** silently omit the file. Stop delivery, report the conflict, and remediate/rotate/move the secret so the evidence policy can be satisfied without publishing credentials. Only an explicit user instruction naming the exception may override this retention invariant.
+
 ## 2. Build the simplest useful product
 
 - Optimize for a workflow that is simple, obvious, and easy to operate.
@@ -66,7 +74,7 @@ When producing repository-local research, benchmarking, postmortems, scientific 
 3. `.coding-tools/task-history.json` — archived task-level continuity/outcome records; useful for longitudinal task-class and acceptance analysis, but not a replacement for the orchestration ledger.
 4. `.coding-tools/task-state.json` — current task/run/wave projection for operator/UI state; useful for present-state evidence, not full forensic history.
 
-These files are **volatile runtime evidence, not source-code inputs**. For research claims, record the observed Git HEAD, capture time/evidence window, sample size where relevant, and distinguish measured/provider-reported facts from derived estimates and scenario assumptions. If projections disagree on causal history, prefer the orchestration ledger and explain the discrepancy. Do not manually edit runtime evidence to make a report look cleaner, and do not let `.coding-tools` volatility participate in source/worktree fingerprints or invalidate otherwise matching code proof.
+These files are **volatile runtime evidence and repository history, not source-code inputs**. Volatility is not permission to ignore or omit them from project-state commits. For research claims, record the observed Git HEAD, capture time/evidence window, sample size where relevant, and distinguish measured/provider-reported facts from derived estimates and scenario assumptions. If projections disagree on causal history, prefer the orchestration ledger and explain the discrepancy. Do not manually edit runtime evidence to make a report look cleaner, and do not let `.coding-tools` volatility participate in source/worktree fingerprints or invalidate otherwise matching code proof.
 
 ## 5. Protect work and keep delivery explicit
 

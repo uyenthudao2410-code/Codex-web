@@ -30,8 +30,8 @@ The goal is to finish the current product without adding unnecessary architectur
 - No paid provider canary may run without explicit external-cost authorization.
 - Installed Windows/Scheduled Task/fault injection steps must verify exact target, current owner identity, rollback path, and quiescent EOCL/managed jobs before mutation.
 - Recovery faults must never kill or adopt a foreign/unverified process.
-- `ledger.sqlite3` remains tracked and must be included in delivery commits; SQLite `-wal`/`-shm` sidecars remain runtime-only.
-- One-shot host-correlation files (`chatweb-host-turn-pending.json`, `chatweb-host-turn-binding.json`) are runtime-only and must not be source-controlled.
+- The complete `.coding-tools/**` tree is project history/evidence and must remain visible to Git and be included in project-state delivery commits/pushes. This includes `ledger.sqlite3`, SQLite `-wal`/`-shm` sidecars, host-turn correlation files, projections, reports, logs, backups, and future telemetry artifacts.
+- No `.coding-tools` path may be treated as a Git/runtime-only exclusion without an explicit user instruction naming that exception. Automation worktrees/nested repositories must live outside `.coding-tools` so individual evidence files remain versionable.
 - Source proof, live activation, packaged proof, installed-session proof, and release/publish claims are separate states.
 - A green test is not final EOCL acceptance until the relevant wave reaches `CHECKPOINTED` when EOCL acceptance is available and required.
 - Wrapper/orchestration projection errors are recorded separately from the underlying terminal command result; neither is allowed to overwrite the other.
@@ -42,7 +42,7 @@ The goal is to finish the current product without adding unnecessary architectur
 
 | ID | Priority | Workstream | Status | Completion gate |
 |---|---|---|---|---|
-| P0.1 | P0 | Repository/runtime-evidence hygiene | **COMPLETE / DELIVERED** | one-shot files ignored/untracked; source-root clean; ledger preserved |
+| P0.1 | P0 | Repository/runtime-evidence hygiene | **COMPLETE / RETENTION POLICY UPDATED** | all `.coding-tools` paths visible to Git; repository guard present; no nested gitlink evidence substitute |
 | P0.2 | P0 | Installed Windows Recovery Supervisor acceptance | **CURRENT-SESSION COMPLETE / PERSISTENCE EXTERNAL** | exact installer + real Scheduled Task + `Action Once` + rollback proven; reboot/logon persistence explicitly remains external/unverified |
 | P0.3 | P0 | Production Recovery fault matrix | PENDING | controlled isolated/installed fault cases pass with no foreign adoption, duplicate owner/listener, orphan, or state corruption |
 | P1.1 | P1 | Exact-fingerprint release candidate | PENDING | source + MCP + Recovery E2E + packaged + installer/provenance gates pass on one exact accepted fingerprint |
@@ -70,7 +70,7 @@ The goal is to finish the current product without adding unnecessary architectur
 
 ## 5. P0.1 — Repository/runtime-evidence hygiene
 
-### Implemented
+### Historical implementation at `bae11481` (superseded for Git retention)
 
 - Added exact runtime-only ignore rules for:
   - `.coding-tools/evaluation/chatweb-host-turn-pending.json`
@@ -80,6 +80,13 @@ The goal is to finish the current product without adding unnecessary architectur
 - Preserved `.coding-tools/orchestration/ledger.sqlite3` as a tracked canonical evidence file.
 - Preserved live one-shot binding state on disk while removing it from source-control concerns.
 - Removed the accidentally tracked pending-turn snapshot from source control.
+
+### Current retention policy — supersedes the Git-exclusion portion above
+
+- Later project direction on 2026-08-17 requires **all files under `.coding-tools/**` to be committed/pushed as historical evidence**; the earlier runtime-only Git exclusions are no longer current policy.
+- `.gitignore` must not hide any `.coding-tools` path, including host-turn correlation files and SQLite `-wal`/`-shm` sidecars.
+- Before commit/push, stage the complete tree with `git add -A -- .coding-tools` and require `npm run check:coding-tools-delivery` to pass.
+- The historical bullets above remain only as chronology of what `bae11481` did; they must not be used as authority to omit current `.coding-tools` evidence.
 
 ### Proof and delivery
 
@@ -449,6 +456,13 @@ Evaluate before implementing:
 - EOCL final acceptance `CHECKPOINTED`.
 - Delivered: `bae11481 chore: close runtime evidence hygiene`.
 
+### 2026-08-17 — Full `.coding-tools` retention supersedes P0.1 exclusions
+
+- Project retention policy changed from selective runtime-only exclusions to full `.coding-tools/**` versioning for historical analysis.
+- Repository-local `.coding-tools` ignore rules are removed and an explicit keep-visible rule is authoritative.
+- `check:coding-tools-history` guards against ignored evidence/nested gitlinks; `check:coding-tools-delivery` additionally requires every current `.coding-tools` mutation to be staged before delivery.
+- Dated research snapshots remain chronological evidence only and do not override this maintained policy or `AGENTS.md`.
+
 ### 2026-08-17 — P0.2 first installed attempt found packaging blocker
 
 - Exact NSIS installer from `bae11481` built and installed to a controlled per-user target.
@@ -507,11 +521,11 @@ Evaluate before implementing:
 
 ## 13. Next action
 
-1. selectively deliver this accepted P0.2 evidence boundary with the living plan, canonical `ledger.sqlite3`, and relevant accepted reports while preserving unrelated concurrent work and excluding SQLite sidecars/runtime projections;
+1. selectively deliver this accepted P0.2 evidence boundary while preserving unrelated concurrent source work, but include the **complete current `.coding-tools/**` tree** in the project-state commit/push; do not exclude SQLite sidecars, host-turn state, or runtime projections;
 2. execute P0.3 F1-F9, reusing exact existing deterministic/E2E coverage where sufficient and using an isolated packaged real-process harness for destructive cases that could sever the active Coding MCP control plane;
 3. update this file with per-case fault evidence, post-case ownership/listener/orphan invariants, and any minimal remediation required by a reproducible fault;
 4. freeze source and execute the exact-fingerprint RC gate, rebuilding the final NSIS artifact only after the source/test surface is frozen;
 5. evaluate representative routing evidence; if comparable accepted cohorts are insufficient or cost remains unknown, record `KEEP_DETERMINISTIC / NO_PROMOTION` rather than manufacture evidence;
 6. close semantic localization as `BLOCKED_CONFIG` unless the required external origin + credential-file binding exists, and benchmark it only if that binding is actually available;
 7. record the true reboot/logon persistence boundary as external/unverified unless it is independently executed and observed;
-8. make the final selective delivery commit/push including the canonical ledger and accepted closure reports; do not create a release/tag/publish artifact without separate authorization.
+8. make the final selective delivery commit/push including the complete `.coding-tools/**` history/evidence tree; do not create a release/tag/publish artifact without separate authorization.

@@ -207,6 +207,12 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(result["status"], "hold")
             self.assertIn("controller_cost_unobserved", result["hold_reasons"])
             self.assertEqual(result["pareto_status"], "indeterminate_total_cost")
+            regret = result["routing_placement_regret"]
+            self.assertEqual(regret["status"], "hold")
+            self.assertEqual(regret["measurement_status"], "incomplete")
+            self.assertIn("outcome_incomplete", regret["hold_reasons"])
+            self.assertEqual(regret["predicted_policy_score"]["coverage"], 0.0)
+            self.assertIsNone(regret["scalar_regret"]["value"])
             self.assertFalse(result["automatic_activation"])
 
     def test_paired_policy_evaluation_scans_beyond_history_ui_cap(self) -> None:
@@ -263,6 +269,145 @@ class OrchestrationLedgerTests(unittest.TestCase):
             self.assertEqual(comparison["tagged_runs_scanned"], 0)
             self.assertEqual(result["pair_count"], 0)
             self.assertEqual(result["pareto_status"], "indeterminate_no_pairs")
+            regret = result["routing_placement_regret"]
+            self.assertEqual(regret["status"], "hold")
+            self.assertEqual(regret["measurement_status"], "indeterminate_no_comparable_pairs")
+            self.assertIsNone(regret["predicted_policy_score"]["coverage"])
+            self.assertIsNone(regret["scalar_regret"]["value"])
+
+    def test_paired_policy_evaluation_reports_component_regret_for_observed_dominance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            def accepted(policy: str, route: str, cost: float, defects: int, started_at: str, accepted_at: str) -> None:
+                run_id = ledger.create_run(
+                    objective="paired observed regret",
+                    metadata={
+                        "workflow": "bugfix",
+                        "evaluation": {
+                            "pair_id": "pair-regret-dominance",
+                            "policy": policy,
+                            "task_class": "localized_bug",
+                            "oracle_id": "oracle-regret",
+                            "provenance": "representative",
+                            "task_spec_fp": "task-regret",
+                            "environment_fp": "env-regret",
+                            "tool_contract_fp": "tool-regret",
+                            "evaluation_schema_fp": "eval-regret",
+                            "runtime_version": "0.4.3",
+                            "cache_stratum": "cold",
+                            "controller": {"source": "client_reported", "monetary_cost": cost},
+                        },
+                    },
+                )
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only" if route == "deterministic" else "bounded_candidate",
+                    base_head="head-regret",
+                    worktree_fp="tree-regret",
+                    contract_fp="contract-regret",
+                )
+                ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", payload={"resolved": route})
+                ledger.record_quality_outcome(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    outcome={"source": "paired-oracle", "oracle_pass": defects == 0, "critical_defect_count": defects},
+                )
+                checkpoint_id = ledger.record_checkpoint(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    git_head="head-regret",
+                    proof_fingerprint=f"proof-{policy}",
+                    status="accepted",
+                )
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+                with ledger._lock, ledger._connect() as connection:
+                    connection.execute("UPDATE runs SET started_at=? WHERE run_id=?", (started_at, run_id))
+                    connection.execute("UPDATE checkpoints SET created_at=? WHERE checkpoint_id=?", (accepted_at, checkpoint_id))
+
+            accepted("chatweb_mcp", "deterministic", 2.0, 1, "2026-08-18T00:00:00Z", "2026-08-18T00:00:02Z")
+            accepted("mini", "mini", 1.0, 0, "2026-08-18T00:01:00Z", "2026-08-18T00:01:01Z")
+            result = ledger.paired_policy_evaluation(candidate_policies=("mini",), min_pairs=1, min_task_classes=1)["results"][0]
+            pair = result["pairs"][0]["routing_placement_regret"]
+            self.assertTrue(pair["outcome_complete"])
+            self.assertEqual(pair["status"], "observed_pareto_dominance")
+            self.assertEqual(pair["best_observed_comparable_action"], "mini")
+            self.assertIsNone(pair["predicted_policy_score"]["baseline"])
+            self.assertIsNone(pair["regret_estimate"]["scalar"])
+            baseline_components = pair["regret_estimate"]["components_by_policy"]["chatweb_mcp"]
+            self.assertEqual(baseline_components["critical_defect_count"], 1.0)
+            self.assertEqual(baseline_components["time_to_accepted_ms"], 1000.0)
+            self.assertEqual(baseline_components["total_monetary_cost"], 1.0)
+            self.assertEqual(pair["regret_estimate"]["components_by_policy"]["mini"]["time_to_accepted_ms"], 0.0)
+            regret = result["routing_placement_regret"]
+            self.assertEqual(regret["status"], "observed")
+            self.assertEqual(regret["measurement_status"], "observed_component_regret")
+            self.assertEqual(regret["best_action_pairs"], 1)
+            self.assertFalse(regret["automatic_activation"])
+
+    def test_paired_policy_evaluation_tradeoff_never_invents_scalar_regret(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            def accepted(policy: str, route: str, cost: float, started_at: str, accepted_at: str) -> None:
+                run_id = ledger.create_run(
+                    objective="paired tradeoff regret",
+                    metadata={
+                        "workflow": "bugfix",
+                        "evaluation": {
+                            "pair_id": "pair-regret-tradeoff",
+                            "policy": policy,
+                            "task_class": "localized_bug",
+                            "oracle_id": "oracle-tradeoff",
+                            "provenance": "representative",
+                            "task_spec_fp": "task-tradeoff",
+                            "environment_fp": "env-tradeoff",
+                            "tool_contract_fp": "tool-tradeoff",
+                            "evaluation_schema_fp": "eval-tradeoff",
+                            "runtime_version": "0.4.3",
+                            "cache_stratum": "cold",
+                            "controller": {"source": "client_reported", "monetary_cost": cost},
+                        },
+                    },
+                )
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only" if route == "deterministic" else "bounded_candidate",
+                    base_head="head-tradeoff",
+                    worktree_fp="tree-tradeoff",
+                    contract_fp="contract-tradeoff",
+                )
+                ledger.append_event(run_id, wave_id=wave_id, event_type="route_selected", payload={"resolved": route})
+                ledger.record_quality_outcome(run_id=run_id, wave_id=wave_id, outcome={
+                    "source": "paired-oracle", "oracle_pass": True, "critical_defect_count": 0,
+                })
+                checkpoint_id = ledger.record_checkpoint(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    git_head="head-tradeoff",
+                    proof_fingerprint=f"proof-{policy}",
+                    status="accepted",
+                )
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+                with ledger._lock, ledger._connect() as connection:
+                    connection.execute("UPDATE runs SET started_at=? WHERE run_id=?", (started_at, run_id))
+                    connection.execute("UPDATE checkpoints SET created_at=? WHERE checkpoint_id=?", (accepted_at, checkpoint_id))
+
+            accepted("chatweb_mcp", "deterministic", 1.0, "2026-08-18T00:00:00Z", "2026-08-18T00:00:02Z")
+            accepted("mini", "mini", 2.0, "2026-08-18T00:01:00Z", "2026-08-18T00:01:01Z")
+            result = ledger.paired_policy_evaluation(candidate_policies=("mini",), min_pairs=1, min_task_classes=1)["results"][0]
+            pair = result["pairs"][0]["routing_placement_regret"]
+            self.assertEqual(pair["status"], "tradeoff_requires_calibrated_utility")
+            self.assertIsNone(pair["best_observed_comparable_action"])
+            self.assertIsNone(pair["regret_estimate"]["scalar"])
+            self.assertIsNone(pair["regret_estimate"]["components_by_policy"]["mini"])
+            regret = result["routing_placement_regret"]
+            self.assertEqual(regret["status"], "hold")
+            self.assertEqual(regret["measurement_status"], "tradeoff_requires_calibrated_utility")
+            self.assertIn("utility_weights_not_calibrated", regret["hold_reasons"])
+            self.assertFalse(regret["automatic_activation"])
 
     def test_paired_policy_evaluation_rejects_worktree_identity_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

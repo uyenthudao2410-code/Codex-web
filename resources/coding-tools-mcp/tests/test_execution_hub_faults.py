@@ -265,6 +265,8 @@ class ExecutionHubFaultTests(unittest.TestCase):
             self.assertTrue(structured["stopped"])
             self.assertTrue(structured["detached"])
             self.assertEqual(structured["orchestration"]["orchestration_state"], "ABORTED")
+            self.assertEqual(structured["completion_report"]["accepted_or_not"], "NOT_ACCEPTED_ABORTED")
+            self.assertTrue(structured["completion_report"]["operator_visible_required"])
             self.assertEqual(structured["state"]["orchestration"]["run_id"], ambient.run_id)
             self.assertEqual(hub.runtime.orchestration_ledger.get_run(historical.run_id)["status"], "aborted")
             self.assertEqual(hub.runtime.orchestration_ledger.get_run(ambient.run_id)["status"], "active")
