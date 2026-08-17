@@ -7,7 +7,7 @@
 - Base HEAD: `885260b404c2c64df1b1afa835963045ac55dbf6`
 - Worktree fingerprint: `483b82b9a0b22b061c3b24ce6fe7ae22262d25455af6f5164bbdb5ec933ebeff`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **accepted**
 
 ## Delegations
 
@@ -47,6 +47,8 @@
 | 13946 | 2026-08-17T11:40:58.593Z | managed_process_terminal |  |  | owner=default |
 | 13947 | 2026-08-17T11:41:00.026Z | proof_recorded |  |  | stage_id=verify:tests; status=passed; cache_hit=False; input_fingerprint=d31c5af3b6762d50e3d722cd08538c78990ccb9ec3e80484a3a4aff9d620c42f |
 | 13948 | 2026-08-17T11:41:00.362Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 13949 | 2026-08-17T11:43:45.907Z | state_transition | ACCEPTING | CHECKPOINTED | reason=controller_acceptance |
+| 13950 | 2026-08-17T11:43:49.647Z | wave_processes_quiesced |  |  | reason=orchestration_state:checkpointed |
 
 ## Proof
 
@@ -60,10 +62,10 @@
 
 | Checkpoint | Status | Git HEAD | Proof fingerprint | Accepted by |
 |---|---|---|---|---|
-| - | - | - | - | - |
+| fd9f271831e545598649089ea848aca2 | accepted | 885260b404c2c64df1b1afa835963045ac55dbf6 | e72d686fd11076251cf805a0c71a1249dd1e40b906f9f6fcf747a6831e9d0f3d | chatweb |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `28`
-- Chain head: `d2816cb8878f14eb2a50e85ec5c25ef7e8f51ec4923a96c3634e9217e7a22ee6`
+- Events checked: `30`
+- Chain head: `951f65cb7179226aec586cc957d882ee44b2977e3ce6b2caa7711f59cf69889f`

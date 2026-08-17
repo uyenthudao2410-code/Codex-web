@@ -129,17 +129,6 @@ function renderRun(data) {
     : 'Chưa có capsule handoff — ghi trước khi xoay chat mới.';
 }
 
-const continuityReasonLabels = {
-  READY: 'Đã có Desktop + capsule + controller phù hợp',
-  NO_ACTIVE_EXECUTION: 'Không có execution đang chạy',
-  LEDGER_INTEGRITY_FAILED: 'Ledger integrity chưa đạt',
-  TASK_NOT_RUNNABLE: 'Task đang pause/stop/fail',
-  DESKTOP_OFFLINE: 'Codex Desktop chưa online qua Hub',
-  CAPSULE_MISSING: 'Chưa có capsule handoff',
-  CAPSULE_STALE: 'Capsule cũ hơn execution/proof hiện tại',
-  CONTROLLER_HANDOFF_REQUIRED: 'Chưa chuyển semantic controller sang Codex Desktop'
-};
-
 function clientFor(data, type, id) {
   const clients = Array.isArray(data?.clients) ? data.clients : [];
   return clients.find((client) => client?.client_id === id)
@@ -147,32 +136,13 @@ function clientFor(data, type, id) {
     || null;
 }
 
-function renderClient(prefix, client, latestEventSeq) {
-  const state = $(`#${prefix}ClientStatus`);
-  const cursor = $(`#${prefix}Cursor`);
-  const online = Boolean(client?.online);
-  state.textContent = online ? 'online' : 'offline';
-  state.className = `client-state ${online ? 'online' : 'offline'}`;
-  const seq = Number(client?.cursor?.last_event_seq || 0);
-  const lag = Math.max(0, Number(latestEventSeq || 0) - seq);
-  cursor.textContent = client ? `cursor #${seq}${lag ? ` · lag ${lag}` : ''}` : 'cursor —';
-}
-
 function renderHub(data) {
-  const latestEventSeq = Number(data?.resume_packet?.latest_event_seq || 0);
   const chatweb = clientFor(data, 'chatweb', 'chatweb');
   const desktop = clientFor(data, 'codex_desktop', 'codex-desktop');
   const opencode = clientFor(data, 'opencode', 'opencode');
-  renderClient('chatweb', chatweb, latestEventSeq);
-  renderClient('desktop', desktop, latestEventSeq);
-  renderClient('opencode', opencode, latestEventSeq);
   const controller = data?.authority?.controller || {};
   const write = data?.authority?.write || {};
   const controllerOwner = controller.owner_client_id || 'chưa claim';
-  $('#controllerLine').textContent = `Controller: ${controllerOwner} · ${controller.status || 'unclaimed'} · fence #${controller.fencing_token || 0}`;
-  $('#writeAuthorityLine').textContent = write.status === 'active'
-    ? `Writer: ${write.owner || 'MCP'} · ACTIVE · fence #${write.fencing_token || 0}`
-    : 'Writer: Coding Tools MCP · hiện không giữ write lease';
   const onlineClientCount = [chatweb, desktop, opencode].filter((client) => client?.online).length;
   $('#hubStatus').textContent = onlineClientCount ? `${onlineClientCount} clients` : 'offline';
   $('#hubStatus').className = `badge ${onlineClientCount ? 'active' : 'stopped'}`;
@@ -182,18 +152,6 @@ function renderHub(data) {
   const safe = Boolean(continuity.safe_to_rotate_chatweb);
   $('#continuityStatus').textContent = safe ? 'READY' : 'HOLD';
   $('#continuityStatus').className = `badge ${safe ? 'active' : 'blocked'}`;
-  $('#rotationLine').textContent = safe ? 'SAFE TO ROTATE CHATWEB: YES' : 'SAFE TO ROTATE CHATWEB: NO';
-  $('#rotationLine').className = `continuity-callout ${safe ? 'safe' : 'unsafe'}`;
-  const reasons = Array.isArray(continuity.reason_codes) ? continuity.reason_codes : [];
-  $('#continuityReasons').textContent = reasons.length ? reasons.map((code) => continuityReasonLabels[code] || code).join(' · ') : 'Chưa có đánh giá continuity.';
-  const pressure = continuity.context_pressure || {};
-  $('#contextPressureLine').textContent = pressure.status === 'unknown'
-    ? 'Context ChatWeb: host không expose mức sử dụng — Hub không tự ước đoán.'
-    : `Context ChatWeb: ${pressure.status || '—'}`;
-  const resume = data?.resume_packet || {};
-  $('#resumeLine').textContent = resume.run_id
-    ? `Resume: ${resume.orchestration_state || resume.task_status || '—'} · event #${resume.latest_event_seq || 0} · ${resume.proofs?.length || 0} proof ref · ${resume.pending_message_count || 0} message chờ`
-    : 'Resume: chưa có run đang hoạt động.';
   renderRouterFabric(data);
 }
 

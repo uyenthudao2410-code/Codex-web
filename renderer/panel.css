@@ -1302,3 +1302,26 @@ html, body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Operator Control Panel v8: keep summary and routing in stable source-flow rows. */
+.operator-dashboard {
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-items: start;
+}
+
+.operator-dashboard > .hero-summary {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: auto !important;
+  margin: 0;
+  overflow: visible;
+}
+
+.operator-dashboard > .hero-routing {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: 0;
+}

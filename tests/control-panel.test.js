@@ -80,7 +80,7 @@ test('MCP exposes an authorized orchestration snapshot endpoint', () => {
 
 test('control panel renders task plus multi-client authority and continuity controls', () => {
   const html = read('renderer/panel.html');
-  for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'chatwebClientStatus', 'desktopClientStatus', 'opencodeClientStatus', 'opencodeCursor', 'controllerLine', 'writeAuthorityLine', 'continuityStatus', 'rotationLine', 'continuityReasons', 'contextPressureLine', 'resumeLine', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton', 'routerFabric', 'routerSummary', 'routerChatWeb', 'routerDesktop', 'routerOpenCode', 'routerHub', 'routerWriter', 'routerFast', 'routerTerra', 'routerSol', 'routerDeepSeek']) {
+  for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'continuityStatus', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton', 'routerFabric', 'routerSummary', 'routerChatWeb', 'routerDesktop', 'routerOpenCode', 'routerHub', 'routerWriter', 'routerFast', 'routerTerra', 'routerSol', 'routerDeepSeek']) {
     assert.match(html, new RegExp(`id="${id}"`), `panel.html thiếu id ${id}`);
   }
   assert.match(html, /Operator Control Panel/);
@@ -92,13 +92,13 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(html, /id="eventCount"/);
   assert.match(html, /id="routerSummary"/);
   assert.match(html, /id="hubStatus"/);
-  assert.match(html, /Alerts &amp; Decisions/);
-  assert.match(html, /Capacity &amp; Authority/);
+  assert.doesNotMatch(html, /Alerts &amp; Decisions/);
+  assert.doesNotMatch(html, /Capacity &amp; Authority/);
+  assert.doesNotMatch(html, /id="continuitySection"/);
+  assert.doesNotMatch(html, /id="hubSection"/);
   assert.match(html, /Quick Controls/);
-  assert.match(html, /Provider quota \/ billing:[\s\S]*UNKNOWN/);
   const routingIndex = html.indexOf('id="routerSection"');
   assert.ok(routingIndex > html.indexOf('Executive Summary'), 'Live Routing phải nằm sau phần tóm tắt đầu trang');
-  assert.ok(routingIndex < html.indexOf('id="continuitySection"'), 'Live Routing phải được đẩy lên trước Alerts & Decisions');
   assert.ok(routingIndex < html.indexOf('Quick Controls'), 'Live Routing không được nằm gần cuối panel');
   assert.match(html, /class="dashboard-card router-card panel-section hero-routing"/);
   assert.match(html, /class="router-fabric routing-stage"/);
@@ -121,8 +121,6 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.doesNotMatch(html, /viewBox="0 0 1000 380"/);
   assert.doesNotMatch(html, /d="M245 75/);
   assert.match(html, /class="hub-role">RUNTIME AUTHORITY/);
-  assert.match(html, /<details class="dashboard-card continuity-section advisory-card" id="continuitySection">/);
-  assert.match(html, /class="section-heading compact advisory-summary"/);
   assert.match(html, /<details class="dashboard-card recent-card panel-section secondary-disclosure" id="eventsSection">/);
   assert.match(html, /id="advancedOperations"/);
   const js = read('renderer/panel.js');
@@ -157,8 +155,9 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(js, /delegationRouterLane/);
   assert.match(js, /className = `router-kpi badge \$\{hubState === 'active'/);
   assert.match(js, /clientFor\(data, 'opencode', 'opencode'\)/);
-  assert.match(js, /SAFE TO ROTATE CHATWEB: YES/);
-  assert.match(js, /host không expose mức sử dụng/);
+  assert.doesNotMatch(js, /renderClient\(/);
+  assert.doesNotMatch(js, /#controllerLine/);
+  assert.doesNotMatch(js, /#rotationLine/);
   assert.match(js, /window\.confirm/);
   assert.match(js, /transferController\('codex-desktop'\)/);
   assert.doesNotMatch(js, /transferController\('opencode'\)/);
@@ -216,6 +215,11 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(v7, /\.summary-kpi-card \.kpi-copy > span \{[\s\S]*?white-space: nowrap;[\s\S]*?text-overflow: ellipsis;/);
   assert.match(v7, /@media \(max-width: 499px\) \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
   assert.match(v7, /@media \(max-width: 350px\) \{[\s\S]*?grid-template-columns: 1fr;/);
+  const v8 = css.slice(css.indexOf('Operator Control Panel v8:'));
+  assert.ok(v8.length > 0, 'panel.css phải có stable source-flow v8 overrides');
+  assert.match(v8, /\.operator-dashboard \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?grid-auto-rows: max-content;/);
+  assert.match(v8, /\.operator-dashboard > \.hero-summary \{[\s\S]*?height: auto !important;[\s\S]*?overflow: visible;/);
+  assert.match(v8, /\.operator-dashboard > \.hero-routing \{[\s\S]*?width: 100%;[\s\S]*?margin: 0;/);
 });
 
 test('browser toolbar offers the control panel toggle', () => {
