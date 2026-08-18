@@ -113,16 +113,16 @@ The P0-P3 program is no longer one undifferentiated implementation gate. Enginee
 
 | Phase | Engineering/source | Live / evidence boundary | Current interpretation |
 |---|---|---|---|
-| P0 — runtime truth/error boundary | **CLOSED** | **LIVE ACTIVATION OPEN** | ExceptionGroup normalization and self-recovery hardening are implemented; the currently connected Windows runtime still has to load the current source and pass live acceptance. |
+| P0 — runtime truth/error boundary | **CLOSED** | **LIVE ACTIVATION ACCEPTED** | ExceptionGroup normalization and self-recovery hardening are implemented, and the currently connected Windows runtime has passed the live connector acceptance checklist on post-fix source. |
 | P1 — measurement integrity | **CLOSED** | **ECONOMICS DEFERRED** | Controlled plumbing is sufficient for experiments. Missing controller/provider usage or money remains unknown, never zero; it does not authorize automatic routing. |
 | P2 — rework diagnosis | **CLOSED** | **CAUSAL EFFICACY DEFERRED** | The diagnostic phase identified rework as a material cost. Incomplete historical causal/oracle coverage is a measurement limitation for later experiments, not a reason to expand P2 architecture indefinitely. |
 | P3 — compute-placement control | **CLOSED / ACCEPTED** | **REPRESENTATIVE EFFICACY DEFERRED** | Explicit placement control is implemented; the representative 10–20-pair pilot remains separate and global server-first stays off. |
 
-The program may move to a new engineering roadmap item only after the P0 **live activation acceptance** below is satisfied. P1/P2/P3 evidence programs continue in parallel without reopening their closed implementation waves.
+The P0 **live activation acceptance** below was satisfied on 2026-08-18. The program may move to a new engineering roadmap item while P1/P2/P3 evidence programs continue in parallel without reopening their closed implementation waves.
 
-### P0 live activation incident and source remediation
+### P0 live activation incident — CLOSED / ACCEPTED
 
-During the 2026-08-18 closure check, every ChatWeb Coding MCP action attempted through the connected tool surface (`workspace_context`, `task_control restart_runtime`, and `agent_workflow`) returned a raw `ExceptionGroup: unhandled errors in a TaskGroup` before a normal typed tool result could be observed.
+During an earlier 2026-08-18 closure check, every ChatWeb Coding MCP action attempted through that connected tool surface (`workspace_context`, `task_control restart_runtime`, and `agent_workflow`) returned a raw `ExceptionGroup: unhandled errors in a TaskGroup` before a normal typed tool result could be observed. That observation remains historical incident evidence; it no longer describes the currently connected process.
 
 Two source-side gaps are now addressed:
 
@@ -131,17 +131,19 @@ Two source-side gaps are now addressed:
 
 Focused source regression proves the semantic canary accepts a real `workspace_context` response, rejects an HTTP-200 raw TaskGroup JSON-RPC failure, restarts only after the configured repeated-failure threshold, and does not restart while the lifecycle controller is busy.
 
-**Live acceptance remains open.** The currently connected Coding MCP still returns the raw TaskGroup failure, which proves that the active Windows process has not yet demonstrated the current source behavior. Before P0 is operationally frozen, the active machine must load the current accepted source and prove all of the following on the same running instance:
+**Live acceptance is now CLOSED / ACCEPTED.** On 2026-08-18 the connected instance demonstrated the accepted behavior on the real tool path:
 
-- exact current process/source identity is observable;
-- `workspace_context` succeeds through the real connector;
-- `agent_workflow` prepare succeeds;
-- `task_control` get/audit succeeds;
-- the `smart-v3` contract exposes exactly 8 public tools;
-- no raw `ExceptionGroup` escapes the normal typed boundary;
-- no stale orchestration run, orphaned background operation, orphaned idempotency record, or conflicting write authority remains.
+- delivered/source HEAD `0cf1eec7366f09d52235ca235d92ccd8b3ea4e18` contains `beb2dc51` (protocol normalization) and `c7841920` (boundary regression) in its ancestry;
+- the primary Coding MCP process observed as PID `18444` was created at `2026-08-18 15:28:53 +07:00`, after both P0 source commits, and runs `E:\DEV\Codex-web\resources\native-python\pythonw.exe -m coding_tools_mcp --workspace E:\DEV\Codex-web`;
+- `workspace_context(detail=full)` succeeds through the real connector and reports the current source identity plus live `process_instance_id` / `server_instance_id`;
+- `agent_workflow` prepare succeeds through the same live tool plane;
+- `task_control` audit succeeds with hash-chain integrity PASS and quiescent execution resources;
+- the live `smart-v3` contract reports exactly 8 public tools;
+- focused ExceptionGroup boundary regression passes `4/4` from the Coding MCP component root;
+- no raw `ExceptionGroup` escaped any of the live acceptance calls;
+- the live runtime reported zero stale orchestration runs, unresolved stale runs, orphaned background operations, and orphaned idempotency records.
 
-Until those live checks pass, this is a **deployment/activation blocker**, not a reason to redesign P0-P3 semantics.
+No Runtime restart was performed for this acceptance. A restart was unnecessary because the observed primary Coding MCP process itself started after the accepted P0 fix commits and then passed the live checklist. Future runtime-affecting changes still require their own source-versus-live activation proof; this acceptance does not collapse that distinction.
 
 ### P3 Engineering / Control Plane — CLOSED / ACCEPTED
 
@@ -224,7 +226,7 @@ Account credential snapshots under `docs/ac/` are local-only data and must never
 
 The following are deliberate evidence/authority gates, not documentation bugs:
 
-- P0 live activation: **OPEN** until the active Windows runtime loads current source and passes the live acceptance checklist above;
+- P0 live activation: **ACCEPTED** on the post-fix active Windows instance; future runtime-affecting changes still require their own activation proof;
 - automatic non-deterministic routing: **OFF / deterministic fail-closed** pending representative accepted paired evidence;
 - automatic global server-first: **OFF** pending representative compute-placement evidence;
 - P3 representative efficacy: **DEFERRED**, separate from the closed engineering gate;

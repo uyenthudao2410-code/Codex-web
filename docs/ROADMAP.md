@@ -21,21 +21,22 @@ The maintained product boundary now includes Electron Execution Control Center; 
 
 P0-P3 engineering/control work is not to be expanded merely to fill representative evidence gaps. The remaining gates are classified explicitly:
 
-- **P0 engineering/source: CLOSED.** Protocol ExceptionGroup normalization and semantic tool-plane self-recovery are implemented. **P0 live activation remains OPEN** until the active Windows process loads current source and proves the real connector path.
+- **P0 engineering/source: CLOSED.** Protocol ExceptionGroup normalization and semantic tool-plane self-recovery are implemented. **P0 live activation is ACCEPTED** on the current post-fix Windows process and real connector path.
 - **P1 measurement integrity: CLOSED.** Controlled measurement plumbing is sufficient for experiments. Economics remains an evidence program; missing usage/cost is unknown, never zero.
 - **P2 diagnostic phase: CLOSED.** Incomplete historical causal/oracle coverage is a measurement limitation for subsequent intervention studies, not a reason to keep extending P2 architecture.
 - **P3 engineering/control plane: CLOSED / ACCEPTED.** Representative efficacy remains deferred; global server-first remains OFF.
 
-The only blocker before starting the next mutation-heavy engineering phase is **P0 live activation acceptance**. The required live checks are: current process/source identity, `workspace_context`, `agent_workflow` prepare, `task_control` get/audit, exactly 8 `smart-v3` public tools, no raw ExceptionGroup leakage, and no stale/orphan/conflicting write authority.
+The prior P0 live-activation blocker is cleared. The accepted live checks covered current process/source identity, `workspace_context`, `agent_workflow` prepare, `task_control` audit, exactly 8 `smart-v3` public tools, no raw ExceptionGroup leakage on the acceptance calls, and no stale/orphan/conflicting write authority. A new engineering phase is therefore governed by its own task-specific acceptance gates rather than by unfinished P0-P3 architecture.
 
 ## Immediate hardening and acceptance priorities
 
-### Operational acceptance — exact-source runtime activation
+### Closed — exact-source runtime activation
 
-- Keep source proof, controlled activation, live canary and packaged/released claims separate.
-- Load the current accepted source on the active Windows Recovery Host/Coding MCP process and verify exact running revision/process identity.
-- Prove the semantic tool plane, not merely `GET /__control/health`: the source-side Recovery Host watchdog now uses a read-only `workspace_context` canary and delegates any restart through the existing `RuntimeOrchestrator` authority.
-- Keep restart/activation fail-closed around active commands, background work, provider/agent lanes and EOCL acceptance.
+- Keep source proof, controlled activation, live canary and packaged/released claims separate for future runtime-affecting changes.
+- Current live acceptance observed primary Coding MCP PID `18444`, created `2026-08-18 15:28:53 +07:00`, running directly from `E:\DEV\Codex-web` after the accepted ExceptionGroup source commits.
+- The real connector passed `workspace_context(detail=full)`, `agent_workflow` prepare and `task_control` audit; the live contract reported exactly 8 `smart-v3` tools, and the focused ExceptionGroup boundary regression passed `4/4`.
+- No raw `ExceptionGroup` escaped the live acceptance calls; stale/orphan runtime residue was zero and audit integrity passed.
+- No restart was performed or required for this acceptance because the observed process already postdated the source fix. Keep any future restart/activation fail-closed around active commands, background work, provider/agent lanes and EOCL acceptance.
 - The isolated packaged-Windows Recovery Host/Supervisor lane remains covered by `npm run test:recovery:packaged`; a release claim still requires any relevant installed Windows logon/session and production-only fault checks.
 
 ### Evidence program — representative routing economics
@@ -77,11 +78,11 @@ The efficacy pilot is intentionally **DEFERRED**, not an implementation blocker.
 - Missing controller/provider monetary cost remains unknown, never zero.
 - Automatic global server-first remains **OFF**.
 
-## Operational blocker before next mutation-heavy phase
+## P0 operational activation closure
 
-The connected ChatWeb Coding MCP still returns a raw `ExceptionGroup: unhandled errors in a TaskGroup`, including for `workspace_context` and confirmed `task_control restart_runtime`. Current `main` now contains both protocol normalization and a Recovery Host semantic tool-plane watchdog that detects this exact HTTP-green/tool-plane-broken state and delegates recovery to the existing orchestrator. Focused source regression is green, but the active Windows process has not yet demonstrated that it loaded this source.
+An earlier connected ChatWeb Coding MCP instance returned a raw `ExceptionGroup: unhandled errors in a TaskGroup`. Current `main` contains both protocol normalization and a Recovery Host semantic tool-plane watchdog for that HTTP-green/tool-plane-broken failure mode. The current post-fix process has now demonstrated the accepted source behavior through the real connector, including the live truth/orchestration smoke and eight-tool contract.
 
-Therefore the remaining blocker is **deployment/activation acceptance**, not additional P0-P3 architecture. Do not claim P0 operationally frozen or start a mutation-heavy next phase until the live checklist above passes.
+Therefore P0 is operationally frozen as **CLOSED / LIVE ACCEPTED** for this source/runtime instance. This does not prove P1/P2/P3 efficacy or economics and does not enable automatic routing or global server-first; those remain evidence-gated. The next engineering phase may proceed without reopening P0-P3 architecture.
 
 Credential snapshots under `docs/ac/` are local-only and must never be tracked. They have been removed from current `main` and `/docs/ac/` is ignored. Any credential that previously entered Git history must be treated as exposed and rotated; a history rewrite is a separate destructive maintenance action and requires explicit authorization.
 
@@ -99,4 +100,4 @@ Credential snapshots under `docs/ac/` are local-only and must never be tracked. 
 
 ## Completion criteria
 
-A semantic engineering item is complete when its relevant source contract, focused/affected-boundary proof and EOCL final acceptance are satisfied. Live activation, packaging/release, and representative efficacy are separate gates and must be reported separately rather than being used to reopen an already accepted implementation wave. For the current P0-P3 freeze, the next engineering phase additionally requires the P0 live connector acceptance checklist to pass on the active Windows instance. Tool count, raw test count, LOC or model-call count are not completion metrics by themselves.
+A semantic engineering item is complete when its relevant source contract, focused/affected-boundary proof and EOCL final acceptance are satisfied. Live activation, packaging/release, and representative efficacy are separate gates and must be reported separately rather than being used to reopen an already accepted implementation wave. For the current P0-P3 freeze, the P0 live connector acceptance checklist has passed on the active Windows instance. Tool count, raw test count, LOC or model-call count are not completion metrics by themselves.
