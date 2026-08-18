@@ -19,7 +19,8 @@ Tools-Codex-web/
 
 # Accounts & local data
 ACC/
-data*
+/data*
+/docs/ac/
 
 # Python test caches
 __pycache__/
@@ -71,4 +72,3 @@ __pycache__/
 # authorizes a named exception.
 !/.coding-tools/
 !/.coding-tools/**
-
