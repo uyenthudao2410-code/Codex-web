@@ -3,56 +3,100 @@
   "task_id": "a229f562ba334dd793d6e754b144cd08",
   "orchestration": {
     "run_id": "d5aac1e3cc4c496bb339437c6a275ac5",
-    "wave_id": "214b17e730984d8b867812f97d5055ef",
-    "orchestration_state": "PROVING",
+    "wave_id": "ceb18830ebad48cfb429619dbd21239f",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "d2f96e6200d736ca257d5f8a4a7b1fcb5e41ed9b",
-    "worktree_fp": "f0dcd4754fc94222f0af4f6fa2f78fcbb7ba57dd750e991cb6854fb1ca746c2e",
+    "base_head": "c360eb953557456b19e0dff4f6ed5f6f8c44e7d7",
+    "worktree_fp": "a9a1a221762196af32b46b283e22485eb31710088f47d38869ec8378173a81e5",
     "contract_fp": ""
   },
-  "objective": "Run the already-created external tail-finalization script, commit pending runtime evidence/helper cleanup on top of the current synchronized main, push origin/main, and verify exact SQLite sidecar policy plus helper removal.",
-  "status": "active",
+  "objective": "Pin Coding MCP launch authority to the current runtime source root. In electron/services/nativeService.js add a fail-closed launch contract that requires an existing coding_tools_mcp package; in development require the canonical module root to equal appRoot/resources/coding-tools-mcp; make that module root the working directory and first PYTHONPATH entry before python_vendor; persist runtimeMode/moduleRoot in runtime state; refuse to reuse a live process whose recorded launch authority does not match. Preserve packaged behavior. Add focused Node tests for matching dev root, mismatched dev root, packaged root, and runtime-state provenance. Do not commit or push.",
+  "status": "completed",
   "steps": [
     {
-      "id": "checks",
-      "text": "Run requested checks",
-      "status": "in_progress",
-      "updated_at": "2026-08-18T12:00:14.369Z"
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-18T12:01:28.872Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "completed",
+      "updated_at": "2026-08-18T12:01:28.872Z"
     },
     {
       "id": "finalize",
       "text": "Finalize verified result",
-      "status": "pending",
-      "updated_at": "2026-08-18T12:00:14.369Z"
+      "status": "completed",
+      "updated_at": "2026-08-18T12:01:28.872Z"
     }
   ],
-  "current_step": "Running requested checks",
+  "current_step": "Completed - operator report required",
   "current_command": {
-    "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& (Join-Path $env:TEMP 'codex-finalize-runtime-tail-20260818.ps1')\"",
+    "command": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
     "kind": "command",
-    "session_id": "Q2D9vzjCuaB9VtaOOk8_uaC7",
+    "session_id": "kY5pwaVuz196ZkSTPn8imtAD",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-18T12:00:15.291Z"
+    "started_at": "2026-08-18T12:01:27.505Z"
   },
   "last_command_result": {
-    "command_id": "pa9D7vbOe1ge6dL3acmE5_l7",
+    "command_id": "Q2D9vzjCuaB9VtaOOk8_uaC7",
     "kind": "command",
     "status": "exited",
     "result_status": "failed",
-    "exit_code": 4294770688,
-    "duration_ms": 626,
-    "finished_at": "2026-08-18T11:59:52.243Z"
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-08-18T12:00:43.866Z"
   },
   "completion_report": null,
-  "test_results": [],
+  "test_results": [
+    {
+      "command": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1298,
+      "summary": "exit 0 | 0.9s | 58 lines | tail: 'ℹ duration_ms 426.8524'"
+    }
+  ],
   "build_results": [],
-  "last_build_report": null,
+  "last_build_report": {
+    "project": {
+      "type": "electron",
+      "name": "web-mcp-assistant",
+      "version": "0.3.4",
+      "package_manager": "npm",
+      "test_command": "npm run test",
+      "build_command": "npm run dist",
+      "artifact_paths": [
+        "dist",
+        "build"
+      ]
+    },
+    "commands": {
+      "test": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+      "build": "npm run dist"
+    },
+    "test_result": {
+      "command": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1298,
+      "summary": "exit 0 | 0.9s | 58 lines | tail: 'ℹ duration_ms 426.8524'"
+    },
+    "build_result": null,
+    "artifacts": [],
+    "hash_algorithm": "sha256",
+    "overall_status": "passed",
+    "failure": null,
+    "report_generated_at": "2026-08-18T12:01:28.210Z"
+  },
   "modified_files": [
     {
       "path": "tmp/commit-current-snapshot-batch-20260818.ps1",
@@ -63,12 +107,22 @@
       "path": "tmp/finalize-runtime-tail-20260818.ps1",
       "operation": "add",
       "updated_at": "2026-08-18T11:59:53.390Z"
+    },
+    {
+      "path": "electron/services/nativeService.js",
+      "operation": "update",
+      "updated_at": "2026-08-18T12:01:29.826Z"
+    },
+    {
+      "path": "tests/runtime-lifecycle.test.js",
+      "operation": "update",
+      "updated_at": "2026-08-18T12:01:29.826Z"
     }
   ],
   "failure": null,
-  "next_step": "Run all requested checks and summarize the result.",
+  "next_step": "Present completion_report to the operator before starting another material wave.",
   "created_at": "2026-08-18T11:56:51.597Z",
-  "updated_at": "2026-08-18T12:00:30.708Z",
+  "updated_at": "2026-08-18T12:01:47.661Z",
   "events": [
     {
       "time": "2026-08-18T11:56:51.597Z",
@@ -499,6 +553,235 @@
       "details": {
         "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& (Join-Path $env:TEMP 'codex-finalize-runtime-tail-20260818.ps1')\"",
         "session_id": "Q2D9vzjCuaB9VtaOOk8_uaC7"
+      }
+    },
+    {
+      "time": "2026-08-18T12:00:43.866Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& (Join-Path $env:TEMP 'codex-finalize-runtime-tail-20260818.ps1')\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-18T12:00:44.274Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:00:44.801Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-18T12:00:44.801Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:00:44.801Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-18T12:00:45.075Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-18T12:00:48.242Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:00:49.092Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "REPLAN_REASON_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:24.535Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:25.244Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:25.894Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:25.899Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:26.563Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:26.723Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:27.505Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+        "session_id": "kY5pwaVuz196ZkSTPn8imtAD"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:28.211Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:28.868Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:28.872Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:29.150Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:29.152Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:29.826Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:29.931Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "FINAL_ACCEPTANCE_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:30.395Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:47.556Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-18T12:01:47.559Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     }
   ]

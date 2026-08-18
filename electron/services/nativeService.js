@@ -8,6 +8,7 @@ const { readJson, updateJsonAtomic, ensureParent } = require('./jsonStore');
 const { rotateLog } = require('./logService');
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { classifyStoredDeviceOwner } = require('./deviceIdentity');
+const { canonicalPath } = require('./runtimeIdentity');
 
 function isAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
@@ -34,12 +35,65 @@ function runtimeFingerprint(settings) {
   })).digest('hex');
 }
 
+function pathKey(value) {
+  const normalized = path.normalize(String(value || ''));
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
+function resolveNativeLaunchContract(paths, python) {
+  const runtimeMode = typeof paths.runtimeMode === 'function'
+    ? String(paths.runtimeMode() || '')
+    : 'development';
+  if (!['development', 'packaged'].includes(runtimeMode)) {
+    throw Object.assign(new Error('Coding MCP runtime mode is invalid.'), { code: 'NATIVE_RUNTIME_MODE_INVALID' });
+  }
+  const resourcesRoot = canonicalPath(paths.resourcesRoot(), 'resourcesRoot');
+  const moduleRoot = canonicalPath(path.join(resourcesRoot, 'coding-tools-mcp'), 'Coding MCP module root');
+  const packageMarker = path.join(moduleRoot, 'coding_tools_mcp', '__init__.py');
+  if (!fs.existsSync(packageMarker)) {
+    throw Object.assign(new Error('Coding MCP source package is missing from the selected runtime resources.'), {
+      code: 'NATIVE_MCP_SOURCE_MISSING',
+      moduleRoot
+    });
+  }
+  if (runtimeMode === 'development') {
+    if (typeof paths.appRoot !== 'function') {
+      throw Object.assign(new Error('Development Coding MCP launch authority cannot be verified without appRoot.'), {
+        code: 'DEV_MCP_SOURCE_ROOT_UNVERIFIED'
+      });
+    }
+    const expectedModuleRoot = canonicalPath(
+      path.join(paths.appRoot(), 'resources', 'coding-tools-mcp'),
+      'Development Coding MCP module root'
+    );
+    if (pathKey(moduleRoot) !== pathKey(expectedModuleRoot)) {
+      throw Object.assign(new Error('Development Coding MCP source root does not belong to the current Electron checkout.'), {
+        code: 'DEV_MCP_SOURCE_ROOT_MISMATCH',
+        moduleRoot,
+        expectedModuleRoot
+      });
+    }
+  }
+  const command = String(python.launchCommand || python.command || '').trim();
+  if (!command) {
+    throw Object.assign(new Error('Coding MCP Python launch command is unavailable.'), { code: 'NATIVE_PYTHON_COMMAND_MISSING' });
+  }
+  return {
+    runtimeMode,
+    resourcesRoot,
+    moduleRoot,
+    vendoredPython: path.join(moduleRoot, 'python_vendor'),
+    command
+  };
+}
+
 function currentRuntimeState(input = {}) {
   const allowed = new Set([
     'manualStop', 'tunnelPid', 'tunnelStartedAt', 'tunnelId', 'tunnelFingerprint',
     'tunnelDeviceId', 'tunnelDeviceInstanceId',
     'nativePid', 'nativeFingerprint', 'nativeWorkspace', 'nativePort',
     'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId',
+    'nativeRuntimeMode', 'nativeModuleRoot',
     'nativeDeviceId', 'nativeDeviceInstanceId', 'startedAt',
     'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt'
   ]);
@@ -67,6 +121,7 @@ class NativeService {
     if (!python.installed) {
       throw new Error('Không tìm thấy Python 3.11+. Gói cài đặt chính thức tích hợp sẵn Python Portable; phiên bản phát triển vui lòng cài đặt Python 3.11+ trước.');
     }
+    const launch = resolveNativeLaunchContract(this.paths, python);
     const current = readJson(this.paths.stateFile(), {});
     const fingerprint = runtimeFingerprint(settings);
     const diskRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
@@ -79,7 +134,9 @@ class NativeService {
       });
     }
     this.assertOwnedLive(current);
-    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint) {
+    const launchAuthorityMatches = current.nativeRuntimeMode === launch.runtimeMode
+      && pathKey(current.nativeModuleRoot) === pathKey(launch.moduleRoot);
+    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint && launchAuthorityMatches) {
       const updatePending = Boolean(current.nativeCodeRevision && current.nativeCodeRevision !== diskRevision);
       this.log.info('MCP Portable đã chạy trong thư mục làm việc mục tiêu', { pid: current.nativePid, workspace: settings.workspace });
       if (updatePending) {
@@ -90,6 +147,13 @@ class NativeService {
         });
       }
       return { reused: true, pid: current.nativePid, codeRevision: current.nativeCodeRevision || null, updatePending };
+    }
+    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint && !launchAuthorityMatches) {
+      this.log.warn('Coding MCP đang chạy không có launch authority khớp checkout hiện tại; sẽ tạo lại thay vì reuse', {
+        pid: current.nativePid,
+        runtimeMode: launch.runtimeMode,
+        moduleRoot: launch.moduleRoot
+      });
     }
     if (isAlive(current.nativePid)) {
       this.log.info('Phát hiện cấu hình MCP Portable đã thay đổi, đang âm thầm tạo lại', { from: current.nativeWorkspace || '', to: settings.workspace });
@@ -116,10 +180,9 @@ class NativeService {
       env.CODING_TOOLS_MCP_DEVICE_INSTANCE_ID = this.device.deviceInstanceId;
       env.CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME = this.device.displayName;
     }
-    const bundledTools = path.join(this.paths.resourcesRoot(), 'tools');
-    const vendoredPython = path.join(this.paths.resourcesRoot(), 'coding-tools-mcp', 'python_vendor');
+    const bundledTools = path.join(launch.resourcesRoot, 'tools');
     env.PATH = [bundledTools, process.env.PATH || ''].filter(Boolean).join(path.delimiter);
-    env.PYTHONPATH = [vendoredPython, path.join(this.paths.resourcesRoot(), 'coding-tools-mcp'), process.env.PYTHONPATH || ''].filter(Boolean).join(path.delimiter);
+    env.PYTHONPATH = [launch.moduleRoot, launch.vendoredPython, process.env.PYTHONPATH || ''].filter(Boolean).join(path.delimiter);
     const args = [
       ...python.prefixArgs,
       '-m', 'coding_tools_mcp',
@@ -128,7 +191,7 @@ class NativeService {
       '--port', String(settings.mcpPort),
       '--permission-mode', settings.permissionMode
     ];
-    const command = python.launchCommand || python.command;
+    const command = launch.command;
     let child;
     try {
       assertActivationDeadline(options.expiresAtUnixMs, options.activationProcessMutated === true);
@@ -136,7 +199,8 @@ class NativeService {
         detached: true,
         windowsHide: true,
         stdio: ['ignore', output, output],
-        env
+        env,
+        cwd: launch.moduleRoot
       });
       await new Promise((resolve, reject) => {
         child.once('spawn', resolve);
@@ -157,13 +221,29 @@ class NativeService {
       nativeToolMode: 'smart',
       nativeCommand: command,
       nativeCodeRevision: diskRevision,
+      nativeRuntimeMode: launch.runtimeMode,
+      nativeModuleRoot: launch.moduleRoot,
       nativeDeviceId: this.device?.deviceId || '',
       nativeDeviceInstanceId: this.device?.deviceInstanceId || '',
       startedAt: new Date().toISOString(),
       nativeInstanceId: instanceId
     }));
-    this.log.info('Môi trường runtime MCP Portable đã khởi động', { pid: child.pid, workspace: settings.workspace, command });
-    return { reused: false, pid: child.pid, instanceId, codeRevision: diskRevision, updatePending: false };
+    this.log.info('Môi trường runtime MCP Portable đã khởi động', {
+      pid: child.pid,
+      workspace: settings.workspace,
+      command,
+      runtimeMode: launch.runtimeMode,
+      moduleRoot: launch.moduleRoot
+    });
+    return {
+      reused: false,
+      pid: child.pid,
+      instanceId,
+      codeRevision: diskRevision,
+      updatePending: false,
+      runtimeMode: launch.runtimeMode,
+      moduleRoot: launch.moduleRoot
+    };
   }
 
   async stop() {
@@ -186,6 +266,8 @@ class NativeService {
         nativePermissionMode: '',
         nativeInstanceId: '',
         nativeCodeRevision: '',
+        nativeRuntimeMode: '',
+        nativeModuleRoot: '',
         nativeDeviceId: '',
         nativeDeviceInstanceId: ''
       }));
@@ -230,4 +312,10 @@ class NativeService {
   }
 }
 
-module.exports = { NativeService, isAlive, runtimeFingerprint, currentRuntimeState };
+module.exports = {
+  NativeService,
+  isAlive,
+  runtimeFingerprint,
+  currentRuntimeState,
+  resolveNativeLaunchContract
+};

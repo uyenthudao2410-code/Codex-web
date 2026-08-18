@@ -5,7 +5,13 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { NativeService, isAlive, runtimeFingerprint, currentRuntimeState } = require('../electron/services/nativeService');
+const {
+  NativeService,
+  isAlive,
+  runtimeFingerprint,
+  currentRuntimeState,
+  resolveNativeLaunchContract
+} = require('../electron/services/nativeService');
 const { normalizeProxyValue } = require('../electron/services/proxyService');
 const runtimePaths = require('../electron/paths');
 const runtimeStatePath = path.join(os.tmpdir(), `webcodex-runtime-lifecycle-${process.pid}.json`);
@@ -127,6 +133,52 @@ test('native runtime identity changes with workspace and port while tool mode st
   assert.equal(runtimeFingerprint(base), runtimeFingerprint({ ...base, toolMode: 'readonly' }));
 });
 
+function nativeLaunchFixture(t, name = 'checkout') {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-native-launch-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const appRoot = path.join(root, name);
+  const resourcesRoot = path.join(appRoot, 'resources');
+  const moduleRoot = path.join(resourcesRoot, 'coding-tools-mcp');
+  fs.mkdirSync(path.join(moduleRoot, 'coding_tools_mcp'), { recursive: true });
+  fs.mkdirSync(path.join(moduleRoot, 'python_vendor'), { recursive: true });
+  fs.writeFileSync(path.join(moduleRoot, 'coding_tools_mcp', '__init__.py'), '', 'utf8');
+  return { root, appRoot, resourcesRoot, moduleRoot };
+}
+
+test('development Coding MCP launch is pinned to the current checkout module root', (t) => {
+  const fixture = nativeLaunchFixture(t);
+  const launch = resolveNativeLaunchContract({
+    runtimeMode: () => 'development',
+    appRoot: () => fixture.appRoot,
+    resourcesRoot: () => fixture.resourcesRoot
+  }, { command: 'python.exe', launchCommand: 'pythonw.exe' });
+  assert.equal(launch.runtimeMode, 'development');
+  assert.equal(launch.moduleRoot, fs.realpathSync(fixture.moduleRoot));
+  assert.equal(launch.command, 'pythonw.exe');
+  assert.equal(path.dirname(launch.vendoredPython), launch.moduleRoot);
+});
+
+test('development Coding MCP launch fails closed when resources belong to another checkout', (t) => {
+  const current = nativeLaunchFixture(t, 'checkout-current');
+  const foreign = nativeLaunchFixture(t, 'checkout-foreign');
+  assert.throws(() => resolveNativeLaunchContract({
+    runtimeMode: () => 'development',
+    appRoot: () => current.appRoot,
+    resourcesRoot: () => foreign.resourcesRoot
+  }, { command: 'python.exe' }), { code: 'DEV_MCP_SOURCE_ROOT_MISMATCH' });
+});
+
+test('packaged Coding MCP launch accepts its packaged resource root', (t) => {
+  const fixture = nativeLaunchFixture(t, 'packaged-app');
+  const launch = resolveNativeLaunchContract({
+    runtimeMode: () => 'packaged',
+    appRoot: () => path.join(fixture.root, 'installed-app-root'),
+    resourcesRoot: () => fixture.resourcesRoot
+  }, { command: 'python.exe' });
+  assert.equal(launch.runtimeMode, 'packaged');
+  assert.equal(launch.moduleRoot, fs.realpathSync(fixture.moduleRoot));
+});
+
 test('proxy values from Windows settings are normalized', () => {
   assert.equal(normalizeProxyValue('127.0.0.1:7890'), 'http://127.0.0.1:7890');
   assert.equal(normalizeProxyValue('http=127.0.0.1:8080;https=127.0.0.1:7890'), 'http://127.0.0.1:7890');
@@ -164,6 +216,8 @@ test('runtime state migration keeps only current native and tunnel fields', () =
       tunnelDeviceId: '12345678-1234-4123-8123-123456789abc',
       tunnelDeviceInstanceId: 'device-instance-0001',
       nativeCodeRevision: 'abc',
+      nativeRuntimeMode: 'development',
+      nativeModuleRoot: 'E:\\DEV\\Codex-web\\resources\\coding-tools-mcp',
       obsoletePid: 3
     }),
     {
@@ -174,7 +228,9 @@ test('runtime state migration keeps only current native and tunnel fields', () =
       tunnelFingerprint: 'f'.repeat(64),
       tunnelDeviceId: '12345678-1234-4123-8123-123456789abc',
       tunnelDeviceInstanceId: 'device-instance-0001',
-      nativeCodeRevision: 'abc'
+      nativeCodeRevision: 'abc',
+      nativeRuntimeMode: 'development',
+      nativeModuleRoot: 'E:\\DEV\\Codex-web\\resources\\coding-tools-mcp'
     }
   );
 });
