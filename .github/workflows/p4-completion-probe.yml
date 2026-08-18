@@ -3,6 +3,10 @@ name: P4 Completion Probe
 "on":
   issues:
     types: [opened]
+  push:
+    branches: [main]
+    paths:
+      - .github/p4-probe-trigger
 
 permissions:
   contents: read
@@ -10,7 +14,7 @@ permissions:
 
 jobs:
   probe:
-    if: github.event.issue.title == '[P4 Completion Probe]'
+    if: github.event_name == 'push' || github.event.issue.title == '[P4 Completion Probe]'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -32,10 +36,8 @@ jobs:
       - id: readiness
         name: Report committed P4 readiness
         run: python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --limit 100 | tee p4-readiness.json
-      - name: Publish probe result
+      - name: Compose probe result
         if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           {
@@ -59,7 +61,16 @@ jobs:
               echo '```'
             fi
           } > p4-probe-comment.md
-          gh issue comment "${{ github.event.issue.number }}" --body-file p4-probe-comment.md
+      - name: Publish issue-event result
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment "${{ github.event.issue.number }}" --body-file p4-probe-comment.md
+      - name: Publish push-event result
+        if: always() && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "[P4 Probe Result] $GITHUB_SHA" --body-file p4-probe-comment.md
       - name: Enforce source proof
         if: steps.tests.outcome != 'success' || steps.module_size.outcome != 'success'
         run: exit 1
