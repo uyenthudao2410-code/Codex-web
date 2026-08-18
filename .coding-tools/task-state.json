@@ -1,18 +1,18 @@
 {
   "version": 2,
-  "task_id": "8667aedb81614965b4896ad09fd0e65f",
+  "task_id": "14737db5332c4a61ad8327a2227d73a0",
   "orchestration": {},
   "objective": "Run a workspace command",
-  "status": "waiting",
+  "status": "active",
   "steps": [],
-  "current_step": "Waiting for model",
+  "current_step": "Execute command",
   "current_command": {
-    "command": "powershell -NoProfile -Command \"Start-Sleep -Seconds 2\" && git add -A && git add -A -- .coding-tools && npm run check:coding-tools-history && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git diff --cached --stat && git commit -m \"feat: control validation compute placement\" && git push origin main && git status --short --branch && git log -3 --oneline --decorate",
+    "command": "python tmp/delivery_snapshot_pr17.py",
     "kind": "command",
-    "session_id": "PoTlHduuYWl7JC2ySquFfdnL",
+    "session_id": "7nkuS_zhVN_YgcExPAi-P9P6",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-18T00:42:31.131Z"
+    "started_at": "2026-08-18T09:07:29.424Z"
   },
   "test_results": [],
   "build_results": [],
@@ -20,38 +20,22 @@
   "modified_files": [],
   "failure": null,
   "next_step": "",
-  "created_at": "2026-08-18T00:42:13.559Z",
-  "updated_at": "2026-08-18T00:42:31.131Z",
+  "created_at": "2026-08-18T09:07:29.021Z",
+  "updated_at": "2026-08-18T09:07:29.424Z",
   "events": [
     {
-      "time": "2026-08-18T00:42:13.559Z",
+      "time": "2026-08-18T09:07:29.021Z",
       "event": "task_auto_started",
       "details": {
         "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-18T00:42:13.796Z",
+      "time": "2026-08-18T09:07:29.424Z",
       "event": "command_started",
       "details": {
-        "command": "rg -n \"coding-tools.*(stage|delivery|snapshot)|ledger\\.sqlite3-(shm|wal)|git add -A -- \\.coding-tools|check:coding-tools\" package.json scripts AGENTS.md docs resources/coding-tools-mcp/AGENTS.md",
-        "session_id": "hgzXwrDFkczbEtP3rdmn8-Xl"
-      }
-    },
-    {
-      "time": "2026-08-18T00:42:15.988Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n \"coding-tools.*(stage|delivery|snapshot)|ledger\\.sqlite3-(shm|wal)|git add -A -- \\.coding-tools|check:coding-tools\" package.json scripts AGENTS.md docs resources/coding-tools-mcp/AGENTS.md",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-18T00:42:31.131Z",
-      "event": "command_started",
-      "details": {
-        "command": "powershell -NoProfile -Command \"Start-Sleep -Seconds 2\" && git add -A && git add -A -- .coding-tools && npm run check:coding-tools-history && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git diff --cached --stat && git commit -m \"feat: control validation compute placement\" && git push origin main && git status --short --branch && git log -3 --oneline --decorate",
-        "session_id": "PoTlHduuYWl7JC2ySquFfdnL"
+        "command": "python tmp/delivery_snapshot_pr17.py",
+        "session_id": "7nkuS_zhVN_YgcExPAi-P9P6"
       }
     }
   ]

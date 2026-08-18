@@ -103,16 +103,19 @@ test('Coding MCP revision resolves from resourcesRoot independently of packaged 
 
 test('Recovery Host legacy revision bridge pins added device identity bytes', (t) => {
   const { appRoot } = fixture(t);
-  const relative = 'electron/services/deviceIdentity.js';
-  const target = path.join(appRoot, ...relative.split('/'));
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.copyFileSync(path.join(__dirname, '..', ...relative.split('/')), target);
+  for (const relative of Object.keys(RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS)) {
+    const target = path.join(appRoot, ...relative.split('/'));
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(path.join(__dirname, '..', ...relative.split('/')), target);
+  }
   const bridge = recoveryHostLegacyV1Revision(appRoot);
   assert.equal(bridge.contract, RECOVERY_HOST_LEGACY_V1_CONTRACT);
-  assert.deepEqual(bridge.pinned_added_files, [{
-    path: relative,
-    sha256: RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS[relative]
-  }]);
+  assert.deepEqual(
+    bridge.pinned_added_files,
+    Object.entries(RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS).map(([relative, sha256]) => ({ path: relative, sha256 }))
+  );
+  const relative = 'electron/services/deviceIdentity.js';
+  const target = path.join(appRoot, ...relative.split('/'));
   const canonicalText = fs.readFileSync(target, 'utf8').replace(/\r\n/g, '\n');
   fs.writeFileSync(target, canonicalText.replace(/\n/g, '\r\n'), 'utf8');
   assert.equal(

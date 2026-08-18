@@ -6,7 +6,13 @@ const os = require('node:os');
 const path = require('node:path');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const { DEVICE_ID_PATTERN, loadOrCreateDeviceIdentity } = require('../electron/services/deviceIdentity');
-const { ComponentRevisionTracker, hashComponentRevision, recoveryHostLegacyV1Revision, RECOVERY_HOST_LEGACY_V1_CONTRACT } = require('../electron/services/componentRevision');
+const {
+  ComponentRevisionTracker,
+  hashComponentRevision,
+  recoveryHostLegacyV1Revision,
+  RECOVERY_HOST_LEGACY_V1_CONTRACT,
+  RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS
+} = require('../electron/services/componentRevision');
 const { RecoveryActionStore } = require('../electron/services/recoveryActionStore');
 const { RecoveryActivation } = require('../electron/services/recoveryActivation');
 const { RecoveryIpcClient, RecoveryIpcServer, RPC_ACTIONS } = require('../electron/services/recoveryIpc');
@@ -571,10 +577,13 @@ test('Recovery Host verifies replacement revision before any legacy device migra
 
 test('Recovery replacement accepts the pinned legacy revision contract and rejects added-file tampering', (t) => {
   const paths = fixture(t);
+  for (const relative of Object.keys(RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS)) {
+    const target = path.join(paths.appRoot(), ...relative.split('/'));
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(path.join(__dirname, '..', ...relative.split('/')), target);
+  }
   const relative = 'electron/services/deviceIdentity.js';
   const target = path.join(paths.appRoot(), ...relative.split('/'));
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.copyFileSync(path.join(__dirname, '..', ...relative.split('/')), target);
   const currentRevision = hashComponentRevision(paths.appRoot(), 'recovery_host').revision;
   const legacyRevision = recoveryHostLegacyV1Revision(paths.appRoot()).revision;
   const now = Date.now();
