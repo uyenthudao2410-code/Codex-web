@@ -1,6 +1,6 @@
 const { spawnSync } = require('node:child_process');
 
-const FORBIDDEN_TRACKED_PATHS = ['docs/ac'];
+const FORBIDDEN_TRACKED_PATHS = ['ACC', 'docs/ac'];
 
 function runGit(args) {
   return spawnSync('git', args, {
