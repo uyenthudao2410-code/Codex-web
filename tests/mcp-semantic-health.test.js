@@ -1,0 +1,109 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const http = require('node:http');
+const {
+  probeMcpSemanticHealth,
+  SemanticMcpHealthWatchdog
+} = require('../electron/services/mcpSemanticHealth');
+
+async function withServer(handler, run) {
+  const server = http.createServer(handler);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try { return await run(server.address().port); }
+  finally { await new Promise((resolve) => server.close(resolve)); }
+}
+
+test('semantic probe proves workspace_context can execute, not only HTTP health', async () => {
+  await withServer((request, response) => {
+    assert.equal(request.url, '/mcp');
+    assert.equal(request.headers.authorization, 'Bearer token');
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk) => { body += chunk; });
+    request.on('end', () => {
+      const parsed = JSON.parse(body);
+      assert.equal(parsed.method, 'tools/call');
+      assert.equal(parsed.params.name, 'workspace_context');
+      const payload = JSON.stringify({
+        jsonrpc: '2.0',
+        id: parsed.id,
+        result: { structuredContent: { workspace: 'C:\\work\\one' } }
+      });
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(payload);
+    });
+  }, async (port) => {
+    const result = await probeMcpSemanticHealth({ port, token: 'token', timeoutMs: 1000 });
+    assert.deepEqual(result, { ok: true, workspace: 'C:\\work\\one' });
+  });
+});
+
+test('semantic probe rejects raw TaskGroup JSON-RPC failures even when HTTP is 200', async () => {
+  await withServer((_request, response) => {
+    const payload = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 'recovery-semantic-health',
+      error: { code: -32603, message: 'ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)' }
+    });
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(payload);
+  }, async (port) => {
+    const result = await probeMcpSemanticHealth({ port, token: 'token', timeoutMs: 1000 });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'jsonrpc_error');
+    assert.equal(result.errorCode, -32603);
+    assert.match(result.errorMessage, /TaskGroup/);
+  });
+});
+
+test('watchdog restarts through the existing orchestrator only after repeated semantic failures', async () => {
+  const calls = { restart: 0 };
+  const orchestrator = {
+    busy: false,
+    recovering: false,
+    isManuallyStopped: () => false,
+    restart: async (options) => {
+      assert.deepEqual(options, { automatic: true });
+      calls.restart += 1;
+    }
+  };
+  const watchdog = new SemanticMcpHealthWatchdog({
+    settings: { load: () => ({ mcpPort: 18766 }) },
+    secrets: { get: () => 'token' },
+    orchestrator,
+    log: { info() {}, warn() {}, error() {} },
+    probe: async () => ({ ok: false, reason: 'jsonrpc_error', errorCode: -32603 }),
+    failureThreshold: 3,
+    restartCooldownMs: 1000
+  });
+  assert.equal((await watchdog.checkOnce()).failures, 1);
+  assert.equal((await watchdog.checkOnce()).failures, 2);
+  const third = await watchdog.checkOnce();
+  assert.equal(third.recovered, true);
+  assert.equal(third.failures, 3);
+  assert.equal(calls.restart, 1);
+  assert.equal(watchdog.failures, 0);
+});
+
+test('watchdog never restarts while the existing lifecycle controller is busy', async () => {
+  const calls = { probe: 0, restart: 0 };
+  const orchestrator = {
+    busy: true,
+    recovering: false,
+    isManuallyStopped: () => false,
+    restart: async () => { calls.restart += 1; }
+  };
+  const watchdog = new SemanticMcpHealthWatchdog({
+    settings: { load: () => ({ mcpPort: 18766 }) },
+    secrets: { get: () => 'token' },
+    orchestrator,
+    log: { info() {}, warn() {}, error() {} },
+    probe: async () => { calls.probe += 1; return { ok: false }; },
+    failureThreshold: 1
+  });
+  const result = await watchdog.checkOnce();
+  assert.equal(result.skipped, true);
+  assert.equal(result.reason, 'suppressed');
+  assert.equal(calls.probe, 0);
+  assert.equal(calls.restart, 0);
+});
