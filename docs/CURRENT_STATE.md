@@ -107,7 +107,41 @@ Current measurement policy:
 
 The current host-observation path uses content-free identities (`turn_id`, `trace_id`, `span_id`) and explicit run binding; prompt/response text is not copied into the correlation record.
 
-## 6. P3 compute-placement closure and efficacy boundary
+## 6. P0-P3 closure and evidence boundary
+
+The P0-P3 program is no longer one undifferentiated implementation gate. Engineering closure, live activation, and representative efficacy are tracked separately so an evidence program cannot silently reopen accepted architecture and a source fix cannot be mistaken for a running-process acceptance.
+
+| Phase | Engineering/source | Live / evidence boundary | Current interpretation |
+|---|---|---|---|
+| P0 — runtime truth/error boundary | **CLOSED** | **LIVE ACTIVATION OPEN** | ExceptionGroup normalization and self-recovery hardening are implemented; the currently connected Windows runtime still has to load the current source and pass live acceptance. |
+| P1 — measurement integrity | **CLOSED** | **ECONOMICS DEFERRED** | Controlled plumbing is sufficient for experiments. Missing controller/provider usage or money remains unknown, never zero; it does not authorize automatic routing. |
+| P2 — rework diagnosis | **CLOSED** | **CAUSAL EFFICACY DEFERRED** | The diagnostic phase identified rework as a material cost. Incomplete historical causal/oracle coverage is a measurement limitation for later experiments, not a reason to expand P2 architecture indefinitely. |
+| P3 — compute-placement control | **CLOSED / ACCEPTED** | **REPRESENTATIVE EFFICACY DEFERRED** | Explicit placement control is implemented; the representative 10–20-pair pilot remains separate and global server-first stays off. |
+
+The program may move to a new engineering roadmap item only after the P0 **live activation acceptance** below is satisfied. P1/P2/P3 evidence programs continue in parallel without reopening their closed implementation waves.
+
+### P0 live activation incident and source remediation
+
+During the 2026-08-18 closure check, every ChatWeb Coding MCP action attempted through the connected tool surface (`workspace_context`, `task_control restart_runtime`, and `agent_workflow`) returned a raw `ExceptionGroup: unhandled errors in a TaskGroup` before a normal typed tool result could be observed.
+
+Two source-side gaps are now addressed:
+
+1. The MCP protocol boundary normalizes an `ExceptionGroup` into typed `ASYNC_TASK_GROUP_FAILED` JSON-RPC evidence instead of stringifying the raw group.
+2. Recovery Host now has a throttled **semantic tool-plane watchdog**. It performs a read-only local `workspace_context` canary, distinguishes "HTTP health is green" from "tools/call is usable", and delegates recovery only through the existing `RuntimeOrchestrator.restart({ automatic: true })` lifecycle authority. It is suppressed while the lifecycle controller is busy, recovering, handing off, or manually stopped. The canary does not create a second writer or recovery authority.
+
+Focused source regression proves the semantic canary accepts a real `workspace_context` response, rejects an HTTP-200 raw TaskGroup JSON-RPC failure, restarts only after the configured repeated-failure threshold, and does not restart while the lifecycle controller is busy.
+
+**Live acceptance remains open.** The currently connected Coding MCP still returns the raw TaskGroup failure, which proves that the active Windows process has not yet demonstrated the current source behavior. Before P0 is operationally frozen, the active machine must load the current accepted source and prove all of the following on the same running instance:
+
+- exact current process/source identity is observable;
+- `workspace_context` succeeds through the real connector;
+- `agent_workflow` prepare succeeds;
+- `task_control` get/audit succeeds;
+- the `smart-v3` contract exposes exactly 8 public tools;
+- no raw `ExceptionGroup` escapes the normal typed boundary;
+- no stale orchestration run, orphaned background operation, orphaned idempotency record, or conflicting write authority remains.
+
+Until those live checks pass, this is a **deployment/activation blocker**, not a reason to redesign P0-P3 semantics.
 
 ### P3 Engineering / Control Plane — CLOSED / ACCEPTED
 
@@ -132,18 +166,12 @@ The frozen experiment `p3-server-first-pilot-v1` targets **10–20 genuinely eli
 
 This evidence program is intentionally separate from the engineering completion gate:
 
-- it does not block moving to another engineering roadmap item;
+- it does not block moving to another engineering roadmap item after P0 live activation acceptance;
 - it does not authorize claiming server-first is faster, cheaper, or better;
 - it does not auto-promote global server-first;
 - automatic activation remains `false`;
 - missing controller/provider monetary cost is unknown, never zero;
 - a confirmatory cohort is still required before broad promotion.
-
-### Current live-verification incident
-
-During the 2026-08-18 closure check, every ChatWeb Coding MCP action attempted through the connected tool surface (`workspace_context`, `task_control restart_runtime`, and `agent_workflow`) returned a raw `ExceptionGroup: unhandled errors in a TaskGroup` before a normal typed tool result could be observed.
-
-Current source already contains an ExceptionGroup normalization boundary and a regression test asserting that `Runtime.call_tool()` converts a dispatch `ExceptionGroup` into typed `ASYNC_TASK_GROUP_FAILED` evidence. Therefore the observed raw connector failure is tracked as a **runtime/activation/transport incident**, not as a reopened P3 compute-placement semantic defect. Exact live process/source identity and the child exception still need to be observed before a new live-activation or release claim can be made.
 
 ## 7. Recovery architecture
 
@@ -152,6 +180,7 @@ Independent recovery is no longer only a roadmap concept. The current source con
 - a headless Recovery Host that owns primary Runtime/Tunnel/Execution-Hub lifecycle;
 - a Windows user-session Recovery Supervisor that resurrects the Recovery Host under bounded, fail-closed rules;
 - a separate Recovery MCP process and, when configured, a separate Recovery Tunnel;
+- a semantic Coding MCP tool-plane watchdog that can distinguish control-health success from failed `tools/call` behavior and delegates restart to the existing orchestrator;
 - `recovery_plane_mode=independent_mcp_tunnel_v1` state;
 - bounded `recovery_status` / confirmed `repair_primary_runtime` behavior rather than arbitrary remote shell/process control;
 - controlled component activation and accepted-code activation gates.
@@ -195,6 +224,7 @@ Account credential snapshots under `docs/ac/` are local-only data and must never
 
 The following are deliberate evidence/authority gates, not documentation bugs:
 
+- P0 live activation: **OPEN** until the active Windows runtime loads current source and passes the live acceptance checklist above;
 - automatic non-deterministic routing: **OFF / deterministic fail-closed** pending representative accepted paired evidence;
 - automatic global server-first: **OFF** pending representative compute-placement evidence;
 - P3 representative efficacy: **DEFERRED**, separate from the closed engineering gate;
