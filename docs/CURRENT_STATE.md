@@ -120,23 +120,36 @@ The P0-P3 program is no longer one undifferentiated implementation gate. Enginee
 
 The P0 **live activation acceptance** below was satisfied on 2026-08-18. The program may move to a new engineering roadmap item while P1/P2/P3 evidence programs continue in parallel without reopening their closed implementation waves.
 
-### P4 — Solution Economics Shadow — SOURCE ACCEPTED / EVIDENCE COLLECTING
+### P4 — Solution Economics Shadow — SOURCE/GATE ACCEPTED / EVIDENCE COLLECTING
 
-The next engineering focus is accepted-result economics rather than additional P0-P3 orchestration architecture. P4 engineering/source is accepted and current source provides a shadow evidence path for `feature` and `bugfix` runs:
+P4 engineering is now split into three explicit boundaries: source contract, live collection health, and empirical predictive readiness. Current source provides the shadow evidence path for `feature` and `bugfix` runs:
 
 - one task-level recommendation is recorded before the first `write_lease_acquired` event;
 - recommendation evidence is structured and content-free: candidate scope, estimated touched surface, root-cause confidence, oracle strength, expected repair risk, and smallest causal solution scope;
 - the recommendation is joined after execution to durable accepted-result evidence including first-pass acceptance, repair/replan count, TTAR, accepted file receipts, proof duration, explicit local/wait observation spans, and explicit manual-fix outcome when available;
 - lines/symbols touched, cost, wait, or intervention remain unknown when they were not actually observed; absent telemetry is never converted to zero;
-- population output is descriptive by predictor bucket only. It does not claim causality or calibrated prediction and cannot activate a production intervention;
-- population output preserves evaluation provenance. `representative` rows are counted separately from `benchmark`, `synthetic`, and unlabeled rows; non-representative rows remain useful descriptive evidence but are not promotion evidence for predictive policy;
+- representative rows alone are eligible for predictive promotion; benchmark, synthetic, and unlabeled rows remain descriptive evidence only;
+- predictive validation requires representative terminal outcome variation plus positive leave-one-out Brier gain and Bonferroni-adjusted Wilson interval separation; the result remains association evidence, not a causal treatment claim;
 - LOC/touched surface remains an explanatory variable, not the optimization target.
 
-P4 does **not** add another public MCP tool and does not change routing, model choice, compute placement, write authority, proof policy, acceptance authority, or production mutation behavior. The source contract adds `task_control action=solution_shadow` inside the existing eight-tool surface.
+P4 does **not** add another public MCP tool and does not change routing, model choice, compute placement, write authority, proof policy, acceptance authority, or production mutation behavior. `solution_shadow` is an action inside `task_control` on the existing eight-tool `smart-v3` surface.
 
-**Live activation remains a separate gate.** The currently connected ChatWeb/Coding-VP `task_control` schema still does not expose `solution_shadow`, so this source capability must not yet be described as live on that connector. No runtime restart was performed in this continuation because a controlled restart requires an explicit user request. After such a request, activation acceptance must verify the reloaded contract, the eight-tool `smart-v3` count, `workspace_context`, `agent_workflow` prepare, `task_control` audit, and zero stale/orphan authority before live collection is claimed.
+The development supervisor has also been hardened so development Coding MCP launches are pinned to the current Electron checkout (`appRoot/resources/coding-tools-mcp`), with that module root first in `PYTHONPATH`, used as `cwd`, persisted as launch provenance, and mismatches refused rather than silently reusing a foreign/stale runtime.
 
-The P4 predictive-evidence gate remains **COLLECTING**. Descriptive separation by provenance or signal is not predictive validation. P5 controlled treatment remains closed until representative feature/bugfix evidence can credibly show which pre-mutation signals predict repair without weakening the quality floor.
+The population/readiness window is fail-closed against unrelated run churn. `solution_shadow_population_report` now selects the latest enrolled shadow runs directly (`population_scope=latest_shadow_runs_v2`) instead of selecting the latest generic runs and filtering afterward. This prevents diagnose/telemetry workload from evicting genuine P4 evidence from the analysis window.
+
+Repository operators can evaluate the canonical committed ledger with:
+
+```text
+python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .
+python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-ready
+```
+
+The manual-only GitHub workflow `.github/workflows/p4-readiness.yml` exposes the same gate without enabling ordinary push/PR Actions consumption. `--require-ready` succeeds only when `p4_gate.can_answer_which_signals_predict_repair=true`; missing or insufficient evidence cannot be converted into a green P4 closure claim.
+
+**Live collection health remains a separate boundary.** `solution_shadow` schema publication has been observed after controlled activation work, but after the subsequent Recovery Host handoff the current ChatWeb/Coding-VP tool-call plane has again returned raw `ExceptionGroup` failures. Therefore post-handoff end-to-end live collection is **RECHECK REQUIRED** before describing the currently connected process as healthy. This runtime-health issue does not invalidate the accepted source/gate implementation, and it must not be papered over by backfilling or synthetic representative rows.
+
+The P4 empirical gate remains **COLLECTING unless the canonical ledger reporter says `EMPIRICALLY_COMPLETE`**. P5 controlled treatment stays closed until that representative predictive gate passes and is explicitly opened by the semantic controller. `automatic_policy_activation=false` and `p5_automatic_start=false` remain invariants.
 
 ### P0 live activation incident — CLOSED / ACCEPTED
 
@@ -248,9 +261,10 @@ The following are deliberate evidence/authority gates, not documentation bugs:
 - automatic non-deterministic routing: **OFF / deterministic fail-closed** pending representative accepted paired evidence;
 - automatic global server-first: **OFF** pending representative compute-placement evidence;
 - P3 representative efficacy: **DEFERRED**, separate from the closed engineering gate;
-- P4 source engineering: **ACCEPTED**; connected live activation of `solution_shadow`: **PENDING explicit controlled restart/reconnect**;
-- P4 predictive validity: **COLLECTING**; benchmark, synthetic, and unlabeled shadow rows are not promotion evidence;
-- P5 controlled rework-reduction treatment: **CLOSED / NOT STARTED** until the P4 predictive gate is satisfied;
+- P4 source/gate engineering: **ACCEPTED**; development launch authority is pinned to the current checkout and `solution_shadow` schema publication has been observed;
+- P4 post-handoff live tool-call health: **RECHECK REQUIRED** because the current ChatWeb/Coding-VP call plane has returned raw `ExceptionGroup` failures after Recovery Host handoff;
+- P4 predictive validity: **COLLECTING unless `report_p4_readiness.py` reports `EMPIRICALLY_COMPLETE`**; benchmark, synthetic, and unlabeled shadow rows are not promotion evidence;
+- P5 controlled rework-reduction treatment: **CLOSED / NOT STARTED** until the P4 predictive gate is satisfied and explicitly opened;
 - auto-handoff: **OFF** pending more real A/B evidence;
 - paid Flash terminal reproduction: **requires explicit external-cost authorization**;
 - provider/model write authority over the primary checkout: **not granted by telemetry or routing alone**;
