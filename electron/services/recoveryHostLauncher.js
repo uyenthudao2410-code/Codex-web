@@ -1,6 +1,10 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { RecoveryIpcClient, loadRecoveryDescriptor, isProcessAlive } = require('./recoveryIpc');
 const { sameInstallationIdentity } = require('./runtimeIdentity');
+
+const MAX_SUPERVISOR_MANIFEST_BYTES = 64 * 1024;
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -67,6 +71,27 @@ async function spawnElectronUi(app, spawnProcess = spawn, options = {}) {
   });
   child.unref();
   return child.pid;
+}
+
+function suppressDevelopmentRecoverySupervisor({ env = process.env, fsApi = fs, now = () => new Date() } = {}) {
+  const localAppData = String(env?.LOCALAPPDATA || '').trim();
+  if (!localAppData || !path.isAbsolute(localAppData)) return { suppressed: false, reason: 'local_app_data_unavailable' };
+  const installRoot = path.join(localAppData, 'WebMcpRecoverySupervisor');
+  const manifestFile = path.join(installRoot, 'manifest.json');
+  let manifest;
+  try {
+    const stat = fsApi.statSync(manifestFile);
+    if (!stat.isFile() || stat.size > MAX_SUPERVISOR_MANIFEST_BYTES) return { suppressed: false, reason: 'manifest_invalid' };
+    manifest = JSON.parse(fsApi.readFileSync(manifestFile, 'utf8'));
+  } catch {
+    return { suppressed: false, reason: 'manifest_unavailable' };
+  }
+  if (manifest?.schema_version !== 1 || String(manifest?.mode || '') !== 'development') {
+    return { suppressed: false, reason: 'not_development_supervisor' };
+  }
+  fsApi.mkdirSync(installRoot, { recursive: true });
+  fsApi.writeFileSync(path.join(installRoot, 'stop.request'), now().toISOString(), { encoding: 'ascii', mode: 0o600 });
+  return { suppressed: true, reason: 'development_supervisor_disabled' };
 }
 
 function descriptorIdentity(descriptor) {
@@ -205,8 +230,16 @@ async function ensureRecoveryHost({
   readDescriptor = loadRecoveryDescriptor,
   terminateProcess = (pid) => process.kill(Number(pid), 'SIGTERM'),
   processAlive = isProcessAlive,
-  sleep = wait
+  sleep = wait,
+  suppressDevelopmentSupervisor = suppressDevelopmentRecoverySupervisor
 }) {
+  if (!app.isPackaged) {
+    const supervisor = suppressDevelopmentSupervisor();
+    if (supervisor?.suppressed) {
+      log?.warn?.('Disabled a persisted development Recovery Supervisor so it cannot resurrect another checkout.');
+    }
+  }
+
   const client = clientFactory({ paths });
   const expectedIdentity = typeof paths.runtimeIdentity === 'function' ? paths.runtimeIdentity() : null;
   try {
@@ -268,10 +301,12 @@ module.exports = {
   electronUiArguments,
   spawnElectronUi,
   assertActivationDeadline,
+  suppressDevelopmentRecoverySupervisor,
   descriptorMatchesInstallation,
   descriptorRequestOptions,
   readVerifiedReadyHost,
   retireStaleDevelopmentRecoveryHost,
   waitForProcessExit,
-  installationMismatchError
+  installationMismatchError,
+  MAX_SUPERVISOR_MANIFEST_BYTES
 };
