@@ -107,6 +107,20 @@ test('cost model settings are allowlisted, normalized and persisted', () => {
   assert.equal(repaired.terra.out, 10);
 });
 
+test('dashboard prices measured tokens per canonical model and prefers provider-reported cost', () => {
+  const js = read('renderer/dashboard.js');
+  assert.match(js, /MODEL_PRICING = \{/);
+  assert.match(js, /'deepseek-v4-flash': \{ in: 0\.28, out: 0\.42, cached: 0\.028 \}/);
+  assert.match(js, /'gpt-5\.6-sol': \{ in: 10, out: 40 \}/);
+  assert.match(js, /function modelPriceOf/);
+  assert.match(js, /economics\.provider_cost/);
+  assert.match(js, /costSource = 'provider_reported'/);
+  assert.match(js, /\? 'pricing_derived' : 'settings_estimate'/);
+  assert.match(js, /cachedTokens = Number\(summary\.cachedTokens\) \|\| 0/);
+  assert.match(js, /uncached = Math\.max\(0, Number\(summary\.inTokens\) - cachedTokens\)/);
+  assert.match(js, /derived from \$\/1M pricing/);
+});
+
 test('dashboard styling is themed, animated and honors reduced motion', () => {
   const css = read('renderer/dashboard.css');
   assert.match(css, /\.da-grid-tiles/);

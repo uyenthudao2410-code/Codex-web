@@ -22,6 +22,21 @@
     sol: { in: 10, out: 40 }
   };
 
+  // Canonical per-model pricing — USD per 1M tokens. Mirrors
+  // resources/coding-tools-mcp/coding_tools_mcp/usage_pricing.py so the
+  // dashboard derives the same token value the backend records.
+  const MODEL_PRICING = {
+    'deepseek-v4-flash': { in: 0.28, out: 0.42, cached: 0.028 },
+    'deepseek-v4-pro': { in: 0.28, out: 0.42, cached: 0.028 },
+    'gpt-5.4-mini': { in: 0.15, out: 0.6 },
+    'gpt-5.6-luna': { in: 0.15, out: 0.6 },
+    'gpt-5.6-terra': { in: 2.5, out: 10 },
+    'gpt-5.6-sol': { in: 10, out: 40 }
+  };
+  const MODEL_PRICING_PATTERNS = [
+    { pattern: /^deepseek-/, rates: MODEL_PRICING['deepseek-v4-flash'] }
+  ];
+
   // Model rows: ChatWeb plus the four delegatable compute lanes. Desktop,
   // OpenCode and the unassigned bucket appear only when they hold traffic.
   const MODELS = [
@@ -229,9 +244,27 @@
     return [...map.values()].sort((a, b) => b.cost - a.cost);
   }
 
+  function modelPriceOf(modelId, component) {
+    const id = String(modelId || '').toLowerCase();
+    for (const [name, rates] of Object.entries(MODEL_PRICING)) {
+      if (id === name || id.endsWith(`/${name}`)) return Number(rates[component]) || 0;
+    }
+    for (const rule of MODEL_PRICING_PATTERNS) {
+      if (rule.pattern.test(id)) return Number(rule.rates[component]) || 0;
+    }
+    return 0;
+  }
+
   function costOf(summary, lane = 'chatweb') {
-    const rates = rateFor(lane);
-    return (summary.inTokens / 1e6) * rates.in + (summary.outTokens / 1e6) * rates.out;
+    const modelId = summary.modelId || lane;
+    const inRate = modelPriceOf(modelId, 'in') || rateFor(lane).in;
+    const outRate = modelPriceOf(modelId, 'out') || rateFor(lane).out;
+    const cachedRate = modelPriceOf(modelId, 'cached');
+    const cachedTokens = Number(summary.cachedTokens) || 0;
+    const uncached = Math.max(0, Number(summary.inTokens) - cachedTokens);
+    let usd = (uncached / 1e6) * inRate + (Number(summary.outTokens) / 1e6) * outRate;
+    if (cachedRate > 0 && cachedTokens > 0) usd += (cachedTokens / 1e6) * cachedRate;
+    return usd;
   }
 
   function rateFor(lane) {
@@ -368,9 +401,20 @@
       entry.cachedTokens = usage.cachedTokens;
       entry.calls = Math.max(entry.calls, usage.calls);
       entry.usageEvidence = 'MEASURED';
+      entry.modelId = String(delegation?.model || '');
+      const providerCost = Number(economics.provider_cost);
+      if (Number.isFinite(providerCost) && providerCost >= 0) {
+        entry.providerCost = providerCost;
+      }
     }
     for (const entry of map.values()) {
-      entry.cost = costOf(entry, entry.model);
+      if (Number.isFinite(Number(entry.providerCost)) && Number(entry.providerCost) >= 0) {
+        entry.cost = Number(entry.providerCost);
+        entry.costSource = 'provider_reported';
+      } else {
+        entry.cost = costOf(entry, entry.model);
+        entry.costSource = entry.usageEvidence === 'MEASURED' ? 'pricing_derived' : 'settings_estimate';
+      }
     }
     return map;
   }
@@ -758,8 +802,8 @@
 
       const inCell = document.createElement('span');
       inCell.className = 'da-model-cell';
-      inCell.title = `${Math.round(inTokens)} token`;
-      inCell.innerHTML = `<b>${compact(inTokens)}</b>`;
+      inCell.title = `${Math.round(inTokens)} token${entry?.cachedTokens ? ` · ${Math.round(entry.cachedTokens)} cached` : ''}`;
+      inCell.innerHTML = `<b>${compact(inTokens)}</b>${entry?.cachedTokens ? ` <small>${compact(entry.cachedTokens)} cached</small>` : ''}`;
       const outCell = document.createElement('span');
       outCell.className = 'da-model-cell';
       outCell.title = `${Math.round(outTokens)} token`;
@@ -778,6 +822,8 @@
       const costCell = document.createElement('span');
       costCell.className = 'da-model-cell da-model-cost';
       const isSubscription = model.id === 'desktop' || model.id === 'opencode';
+      const costSourceText = { provider_reported: 'provider reported', pricing_derived: 'derived from $/1M pricing', settings_estimate: 'settings estimate' }[entry?.costSource] || 'estimate';
+      costCell.title = `Nguồn giá trị token: ${costSourceText}`;
       costCell.innerHTML = `<b>${isSubscription && !rowCost ? '—' : money(displayedCost(rowCost))}</b>`;
 
       row.append(name, stateCell, inCell, outCell, callsCell, shareWrap, costCell);
