@@ -12,7 +12,47 @@
     "session_id": "7nkuS_zhVN_YgcExPAi-P9P6",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-18T09:07:29.424Z"
+    "started_at": "2026-08-18T09:07:29.424Z",
+    "exit_code": null,
+    "elapsed_ms": 30019,
+    "artifact_ref": {
+      "schema_version": 1,
+      "kind": "command_output",
+      "scope": "runtime_retained",
+      "source": "command",
+      "locator": {
+        "command_id": "7nkuS_zhVN_YgcExPAi-P9P6"
+      },
+      "durability": "process_runtime",
+      "restart_safe": false,
+      "content_addressed": false,
+      "retrieval": {
+        "tool": "command_control",
+        "action": "read"
+      },
+      "size_bytes": 3770,
+      "command_id": "7nkuS_zhVN_YgcExPAi-P9P6",
+      "streams": {
+        "stdout": {
+          "output_ref": "command:7nkuS_zhVN_YgcExPAi-P9P6:stdout",
+          "total_stream_bytes": 3670,
+          "total_retained_bytes": 3670,
+          "head_retained_bytes": 3670,
+          "tail_retained_bytes": 0,
+          "evicted_gap_bytes": 0,
+          "evicted_bytes_total": 0
+        },
+        "stderr": {
+          "output_ref": "command:7nkuS_zhVN_YgcExPAi-P9P6:stderr",
+          "total_stream_bytes": 100,
+          "total_retained_bytes": 100,
+          "head_retained_bytes": 100,
+          "tail_retained_bytes": 0,
+          "evicted_gap_bytes": 0,
+          "evicted_bytes_total": 0
+        }
+      }
+    }
   },
   "test_results": [],
   "build_results": [],
@@ -21,7 +61,7 @@
   "failure": null,
   "next_step": "",
   "created_at": "2026-08-18T09:07:29.021Z",
-  "updated_at": "2026-08-18T09:07:29.424Z",
+  "updated_at": "2026-08-18T09:07:59.049Z",
   "events": [
     {
       "time": "2026-08-18T09:07:29.021Z",
