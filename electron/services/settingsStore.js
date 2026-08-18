@@ -8,12 +8,26 @@ class SettingsStore {
     this.paths = paths;
   }
 
+  isDevelopmentRuntime() {
+    try {
+      return typeof this.paths.runtimeMode === 'function' && this.paths.runtimeMode() === 'development';
+    } catch {
+      return false;
+    }
+  }
+
   load() {
-    return normalize(readJson(this.paths.settingsFile(), {}));
+    const current = normalize(readJson(this.paths.settingsFile(), {}));
+    // Development checkouts are intentionally session-owned. Persisting a
+    // Windows login item would pin an arbitrary checkout path in the registry
+    // and can resurrect a stale source root after the checkout moves.
+    if (this.isDevelopmentRuntime()) current.startWithWindows = false;
+    return current;
   }
 
   save(patch) {
     const next = normalize({ ...this.load(), ...patch });
+    if (this.isDevelopmentRuntime()) next.startWithWindows = false;
     writeJsonAtomic(this.paths.settingsFile(), next);
     return next;
   }
