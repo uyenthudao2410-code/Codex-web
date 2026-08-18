@@ -1,141 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "8a75be80b7d5475484bac6b3a98858f3",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-17T20:15:28.106Z",
-    "updated_at": "2026-08-17T20:15:29.840Z",
-    "events": [
-      {
-        "time": "2026-08-17T20:15:28.106Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-17T20:15:28.310Z",
-        "event": "command_started",
-        "details": {
-          "command": "git add -A -- .coding-tools && npm run check:coding-tools-delivery && git add -A -- .coding-tools && npm run check:coding-tools-delivery && git diff --cached --check && git commit -m \"Freeze P3 server-first pilot manifest\" && git push origin main",
-          "session_id": "MvtCJohrEKr4fMZDfO6kn8Ru"
-        }
-      },
-      {
-        "time": "2026-08-17T20:15:29.840Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git add -A -- .coding-tools && npm run check:coding-tools-delivery && git add -A -- .coding-tools && npm run check:coding-tools-delivery && git diff --cached --check && git commit -m \"Freeze P3 server-first pilot manifest\" && git push origin main",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-17T20:16:28.794Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "30b543ee24e344e0b75dedd30ce76156",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-17T20:16:29.092Z",
-    "updated_at": "2026-08-17T20:16:34.223Z",
-    "events": [
-      {
-        "time": "2026-08-17T20:16:29.092Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-17T20:16:29.307Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $paths=@('.coding-tools/orchestration/ledger.sqlite3-shm','.coding-tools/orchestration/ledger.sqlite3-wal'); $handles=@(); foreach($p in $paths){ for($i=0; $i -lt 20 -and -not (Test-Path $p); $i++){ Start-Sleep -Milliseconds 50 }; if(Test-Path $p){ $handles += [System.IO.File]::Open($p,[System.IO.FileMode]::Open,[System.IO.FileAccess]::Read,[System.IO.FileShare]::ReadWrite) } }; try { cmd /c 'git add -A -- .coding-tools'; if($LASTEXI",
-          "session_id": "uIZJZtfU1n_zJFrX7GRBOnrx"
-        }
-      },
-      {
-        "time": "2026-08-17T20:16:34.223Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $paths=@('.coding-tools/orchestration/ledger.sqlite3-shm','.coding-tools/orchestration/ledger.sqlite3-wal'); $handles=@(); foreach($p in $paths){ for($i=0; $i -lt 20 -and -not (Test-Path $p); $i++){ Start-Sleep -Milliseconds 50 }; if(Test-Path $p){ $handles += [System.IO.File]::Open($p,[System.IO.FileMode]::Open,[System.IO.FileAccess]::Read,[System.IO.FileShare]::ReadWrite) } }; try { cmd /c 'git add -A -- .coding-tools'; if($LASTEXI",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-17T20:16:54.655Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "d3e53f5aeffb41dcb335f74d10af8151",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Command path could not be inspected safely.",
-    "next_step": "",
-    "created_at": "2026-08-17T20:16:54.954Z",
-    "updated_at": "2026-08-17T20:16:54.957Z",
-    "events": [
-      {
-        "time": "2026-08-17T20:16:54.954Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-17T20:16:54.957Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A 80 -B 20 \"require-staged|ledger.sqlite3-shm|coding-tools delivery|git diff|hash|sqlite\" scripts/check-coding-tools-history.js",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-17T20:16:54.957Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "INVALID_ARGUMENT"
-        }
-      }
-    ],
-    "archived_at": "2026-08-17T20:17:09.406Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "6b854fddd28d4ef98d5651320fdf8012",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -58872,5 +58737,966 @@
     ],
     "archived_at": "2026-08-18T11:56:51.522Z",
     "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "a229f562ba334dd793d6e754b144cd08",
+    "orchestration": {
+      "run_id": "d5aac1e3cc4c496bb339437c6a275ac5",
+      "wave_id": "ceb18830ebad48cfb429619dbd21239f",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "c360eb953557456b19e0dff4f6ed5f6f8c44e7d7",
+      "worktree_fp": "a9a1a221762196af32b46b283e22485eb31710088f47d38869ec8378173a81e5",
+      "contract_fp": ""
+    },
+    "objective": "Pin Coding MCP launch authority to the current runtime source root. In electron/services/nativeService.js add a fail-closed launch contract that requires an existing coding_tools_mcp package; in development require the canonical module root to equal appRoot/resources/coding-tools-mcp; make that module root the working directory and first PYTHONPATH entry before python_vendor; persist runtimeMode/moduleRoot in runtime state; refuse to reuse a live process whose recorded launch authority does not match. Preserve packaged behavior. Add focused Node tests for matching dev root, mismatched dev root, packaged root, and runtime-state provenance. Do not commit or push.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-18T12:01:28.872Z"
+      },
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-08-18T12:01:28.872Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-18T12:01:28.872Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": {
+      "command": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+      "kind": "command",
+      "session_id": "kY5pwaVuz196ZkSTPn8imtAD",
+      "workdir": ".",
+      "status": "running",
+      "started_at": "2026-08-18T12:01:27.505Z"
+    },
+    "last_command_result": {
+      "command_id": "Q2D9vzjCuaB9VtaOOk8_uaC7",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": null,
+      "finished_at": "2026-08-18T12:00:43.866Z"
+    },
+    "completion_report": null,
+    "test_results": [
+      {
+        "command": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 1298,
+        "summary": "exit 0 | 0.9s | 58 lines | tail: 'ℹ duration_ms 426.8524'"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "electron",
+        "name": "web-mcp-assistant",
+        "version": "0.3.4",
+        "package_manager": "npm",
+        "test_command": "npm run test",
+        "build_command": "npm run dist",
+        "artifact_paths": [
+          "dist",
+          "build"
+        ]
+      },
+      "commands": {
+        "test": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+        "build": "npm run dist"
+      },
+      "test_result": {
+        "command": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 1298,
+        "summary": "exit 0 | 0.9s | 58 lines | tail: 'ℹ duration_ms 426.8524'"
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "passed",
+      "failure": null,
+      "report_generated_at": "2026-08-18T12:01:28.210Z"
+    },
+    "modified_files": [
+      {
+        "path": "tmp/commit-current-snapshot-batch-20260818.ps1",
+        "operation": "add",
+        "updated_at": "2026-08-18T11:58:05.701Z"
+      },
+      {
+        "path": "tmp/finalize-runtime-tail-20260818.ps1",
+        "operation": "add",
+        "updated_at": "2026-08-18T11:59:53.390Z"
+      },
+      {
+        "path": "electron/services/nativeService.js",
+        "operation": "update",
+        "updated_at": "2026-08-18T12:01:29.826Z"
+      },
+      {
+        "path": "tests/runtime-lifecycle.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-18T12:01:29.826Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-18T11:56:51.597Z",
+    "updated_at": "2026-08-18T12:02:30.963Z",
+    "events": [
+      {
+        "time": "2026-08-18T11:56:51.597Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:04.595Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:05.688Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:05.688Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:40.263Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:41.032Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:41.890Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:41.890Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:42.551Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:42.742Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:57:43.717Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File tmp\\commit-current-snapshot-batch-20260818.ps1",
+          "session_id": "otYCxwNfPrKpeIG7345EwFJ-"
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:04.260Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File tmp\\commit-current-snapshot-batch-20260818.ps1",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:04.653Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:05.401Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:05.402Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:05.406Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:05.701Z",
+        "event": "files_modified",
+        "details": {
+          "count": 1
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:10.704Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:24.673Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$root='resources\\coding-tools-mcp'; Write-Output ('MODULE_ROOT=' + (Resolve-Path $root)); if (Test-Path \"$root\\python_vendor\\coding_tools_mcp\") { Write-Output ('VENDORED_PACKAGE=' + (Resolve-Path \"$root\\python_vendor\\coding_tools_mcp\")) } else { Write-Output 'VENDORED_PACKAGE=NONE' }; Get-ChildItem \"$root\\python_vendor\" -Name -ErrorAction SilentlyContinue | Select-Object -First 12\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:24.673Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "EXECUTION_OWNER_INVALID"
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:26.708Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:41.869Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:42.830Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T11:58:42.834Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:45.646Z",
+        "event": "orchestration_drift_detected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:46.064Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:46.775Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:47.465Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:47.470Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:48.163Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:48.366Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:49.290Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$dst=Join-Path $env:TEMP 'codex-finalize-runtime-tail-20260818.ps1'; Copy-Item -LiteralPath 'tmp\\finalize-runtime-tail-20260818.ps1' -Destination $dst -Force; Remove-Item -LiteralPath 'tmp\\finalize-runtime-tail-20260818.ps1','tmp\\commit-current-snapshot-batch-20260818.ps1','tmp\\commit-current-snapshot-20260818.ps1' -Force -ErrorAction SilentlyContinue; if (Test-Path -LiteralPath 'tmp\\finalize-runtime-tail-20260818.ps1') { throw 'failed to remove repo helper before",
+          "session_id": "-oDyqpSRQ6v53BGjx4YxRWUK"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:50.684Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$dst=Join-Path $env:TEMP 'codex-finalize-runtime-tail-20260818.ps1'; Copy-Item -LiteralPath 'tmp\\finalize-runtime-tail-20260818.ps1' -Destination $dst -Force; Remove-Item -LiteralPath 'tmp\\finalize-runtime-tail-20260818.ps1','tmp\\commit-current-snapshot-batch-20260818.ps1','tmp\\commit-current-snapshot-20260818.ps1' -Force -ErrorAction SilentlyContinue; if (Test-Path -LiteralPath 'tmp\\finalize-runtime-tail-20260818.ps1') { throw 'failed to remove repo helper before",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:51.803Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:TEMP\\codex-finalize-runtime-tail-20260818.ps1\"",
+          "session_id": "pa9D7vbOe1ge6dL3acmE5_l7"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:52.243Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:TEMP\\codex-finalize-runtime-tail-20260818.ps1\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:52.583Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:53.143Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:53.146Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:53.149Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-18T11:59:53.390Z",
+        "event": "files_modified",
+        "details": {
+          "count": 1
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:09.556Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:10.577Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:11.224Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:11.224Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "orchestration"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:11.978Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:11.981Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:14.002Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:14.204Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:14.369Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:15.291Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& (Join-Path $env:TEMP 'codex-finalize-runtime-tail-20260818.ps1')\"",
+          "session_id": "Q2D9vzjCuaB9VtaOOk8_uaC7"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:43.866Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& (Join-Path $env:TEMP 'codex-finalize-runtime-tail-20260818.ps1')\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:44.274Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:44.801Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:44.801Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:44.801Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:45.075Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:48.242Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:00:49.092Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:24.535Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:25.244Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:25.894Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:25.899Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:26.563Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:26.723Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:27.505Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/runtime-lifecycle.test.js tests/dev-checkout-authority.test.js tests/runtime-installation-identity.test.js",
+          "session_id": "kY5pwaVuz196ZkSTPn8imtAD"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:28.211Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:28.868Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:28.872Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:29.150Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:29.152Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:29.826Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:29.931Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "FINAL_ACCEPTANCE_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:30.395Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:47.556Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-18T12:01:47.559Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T12:02:30.421Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-18T12:02:41.175Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f69a6786d9fd4e83a729f37f441ea74b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-18T12:03:01.717Z"
+    },
+    "completion_report": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-18T12:02:41.233Z",
+    "updated_at": "2026-08-18T12:03:01.717Z",
+    "events": [
+      {
+        "time": "2026-08-18T12:02:41.233Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-18T12:02:41.627Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"git rev-parse HEAD && git rev-parse origin/main && git status --short --branch\"",
+          "session_id": "e8_zeeQXLWT7Cbo0cjgstS2T"
+        }
+      },
+      {
+        "time": "2026-08-18T12:02:42.133Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"git rev-parse HEAD && git rev-parse origin/main && git status --short --branch\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-18T12:02:54.471Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"activateUpdate|activateRecovery|recovery_host|activateCodingMcpUpdate|expected_disk_revision|replace-recovery-host\" electron/services/runtimeOrchestrator.js electron/recoveryHost.js electron/services/recoveryHostLauncher.js tests/accepted-code-activation.test.js",
+          "session_id": "pCMZgG8aYStwaBsC3qc8M2Rp"
+        }
+      },
+      {
+        "time": "2026-08-18T12:02:54.742Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"activateUpdate|activateRecovery|recovery_host|activateCodingMcpUpdate|expected_disk_revision|replace-recovery-host\" electron/services/runtimeOrchestrator.js electron/recoveryHost.js electron/services/recoveryHostLauncher.js tests/accepted-code-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-18T12:03:01.717Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"async activate.*Update|component === 'recovery_host'|case 'recovery_host'|spawnRecoveryHost\\(|recoveryReplacement\" electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js electron/services/recoveryHostLauncher.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-18T12:03:01.717Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-18T12:03:10.435Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "423c49c2f3034e2f8506c502e86adb22",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-18T12:03:19.043Z"
+    },
+    "completion_report": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-18T12:03:10.489Z",
+    "updated_at": "2026-08-18T12:03:19.043Z",
+    "events": [
+      {
+        "time": "2026-08-18T12:03:10.489Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-18T12:03:10.906Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 -e \"activateRecoveryHost\" -e \"activateUpdate\" -e \"spawnRecoveryHost\" -e \"recovery_host\" electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js electron/services/recoveryHostLauncher.js",
+          "session_id": "Ghnv53FPMmrt2cpEIqwcMbke"
+        }
+      },
+      {
+        "time": "2026-08-18T12:03:11.203Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 -e \"activateRecoveryHost\" -e \"activateUpdate\" -e \"spawnRecoveryHost\" -e \"recovery_host\" electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js electron/services/recoveryHostLauncher.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-18T12:03:19.043Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 -e \"activateRecoveryHost\" -e \"activateElectron\" -e \"activateComponent\" -e \"recovery_host\" electron/services/codeActivation*.js electron/services/*activation*.js electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-18T12:03:19.043Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-18T12:03:26.355Z",
+    "archive_reason": "finished"
   }
 ]
