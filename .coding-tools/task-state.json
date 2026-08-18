@@ -1,24 +1,24 @@
 {
   "version": 2,
-  "task_id": "660c2d77ea824450bbd47d592f693662",
+  "task_id": "afb80efad69041c6affc6ea7a56a8d0c",
   "orchestration": {
-    "run_id": "6fa8ab3c0e5f4eb68317ac8f8bbe098c",
-    "wave_id": "f46bfa6162b2482c8beaab3c0b0333a7",
-    "orchestration_state": "REPLAN",
+    "run_id": "69cd15b9b1cb43b2a1f7741b9d45686a",
+    "wave_id": "427b7d08c32a4bed9782e8906bf4cc5a",
+    "orchestration_state": "PREFLIGHT",
     "execution_mode": "mcp_only",
     "route_requested": "",
     "route_resolved": "",
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "d4c194e38225bca7c0b97ac0db1b0875137e3e6d",
-    "worktree_fp": "7c90940d204d67fc6e25fdb28588bc1f873379a6edd62defb4b3aefeaa76c444",
+    "base_head": "0c1a05a55f264baa91dd1fb6e818598df473b2f9",
+    "worktree_fp": "0592408ee19e1bc79d8aa1dddb91c65261f205353e338de3622a8deca271e346",
     "contract_fp": ""
   },
-  "objective": "Continue the accepted-result economics roadmap after the already accepted P4 source implementation: update project Markdown documentation to accurately reflect P4 engineering/source accepted, live activation still pending until an explicit restart request, predictive-evidence gate still collecting, and P5 still closed; then identify and implement the smallest remaining P4 shadow-only work that improves representative evidence collection without changing production routing/behavior or opening P5. Preserve all unrelated concurrent worktree changes, especially renderer/* and usage-pricing/usage-events lane changes, and preserve .coding-tools telemetry/history. Do not restart runtime.",
+  "objective": "Complete P4 Solution Economics Shadow as fully as possible without changing production behavior, opening P5, or restarting runtime. Identify remaining source-side gaps against the agreed P4 contract: pre-mutation predictors for feature/bugfix tasks; post-run outcomes including first-pass, repair/replan, TTAR, actual touched surface (files/lines/symbols where deterministically observable), proof cost/duration, local execution, wait, and manual intervention; representative-vs-benchmark/synthetic provenance separation; and an explicit predictive-readiness gate that stays fail-closed until representative repair/non-repair variation and signal support are sufficient. Preserve unknowns rather than inventing values. Update only the single canonical research tracker under docs/research for P4 progress. Preserve all unrelated concurrent changes and .coding-tools history. Do not restart runtime, do not change production routing/model/placement/proof/acceptance behavior, and do not add a public MCP tool.",
   "status": "waiting",
   "steps": [],
-  "current_step": "Replan required - operator report required",
+  "current_step": "Waiting for model",
   "current_command": null,
   "last_command_result": null,
   "completion_report": null,
@@ -26,65 +26,79 @@
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
-  "failure": "Base/worktree/contract changed after orchestration preflight. Provide replan_reason to create a new wave.",
-  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
-  "created_at": "2026-08-18T10:59:20.757Z",
-  "updated_at": "2026-08-18T11:01:09.336Z",
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-18T11:09:54.263Z",
+  "updated_at": "2026-08-18T11:12:30.321Z",
   "events": [
     {
-      "time": "2026-08-18T10:59:20.757Z",
+      "time": "2026-08-18T11:09:54.263Z",
       "event": "task_auto_started",
       "details": {
-        "objective": "Continue the accepted-result economics roadmap after the already accepted P4 source implementation: update project Markdown documentation to accurately reflect P4 engineering/source accepted, live activation still pending until an explicit restart request, predictive-evidence gate still collecting, and P5 still closed; then identify and implement the smallest remaining P4 shadow-only work that improves representative evidence collection without changing production routing/behavior or opening P5. Preserve all unrelated concurrent worktree changes, especially renderer/* and usage-pricing/usage-events lane changes, and preserve .coding-tools telemetry/history. Do not restart runtime."
+        "objective": "Complete P4 Solution Economics Shadow as fully as possible without changing production behavior, opening P5, or restarting runtime. Identify remaining source-side gaps against the agreed P4 contract: pre-mutation predictors for feature/bugfix tasks; post-run outcomes including first-pass, repair/replan, TTAR, actual touched surface (files/lines/symbols where deterministically observable), proof cost/duration, local execution, wait, and manual intervention; representative-vs-benchmark/synthetic provenance separation; and an explicit predictive-readiness gate that stays fail-closed until representative repair/non-repair variation and signal support are sufficient. Preserve unknowns rather than inventing values. Update only the single canonical research tracker under docs/research for P4 progress. Preserve all unrelated concurrent changes and .coding-tools history. Do not restart runtime, do not change production routing/model/placement/proof/acceptance behavior, and do not add a public MCP tool."
       }
     },
     {
-      "time": "2026-08-18T10:59:21.762Z",
+      "time": "2026-08-18T11:09:55.039Z",
       "event": "orchestration_context_ready",
       "details": {
         "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-08-18T10:59:22.905Z",
+      "time": "2026-08-18T11:09:56.468Z",
       "event": "orchestration_prepared",
       "details": {
         "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-08-18T10:59:22.915Z",
+      "time": "2026-08-18T11:09:56.475Z",
       "event": "files_modified",
       "details": {
         "count": 0
       }
     },
     {
-      "time": "2026-08-18T11:01:02.686Z",
-      "event": "orchestration_drift_detected",
+      "time": "2026-08-18T11:10:46.711Z",
+      "event": "orchestration_context_ready",
       "details": {
-        "state": "REPLAN"
+        "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-08-18T11:01:02.812Z",
-      "event": "tool_failed",
+      "time": "2026-08-18T11:10:47.906Z",
+      "event": "orchestration_prepared",
       "details": {
-        "tool": "agent_workflow",
-        "code": "REPLAN_REASON_REQUIRED"
+        "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-08-18T11:01:09.336Z",
-      "event": "orchestration_projection_reconciled",
+      "time": "2026-08-18T11:10:47.913Z",
+      "event": "files_modified",
       "details": {
-        "fields": [
-          "current_step",
-          "failure",
-          "next_step",
-          "orchestration",
-          "status"
-        ]
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-18T11:11:51.787Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-18T11:11:52.831Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-18T11:11:52.835Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
       }
     }
   ]

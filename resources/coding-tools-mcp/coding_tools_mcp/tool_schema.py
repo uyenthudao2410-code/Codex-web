@@ -292,7 +292,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "dry_run": {**boolean, "default": False},
         }),
         "task_control": object_schema({
-            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "events", "messages", "ack", "handoff", "quality", "observation", "restart_runtime"], "default": "get"},
+            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "events", "messages", "ack", "handoff", "quality", "observation", "solution_shadow", "restart_runtime"], "default": "get"},
             "run_id": {**string, "description": "Optional orchestration run id; defaults to the current task projection."},
             "wave_id": {**string, "description": "Optional orchestration wave id; defaults to the current task projection."},
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
@@ -336,6 +336,45 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                     "source": {**string, "maxLength": 128},
                 },
                 "description": "Immediate or delayed operational quality observation; never include private reasoning or raw source content.",
+            },
+            "solution_shadow_recommendation": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "recommendation_id": {**string, "maxLength": 128},
+                    "candidate_solution_scope": {**string, "enum": ["localized_symbol", "localized_file", "bounded_multi_file", "cross_subsystem", "unknown"]},
+                    "estimated_touched_surface": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "files": {**integer, "minimum": 0},
+                            "symbols": {**integer, "minimum": 0},
+                            "lines": {**integer, "minimum": 0},
+                        },
+                    },
+                    "root_cause_confidence": {**string, "enum": ["low", "medium", "high", "unknown"]},
+                    "oracle_strength": {**string, "enum": ["weak", "moderate", "strong", "unknown"]},
+                    "expected_repair_risk": {**string, "enum": ["low", "medium", "high", "unknown"]},
+                    "smallest_causal_solution": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "scope": {**string, "enum": ["localized_symbol", "localized_file", "bounded_multi_file", "cross_subsystem", "unknown"]},
+                            "estimated_touched_surface": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "properties": {
+                                    "files": {**integer, "minimum": 0},
+                                    "symbols": {**integer, "minimum": 0},
+                                    "lines": {**integer, "minimum": 0},
+                                },
+                            },
+                        },
+                        "required": ["scope", "estimated_touched_surface"],
+                    },
+                },
+                "required": ["recommendation_id", "candidate_solution_scope", "estimated_touched_surface", "root_cause_confidence", "oracle_strength", "expected_repair_risk", "smallest_causal_solution"],
+                "description": "P4 shadow-only pre-mutation solution recommendation for feature/bugfix runs. It never changes routing, mutation, proof, or acceptance policy.",
             },
             "observation_span": {
                 "type": "object",

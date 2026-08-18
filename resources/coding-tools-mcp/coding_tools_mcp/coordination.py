@@ -15,6 +15,7 @@ from .codex_bridge import CodexBridgeError
 from .errors import ToolFailure
 from .fs_utils import is_relative_to
 from .orchestration_control import OrchestrationControlError
+from .solution_economics import record_solution_shadow, solution_shadow_run_report
 
 
 SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
@@ -1110,6 +1111,39 @@ class CoordinationMixin:
                 "recorded": bool(recorded.get("recorded")),
                 "observation_span": recorded,
                 "critical_path": self.orchestration_ledger.critical_path_analysis(run_id),
+            }
+        if action == "solution_shadow":
+            state, projection, run_id, wave_id = self._coordination_ids(args)
+            if not run_id:
+                raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "No orchestration run is available for solution shadow evidence.", category="not_found")
+            recommendation = args.get("solution_shadow_recommendation")
+            recording = None
+            if recommendation is not None:
+                if not isinstance(recommendation, dict):
+                    raise ToolFailure("SOLUTION_SHADOW_INVALID", "solution_shadow_recommendation must be an object.", category="validation")
+                projected_run = str(projection.get("run_id") or "").strip()
+                projected_wave = str(projection.get("wave_id") or "").strip()
+                if run_id != projected_run or not wave_id or wave_id != projected_wave:
+                    raise ToolFailure(
+                        "SOLUTION_SHADOW_CONTEXT_MISMATCH",
+                        "Solution shadow recording requires the current task-projected run and wave.",
+                        category="runtime",
+                        retryable=True,
+                        details={"run_id": run_id, "wave_id": wave_id, "projected_run_id": projected_run, "projected_wave_id": projected_wave},
+                    )
+                try:
+                    recording = record_solution_shadow(
+                        self.orchestration_ledger,
+                        run_id=run_id,
+                        wave_id=wave_id,
+                        recommendation=recommendation,
+                    )
+                except ValueError as exc:
+                    raise ToolFailure("SOLUTION_SHADOW_INVALID", str(exc), category="validation", retryable=False) from exc
+            return {
+                "recording": recording,
+                "solution_shadow": solution_shadow_run_report(self.orchestration_ledger, run_id),
+                "production_behavior_changed": False,
             }
         if action in {"audit", "accept", "reject"}:
             state = self.task_state.get()

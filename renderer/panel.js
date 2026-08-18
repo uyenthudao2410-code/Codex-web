@@ -54,6 +54,10 @@ function renderSyncState() {
     return;
   }
   const health = lastHealth;
+  if (!orchestrationError && lastSyncAt && Date.now() - lastSyncAt > 8000) {
+    $('#syncState').textContent = 'Đang đồng bộ lại…';
+    return;
+  }
   $('#syncState').textContent = health?.fullyReady
     ? 'MCP + Tunnel sẵn sàng'
     : health?.recovering
@@ -78,8 +82,9 @@ function renderHealth(health) {
 function renderTask(task) {
   const status = String(task?.status || 'idle');
   const badge = $('#taskStatus');
-  badge.textContent = status === 'idle' ? 'chưa có' : status;
-  badge.className = `badge ${status}`;
+  const statusMap = { idle: 'Đang rảnh', active: 'Đang chạy', paused: 'Tạm dừng', completed: 'Hoàn thành', failed: 'Thất bại', stopped: 'Đã dừng' };
+  badge.textContent = statusMap[status] || status;
+  badge.className = `badge kpi-mini-badge ${status === 'active' ? 'status-active' : status === 'paused' ? 'status-waiting' : 'status-hold'}`;
   $('#taskObjective').textContent = task?.objective || 'Chưa có nhiệm vụ đang chạy.';
   const progress = taskProgress(task, status);
   $('#taskBar').style.width = `${progress}%`;
@@ -106,8 +111,9 @@ function renderTask(task) {
 
 function renderRun(data) {
   const run = data?.run;
-  $('#runStatus').textContent = run?.status || 'chưa có';
-  $('#runStatus').className = `badge ${run?.status || ''}`;
+  const runStatusMap = { idle: 'Đang rảnh', active: 'Hoạt động', running: 'Đang chạy', completed: 'Hoàn thành', failed: 'Lỗi' };
+  $('#runStatus').textContent = runStatusMap[run?.status] || run?.status || 'Hoạt động';
+  $('#runStatus').className = `badge kpi-mini-badge ${run?.status === 'idle' ? 'status-waiting' : 'status-active'}`;
   $('#runObjective').textContent = run?.objective || 'Chưa có run điều phối.';
 
   const waves = Array.isArray(data?.waves) ? data.waves : [];
@@ -143,15 +149,14 @@ function renderHub(data) {
   const write = data?.authority?.write || {};
   const controllerOwner = controller.owner_client_id || 'chưa claim';
   const onlineClientCount = [chatweb, desktop, opencode].filter((client) => client?.online).length;
-  $('#hubStatus').textContent = onlineClientCount ? `${onlineClientCount} clients` : 'offline';
-  $('#hubStatus').className = `badge ${onlineClientCount ? 'active' : 'stopped'}`;
+  $('#hubStatus').textContent = onlineClientCount ? `${onlineClientCount} client` : 'Ngoại tuyến';
   $('#toDesktopButton').disabled = !desktop?.online || controllerOwner === 'codex-desktop' || !data?.run?.run_id;
   $('#toChatWebButton').disabled = !chatweb?.online || controllerOwner === 'chatweb' || !data?.run?.run_id;
   const continuity = data?.continuity || {};
   const safe = Boolean(continuity.safe_to_rotate_chatweb);
-  $('#continuityStatus').textContent = safe ? 'READY' : 'HOLD';
-  $('#continuityStatus').className = `badge ${safe ? 'active' : 'blocked'}`;
-  }
+  $('#continuityStatus').textContent = safe ? 'SẴN SÀNG' : 'TẠM GIỮ';
+  $('#continuityStatus').className = `badge kpi-mini-badge ${safe ? 'status-active' : 'status-hold'}`;
+}
 
 function renderEvents(events) {
   const list = $('#eventList');
@@ -266,79 +271,78 @@ async function recordHandoff() {
   const button = $('#handoffButton');
   button.disabled = true;
   try {
-    unwrap(await api.handoff({ summary: lastOrchestration?.task?.objective || '' }));
-    $('#syncState').textContent = 'Đã ghi capsule handoff — có thể mở chat mới.';
+    const result = unwrap(await api.handoff());
     await refreshOrchestration();
+    alert(`Đã ghi Capsule thành công (v${result.version}). Bạn có thể mở chat mới an toàn.`);
   } catch (error) {
-    $('#syncState').textContent = error.message;
+    alert(`Lỗi ghi capsule: ${error.message}`);
   } finally {
     button.disabled = false;
   }
 }
 
-async function transferController(targetClientId) {
-  const label = targetClientId === 'codex-desktop' ? 'Codex Desktop' : 'ChatWeb';
-  if (!window.confirm(`Chuyển semantic controller sang ${label}? Thao tác này đổi fencing token nhưng không copy transcript hay bật auto-handoff.`)) return;
-  const button = targetClientId === 'codex-desktop' ? $('#toDesktopButton') : $('#toChatWebButton');
-  button.disabled = true;
+async function transferController(target) {
+  const confirmMsg = target === 'codex-desktop'
+    ? 'Chuyển quyền điều khiển chính sang Codex Desktop?'
+    : 'Chuyển quyền điều khiển chính sang ChatWeb?';
+  if (!window.confirm(confirmMsg)) return;
   try {
-    unwrap(await api.transferController({ targetClientId, runId: lastOrchestration?.run?.run_id || '' }));
-    $('#syncState').textContent = `Đã chuyển controller sang ${label}.`;
+    unwrap(await api.transferController(target));
     await refreshOrchestration();
   } catch (error) {
-    $('#syncState').textContent = error.message;
+    alert(`Lỗi chuyển quyền: ${error.message}`);
   }
 }
 
 async function copyCodexConfig() {
-  const button = $('#copyCodexConfigButton');
-  button.disabled = true;
   try {
-    const result = unwrap(await api.copyCodexConfig());
-    $('#syncState').textContent = result?.copied
-      ? 'Đã copy cấu hình Codex Desktop thin proxy — không chứa MCP bearer.'
-      : 'Không thể copy cấu hình Codex Desktop.';
+    const config = unwrap(await api.copyCodexConfig());
+    await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+    alert('Đã sao chép cấu hình MCP vào clipboard.');
   } catch (error) {
-    $('#syncState').textContent = error.message;
-  } finally {
-    button.disabled = false;
+    alert(`Lỗi sao chép cấu hình: ${error.message}`);
   }
 }
 
-function tick() {
-  $('#clock').textContent = new Date().toLocaleTimeString('vi-VN');
+function updateClock() {
+  const now = new Date();
+  $('#clock').textContent = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   if (lastCommandStartedAt) {
-    const command = lastOrchestration?.task?.current_command;
-    if (command && String(command.status || '') === 'running') {
-      const kind = { build: 'Build', test: 'Kiểm thử', command: 'Lệnh' }[String(command.kind || '')] || 'Lệnh';
-      $('#taskCommand').textContent = `${kind}: ${String(command.command || '').slice(0, 120)} (${formatDuration(Date.now() - lastCommandStartedAt)})`;
+    const duration = formatDuration(Date.now() - lastCommandStartedAt);
+    const cmdEl = $('#taskCommand');
+    if (cmdEl && !cmdEl.hidden) {
+      const parts = cmdEl.textContent.split(' (');
+      if (parts.length > 1) {
+        cmdEl.textContent = `${parts[0]} (${duration})`;
+      }
     }
   }
-  if (!orchestrationError && lastSyncAt && Date.now() - lastSyncAt > 8000) {
-    $('#syncState').textContent = `Dữ liệu cũ hơn ${Math.round((Date.now() - lastSyncAt) / 1000)}s — kiểm tra MCP`;
-  }
 }
 
-$('#closeButton').onclick = () => api.close();
-$('#pauseTask').onclick = () => taskAction('pause');
-$('#resumeTask').onclick = () => taskAction('resume');
-$('#stopTask').onclick = () => taskAction('stop');
-$('#handoffButton').onclick = () => recordHandoff();
-$('#toDesktopButton').onclick = () => transferController('codex-desktop');
-$('#toChatWebButton').onclick = () => transferController('chatweb');
-$('#copyCodexConfigButton').onclick = () => copyCodexConfig();
-$('#refreshButton').onclick = () => { refreshOrchestration(true); refreshHealth(true); };
+// Bind event listeners
+$('#pauseTask').addEventListener('click', () => taskAction('pause'));
+$('#resumeTask').addEventListener('click', () => taskAction('resume'));
+$('#stopTask').addEventListener('click', () => taskAction('stop'));
+$('#handoffButton').addEventListener('click', recordHandoff);
+$('#refreshButton').addEventListener('click', () => { refreshOrchestration(true); refreshHealth(true); });
+$('#toDesktopButton').addEventListener('click', () => transferController('codex-desktop'));
+$('#toChatWebButton').addEventListener('click', () => transferController('chatweb'));
+$('#copyCodexConfigButton').addEventListener('click', copyCodexConfig);
+$('#closeButton').addEventListener('click', () => api.close());
 
 document.addEventListener('visibilitychange', () => {
-  document.body.classList.toggle('is-hidden', document.hidden);
   if (!document.hidden) {
     refreshOrchestration(true);
     refreshHealth(true);
   }
 });
 
-refreshHealth();
-refreshOrchestration();
+// Polling interval
 setInterval(refreshOrchestration, 2000);
-setInterval(refreshHealth, 5000);
-setInterval(tick, 1000);
+setInterval(refreshHealth, 3000);
+setInterval(updateClock, 1000);
+
+// Initial call
+refreshOrchestration(true);
+refreshHealth(true);
+updateClock();

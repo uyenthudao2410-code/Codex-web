@@ -28,6 +28,42 @@ P0-P3 engineering/control work is not to be expanded merely to fill representati
 
 The prior P0 live-activation blocker is cleared. The accepted live checks covered current process/source identity, `workspace_context`, `agent_workflow` prepare, `task_control` audit, exactly 8 `smart-v3` public tools, no raw ExceptionGroup leakage on the acceptance calls, and no stale/orphan/conflicting write authority. A new engineering phase is therefore governed by its own task-specific acceptance gates rather than by unfinished P0-P3 architecture.
 
+## P4 — Solution Economics Shadow — source accepted, evidence collection active
+
+P4 is shadow-only. For `feature` and `bugfix` tasks, record a structured recommendation before the first write and compare it later with durable accepted-result outcomes. The pre-mutation predictors are candidate solution scope, estimated touched surface, root-cause confidence, oracle strength, expected repair risk, and smallest causal solution scope. Outcome evidence includes first-pass acceptance, repair/replan count, TTAR, accepted file receipts, proof duration, explicitly observed local/wait spans, and explicit manual-fix outcome when present.
+
+**Engineering/source is accepted.** Evidence collection and live activation are separate gates. The current connected ChatWeb/Coding-VP schema still lacks `task_control.solution_shadow`, so live P4 collection on that connector remains pending an explicitly requested controlled runtime restart/reconnect and post-activation verification. Do not backfill a recommendation after the first write merely to manufacture a sample.
+
+The P4 analysis is descriptive until predictive validity is established. Reports separate `representative` evidence from benchmark/synthetic/unlabeled rows; missing observations remain unknown, LOC is explanatory rather than a target, and no shadow recommendation can change production behavior. The gate stays open until representative data contains enough real repair/non-repair outcome variation to validate which pre-change signals predict repair. No sample-size threshold is invented in advance merely to close the phase.
+
+In parallel, continue collecting frozen P3 server-first representative pairs naturally. Do not reopen P3 engineering and keep global server-first OFF.
+
+## P5 — Controlled Rework-Reduction A/B — gated / not started
+
+Start only after P4 predictive validity is established. Begin with `feature` and `bugfix` tasks under a stable quality oracle. Treatment is the smallest bounded intervention: a causal-fix gate, explicit oracle settlement before mutation, and bounded change surface. Promotion requires the quality floor to hold, repair/replan not to worsen, and TTAR/CAR to improve materially. P4 shadow recommendations alone never activate this treatment.
+
+## P6 — P3 server-first representative evidence — parallel collection only
+
+Continue the frozen P3 representative pilot naturally while P4/P5 progress. Keep global server-first OFF. This workstream supplies evidence; it does not reopen the accepted P3 control-plane architecture.
+
+## P7 — Model-routing economics — later, strong-oracle cohorts first
+
+After rework economics are understood, compare deterministic execution against Mini/Luna first on strong-oracle cohorts. Terra and Sol treatment lanes come later because integration width and review cost are higher. `sol_max` and `sol_ultra` remain explicit-only high-cost escalation and are never automatic evidence shortcuts.
+
+## P8 — Joint accepted-cost optimizer — deferred
+
+Only after P4-P7 provide validated inputs should routing, repair risk, proof cost, latency, and quality be combined into an optimizer for expected accepted cost. Do not optimize raw LOC, model-call count, or isolated tool latency as the North Star.
+
+## P9 — Capacity scaling — evidence-triggered only
+
+Scale workers, providers, runners, or orchestration capacity only when telemetry demonstrates that capacity is the active bottleneck. Do not add fleet/orchestration architecture pre-emptively.
+
+### Side workstreams
+
+- LSP: measure economic value (localization/proof/rework impact) before further architecture expansion.
+- Storage/artifact hygiene: keep it maintained, but do not let cleanup displace the accepted-result economics roadmap.
+- Approximate engineering allocation while P4 is active: 60–70% rework/accepted-result economics, 15–20% representative evidence, 10–15% operational reliability/telemetry hygiene, and approximately 0% new orchestration architecture without a concrete regression.
+
 ## Immediate hardening and acceptance priorities
 
 ### Closed — exact-source runtime activation

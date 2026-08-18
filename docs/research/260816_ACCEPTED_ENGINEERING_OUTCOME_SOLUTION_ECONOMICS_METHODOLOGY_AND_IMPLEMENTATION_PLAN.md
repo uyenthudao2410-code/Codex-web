@@ -2066,3 +2066,315 @@ North Star hoàn chỉnh vì vậy là:
 > **Coding Web tự động hiểu behavior và invariant cần đạt; loại bỏ work không cần thiết; reuse capability hiện hữu khi đúng; chọn giải pháp có expected engineering economics thấp nhất; sau đó phối hợp ChatWeb, model lanes, server compute, local edge và proof plane để tạo accepted code nhanh nhất, rẻ nhất, với ít rework và maintenance burden nhất.**
 
 Nếu một “optimization” chỉ làm code ngắn hơn, server bận hơn, token ít hơn hoặc dashboard đẹp hơn nhưng không cải thiện accepted-result economics sau quality floor, hệ thống phải có khả năng **REVISE hoặc REMOVE nó**.
+
+---
+
+# 37. Canonical Active Tracker — P4 Accepted-Result Economics
+
+**Current update:** 2026-08-18 18:04 ICT (Asia/Bangkok)  
+**Tracking rule:** từ checkpoint này, đây là **single active research tracker** cho chương trình accepted-result economics. Các research document khác dưới `docs/research/` giữ vai trò historical evidence, frozen experiment contract hoặc phase-specific handoff; không tiếp tục rải current-status addendum sang nhiều file nếu không có lý do contract-specific.
+
+Phần này supersede **chỉ các status/next-action statement cũ** trong tài liệu; methodology, hypotheses và historical evidence phía trên vẫn được giữ nguyên.
+
+## 37.1 Research-file precedence từ checkpoint này
+
+Current accepted-result economics tracking:
+
+```text
+PRIMARY ACTIVE TRACKER
+  docs/research/260816_ACCEPTED_ENGINEERING_OUTCOME_SOLUTION_ECONOMICS_METHODOLOGY_AND_IMPLEMENTATION_PLAN.md
+
+REFERENCE / HISTORICAL
+  docs/research/260817_PROJECT_REAL_STATE_SCIENTIFIC_EVIDENCE_AND_FULL_EXECUTION_PLAN.md
+  docs/research/260818_P2_REWORK_DIAGNOSIS_CLOSURE_AND_P3_HANDOFF.md
+
+FROZEN EXPERIMENT CONTRACT
+  docs/research/260818_P3_SERVER_FIRST_PAIRED_EXPERIMENT_MANIFEST.md
+```
+
+`docs/CURRENT_STATE.md` và `docs/ROADMAP.md` vẫn là maintained operational/product documents theo precedence riêng của repository. Chúng không thay vai trò của file research tracker này.
+
+## 37.2 Current phase boundary
+
+```text
+P0 runtime/orchestration recovery architecture    FROZEN unless concrete regression reproduces
+P1 measurement-integrity architecture             CLOSED
+P2 rework diagnosis architecture                  CLOSED
+P3 compute-placement engineering                  CLOSED / ACCEPTED
+P3 representative efficacy                        PARALLEL / DEFERRED EVIDENCE
+P4 Solution Economics source engineering          ACCEPTED
+P4 live shadow activation                         PENDING EXPLICIT CONTROLLED RESTART/RECONNECT
+P4 representative predictive evidence             COLLECTING / NOT YET SUFFICIENT
+P5 controlled rework-reduction treatment          CLOSED / NOT STARTED
+P6 P3 representative server-first evidence        PARALLEL ONLY
+P7 model-routing economics                        LATER
+P8 joint accepted-cost optimizer                  DEFERRED
+P9 capacity scaling                               EVIDENCE-TRIGGERED ONLY
+```
+
+North Star remains **accepted-result economics**: quality floor first, then minimize expected TTAR/CAR/rework/local burden/maintenance burden. LOC remains explanatory only.
+
+## 37.3 P4 source implementation now accepted
+
+P4 no longer exists only as the proposal described earlier in this document. Current source now contains a shadow-only implementation for `feature` and `bugfix` workflows.
+
+The implemented pre-mutation recommendation records structured, content-free signals:
+
+```text
+candidate_solution_scope
+estimated_touched_surface.files
+estimated_touched_surface.lines
+estimated_touched_surface.symbols
+root_cause_confidence
+oracle_strength
+expected_repair_risk
+smallest_causal_solution.scope
+smallest_causal_solution.estimated_touched_surface
+```
+
+Core constraints:
+
+- exactly one task-level recommendation per run;
+- recommendation must exist **before the first `write_lease_acquired` event**;
+- identical replay is idempotent;
+- conflicting replay or a second recommendation fails closed;
+- recording after any first write anywhere in the run fails closed, preventing repair-outcome leakage;
+- no source/code content is stored in the recommendation event;
+- `mode=shadow_only`;
+- `automatic_policy_activation=false`;
+- `production_behavior_changed=false`.
+
+Outcome joining now uses durable accepted-result evidence where available:
+
+```text
+first_pass_accepted
+replan_count
+repaired
+repair_final
+time_to_accepted_ms
+accepted file receipts when complete
+proof duration when observed
+local_execution/wait only from explicit observation spans
+manual intervention only from explicit quality outcome
+```
+
+Missing evidence remains unknown. In particular, uninstrumented lines/symbols, monetary cost, local/wait timing or manual intervention are never synthesized as zero.
+
+## 37.4 Evidence provenance is now explicit
+
+The population report now separates:
+
+```text
+representative
+benchmark
+synthetic
+unlabeled
+```
+
+Only `representative` rows are eligible to become promotion evidence. Benchmark, synthetic and unlabeled rows may support instrumentation/debugging/descriptive analysis but must not be pooled into a production predictive claim.
+
+The report may show descriptive repair rate, first-pass rate, accepted count, median TTAR and predictor-bucket breakdowns, but current governance remains:
+
+```text
+can_answer_which_signals_predict_repair = false
+predictive_claim_allowed                = false
+automatic_policy_activation             = false
+```
+
+No sample-size threshold is invented merely to close P4. The gate requires enough representative repair/non-repair variation and stable measurement to validate predictive usefulness honestly.
+
+## 37.5 Accepted engineering evidence
+
+### P4 core source acceptance
+
+```text
+run_id      d04acc77eb1d4b4fb1356f727736d411
+final wave  6912eb6e9afc435f91be8a8040437568
+state       CHECKPOINTED / ACCEPTED
+```
+
+Final affected-suite proof:
+
+```text
+python -m pytest tests/test_solution_economics.py tests/test_task_state_and_build.py tests/test_evaluation_report.py tests/test_efficiency_runtime.py tests/test_code_mode_bindings.py -q
+110 passed, 18 subtests passed
+
+python scripts/check_module_size.py
+module-size budgets ok
+
+git diff --check on P4 scope
+PASS
+```
+
+### P4 provenance + research/documentation follow-up
+
+```text
+run_id      6fa8ab3c0e5f4eb68317ac8f8bbe098c
+final wave  5382240528f34ad2a90ba4895d41b5d7
+state       CHECKPOINTED / ACCEPTED
+integrity   PASS
+```
+
+Proof actually run:
+
+```text
+git diff --check -- docs/CURRENT_STATE.md docs/ROADMAP.md resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/tests/test_solution_economics.py
+PASS
+
+python -m pytest tests/test_solution_economics.py tests/test_evaluation_report.py -q && python scripts/check_module_size.py
+PASS
+```
+
+This follow-up added explicit representative-vs-nonrepresentative separation and aligned current operational documentation with the P4/P5-P9 phase boundary.
+
+## 37.6 Live activation is intentionally separate
+
+The connected Coding-VP/ChatWeb runtime at this checkpoint still reports:
+
+```text
+runtime_version       0.4.3
+process_instance_id   5J8uwLkgsLteIhLj
+server_instance_id    vZVyIdP_Ea9rV50y
+smart-v3 tool_count   8
+live contract SHA     4ddfa6bb982f46f02bdd448975ca64b3235a59379b379ec651bcc44000ac9aca
+stale runs            0
+unresolved stale      0
+orphaned background   0
+orphaned idempotency  0
+```
+
+The accepted P4 source contract expects the newer `task_control` schema containing `solution_shadow`; the source-derived smart-v3 contract fingerprint from the accepted implementation is:
+
+```text
+bd5c09aeffe02bb60d0f548ed02912e8a21e78b91404186e6896f6d6cbdedd70
+```
+
+The currently connected client schema still does not expose `task_control.solution_shadow`. Therefore:
+
+> **P4 source is accepted, but live collection on this connector is not yet active.**
+
+A recommendation must never be backfilled after write merely to manufacture a sample. If the live connector cannot record the shadow recommendation before first mutation, that task is not a valid P4 shadow sample.
+
+No Runtime restart was performed in this continuation. A controlled restart/reconnect is a separate lifecycle action and requires an explicit user request.
+
+## 37.7 Activation acceptance checklist when explicitly requested
+
+After an explicit controlled restart/reconnect request, live P4 activation is accepted only if the reloaded process proves all of the following:
+
+```text
+new process/server instance identity observed
+workspace_context(detail=full) PASS
+agent_workflow prepare PASS
+task_control audit PASS
+smart-v3 public tool count = 8
+loaded tool contract matches current source contract
+solution_shadow action is exposed by the connected schema
+stale orchestration runs = 0
+unresolved stale runs = 0
+orphaned background operations = 0
+orphaned idempotency records = 0
+no conflicting write authority
+```
+
+Only after that checklist may new eligible `feature`/`bugfix` tasks begin producing live pre-write shadow records.
+
+## 37.8 P4 evidence program — what to collect next
+
+For every genuinely eligible representative `feature` or `bugfix` task after live activation:
+
+```text
+BEFORE FIRST WRITE
+  candidate solution scope
+  estimated touched surface
+  root-cause confidence
+  oracle strength
+  expected repair risk
+  smallest causal solution recommendation
+
+AFTER OUTCOME
+  first-pass accepted?
+  repaired/replanned?
+  replan count
+  TTAR
+  accepted file count when checkpoint receipts are complete
+  proof duration when observed
+  explicit local execution / wait spans when observed
+  explicit manual intervention outcome when observed
+```
+
+Population analysis should answer in order:
+
+1. Is representative coverage actually accumulating?
+2. Is there enough repair/non-repair outcome variation?
+3. Do predictor buckets have enough support to compare without pooling benchmark/synthetic/unlabeled rows?
+4. Which pre-mutation signals, if any, have stable predictive value for repair?
+5. Does that evidence justify a bounded P5 treatment without weakening the quality floor?
+
+Until question 4 can be answered credibly, P4 remains descriptive and P5 remains closed.
+
+## 37.9 P5 treatment gate remains closed
+
+P5 may begin only after P4 representative evidence supports a predictive rework hypothesis. Initial treatment should remain bounded to strong-oracle `feature`/`bugfix` classes and vary only a small intervention set:
+
+```text
+causal-fix gate
+explicit oracle settlement before mutation
+bounded change surface
+```
+
+Promotion requires:
+
+```text
+quality floor non-inferior
+repair/replan not worse
+TTAR materially better
+CAR materially better when cost is genuinely observed
+no authority/proof regression
+```
+
+P4 shadow recommendations alone never authorize treatment.
+
+## 37.10 Parallel evidence and later phases
+
+P3 server-first representative evidence may continue naturally in parallel under its frozen manifest. It must not reopen P3 engineering, and global server-first remains OFF.
+
+Model-routing economics comes later. The preferred sequence remains deterministic vs Mini/Luna first on strong-oracle cohorts, followed by broader/higher-integration routes only when economics justify them. Terra/Sol treatment lanes are later; `sol_max`/`sol_ultra` remain explicit-only high-cost escalation.
+
+The joint optimizer is deferred until rework risk, route economics, proof cost, placement economics and quality have measured inputs. Capacity scaling is deferred until telemetry demonstrates capacity is the active bottleneck.
+
+## 37.11 Stop rules for this active tracker
+
+Do not:
+
+- reopen P0-P3 orchestration architecture without a concrete regression reproduction;
+- create another active research tracker for the same accepted-result economics program;
+- backfill P4 pre-write recommendation data after mutation;
+- treat benchmark/synthetic/unlabeled rows as representative promotion evidence;
+- convert missing telemetry to zero;
+- optimize LOC as the North Star;
+- open P5 because source engineering is green;
+- enable automatic non-deterministic routing or global server-first from P4 shadow data;
+- restart Runtime implicitly;
+- claim live `solution_shadow` collection before the connected schema actually exposes and proves it.
+
+## 37.12 Single-file tracking policy going forward
+
+For the accepted-result economics program, append future current-state checkpoints **here only** unless a new frozen experiment manifest or a separate immutable phase handoff is scientifically necessary.
+
+The normal update format for each future checkpoint is:
+
+```text
+DATE / SOURCE / RUNTIME IDENTITY
+WHAT CHANGED
+CURRENT P4 EVIDENCE POPULATION
+REPRESENTATIVE COVERAGE
+REPAIR / FIRST-PASS OUTCOMES
+PREDICTOR SUPPORT / UNCERTAINTY
+QUALITY FLOOR
+LIVE ACTIVATION STATUS
+ACCEPTED OR NOT
+WHAT REMAINS
+NEXT CRITICAL ACTION
+```
+
+This keeps the methodology, chronology, engineering acceptance and live evidence progression in one place while leaving older research files stable for auditability.

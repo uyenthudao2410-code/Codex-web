@@ -120,6 +120,24 @@ The P0-P3 program is no longer one undifferentiated implementation gate. Enginee
 
 The P0 **live activation acceptance** below was satisfied on 2026-08-18. The program may move to a new engineering roadmap item while P1/P2/P3 evidence programs continue in parallel without reopening their closed implementation waves.
 
+### P4 — Solution Economics Shadow — SOURCE ACCEPTED / EVIDENCE COLLECTING
+
+The next engineering focus is accepted-result economics rather than additional P0-P3 orchestration architecture. P4 engineering/source is accepted and current source provides a shadow evidence path for `feature` and `bugfix` runs:
+
+- one task-level recommendation is recorded before the first `write_lease_acquired` event;
+- recommendation evidence is structured and content-free: candidate scope, estimated touched surface, root-cause confidence, oracle strength, expected repair risk, and smallest causal solution scope;
+- the recommendation is joined after execution to durable accepted-result evidence including first-pass acceptance, repair/replan count, TTAR, accepted file receipts, proof duration, explicit local/wait observation spans, and explicit manual-fix outcome when available;
+- lines/symbols touched, cost, wait, or intervention remain unknown when they were not actually observed; absent telemetry is never converted to zero;
+- population output is descriptive by predictor bucket only. It does not claim causality or calibrated prediction and cannot activate a production intervention;
+- population output preserves evaluation provenance. `representative` rows are counted separately from `benchmark`, `synthetic`, and unlabeled rows; non-representative rows remain useful descriptive evidence but are not promotion evidence for predictive policy;
+- LOC/touched surface remains an explanatory variable, not the optimization target.
+
+P4 does **not** add another public MCP tool and does not change routing, model choice, compute placement, write authority, proof policy, acceptance authority, or production mutation behavior. The source contract adds `task_control action=solution_shadow` inside the existing eight-tool surface.
+
+**Live activation remains a separate gate.** The currently connected ChatWeb/Coding-VP `task_control` schema still does not expose `solution_shadow`, so this source capability must not yet be described as live on that connector. No runtime restart was performed in this continuation because a controlled restart requires an explicit user request. After such a request, activation acceptance must verify the reloaded contract, the eight-tool `smart-v3` count, `workspace_context`, `agent_workflow` prepare, `task_control` audit, and zero stale/orphan authority before live collection is claimed.
+
+The P4 predictive-evidence gate remains **COLLECTING**. Descriptive separation by provenance or signal is not predictive validation. P5 controlled treatment remains closed until representative feature/bugfix evidence can credibly show which pre-mutation signals predict repair without weakening the quality floor.
+
 ### P0 live activation incident — CLOSED / ACCEPTED
 
 During an earlier 2026-08-18 closure check, every ChatWeb Coding MCP action attempted through that connected tool surface (`workspace_context`, `task_control restart_runtime`, and `agent_workflow`) returned a raw `ExceptionGroup: unhandled errors in a TaskGroup` before a normal typed tool result could be observed. That observation remains historical incident evidence; it no longer describes the currently connected process.
@@ -230,6 +248,9 @@ The following are deliberate evidence/authority gates, not documentation bugs:
 - automatic non-deterministic routing: **OFF / deterministic fail-closed** pending representative accepted paired evidence;
 - automatic global server-first: **OFF** pending representative compute-placement evidence;
 - P3 representative efficacy: **DEFERRED**, separate from the closed engineering gate;
+- P4 source engineering: **ACCEPTED**; connected live activation of `solution_shadow`: **PENDING explicit controlled restart/reconnect**;
+- P4 predictive validity: **COLLECTING**; benchmark, synthetic, and unlabeled shadow rows are not promotion evidence;
+- P5 controlled rework-reduction treatment: **CLOSED / NOT STARTED** until the P4 predictive gate is satisfied;
 - auto-handoff: **OFF** pending more real A/B evidence;
 - paid Flash terminal reproduction: **requires explicit external-cost authorization**;
 - provider/model write authority over the primary checkout: **not granted by telemetry or routing alone**;

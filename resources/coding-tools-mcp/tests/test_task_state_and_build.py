@@ -512,7 +512,9 @@ class ToolModeTests(unittest.TestCase):
             self.assertNotIn("document_extract", tools)
             task_schema = server_module.input_schemas()["task_control"]
             self.assertIn("restart_runtime", task_schema["properties"]["action"]["enum"])
+            self.assertIn("solution_shadow", task_schema["properties"]["action"]["enum"])
             self.assertIn("confirm_restart", task_schema["properties"])
+            self.assertIn("solution_shadow_recommendation", task_schema["properties"])
 
     def test_permission_elicitation_fallback_is_explicit_and_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
