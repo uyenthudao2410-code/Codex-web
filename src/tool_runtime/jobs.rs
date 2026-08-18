@@ -259,6 +259,9 @@ fn validation_job_projection_with_metadata(
             "entry_count": identity.entry_count,
         });
     }
+    if let Some(placement) = metadata.and_then(|metadata| metadata.compute_placement.as_ref()) {
+        value["compute_placement"] = json!(placement);
+    }
     Some(value)
 }
 

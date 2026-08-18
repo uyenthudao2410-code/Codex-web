@@ -8,7 +8,7 @@ use crate::shell_protocol::{
     ShellClientRegisterRequest, ShellJobOpRequest, ShellJobValidationMetadata,
     ShellJobValidationProgress, ShellJobValidationSourceSnapshotIdentity, ShellJobValidationStep,
 };
-use crate::tool_runtime::{RuntimeInfo, ToolRuntime};
+use crate::tool_runtime::{RuntimeInfo, ToolRuntime, ValidationComputePlacementPolicy};
 use std::sync::Arc;
 use std::time::Duration;
 use webcodex_core::source_snapshot::{
@@ -218,6 +218,322 @@ fn spawn_check(
             )
             .await
     })
+}
+
+fn spawn_check_with_placement(
+    runtime: ToolRuntime,
+    id: &str,
+    policy: ValidationComputePlacementPolicy,
+) -> tokio::task::JoinHandle<crate::tool_runtime::ToolResult> {
+    let project = runtime_project(id);
+    tokio::spawn(async move {
+        runtime
+            .cargo_check_with_context(
+                project,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(600),
+                Some(policy),
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+    })
+}
+
+async fn explicit_server_preferred_clean_dispatch() -> Result<(), String> {
+    let source = "r3b2-explicit-server-source";
+    let target = "r3b2-explicit-server-target";
+    let head = "8123456789abcdef0123456789abcdef01234567";
+    let runtime = runtime(Duration::from_millis(20));
+    register(&runtime, source, project(head, false), false, 1).await?;
+    register(&runtime, target, project(head, false), true, 2).await?;
+
+    let task = spawn_check_with_placement(
+        runtime.clone(),
+        source,
+        ValidationComputePlacementPolicy::ServerPreferred,
+    );
+    let request = wait_request(&runtime, target).await?;
+    require(
+        request.kind == "start_validation_job",
+        format!(
+            "expected server-preferred validation job, got {}",
+            request.kind
+        ),
+    )?;
+    require(
+        poll(&runtime, source).await?.is_none(),
+        "server-preferred clean validation unexpectedly enqueued on source Runner",
+    )?;
+    let job_id = request
+        .job_id
+        .clone()
+        .ok_or("server-preferred validation missing job_id")?;
+    let placement = request
+        .job_context
+        .as_ref()
+        .and_then(|context| context.validation.as_ref())
+        .and_then(|validation| validation.compute_placement.as_ref())
+        .cloned()
+        .ok_or("server-preferred Job missing compute placement evidence")?;
+    require(
+        placement.requested_policy == "server_preferred"
+            && placement.actual_placement == "server_compute"
+            && !placement.fallback_used
+            && placement.reason_code == "server_compute_selected"
+            && placement.source_runner_id == source
+            && placement.executor_runner_id == target,
+        "server-preferred placement evidence mismatch",
+    )?;
+    let placement_json = serde_json::to_value(&placement).map_err(|error| error.to_string())?;
+
+    let handoff = task.await.map_err(|error| error.to_string())?;
+    require(
+        handoff.success && handoff.output["compute_placement"] == placement_json,
+        format!(
+            "server-preferred handoff evidence mismatch: {:?}",
+            handoff.error
+        ),
+    )?;
+    let status = runtime
+        .job_status_for_auth(job_id.clone(), false, None)
+        .await;
+    require(
+        status.success && status.output["validation"]["compute_placement"] == placement_json,
+        "job_status did not project server-preferred placement evidence",
+    )?;
+    let log = runtime
+        .job_log_for_auth(job_id, None, Some(200), None, None, None)
+        .await;
+    require(
+        log.success
+            && log.output["validation"]["compute_placement"]
+                == status.output["validation"]["compute_placement"],
+        "job_log did not project server-preferred placement evidence",
+    )?;
+    complete_job(&runtime, target, &request).await?;
+    Ok(())
+}
+
+async fn explicit_local_only_stays_on_source() -> Result<(), String> {
+    let source = "r3b2-explicit-local-source";
+    let target = "r3b2-explicit-local-target";
+    let head = "9123456789abcdef0123456789abcdef01234567";
+    let runtime = runtime(Duration::from_millis(20));
+    register(&runtime, source, project(head, false), false, 1).await?;
+    register(&runtime, target, project(head, false), true, 2).await?;
+
+    let task = spawn_check_with_placement(
+        runtime.clone(),
+        source,
+        ValidationComputePlacementPolicy::LocalOnly,
+    );
+    let request = wait_request(&runtime, source).await?;
+    require(
+        poll(&runtime, target).await?.is_none(),
+        "local_only validation enqueued work on server-compute Runner",
+    )?;
+    let placement = request
+        .job_context
+        .as_ref()
+        .and_then(|context| context.validation.as_ref())
+        .and_then(|validation| validation.compute_placement.as_ref())
+        .cloned()
+        .ok_or("local_only Job missing compute placement evidence")?;
+    require(
+        placement.requested_policy == "local_only"
+            && placement.actual_placement == "source"
+            && !placement.fallback_used
+            && placement.reason_code == "local_only_policy"
+            && placement.source_runner_id == source
+            && placement.executor_runner_id == source,
+        "local_only placement evidence mismatch",
+    )?;
+    let placement_json = serde_json::to_value(&placement).map_err(|error| error.to_string())?;
+    let handoff = task.await.map_err(|error| error.to_string())?;
+    require(
+        handoff.success && handoff.output["compute_placement"] == placement_json,
+        "local_only handoff did not retain placement evidence",
+    )?;
+    complete_job(&runtime, source, &request).await?;
+    Ok(())
+}
+
+async fn explicit_server_preferred_falls_back_to_source() -> Result<(), String> {
+    let source = "r3b2-explicit-fallback-source";
+    let head = "a123456789abcdef0123456789abcdef01234567";
+    let runtime = runtime(Duration::from_millis(20));
+    register(&runtime, source, project(head, false), false, 1).await?;
+
+    let task = spawn_check_with_placement(
+        runtime.clone(),
+        source,
+        ValidationComputePlacementPolicy::ServerPreferred,
+    );
+    let request = wait_request(&runtime, source).await?;
+    let placement = request
+        .job_context
+        .as_ref()
+        .and_then(|context| context.validation.as_ref())
+        .and_then(|validation| validation.compute_placement.as_ref())
+        .cloned()
+        .ok_or("server-preferred fallback Job missing placement evidence")?;
+    require(
+        placement.requested_policy == "server_preferred"
+            && placement.actual_placement == "source"
+            && placement.fallback_used
+            && placement.reason_code == "server_compute_fallback_source"
+            && placement.source_runner_id == source
+            && placement.executor_runner_id == source,
+        "server-preferred fallback evidence mismatch",
+    )?;
+    let placement_json = serde_json::to_value(&placement).map_err(|error| error.to_string())?;
+    let handoff = task.await.map_err(|error| error.to_string())?;
+    require(
+        handoff.success && handoff.output["compute_placement"] == placement_json,
+        "server-preferred fallback handoff lost placement evidence",
+    )?;
+    complete_job(&runtime, source, &request).await?;
+    Ok(())
+}
+
+async fn explicit_invalid_contexts_reject_before_enqueue() -> Result<(), String> {
+    let head = "b123456789abcdef0123456789abcdef01234567";
+
+    let dirty_runtime = runtime(Duration::from_millis(20));
+    register(
+        &dirty_runtime,
+        "r3b2-explicit-dirty-source",
+        project(head, true),
+        false,
+        1,
+    )
+    .await?;
+    register(
+        &dirty_runtime,
+        "r3b2-explicit-dirty-target",
+        project(head, false),
+        true,
+        2,
+    )
+    .await?;
+    let dirty = dirty_runtime
+        .cargo_check_with_context(
+            runtime_project("r3b2-explicit-dirty-source"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(600),
+            Some(ValidationComputePlacementPolicy::ServerPreferred),
+            None,
+            None,
+            None,
+            None,
+        )
+        .await;
+    require(
+        !dirty.success
+            && dirty.output["failure_kind"] == "invalid_arguments"
+            && dirty.output["command_started"] == false,
+        "dirty explicit placement was not rejected before execution",
+    )?;
+    require(
+        poll(&dirty_runtime, "r3b2-explicit-dirty-source")
+            .await?
+            .is_none()
+            && poll(&dirty_runtime, "r3b2-explicit-dirty-target")
+                .await?
+                .is_none(),
+        "dirty explicit placement enqueued a Runner request",
+    )?;
+
+    let sandbox_runtime = runtime(Duration::from_millis(20));
+    register(
+        &sandbox_runtime,
+        "r3b2-explicit-sandbox-source",
+        project(head, false),
+        false,
+        1,
+    )
+    .await?;
+    let sandboxed = sandbox_runtime
+        .cargo_check_with_context(
+            runtime_project("r3b2-explicit-sandbox-source"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(600),
+            Some(ValidationComputePlacementPolicy::LocalOnly),
+            None,
+            None,
+            Some("inspect"),
+            None,
+        )
+        .await;
+    require(
+        !sandboxed.success
+            && sandboxed.output["failure_kind"] == "invalid_arguments"
+            && sandboxed.output["command_started"] == false,
+        "sandboxed explicit placement was not rejected before execution",
+    )?;
+    require(
+        poll(&sandbox_runtime, "r3b2-explicit-sandbox-source")
+            .await?
+            .is_none(),
+        "sandboxed explicit placement enqueued a Runner request",
+    )?;
+
+    let short_runtime = runtime(Duration::from_millis(20));
+    register(
+        &short_runtime,
+        "r3b2-explicit-short-source",
+        project(head, false),
+        false,
+        1,
+    )
+    .await?;
+    let short = short_runtime
+        .cargo_check_with_context(
+            runtime_project("r3b2-explicit-short-source"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(60),
+            Some(ValidationComputePlacementPolicy::LocalOnly),
+            None,
+            None,
+            None,
+            None,
+        )
+        .await;
+    require(
+        !short.success
+            && short.output["failure_kind"] == "invalid_arguments"
+            && short.output["command_started"] == false,
+        "short explicit placement was not rejected before execution",
+    )?;
+    require(
+        poll(&short_runtime, "r3b2-explicit-short-source")
+            .await?
+            .is_none(),
+        "short explicit placement enqueued a Runner request",
+    )
 }
 
 async fn successful_target_dispatch() -> Result<(), String> {
@@ -523,6 +839,10 @@ async fn dispatched_timeout_fails_closed() -> Result<(), String> {
 }
 
 pub async fn run_server_first_dirty_snapshot_validation_scenarios() -> Result<(), String> {
+    explicit_server_preferred_clean_dispatch().await?;
+    explicit_local_only_stays_on_source().await?;
+    explicit_server_preferred_falls_back_to_source().await?;
+    explicit_invalid_contexts_reject_before_enqueue().await?;
     successful_target_dispatch().await?;
     mismatched_snapshot_identity_is_rejected_before_enqueue().await?;
     undispatched_fallback().await?;

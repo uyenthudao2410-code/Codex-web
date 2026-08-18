@@ -1,60 +1,57 @@
 {
   "version": 2,
-  "task_id": "0926b3663f15483e8c6e2241e54d5d1e",
-  "orchestration": {
-    "run_id": "a020e85c8d0f4e4bb55462a2c16f4776",
-    "wave_id": "a9c7680dd0f44f46a479638f269d1187",
-    "orchestration_state": "PREFLIGHT",
-    "execution_mode": "mcp_only",
-    "route_requested": "",
-    "route_resolved": "",
-    "write_owner": "",
-    "write_lease_id": "",
-    "delegation_id": "",
-    "base_head": "189de19e2f7dbaa2a71ee62dbcc50d5d76a55c0a",
-    "worktree_fp": "942fe30da7ec0e3ea2c37f83b52070d0b7a0da6568fc43763e7b9e7ec5e9e010",
-    "contract_fp": ""
-  },
-  "objective": "Implement the remaining Layer C of P3 validation compute-placement control on the authoritative current checkout. Consume the already-plumbed optional compute_placement_policy for cargo_check/cargo_test only. Explicit selector must reject before enqueue/process unless resolved project is Agent-backed, sandbox is absent, request is long structured validation (effective timeout > sync wait), Runner supports structured async validation handoff, and source is Clean exact-source with a valid exact git head. Unknown selector is already typed/serde rejected. Explicit local_only must force source Runner and never select/call server compute. Explicit server_preferred must use existing clean-source server target selection + revalidation and safe local fallback; caller never supplies runner id. Absent selector must preserve all current production behavior including dirty-snapshot auto-offload. For explicit runs construct ShellJobValidationComputePlacement evidence and persist it in ShellJobValidationMetadata, immediate cargo terminal/handoff result, and job_status/job_log validation projection; absent selector must keep evidence absent. Add focused tests for local_only, server_preferred success/fallback, invalid explicit contexts pre-execution, default absent-selector behavior, projection, and cargo_fmt/schema rejection as needed. Do not modify analyzer/frozen P3 manifest, do not restart runtime, do not enroll representative P3 pairs, and preserve all .coding-tools telemetry plus existing formatting diffs.",
+  "task_id": "8667aedb81614965b4896ad09fd0e65f",
+  "orchestration": {},
+  "objective": "Run a workspace command",
   "status": "waiting",
   "steps": [],
   "current_step": "Waiting for model",
-  "current_command": null,
+  "current_command": {
+    "command": "powershell -NoProfile -Command \"Start-Sleep -Seconds 2\" && git add -A && git add -A -- .coding-tools && npm run check:coding-tools-history && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git diff --cached --stat && git commit -m \"feat: control validation compute placement\" && git push origin main && git status --short --branch && git log -3 --oneline --decorate",
+    "kind": "command",
+    "session_id": "PoTlHduuYWl7JC2ySquFfdnL",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-18T00:42:31.131Z"
+  },
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
   "next_step": "",
-  "created_at": "2026-08-18T00:20:09.482Z",
-  "updated_at": "2026-08-18T00:20:15.672Z",
+  "created_at": "2026-08-18T00:42:13.559Z",
+  "updated_at": "2026-08-18T00:42:31.131Z",
   "events": [
     {
-      "time": "2026-08-18T00:20:09.482Z",
+      "time": "2026-08-18T00:42:13.559Z",
       "event": "task_auto_started",
       "details": {
-        "objective": "Implement the remaining Layer C of P3 validation compute-placement control on the authoritative current checkout. Consume the already-plumbed optional compute_placement_policy for cargo_check/cargo_test only. Explicit selector must reject before enqueue/process unless resolved project is Agent-backed, sandbox is absent, request is long structured validation (effective timeout > sync wait), Runner supports structured async validation handoff, and source is Clean exact-source with a valid exact git head. Unknown selector is already typed/serde rejected. Explicit local_only must force source Runner and never select/call server compute. Explicit server_preferred must use existing clean-source server target selection + revalidation and safe local fallback; caller never supplies runner id. Absent selector must preserve all current production behavior including dirty-snapshot auto-offload. For explicit runs construct ShellJobValidationComputePlacement evidence and persist it in ShellJobValidationMetadata, immediate cargo terminal/handoff result, and job_status/job_log validation projection; absent selector must keep evidence absent. Add focused tests for local_only, server_preferred success/fallback, invalid explicit contexts pre-execution, default absent-selector behavior, projection, and cargo_fmt/schema rejection as needed. Do not modify analyzer/frozen P3 manifest, do not restart runtime, do not enroll representative P3 pairs, and preserve all .coding-tools telemetry plus existing formatting diffs."
+        "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-18T00:20:10.302Z",
-      "event": "orchestration_context_ready",
+      "time": "2026-08-18T00:42:13.796Z",
+      "event": "command_started",
       "details": {
-        "state": "PREFLIGHT"
+        "command": "rg -n \"coding-tools.*(stage|delivery|snapshot)|ledger\\.sqlite3-(shm|wal)|git add -A -- \\.coding-tools|check:coding-tools\" package.json scripts AGENTS.md docs resources/coding-tools-mcp/AGENTS.md",
+        "session_id": "hgzXwrDFkczbEtP3rdmn8-Xl"
       }
     },
     {
-      "time": "2026-08-18T00:20:15.669Z",
-      "event": "orchestration_prepared",
+      "time": "2026-08-18T00:42:15.988Z",
+      "event": "command_finished",
       "details": {
-        "state": "PREFLIGHT"
+        "command": "rg -n \"coding-tools.*(stage|delivery|snapshot)|ledger\\.sqlite3-(shm|wal)|git add -A -- \\.coding-tools|check:coding-tools\" package.json scripts AGENTS.md docs resources/coding-tools-mcp/AGENTS.md",
+        "status": "passed"
       }
     },
     {
-      "time": "2026-08-18T00:20:15.672Z",
-      "event": "files_modified",
+      "time": "2026-08-18T00:42:31.131Z",
+      "event": "command_started",
       "details": {
-        "count": 0
+        "command": "powershell -NoProfile -Command \"Start-Sleep -Seconds 2\" && git add -A && git add -A -- .coding-tools && npm run check:coding-tools-history && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git diff --cached --stat && git commit -m \"feat: control validation compute placement\" && git push origin main && git status --short --branch && git log -3 --oneline --decorate",
+        "session_id": "PoTlHduuYWl7JC2ySquFfdnL"
       }
     }
   ]

@@ -22,7 +22,8 @@ use super::{ExecutionPurpose, ToolRuntime};
 use crate::auth::AuthContext;
 use crate::shell_client::{decode_source_snapshot_capture_response, ShellJobStartMetadata};
 use crate::shell_protocol::{
-    valid_exact_git_oid, ShellCommandExecutionState, ShellJobOpRequest, ShellJobValidationMetadata,
+    valid_exact_git_oid, ShellCommandExecutionState, ShellJobOpRequest,
+    ShellJobValidationComputePlacement, ShellJobValidationMetadata,
     ShellJobValidationSourceIdentity, ShellJobValidationSourceSnapshotIdentity,
     ShellJobValidationStep, VALIDATION_SOURCE_DIRTY_CODE, VALIDATION_SOURCE_IDENTITY_MISMATCH_CODE,
     VALIDATION_SOURCE_IDENTITY_UNAVAILABLE_CODE,
@@ -222,6 +223,61 @@ fn reject_structured_cargo_ssh_resource(ssh_resource: Option<&str>) -> Option<To
             "use the named runner host through run_shell or run_job instead.",
         ))
     })
+}
+
+fn reject_explicit_compute_placement(tool_name: &str, reason: &str, guidance: &str) -> ToolResult {
+    ToolResult::err_with_output(
+        command_rejected_message(reason, guidance),
+        json!({
+            "execution_source": tool_name,
+            "command_started": false,
+            "command_completed": false,
+            "command_ok": false,
+            "exit_code": null,
+            "failure_kind": "invalid_arguments",
+            "tool_failure": true,
+        }),
+    )
+}
+
+fn explicit_compute_placement_evidence(
+    policy: ValidationComputePlacementPolicy,
+    source_runner_id: &str,
+    executor_runner_id: &str,
+) -> ShellJobValidationComputePlacement {
+    match policy {
+        ValidationComputePlacementPolicy::LocalOnly => {
+            debug_assert_eq!(source_runner_id, executor_runner_id);
+            ShellJobValidationComputePlacement {
+                requested_policy: policy.as_str().to_string(),
+                actual_placement: "source".to_string(),
+                fallback_used: false,
+                reason_code: "local_only_policy".to_string(),
+                source_runner_id: source_runner_id.to_string(),
+                executor_runner_id: executor_runner_id.to_string(),
+            }
+        }
+        ValidationComputePlacementPolicy::ServerPreferred
+            if source_runner_id != executor_runner_id =>
+        {
+            ShellJobValidationComputePlacement {
+                requested_policy: policy.as_str().to_string(),
+                actual_placement: "server_compute".to_string(),
+                fallback_used: false,
+                reason_code: "server_compute_selected".to_string(),
+                source_runner_id: source_runner_id.to_string(),
+                executor_runner_id: executor_runner_id.to_string(),
+            }
+        }
+        ValidationComputePlacementPolicy::ServerPreferred => ShellJobValidationComputePlacement {
+            requested_policy: policy.as_str().to_string(),
+            actual_placement: "source".to_string(),
+            fallback_used: true,
+            reason_code: "server_compute_fallback_source".to_string(),
+            source_runner_id: source_runner_id.to_string(),
+            executor_runner_id: executor_runner_id.to_string(),
+        },
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -669,6 +725,7 @@ impl ToolRuntime {
         tool_name: &str,
         request: ValidationRunRequest<'_>,
     ) -> ToolResult {
+        let compute_placement_policy = request.compute_placement_policy;
         let default = match tool_name {
             "cargo_check" => DEFAULT_CARGO_CHECK_TIMEOUT_SECS,
             "cargo_test" => DEFAULT_CARGO_TEST_TIMEOUT_SECS,
@@ -733,6 +790,37 @@ impl ToolRuntime {
         let session_id = request.session_id.clone();
         let ssh_resource = request.ssh_resource.map(str::to_string);
 
+        if compute_placement_policy.is_some() {
+            if !matches!(tool_name, "cargo_check" | "cargo_test") {
+                return reject_explicit_compute_placement(
+                    tool_name,
+                    "compute_placement_policy is supported only for cargo_check and cargo_test",
+                    "omit compute_placement_policy for this validation tool.",
+                );
+            }
+            if !resolved.is_agent() {
+                return reject_explicit_compute_placement(
+                    tool_name,
+                    "compute_placement_policy requires an Agent-backed project",
+                    "use an Agent-backed project, or omit compute_placement_policy to preserve normal routing.",
+                );
+            }
+            if request.sandbox.is_some() {
+                return reject_explicit_compute_placement(
+                    tool_name,
+                    "compute_placement_policy does not support sandboxed validation",
+                    "omit the sandbox for the controlled placement run, or omit compute_placement_policy.",
+                );
+            }
+            if timeout_secs <= sync_wait_secs {
+                return reject_explicit_compute_placement(
+                    tool_name,
+                    "compute_placement_policy requires a long validation that can hand off to a Job",
+                    "increase timeout_secs beyond the synchronous validation window, or omit compute_placement_policy.",
+                );
+            }
+        }
+
         if resolved.is_agent() {
             // Structured Cargo tools never execute through a named SSH resource.
             // Reject at the shared Agent entry so legacy sync, short sync, and
@@ -761,6 +849,13 @@ impl ToolRuntime {
             let async_handoff_available = (capabilities.async_jobs
                 || capabilities.async_shell_jobs)
                 && capabilities.structured_validation_argv;
+            if compute_placement_policy.is_some() && !async_handoff_available {
+                return reject_explicit_compute_placement(
+                    tool_name,
+                    "compute_placement_policy requires structured asynchronous validation Job support",
+                    "upgrade or reconnect the source Runner with structured validation Job support, or omit compute_placement_policy.",
+                );
+            }
             if !async_handoff_available {
                 let legacy_timeout = match request.timeout_secs {
                     Some(value) if value > 120 => {
@@ -835,6 +930,7 @@ impl ToolRuntime {
                     purpose,
                     timeout_secs,
                     sync_wait_secs,
+                    compute_placement_policy,
                     session_id,
                     ssh_resource.as_deref(),
                     request.sandbox.as_deref(),
@@ -916,6 +1012,7 @@ impl ToolRuntime {
         purpose: ExecutionPurpose,
         timeout_secs: u64,
         sync_wait_secs: u64,
+        compute_placement_policy: Option<ValidationComputePlacementPolicy>,
         session_id: Option<String>,
         ssh_resource: Option<&str>,
         sandbox: Option<&str>,
@@ -959,6 +1056,22 @@ impl ToolRuntime {
         };
         let auto_offload_eligible =
             validation_auto_offload_eligible(tool_name, timeout_secs, sync_wait_secs, sandbox);
+        if compute_placement_policy.is_some() {
+            if !auto_offload_eligible {
+                return reject_explicit_compute_placement(
+                    tool_name,
+                    "compute_placement_policy requires a long unsandboxed cargo_check/cargo_test validation",
+                    "use a long unsandboxed cargo_check/cargo_test request, or omit compute_placement_policy.",
+                );
+            }
+            if !matches!(&source, AgentValidationSource::Clean(_)) {
+                return reject_explicit_compute_placement(
+                    tool_name,
+                    "compute_placement_policy requires a clean exact-source Runner checkout",
+                    "refresh the source Runner to a clean exact Git HEAD, or omit compute_placement_policy to use normal source handling.",
+                );
+            }
+        }
         if matches!(source, AgentValidationSource::DirtySnapshot { .. }) && !auto_offload_eligible {
             return ToolResult::err_with_output(
                 command_rejected_message(
@@ -978,8 +1091,15 @@ impl ToolRuntime {
             AgentValidationSource::Clean(identity) => Some(identity.clone()),
             AgentValidationSource::Legacy | AgentValidationSource::DirtySnapshot { .. } => None,
         };
-        let (remote_target, remote_snapshot) = match &source {
-            AgentValidationSource::Clean(identity) if auto_offload_eligible => (
+        let (remote_target, remote_snapshot) = match (compute_placement_policy, &source) {
+            (
+                Some(ValidationComputePlacementPolicy::LocalOnly),
+                AgentValidationSource::Clean(_),
+            ) => (None, None),
+            (
+                Some(ValidationComputePlacementPolicy::ServerPreferred),
+                AgentValidationSource::Clean(identity),
+            ) => (
                 self.select_server_preferred_validation_target(
                     runtime_project_id,
                     &identity.expected_git_head,
@@ -989,10 +1109,24 @@ impl ToolRuntime {
                 .await,
                 None,
             ),
-            AgentValidationSource::DirtySnapshot {
-                project_id,
-                expected_git_head,
-            } if auto_offload_eligible && cwd.is_none() => {
+            (Some(_), _) => unreachable!("explicit placement source guard must fail closed"),
+            (None, AgentValidationSource::Clean(identity)) if auto_offload_eligible => (
+                self.select_server_preferred_validation_target(
+                    runtime_project_id,
+                    &identity.expected_git_head,
+                    purpose.as_str(),
+                    auth,
+                )
+                .await,
+                None,
+            ),
+            (
+                None,
+                AgentValidationSource::DirtySnapshot {
+                    project_id,
+                    expected_git_head,
+                },
+            ) if auto_offload_eligible && cwd.is_none() => {
                 let target = self
                     .select_server_preferred_snapshot_validation_target(
                         runtime_project_id,
@@ -1120,6 +1254,9 @@ impl ToolRuntime {
                 ));
             }
         };
+        let compute_placement = compute_placement_policy.map(|policy| {
+            explicit_compute_placement_evidence(policy, &source_client_id, &client_id)
+        });
         let effective_cwd = match super::helpers::resolve_agent_cwd(execution_config, cwd) {
             Ok(cwd) => cwd,
             Err(error) => {
@@ -1166,7 +1303,7 @@ impl ToolRuntime {
                         adapter: adapter.tool_identity().to_string(),
                         source_identity,
                         source_snapshot_identity,
-                        compute_placement: None,
+                        compute_placement: compute_placement.clone(),
                     }),
                     visibility: crate::shell_client::ShellJobVisibility::HiddenUntilHandoff,
                     sandbox: sandbox.map(str::to_string),
@@ -1197,6 +1334,7 @@ impl ToolRuntime {
             shell: actual_shell.to_string(),
             executor: "agent".to_string(),
             command_summary: crate::shell_client::command_preview(command),
+            compute_placement,
             auth: auth.cloned(),
         };
         self.await_validation_job(job_id, sync_wait_secs, adapter, handoff)
@@ -1708,7 +1846,8 @@ impl ToolRuntime {
             "queued" | "agent_queued" | "started"
         );
         let execution_state = if queued { "queued" } else { "running" };
-        let payload = json!({
+        let compute_placement = handoff.compute_placement.clone();
+        let mut payload = json!({
             "execution_source": handoff.execution_source,
             "purpose": handoff.purpose,
             "execution_state": execution_state,
@@ -1732,6 +1871,9 @@ impl ToolRuntime {
             "stderr_truncated": false,
             "terminal": false,
         });
+        if let Some(placement) = compute_placement {
+            payload["compute_placement"] = json!(placement);
+        }
         guard.disarm();
         ToolResult::ok(payload)
     }
@@ -1775,6 +1917,7 @@ impl ToolRuntime {
         let exit_code = job.as_ref().and_then(|job| job.exit_code);
         let timed_out = matches!(job_status, "timeout" | "timed_out");
         let passed = job_status == "completed" && exit_code == Some(0);
+        let compute_placement = handoff.compute_placement.clone();
         let mut payload = json!({
             "project": handoff.project,
             "command_summary": handoff.command_summary,
@@ -1800,6 +1943,9 @@ impl ToolRuntime {
             "sync_wait_secs": handoff.sync_wait_secs,
             "terminal": true,
         });
+        if let Some(placement) = compute_placement {
+            payload["compute_placement"] = json!(placement);
+        }
         if let Some(projection) = crate::tool_runtime::jobs::validation_job_projection(
             Some(adapter.tool_identity()),
             Some(adapter.validation_kind()),
@@ -2080,6 +2226,7 @@ struct ValidationHandoff {
     shell: String,
     executor: String,
     command_summary: String,
+    compute_placement: Option<ShellJobValidationComputePlacement>,
     auth: Option<AuthContext>,
 }
 

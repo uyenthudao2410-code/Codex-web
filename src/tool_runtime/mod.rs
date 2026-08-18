@@ -82,8 +82,8 @@ pub use tool_call::{
     ObserveJobsItem, ReadFilesItem, SearchProjectTextsQuery, SearchResultMode, ToolCall,
 };
 pub(crate) use tool_call::{
-    TOOL_CALL_ARGUMENTS_FIELD, TOOL_CALL_PARAMS_FIELD, TOOL_CALL_TOOL_FIELD,
-    TOOL_CALL_WRAPPER_FIELDS,
+    ValidationComputePlacementPolicy, TOOL_CALL_ARGUMENTS_FIELD, TOOL_CALL_PARAMS_FIELD,
+    TOOL_CALL_TOOL_FIELD, TOOL_CALL_WRAPPER_FIELDS,
 };
 #[cfg(test)]
 pub use tool_definition::is_known_tool_name;
