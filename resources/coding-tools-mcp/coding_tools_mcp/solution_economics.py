@@ -518,11 +518,28 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _latest_solution_shadow_run_ids(ledger: OrchestrationLedger, *, limit: int) -> list[str]:
+    """Return the newest enrolled shadow runs without letting unrelated run churn evict evidence."""
+    with ledger._lock, ledger._connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT run_id, MAX(seq) AS shadow_seq
+            FROM events
+            WHERE event_type=?
+            GROUP BY run_id
+            ORDER BY shadow_seq DESC
+            LIMIT ?
+            """,
+            (SOLUTION_SHADOW_EVENT, limit),
+        ).fetchall()
+    return [str(row["run_id"]) for row in rows]
+
+
 def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int = 100) -> dict[str, Any]:
     bounded_limit = max(1, min(int(limit), 100))
     reports = []
-    for run in ledger.list_runs(limit=bounded_limit):
-        report = solution_shadow_run_report(ledger, str(run.get("run_id") or ""))
+    for run_id in _latest_solution_shadow_run_ids(ledger, limit=bounded_limit):
+        report = solution_shadow_run_report(ledger, run_id)
         if report.get("status") == "observed":
             reports.append(report)
     terminal = [item for item in reports if (item.get("outcome") or {}).get("final") is True]
@@ -604,8 +621,9 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
     return {
         "schema_version": 1,
         "mode": "solution_economics_shadow_v1",
-        "population_scope": "latest_runs_v1",
+        "population_scope": "latest_shadow_runs_v2",
         "scan_limit": bounded_limit,
+        "scan_limit_semantics": "shadow_runs_with_solution_shadow_event",
         "cohort": {
             "shadow_tasks": len(reports),
             "terminal_shadow_tasks": len(terminal),
