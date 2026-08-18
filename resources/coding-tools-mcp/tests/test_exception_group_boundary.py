@@ -3,9 +3,11 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from coding_tools_mcp.errors import ToolFailure, normalize_exception_group
+from coding_tools_mcp.http_exception_boundary import ExceptionSafeMCPHandler
 from coding_tools_mcp.protocol import dispatch_rpc
 from coding_tools_mcp.server import Runtime
 
@@ -114,6 +116,52 @@ class ExceptionGroupBoundaryTests(unittest.TestCase):
                 )
             finally:
                 runtime.close()
+
+    def test_http_pre_dispatch_boundary_never_stringifies_exception_group(self) -> None:
+        grouped = ExceptionGroup(
+            "unhandled errors in a TaskGroup",
+            [RuntimeError("hub reconciliation child failed")],
+        )
+
+        class FailingRuntime:
+            def __init__(self) -> None:
+                self.request_context = SimpleNamespace()
+
+            def _touch_hub_client(self, _identity: dict[str, object]) -> None:
+                raise grouped
+
+        runtime = FailingRuntime()
+        handler = object.__new__(ExceptionSafeMCPHandler)
+        handler._runtime = runtime
+        request = {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {
+                "name": "workspace_context",
+                "arguments": {"detail": "compact"},
+            },
+        }
+        with patch.object(
+            ExceptionSafeMCPHandler,
+            "_hub_identity_from_request",
+            return_value={"client_id": "chatweb", "client_type": "chatweb", "role": "controller"},
+        ):
+            response = handler.handle_rpc(request)
+
+        self.assertIsNotNone(response)
+        assert response is not None
+        error = response["error"]
+        self.assertEqual(error["code"], -32603)
+        self.assertEqual(
+            error["message"],
+            "Concurrent runtime tasks failed; inspect the structured child failures.",
+        )
+        data = error["data"]
+        self.assertEqual(data["code"], "ASYNC_TASK_GROUP_FAILED")
+        self.assertEqual(data["details"]["leaf_count"], 1)
+        self.assertEqual(data["details"]["children"][0]["type"], "RuntimeError")
+        self.assertFalse(hasattr(runtime.request_context, "hub_client"))
 
 
 if __name__ == "__main__":
