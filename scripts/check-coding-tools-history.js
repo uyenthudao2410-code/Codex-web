@@ -3,6 +3,19 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const REQUIRE_STAGED = process.argv.includes('--require-staged');
+const APPROVED_IGNORED_EVIDENCE = [
+  '.coding-tools/orchestration/ledger.sqlite3-shm',
+  '.coding-tools/orchestration/ledger.sqlite3-wal',
+];
+const APPROVED_IGNORED_EVIDENCE_SET = new Set(APPROVED_IGNORED_EVIDENCE);
+
+function normalizedPortable(value) {
+  return String(value || '').split('\\').join('/');
+}
+
+function isApprovedIgnoredEvidence(value) {
+  return APPROVED_IGNORED_EVIDENCE_SET.has(normalizedPortable(value));
+}
 
 function runGit(root, args, options = {}) {
   const result = spawnSync('git', ['-C', root, ...args], {
@@ -85,13 +98,43 @@ function main() {
     if (![0, 1].includes(ignored.status)) {
       failures.push(`coding-tools history check: git check-ignore failed (exit ${ignored.status})`);
     } else {
-      const ignoredFiles = nulList(ignored.stdout);
+      const ignoredFiles = nulList(ignored.stdout).filter((item) => !isApprovedIgnoredEvidence(item));
       if (ignoredFiles.length) {
         failures.push(
           'coding-tools history check: ignored evidence is forbidden:',
           ...ignoredFiles.map((item) => `  ${item}`)
         );
       }
+    }
+  }
+
+  const approvedIgnoreInput = `${APPROVED_IGNORED_EVIDENCE.join('\0')}\0`;
+  const approvedIgnoreCheck = runGit(root, ['check-ignore', '--no-index', '-z', '--stdin'], {
+    input: approvedIgnoreInput,
+  });
+  if (![0, 1].includes(approvedIgnoreCheck.status)) {
+    failures.push(`coding-tools history check: approved sidecar ignore check failed (exit ${approvedIgnoreCheck.status})`);
+  } else {
+    const ignoredApproved = new Set(nulList(approvedIgnoreCheck.stdout).map(normalizedPortable));
+    const missingIgnoreRules = APPROVED_IGNORED_EVIDENCE.filter((item) => !ignoredApproved.has(item));
+    if (missingIgnoreRules.length) {
+      failures.push(
+        'coding-tools history check: approved transient SQLite sidecars must remain ignored:',
+        ...missingIgnoreRules.map((item) => `  ${item}`)
+      );
+    }
+  }
+
+  const trackedApproved = runGit(root, ['ls-files', '-z', '--', ...APPROVED_IGNORED_EVIDENCE]);
+  if (trackedApproved.status !== 0) {
+    failures.push(`coding-tools history check: unable to inspect approved sidecar tracking (exit ${trackedApproved.status})`);
+  } else {
+    const trackedFiles = nulList(trackedApproved.stdout);
+    if (trackedFiles.length) {
+      failures.push(
+        'coding-tools history check: approved transient SQLite sidecars must not be tracked:',
+        ...trackedFiles.map((item) => `  ${item}`)
+      );
     }
   }
 
@@ -114,7 +157,9 @@ function main() {
     if (unstaged.status !== 0 || untracked.status !== 0) {
       failures.push('coding-tools delivery check: unable to inspect staged state');
     } else {
-      const missingFromDelivery = [...new Set([...nulList(unstaged.stdout), ...nulList(untracked.stdout)])].sort();
+      const missingFromDelivery = [...new Set([...nulList(unstaged.stdout), ...nulList(untracked.stdout)])]
+        .filter((item) => !isApprovedIgnoredEvidence(item))
+        .sort();
       if (missingFromDelivery.length) {
         failures.push(
           'coding-tools delivery check: current evidence is not fully staged:',

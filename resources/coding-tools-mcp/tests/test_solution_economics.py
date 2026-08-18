@@ -10,6 +10,7 @@ from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.solution_economics import (
     record_solution_shadow,
+    record_solution_shadow_patch_surface,
     solution_shadow_population_report,
     solution_shadow_run_report,
 )
@@ -111,6 +112,80 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertEqual(outcome["wait_ms"], 5.0)
             self.assertFalse(outcome["manual_intervention"])
 
+    def test_applied_patch_surface_is_content_free_and_requires_receipt_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="feature", metadata={"workflow": "feature"})
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            record_solution_shadow(ledger, run_id=run_id, wave_id=wave_id, recommendation=recommendation("surface"))
+            recorded = record_solution_shadow_patch_surface(
+                ledger,
+                run_id=run_id,
+                wave_id=wave_id,
+                patch_result={
+                    "dry_run": False,
+                    "additions": 4,
+                    "removals": 2,
+                    "affected_files": [{"path": "src/private_name.py", "operation": "update"}],
+                },
+            )
+            self.assertTrue(recorded["recorded"])
+            event = ledger.list_events(run_id)[-1]
+            self.assertNotIn("private_name", str(event["payload"]))
+            ledger.record_checkpoint(
+                run_id=run_id,
+                wave_id=wave_id,
+                git_head="head",
+                proof_fingerprint="proof",
+                status="accepted",
+                metadata={"accepted_files": {
+                    "complete": True,
+                    "count": 1,
+                    "files": [{"path": "src/private_name.py", "state": "file", "sha256": "x"}],
+                    "total_bytes": 1,
+                    "incomplete_reasons": [],
+                }},
+            )
+            ledger.finish_wave(wave_id, status="accepted")
+            ledger.finish_run(run_id, status="accepted")
+            surface = solution_shadow_run_report(ledger, run_id)["outcome"]["touched_surface"]
+            self.assertEqual(surface["lines"], 6)
+            self.assertEqual(surface["observed_patch_additions"], 4)
+            self.assertEqual(surface["observed_patch_removals"], 2)
+            self.assertTrue(surface["line_coverage_complete"])
+            self.assertEqual(surface["lines_measurement"], "applied_patch_delta_complete_v1")
+
+            other = ledger.create_run(objective="feature2", metadata={"workflow": "feature"})
+            other_wave = ledger.create_wave(other, execution_mode="mcp_only")
+            record_solution_shadow(ledger, run_id=other, wave_id=other_wave, recommendation=recommendation("partial"))
+            record_solution_shadow_patch_surface(
+                ledger,
+                run_id=other,
+                wave_id=other_wave,
+                patch_result={"dry_run": False, "additions": 1, "removals": 1, "affected_files": [{"path": "a.py"}]},
+            )
+            ledger.record_checkpoint(
+                run_id=other,
+                wave_id=other_wave,
+                git_head="head",
+                proof_fingerprint="proof",
+                status="accepted",
+                metadata={"accepted_files": {
+                    "complete": True,
+                    "count": 2,
+                    "files": [{"path": "a.py"}, {"path": "command_generated.py"}],
+                    "total_bytes": 2,
+                    "incomplete_reasons": [],
+                }},
+            )
+            ledger.finish_wave(other_wave, status="accepted")
+            ledger.finish_run(other, status="accepted")
+            partial = solution_shadow_run_report(ledger, other)["outcome"]["touched_surface"]
+            self.assertIsNone(partial["lines"])
+            self.assertEqual(partial["observed_patch_line_changes"], 2)
+            self.assertFalse(partial["line_coverage_complete"])
+            self.assertEqual(partial["lines_measurement"], "applied_patch_delta_incomplete_v1")
+
     def test_population_is_descriptive_only_and_exposes_repair_signal_buckets(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))
@@ -142,11 +217,52 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertEqual(risks["low"]["representative_repair_rate"], 0.0)
             self.assertEqual(risks["high"]["representative_repair_rate"], 1.0)
             self.assertTrue(population["representative_predictor_variation"]["expected_repair_risk"])
+            self.assertFalse(population["representative_predictor_variation"]["smallest_causal_solution_scope"])
             self.assertEqual(population["p4_gate"]["status"], "representative_descriptive_comparison_available_but_unvalidated")
             self.assertFalse(population["p4_gate"]["can_answer_which_signals_predict_repair"])
             self.assertFalse(population["p4_gate"]["automatic_policy_activation"])
             self.assertTrue(population["policy"]["loc_is_explanatory_not_objective"])
             self.assertTrue(population["policy"]["predictive_promotion_requires_representative_provenance"])
+
+    def test_predictive_gate_requires_out_of_sample_gain_and_familywise_separation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            for index in range(24):
+                repaired = index >= 12
+                risk = "high" if repaired else "low"
+                run_id = ledger.create_run(
+                    objective=f"feature-{index}",
+                    metadata={"workflow": "feature", "evaluation": {"provenance": "representative"}},
+                )
+                wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                record_solution_shadow(
+                    ledger,
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    recommendation=recommendation(f"predict-{index}", risk=risk),
+                )
+                if repaired:
+                    ledger.append_event(
+                        run_id,
+                        wave_id=wave_id,
+                        event_type="failure_observed",
+                        state_before="EXECUTING",
+                        state_after="REPLAN",
+                    )
+                    ledger.finish_wave(wave_id, status="replanned")
+                    wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+
+            population = solution_shadow_population_report(ledger)
+            validation = population["predictive_validation"]
+            self.assertIn("expected_repair_risk", validation["validated_signals"])
+            self.assertGreater(validation["signals"]["expected_repair_risk"]["leave_one_out_brier_gain"], 0)
+            self.assertTrue(validation["signals"]["expected_repair_risk"]["separated_bucket_pairs"])
+            self.assertTrue(population["p4_gate"]["can_answer_which_signals_predict_repair"])
+            self.assertEqual(population["p4_gate"]["status"], "predictive_signal_validation_available")
+            self.assertFalse(population["p4_gate"]["automatic_policy_activation"])
+            self.assertFalse(population["policy"]["p5_automatic_start"])
 
     def test_missing_evaluation_provenance_is_unlabeled_not_representative(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

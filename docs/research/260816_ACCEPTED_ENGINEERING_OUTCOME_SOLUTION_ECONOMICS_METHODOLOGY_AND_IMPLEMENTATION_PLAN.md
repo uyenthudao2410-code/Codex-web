@@ -2378,3 +2378,308 @@ NEXT CRITICAL ACTION
 ```
 
 This keeps the methodology, chronology, engineering acceptance and live evidence progression in one place while leaving older research files stable for auditability.
+
+---
+
+# 38. P4 Source Completion — Applied Surface + Predictive Readiness
+
+**Checkpoint:** 2026-08-18 18:26 ICT (Asia/Bangkok)  
+**Decision:** `P4 SOURCE ENGINEERING = SOURCE-COMPLETE / ACCEPTED`; `P4 LIVE ACTIVATION = PENDING`; `P4 REPRESENTATIVE PREDICTIVE EVIDENCE = COLLECTING`; `P5 = CLOSED / NOT STARTED`.
+
+This checkpoint closes the remaining source-side gaps that can be closed without activating the new Runtime schema or fabricating representative evidence. It does **not** claim that P4's real-data predictive gate has passed.
+
+## 38.1 Source / run / wave / proof identity
+
+```text
+base source HEAD        128afd79a1dfe2b607de4ec519a053a2ab050d0f
+run_id                  69cd15b9b1cb43b2a1f7741b9d45686a
+final wave_id           5afc6777fc7d4473a8a9f5ec5ddada93
+execution route         deterministic
+execution mode          mcp_only
+final state             CHECKPOINTED / ACCEPTED
+final integrity         30 / 30 OK
+proof fingerprint       53bc502d7ad8a8b03adb365f07a4a5f91521bbb6bbbd3e921977374b29155cf5
+post-change worktree fp 5932859c185dfab6b06fe07cea49a3b492bf560d7153b6d3fe146f925b762381
+```
+
+Accepted checkpoint receipts are exactly:
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py
+  sha256 81d02a93bd76ff9a451fab19531f9171220c2d2651abff5e7e41dceeb6f2d3b3
+
+resources/coding-tools-mcp/coding_tools_mcp/context_tools.py
+  sha256 538e7b34f7299506317bdacb4d2536c10d87530aff82f2623092f4170e8d4aef
+
+resources/coding-tools-mcp/tests/test_solution_economics.py
+  sha256 8333be59fe793cbb586040fb51cdfdce15ee22f657436b3a6d47489a901edce7
+```
+
+## 38.2 Proof actually run
+
+```text
+git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/tests/test_solution_economics.py
+PASS
+proof_id = 739908d5197748e296d4101f1a8af971
+
+python -m pytest tests/test_solution_economics.py tests/test_evaluation_report.py tests/test_task_state_and_build.py -q && python scripts/check_module_size.py
+PASS / exit 0
+module-size budgets ok
+proof_id = e0d5c4ef99d44411a33c996d920050cf
+```
+
+Final audit before acceptance proved:
+
+```text
+recorded proofs passed = 2 / 2
+recorded proofs failed = 0
+active claims          = 0
+active commands        = 0
+orphaned resources     = 0
+quiescent              = true
+ledger integrity       = PASS
+```
+
+## 38.3 Fail-closed replan chronology
+
+The first proposed source patch did **not** write. Patch preflight rejected it as:
+
+```text
+PATCH_CONTEXT_AMBIGUOUS
+```
+
+because one `solution_economics.py` context block matched two locations. The run entered explicit `REPLAN`; the patch was regenerated with unique function-level anchors and only then acquired write authority. No unchanged retry and no speculative write occurred.
+
+This failure is orchestration/preflight evidence, not a P4 product regression.
+
+## 38.4 Actual applied line-surface telemetry
+
+P4 now has a content-free durable event for successful applied patch work:
+
+```text
+solution_shadow_patch_surface_observed
+```
+
+For a run already enrolled in `solution_shadow`, each successful non-dry-run patch records:
+
+```text
+file_count
+SHA-256 path identities only
+additions
+removals
+line_changes = additions + removals
+measurement = applied_patch_delta_v1
+complete flag
+production_behavior_changed = false
+```
+
+Raw source paths and source content are not persisted in this event.
+
+The chosen metric is **applied line work**, not final net LOC. Additions/removals across repair waves are intentionally accumulated because repeated edits are real engineering/rework cost.
+
+P4 deliberately does **not** use `HEAD -> dirty worktree` numstat as its authoritative line metric. The repository may contain concurrent unrelated dirty changes; a checkout-wide diff would contaminate one task's accepted-result economics with another lane's work.
+
+## 38.5 Coverage-gated line truth
+
+`touched_surface.lines` becomes a real observed value only when all of the following are true:
+
+```text
+patch-surface events exist
+all patch-surface events are complete
+accepted checkpoint file receipts are complete
+hashed union of patch-event paths == accepted receipt paths
+```
+
+If any condition fails:
+
+```text
+touched_surface.lines = null
+```
+
+while partial applied work may still be reported explicitly as incomplete observation:
+
+```text
+observed_patch_additions
+observed_patch_removals
+observed_patch_line_changes
+patch_surface_event_count
+patch_surface_file_count
+line_coverage_complete = false
+lines_measurement = applied_patch_delta_incomplete_v1
+```
+
+This prevents command-generated files, incomplete receipts or unrelated worktree dirt from being silently treated as exact task line cost.
+
+## 38.6 Symbol surface remains intentionally unknown
+
+P4 does **not** invent a regex/AST heuristic just to populate `symbols_touched`.
+
+Until a trustworthy semantic symbol-delta source exists:
+
+```text
+touched_surface.symbols = null
+symbols_measurement = unobserved_semantic_symbol_delta_not_instrumented
+```
+
+This is a correct measurement state, not an implementation failure.
+
+## 38.7 Recommendation-vs-actual surface calibration
+
+The run report now compares both pre-write surface estimates against accepted actual surface when the corresponding actual metric is genuinely observed:
+
+```text
+candidate estimated surface
+vs
+actual accepted surface
+
+smallest-causal estimated surface
+vs
+actual accepted surface
+```
+
+For each of `files`, `lines`, and `symbols`, the report may expose:
+
+```text
+estimated
+actual
+delta
+absolute_error
+```
+
+`delta`/`absolute_error` remain null when either side is unobserved. No unknown value is converted to zero.
+
+This gives P4 a direct calibration path for whether pre-mutation scope estimates are economically informative rather than merely plausible prose.
+
+## 38.8 Predictive signal set is now complete for the agreed P4 contract
+
+Representative predictive analysis now includes:
+
+```text
+candidate_solution_scope
+root_cause_confidence
+oracle_strength
+expected_repair_risk
+smallest_causal_solution_scope
+```
+
+The last item closes the previous gap where the smallest causal solution was recorded but not included in population predictor-variation analysis.
+
+## 38.9 Predictive-readiness validation contract
+
+P4 now has a deterministic, representative-only readiness check rather than a descriptive bucket count alone.
+
+For each predictor signal:
+
+1. retain only representative terminal rows with a real repair/non-repair label;
+2. preserve unknown predictor values rather than inventing a bucket value;
+3. compute leave-one-out overall repair probability as the baseline predictor;
+4. compute leave-one-out bucket repair probability for the candidate signal;
+5. compare Brier score out of sample;
+6. require positive leave-one-out Brier gain;
+7. compute Wilson repair-rate intervals for occupied predictor buckets;
+8. Bonferroni-adjust the interval alpha across the family of occupied bucket-pair comparisons;
+9. require at least one family-wise separated bucket pair before declaring that signal validated.
+
+Current method identity:
+
+```text
+leave_one_out_brier_plus_bonferroni_wilson_separation_v1
+familywise confidence = 95%
+```
+
+A validated signal therefore needs both **out-of-sample predictive improvement** and **family-wise bucket separation**. This is intentionally more conservative than simply observing that two descriptive repair rates differ.
+
+## 38.10 What a validated signal does — and does not — mean
+
+If future representative data passes the check:
+
+```text
+can_answer_which_signals_predict_repair = true
+validated_signals = [...]
+```
+
+that means the ledger contains evidence for **predictive association** within the observed representative cohort.
+
+It does **not** mean:
+
+```text
+causal effect proven
+P5 treatment proven
+production policy may auto-activate
+```
+
+The report therefore keeps:
+
+```text
+causal_claim_allowed = false
+predictive_validation_is_association_not_causality = true
+automatic_policy_activation = false
+p5_automatic_start = false
+```
+
+P5 still requires its own controlled intervention and quality/economics gates.
+
+## 38.11 No arbitrary N threshold was invented
+
+P4 does not contain a magic rule such as `n >= 20 => promote`.
+
+Readiness is driven by observed outcome variation, predictor support, out-of-sample predictive gain and family-wise uncertainty. A small perfectly separated synthetic dataset may prove the validator implementation works; it does not become production evidence simply because it passes the algorithm.
+
+The new regression test with 24 intentionally separated representative-looking rows is **synthetic algorithm verification only**. It proves that the validator can detect a strong known signal. Those rows are not real project outcomes and must never be counted toward P4 production/promotion evidence.
+
+## 38.12 Source-complete versus evidence-complete
+
+After this acceptance, the P4 boundary is:
+
+```text
+PRE-WRITE SHADOW CONTRACT                 SOURCE COMPLETE
+ONE-RECOMMENDATION / NO-LEAKAGE RULE      SOURCE COMPLETE
+PROVENANCE SEPARATION                     SOURCE COMPLETE
+FIRST-PASS / REPAIR / TTAR JOIN           SOURCE COMPLETE
+PROOF / OBSERVED LOCAL-WAIT / MANUAL JOIN SOURCE COMPLETE
+ACCEPTED FILE SURFACE                     SOURCE COMPLETE
+APPLIED LINE-WORK SURFACE                 SOURCE COMPLETE, COVERAGE-GATED
+SYMBOL SURFACE                            EXPLICIT UNKNOWN UNTIL TRUSTWORTHY SOURCE
+RECOMMENDATION CALIBRATION                SOURCE COMPLETE
+REPRESENTATIVE PREDICTIVE VALIDATOR       SOURCE COMPLETE
+P5 AUTO-ACTIVATION                        FORBIDDEN
+
+LIVE solution_shadow COLLECTION           PENDING ACTIVATION
+REAL REPRESENTATIVE P4 POPULATION         COLLECTING / EFFECTIVELY NOT STARTED ON CURRENT CONNECTOR
+REAL PREDICTIVE VALIDITY                   NOT YET ESTABLISHED
+P5 CONTROLLED TREATMENT                   CLOSED / NOT STARTED
+```
+
+This is the strongest defensible statement of “P4 complete”: **the source/instrumentation/validation machinery is complete for the agreed P4 scope; the empirical gate cannot be completed before real representative data exists.**
+
+## 38.13 Live activation remains the immediate external gate
+
+This source completion did not restart the Runtime and did not update the already-running connector schema.
+
+The currently connected tool surface used to create this run still reported the older smart-v3 contract identity in its enrollment metadata:
+
+```text
+tool_contract_fp = 4ddfa6bb982f46f02bdd448975ca64b3235a59379b379ec651bcc44000ac9aca
+```
+
+It therefore could not record this task itself as a valid pre-write `solution_shadow` sample. Backfilling it after write would violate P4's no-leakage rule and is forbidden.
+
+The source-side schema containing `task_control.solution_shadow` remains pending a separate controlled runtime restart/reconnect. That lifecycle action requires an explicit user request; it was not performed here.
+
+When such activation is explicitly requested, use the checklist in §37.7 and additionally verify that new eligible feature/bugfix work emits `solution_shadow_patch_surface_observed` only after real successful patch application and that complete/incomplete line-surface semantics match checkpoint receipts.
+
+## 38.14 Current decision and next critical action
+
+```text
+P4 source engineering                  SOURCE-COMPLETE / ACCEPTED
+P4 live activation                     PENDING EXPLICIT RESTART/RECONNECT
+P4 real representative evidence        COLLECTING
+P4 predictive association              NOT YET ESTABLISHED ON REAL DATA
+P5                                     CLOSED / NOT STARTED
+production behavior change             NONE
+public MCP tool count change            NONE
+runtime restart                         NOT PERFORMED
+commit / push                            NOT PERFORMED
+```
+
+Next critical action is **not another P4 architecture wave**. It is controlled live activation when explicitly requested, followed by natural collection of real representative `feature`/`bugfix` samples. Only observed representative outcomes may determine whether P4's predictive gate can be closed and whether a separate P5 A/B experiment is justified.

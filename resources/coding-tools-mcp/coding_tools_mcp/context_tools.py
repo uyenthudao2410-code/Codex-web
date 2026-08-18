@@ -20,6 +20,7 @@ from .semantic_localization import (
     semantic_resource_cost,
     semantic_scope_mode,
 )
+from .solution_economics import record_solution_shadow_patch_surface
 from .tool_contract import tool_metadata_contract
 
 
@@ -675,6 +676,18 @@ class ContextToolsMixin:
                 result = self.apply_patch({"patch": patch_text, "dry_run": bool(args.get("dry_run", False))})
                 patch_results.append(result)
                 affected_files.extend(result.get("affected_files", []))
+                if ctx is not None and not bool(args.get("dry_run", False)):
+                    try:
+                        record_solution_shadow_patch_surface(
+                            self.orchestration_ledger,
+                            run_id=ctx.run_id,
+                            wave_id=ctx.wave_id,
+                            patch_result=result,
+                        )
+                    except Exception:
+                        # P4 is shadow telemetry. Missing telemetry remains unknown
+                        # rather than changing mutation/proof behavior.
+                        pass
         except ToolFailure as exc:
             record_failure(exc.code, message=str(exc))
             raise

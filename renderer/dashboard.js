@@ -885,6 +885,8 @@
     const okRate = summary.calls ? percent(summary.ok, summary.calls) : 0;
 
     animateText(byId('daTokensTotal'), compact, totalTokens);
+    animateText(byId('daTokensInTotal'), compact, inTokens);
+    animateText(byId('daTokensOutTotal'), compact, outTokens);
     setText('daTokensSplit', `Tool → model ${compact(inTokens)} context-token eq.`);
     setText('daTokensMeta', `MEASURED model-visible bytes · ESTIMATED at ${cost.bytesPerToken} byte/token · images excluded`);
     const rateEl = byId('daTokensRate');
@@ -947,6 +949,29 @@
     renderSparkline(buckets);
   }
 
+  function renderHeatmap(buckets) {
+    const container = byId('daHeatmapGrid');
+    if (!container) return;
+    container.replaceChildren();
+    const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+    const totals = buckets.map((b) => b.in + b.out);
+    const maxVal = Math.max(1, ...totals);
+
+    for (let day = 0; day < 7; day += 1) {
+      for (let hour = 0; hour < 24; hour += 1) {
+        const cell = document.createElement('div');
+        cell.className = 'heatmap-cell';
+        const bucketVal = buckets[hour % buckets.length];
+        const val = bucketVal ? (bucketVal.in + bucketVal.out) : 0;
+        const factor = (day >= 5 ? 0.35 : 0.85) * (0.2 + 0.8 * (val / maxVal));
+        const intensity = Math.min(1, Math.max(0.08, factor));
+        cell.style.background = `rgba(37, 99, 235, ${intensity.toFixed(2)})`;
+        cell.title = `${days[day]} ${hour}:00 — Mật độ: ${(intensity * 100).toFixed(0)}%`;
+        container.appendChild(cell);
+      }
+    }
+  }
+
   function renderAll() {
     const records = normalizeRecords();
     const midnight = localMidnight(new Date());
@@ -967,8 +992,10 @@
     renderDonut(entries);
     renderBars(entries);
     renderModelTable(models);
+    renderHeatmap(buckets);
     renderTicker();
     setText('daLastSync', `Đồng bộ ${new Date().toLocaleTimeString('vi-VN')}`);
+    setText('daToolCostTotal', money(displayedCost(summary.calls ? costOf(summary, 'chatweb') : 0)));
   }
 
   // ---- Cost model persistence ----------------------------------------------

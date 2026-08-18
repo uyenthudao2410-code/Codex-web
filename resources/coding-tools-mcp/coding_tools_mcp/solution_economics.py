@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import math
+from statistics import NormalDist
 from typing import Any
 
 from .orchestration_ledger import OrchestrationLedger
 
 
 SOLUTION_SHADOW_EVENT = "solution_shadow_recommended"
+SOLUTION_SHADOW_PATCH_SURFACE_EVENT = "solution_shadow_patch_surface_observed"
 ELIGIBLE_WORKFLOWS = frozenset({"feature", "bugfix"})
 SCOPE_VALUES = frozenset({"localized_symbol", "localized_file", "bounded_multi_file", "cross_subsystem", "unknown"})
 CONFIDENCE_VALUES = frozenset({"low", "medium", "high", "unknown"})
@@ -13,6 +17,14 @@ ORACLE_VALUES = frozenset({"weak", "moderate", "strong", "unknown"})
 RISK_VALUES = frozenset({"low", "medium", "high", "unknown"})
 SURFACE_KEYS = frozenset({"files", "symbols", "lines"})
 EVALUATION_PROVENANCE_VALUES = frozenset({"representative", "benchmark", "synthetic"})
+PATCH_SURFACE_FILE_ID_LIMIT = 256
+PREDICTIVE_SIGNAL_NAMES = (
+    "candidate_solution_scope",
+    "root_cause_confidence",
+    "oracle_strength",
+    "expected_repair_risk",
+    "smallest_causal_solution_scope",
+)
 
 
 def _run_workflow(run: dict[str, Any] | None) -> str:
@@ -32,6 +44,11 @@ def _bounded_identifier(value: Any, *, name: str, limit: int = 128) -> str:
     if not text or len(text) > limit or any(ord(char) < 32 for char in text):
         raise ValueError(f"{name} must be a non-empty bounded identifier")
     return text
+
+
+def _path_identity(value: Any) -> str:
+    path = str(value or "").strip().replace("\\", "/")
+    return hashlib.sha256(path.encode("utf-8")).hexdigest() if path else ""
 
 
 def _enum(value: Any, *, name: str, allowed: frozenset[str]) -> str:
@@ -145,11 +162,146 @@ def record_solution_shadow(
     }
 
 
+def record_solution_shadow_patch_surface(
+    ledger: OrchestrationLedger,
+    *,
+    run_id: str,
+    wave_id: str,
+    patch_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Record exact applied-patch line work without persisting source paths/content."""
+    events = ledger.list_events(run_id)
+    if not any(str(item.get("event_type") or "") == SOLUTION_SHADOW_EVENT for item in events):
+        return {"recorded": False, "reason": "solution_shadow_unenrolled"}
+    if patch_result.get("dry_run") is True:
+        return {"recorded": False, "reason": "dry_run"}
+    additions = patch_result.get("additions")
+    removals = patch_result.get("removals")
+    if (
+        isinstance(additions, bool)
+        or not isinstance(additions, int)
+        or additions < 0
+        or isinstance(removals, bool)
+        or not isinstance(removals, int)
+        or removals < 0
+    ):
+        raise ValueError("patch surface additions/removals must be non-negative integers")
+    affected = patch_result.get("affected_files") if isinstance(patch_result.get("affected_files"), list) else []
+    file_ids = sorted({
+        identity
+        for item in affected
+        if isinstance(item, dict)
+        for identity in [_path_identity(item.get("path"))]
+        if identity
+    })
+    if not file_ids:
+        raise ValueError("patch surface requires at least one affected file")
+    complete = len(file_ids) <= PATCH_SURFACE_FILE_ID_LIMIT
+    event = ledger.append_event(
+        run_id,
+        wave_id=wave_id,
+        event_type=SOLUTION_SHADOW_PATCH_SURFACE_EVENT,
+        payload={
+            "schema_version": 1,
+            "measurement": "applied_patch_delta_v1",
+            "file_count": len(file_ids),
+            "file_ids": file_ids[:PATCH_SURFACE_FILE_ID_LIMIT],
+            "complete": complete,
+            "additions": additions,
+            "removals": removals,
+            "line_changes": additions + removals,
+            "content_free": True,
+            "production_behavior_changed": False,
+        },
+    )
+    return {"recorded": True, "event_id": event["event_id"], "seq": event["seq"]}
+
+
 def _observed_stage_duration(ledger: OrchestrationLedger, run_id: str, stage: str) -> float | None:
     spans = [item for item in ledger.list_observation_spans(run_id, limit=1000) if str(item.get("stage") or "") == stage]
     if not spans:
         return None
     return round(sum(max(0.0, float(item.get("duration_ms") or 0.0)) for item in spans), 6)
+
+
+def _accepted_touched_surface(
+    ledger: OrchestrationLedger,
+    run_id: str,
+    accepted_checkpoints: list[dict[str, Any]],
+) -> dict[str, Any]:
+    accepted_files = None
+    file_measurement = "unobserved"
+    receipt_ids: set[str] = set()
+    receipt_ids_complete = False
+    if accepted_checkpoints:
+        metadata = accepted_checkpoints[-1].get("metadata") if isinstance(accepted_checkpoints[-1].get("metadata"), dict) else {}
+        receipts = metadata.get("accepted_files") if isinstance(metadata.get("accepted_files"), dict) else {}
+        if receipts:
+            complete = receipts.get("complete") is True
+            file_measurement = "accepted_file_receipts_complete" if complete else "accepted_file_receipts_incomplete"
+            count = receipts.get("count")
+            files = receipts.get("files") if isinstance(receipts.get("files"), list) else []
+            for item in files:
+                identity = _path_identity(item.get("path")) if isinstance(item, dict) else ""
+                if identity:
+                    receipt_ids.add(identity)
+            receipt_ids_complete = complete and isinstance(count, int) and not isinstance(count, bool) and count >= 0 and len(receipt_ids) == count
+            if complete and isinstance(count, int) and not isinstance(count, bool) and count >= 0:
+                accepted_files = count
+
+    surface_events = [
+        item for item in ledger.list_events(run_id)
+        if str(item.get("event_type") or "") == SOLUTION_SHADOW_PATCH_SURFACE_EVENT
+    ]
+    observed_ids: set[str] = set()
+    additions = 0
+    removals = 0
+    events_complete = bool(surface_events)
+    for event in surface_events:
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        events_complete = events_complete and payload.get("complete") is True
+        observed_ids.update(str(item) for item in payload.get("file_ids", []) if isinstance(item, str) and item)
+        additions += int(payload.get("additions") or 0)
+        removals += int(payload.get("removals") or 0)
+    line_coverage_complete = bool(
+        surface_events
+        and events_complete
+        and receipt_ids_complete
+        and observed_ids == receipt_ids
+    )
+    return {
+        "files": accepted_files,
+        "files_measurement": file_measurement,
+        "lines": additions + removals if line_coverage_complete else None,
+        "symbols": None,
+        "lines_measurement": "applied_patch_delta_complete_v1" if line_coverage_complete else "applied_patch_delta_incomplete_v1" if surface_events else "unobserved",
+        "symbols_measurement": "unobserved_semantic_symbol_delta_not_instrumented",
+        "observed_patch_additions": additions if surface_events else None,
+        "observed_patch_removals": removals if surface_events else None,
+        "observed_patch_line_changes": additions + removals if surface_events else None,
+        "patch_surface_event_count": len(surface_events),
+        "patch_surface_file_count": len(observed_ids),
+        "line_coverage_complete": line_coverage_complete,
+    }
+
+
+def _surface_comparison(estimated: Any, actual: dict[str, Any]) -> dict[str, Any]:
+    estimate = estimated if isinstance(estimated, dict) else {}
+    metrics: dict[str, Any] = {}
+    for key in sorted(SURFACE_KEYS):
+        expected = estimate.get(key)
+        observed = actual.get(key)
+        comparable = (
+            isinstance(expected, int) and not isinstance(expected, bool)
+            and isinstance(observed, int) and not isinstance(observed, bool)
+        )
+        metrics[key] = {
+            "estimated": expected if isinstance(expected, int) and not isinstance(expected, bool) else None,
+            "actual": observed if isinstance(observed, int) and not isinstance(observed, bool) else None,
+            "delta": observed - expected if comparable else None,
+            "absolute_error": abs(observed - expected) if comparable else None,
+        }
+    return {"metrics": metrics, "all_metrics_comparable": all(item["delta"] is not None for item in metrics.values())}
 
 
 def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict[str, Any]:
@@ -181,16 +333,7 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
     manual_fix = quality.get("manual_fix_required") if isinstance(quality.get("manual_fix_required"), bool) else None
 
     accepted_checkpoints = [item for item in ledger.list_checkpoints(run_id) if str(item.get("status") or "") == "accepted"]
-    accepted_files = None
-    file_measurement = "unobserved"
-    if accepted_checkpoints:
-        metadata = accepted_checkpoints[-1].get("metadata") if isinstance(accepted_checkpoints[-1].get("metadata"), dict) else {}
-        receipts = metadata.get("accepted_files") if isinstance(metadata.get("accepted_files"), dict) else {}
-        if receipts:
-            file_measurement = "accepted_file_receipts_complete" if receipts.get("complete") is True else "accepted_file_receipts_incomplete"
-            count = receipts.get("count")
-            if receipts.get("complete") is True and isinstance(count, int) and not isinstance(count, bool) and count >= 0:
-                accepted_files = count
+    touched_surface = _accepted_touched_surface(ledger, run_id, accepted_checkpoints)
 
     proof_records = mcp.get("proof_records") if isinstance(mcp.get("proof_records"), int) else 0
     proof_duration = mcp.get("proof_duration_ms") if proof_records > 0 else None
@@ -219,14 +362,7 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
                 "replan_count": replan_count,
             },
             "ttar_ms": milestones.get("time_to_accepted_ms"),
-            "touched_surface": {
-                "files": accepted_files,
-                "files_measurement": file_measurement,
-                "lines": None,
-                "symbols": None,
-                "lines_measurement": "unobserved",
-                "symbols_measurement": "unobserved",
-            },
+            "touched_surface": touched_surface,
             "proof_cost": {
                 "duration_ms": proof_duration,
                 "records": proof_records,
@@ -237,6 +373,14 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
             "wait_ms": _observed_stage_duration(ledger, run_id, "wait"),
             "manual_intervention": manual_fix,
             "manual_intervention_source": "quality_outcome.manual_fix_required" if manual_fix is not None else "unobserved",
+        },
+        "recommendation_vs_outcome": {
+            "candidate_surface": _surface_comparison(recommendation.get("estimated_touched_surface"), touched_surface),
+            "smallest_causal_surface": _surface_comparison(
+                (recommendation.get("smallest_causal_solution") or {}).get("estimated_touched_surface")
+                if isinstance(recommendation.get("smallest_causal_solution"), dict) else {},
+                touched_surface,
+            ),
         },
         "automatic_policy_activation": False,
         "production_behavior_changed": False,
@@ -251,6 +395,129 @@ def _p50(values: list[float]) -> float | None:
     return round(float(ordered[(len(ordered) - 1) // 2]), 6)
 
 
+def _signal_value(report: dict[str, Any], signal: str) -> str:
+    recommendation = report.get("recommendation") if isinstance(report.get("recommendation"), dict) else {}
+    if signal == "smallest_causal_solution_scope":
+        smallest = recommendation.get("smallest_causal_solution") if isinstance(recommendation.get("smallest_causal_solution"), dict) else {}
+        return str(smallest.get("scope") or "unknown")
+    return str(recommendation.get(signal) or "unknown")
+
+
+def _repair_label(report: dict[str, Any]) -> int | None:
+    repair = (report.get("outcome") or {}).get("repair") if isinstance(report.get("outcome"), dict) else {}
+    repaired = repair.get("repaired") if isinstance(repair, dict) else None
+    return 1 if repaired is True else 0 if repaired is False else None
+
+
+def _wilson_interval(successes: int, total: int, z: float) -> tuple[float, float]:
+    if total <= 0:
+        return (0.0, 1.0)
+    p = successes / total
+    z2 = z * z
+    denominator = 1.0 + z2 / total
+    center = (p + z2 / (2.0 * total)) / denominator
+    radius = z * math.sqrt((p * (1.0 - p) + z2 / (4.0 * total)) / total) / denominator
+    return (max(0.0, center - radius), min(1.0, center + radius))
+
+
+def _loocv_brier(rows: list[dict[str, Any]], signal: str) -> tuple[float | None, float | None, float | None]:
+    usable = [(row, _repair_label(row)) for row in rows if _signal_value(row, signal) != "unknown"]
+    usable = [(row, label) for row, label in usable if label is not None]
+    if len(usable) < 2 or len({label for _, label in usable}) < 2:
+        return (None, None, None)
+    baseline_errors: list[float] = []
+    signal_errors: list[float] = []
+    for index, (held, label) in enumerate(usable):
+        training = usable[:index] + usable[index + 1 :]
+        if not training:
+            continue
+        baseline_probability = sum(item_label for _, item_label in training) / len(training)
+        held_value = _signal_value(held, signal)
+        bucket = [item_label for item, item_label in training if _signal_value(item, signal) == held_value]
+        signal_probability = sum(bucket) / len(bucket) if bucket else baseline_probability
+        baseline_errors.append((baseline_probability - label) ** 2)
+        signal_errors.append((signal_probability - label) ** 2)
+    if not baseline_errors:
+        return (None, None, None)
+    baseline = sum(baseline_errors) / len(baseline_errors)
+    signal_score = sum(signal_errors) / len(signal_errors)
+    return (round(baseline, 6), round(signal_score, 6), round(baseline - signal_score, 6))
+
+
+def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
+    labeled = [item for item in reports if _repair_label(item) is not None]
+    outcome_variation = len({_repair_label(item) for item in labeled}) >= 2
+    group_counts = {
+        signal: len({value for item in labeled for value in [_signal_value(item, signal)] if value != "unknown"})
+        for signal in PREDICTIVE_SIGNAL_NAMES
+    }
+    comparison_count = sum(count * (count - 1) // 2 for count in group_counts.values() if count >= 2)
+    familywise_alpha = 0.05
+    per_comparison_alpha = familywise_alpha / comparison_count if comparison_count else None
+    z = NormalDist().inv_cdf(1.0 - per_comparison_alpha / 2.0) if per_comparison_alpha else None
+    signals: dict[str, Any] = {}
+    validated: list[str] = []
+    for signal in PREDICTIVE_SIGNAL_NAMES:
+        known = [item for item in labeled if _signal_value(item, signal) != "unknown"]
+        groups: dict[str, list[int]] = {}
+        for item in known:
+            label = _repair_label(item)
+            if label is not None:
+                groups.setdefault(_signal_value(item, signal), []).append(label)
+        baseline_brier, signal_brier, brier_gain = _loocv_brier(labeled, signal)
+        intervals: dict[str, list[float]] = {}
+        if z is not None:
+            for value, outcomes in groups.items():
+                low, high = _wilson_interval(sum(outcomes), len(outcomes), z)
+                intervals[value] = [round(low, 6), round(high, 6)]
+        separated_pairs: list[list[str]] = []
+        values = sorted(intervals)
+        for index, left in enumerate(values):
+            for right in values[index + 1 :]:
+                if intervals[left][1] < intervals[right][0] or intervals[right][1] < intervals[left][0]:
+                    separated_pairs.append([left, right])
+        signal_validated = bool(outcome_variation and brier_gain is not None and brier_gain > 0 and separated_pairs)
+        if signal_validated:
+            validated.append(signal)
+        signals[signal] = {
+            "known_value_samples": len(known),
+            "unknown_value_samples": len(labeled) - len(known),
+            "bucket_count": len(groups),
+            "leave_one_out_baseline_brier": baseline_brier,
+            "leave_one_out_signal_brier": signal_brier,
+            "leave_one_out_brier_gain": brier_gain,
+            "familywise_wilson_intervals": intervals,
+            "separated_bucket_pairs": separated_pairs,
+            "validated_predictive_signal": signal_validated,
+        }
+    if validated:
+        status = "predictive_signal_validation_available"
+        reason = "representative_out_of_sample_gain_with_familywise_interval_separation"
+    elif not labeled:
+        status = "collecting"
+        reason = "no_representative_terminal_outcomes"
+    elif not outcome_variation:
+        status = "collecting"
+        reason = "representative_repair_outcome_variation_missing"
+    else:
+        status = "representative_descriptive_comparison_available_but_unvalidated"
+        reason = "predictive_validation_not_yet_established"
+    return {
+        "schema_version": 1,
+        "status": status,
+        "reason": reason,
+        "representative_terminal_outcomes": len(labeled),
+        "outcome_variation": outcome_variation,
+        "familywise_confidence": 0.95,
+        "comparison_count": comparison_count,
+        "per_comparison_alpha": round(per_comparison_alpha, 8) if per_comparison_alpha is not None else None,
+        "method": "leave_one_out_brier_plus_bonferroni_wilson_separation_v1",
+        "validated_signals": validated,
+        "signals": signals,
+        "causal_claim_allowed": False,
+    }
+
+
 def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int = 100) -> dict[str, Any]:
     bounded_limit = max(1, min(int(limit), 100))
     reports = []
@@ -260,15 +527,14 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             reports.append(report)
     terminal = [item for item in reports if (item.get("outcome") or {}).get("final") is True]
     representative_terminal = [item for item in terminal if item.get("evidence_provenance") == "representative"]
-    signals = ("candidate_solution_scope", "root_cause_confidence", "oracle_strength", "expected_repair_risk")
+    signals = PREDICTIVE_SIGNAL_NAMES
     by_signal: dict[str, list[dict[str, Any]]] = {}
     variation: dict[str, bool] = {}
     representative_variation: dict[str, bool] = {}
     for signal in signals:
         groups: dict[str, list[dict[str, Any]]] = {}
         for report in terminal:
-            recommendation = report.get("recommendation") if isinstance(report.get("recommendation"), dict) else {}
-            groups.setdefault(str(recommendation.get(signal) or "unknown"), []).append(report)
+            groups.setdefault(_signal_value(report, signal), []).append(report)
         rows = []
         for value, group in sorted(groups.items()):
             outcomes = [item.get("outcome") or {} for item in group]
@@ -327,11 +593,14 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
                 "smallest_causal_solution": (item.get("recommendation") or {}).get("smallest_causal_solution"),
             },
             "outcome": item.get("outcome"),
+            "comparison": item.get("recommendation_vs_outcome"),
         }
         for item in terminal
     ]
     descriptive_available = bool(terminal and any(variation.values()))
     representative_descriptive_available = bool(representative_terminal and any(representative_variation.values()))
+    predictive_validation = _predictive_validation(representative_terminal)
+    can_answer = bool(predictive_validation["validated_signals"])
     return {
         "schema_version": 1,
         "mode": "solution_economics_shadow_v1",
@@ -351,17 +620,13 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
         "predictor_variation": variation,
         "representative_predictor_variation": representative_variation,
         "by_signal": by_signal,
+        "predictive_validation": predictive_validation,
         "records": records,
         "p4_gate": {
-            "status": (
-                "representative_descriptive_comparison_available_but_unvalidated"
-                if representative_descriptive_available
-                else "nonrepresentative_descriptive_comparison_only"
-                if descriptive_available
-                else "collecting"
-            ),
-            "can_answer_which_signals_predict_repair": False,
-            "reason": "predictive_validation_not_yet_established",
+            "status": predictive_validation["status"] if representative_terminal else "nonrepresentative_descriptive_comparison_only" if descriptive_available else "collecting",
+            "can_answer_which_signals_predict_repair": can_answer,
+            "reason": predictive_validation["reason"] if representative_terminal else "representative_evidence_required" if descriptive_available else "predictive_validation_not_yet_established",
+            "validated_signals": list(predictive_validation["validated_signals"]),
             "representative_terminal_tasks": len(representative_terminal),
             "representative_repaired_tasks": representative_repaired,
             "representative_nonrepaired_tasks": len(representative_terminal) - representative_repaired,
@@ -374,6 +639,8 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "cross_task_counterfactual_inference_forbidden": True,
             "predictive_promotion_requires_representative_provenance": True,
             "benchmark_synthetic_unlabeled_are_not_promotion_evidence": True,
+            "predictive_validation_is_association_not_causality": True,
+            "p5_automatic_start": False,
         },
         "content_free": True,
     }

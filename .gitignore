@@ -67,8 +67,9 @@ __pycache__/
 /frontend/.dev-dist/
 
 # Coding Tools history/telemetry/orchestration is repository evidence.
-# This MUST remain the final ignore section: every current and future file
-# below .coding-tools must stay visible to Git unless the user explicitly
-# authorizes a named exception.
+# Keep every current and future file below .coding-tools visible to Git except
+# the two transient SQLite sidecars explicitly authorized by the operator.
 !/.coding-tools/
 !/.coding-tools/**
+/.coding-tools/orchestration/ledger.sqlite3-shm
+/.coding-tools/orchestration/ledger.sqlite3-wal

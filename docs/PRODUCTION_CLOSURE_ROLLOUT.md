@@ -30,7 +30,7 @@ The goal is to finish the current product without adding unnecessary architectur
 - No paid provider canary may run without explicit external-cost authorization.
 - Installed Windows/Scheduled Task/fault injection steps must verify exact target, current owner identity, rollback path, and quiescent EOCL/managed jobs before mutation.
 - Recovery faults must never kill or adopt a foreign/unverified process.
-- The complete `.coding-tools/**` tree is project history/evidence and must remain visible to Git and be included in project-state delivery commits/pushes. This includes `ledger.sqlite3`, SQLite `-wal`/`-shm` sidecars, host-turn correlation files, projections, reports, logs, backups, and future telemetry artifacts.
+- The complete `.coding-tools/**` tree is project history/evidence and must remain visible to Git and be included in project-state delivery commits/pushes except for the explicitly approved transient SQLite sidecars `.coding-tools/orchestration/ledger.sqlite3-shm` and `.coding-tools/orchestration/ledger.sqlite3-wal`. The canonical `ledger.sqlite3`, host-turn correlation files, projections, reports, logs, backups, and future telemetry artifacts remain versioned.
 - No `.coding-tools` path may be treated as a Git/runtime-only exclusion without an explicit user instruction naming that exception. Automation worktrees/nested repositories must live outside `.coding-tools` so individual evidence files remain versionable.
 - Source proof, live activation, packaged proof, installed-session proof, and release/publish claims are separate states.
 - A green test is not final EOCL acceptance until the relevant wave reaches `CHECKPOINTED` when EOCL acceptance is available and required.
@@ -49,7 +49,7 @@ The goal is to finish the current product without adding unnecessary architectur
 | P1.2 | P1 | Representative routing economics | PENDING | homogeneous accepted paired cohorts by task class/oracle/environment with measured quality/time/cost |
 | P1.3 | P1 | Selective auto-routing promotion | GATED | only task classes that satisfy representative promotion thresholds may change from deterministic |
 | P2.1 | P2 | Semantic localization optimization | **BLOCKED_CONFIG / ASSESSMENT PENDING** | configure only if exact binding exists and benchmark shows material value; otherwise keep bounded text fallback |
-| D1 | Delivery | Commit/push accepted waves | ACTIVE | each accepted source/docs wave pushed with ledger, excluding transient SQLite sidecars/runtime projections |
+| D1 | Delivery | Commit/push accepted waves | ACTIVE | each accepted source/docs wave pushed with ledger and all current evidence except the two named transient SQLite sidecars |
 
 ## 4. Current baseline evidence
 
@@ -81,12 +81,12 @@ The goal is to finish the current product without adding unnecessary architectur
 - Preserved live one-shot binding state on disk while removing it from source-control concerns.
 - Removed the accidentally tracked pending-turn snapshot from source control.
 
-### Current retention policy — supersedes the Git-exclusion portion above
+### Current retention policy — 2026-08-18 named sidecar exception
 
-- Later project direction on 2026-08-17 requires **all files under `.coding-tools/**` to be committed/pushed as historical evidence**; the earlier runtime-only Git exclusions are no longer current policy.
-- `.gitignore` must not hide any `.coding-tools` path, including host-turn correlation files and SQLite `-wal`/`-shm` sidecars.
-- Before commit/push, stage the complete tree with `git add -A -- .coding-tools` and require `npm run check:coding-tools-delivery` to pass.
-- The historical bullets above remain only as chronology of what `bae11481` did; they must not be used as authority to omit current `.coding-tools` evidence.
+- Current operator direction requires **all files under `.coding-tools/**` to be committed/pushed as historical evidence except exactly** `.coding-tools/orchestration/ledger.sqlite3-shm` and `.coding-tools/orchestration/ledger.sqlite3-wal`.
+- `.gitignore` must keep those two transient SQLite sidecars ignored/untracked while keeping `ledger.sqlite3`, host-turn correlation files, runtime projections, reports, logs, backups, and all other `.coding-tools` evidence visible to Git.
+- Before commit/push, stage the deliverable tree with `git add -A -- .coding-tools` and require `npm run check:coding-tools-delivery` to pass; the guard must reject any broader `.coding-tools` ignore exception.
+- The historical bullets above remain only as chronology of what `bae11481` and the 2026-08-17 full-retention policy did; they must not be used as authority to re-add the two transient sidecars or omit any other current `.coding-tools` evidence.
 
 ### Proof and delivery
 
@@ -463,6 +463,12 @@ Evaluate before implementing:
 - `check:coding-tools-history` guards against ignored evidence/nested gitlinks; `check:coding-tools-delivery` additionally requires every current `.coding-tools` mutation to be staged before delivery.
 - Dated research snapshots remain chronological evidence only and do not override this maintained policy or `AGENTS.md`.
 
+### 2026-08-18 — Transient SQLite sidecars explicitly excluded
+
+- Operator direction now permanently excludes only `.coding-tools/orchestration/ledger.sqlite3-shm` and `.coding-tools/orchestration/ledger.sqlite3-wal` from Git delivery because they are transient SQLite sidecars and have caused commit instability.
+- Canonical `.coding-tools/orchestration/ledger.sqlite3` remains mandatory repository evidence, together with every other `.coding-tools` artifact.
+- Repository policy/guard must enforce that the two named sidecars are ignored and untracked without permitting any broader `.coding-tools` exclusion.
+
 ### 2026-08-17 — P0.2 first installed attempt found packaging blocker
 
 - Exact NSIS installer from `bae11481` built and installed to a controlled per-user target.
@@ -521,11 +527,11 @@ Evaluate before implementing:
 
 ## 13. Next action
 
-1. selectively deliver this accepted P0.2 evidence boundary while preserving unrelated concurrent source work, but include the **complete current `.coding-tools/**` tree** in the project-state commit/push; do not exclude SQLite sidecars, host-turn state, or runtime projections;
+1. selectively deliver this accepted P0.2 evidence boundary while preserving unrelated concurrent source work, and include the **complete current `.coding-tools/**` deliverable tree** in the project-state commit/push; exclude only `ledger.sqlite3-shm` and `ledger.sqlite3-wal`, while retaining `ledger.sqlite3`, host-turn state, and runtime projections;
 2. execute P0.3 F1-F9, reusing exact existing deterministic/E2E coverage where sufficient and using an isolated packaged real-process harness for destructive cases that could sever the active Coding MCP control plane;
 3. update this file with per-case fault evidence, post-case ownership/listener/orphan invariants, and any minimal remediation required by a reproducible fault;
 4. freeze source and execute the exact-fingerprint RC gate, rebuilding the final NSIS artifact only after the source/test surface is frozen;
 5. evaluate representative routing evidence; if comparable accepted cohorts are insufficient or cost remains unknown, record `KEEP_DETERMINISTIC / NO_PROMOTION` rather than manufacture evidence;
 6. close semantic localization as `BLOCKED_CONFIG` unless the required external origin + credential-file binding exists, and benchmark it only if that binding is actually available;
 7. record the true reboot/logon persistence boundary as external/unverified unless it is independently executed and observed;
-8. make the final selective delivery commit/push including the complete `.coding-tools/**` history/evidence tree; do not create a release/tag/publish artifact without separate authorization.
+8. make the final selective delivery commit/push including the complete `.coding-tools/**` history/evidence tree except the two named transient SQLite sidecars; do not create a release/tag/publish artifact without separate authorization.
