@@ -7,7 +7,8 @@ const MAX_COMPONENT_FILES = 4096;
 const MAX_COMPONENT_BYTES = 64 * 1024 * 1024;
 const RECOVERY_HOST_LEGACY_V1_CONTRACT = 'recovery_host_legacy_v1_without_device_identity';
 const RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS = Object.freeze({
-  'electron/services/deviceIdentity.js': 'ede358714afa4d35a2fc939f56051859922acdc3693a40563234bf81a650a4ee'
+  'electron/services/deviceIdentity.js': 'ede358714afa4d35a2fc939f56051859922acdc3693a40563234bf81a650a4ee',
+  'electron/services/runtimeIdentity.js': '4774b0922cbcf859addd99899a76db449477cfe0643bcacdb00f9549d02caea5'
 });
 
 const COMPONENT_SPECS = Object.freeze({
@@ -34,6 +35,7 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/recoveryIpc.js',
       // Recovery-plane source is Recovery Host-owned so accepted bytes activate through the safe host handoff.
       'electron/services/recoveryPlaneService.js',
+      'electron/services/runtimeIdentity.js',
       'electron/services/runtimeOrchestrator.js',
       'electron/services/runtimePaths.js',
       'electron/services/secretStore.js',

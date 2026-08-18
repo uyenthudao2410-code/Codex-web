@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
 const { runtimeDeviceIdentity } = require('./deviceIdentity');
+const { INSTALLATION_ID_PATTERN } = require('./runtimeIdentity');
 
 const MAX_DESCRIPTOR_BYTES = 16 * 1024;
 const MAX_REQUEST_BYTES = 64 * 1024;
@@ -86,6 +87,9 @@ class RecoveryIpcServer {
   }
 
   descriptor() {
+    const runtimeIdentity = typeof this.paths.runtimeIdentity === 'function'
+      ? this.paths.runtimeIdentity()
+      : null;
     return {
       version: 1,
       host: '127.0.0.1',
@@ -94,6 +98,10 @@ class RecoveryIpcServer {
       owner: 'recovery-host',
       owner_pid: process.pid,
       instance_id: this.instanceId,
+      ...(runtimeIdentity ? {
+        installation_id: runtimeIdentity.installation_id,
+        runtime_mode: runtimeIdentity.mode
+      } : {}),
       ...(this.device ? {
         device_id: this.device.deviceId,
         device_instance_id: this.device.deviceInstanceId,
@@ -220,16 +228,51 @@ function loadRecoveryDescriptor(paths) {
   const port = Number(descriptor?.port || 0);
   const token = String(descriptor?.token || '');
   const ownerPid = Number(descriptor?.owner_pid || 0);
+  const installationId = String(descriptor?.installation_id || '').toLowerCase();
+  const runtimeMode = String(descriptor?.runtime_mode || '');
+  const hasRuntimeIdentity = Boolean(descriptor?.installation_id || descriptor?.runtime_mode);
   if (descriptor?.version !== 1 || descriptor?.host !== '127.0.0.1' || descriptor?.owner !== 'recovery-host') {
     throw Object.assign(new Error('Recovery Host descriptor endpoint is invalid.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
   }
   if (!Number.isInteger(port) || port < 1 || port > 65535 || token.length < 32 || !String(descriptor?.instance_id || '')) {
     throw Object.assign(new Error('Recovery Host descriptor is incomplete.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
   }
+  if (hasRuntimeIdentity
+    && (!INSTALLATION_ID_PATTERN.test(installationId) || !['development', 'packaged'].includes(runtimeMode))) {
+    throw Object.assign(new Error('Recovery Host installation identity is invalid.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
+  }
   if (!Number.isInteger(ownerPid) || !isProcessAlive(ownerPid)) {
     throw Object.assign(new Error('Recovery Host descriptor owner is not alive.'), { code: 'RECOVERY_DESCRIPTOR_STALE' });
   }
-  return { ...descriptor, port, token, owner_pid: ownerPid };
+  return {
+    ...descriptor,
+    port,
+    token,
+    owner_pid: ownerPid,
+    installation_id: installationId || null,
+    runtime_mode: runtimeMode || null
+  };
+}
+
+function assertExpectedDescriptor(descriptor, options = {}) {
+  const expectedOwnerPid = Number(options.expectedOwnerPid || 0);
+  const expectedInstanceId = String(options.expectedInstanceId || '');
+  const expectedInstallationId = String(options.expectedInstallationId || '').toLowerCase();
+  const ownerMatches = !expectedOwnerPid || Number(descriptor.owner_pid) === expectedOwnerPid;
+  const instanceMatches = !expectedInstanceId || String(descriptor.instance_id || '') === expectedInstanceId;
+  const installationMatches = !expectedInstallationId || String(descriptor.installation_id || '').toLowerCase() === expectedInstallationId;
+  if (ownerMatches && instanceMatches && installationMatches) return descriptor;
+  throw Object.assign(new Error('Recovery Host descriptor changed before the authenticated request was sent.'), {
+    code: 'RECOVERY_DESCRIPTOR_CHANGED',
+    details: {
+      expected_owner_pid: expectedOwnerPid || null,
+      observed_owner_pid: Number(descriptor.owner_pid || 0) || null,
+      expected_instance_id: expectedInstanceId || null,
+      observed_instance_id: String(descriptor.instance_id || '') || null,
+      expected_installation_id: expectedInstallationId || null,
+      observed_installation_id: String(descriptor.installation_id || '') || null
+    }
+  });
 }
 
 class RecoveryIpcClient {
@@ -242,8 +285,10 @@ class RecoveryIpcClient {
       return Promise.reject(Object.assign(new Error('Recovery action is not allowlisted.'), { code: 'ACTION_NOT_ALLOWED' }));
     }
     let descriptor;
-    try { descriptor = loadRecoveryDescriptor(this.paths); }
-    catch (error) { return Promise.reject(error); }
+    try {
+      descriptor = loadRecoveryDescriptor(this.paths);
+      assertExpectedDescriptor(descriptor, options);
+    } catch (error) { return Promise.reject(error); }
     const body = Buffer.from(JSON.stringify({ action, args }));
     const timeout = Math.max(100, Number(options.timeout || (MUTATING_ACTIONS.has(action) ? MUTATION_TIMEOUT_MS : DEFAULT_TIMEOUT_MS)));
     return new Promise((resolve, reject) => {
@@ -288,8 +333,8 @@ class RecoveryIpcClient {
     });
   }
 
-  ping() { return this.call('recovery.ping', [], { timeout: 1500 }); }
-  status() { return this.call('recovery.status'); }
+  ping(options = {}) { return this.call('recovery.ping', [], { timeout: 1500, ...options }); }
+  status(options = {}) { return this.call('recovery.status', [], options); }
   activationPreflight(request) { return this.call('code.activation_preflight', [request]); }
   activateUpdate(request) { return this.call('code.activate_update', [request]); }
   activationStatus(operationId) { return this.call('code.activation_status', [operationId]); }
@@ -298,9 +343,9 @@ class RecoveryIpcClient {
   snapshot(options = {}) { return this.call('runtime.snapshot', [options]); }
   lightweightSnapshot() { return this.call('runtime.lightweight_snapshot'); }
   supervise() { return this.lightweightSnapshot(); }
-  start(options = {}) { return this.call('runtime.start', [options]); }
-  stop(options = {}) { return this.call('runtime.stop', [options]); }
-  restart(options = {}) { return this.call('runtime.restart', [options]); }
+  start(options = {}, callOptions = {}) { return this.call('runtime.start', [options], callOptions); }
+  stop(options = {}, callOptions = {}) { return this.call('runtime.stop', [options], callOptions); }
+  restart(options = {}, callOptions = {}) { return this.call('runtime.restart', [options], callOptions); }
   switchWorkspace(workspace) { return this.call('runtime.switch_workspace', [workspace]); }
   updateAuthorizedRoots(roots) { return this.call('runtime.update_authorized_roots', [roots]); }
   acknowledgeConnectorContract() { return this.call('runtime.acknowledge_connector_contract'); }
@@ -315,6 +360,7 @@ module.exports = {
   RecoveryIpcClient,
   RPC_ACTIONS,
   loadRecoveryDescriptor,
+  assertExpectedDescriptor,
   sameToken,
   MAX_DESCRIPTOR_BYTES,
   MAX_REQUEST_BYTES,
