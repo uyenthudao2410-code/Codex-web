@@ -6,6 +6,7 @@ name: P4 Completion Probe
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   probe:
@@ -19,18 +20,46 @@ jobs:
           python-version: '3.12'
       - name: Install Coding Tools MCP test dependencies
         run: python -m pip install -e "resources/coding-tools-mcp[dev]"
-      - name: Focused P4 and HTTP-boundary regression
+      - id: tests
+        name: Focused P4 and HTTP-boundary regression
+        continue-on-error: true
         working-directory: resources/coding-tools-mcp
-        run: python -m pytest tests/test_exception_group_boundary.py tests/test_p4_population_window.py tests/test_solution_economics.py -q
-      - name: Check module size
-        run: python resources/coding-tools-mcp/scripts/check_module_size.py
-      - name: Report committed P4 readiness
+        run: python -m pytest tests/test_exception_group_boundary.py tests/test_p4_population_window.py tests/test_solution_economics.py -q | tee ../../p4-tests.log
+      - id: module_size
+        name: Check module size
+        continue-on-error: true
+        run: python resources/coding-tools-mcp/scripts/check_module_size.py | tee p4-module-size.log
+      - id: readiness
+        name: Report committed P4 readiness
         run: python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --limit 100 | tee p4-readiness.json
-      - name: Upload readiness evidence
+      - name: Publish probe result
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: p4-completion-probe-${{ github.sha }}
-          path: p4-readiness.json
-          if-no-files-found: warn
-          retention-days: 3
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### P4 completion probe'
+            echo
+            echo "- source: $GITHUB_SHA"
+            echo "- focused tests: ${{ steps.tests.outcome }}"
+            echo "- module size: ${{ steps.module_size.outcome }}"
+            echo "- readiness reporter: ${{ steps.readiness.outcome }}"
+            echo
+            if [[ -f p4-readiness.json ]]; then
+              echo '```json'
+              cat p4-readiness.json
+              echo '```'
+            fi
+            if [[ -f p4-tests.log ]]; then
+              echo
+              echo 'Focused-test tail:'
+              echo '```text'
+              tail -n 30 p4-tests.log
+              echo '```'
+            fi
+          } > p4-probe-comment.md
+          gh issue comment "${{ github.event.issue.number }}" --body-file p4-probe-comment.md
+      - name: Enforce source proof
+        if: steps.tests.outcome != 'success' || steps.module_size.outcome != 'success'
+        run: exit 1
