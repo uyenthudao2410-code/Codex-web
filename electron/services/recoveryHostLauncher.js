@@ -82,6 +82,14 @@ function descriptorMatchesInstallation(descriptor, expectedIdentity) {
   return sameInstallationIdentity(descriptorIdentity(descriptor), expectedIdentity);
 }
 
+function descriptorRequestOptions(descriptor) {
+  return {
+    expectedOwnerPid: Number(descriptor?.owner_pid || 0),
+    expectedInstanceId: String(descriptor?.instance_id || ''),
+    ...(descriptor?.installation_id ? { expectedInstallationId: String(descriptor.installation_id) } : {})
+  };
+}
+
 function installationMismatchError(expectedIdentity, descriptor) {
   return Object.assign(
     new Error('Recovery Host belongs to another application checkout or installation.'),
@@ -108,6 +116,23 @@ async function waitForProcessExit(pid, {
     await sleep(50);
   }
   return !processAlive(pid);
+}
+
+async function readVerifiedReadyHost(client, paths, readDescriptor = loadRecoveryDescriptor, attempts = 2) {
+  let lastError = null;
+  for (let attempt = 0; attempt < Math.max(1, Number(attempts) || 1); attempt += 1) {
+    try {
+      const descriptor = readDescriptor(paths);
+      const status = await client.ping(descriptorRequestOptions(descriptor));
+      return status?.ready ? { descriptor, status } : null;
+    } catch (error) {
+      lastError = error;
+      if (error?.code !== 'RECOVERY_DESCRIPTOR_CHANGED') throw error;
+    }
+  }
+  throw lastError || Object.assign(new Error('Recovery Host identity could not be stabilized.'), {
+    code: 'RECOVERY_DESCRIPTOR_CHANGED'
+  });
 }
 
 async function retireStaleDevelopmentRecoveryHost({
@@ -138,10 +163,10 @@ async function retireStaleDevelopmentRecoveryHost({
     newInstallationId: expectedIdentity.installation_id
   });
 
-  // Starting a development checkout is the authority transition. Stop the old
-  // primary runtime first so no Coding MCP/Tunnel process from the previous
-  // checkout survives the host takeover. Preserve manual-stop intent.
-  await client.stop({ manual: false });
+  // Starting a development checkout is the authority transition. Bind the
+  // mutation to the host identity that was already authenticated by ping so a
+  // descriptor race cannot stop a replacement process.
+  await client.stop({ manual: false }, descriptorRequestOptions(descriptor));
 
   let verified;
   try {
@@ -184,18 +209,16 @@ async function ensureRecoveryHost({
 }) {
   const client = clientFactory({ paths });
   const expectedIdentity = typeof paths.runtimeIdentity === 'function' ? paths.runtimeIdentity() : null;
-  let existingDescriptor = null;
   try {
-    existingDescriptor = readDescriptor(paths);
-    const status = await client.ping();
-    if (status?.ready) {
-      if (expectedIdentity && descriptorMatchesInstallation(existingDescriptor, expectedIdentity)) return client;
-      if (app.isPackaged || !expectedIdentity) throw installationMismatchError(expectedIdentity, existingDescriptor);
+    const existing = await readVerifiedReadyHost(client, paths, readDescriptor, 2);
+    if (existing?.status?.ready) {
+      if (expectedIdentity && descriptorMatchesInstallation(existing.descriptor, expectedIdentity)) return client;
+      if (app.isPackaged || !expectedIdentity) throw installationMismatchError(expectedIdentity, existing.descriptor);
       await retireStaleDevelopmentRecoveryHost({
         client,
         paths,
         expectedIdentity,
-        descriptor: existingDescriptor,
+        descriptor: existing.descriptor,
         log,
         readDescriptor,
         terminateProcess,
@@ -206,7 +229,8 @@ async function ensureRecoveryHost({
     }
   } catch (error) {
     if (String(error?.code || '').startsWith('RECOVERY_HOST_DEV_HANDOFF_')
-      || error?.code === 'RECOVERY_HOST_INSTALLATION_MISMATCH') {
+      || error?.code === 'RECOVERY_HOST_INSTALLATION_MISMATCH'
+      || error?.code === 'RECOVERY_DESCRIPTOR_CHANGED') {
       throw error;
     }
     // Missing/stale/unreachable host falls through to a current-checkout spawn.
@@ -217,11 +241,10 @@ async function ensureRecoveryHost({
   let lastError = null;
   while (Date.now() < deadline) {
     try {
-      const descriptor = readDescriptor(paths);
-      const status = await client.ping();
-      if (status?.ready) {
-        if (!expectedIdentity || descriptorMatchesInstallation(descriptor, expectedIdentity)) return client;
-        lastError = installationMismatchError(expectedIdentity, descriptor);
+      const ready = await readVerifiedReadyHost(client, paths, readDescriptor, 2);
+      if (ready?.status?.ready) {
+        if (!expectedIdentity || descriptorMatchesInstallation(ready.descriptor, expectedIdentity)) return client;
+        lastError = installationMismatchError(expectedIdentity, ready.descriptor);
       }
     } catch (error) {
       lastError = error;
@@ -230,8 +253,8 @@ async function ensureRecoveryHost({
   }
   log?.error?.('Recovery Host không sẵn sàng trong thời gian quy định', { code: lastError?.code || 'RECOVERY_HOST_START_TIMEOUT' });
   throw Object.assign(new Error('Recovery Host không sẵn sàng trong thời gian quy định.'), {
-    code: lastError?.code === 'RECOVERY_HOST_INSTALLATION_MISMATCH'
-      ? 'RECOVERY_HOST_INSTALLATION_MISMATCH'
+    code: ['RECOVERY_HOST_INSTALLATION_MISMATCH', 'RECOVERY_DESCRIPTOR_CHANGED'].includes(lastError?.code)
+      ? lastError.code
       : 'RECOVERY_HOST_START_TIMEOUT',
     cause: lastError
   });
@@ -246,6 +269,8 @@ module.exports = {
   spawnElectronUi,
   assertActivationDeadline,
   descriptorMatchesInstallation,
+  descriptorRequestOptions,
+  readVerifiedReadyHost,
   retireStaleDevelopmentRecoveryHost,
   waitForProcessExit,
   installationMismatchError
