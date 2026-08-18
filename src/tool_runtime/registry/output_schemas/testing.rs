@@ -138,10 +138,7 @@ fn cargo_output_schema(tool_name: &str) -> Value {
             ("permission", permission_decision_schema()),
     ];
     if matches!(tool_name, "cargo_check" | "cargo_test") {
-        fields.push((
-            "compute_placement",
-            validation_compute_placement_schema(),
-        ));
+        fields.push(("compute_placement", validation_compute_placement_schema()));
         fields.push((
             "diagnostics",
             cargo_test_diagnostics_schema(

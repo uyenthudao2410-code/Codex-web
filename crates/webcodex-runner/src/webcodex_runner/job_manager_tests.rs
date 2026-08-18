@@ -1399,11 +1399,9 @@ fn structured_process_job_handoff_observation_does_not_reset_the_original_total_
     let mut handoff = None;
     let poll_deadline = Instant::now() + Duration::from_secs(1);
     while Instant::now() < poll_deadline {
-        handoff = manager
-            .inventory()
-            .jobs
-            .into_iter()
-            .find(|snapshot| snapshot.job_id == "structured-original-timeout" && snapshot.status == "running");
+        handoff = manager.inventory().jobs.into_iter().find(|snapshot| {
+            snapshot.job_id == "structured-original-timeout" && snapshot.status == "running"
+        });
         if handoff.is_some() {
             break;
         }

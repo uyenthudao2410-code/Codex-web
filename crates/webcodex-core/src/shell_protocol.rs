@@ -1635,9 +1635,7 @@ impl ShellJobValidationComputePlacement {
                 && !value.chars().any(char::is_control)
         }
 
-        if !valid_runner_id(&self.source_runner_id)
-            || !valid_runner_id(&self.executor_runner_id)
-        {
+        if !valid_runner_id(&self.source_runner_id) || !valid_runner_id(&self.executor_runner_id) {
             return false;
         }
 
@@ -1650,18 +1648,12 @@ impl ShellJobValidationComputePlacement {
             ("local_only", "source", false, "local_only_policy") => {
                 self.source_runner_id == self.executor_runner_id
             }
-            (
-                "server_preferred",
-                "server_compute",
-                false,
-                "server_compute_selected",
-            ) => self.source_runner_id != self.executor_runner_id,
-            (
-                "server_preferred",
-                "source",
-                true,
-                "server_compute_fallback_source",
-            ) => self.source_runner_id == self.executor_runner_id,
+            ("server_preferred", "server_compute", false, "server_compute_selected") => {
+                self.source_runner_id != self.executor_runner_id
+            }
+            ("server_preferred", "source", true, "server_compute_fallback_source") => {
+                self.source_runner_id == self.executor_runner_id
+            }
             _ => false,
         }
     }
