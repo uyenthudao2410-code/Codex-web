@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .server import main
+from .bootstrap import main
 
 
 if __name__ == "__main__":
