@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .errors import JsonRpcError
+from .errors import JsonRpcError, normalize_exception_group
 
 
 PROTOCOL_VERSION = "2025-11-25"
@@ -207,3 +207,16 @@ def dispatch_rpc(
         return {"jsonrpc": "2.0", "id": request_id, "result": result}
     except JsonRpcError as exc:
         return jsonrpc_error(response_id(request), exc.code, exc.message, exc.data)
+    except ExceptionGroup as exc:
+        failure = normalize_exception_group(exc)
+        return jsonrpc_error(
+            response_id(request),
+            -32603,
+            failure.message,
+            {
+                "code": failure.code,
+                "category": failure.category,
+                "retryable": failure.retryable,
+                "details": failure.details,
+            },
+        )
