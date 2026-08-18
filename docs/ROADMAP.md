@@ -4,7 +4,7 @@ This roadmap describes the current **Tools-Codex-web Windows Desktop Execution H
 
 ## Current baseline
 
-The maintained product boundary now includes Electron Execution Control Center; one shared Coding Tools MCP Runtime; ChatWeb primary-tunnel access; Codex Desktop thin-proxy access into the same authority; the verified `smart-v3` eight-tool surface; EOCL/controller/write-fencing/proof/handoff/observation/restart controls; Recovery Host + Windows Recovery Supervisor + independent Recovery MCP/Tunnel; bounded Codex/OpenCode provider lanes; semantic-first localization; closed LSP process telemetry/resource governance; an isolated packaged-Windows Recovery acceptance lane; and accepted explicit validation compute-placement control for `local_only` and `server_preferred`.
+The maintained product boundary now includes Electron Execution Control Center; one shared Coding Tools MCP Runtime; ChatWeb primary-tunnel access; Codex Desktop thin-proxy access into the same authority; the verified `smart-v3` eight-tool surface; EOCL/controller/write-fencing/proof/handoff/observation/restart controls; Recovery Host + Windows Recovery Supervisor + independent Recovery MCP/Tunnel; bounded Codex/OpenCode provider lanes; semantic-first localization; closed LSP process telemetry/resource governance; an isolated packaged-Windows Recovery acceptance lane; accepted explicit validation compute-placement control for `local_only` and `server_preferred`; protocol-level ExceptionGroup normalization; and source-side semantic MCP health supervision that distinguishes control-health success from a broken tool plane.
 
 ## Policy already decided
 
@@ -17,16 +17,28 @@ The maintained product boundary now includes Electron Execution Control Center; 
 7. **Automatic global server-first stays off** until representative compute-placement evidence supports promotion.
 8. **No fabricated observability.** Unknown quota, billing, ChatGPT context percentage or host state stays unknown.
 
+## P0-P3 closure boundary before the next engineering phase
+
+P0-P3 engineering/control work is not to be expanded merely to fill representative evidence gaps. The remaining gates are classified explicitly:
+
+- **P0 engineering/source: CLOSED.** Protocol ExceptionGroup normalization and semantic tool-plane self-recovery are implemented. **P0 live activation remains OPEN** until the active Windows process loads current source and proves the real connector path.
+- **P1 measurement integrity: CLOSED.** Controlled measurement plumbing is sufficient for experiments. Economics remains an evidence program; missing usage/cost is unknown, never zero.
+- **P2 diagnostic phase: CLOSED.** Incomplete historical causal/oracle coverage is a measurement limitation for subsequent intervention studies, not a reason to keep extending P2 architecture.
+- **P3 engineering/control plane: CLOSED / ACCEPTED.** Representative efficacy remains deferred; global server-first remains OFF.
+
+The only blocker before starting the next mutation-heavy engineering phase is **P0 live activation acceptance**. The required live checks are: current process/source identity, `workspace_context`, `agent_workflow` prepare, `task_control` get/audit, exactly 8 `smart-v3` public tools, no raw ExceptionGroup leakage, and no stale/orphan/conflicting write authority.
+
 ## Immediate hardening and acceptance priorities
 
-### P1 — exact-source activation and release boundaries
+### Operational acceptance — exact-source runtime activation
 
 - Keep source proof, controlled activation, live canary and packaged/released claims separate.
-- Verify exact running revision/process identity after controlled activation when current Recovery/Coding MCP/Electron changes require live proof.
-- The isolated packaged-Windows Recovery Host/Supervisor lane is covered by `npm run test:recovery:packaged`; before calling a release complete, still prove any required installed Windows logon/session behavior and production-only fault scenarios that cannot safely be represented in isolation.
+- Load the current accepted source on the active Windows Recovery Host/Coding MCP process and verify exact running revision/process identity.
+- Prove the semantic tool plane, not merely `GET /__control/health`: the source-side Recovery Host watchdog now uses a read-only `workspace_context` canary and delegates any restart through the existing `RuntimeOrchestrator` authority.
 - Keep restart/activation fail-closed around active commands, background work, provider/agent lanes and EOCL acceptance.
+- The isolated packaged-Windows Recovery Host/Supervisor lane remains covered by `npm run test:recovery:packaged`; a release claim still requires any relevant installed Windows logon/session and production-only fault checks.
 
-### P2 — representative routing economics
+### Evidence program — representative routing economics
 
 - Produce accepted, homogeneous paired cohorts by task class/oracle/environment instead of synthetic no-op volume.
 - Compare quality/critical-defect/repair/TTA/cost with explicit sample sizes and provenance.
@@ -65,9 +77,11 @@ The efficacy pilot is intentionally **DEFERRED**, not an implementation blocker.
 - Missing controller/provider monetary cost remains unknown, never zero.
 - Automatic global server-first remains **OFF**.
 
-## Operational blocker outside P3 semantics
+## Operational blocker before next mutation-heavy phase
 
-A raw `ExceptionGroup: unhandled errors in a TaskGroup` is currently being returned by the ChatWeb Coding MCP connector before normal typed tool-error handling can be observed. Current source already contains an ExceptionGroup normalization boundary, so this is treated as a runtime/activation/transport incident until exact live process identity and the child exception are observed. It does **not** reopen accepted P3 compute-placement semantics, but it must be resolved before claiming a new live activation/release acceptance.
+The connected ChatWeb Coding MCP still returns a raw `ExceptionGroup: unhandled errors in a TaskGroup`, including for `workspace_context` and confirmed `task_control restart_runtime`. Current `main` now contains both protocol normalization and a Recovery Host semantic tool-plane watchdog that detects this exact HTTP-green/tool-plane-broken state and delegates recovery to the existing orchestrator. Focused source regression is green, but the active Windows process has not yet demonstrated that it loaded this source.
+
+Therefore the remaining blocker is **deployment/activation acceptance**, not additional P0-P3 architecture. Do not claim P0 operationally frozen or start a mutation-heavy next phase until the live checklist above passes.
 
 Credential snapshots under `docs/ac/` are local-only and must never be tracked. They have been removed from current `main` and `/docs/ac/` is ignored. Any credential that previously entered Git history must be treated as exposed and rotated; a history rewrite is a separate destructive maintenance action and requires explicit authorization.
 
@@ -85,4 +99,4 @@ Credential snapshots under `docs/ac/` are local-only and must never be tracked. 
 
 ## Completion criteria
 
-A semantic engineering item is complete when its relevant source contract, focused/affected-boundary proof and EOCL final acceptance are satisfied. Live activation, packaging/release, and representative efficacy are separate gates and must be reported separately rather than being used to reopen an already accepted implementation wave. Tool count, raw test count, LOC or model-call count are not completion metrics by themselves.
+A semantic engineering item is complete when its relevant source contract, focused/affected-boundary proof and EOCL final acceptance are satisfied. Live activation, packaging/release, and representative efficacy are separate gates and must be reported separately rather than being used to reopen an already accepted implementation wave. For the current P0-P3 freeze, the next engineering phase additionally requires the P0 live connector acceptance checklist to pass on the active Windows instance. Tool count, raw test count, LOC or model-call count are not completion metrics by themselves.
