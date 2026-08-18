@@ -12,7 +12,47 @@
     "session_id": "HspSO24llIlmMv677PC9WAd9",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-18T09:20:17.149Z"
+    "started_at": "2026-08-18T09:20:17.149Z",
+    "exit_code": null,
+    "elapsed_ms": 30003,
+    "artifact_ref": {
+      "schema_version": 1,
+      "kind": "command_output",
+      "scope": "runtime_retained",
+      "source": "command",
+      "locator": {
+        "command_id": "HspSO24llIlmMv677PC9WAd9"
+      },
+      "durability": "process_runtime",
+      "restart_safe": false,
+      "content_addressed": false,
+      "retrieval": {
+        "tool": "command_control",
+        "action": "read"
+      },
+      "size_bytes": 2588,
+      "command_id": "HspSO24llIlmMv677PC9WAd9",
+      "streams": {
+        "stdout": {
+          "output_ref": "command:HspSO24llIlmMv677PC9WAd9:stdout",
+          "total_stream_bytes": 2488,
+          "total_retained_bytes": 2488,
+          "head_retained_bytes": 2488,
+          "tail_retained_bytes": 0,
+          "evicted_gap_bytes": 0,
+          "evicted_bytes_total": 0
+        },
+        "stderr": {
+          "output_ref": "command:HspSO24llIlmMv677PC9WAd9:stderr",
+          "total_stream_bytes": 100,
+          "total_retained_bytes": 100,
+          "head_retained_bytes": 100,
+          "tail_retained_bytes": 0,
+          "evicted_gap_bytes": 0,
+          "evicted_bytes_total": 0
+        }
+      }
+    }
   },
   "test_results": [],
   "build_results": [],
@@ -21,7 +61,7 @@
   "failure": null,
   "next_step": "",
   "created_at": "2026-08-18T09:20:16.699Z",
-  "updated_at": "2026-08-18T09:20:17.149Z",
+  "updated_at": "2026-08-18T09:20:53.580Z",
   "events": [
     {
       "time": "2026-08-18T09:20:16.700Z",
