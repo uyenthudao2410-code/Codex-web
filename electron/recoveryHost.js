@@ -3,6 +3,7 @@ const { SecretStore } = require('./services/secretStore');
 const { LogService } = require('./services/logService');
 const { EnvironmentService } = require('./services/environmentService');
 const { RecoveryHost } = require('./services/recoveryHost');
+const { SemanticMcpHealthWatchdog } = require('./services/mcpSemanticHealth');
 const { createElectronRuntimePaths } = require('./services/runtimePaths');
 const { configureRuntimePaths } = require('./paths');
 const { spawnRecoveryHost, spawnElectronUi } = require('./services/recoveryHostLauncher');
@@ -58,11 +59,21 @@ async function startRecoveryHostApplication(app) {
     return null;
   }
 
+  const semanticWatchdog = new SemanticMcpHealthWatchdog({
+    settings,
+    secrets,
+    orchestrator: host.orchestrator,
+    log,
+    isSuppressed: () => !host.running || host.handoffStarted
+  });
+  semanticWatchdog.start();
+
   let shutdownStarted = false;
   app.on('before-quit', (event) => {
     if (shutdownStarted) return;
     shutdownStarted = true;
     event.preventDefault();
+    semanticWatchdog.stop();
     host.stop().finally(() => app.quit());
   });
   return host;
