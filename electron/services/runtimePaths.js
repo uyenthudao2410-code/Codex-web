@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { createInstallationIdentity } = require('./runtimeIdentity');
 
 function requiredRoot(value, name) {
   const text = String(value || '').trim();
@@ -9,15 +10,26 @@ function requiredRoot(value, name) {
 }
 
 class RuntimePaths {
-  constructor({ dataRoot, resourcesRoot, appRoot }) {
+  constructor({ dataRoot, resourcesRoot, appRoot, runtimeMode = 'development', executablePath = process.execPath }) {
     this.dataRootPath = requiredRoot(dataRoot, 'dataRoot');
     this.resourcesRootPath = requiredRoot(resourcesRoot, 'resourcesRoot');
     this.appRootPath = requiredRoot(appRoot || path.dirname(this.resourcesRootPath), 'appRoot');
+    this.executablePathValue = requiredRoot(executablePath, 'executablePath');
+    this.runtimeModeValue = runtimeMode === 'packaged' ? 'packaged' : 'development';
+    this.runtimeIdentityValue = createInstallationIdentity({
+      mode: this.runtimeModeValue,
+      appRoot: this.appRootPath,
+      resourcesRoot: this.resourcesRootPath,
+      executablePath: this.executablePathValue
+    });
   }
 
   dataRoot() { return this.dataRootPath; }
   resourcesRoot() { return this.resourcesRootPath; }
   appRoot() { return this.appRootPath; }
+  executablePath() { return this.executablePathValue; }
+  runtimeMode() { return this.runtimeModeValue; }
+  runtimeIdentity() { return this.runtimeIdentityValue; }
   deviceFile() { return path.join(this.dataRootPath, 'device.json'); }
   settingsFile() { return path.join(this.dataRootPath, 'settings.json'); }
   secretsFile() { return path.join(this.dataRootPath, 'secrets.bin'); }
@@ -44,14 +56,16 @@ function createRuntimePaths(options) {
   return new RuntimePaths(options);
 }
 
-function createElectronRuntimePaths(app, processResourcesPath = process.resourcesPath) {
+function createElectronRuntimePaths(app, processResourcesPath = process.resourcesPath, executablePath = process.execPath) {
   if (!app) throw new Error('Electron app is required to resolve runtime paths.');
   return createRuntimePaths({
     dataRoot: app.getPath('userData'),
     appRoot: app.getAppPath(),
     resourcesRoot: app.isPackaged
       ? path.join(processResourcesPath, 'resources')
-      : path.join(app.getAppPath(), 'resources')
+      : path.join(app.getAppPath(), 'resources'),
+    runtimeMode: app.isPackaged ? 'packaged' : 'development',
+    executablePath
   });
 }
 
