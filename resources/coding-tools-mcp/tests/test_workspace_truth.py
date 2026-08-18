@@ -61,6 +61,19 @@ def test_workspace_truth_guard_preserves_existing_escape_checks(tmp_path: Path) 
     assert symlink_escape.value.code == "SYMLINK_ESCAPE"
 
 
+def test_canonical_alias_into_active_workspace_remains_valid(tmp_path: Path) -> None:
+    root = tmp_path / "workspace"
+    root.mkdir()
+    alias = tmp_path / "workspace-alias"
+    try:
+        alias.symlink_to(root, target_is_directory=True)
+    except OSError:
+        pytest.skip("directory symlinks are unavailable on this test host")
+
+    workspace = _guarded_workspace(root)
+    assert workspace.resolve_existing(str(alias)).path == root.resolve()
+
+
 def test_workspace_truth_guard_installation_is_idempotent() -> None:
     install_workspace_truth_guard(server)
     guarded = server.Workspace

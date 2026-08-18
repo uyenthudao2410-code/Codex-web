@@ -20,13 +20,24 @@ def _path_is_within(candidate: Path | str, root: Path | str) -> bool:
         return False
 
 
+def _path_belongs_to_root(candidate: Path, root: Path) -> bool:
+    if _path_is_within(candidate, root):
+        return True
+    try:
+        resolved = candidate.resolve(strict=False)
+    except (OSError, RuntimeError):
+        return False
+    return _path_is_within(resolved, root)
+
+
 def install_workspace_truth_guard(server_module: ModuleType) -> ModuleType:
     """Make the Runtime-configured workspace authoritative for absolute paths.
 
     Relative paths continue to resolve from the active workspace/default cwd.
-    Absolute paths are accepted only when they lexically belong to the active
-    workspace or one of the explicitly configured authorized roots. Existing
-    resolution still performs the final symlink/canonical security checks.
+    Absolute paths are accepted only when they belong to the active workspace
+    or one of the explicitly configured authorized roots. Canonical aliases
+    into an allowed root remain valid; the existing resolver still performs
+    the final symlink/canonical security checks.
     """
 
     current = server_module.Workspace
@@ -40,7 +51,7 @@ def install_workspace_truth_guard(server_module: ModuleType) -> ModuleType:
             if isinstance(raw_path, str) and raw_path and "\x00" not in raw_path:
                 supplied = Path(raw_path).expanduser()
                 if supplied.is_absolute() and not any(
-                    _path_is_within(supplied, root) for root in self.authorized_roots
+                    _path_belongs_to_root(supplied, root) for root in self.authorized_roots
                 ):
                     raise ToolFailure(
                         "STALE_WORKSPACE_CONTEXT",
