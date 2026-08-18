@@ -30,14 +30,14 @@
         "tool": "command_control",
         "action": "read"
       },
-      "size_bytes": 3309,
+      "size_bytes": 3994,
       "command_id": "HspSO24llIlmMv677PC9WAd9",
       "streams": {
         "stdout": {
           "output_ref": "command:HspSO24llIlmMv677PC9WAd9:stdout",
-          "total_stream_bytes": 3209,
-          "total_retained_bytes": 3209,
-          "head_retained_bytes": 3209,
+          "total_stream_bytes": 3894,
+          "total_retained_bytes": 3894,
+          "head_retained_bytes": 3894,
           "tail_retained_bytes": 0,
           "evicted_gap_bytes": 0,
           "evicted_bytes_total": 0
@@ -61,7 +61,7 @@
   "failure": null,
   "next_step": "",
   "created_at": "2026-08-18T09:20:16.699Z",
-  "updated_at": "2026-08-18T09:21:25.994Z",
+  "updated_at": "2026-08-18T09:21:53.584Z",
   "events": [
     {
       "time": "2026-08-18T09:20:16.700Z",
