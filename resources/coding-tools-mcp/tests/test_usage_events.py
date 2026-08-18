@@ -6,6 +6,7 @@ from pathlib import Path
 
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.usage_events import build_usage_event, usage_event_from_provider_delegation, usage_event_from_provider_telemetry
+from coding_tools_mcp.usage_pricing import derive_cost, price_of
 
 
 class UsageEventTests(unittest.TestCase):
@@ -76,6 +77,79 @@ class UsageEventTests(unittest.TestCase):
         self.assertEqual(event["timing"]["provider_ms"], 900)
         self.assertEqual(event["timing"]["total_ms"], 45000)
         self.assertEqual(event["error"]["class"], "deadline_or_timeout")
+
+    def test_pricing_lookup_matches_repo_lane_rates(self) -> None:
+        self.assertEqual(price_of("deepseek-v4-flash", "input"), 0.28)
+        self.assertEqual(price_of("deepseek-v4-flash", "output"), 0.42)
+        self.assertEqual(price_of("deepseek-v4-flash", "cached"), 0.028)
+        self.assertEqual(price_of("opencode-go/deepseek-v4-pro", "input"), 0.28)
+        self.assertEqual(price_of("gpt-5.4-mini", "input"), 0.15)
+        self.assertEqual(price_of("gpt-5.6-luna", "output"), 0.6)
+        self.assertEqual(price_of("gpt-5.6-terra", "input"), 2.5)
+        self.assertEqual(price_of("gpt-5.6-sol", "input"), 10)
+        self.assertEqual(price_of("gpt-5.6-sol", "output"), 40)
+        self.assertIsNone(price_of("gpt-5.6-sol", "reasoning"))
+        self.assertIsNone(price_of("unknown-model", "input"))
+        self.assertIsNone(price_of("deepseek-v4-flash", "bogus"))
+
+    def test_derived_cost_when_provider_cost_missing(self) -> None:
+        event = build_usage_event(
+            run_id="run-d",
+            wave_id="wave-d",
+            delegation_id="delegation-d",
+            provider_id="opencode-go",
+            model_id="deepseek-v4-flash",
+            status="completed",
+            source="test",
+            input_tokens=1000,
+            cached_input_tokens=400,
+            output_tokens=200,
+            reasoning_output_tokens=20,
+            cache_write_tokens=5,
+        )
+        self.assertIsNone(event["cost"]["provider_cost"])
+        self.assertEqual(event["cost"]["kind"], "pricing_derived")
+        self.assertEqual(event["provenance"]["cost"], "pricing_derived")
+        self.assertEqual(event["measurement"]["cost"], "derived")
+        self.assertAlmostEqual(event["cost"]["derived_cost_usd"], (600 * 0.28 + 400 * 0.028 + 200 * 0.42) / 1_000_000)
+        self.assertEqual(event["cost"]["derived_components"]["input"], 600 * 0.28 / 1_000_000)
+        self.assertNotIn("reasoning", event["cost"]["derived_components"])
+
+    def test_no_derived_cost_for_unknown_model(self) -> None:
+        event = build_usage_event(
+            run_id="run-e",
+            wave_id="wave-e",
+            delegation_id="delegation-e",
+            provider_id="some-provider",
+            model_id="unknown-xyz",
+            status="completed",
+            source="test",
+            input_tokens=1000,
+            output_tokens=200,
+        )
+        self.assertIsNone(event["cost"]["provider_cost"])
+        self.assertIsNone(event["cost"]["derived_cost_usd"])
+        self.assertEqual(event["cost"]["kind"], "unobserved")
+        self.assertIsNone(derive_cost({"input_tokens": 1000, "output_tokens": 200}, "unknown-xyz"))
+
+    def test_provider_cost_wins_over_derived_pricing(self) -> None:
+        event = build_usage_event(
+            run_id="run-f",
+            wave_id="wave-f",
+            delegation_id="delegation-f",
+            provider_id="opencode-go",
+            model_id="deepseek-v4-flash",
+            status="completed",
+            source="test",
+            input_tokens=1000,
+            cached_input_tokens=400,
+            output_tokens=200,
+            provider_cost=0.004,
+        )
+        self.assertEqual(event["cost"]["provider_cost"], 0.004)
+        self.assertEqual(event["cost"]["kind"], "provider_reported")
+        self.assertIsNone(event["cost"]["derived_cost_usd"])
+        self.assertIsNone(event["cost"]["derived_components"])
 
     def test_ledger_usage_projection_is_sanitized_and_ordered(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

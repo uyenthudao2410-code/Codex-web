@@ -1,62 +1,61 @@
 {
   "version": 2,
-  "task_id": "7385d46a90914a5abd4ad1d0f37e949e",
+  "task_id": "62e6ee4b29254bc0977d21cdc179ff72",
   "orchestration": {
     "run_id": "d04acc77eb1d4b4fb1356f727736d411",
-    "wave_id": "fa633350b523454fbeb78e3d5bfd3e01",
-    "orchestration_state": "REPLAN",
+    "wave_id": "6912eb6e9afc435f91be8a8040437568",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "9a226cd3a8a1494c4f9e9ca7d6382fec19ba0c04",
-    "worktree_fp": "2e2bd501688d5b7971e93fd9c4a62769147f67f157965ca3549448c64ef13311",
+    "base_head": "81066b552c0ef494807beb50380b5013cec153f9",
+    "worktree_fp": "28969e275bd167a21302b5f78e604e1a72475ad4a27d48485fa802be4a3a2401",
     "contract_fp": ""
   },
-  "objective": "Implement P4 Solution Economics Shadow on current HEAD 9a226cd3a8a1494c4f9e9ca7d6382fec19ba0c04. Preserve the concurrent commit and the unrelated remaining renderer/index.html change. P0-P3 remain frozen; do not implement P5-P9. Production execution/routing/proof/acceptance behavior must not change.\n\nImplement the smallest event-ledger design, preferably no SQLite schema migration:\n- Add a durable content-free solution-shadow recommendation event/method distinct from routing shadow. Enroll only runs whose workflow/task class is feature or bugfix; noneligible classes must return not_enrolled without creating a recommendation event.\n- Expose recording through the existing task_control tool as an action such as solution_shadow; do not add a public MCP tool. Keep smart-v3 exactly 8 tools.\n- Recommendation contract: recommendation_id; policy/version solution_economics_shadow_v1; candidate solution scope (bounded paths/count/scope class); estimated touched surface with files/lines/symbols nullable; root-cause confidence as bounded ordinal unknown|low|medium|high plus provenance; oracle strength unknown|weak|strong plus provenance; expected repair risk unknown|low|medium|high plus provenance, never a fabricated probability; smallest causal solution recommendation as content-free structured target surface/change-kind/causal-fix-oracle/bounded-surface flags, no prompt/code/patch text. Missing data remains null/unknown.\n- Bind the event to run_id/wave_id and durable source identity from the current wave (base_head/worktree_fp/contract_fp where present), record seq/event_time, and prove it is pre-mutation: reject recording if the current run/wave has already acquired a write lease or otherwise has a durable mutation-start event. Outcome projection should include recommendation_seq and first_write_seq and an explicit predates_mutation boolean/unknown.\n- Idempotency must be strict: same recommendation_id + same normalized evidence returns recorded=false; same id with conflicting evidence fails closed.\n- Add solution shadow outcome projection joining the recommendation to accepted_result_economics/accepted_result_evaluation and existing durable evidence. Include accepted, first_pass_accepted, repaired, replan_count, time_to_accepted/TTAR, proof records/duration, quality/manual_fix_required, files/lines/symbols touched only when durably observed, local execution and wait measurements only when already observed. Missing measurement must remain null/unknown, never 0 by default. Touched surface is explanatory only.\n- Add aggregate P4 shadow report/readiness over feature+bugfix recommendations: enrollment/matched-outcome counts, predictor coverage, categorical outcome summaries sufficient to inspect associations, explicit observational/non-causal semantics, and gate_status collecting/hold until predictive usefulness is actually demonstrated. automatic_activation/policy_promotion must always be false in P4.\n- Include the P4 shadow section in current_ledger_baseline_report/evaluation reporting so it can be collected without changing production behavior.\n- Add focused tests covering feature+bugfix enrollment, non-enrollment, strict idempotency, unknown-not-zero, rejection after write starts, source identity/pre-mutation proof, first-pass and replanned accepted outcome joins, aggregate collection status/no activation, evaluation report inclusion, and smart-v3 8-tool contract/action schema if changed.\n- Update docs/CURRENT_STATE.md and docs/ROADMAP.md narrowly: add 2026-08-18 G0 recovery observation (raw ExceptionGroup reproduced across surfaces; stale run 66e03f... child root_process_gone/quiesced while projection stayed PROVING; run ABORTED; supervisor restart; new runtime wEpWXpkTMwxTBDiP / server hN4dSNxyBV3nGw9y; workspace/prepare/audit PASS, smart-v3=8, stale/orphan=0). Do not claim the lost pytest output was an assertion failure. Freeze P0-P3 except reproducible regression. Mark P4 shadow as active phase with baseline ~63.4% first-pass/~36.6% repaired, repaired median ~4.75x first-pass, feature repaired ~51%, bugfix repaired ~34%, oracle observation coverage ~17.5%, causal repair mapping ~47%. P6 representative server-first evidence can collect in parallel; global server-first remains OFF; P5/P7/P8/P9 stay gated.\n\nDo not alter routing policy, compute placement, model promotion, public tool count, or runtime lifecycle. Do not commit/push/restart/deploy.",
-  "status": "waiting",
+  "objective": "Repair the P4 focused proof only: make the new solution-economics integration test instantiate smart-v3 mode and update the two intentional smart-v3 contract SHA pins to the source-derived value bd5c09aeffe02bb60d0f548ed02912e8a21e78b91404186e6896f6d6cbdedd70. Do not change P4 production behavior or unrelated files.",
+  "status": "completed",
   "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-18T10:53:57.486Z"
+    },
     {
       "id": "verify",
       "text": "Run tests and build verification",
       "status": "completed",
-      "updated_at": "2026-08-18T10:29:24.478Z"
+      "updated_at": "2026-08-18T10:53:57.486Z"
     },
     {
       "id": "finalize",
       "text": "Finalize verified result",
       "status": "completed",
-      "updated_at": "2026-08-18T10:29:24.478Z"
+      "updated_at": "2026-08-18T10:53:57.486Z"
     }
   ],
-  "current_step": "Replan required - operator report required",
-  "current_command": {
-    "command": "python -m pytest tests/test_orchestration_ledger.py tests/test_evaluation_report.py tests/test_task_state_and_build.py -q",
-    "kind": "test",
-    "session_id": "7lUhLKyOZn2gy5lKN3DiEzCQ",
-    "workdir": "resources/coding-tools-mcp",
-    "status": "running",
-    "started_at": "2026-08-18T10:28:46.394Z"
-  },
+  "current_step": "Completed - operator report required",
+  "current_command": null,
   "last_command_result": {
-    "command_id": "AV2mRd3Msytdfqw62MDY3Fup",
+    "command_id": "h5g9JuBdgV3jq_oubSIZy12k",
     "kind": "command",
     "status": "exited",
     "result_status": "passed",
     "exit_code": 0,
-    "duration_ms": 683,
-    "finished_at": "2026-08-18T10:27:47.217Z"
+    "duration_ms": 663,
+    "finished_at": "2026-08-18T10:54:26.498Z"
   },
   "completion_report": null,
   "test_results": [
     {
-      "command": "python -m pytest tests/test_orchestration_ledger.py tests/test_evaluation_report.py tests/test_task_state_and_build.py -q",
+      "command": "python -m pytest tests/test_solution_economics.py tests/test_task_state_and_build.py tests/test_evaluation_report.py tests/test_efficiency_runtime.py tests/test_code_mode_bindings.py -q && python scripts/check_module_size.py",
       "status": "passed",
       "exit_code": 0,
-      "duration_ms": 38436,
-      "summary": "exit 0 | 0.0s | 4 lines | tail: '116 passed, 3 subtests passed in 36.54s'"
+      "duration_ms": 33812,
+      "summary": "exit 0 | 0.0s | 5 lines | tail: 'module-size budgets ok'"
     }
   ],
   "build_results": [],
@@ -74,182 +73,107 @@
       ]
     },
     "commands": {
-      "test": "python -m pytest tests/test_orchestration_ledger.py tests/test_evaluation_report.py tests/test_task_state_and_build.py -q",
+      "test": "python -m pytest tests/test_solution_economics.py tests/test_task_state_and_build.py tests/test_evaluation_report.py tests/test_efficiency_runtime.py tests/test_code_mode_bindings.py -q && python scripts/check_module_size.py",
       "build": "npm run dist"
     },
     "test_result": {
-      "command": "python -m pytest tests/test_orchestration_ledger.py tests/test_evaluation_report.py tests/test_task_state_and_build.py -q",
+      "command": "python -m pytest tests/test_solution_economics.py tests/test_task_state_and_build.py tests/test_evaluation_report.py tests/test_efficiency_runtime.py tests/test_code_mode_bindings.py -q && python scripts/check_module_size.py",
       "status": "passed",
       "exit_code": 0,
-      "duration_ms": 38436,
-      "summary": "exit 0 | 0.0s | 4 lines | tail: '116 passed, 3 subtests passed in 36.54s'"
+      "duration_ms": 33812,
+      "summary": "exit 0 | 0.0s | 5 lines | tail: 'module-size budgets ok'"
     },
     "build_result": null,
     "artifacts": [],
     "hash_algorithm": "sha256",
     "overall_status": "passed",
     "failure": null,
-    "report_generated_at": "2026-08-18T10:29:24.083Z"
+    "report_generated_at": "2026-08-18T10:53:56.688Z"
   },
-  "modified_files": [],
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/tests/test_solution_economics.py",
+      "operation": "update",
+      "updated_at": "2026-08-18T10:53:58.032Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+      "operation": "update",
+      "updated_at": "2026-08-18T10:53:58.032Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_code_mode_bindings.py",
+      "operation": "update",
+      "updated_at": "2026-08-18T10:53:58.032Z"
+    }
+  ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
-  "created_at": "2026-08-18T10:24:21.818Z",
-  "updated_at": "2026-08-18T10:30:30.084Z",
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-18T10:53:01.516Z",
+  "updated_at": "2026-08-18T10:56:30.079Z",
   "events": [
     {
-      "time": "2026-08-18T10:24:21.818Z",
-      "event": "task_started",
+      "time": "2026-08-18T10:53:01.516Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-18T10:53:02.388Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"4ddfa6bb982f46f02bdd448975ca64b3235a59379b379ec651bcc44000ac9aca|SMART_CONTRACT_SHA256\" tests coding_tools_mcp",
+        "session_id": "6CTgA362oeb7ISxV8g_WVokj"
+      }
+    },
+    {
+      "time": "2026-08-18T10:53:02.897Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"4ddfa6bb982f46f02bdd448975ca64b3235a59379b379ec651bcc44000ac9aca|SMART_CONTRACT_SHA256\" tests coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T10:53:03.203Z",
+      "event": "orchestration_projection_reconciled",
       "details": {
         "fields": [
-          "current_step",
-          "failure",
-          "new_task",
-          "next_step",
-          "objective",
-          "status",
-          "steps"
+          "orchestration"
         ]
       }
     },
     {
-      "time": "2026-08-18T10:24:29.976Z",
-      "event": "orchestration_context_ready",
-      "details": {
-        "state": "PREFLIGHT"
-      }
-    },
-    {
-      "time": "2026-08-18T10:24:31.155Z",
-      "event": "orchestration_prepared",
-      "details": {
-        "state": "PREFLIGHT"
-      }
-    },
-    {
-      "time": "2026-08-18T10:24:31.181Z",
-      "event": "files_modified",
-      "details": {
-        "count": 0
-      }
-    },
-    {
-      "time": "2026-08-18T10:26:49.092Z",
+      "time": "2026-08-18T10:53:19.656Z",
       "event": "orchestration_drift_detected",
       "details": {
         "state": "REPLAN"
       }
     },
     {
-      "time": "2026-08-18T10:26:49.230Z",
-      "event": "tool_failed",
-      "details": {
-        "tool": "agent_workflow",
-        "code": "REPLAN_REASON_REQUIRED"
-      }
-    },
-    {
-      "time": "2026-08-18T10:26:51.151Z",
-      "event": "orchestration_projection_reconciled",
-      "details": {
-        "fields": [
-          "current_step",
-          "failure",
-          "next_step",
-          "orchestration",
-          "status"
-        ]
-      }
-    },
-    {
-      "time": "2026-08-18T10:27:14.142Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git show --stat --summary --oneline --decorate --no-renames HEAD",
-        "status": "failed"
-      }
-    },
-    {
-      "time": "2026-08-18T10:27:14.142Z",
-      "event": "tool_failed",
-      "details": {
-        "tool": "exec_command",
-        "code": "EXECUTION_OWNER_INVALID"
-      }
-    },
-    {
-      "time": "2026-08-18T10:27:25.715Z",
-      "event": "orchestration_projection_reconciled",
-      "details": {
-        "fields": [
-          "current_step",
-          "failure",
-          "next_step",
-          "orchestration",
-          "status"
-        ]
-      }
-    },
-    {
-      "time": "2026-08-18T10:27:33.096Z",
+      "time": "2026-08-18T10:53:20.106Z",
       "event": "orchestration_context_ready",
       "details": {
         "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-08-18T10:27:34.434Z",
-      "event": "orchestration_prepared",
-      "details": {
-        "state": "PREFLIGHT"
-      }
-    },
-    {
-      "time": "2026-08-18T10:27:34.440Z",
-      "event": "files_modified",
-      "details": {
-        "count": 0
-      }
-    },
-    {
-      "time": "2026-08-18T10:27:46.454Z",
-      "event": "command_started",
-      "details": {
-        "command": "git show --format=fuller --stat --summary --no-renames HEAD",
-        "session_id": "AV2mRd3Msytdfqw62MDY3Fup"
-      }
-    },
-    {
-      "time": "2026-08-18T10:27:47.217Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git show --format=fuller --stat --summary --no-renames HEAD",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-18T10:28:42.785Z",
-      "event": "orchestration_context_ready",
-      "details": {
-        "state": "PREFLIGHT"
-      }
-    },
-    {
-      "time": "2026-08-18T10:28:43.651Z",
+      "time": "2026-08-18T10:53:20.909Z",
       "event": "orchestration_routed",
       "details": {
         "state": "ROUTED"
       }
     },
     {
-      "time": "2026-08-18T10:28:44.499Z",
+      "time": "2026-08-18T10:53:21.591Z",
       "event": "mcp_write_lease_active",
       "details": {
         "state": "EXECUTING"
       }
     },
     {
-      "time": "2026-08-18T10:28:44.503Z",
+      "time": "2026-08-18T10:53:21.593Z",
       "event": "continuous_workflow_started",
       "details": {
         "fields": [
@@ -262,14 +186,14 @@
       }
     },
     {
-      "time": "2026-08-18T10:28:45.208Z",
+      "time": "2026-08-18T10:53:22.436Z",
       "event": "orchestration_proving",
       "details": {
         "state": "PROVING"
       }
     },
     {
-      "time": "2026-08-18T10:28:45.402Z",
+      "time": "2026-08-18T10:53:22.665Z",
       "event": "task_updated",
       "details": {
         "fields": [
@@ -279,22 +203,22 @@
       }
     },
     {
-      "time": "2026-08-18T10:28:46.394Z",
+      "time": "2026-08-18T10:53:23.726Z",
       "event": "command_started",
       "details": {
-        "command": "python -m pytest tests/test_orchestration_ledger.py tests/test_evaluation_report.py tests/test_task_state_and_build.py -q",
-        "session_id": "7lUhLKyOZn2gy5lKN3DiEzCQ"
+        "command": "python -m pytest tests/test_solution_economics.py tests/test_task_state_and_build.py tests/test_evaluation_report.py tests/test_efficiency_runtime.py tests/test_code_mode_bindings.py -q && python scripts/check_module_size.py",
+        "session_id": "bUNGyFf0Nt_3FZfofZuRBeez"
       }
     },
     {
-      "time": "2026-08-18T10:29:24.085Z",
+      "time": "2026-08-18T10:53:56.688Z",
       "event": "build_verification_finished",
       "details": {
         "status": "passed"
       }
     },
     {
-      "time": "2026-08-18T10:29:24.476Z",
+      "time": "2026-08-18T10:53:57.484Z",
       "event": "task_updated",
       "details": {
         "fields": [
@@ -304,7 +228,7 @@
       }
     },
     {
-      "time": "2026-08-18T10:29:24.478Z",
+      "time": "2026-08-18T10:53:57.486Z",
       "event": "continuous_workflow_completed",
       "details": {
         "fields": [
@@ -317,14 +241,14 @@
       }
     },
     {
-      "time": "2026-08-18T10:29:24.675Z",
+      "time": "2026-08-18T10:53:57.696Z",
       "event": "awaiting_final_acceptance",
       "details": {
         "state": "ACCEPTING"
       }
     },
     {
-      "time": "2026-08-18T10:29:24.676Z",
+      "time": "2026-08-18T10:53:57.698Z",
       "event": "final_acceptance_required",
       "details": {
         "fields": [
@@ -337,7 +261,14 @@
       }
     },
     {
-      "time": "2026-08-18T10:29:24.687Z",
+      "time": "2026-08-18T10:53:58.032Z",
+      "event": "files_modified",
+      "details": {
+        "count": 3
+      }
+    },
+    {
+      "time": "2026-08-18T10:54:04.202Z",
       "event": "orchestration_projection_reconciled",
       "details": {
         "fields": [
@@ -350,22 +281,24 @@
       }
     },
     {
-      "time": "2026-08-18T10:29:25.138Z",
-      "event": "files_modified",
+      "time": "2026-08-18T10:54:25.728Z",
+      "event": "command_started",
       "details": {
-        "count": 0
+        "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/evaluation_report.py resources/coding-tools-mcp/tests/test_solution_economics.py resources/coding-tools-mcp/tests/test_task_state_and_build.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py resources/coding-tools-mcp/tests/test_code_mode_",
+        "session_id": "h5g9JuBdgV3jq_oubSIZy12k"
       }
     },
     {
-      "time": "2026-08-18T10:29:41.675Z",
-      "event": "final_acceptance_rejected",
+      "time": "2026-08-18T10:54:26.498Z",
+      "event": "command_finished",
       "details": {
-        "state": "REPLAN"
+        "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/evaluation_report.py resources/coding-tools-mcp/tests/test_solution_economics.py resources/coding-tools-mcp/tests/test_task_state_and_build.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py resources/coding-tools-mcp/tests/test_code_mode_",
+        "status": "passed"
       }
     },
     {
-      "time": "2026-08-18T10:29:41.678Z",
-      "event": "task_rejected",
+      "time": "2026-08-18T10:54:29.546Z",
+      "event": "orchestration_projection_reconciled",
       "details": {
         "fields": [
           "current_step",
@@ -377,7 +310,27 @@
       }
     },
     {
-      "time": "2026-08-18T10:29:42.699Z",
+      "time": "2026-08-18T10:55:08.701Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-18T10:55:08.706Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T10:55:11.298Z",
       "event": "orchestration_projection_reconciled",
       "details": {
         "fields": [

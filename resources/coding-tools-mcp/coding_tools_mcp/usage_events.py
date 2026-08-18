@@ -4,6 +4,8 @@ import hashlib
 import math
 from typing import Any
 
+from .usage_pricing import derive_cost
+
 
 USAGE_EVENT_SCHEMA_VERSION = 1
 
@@ -71,6 +73,23 @@ def build_usage_event(
     usage_id = hashlib.sha256(
         f"{run_id}\0{wave_id}\0{delegation_id}\0{source}".encode("utf-8")
     ).hexdigest()
+    usage = {
+        "input_tokens": input_count,
+        "cached_input_tokens": cached_count,
+        "uncached_input_tokens": max(0, input_count - cached_count),
+        "output_tokens": _nonnegative_int(output_tokens),
+        "reasoning_output_tokens": _nonnegative_int(reasoning_output_tokens),
+        "cache_read_tokens": _nonnegative_int(cache_read_tokens),
+        "cache_write_tokens": _nonnegative_int(cache_write_tokens),
+    }
+    derived_cost_usd: float | None = None
+    derived_components: dict[str, float] | None = None
+    cost_kind = "provider_reported" if cost is not None else "unobserved"
+    if cost is None:
+        derived = derive_cost(usage, resolved_model)
+        if derived is not None:
+            derived_cost_usd, derived_components = derived
+            cost_kind = "pricing_derived"
     return {
         "schema_version": USAGE_EVENT_SCHEMA_VERSION,
         "usage_id": usage_id,
@@ -84,28 +103,22 @@ def build_usage_event(
         "provenance": {
             "source": str(source or "")[:160],
             "usage": "provider_reported",
-            "cost": "provider_reported" if cost is not None else "unobserved",
+            "cost": cost_kind,
             "timing": "provider_message_timestamps" if provider is not None else "unobserved",
         },
         "measurement": {
             "usage": "measured",
-            "cost": "measured" if cost is not None else "unobserved",
+            "cost": "measured" if cost is not None else ("derived" if derived_cost_usd is not None else "unobserved"),
             "queue_timing": "measured" if queue is not None else "unobserved",
             "provider_timing": "measured" if provider is not None else "unobserved",
             "total_timing": "measured" if total is not None else "unobserved",
         },
-        "usage": {
-            "input_tokens": input_count,
-            "cached_input_tokens": cached_count,
-            "uncached_input_tokens": max(0, input_count - cached_count),
-            "output_tokens": _nonnegative_int(output_tokens),
-            "reasoning_output_tokens": _nonnegative_int(reasoning_output_tokens),
-            "cache_read_tokens": _nonnegative_int(cache_read_tokens),
-            "cache_write_tokens": _nonnegative_int(cache_write_tokens),
-        },
+        "usage": usage,
         "cost": {
             "provider_cost": cost,
-            "kind": "provider_reported" if cost is not None else "unobserved",
+            "derived_cost_usd": derived_cost_usd,
+            "derived_components": derived_components,
+            "kind": cost_kind,
         },
         "timing": {
             "queue_ms": queue,
