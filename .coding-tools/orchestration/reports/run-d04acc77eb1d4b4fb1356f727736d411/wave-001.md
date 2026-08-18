@@ -7,7 +7,7 @@
 - Base HEAD: `0febca261330ec48b326bf58d91b4f028eb68532`
 - Worktree fingerprint: `bd17fe430cc9465675f067e4a95c85bd6f023122a39b58819e54bcea383b133a`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **replanned**
 
 ## Delegations
 
@@ -21,6 +21,9 @@
 |---:|---|---|---|---|---|
 | 17212 | 2026-08-18T10:24:29.773Z | run_started |  | PREFLIGHT |  |
 | 17213 | 2026-08-18T10:24:30.939Z | context_prepared | PREFLIGHT | PREFLIGHT |  |
+| 17214 | 2026-08-18T10:26:48.461Z | failure_observed | PREFLIGHT | PREFLIGHT | failure_class=BASE_DRIFT |
+| 17215 | 2026-08-18T10:26:48.712Z | state_transition | PREFLIGHT | REPLAN | reason=BASE_DRIFT; failure_class=BASE_DRIFT |
+| 17216 | 2026-08-18T10:26:48.890Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
 
 ## Proof
 
@@ -37,5 +40,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `2`
-- Chain head: `153316f73e5866d2c6b97ab4e1af3fa50574b57768ed004f3235b4b67bfe9aab`
+- Events checked: `27`
+- Chain head: `332bdbfee015352eda2533907a679d73ac91850a37ba77d6d0a23472978949f7`

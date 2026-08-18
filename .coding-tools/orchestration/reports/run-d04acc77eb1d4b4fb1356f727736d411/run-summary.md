@@ -9,11 +9,11 @@
 
 ## Outcome metrics
 
-- Waves: **1**
-- Route decisions: **0**
-- Failures observed: **0**
-- REPLAN transitions: **0**
-- Proof stages: **0**
+- Waves: **2**
+- Route decisions: **1**
+- Failures observed: **2**
+- REPLAN transitions: **2**
+- Proof stages: **1**
 - Proof cache hits: **0**
 - Acceptance checkpoints: **0**
 
@@ -21,7 +21,8 @@
 
 | # | Wave | Mode | Base | Status |
 |---:|---|---|---|---|
-| 1 | `01f25868c25044de9df3a5998a24c818` | `mcp_only` | `0febca261330ec48b326bf58d91b4f028eb68532` | active |
+| 1 | `01f25868c25044de9df3a5998a24c818` | `mcp_only` | `0febca261330ec48b326bf58d91b4f028eb68532` | replanned |
+| 2 | `fa633350b523454fbeb78e3d5bfd3e01` | `mcp_only` | `9a226cd3a8a1494c4f9e9ca7d6382fec19ba0c04` | active |
 
 ## Acceptance checkpoints
 
@@ -33,16 +34,19 @@
 
 | Seq | Requested | Resolved | Reason |
 |---:|---|---|---|
+| 17224 | `deterministic` | `deterministic` | explicit_request |
 
 ## Failures / replans
 
 | Seq | Failure class | State | Evidence |
 |---:|---|---|---|
+| 17214 | `BASE_DRIFT` | `PREFLIGHT` |  |
+| 17236 | `SOL_REJECTED` | `ACCEPTING` | P4 implementation wave is a no-op: focused tests passed but affected_files/durable file receipts are empty, so the requested Solution Economics Shadow contract was not implemented. Reject baseline-only proof and replan with concrete guarded source patches. |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `2`
-- Chain head: `153316f73e5866d2c6b97ab4e1af3fa50574b57768ed004f3235b4b67bfe9aab`
+- Events checked: `27`
+- Chain head: `332bdbfee015352eda2533907a679d73ac91850a37ba77d6d0a23472978949f7`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.
