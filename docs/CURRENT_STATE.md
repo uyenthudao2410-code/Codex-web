@@ -1,8 +1,8 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-17
+> **Status date:** 2026-08-18
 > **Desktop package:** `web-mcp-assistant 0.3.4`
-> **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every dirty-worktree change has been packaged or deployed.
+> **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
 ## 1. Source of truth and document precedence
 
@@ -14,7 +14,7 @@ When repository documents disagree, use this order:
 4. `docs/MODEL_EXECUTION.md` and `docs/agent/*` for the WebCodex core/subsystem they explicitly describe.
 5. Dated files under `docs/research/*` as historical evidence, plans, benchmarks, and decision snapshots. They do **not** override later source or this current-state document.
 
-A source implementation can be newer than the process currently running. For Electron, Recovery Host, Coding Tools MCP, and other supervised components, distinguish **source present**, **focused proof passed**, **controlled activation completed**, and **packaged/released**.
+A source implementation can be newer than the process currently running. For Electron, Recovery Host, Coding Tools MCP, and other supervised components, distinguish **source present**, **focused proof passed**, **EOCL accepted**, **controlled activation completed**, and **packaged/released**.
 
 ## 2. Current product boundary
 
@@ -82,7 +82,8 @@ Consequences:
 - non-deterministic lanes are explicit/evaluation lanes until the accepted representative cohort gate changes;
 - `sol_max` and `sol_ultra` still require explicit high-cost acknowledgement;
 - provider traffic/capacity telemetry does not itself authorize automatic routing;
-- OpenCode automatic routing remains off/evidence-gated.
+- OpenCode automatic routing remains off/evidence-gated;
+- automatic global server-first compute placement remains off until representative P3 evidence supports promotion.
 
 Auto-handoff is also kept off until enough representative real-task A/B evidence shows a stable benefit without state loss or duplicate work. Durable handoff capsules remain available for rollover/recovery.
 
@@ -101,12 +102,50 @@ Current measurement policy:
 - distinguish provider-reported/measured tokens, cost, and timing from estimates;
 - never present internal estimated credits as provider billing;
 - keep representative, benchmark, and synthetic evidence separate;
-- do not promote routing from small or synthetic samples;
+- do not promote routing or placement from small or synthetic samples;
 - host-visible latency claims require an explicit host observation bound to the exact EOCL run/wave, not timestamp proximity.
 
 The current host-observation path uses content-free identities (`turn_id`, `trace_id`, `span_id`) and explicit run binding; prompt/response text is not copied into the correlation record.
 
-## 6. Recovery architecture
+## 6. P3 compute-placement closure and efficacy boundary
+
+### P3 Engineering / Control Plane — CLOSED / ACCEPTED
+
+The explicit validation compute-placement implementation is accepted at source commit `2c990332` (`feat: control validation compute placement`). P3 engineering is no longer a semantic roadmap blocker.
+
+Accepted behavior:
+
+- `compute_placement_policy = local_only | server_preferred` is available only for eligible long structured `cargo_check` / `cargo_test` validation.
+- Explicit placement requires an Agent-backed project, no sandbox, structured asynchronous validation support, and a clean exact-source Runner checkout.
+- Invalid explicit contexts fail closed before enqueue/process execution.
+- `local_only` keeps execution on the source Runner and never selects server compute.
+- `server_preferred` uses exact-source target selection and revalidation; if no valid target remains, execution safely falls back to the source Runner.
+- Placement evidence records requested policy, actual placement, fallback, source Runner and executor Runner and is preserved through Job metadata, handoff/terminal result, `job_status`, and `job_log` projection.
+- Omitting the selector preserves the established production behavior, including the pre-existing dirty-snapshot auto-offload path.
+- Focused R3B2 integration regression covered server dispatch, local-only source execution, safe fallback, invalid-context pre-enqueue rejection, evidence projection, and selector-absent regression behavior before acceptance.
+
+The preregistered analyzer remains frozen under the identity recorded in `docs/research/260818_P3_SERVER_FIRST_PAIRED_EXPERIMENT_MANIFEST.md`. Existing pilot outcomes must not be reinterpreted under an edited analyzer without a new manifest/version.
+
+### P3 Representative Efficacy Pilot — DEFERRED
+
+The frozen experiment `p3-server-first-pilot-v1` targets **10–20 genuinely eligible representative paired tasks**. Its purpose is instrumentation/variance/failure-mix/break-even/power planning before any confirmatory promotion claim.
+
+This evidence program is intentionally separate from the engineering completion gate:
+
+- it does not block moving to another engineering roadmap item;
+- it does not authorize claiming server-first is faster, cheaper, or better;
+- it does not auto-promote global server-first;
+- automatic activation remains `false`;
+- missing controller/provider monetary cost is unknown, never zero;
+- a confirmatory cohort is still required before broad promotion.
+
+### Current live-verification incident
+
+During the 2026-08-18 closure check, every ChatWeb Coding MCP action attempted through the connected tool surface (`workspace_context`, `task_control restart_runtime`, and `agent_workflow`) returned a raw `ExceptionGroup: unhandled errors in a TaskGroup` before a normal typed tool result could be observed.
+
+Current source already contains an ExceptionGroup normalization boundary and a regression test asserting that `Runtime.call_tool()` converts a dispatch `ExceptionGroup` into typed `ASYNC_TASK_GROUP_FAILED` evidence. Therefore the observed raw connector failure is tracked as a **runtime/activation/transport incident**, not as a reopened P3 compute-placement semantic defect. Exact live process/source identity and the child exception still need to be observed before a new live-activation or release claim can be made.
+
+## 7. Recovery architecture
 
 Independent recovery is no longer only a roadmap concept. The current source contains:
 
@@ -121,19 +160,17 @@ The Recovery Tunnel must use a distinct tunnel identity from the primary Coding 
 
 Implementation in source is not the same as a packaged/live proof. Recovery changes still require the relevant process-boundary, activation, packaged-Windows/login, and fault-matrix acceptance appropriate to the change.
 
-The current checkout now also has a repeatable isolated packaged-Windows Recovery lane: `npm run test:recovery:packaged`. It builds `dist/win-unpacked`, launches the packaged `--recovery-host` under a temporary Electron user-data root, proves device identity plus independent Recovery MCP, exercises the packaged Recovery Supervisor in healthy and fail-closed fault cases, cleans only isolated PIDs, and verifies that the production Recovery descriptor identity is unchanged. This is packaged runtime evidence, not publication of an installer and not a substitute for an actual installed-logon/session smoke when that boundary is required for release.
+The current checkout also has a repeatable isolated packaged-Windows Recovery lane: `npm run test:recovery:packaged`. It builds `dist/win-unpacked`, launches the packaged `--recovery-host` under a temporary Electron user-data root, proves device identity plus independent Recovery MCP, exercises the packaged Recovery Supervisor in healthy and fail-closed fault cases, cleans only isolated PIDs, and verifies that the production Recovery descriptor identity is unchanged. This is packaged runtime evidence, not publication of an installer and not a substitute for an actual installed-logon/session smoke when that boundary is required for release.
 
-## 7. Semantic localization and LSP resource policy
+## 8. Semantic localization and LSP resource policy
 
 Coding Tools MCP uses semantic-first localization when the native WebCodex LSP provider is available and falls back to bounded text search per query when semantic localization is unavailable, denied by resource admission, or cannot handle a query.
 
 The current worktree also contains LSP process telemetry/resource-governance work: process instance identity, PID/start identity, current and peak working set, pending-request state, memory-pressure classification, restart/drain counters, bounded idle reaping, and soft/hard pressure behavior. Pressure policy is internal and testable; it must not be documented as one universal production memory number derived from a historical sample.
 
-The P2/P3 LSP/resource hardening was technically closed on 2026-08-16. Its 10-cycle real Connector/Runner/rust-analyzer acceptance window recorded distinct process identities for every cold restart, final `STOPPED`, zero active HEAVY claim/write fence/stale run/orphan/overlap, and p95 peak LSP working set below 30 MiB on this Windows host. This host-scoped sample supports keeping the existing 2 GiB/3 GiB soft/hard defaults; it is evidence for that acceptance window, not a universal memory guarantee.
+The P2/P3 LSP/resource hardening was technically closed on 2026-08-16. Its 10-cycle real Connector/Runner/rust-analyzer acceptance window recorded distinct process identities for every cold restart, final `STOPPED`, zero active HEAVY claim/write fence/stale run/orphan/overlap, and p95 peak LSP working set below 30 MiB on that Windows host. This host-scoped sample supports keeping the existing 2 GiB/3 GiB soft/hard defaults; it is evidence for that acceptance window, not a universal memory guarantee.
 
-Until the exact change set has final acceptance and, where required, controlled activation/package validation, describe this as **implemented in the current worktree**, not automatically as a released feature.
-
-## 8. Validation and release boundary
+## 9. Validation, security, and release boundary
 
 For ordinary changes, validate only the behavior changed. The current top-level entry points are:
 
@@ -152,16 +189,20 @@ The paid/real provider canary `npm run canary:opencode-flash` may create externa
 
 Runtime-affecting source changes need a separate activation/instance check after source tests. A release claim needs source proof, required live/process proof, exact accepted fingerprint, packaging checks, and rollback guidance appropriate to the component.
 
-## 9. Known evidence gates that remain intentional
+Account credential snapshots under `docs/ac/` are local-only data and must never be tracked. They have been removed from the current `main` tree and `/docs/ac/` is ignored. Credentials that were previously committed must be treated as exposed and rotated/revoked. Purging them from existing Git history is a separate destructive history-rewrite action and is not implied by ordinary cleanup commits.
+
+## 10. Known evidence gates that remain intentional
 
 The following are deliberate evidence/authority gates, not documentation bugs:
 
 - automatic non-deterministic routing: **OFF / deterministic fail-closed** pending representative accepted paired evidence;
+- automatic global server-first: **OFF** pending representative compute-placement evidence;
+- P3 representative efficacy: **DEFERRED**, separate from the closed engineering gate;
 - auto-handoff: **OFF** pending more real A/B evidence;
 - paid Flash terminal reproduction: **requires explicit external-cost authorization**;
 - provider/model write authority over the primary checkout: **not granted by telemetry or routing alone**;
 - ChatGPT context-pressure percentage: **unknown unless the host exposes a real source**; do not fabricate one.
 
-## 10. Historical WebCodex material
+## 11. Historical WebCodex material
 
 WebCodex core documents, Rust crates, server/runner deployment material, and dated research remain useful and should not be deleted merely because the desktop product has moved further. Their scope must be explicit. When a historical plan says something is future work but current source now implements it, preserve the historical record and update this current-state document or the maintained product guide instead of rewriting chronology.
