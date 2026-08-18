@@ -1,0 +1,36 @@
+name: P4 Readiness
+
+"on":
+  workflow_dispatch:
+    inputs:
+      require_ready:
+        description: Fail the run unless the representative P4 predictive gate is satisfied
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Report P4 readiness from committed ledger
+        shell: bash
+        run: |
+          args=(--workspace . --limit 100)
+          if [[ "${{ inputs.require_ready }}" == "true" ]]; then
+            args+=(--require-ready)
+          fi
+          python resources/coding-tools-mcp/scripts/report_p4_readiness.py "${args[@]}" | tee p4-readiness.json
+      - name: Upload P4 readiness report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p4-readiness-${{ github.sha }}
+          path: p4-readiness.json
+          if-no-files-found: warn
+          retention-days: 7
