@@ -1,58 +1,18 @@
 {
   "version": 2,
-  "task_id": "14737db5332c4a61ad8327a2227d73a0",
+  "task_id": "024c1c8032e3485eb03f1c53eb62c092",
   "orchestration": {},
   "objective": "Run a workspace command",
-  "status": "active",
+  "status": "waiting",
   "steps": [],
-  "current_step": "Execute command",
+  "current_step": "Waiting for model",
   "current_command": {
     "command": "python tmp/delivery_snapshot_pr17.py",
     "kind": "command",
-    "session_id": "7nkuS_zhVN_YgcExPAi-P9P6",
+    "session_id": "fVB7nUn4w7fGWoV9HMPGUhL_",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-18T09:07:29.424Z",
-    "exit_code": null,
-    "elapsed_ms": 30019,
-    "artifact_ref": {
-      "schema_version": 1,
-      "kind": "command_output",
-      "scope": "runtime_retained",
-      "source": "command",
-      "locator": {
-        "command_id": "7nkuS_zhVN_YgcExPAi-P9P6"
-      },
-      "durability": "process_runtime",
-      "restart_safe": false,
-      "content_addressed": false,
-      "retrieval": {
-        "tool": "command_control",
-        "action": "read"
-      },
-      "size_bytes": 3770,
-      "command_id": "7nkuS_zhVN_YgcExPAi-P9P6",
-      "streams": {
-        "stdout": {
-          "output_ref": "command:7nkuS_zhVN_YgcExPAi-P9P6:stdout",
-          "total_stream_bytes": 3670,
-          "total_retained_bytes": 3670,
-          "head_retained_bytes": 3670,
-          "tail_retained_bytes": 0,
-          "evicted_gap_bytes": 0,
-          "evicted_bytes_total": 0
-        },
-        "stderr": {
-          "output_ref": "command:7nkuS_zhVN_YgcExPAi-P9P6:stderr",
-          "total_stream_bytes": 100,
-          "total_retained_bytes": 100,
-          "head_retained_bytes": 100,
-          "tail_retained_bytes": 0,
-          "evicted_gap_bytes": 0,
-          "evicted_bytes_total": 0
-        }
-      }
-    }
+    "started_at": "2026-08-18T09:12:24.540Z"
   },
   "test_results": [],
   "build_results": [],
@@ -60,22 +20,38 @@
   "modified_files": [],
   "failure": null,
   "next_step": "",
-  "created_at": "2026-08-18T09:07:29.021Z",
-  "updated_at": "2026-08-18T09:07:59.049Z",
+  "created_at": "2026-08-18T09:12:09.746Z",
+  "updated_at": "2026-08-18T09:12:24.540Z",
   "events": [
     {
-      "time": "2026-08-18T09:07:29.021Z",
+      "time": "2026-08-18T09:12:09.746Z",
       "event": "task_auto_started",
       "details": {
         "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-18T09:07:29.424Z",
+      "time": "2026-08-18T09:12:10.207Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$lock='.git/index.lock'; Write-Output '---LOCK---'; if(Test-Path -LiteralPath $lock){Get-Item -LiteralPath $lock | Select-Object FullName,Length,CreationTime,LastWriteTime | Format-List}else{Write-Output 'NO_INDEX_LOCK'}; Write-Output '---GIT_PROCESSES---'; Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^git(\\.exe)?$' -or $_.CommandLine -match 'git(\\.exe)?\\s' } | Select-Object ProcessId,Name,ParentProcessId,CommandLine | Format-List\"",
+        "session_id": "13rVNt4PUfTDKvzFlnyuOPUj"
+      }
+    },
+    {
+      "time": "2026-08-18T09:12:13.314Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$lock='.git/index.lock'; Write-Output '---LOCK---'; if(Test-Path -LiteralPath $lock){Get-Item -LiteralPath $lock | Select-Object FullName,Length,CreationTime,LastWriteTime | Format-List}else{Write-Output 'NO_INDEX_LOCK'}; Write-Output '---GIT_PROCESSES---'; Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^git(\\.exe)?$' -or $_.CommandLine -match 'git(\\.exe)?\\s' } | Select-Object ProcessId,Name,ParentProcessId,CommandLine | Format-List\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T09:12:24.540Z",
       "event": "command_started",
       "details": {
         "command": "python tmp/delivery_snapshot_pr17.py",
-        "session_id": "7nkuS_zhVN_YgcExPAi-P9P6"
+        "session_id": "fVB7nUn4w7fGWoV9HMPGUhL_"
       }
     }
   ]

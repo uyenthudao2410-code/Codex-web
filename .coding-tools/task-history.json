@@ -1,278 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "1dc947b08427469c9c493ee17a31dca8",
-    "orchestration": {},
-    "objective": "Inspect docs/research/260817_CURRENT_LEDGER_BASELINE.md together with the already-updated P1 closure addendum in docs/research/260817_PROJECT_REAL_STATE_SCIENTIFIC_EVIDENCE_AND_FULL_EXECUTION_PLAN.md. Determine the minimal chronology-safe update needed so CURRENT_LEDGER_BASELINE also records the completed P1.1-P1.6 measurement closure, the fresh canonical baseline captured at 2026-08-17T18:06:42.547322Z, P1.6 regret state, rework economics, host-binding coverage, taxonomy limitations, and the explicit boundary that measurement readiness is closed but empirical efficacy/promotion remains HOLD. Do not modify files in this prepare phase. Preserve historical snapshots; prefer an appended dated closure section rather than rewriting older evidence.",
-    "status": "completed",
-    "steps": [],
-    "current_step": "Completed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [
-      {
-        "path": "docs/research/260817_CURRENT_LEDGER_BASELINE.md",
-        "operation": "create",
-        "updated_at": "2026-08-17T18:19:29.092Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Review or use the generated document.",
-    "created_at": "2026-08-17T18:17:41.505Z",
-    "updated_at": "2026-08-17T18:19:29.092Z",
-    "events": [
-      {
-        "time": "2026-08-17T18:17:41.505Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Inspect docs/research/260817_CURRENT_LEDGER_BASELINE.md together with the already-updated P1 closure addendum in docs/research/260817_PROJECT_REAL_STATE_SCIENTIFIC_EVIDENCE_AND_FULL_EXECUTION_PLAN.md. Determine the minimal chronology-safe update needed so CURRENT_LEDGER_BASELINE also records the completed P1.1-P1.6 measurement closure, the fresh canonical baseline captured at 2026-08-17T18:06:42.547322Z, P1.6 regret state, rework economics, host-binding coverage, taxonomy limitations, and the explicit boundary that measurement readiness is closed but empirical efficacy/promotion remains HOLD. Do not modify files in this prepare phase. Preserve historical snapshots; prefer an appended dated closure section rather than rewriting older evidence."
-        }
-      },
-      {
-        "time": "2026-08-17T18:17:41.555Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-17T18:19:29.092Z",
-        "event": "files_modified",
-        "details": {
-          "count": 1
-        }
-      }
-    ],
-    "archived_at": "2026-08-17T18:23:08.937Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "5093e8e8fed5483a887c348632bd2572",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-17T18:23:09.389Z",
-    "updated_at": "2026-08-17T18:23:29.388Z",
-    "events": [
-      {
-        "time": "2026-08-17T18:23:09.389Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-17T18:23:09.660Z",
-        "event": "command_started",
-        "details": {
-          "command": "git status --short --branch",
-          "session_id": "HrLJ2WEwyVIkAhsg71DNNTqh"
-        }
-      },
-      {
-        "time": "2026-08-17T18:23:10.252Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git status --short --branch",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-17T18:23:26.534Z",
-        "event": "command_started",
-        "details": {
-          "command": "git add -A",
-          "session_id": "5k7uMhPtUXGAbVZpCPh2k1Yv"
-        }
-      },
-      {
-        "time": "2026-08-17T18:23:29.388Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git add -A",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-17T18:23:45.063Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "99becbc6a72d4bd390df6f9bc623870d",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-17T18:23:45.472Z",
-    "updated_at": "2026-08-17T18:25:20.607Z",
-    "events": [
-      {
-        "time": "2026-08-17T18:23:45.472Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-17T18:23:45.691Z",
-        "event": "command_started",
-        "details": {
-          "command": "git status --porcelain=v1 -uall",
-          "session_id": "SHB132go4fMA-tX3SiDwkBfE"
-        }
-      },
-      {
-        "time": "2026-08-17T18:23:46.550Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git status --porcelain=v1 -uall",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-17T18:24:10.449Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "command_control",
-          "code": "INVALID_ARGUMENT"
-        }
-      },
-      {
-        "time": "2026-08-17T18:24:55.000Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff -- scripts/check-coding-tools-history.js AGENTS.md .gitignore",
-          "session_id": "CH-_Mn0Wl7wPL5Op-qVYFxo8"
-        }
-      },
-      {
-        "time": "2026-08-17T18:24:55.277Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff -- scripts/check-coding-tools-history.js AGENTS.md .gitignore",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-17T18:25:09.441Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff -- package.json",
-          "session_id": "Bx8EZ8dfNEpmtcNDo9JeXLif"
-        }
-      },
-      {
-        "time": "2026-08-17T18:25:09.791Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff -- package.json",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-17T18:25:20.391Z",
-        "event": "command_started",
-        "details": {
-          "command": "Get-Content -Raw scripts/check-coding-tools-history.js",
-          "session_id": "lJfmchVOxU_pSUjUDfzaHdce"
-        }
-      },
-      {
-        "time": "2026-08-17T18:25:20.607Z",
-        "event": "command_finished",
-        "details": {
-          "command": "Get-Content -Raw scripts/check-coding-tools-history.js",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-17T18:25:30.711Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "a21bfc7c0679497196a8885b519f65f4",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Command path could not be inspected safely.",
-    "next_step": "",
-    "created_at": "2026-08-17T18:25:31.106Z",
-    "updated_at": "2026-08-17T18:25:56.376Z",
-    "events": [
-      {
-        "time": "2026-08-17T18:25:31.106Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-17T18:25:31.340Z",
-        "event": "command_started",
-        "details": {
-          "command": "type scripts\\check-coding-tools-history.js",
-          "session_id": "GiOlRRhBcVgDB-ochFNmjOs_"
-        }
-      },
-      {
-        "time": "2026-08-17T18:25:31.586Z",
-        "event": "command_finished",
-        "details": {
-          "command": "type scripts\\check-coding-tools-history.js",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-17T18:25:56.376Z",
-        "event": "command_finished",
-        "details": {
-          "command": "for /L %i in (1,1,5) do @(git add -A -- .coding-tools && npm run check:coding-tools-delivery && exit /b 0 || ping 127.0.0.1 -n 2 >nul) & exit /b 1",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-17T18:25:56.376Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "INVALID_ARGUMENT"
-        }
-      }
-    ],
-    "archived_at": "2026-08-17T18:26:07.056Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "51260837754d40fb8af3ccee42e4551a",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -109274,6 +109002,340 @@
       }
     ],
     "archived_at": "2026-08-18T09:07:28.856Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "14737db5332c4a61ad8327a2227d73a0",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-18T09:07:29.021Z",
+    "updated_at": "2026-08-18T09:09:53.305Z",
+    "events": [
+      {
+        "time": "2026-08-18T09:07:29.021Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-18T09:07:29.424Z",
+        "event": "command_started",
+        "details": {
+          "command": "python tmp/delivery_snapshot_pr17.py",
+          "session_id": "7nkuS_zhVN_YgcExPAi-P9P6"
+        }
+      },
+      {
+        "time": "2026-08-18T09:09:10.723Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python tmp/delivery_snapshot_pr17.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-18T09:09:54.207Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "45c9ed1c7a444c1c9833ec8db5fa7773",
+    "orchestration": {},
+    "objective": "Replace only tmp/delivery_snapshot_pr17.py with a resume-only delivery controller for current local HEAD after the main repair commit and first evidence commit already exist. Preserve all unrelated unstaged changes, especially electron/services/runtimeOrchestrator.js and renderer/browser.html, renderer/panel.css, renderer/panel.html; never stage them. The helper must fetch origin/main and require origin/main to be an ancestor of HEAD (fail on divergence); verify HEAD already contains .coding-tools/migrated/resources-coding-tools-mcp/orchestration/ledger.sqlite3 and no longer contains resources/coding-tools-mcp/.coding-tools/orchestration/ledger.sqlite3; converge only repository-root .coding-tools evidence using stable-byte snapshot staging for ledger.sqlite3, -wal, -shm and normal staging for all other .coding-tools; run canonical check:coding-tools-history, check:coding-tools-delivery, and git diff --cached --check; before each evidence commit assert every staged path is under .coding-tools; commit evidence with commit-local author uyenthudao2410-code <uyenthu.dao2410@gmail.com>; once a delivery guard passes and there are no staged changes, push immediately without an additional redundant guard; verify HEAD == origin/main; self-delete tmp/delivery_snapshot_pr17.py and tmp/delivery_lock_pr17.py only after successful push. Do not execute the helper in this wave.",
+    "status": "active",
+    "steps": [],
+    "current_step": "Run complete agent workflow",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Cannot add file that already exists.",
+    "next_step": "",
+    "created_at": "2026-08-18T09:10:19.066Z",
+    "updated_at": "2026-08-18T09:10:19.391Z",
+    "events": [
+      {
+        "time": "2026-08-18T09:10:19.066Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Replace only tmp/delivery_snapshot_pr17.py with a resume-only delivery controller for current local HEAD after the main repair commit and first evidence commit already exist. Preserve all unrelated unstaged changes, especially electron/services/runtimeOrchestrator.js and renderer/browser.html, renderer/panel.css, renderer/panel.html; never stage them. The helper must fetch origin/main and require origin/main to be an ancestor of HEAD (fail on divergence); verify HEAD already contains .coding-tools/migrated/resources-coding-tools-mcp/orchestration/ledger.sqlite3 and no longer contains resources/coding-tools-mcp/.coding-tools/orchestration/ledger.sqlite3; converge only repository-root .coding-tools evidence using stable-byte snapshot staging for ledger.sqlite3, -wal, -shm and normal staging for all other .coding-tools; run canonical check:coding-tools-history, check:coding-tools-delivery, and git diff --cached --check; before each evidence commit assert every staged path is under .coding-tools; commit evidence with commit-local author uyenthudao2410-code <uyenthu.dao2410@gmail.com>; once a delivery guard passes and there are no staged changes, push immediately without an additional redundant guard; verify HEAD == origin/main; self-delete tmp/delivery_snapshot_pr17.py and tmp/delivery_lock_pr17.py only after successful push. Do not execute the helper in this wave."
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:19.391Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_FAILED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-18T09:10:30.477Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "776827d203c64aaeac60ad9ea4d15ffc",
+    "orchestration": {
+      "run_id": "7163bc48f3724d129b6c515b61ac9259",
+      "wave_id": "48c88de5d5074553b9bcefa7c4d52baa",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9d1e1c764dc359980910aca51fb068922298620c",
+      "worktree_fp": "e94f44024686b0cf7ea8d079a8808ed2b5d750875206a91856cc1399dbb279df",
+      "contract_fp": ""
+    },
+    "objective": "Patch only the existing temporary helper tmp/delivery_snapshot_pr17.py into resume-only mode for current local HEAD 9d1e1c7. Preserve all unrelated unstaged Electron/renderer changes and never stage them. The helper must accept origin/main as an ancestor of HEAD rather than requiring equality, verify the accepted nested-ledger relocation is already committed, converge only .coding-tools evidence, assert evidence commits contain no staged paths outside .coding-tools, and when a canonical delivery guard passes with no staged delta push immediately without a redundant final guard. Do not execute the helper in this wave.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-18T09:10:50.558Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-18T09:10:50.558Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "tmp/delivery_snapshot_pr17.py",
+        "operation": "update",
+        "updated_at": "2026-08-18T09:10:51.149Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-18T09:10:45.907Z",
+    "updated_at": "2026-08-18T09:11:02.804Z",
+    "events": [
+      {
+        "time": "2026-08-18T09:10:45.908Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Patch only the existing temporary helper tmp/delivery_snapshot_pr17.py into resume-only mode for current local HEAD 9d1e1c7. Preserve all unrelated unstaged Electron/renderer changes and never stage them. The helper must accept origin/main as an ancestor of HEAD rather than requiring equality, verify the accepted nested-ledger relocation is already committed, converge only .coding-tools evidence, assert evidence commits contain no staged paths outside .coding-tools, and when a canonical delivery guard passes with no staged delta push immediately without a redundant final guard. Do not execute the helper in this wave."
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:46.838Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:48.003Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "orchestration"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:48.239Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:49.051Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:49.053Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:49.956Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:50.557Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:50.559Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:50.786Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:50.788Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:51.149Z",
+        "event": "files_modified",
+        "details": {
+          "count": 1
+        }
+      },
+      {
+        "time": "2026-08-18T09:10:52.733Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T09:11:02.699Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-18T09:11:02.699Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-18T09:11:02.703Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-18T09:11:09.191Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "97ce01b88fc64ee4b06d18a285458460",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-18T09:11:09.335Z",
+    "updated_at": "2026-08-18T09:11:57.810Z",
+    "events": [
+      {
+        "time": "2026-08-18T09:11:09.335Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-18T09:11:09.956Z",
+        "event": "command_started",
+        "details": {
+          "command": "python tmp/delivery_snapshot_pr17.py",
+          "session_id": "lgLoBQk181xXBeSAAJhyk1Xh"
+        }
+      },
+      {
+        "time": "2026-08-18T09:11:57.810Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python tmp/delivery_snapshot_pr17.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-18T09:12:09.615Z",
     "archive_reason": "finished"
   }
 ]
