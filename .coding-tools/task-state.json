@@ -19,15 +19,22 @@
   "status": "waiting",
   "steps": [],
   "current_step": "Waiting for model",
-  "current_command": null,
+  "current_command": {
+    "command": "powershell -NoProfile -Command \"$src=Get-Item 'electron\\services\\nativeService.js'; Write-Output ('SOURCE_LAST_WRITE=' + $src.LastWriteTime.ToString('o')); foreach($pid in 46720,47364){ $p=Get-CimInstance Win32_Process -Filter ('ProcessId=' + $pid); if($p){ Write-Output ('PID=' + $pid + ' CREATED=' + ([Management.ManagementDateTimeConverter]::ToDateTime($p.CreationDate)).ToString('o')) } }; $candidates=@((Join-Path $env:APPDATA 'web-mcp-assistant\\runtime-state.json'),(Join-Path $env:APPDATA 'Trợ lý Web MCP\\runtime-state.json'),(Join-Path $env:APPDATA 'Electron\\runtime-state.json')); foreach($f in $candidates){ if(Test-Path -LiteralPath $f){ Write-Output ('STATE_FILE=' + $f); $j=Get-Content -Raw -LiteralPath $f | ConvertFrom-Json; Write-Output ('nativeRuntimeMode=' + $j.nativeRuntimeMode); Write-Output ('nativeModuleRoot=' + $j.nativeModuleRoot); Write-Output ('nativePid=' + $j.nativePid); Write-Output ('nativeCodeRevision=' + $j.nativeCodeRevision); Write-Output ('nativeInstanceId=' + $j.nativeInstanceId) } }\"",
+    "kind": "command",
+    "session_id": "VNJHYb8inpo_WvQgniRtpIj_",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-18T12:04:44.795Z"
+  },
   "last_command_result": {
-    "command_id": "0WALUyOeXRxWDyRKG5MYwSoO",
+    "command_id": "vYGx_7hx3sJgWGxyvtRvu8O7",
     "kind": "command",
     "status": "exited",
     "result_status": "passed",
     "exit_code": 0,
-    "duration_ms": 742,
-    "finished_at": "2026-08-18T12:04:29.807Z"
+    "duration_ms": 17091,
+    "finished_at": "2026-08-18T12:04:43.525Z"
   },
   "completion_report": null,
   "test_results": [],
@@ -37,7 +44,7 @@
   "failure": null,
   "next_step": "",
   "created_at": "2026-08-18T12:03:26.418Z",
-  "updated_at": "2026-08-18T12:04:30.806Z",
+  "updated_at": "2026-08-18T12:04:44.795Z",
   "events": [
     {
       "time": "2026-08-18T12:03:26.418Z",
@@ -201,6 +208,38 @@
       "details": {
         "command": "rg -n -B 30 -A 4 \"Chế độ quyền lệnh\" renderer/index.html",
         "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T12:04:36.826Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 14 \"destructive_command|permission_mode|dangerous\" resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py resources/coding-tools-mcp/coding_tools_mcp/server.py electron/services/runtimeOrchestrator.js electron/services/settingsStore.js",
+        "session_id": "HTY0ZLOoHTKCwKPTT0Atseca"
+      }
+    },
+    {
+      "time": "2026-08-18T12:04:37.291Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 14 \"destructive_command|permission_mode|dangerous\" resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py resources/coding-tools-mcp/coding_tools_mcp/server.py electron/services/runtimeOrchestrator.js electron/services/settingsStore.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T12:04:43.525Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T12:04:44.795Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$src=Get-Item 'electron\\services\\nativeService.js'; Write-Output ('SOURCE_LAST_WRITE=' + $src.LastWriteTime.ToString('o')); foreach($pid in 46720,47364){ $p=Get-CimInstance Win32_Process -Filter ('ProcessId=' + $pid); if($p){ Write-Output ('PID=' + $pid + ' CREATED=' + ([Management.ManagementDateTimeConverter]::ToDateTime($p.CreationDate)).ToString('o')) } }; $candidates=@((Join-Path $env:APPDATA 'web-mcp-assistant\\runtime-state.json'),(Join-Path $env:APPDATA 'Trợ",
+        "session_id": "VNJHYb8inpo_WvQgniRtpIj_"
       }
     }
   ]
