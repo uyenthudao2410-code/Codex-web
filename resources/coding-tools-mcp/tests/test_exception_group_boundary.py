@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from coding_tools_mcp.errors import ToolFailure, normalize_exception_group
+from coding_tools_mcp.protocol import dispatch_rpc
 from coding_tools_mcp.server import Runtime
 
 
@@ -70,6 +71,47 @@ class ExceptionGroupBoundaryTests(unittest.TestCase):
                 self.assertEqual(error["details"]["children"][0]["type"], "RuntimeError")
                 recent = runtime.performance_trace.get()["recent"][-1]
                 self.assertEqual(recent["error_class"], "RUNTIME")
+            finally:
+                runtime.close()
+
+    def test_protocol_never_stringifies_exception_group(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                runtime.initialized = True
+                grouped = ExceptionGroup(
+                    "unhandled errors in a TaskGroup",
+                    [RuntimeError("protocol child task failed")],
+                )
+                request = {
+                    "jsonrpc": "2.0",
+                    "id": 7,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "workspace_context",
+                        "arguments": {"detail": "compact"},
+                    },
+                }
+                with patch.object(runtime, "call_tool", side_effect=grouped):
+                    response = dispatch_rpc(runtime, request)
+
+                self.assertIsNotNone(response)
+                assert response is not None
+                error = response["error"]
+                self.assertEqual(error["code"], -32603)
+                self.assertEqual(
+                    error["message"],
+                    "Concurrent runtime tasks failed; inspect the structured child failures.",
+                )
+                data = error["data"]
+                self.assertEqual(data["code"], "ASYNC_TASK_GROUP_FAILED")
+                self.assertEqual(data["category"], "runtime")
+                self.assertFalse(data["retryable"])
+                self.assertEqual(data["details"]["leaf_count"], 1)
+                self.assertEqual(
+                    data["details"]["children"][0]["type"],
+                    "RuntimeError",
+                )
             finally:
                 runtime.close()
 
