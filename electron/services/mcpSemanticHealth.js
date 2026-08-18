@@ -1,9 +1,9 @@
 const http = require('node:http');
 
-const DEFAULT_INTERVAL_MS = 15_000;
-const DEFAULT_FAILURE_THRESHOLD = 3;
+const DEFAULT_INTERVAL_MS = 60_000;
+const DEFAULT_FAILURE_THRESHOLD = 2;
 const DEFAULT_TIMEOUT_MS = 2_500;
-const DEFAULT_RESTART_COOLDOWN_MS = 60_000;
+const DEFAULT_RESTART_COOLDOWN_MS = 120_000;
 
 function probeMcpSemanticHealth({ port, token, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   return new Promise((resolve) => {
@@ -31,7 +31,9 @@ function probeMcpSemanticHealth({ port, token, timeoutMs = DEFAULT_TIMEOUT_MS })
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
-        'MCP-Protocol-Version': '2025-11-25'
+        'MCP-Protocol-Version': '2025-11-25',
+        'X-Coding-Tools-Client-Id': 'recovery-semantic-watchdog',
+        'X-Coding-Tools-Client-Type': 'electron'
       },
       timeout: Math.max(250, Number(timeoutMs) || DEFAULT_TIMEOUT_MS)
     }, (response) => {
