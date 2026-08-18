@@ -73,7 +73,6 @@ function renderHealth(health) {
     $('#mcpDot').title = `Đang khôi phục (lần ${health.failures || 0})`;
   }
   renderSyncState();
-  if (lastOrchestration) renderRouterFabric(lastOrchestration);
 }
 
 function renderTask(task) {
@@ -152,186 +151,7 @@ function renderHub(data) {
   const safe = Boolean(continuity.safe_to_rotate_chatweb);
   $('#continuityStatus').textContent = safe ? 'READY' : 'HOLD';
   $('#continuityStatus').className = `badge ${safe ? 'active' : 'blocked'}`;
-  renderRouterFabric(data);
-}
-
-const routerNodeIds = {
-  chatweb: 'routerChatWeb',
-  desktop: 'routerDesktop',
-  opencode: 'routerOpenCode',
-  hub: 'routerHub',
-  writer: 'routerWriter',
-  fast: 'routerFast',
-  terra: 'routerTerra',
-  sol: 'routerSol',
-  deepseek: 'routerDeepSeek'
-};
-
-const routerEdgeIds = {
-  chatweb: 'routerEdgeChatWeb',
-  desktop: 'routerEdgeDesktop',
-  opencode: 'routerEdgeOpenCode',
-  writer: 'routerEdgeWriter',
-  fast: 'routerEdgeFast',
-  terra: 'routerEdgeTerra',
-  sol: 'routerEdgeSol',
-  deepseek: 'routerEdgeDeepSeek'
-};
-
-const routerGeometry = {
-  chatweb: { from: 'routerChatWeb', to: 'routerHub', fromSide: 'right', toSide: 'left', toRatio: 0.24 },
-  desktop: { from: 'routerDesktop', to: 'routerHub', fromSide: 'right', toSide: 'left', toRatio: 0.5 },
-  opencode: { from: 'routerOpenCode', to: 'routerHub', fromSide: 'right', toSide: 'left', toRatio: 0.76 },
-  fast: { from: 'routerHub', to: 'routerFast', fromSide: 'right', toSide: 'left', fromRatio: 0.18 },
-  deepseek: { from: 'routerHub', to: 'routerDeepSeek', fromSide: 'right', toSide: 'left', fromRatio: 0.38 },
-  terra: { from: 'routerHub', to: 'routerTerra', fromSide: 'right', toSide: 'left', fromRatio: 0.62 },
-  sol: { from: 'routerHub', to: 'routerSol', fromSide: 'right', toSide: 'left', fromRatio: 0.82 },
-  writer: { from: 'routerHub', to: 'routerWriter', fromSide: 'bottom', toSide: 'top', fromRatio: 0.5, toRatio: 0.5 }
-};
-
-let routerGeometryFrame = 0;
-
-function routerAnchor(element, side, ratio, fabricRect) {
-  const rect = element.getBoundingClientRect();
-  const x = rect.left - fabricRect.left;
-  const y = rect.top - fabricRect.top;
-  const anchorRatio = Number.isFinite(ratio) ? ratio : 0.5;
-  if (side === 'left') return { x, y: y + rect.height * anchorRatio };
-  if (side === 'right') return { x: x + rect.width, y: y + rect.height * anchorRatio };
-  if (side === 'top') return { x: x + rect.width * anchorRatio, y };
-  return { x: x + rect.width * anchorRatio, y: y + rect.height };
-}
-
-function routerCurve(start, end, vertical = false) {
-  if (vertical) {
-    const bend = Math.max(22, Math.min(72, Math.abs(end.y - start.y) * 0.45));
-    return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} C ${start.x.toFixed(1)} ${(start.y + bend).toFixed(1)}, ${end.x.toFixed(1)} ${(end.y - bend).toFixed(1)}, ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
   }
-  const bend = Math.max(30, Math.min(120, Math.abs(end.x - start.x) * 0.46));
-  return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} C ${(start.x + bend).toFixed(1)} ${start.y.toFixed(1)}, ${(end.x - bend).toFixed(1)} ${end.y.toFixed(1)}, ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
-}
-
-function updateRouterGeometry() {
-  const fabric = document.getElementById('routerFabric');
-  const overlay = document.getElementById('routingOverlay');
-  if (!fabric || !overlay) return;
-  const fabricRect = fabric.getBoundingClientRect();
-  if (!fabricRect.width || !fabricRect.height) return;
-  overlay.setAttribute('viewBox', `0 0 ${fabricRect.width.toFixed(1)} ${fabricRect.height.toFixed(1)}`);
-  for (const [key, geometry] of Object.entries(routerGeometry)) {
-    const from = document.getElementById(geometry.from);
-    const to = document.getElementById(geometry.to);
-    const edge = document.getElementById(routerEdgeIds[key]);
-    if (!from || !to || !edge) continue;
-    const start = routerAnchor(from, geometry.fromSide, geometry.fromRatio, fabricRect);
-    const end = routerAnchor(to, geometry.toSide, geometry.toRatio, fabricRect);
-    edge.setAttribute('d', routerCurve(start, end, geometry.fromSide === 'bottom' || geometry.toSide === 'top'));
-  }
-}
-
-function scheduleRouterGeometry() {
-  if (routerGeometryFrame) cancelAnimationFrame(routerGeometryFrame);
-  routerGeometryFrame = requestAnimationFrame(() => {
-    routerGeometryFrame = 0;
-    updateRouterGeometry();
-  });
-}
-
-const routerStateRank = { offline: 0, connected: 1, waiting: 2, blocked: 3, active: 4 };
-
-function mergeRouterState(current, next) {
-  return routerStateRank[next] > routerStateRank[current] ? next : current;
-}
-
-function delegationRouterLane(delegation) {
-  const text = `${delegation?.route_resolved || ''} ${delegation?.model || ''}`.toLowerCase();
-  if (text.includes('deepseek')) return 'deepseek';
-  if (text.includes('terra')) return 'terra';
-  if (text.includes('sol')) return 'sol';
-  if (text.includes('mini') || text.includes('luna')) return 'fast';
-  return '';
-}
-
-function delegationRouterState(status) {
-  const value = String(status || '').toLowerCase();
-  if (['active', 'running', 'starting', 'executing', 'in_progress'].includes(value)) return 'active';
-  if (['waiting', 'queued', 'pending', 'idle'].includes(value)) return 'waiting';
-  if (['blocked', 'failed', 'replanned', 'interrupted'].includes(value)) return 'blocked';
-  return 'offline';
-}
-
-function setRouterNode(key, state, detail) {
-  const node = document.getElementById(routerNodeIds[key]);
-  if (!node) return;
-  node.classList.remove('offline', 'connected', 'active', 'waiting', 'blocked');
-  node.classList.add(state);
-  const stateLabel = node.querySelector('.router-state');
-  if (stateLabel) {
-    const idleWhenOffline = ['fast', 'terra', 'sol', 'deepseek', 'writer'].includes(key);
-    stateLabel.textContent = state === 'connected' ? 'online' : state === 'offline' && idleWhenOffline ? 'idle' : state;
-  }
-  node.title = detail || state;
-}
-
-function setRouterEdge(key, state) {
-  const edge = document.getElementById(routerEdgeIds[key]);
-  if (!edge) return;
-  edge.classList.remove('offline', 'connected', 'active', 'waiting', 'blocked');
-  edge.classList.add(state);
-}
-
-function renderRouterFabric(data) {
-  const chatweb = clientFor(data, 'chatweb', 'chatweb');
-  const desktop = clientFor(data, 'codex_desktop', 'codex-desktop');
-  const opencode = clientFor(data, 'opencode', 'opencode');
-  const controllerOwner = data?.authority?.controller?.owner_client_id || '';
-  const write = data?.authority?.write || {};
-  const taskStatus = String(data?.task?.status || '').toLowerCase();
-  const routeStates = { fast: 'offline', terra: 'offline', sol: 'offline', deepseek: 'offline' };
-  const routeDetails = {
-    fast: 'Không có delegation Mini/Luna đang chạy',
-    terra: 'Không có delegation Terra đang chạy',
-    sol: 'Không có delegation Sol đang chạy',
-    deepseek: 'Không có DeepSeek delegation được Hub quan sát'
-  };
-  const delegations = Array.isArray(data?.delegations) ? data.delegations : [];
-  delegations.forEach((delegation) => {
-    const lane = delegationRouterLane(delegation);
-    if (!lane) return;
-    const state = delegationRouterState(delegation?.status);
-    routeStates[lane] = mergeRouterState(routeStates[lane], state);
-    if (state !== 'offline') routeDetails[lane] = `${delegation?.model || delegation?.route_resolved || lane} · ${delegation?.status || state}`;
-  });
-
-  const clientState = (client, controllerId) => client?.online ? (controllerOwner === controllerId ? 'active' : 'connected') : 'offline';
-  const chatwebState = clientState(chatweb, 'chatweb');
-  const desktopState = clientState(desktop, 'codex-desktop');
-  const opencodeState = opencode?.online ? 'connected' : 'offline';
-  const anyClientOnline = Boolean(chatweb?.online || desktop?.online || opencode?.online);
-  const anyRouteActive = Object.values(routeStates).some((state) => state === 'active');
-  const hubOnline = Boolean(lastHealth?.mcpRunning || anyClientOnline);
-  const hubState = hubOnline && (taskStatus === 'active' || anyRouteActive || write.status === 'active') ? 'active' : hubOnline ? 'connected' : 'offline';
-  const writerState = write.status === 'active' ? 'active' : hubOnline ? 'connected' : 'offline';
-
-  setRouterNode('chatweb', chatwebState, chatweb?.online ? `ChatWeb · ${controllerOwner === 'chatweb' ? 'controller active' : 'observer'}` : 'ChatWeb offline');
-  setRouterNode('desktop', desktopState, desktop?.online ? `Codex Desktop · ${controllerOwner === 'codex-desktop' ? 'controller active' : 'worker'}` : 'Codex Desktop offline');
-  setRouterNode('opencode', opencodeState, opencode?.online ? 'OpenCode stdio proxy đang heartbeat vào Hub' : 'OpenCode offline');
-  setRouterNode('hub', hubState, `Runtime ${lastHealth?.mcpRunning ? 'ready' : anyClientOnline ? 'observed through clients' : 'offline'} · task ${taskStatus || 'idle'}`);
-  setRouterNode('writer', writerState, write.status === 'active' ? `Write lease active · fence #${write.fencing_token || 0}` : 'MCP proof/writer idle');
-  for (const lane of ['fast', 'terra', 'sol', 'deepseek']) setRouterNode(lane, routeStates[lane], routeDetails[lane]);
-
-  setRouterEdge('chatweb', chatwebState);
-  setRouterEdge('desktop', desktopState);
-  setRouterEdge('opencode', opencodeState);
-  setRouterEdge('writer', writerState);
-  for (const lane of ['fast', 'terra', 'sol', 'deepseek']) setRouterEdge(lane, routeStates[lane]);
-
-  const activeRoutes = Object.values(routeStates).filter((state) => state === 'active').length;
-  const onlineClients = [chatweb, desktop, opencode].filter((client) => client?.online).length;
-  $('#routerSummary').textContent = `${onlineClients}/3 clients · ${activeRoutes} route active`;
-  $('#routerSummary').className = `router-kpi badge ${hubState === 'active' ? 'active' : hubOnline ? 'waiting' : 'stopped'}`;
-  scheduleRouterGeometry();
-}
 
 function renderEvents(events) {
   const list = $('#eventList');
@@ -509,16 +329,6 @@ $('#toChatWebButton').onclick = () => transferController('chatweb');
 $('#copyCodexConfigButton').onclick = () => copyCodexConfig();
 $('#refreshButton').onclick = () => { refreshOrchestration(true); refreshHealth(true); };
 
-const routerResizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(scheduleRouterGeometry) : null;
-if (routerResizeObserver) {
-  ['routerFabric', ...Object.values(routerNodeIds)].forEach((id) => {
-    const element = document.getElementById(id);
-    if (element) routerResizeObserver.observe(element);
-  });
-} else {
-  window.addEventListener('resize', scheduleRouterGeometry);
-}
-
 document.addEventListener('visibilitychange', () => {
   document.body.classList.toggle('is-hidden', document.hidden);
   if (!document.hidden) {
@@ -529,7 +339,6 @@ document.addEventListener('visibilitychange', () => {
 
 refreshHealth();
 refreshOrchestration();
-scheduleRouterGeometry();
 setInterval(refreshOrchestration, 2000);
 setInterval(refreshHealth, 5000);
 setInterval(tick, 1000);

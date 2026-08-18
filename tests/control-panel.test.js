@@ -17,24 +17,24 @@ const {
 } = require('../electron/services/panelLayout');
 
 test('panel layout keeps chat usable and shrinks gracefully on narrow windows', () => {
-  assert.equal(PANEL_WIDTH, 510);
-  assert.equal(PANEL_WIDTH_RATIO, 0.45);
-  assert.equal(PANEL_MIN_WIDTH, PANEL_WIDTH);
-  assert.equal(PANEL_MAX_WIDTH, 880);
+  assert.equal(PANEL_WIDTH, 420);
+  assert.equal(PANEL_WIDTH_RATIO, 0.35);
+  assert.equal(PANEL_MIN_WIDTH, 360);
+  assert.equal(PANEL_MAX_WIDTH, 750);
   assert.equal(panelInset(1360, false), 0);
-  assert.equal(panelInset(1360, true), 612);
-  assert.equal(panelInset(1920, true), 864);
+  assert.equal(panelInset(1360, true), 476);
+  assert.equal(panelInset(1920, true), 672);
   assert.equal(panelInset(2560, true), PANEL_MAX_WIDTH);
   assert.equal(panelInset(900, true), 900 - MIN_CHAT_WIDTH);
   assert.equal(panelInset(400, true), 0);
   assert.equal(panelInset(1200, true, { panelWidth: 500, minChatWidth: 600 }), 500);
 
   const bounds = panelBounds(1360, 900, 112, true);
-  assert.deepEqual(bounds, { x: 748, y: 112, width: 612, height: 900 - 112 });
+  assert.deepEqual(bounds, { x: 884, y: 112, width: 476, height: 900 - 112 });
   assert.equal(panelBounds(1360, 900, 112, false), null);
 
   const chat = chatBounds(1360, 900, 112, true);
-  assert.deepEqual(chat, { x: 0, y: 112, width: 748, height: 900 - 112 });
+  assert.deepEqual(chat, { x: 0, y: 112, width: 884, height: 900 - 112 });
   const chatClosed = chatBounds(1360, 900, 112, false);
   assert.deepEqual(chatClosed, { x: 0, y: 112, width: 1360, height: 900 - 112 });
 });
@@ -80,47 +80,18 @@ test('MCP exposes an authorized orchestration snapshot endpoint', () => {
 
 test('control panel renders task plus multi-client authority and continuity controls', () => {
   const html = read('renderer/panel.html');
-  for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'continuityStatus', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton', 'routerFabric', 'routerSummary', 'routerChatWeb', 'routerDesktop', 'routerOpenCode', 'routerHub', 'routerWriter', 'routerFast', 'routerTerra', 'routerSol', 'routerDeepSeek']) {
+  for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'continuityStatus', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton']) {
     assert.match(html, new RegExp(`id="${id}"`), `panel.html thiếu id ${id}`);
   }
   assert.match(html, /Operator Control Panel/);
   assert.match(html, /Executive Summary/);
   assert.match(html, /class="dashboard-card executive-card hero-summary"/);
   assert.match(html, /class="hero-kpi-grid"/);
-  assert.equal((html.match(/class="summary-kpi-card /g) || []).length, 4, 'Executive Summary phải có đúng bốn KPI hero cards');
+  assert.equal((html.match(/class="summary-kpi-card /g) || []).length, 3, 'Executive Summary phải có đúng ba KPI hero cards');
   assert.match(html, /id="taskPercent"/);
   assert.match(html, /id="eventCount"/);
-  assert.match(html, /id="routerSummary"/);
   assert.match(html, /id="hubStatus"/);
-  assert.doesNotMatch(html, /Alerts &amp; Decisions/);
-  assert.doesNotMatch(html, /Capacity &amp; Authority/);
-  assert.doesNotMatch(html, /id="continuitySection"/);
-  assert.doesNotMatch(html, /id="hubSection"/);
   assert.match(html, /Quick Controls/);
-  const routingIndex = html.indexOf('id="routerSection"');
-  assert.ok(routingIndex > html.indexOf('Executive Summary'), 'Live Routing phải nằm sau phần tóm tắt đầu trang');
-  assert.ok(routingIndex < html.indexOf('Quick Controls'), 'Live Routing không được nằm gần cuối panel');
-  assert.match(html, /class="dashboard-card router-card panel-section hero-routing"/);
-  assert.match(html, /class="router-fabric routing-stage"/);
-  assert.match(html, /class="routing-column routing-frontends"/);
-  assert.match(html, /class="routing-hub-column"/);
-  assert.match(html, /class="routing-column routing-lanes"/);
-  assert.match(html, />FRONTENDS</);
-  assert.match(html, />EXECUTION HUB</);
-  assert.match(html, />COMPUTE LANES</);
-  assert.match(html, /Delegated model work/);
-  assert.match(html, /MCP Write &amp; Proof/);
-  assert.match(html, /single writer · fence/);
-  const hubColumn = html.slice(html.indexOf('class="routing-hub-column"'), html.indexOf('class="routing-column routing-lanes"'));
-  const laneColumn = html.slice(html.indexOf('class="routing-column routing-lanes"'), html.indexOf('class="router-legend"'));
-  assert.match(hubColumn, /id="routerWriter"/, 'MCP writer/proof authority phải nằm cùng control-plane column với Execution Hub');
-  assert.doesNotMatch(laneColumn, /id="routerWriter"/, 'MCP writer không được trình bày như một compute/model lane');
-  assert.match(html, /id="routingOverlay" class="router-links"/);
-  assert.match(html, /<path id="routerEdgeChatWeb"/);
-  assert.doesNotMatch(html, /<line id="routerEdge/);
-  assert.doesNotMatch(html, /viewBox="0 0 1000 380"/);
-  assert.doesNotMatch(html, /d="M245 75/);
-  assert.match(html, /class="hub-role">RUNTIME AUTHORITY/);
   assert.match(html, /<details class="dashboard-card recent-card panel-section secondary-disclosure" id="eventsSection">/);
   assert.match(html, /id="advancedOperations"/);
   const js = read('renderer/panel.js');
@@ -141,20 +112,8 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(js, /renderEvents/);
   assert.match(js, /renderProofs/);
   assert.match(js, /renderHub/);
-  assert.match(js, /renderRouterFabric/);
-  assert.match(js, /const routerGeometry = \{/);
-  assert.match(js, /getBoundingClientRect\(\)/);
-  assert.match(js, /function updateRouterGeometry\(\)/);
-  assert.match(js, /function scheduleRouterGeometry\(\)/);
-  assert.match(js, /requestAnimationFrame/);
-  assert.match(js, /new ResizeObserver\(scheduleRouterGeometry\)/);
-  assert.match(js, /\['routerFabric', \.\.\.Object\.values\(routerNodeIds\)\]\.forEach\(\(id\) => \{/);
-  assert.match(js, /routerResizeObserver\.observe\(element\)/);
-  assert.match(js, /overlay\.setAttribute\('viewBox'/);
-  assert.match(js, /edge\.setAttribute\('d', routerCurve/);
-  assert.match(js, /delegationRouterLane/);
-  assert.match(js, /className = `router-kpi badge \$\{hubState === 'active'/);
   assert.match(js, /clientFor\(data, 'opencode', 'opencode'\)/);
+  assert.doesNotMatch(js, /renderRouterFabric|routerGeometry|getBoundingClientRect|updateRouterGeometry|scheduleRouterGeometry|requestAnimationFrame|ResizeObserver|routerNodeIds|routerEdgeIds/);
   assert.doesNotMatch(js, /renderClient\(/);
   assert.doesNotMatch(js, /#controllerLine/);
   assert.doesNotMatch(js, /#rotationLine/);

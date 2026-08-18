@@ -9,7 +9,8 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from coding_tools_mcp.execution_resources import (
     ExecutionResourceError,
@@ -62,6 +63,47 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
             popen_kwargs=process_group_popen_kwargs(),
         )
         return process
+
+    def test_foreign_heavy_scan_defers_expensive_process_attrs_until_heavy(self) -> None:
+        class FakeProcess:
+            def __init__(self, pid: int, name: str, cmdline: list[str], cwd: str, rss: int) -> None:
+                self.info = {"pid": pid, "name": name, "cmdline": cmdline}
+                self._cwd = cwd
+                self._rss = rss
+                self.cwd_calls = 0
+                self.memory_info_calls = 0
+
+            def cwd(self) -> str:
+                self.cwd_calls += 1
+                return self._cwd
+
+            def memory_info(self) -> SimpleNamespace:
+                self.memory_info_calls += 1
+                return SimpleNamespace(rss=self._rss)
+
+        light = FakeProcess(41001, "explorer.exe", [], str(self.root), 1)
+        heavy = FakeProcess(41002, "cargo.exe", ["cargo.exe", "test"], str(self.root), 123)
+        current = Mock()
+        current.parents.return_value = []
+
+        with (
+            patch("coding_tools_mcp.execution_resources.psutil.Process", return_value=current),
+            patch(
+                "coding_tools_mcp.execution_resources.psutil.process_iter",
+                return_value=[light, heavy],
+            ) as process_iter,
+        ):
+            foreign = self.governor._foreign_heavy_processes()
+
+        process_iter.assert_called_once_with(["pid", "name", "cmdline"])
+        self.assertEqual(light.cwd_calls, 0)
+        self.assertEqual(light.memory_info_calls, 0)
+        self.assertEqual(heavy.cwd_calls, 1)
+        self.assertEqual(heavy.memory_info_calls, 1)
+        self.assertEqual(
+            foreign,
+            [{"pid": 41002, "name": "cargo.exe", "working_set_bytes": 123}],
+        )
 
     def test_heavy_requires_owner_and_global_slot_while_light_remains_available(self) -> None:
         with self.assertRaises(ExecutionResourceError) as missing:

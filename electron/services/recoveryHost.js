@@ -301,6 +301,7 @@ class RecoveryHost {
       started_at: this.startedAt,
       watchdog_interval_ms: SUPERVISION_INTERVAL_MS,
       gateway: this.gateway?.server ? 'healthy' : 'stopped',
+      gateway_metrics: this.gateway?.metrics?.() || null,
       code_revision: codeRevision,
       electron_ui_revision: this.activation.uiRevisionStatus(),
       electron_ui_recovery: this.uiRecoveryStatus(),

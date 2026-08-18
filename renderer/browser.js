@@ -29,21 +29,9 @@ function progressForTask(task, status) {
   if (steps.length) {
     const completed = steps.filter((step) => String(step?.status || '') === 'completed').length;
     const active = steps.filter((step) => ['in_progress', 'active', 'running'].includes(String(step?.status || ''))).length;
-    return Math.max(status === 'active' ? 5 : 0, Math.min(99, Math.round(((completed + active * 0.5) / steps.length) * 100)));
+    return Math.max(0, Math.min(100, Math.round(((completed + active * 0.5) / steps.length) * 100)));
   }
-  const kind = String(task?.current_command?.kind || '');
-  if (kind === 'build') return 85;
-  if (kind === 'test') return 72;
-  if (kind === 'command') return 52;
-  const step = String(task?.current_step || '').toLowerCase();
-  if (step.includes('completed')) return 100;
-  if (step.includes('build')) return 82;
-  if (step.includes('test') || step.includes('verify')) return 70;
-  if (step.includes('apply') || step.includes('modify') || step.includes('patch')) return 42;
-  if (status === 'waiting') return 62;
-  if (status === 'paused') return 50;
-  if (status === 'failed' || status === 'stopped') return 100;
-  return status === 'active' ? 18 : 0;
+  return null;
 }
 
 function renderChatState(state) {
@@ -153,9 +141,9 @@ async function refreshTask() {
     if (status === 'active' && idleFor >= 30000) parts.push(`Hoạt động gần đây ${formatDuration(idleFor)} trước`);
     if (status === 'active' && idleFor >= 120000) parts.push('Vẫn đang thực thi, không phải bị treo');
     $('#taskStep').textContent = parts.filter(Boolean).join(' · ');
-    $('#taskProgressBar').style.width = `${progress}%`;
-    $('#taskProgressText').textContent = `${progress}%`;
-    strip.title = `Trạng thái: ${status}; Tiến độ giai đoạn: ${progress}%; Cập nhật lần cuối: ${new Date(updatedAt).toLocaleString('vi-VN')}`;
+    $('#taskProgressBar').style.width = progress === null ? '0%' : `${progress}%`;
+    $('#taskProgressText').textContent = progress === null ? '—' : `${progress}%`;
+    strip.title = `Trạng thái: ${status}; Tiến độ giai đoạn: ${progress === null ? 'chưa rõ' : `${progress}%`}; Cập nhật lần cuối: ${new Date(updatedAt).toLocaleString('vi-VN')}`;
   } catch { /* no active workspace/task yet */ }
 }
 

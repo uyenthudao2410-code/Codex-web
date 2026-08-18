@@ -315,6 +315,65 @@ class TaskStateTests(unittest.TestCase):
             )
             self.assertEqual(terminal["events"][-1]["event"], "command_finished")
 
+    def test_public_terminal_command_control_requires_operator_report_and_recovers_lost_handle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = Runtime(root)
+            runtime.task_state.update({"objective": "Long delivery command", "status": "active"})
+            runtime.task_state.record_command_started("delivery-helper", "command-delivery", ".")
+            payload = {
+                "ok": True,
+                "status": "exited",
+                "command_id": "command-delivery",
+                "session_id": "command-delivery",
+                "exit_code": 0,
+                "elapsed_ms": 42,
+                "summary": "sensitive raw output must not enter report",
+            }
+            runtime._record_task_tool_result(
+                "command_control",
+                {"action": "poll", "command_id": "command-delivery"},
+                payload,
+            )
+            report = payload["completion_report"]
+            self.assertTrue(payload["operator_visible_required"])
+            self.assertTrue(report["operator_visible_required"])
+            self.assertEqual(report["command_id"], "command-delivery")
+            self.assertEqual(report["accepted_or_not"], "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT")
+            self.assertFalse(report["what_changed"]["raw_source_or_command_output_included"])
+            self.assertNotIn("sensitive raw output", json.dumps(report))
+            durable = runtime.task_state.get()
+            self.assertEqual(durable["completion_report"]["command_id"], "command-delivery")
+            self.assertIn("operator report required", durable["current_step"].lower())
+
+            recovered = runtime.command_control({"action": "poll", "command_id": "command-delivery"})
+            self.assertTrue(recovered["reconciled"])
+            self.assertTrue(recovered["operator_visible_required"])
+            self.assertEqual(recovered["completion_report"]["command_id"], "command-delivery")
+            runtime.close()
+
+    def test_failed_plain_exec_requires_operator_report_but_active_eocl_does_not(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = Runtime(root)
+            runtime.task_state.update({"objective": "Failing command", "status": "active"})
+            failed = {"ok": False, "status": "failed", "session_id": "command-failed", "exit_code": 7, "elapsed_ms": 3}
+            runtime._record_task_tool_result("exec_command", {"cmd": "failing-command"}, failed)
+            self.assertTrue(failed["operator_visible_required"])
+            self.assertEqual(failed["completion_report"]["accepted_or_not"], "COMMAND_FAILED")
+
+            runtime.task_state.update({
+                "objective": "EOCL owned command",
+                "status": "active",
+                "orchestration": {"orchestration_state": "EXECUTING", "run_id": "run-live", "wave_id": "wave-live"},
+            })
+            runtime.task_state.record_command_started("another-command", "command-eocl", ".")
+            eocl_payload = {"ok": True, "status": "exited", "command_id": "command-eocl", "session_id": "command-eocl", "exit_code": 0, "elapsed_ms": 1}
+            runtime._record_task_tool_result("command_control", {"action": "poll", "command_id": "command-eocl"}, eocl_payload)
+            self.assertNotIn("completion_report", eocl_payload)
+            self.assertEqual(runtime.task_state.get()["orchestration"]["orchestration_state"], "EXECUTING")
+            runtime.close()
+
     def test_command_classification(self) -> None:
         self.assertEqual(classify_command("python -m pytest -q"), "test")
         self.assertEqual(classify_command("npm run build"), "build")
@@ -1088,7 +1147,8 @@ class ToolModeTests(unittest.TestCase):
                 repaired = runtime.task_state.get()
                 self.assertEqual(repaired["orchestration"]["orchestration_state"], "ABORTED")
                 self.assertEqual(repaired["status"], "stopped")
-                self.assertEqual(repaired["current_step"], "Aborted")
+                self.assertEqual(repaired["current_step"], "Aborted - operator report required")
+                self.assertIn("completion_report", repaired["next_step"])
                 self.assertNotEqual(repaired["current_step"], "Awaiting acceptance")
             finally:
                 runtime.close()

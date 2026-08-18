@@ -34,7 +34,7 @@
   }
 
   function shouldPoll() {
-    return document.visibilityState !== 'hidden' && ['overview', 'routing', 'traffic', 'task'].includes(activePage());
+    return document.visibilityState !== 'hidden' && ['overview', 'task'].includes(activePage());
   }
 
   function clientFor(data, type, id) {
@@ -106,38 +106,6 @@
     if (number < 1000) return String(Math.round(number));
     if (number < 1000000) return `${(number / 1000).toFixed(number < 10000 ? 1 : 0)}K`;
     return `${(number / 1000000).toFixed(number < 10000000 ? 2 : 1)}M`;
-  }
-
-  function measurementLabel(value) {
-    const raw = value && typeof value === 'object'
-      ? String(value.source || value.kind || value.status || '')
-      : String(value || '');
-    const normalized = raw.toLowerCase();
-    if (normalized.includes('provider')) return 'PROVIDER';
-    if (normalized.includes('measured')) return 'MEASURED';
-    if (normalized.includes('estimate')) return 'ESTIMATED';
-    return 'UNKNOWN';
-  }
-
-  function normalizedUsageEvent(item) {
-    const usage = item?.tokens && typeof item.tokens === 'object'
-      ? item.tokens
-      : item?.usage && typeof item.usage === 'object' ? item.usage : {};
-    const input = Math.max(0, Number(usage.input ?? usage.input_tokens ?? usage.prompt_tokens ?? 0) || 0);
-    const cached = Math.max(0, Number(usage.cached_input ?? usage.cached_input_tokens ?? usage.cached_tokens ?? 0) || 0);
-    const output = Math.max(0, Number(usage.output ?? usage.output_tokens ?? usage.completion_tokens ?? 0) || 0);
-    const reasoning = Math.max(0, Number(usage.reasoning ?? usage.reasoning_tokens ?? 0) || 0);
-    const reportedTotal = finiteNumber(usage.total ?? usage.total_tokens);
-    return {
-      input,
-      cached,
-      output,
-      reasoning,
-      total: reportedTotal !== null && reportedTotal >= 0 ? reportedTotal : input + output,
-      measurement: measurementLabel(item?.measurement ?? item?.measurement_source ?? usage?.measurement),
-      provider: String(item?.provider || item?.provider_id || item?.principal || ''),
-      model: String(item?.model || item?.provider_model || item?.route || 'provider request')
-    };
   }
 
   function appendListRow(container, titleText, metaText, pillText = '', pillState = 'offline') {
@@ -485,72 +453,6 @@
     renderRecovery(data);
   }
 
-  function renderClientCard(prefix, client, latestEventSeq) {
-    const online = Boolean(client?.online);
-    setPill(`${prefix}State`, online ? 'online' : 'offline', online ? 'active' : 'offline');
-    const seq = Number(client?.cursor?.last_event_seq || 0);
-    const lag = Math.max(0, Number(latestEventSeq || 0) - seq);
-    setText(`${prefix}Meta`, client ? `cursor #${seq}${lag ? ` · lag ${lag}` : ''}` : 'No client record');
-  }
-
-  function renderDelegationList(items) {
-    const container = byId('routingDelegations');
-    if (!container) return;
-    container.replaceChildren();
-    const list = Array.isArray(items) ? items : [];
-    if (!list.length) {
-      const empty = document.createElement('div');
-      empty.className = 'cc-empty';
-      empty.textContent = 'No delegation is active or retained for this run.';
-      container.appendChild(empty);
-      return;
-    }
-    for (const item of list.slice().reverse().slice(0, 8)) {
-      const row = document.createElement('div');
-      row.className = 'cc-list-row';
-      const main = document.createElement('div');
-      const title = document.createElement('b');
-      title.textContent = item.model || item.route_resolved || 'deterministic';
-      const meta = document.createElement('small');
-      meta.textContent = `${item.route_resolved || 'route —'} · ${item.effort || '—'} · ${item.status || 'unknown'}`;
-      main.append(title, meta);
-      const state = document.createElement('span');
-      state.className = `cc-pill is-${delegationState(item.status)}`;
-      state.textContent = item.status || 'unknown';
-      row.append(main, state);
-      container.appendChild(row);
-    }
-  }
-
-  function renderEvidenceList(containerId, items, kind) {
-    const container = byId(containerId);
-    if (!container) return;
-    container.replaceChildren();
-    const list = Array.isArray(items) ? items : [];
-    if (!list.length) {
-      const empty = document.createElement('div');
-      empty.className = 'cc-empty';
-      empty.textContent = kind === 'proof' ? 'No proof records.' : 'No recent orchestration events.';
-      container.appendChild(empty);
-      return;
-    }
-    for (const item of list.slice().reverse().slice(0, 6)) {
-      const row = document.createElement('div');
-      row.className = 'cc-evidence-row';
-      const time = document.createElement('time');
-      time.textContent = formatTime(kind === 'proof' ? item.created_at : item.event_time);
-      const copy = document.createElement('div');
-      const title = document.createElement('b');
-      title.textContent = kind === 'proof' ? (item.stage_id || 'proof') : (item.event_type || 'event');
-      const meta = document.createElement('small');
-      if (kind === 'proof') meta.textContent = `${item.status || 'unknown'} · ${item.duration_ms ?? '—'}ms`;
-      else meta.textContent = `${item.state_before || '·'} → ${item.state_after || '·'}`;
-      copy.append(title, meta);
-      row.append(time, copy);
-      container.appendChild(row);
-    }
-  }
-
   function renderProviderTraffic(data) {
     const traffic = data?.provider_traffic || {};
     const policy = traffic?.policy || {};
@@ -562,150 +464,11 @@
     const automatic = traffic?.automatic_routing || {};
     const enforced = providers.filter((item) => item?.mode === 'enforced').length;
     const invalid = providers.filter((item) => item?.mode === 'invalid').length;
-    const policyLabel = invalid ? 'Invalid · fail closed' : enforced ? `${enforced} configured` : 'Limits unknown';
+    const policyLabel = invalid ? 'Invalid · fail closed' : enforced ? ` configured` : 'Limits unknown · Provider quota is not configured; observe-only, no limit is invented';
     setText('ccTrafficPolicy', policyLabel);
     setText('ccTrafficMeta', `${Number(opencodeCapacity?.active_requests || 0)} OpenCode active · auto-route ${automatic?.enabled ? 'ON' : 'OFF'} · ${config?.status || 'unconfigured'}`);
 
-    const container = byId('routingProviderTraffic');
-    if (!container) return;
-    container.replaceChildren();
-    if (!providers.length && !codexCooldowns.length) {
-      const empty = document.createElement('div');
-      empty.className = 'cc-empty';
-      empty.textContent = 'No configured provider limits or local cooldown evidence.';
-      container.appendChild(empty);
     }
-    for (const item of providers.slice(0, 8)) {
-      const limits = item?.limits || {};
-      const usage = item?.usage || {};
-      const meta = item?.mode === 'enforced'
-        ? `RPM ${formatLimit(limits.rpm)} · TPM ${formatLimit(limits.tpm)} · concurrency ${formatLimit(limits.concurrency)} · active ${Number(usage.active_requests || 0)}`
-        : item?.mode === 'invalid'
-          ? `Configuration invalid · ${item.configuration_error || item.reason || 'fail closed'}`
-          : 'Provider quota is not configured; observe-only, no limit is invented.';
-      appendListRow(container, item?.provider_model || 'provider', meta, item?.mode || 'unknown', item?.mode === 'invalid' ? 'blocked' : item?.mode === 'enforced' ? 'connected' : 'offline');
-    }
-    for (const item of codexCooldowns.slice(0, 4)) {
-      appendListRow(container, item?.model || 'Codex model', `Capacity cooldown · retry after ${formatDuration(item?.retry_after_ms)} · failures ${Number(item?.failures || 0)}`, 'cooldown', 'waiting');
-    }
-    appendListRow(container, 'Automatic provider routing', automatic?.enabled ? 'Enabled by explicit policy.' : `OFF · ${automatic?.reason || 'evidence gate'}`, automatic?.enabled ? 'ON' : 'OFF', automatic?.enabled ? 'active' : 'waiting');
-  }
-
-  function renderTrafficUsage(data) {
-    const traffic = data?.provider_traffic || {};
-    const policy = traffic?.policy || {};
-    const providers = Array.isArray(policy?.providers) ? policy.providers : [];
-    const opencodeCapacity = traffic?.capacity?.opencode || {};
-    const cooldowns = Array.isArray(traffic?.capacity?.codex?.capacity_cooldowns) ? traffic.capacity.codex.capacity_cooldowns : [];
-    const automatic = traffic?.automatic_routing || {};
-    const usageEvents = Array.isArray(data?.usage_events) ? data.usage_events : [];
-    const normalizedUsage = usageEvents.map(normalizedUsageEvent);
-    const providerActive = finiteNumber(opencodeCapacity?.active_requests);
-    const queueDepth = finiteNumber(traffic?.queue?.depth);
-    const enforced = providers.filter((item) => item?.mode === 'enforced').length;
-    const invalid = providers.filter((item) => item?.mode === 'invalid').length;
-    const providerTokens = normalizedUsage.reduce((sum, item) => sum + item.total, 0);
-
-    setText('trafficActive', providerActive === null ? 'UNKNOWN' : compactNumber(providerActive));
-    setText('trafficActiveMeta', providerActive === null ? 'Provider activity is not exposed by the current snapshot.' : 'Provider runtime activity from the Execution Hub read model.');
-    setText('trafficQueued', queueDepth === null ? 'UNKNOWN' : compactNumber(queueDepth));
-    setText('trafficQueuedMeta', queueDepth === null ? 'Queue depth is not exposed; zero is not assumed.' : 'Queue depth from runtime traffic state.');
-    setText('trafficUsage', usageEvents.length ? compactNumber(providerTokens) : 'UNKNOWN');
-    setText('trafficUsageMeta', usageEvents.length ? `${usageEvents.length} retained canonical event${usageEvents.length === 1 ? '' : 's'} · provider token plane` : 'No retained provider usage event; MCP bytes stay separate.');
-    setText('trafficLimits', providers.length ? `${enforced}/${providers.length}` : 'UNKNOWN');
-    setText('trafficLimitsMeta', invalid ? `${invalid} invalid · fail closed · ${cooldowns.length} cooldown` : `${enforced} enforced · ${cooldowns.length} cooldown`);
-
-    const routes = byId('trafficRoutes');
-    if (routes) {
-      routes.replaceChildren();
-      if (!providers.length) appendListRow(routes, 'Provider admission', 'No provider limit configuration. Quota UNKNOWN; observe-only state is not rendered as available quota.', 'UNKNOWN', 'offline');
-      for (const item of providers.slice(0, 10)) {
-        const limits = item?.limits || {};
-        const usage = item?.usage || {};
-        const meta = item?.mode === 'enforced'
-          ? `RPM ${formatLimit(limits.rpm)} · TPM ${formatLimit(limits.tpm)} · concurrency ${formatLimit(limits.concurrency)} · active ${Number(usage.active_requests || 0)} · quota UNKNOWN unless separately reported`
-          : item?.mode === 'invalid'
-            ? `Invalid configuration · ${item.configuration_error || item.reason || 'fail closed'}`
-            : 'Observe-only · provider quota UNKNOWN; no availability percentage is fabricated.';
-        appendListRow(routes, item?.provider_model || 'provider', meta, item?.mode || 'UNKNOWN', item?.mode === 'invalid' ? 'blocked' : item?.mode === 'enforced' ? 'connected' : 'offline');
-      }
-    }
-
-    const usageList = byId('trafficUsageEvents');
-    if (usageList) {
-      usageList.replaceChildren();
-      if (!normalizedUsage.length) appendListRow(usageList, 'Provider usage', 'No retained canonical provider usage event for the current run.', 'UNKNOWN', 'offline');
-      normalizedUsage.slice().reverse().slice(0, 8).forEach((usage) => {
-        const title = [usage.provider, usage.model].filter(Boolean).join(' · ') || 'provider request';
-        const meta = `in ${compactNumber(usage.input)} · cached ${compactNumber(usage.cached)} · out ${compactNumber(usage.output)} · total ${compactNumber(usage.total)}${usage.reasoning ? ` · reasoning ${compactNumber(usage.reasoning)}` : ''}`;
-        const pillState = usage.measurement === 'PROVIDER' || usage.measurement === 'MEASURED' ? 'connected' : usage.measurement === 'ESTIMATED' ? 'waiting' : 'offline';
-        appendListRow(usageList, title, meta, usage.measurement, pillState);
-      });
-    }
-
-    const capacity = byId('trafficCapacity');
-    if (capacity) {
-      capacity.replaceChildren();
-      if (!cooldowns.length) appendListRow(capacity, 'Codex capacity', 'No active capacity cooldown in the retained snapshot.', 'AVAILABLE', 'connected');
-      cooldowns.slice(0, 8).forEach((item) => appendListRow(capacity, item?.model || 'Codex model', `Retry after ${formatDuration(item?.retry_after_ms)} · failures ${Number(item?.failures || 0)}`, 'COOLDOWN', 'waiting'));
-      appendListRow(capacity, 'Automatic provider routing', automatic?.enabled ? 'Enabled by explicit runtime policy.' : `OFF · ${automatic?.reason || 'evidence gate'}`, automatic?.enabled ? 'ON' : 'OFF', automatic?.enabled ? 'active' : 'waiting');
-    }
-
-    const evidence = byId('trafficEvidence');
-    if (evidence) {
-      evidence.replaceChildren();
-      const counts = normalizedUsage.reduce((map, item) => {
-        map[item.measurement] = (map[item.measurement] || 0) + 1;
-        return map;
-      }, {});
-      appendListRow(evidence, 'Provider token plane', usageEvents.length ? Object.entries(counts).map(([key, value]) => `${key} ${value}`).join(' · ') : 'No provider token event retained.', usageEvents.length ? 'BOUNDED' : 'UNKNOWN', usageEvents.length ? 'connected' : 'offline');
-      const records = Array.isArray(performance?.recent) ? performance.recent : [];
-      const modelVisibleBytes = records.reduce((sum, item) => {
-        const value = finiteNumber(item?.model_visible_bytes);
-        return sum + (value !== null && value > 0 ? value : 0);
-      }, 0);
-      appendListRow(evidence, 'MCP model-visible plane', modelVisibleBytes ? `${compactNumber(modelVisibleBytes)} bytes measured in retained performance trace; token conversion remains ESTIMATED in analytics.` : 'No measured model-visible bytes in retained performance trace.', modelVisibleBytes ? 'MEASURED BYTES' : 'UNKNOWN', modelVisibleBytes ? 'connected' : 'offline');
-      appendListRow(evidence, 'Billing boundary', 'Provider tokens and MCP model-visible bytes are never added together as one total.', 'SEPARATE', 'active');
-    }
-  }
-
-  function renderPhaseTiming(data) {
-    const timing = data?.flight_recorder?.phase_timing || {};
-    const segments = Array.isArray(timing?.segments) ? timing.segments : [];
-    const container = byId('routingPhaseTiming');
-    if (!container) return;
-    container.replaceChildren();
-    if (!segments.length) {
-      const empty = document.createElement('div');
-      empty.className = 'cc-empty';
-      empty.textContent = 'No durable EOCL phase timing evidence.';
-      container.appendChild(empty);
-      return;
-    }
-    for (const segment of segments.slice().reverse().slice(0, 8)) {
-      const duration = segment?.duration_ms == null ? 'in progress / unknown' : formatDuration(segment.duration_ms);
-      appendListRow(container, segment?.state || 'state', `${formatTime(segment?.started_at)} → ${formatTime(segment?.ended_at)} · ${timing?.source || 'unknown source'}`, duration, segment?.duration_ms == null ? 'waiting' : 'connected');
-    }
-  }
-
-  function renderRunHistory(data) {
-    const runs = Array.isArray(data?.history?.runs) ? data.history.runs : [];
-    const container = byId('routingRunHistory');
-    if (!container) return;
-    container.replaceChildren();
-    if (!runs.length) {
-      const empty = document.createElement('div');
-      empty.className = 'cc-empty';
-      empty.textContent = 'No retained run history.';
-      container.appendChild(empty);
-      return;
-    }
-    for (const run of runs.slice(0, 8)) {
-      const status = String(run?.status || 'unknown').toLowerCase();
-      const pillState = ['accepted', 'completed'].includes(status) ? 'active' : ['active', 'running'].includes(status) ? 'connected' : ['aborted', 'failed', 'blocked'].includes(status) ? 'blocked' : 'offline';
-      appendListRow(container, `Run ${shortId(run?.run_id)}`, `${formatTime(run?.started_at)} → ${formatTime(run?.finished_at)} · transcript excluded`, status, pillState);
-    }
-  }
 
   function renderRecovery(data) {
     const health = snapshot?.status || {};
@@ -723,48 +486,17 @@
     const recoveryMeta = detailParts.join(' · ') || 'No local recovery evidence.';
     setText('ccRecoveryState', recoveryState);
     setText('ccRecoveryMeta', recoveryMeta);
-    setText('routingRecoveryState', recoveryState);
-    setText('routingRecoveryMeta', recoveryMeta);
-
     const pressureUnknown = String(pressure?.status || 'unknown').toLowerCase() === 'unknown';
     const pressureSource = String(pressure?.source || 'host_not_exposed');
     setText('ccContextPressure', pressureUnknown ? 'Unknown' : String(pressure.status));
     setText('ccContextMeta', pressureUnknown && pressureSource === 'host_not_exposed'
       ? 'Host does not expose conversation context pressure; UI does not estimate a percentage.'
       : `Source ${pressureSource}`);
-    setText('routingContextPressure', `${pressureUnknown ? 'Unknown' : pressure.status} · ${pressureSource}`);
-  }
-
-  function renderRouting(data) {
-    const view = renderRouter('routing', data);
-    const latestEventSeq = Number(data?.resume_packet?.latest_event_seq || 0);
-    renderClientCard('routingChatWeb', view.clients.chatweb, latestEventSeq);
-    renderClientCard('routingDesktop', view.clients.desktop, latestEventSeq);
-    renderClientCard('routingOpenCode', view.clients.opencode, latestEventSeq);
-    const controller = data?.authority?.controller || {};
-    const write = data?.authority?.write || {};
-    setText('routingAuthorityController', controller.owner_client_id
-      ? `${controller.owner_client_id} · ${controller.status || 'claimed'} · fence #${controller.fencing_token || 0}` : 'Unclaimed');
-    setText('routingAuthorityWriter', write.status === 'active'
-      ? `${write.owner || 'Coding Tools MCP'} · ACTIVE · fence #${write.fencing_token || 0}` : 'Coding Tools MCP · idle');
-    const continuity = data?.continuity || {};
-    setPill('routingContinuity', continuity.safe_to_rotate_chatweb ? 'Ready' : 'Hold', continuity.safe_to_rotate_chatweb ? 'active' : 'waiting');
-    setText('routingContinuityMeta', Array.isArray(continuity.reason_codes) && continuity.reason_codes.length
-      ? continuity.reason_codes.join(' · ') : 'No continuity assessment available');
-    renderDelegationList(data?.delegations);
-    renderEvidenceList('routingEvents', data?.flight_recorder?.events || data?.events, 'event');
-    renderEvidenceList('routingProofs', data?.proofs, 'proof');
-    renderProviderTraffic(data);
-    renderPhaseTiming(data);
-    renderRunHistory(data);
-    renderRecovery(data);
   }
 
   function renderAll() {
     const data = orchestration || {};
     renderCommandCenter(data);
-    renderRouting(data);
-    renderTrafficUsage(data);
   }
 
   async function refreshPerformance(force = false) {
@@ -788,8 +520,6 @@
       await refreshPerformance(force);
       renderAll();
       setText('ccLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
-      setText('routingLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
-      setText('trafficLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
     } finally {
       refreshInFlight = false;
     }
@@ -810,8 +540,6 @@
 
   byId('ccRestartButton')?.addEventListener('click', restartRuntime);
   byId('ccRefreshButton')?.addEventListener('click', () => refresh(true));
-  byId('routingRefreshButton')?.addEventListener('click', () => refresh(true));
-  byId('trafficRefreshButton')?.addEventListener('click', () => refresh(true));
 
   document.addEventListener('click', (event) => {
     const target = event.target.closest('[data-page],[data-nav]');

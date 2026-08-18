@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import secrets
+import sqlite3
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -200,18 +201,26 @@ class CoordinationMixin:
                 starting_commands = int(self.starting_sessions)
             with self.background_operations_lock:
                 active_background = sum(1 for item in self.background_operations.values() if not item["event"].is_set())
-            ledger_background = sum(
-                1 for item in self.orchestration_ledger.list_background_operations(limit=100)
-                if str(item.get("status") or "") == "running"
-            )
-            managed = self.execution_resource_governor.snapshot(limit=100)
-            owned_codex_sidecars = self._activation_owned_codex_sidecar_rows(managed)
-            managed_active = max(
-                0,
-                int(managed.get("active_command_count") or 0) - len(owned_codex_sidecars),
-            )
-            foreign_heavy = self.execution_resource_governor.foreign_heavy_processes()
-            active_lanes = len(self.orchestration_ledger.list_agent_lanes(lifecycle="active"))
+            try:
+                ledger_background = sum(
+                    1 for item in self.orchestration_ledger.list_background_operations(limit=100)
+                    if str(item.get("status") or "") == "running"
+                )
+                managed = self.execution_resource_governor.snapshot(limit=100)
+                owned_codex_sidecars = self._activation_owned_codex_sidecar_rows(managed)
+                managed_active = max(
+                    0,
+                    int(managed.get("active_command_count") or 0) - len(owned_codex_sidecars),
+                )
+                foreign_heavy = self.execution_resource_governor.foreign_heavy_processes()
+                active_lanes = len(self.orchestration_ledger.list_agent_lanes(lifecycle="active"))
+            except (sqlite3.Error, OSError) as exc:
+                return {
+                    "safe": False,
+                    "code": "ORCHESTRATION_STATE_UNCERTAIN",
+                    "reason": "activation_state_probe_failed",
+                    "error_type": type(exc).__name__,
+                }
             active_tool_calls = max(0, int(self.active_tool_calls) - max(0, int(ignore_active_tool_calls)))
             counts = {
                 "active_tool_calls": active_tool_calls,
@@ -225,7 +234,16 @@ class CoordinationMixin:
             if any(counts.values()):
                 return {"safe": False, "code": "RUNTIME_BUSY", "reason": "active_runtime_work", "counts": counts}
 
-            active_run = self.orchestration_ledger.current_active_run()
+            try:
+                active_run = self.orchestration_ledger.current_active_run()
+            except (sqlite3.Error, OSError) as exc:
+                return {
+                    "safe": False,
+                    "code": "ORCHESTRATION_STATE_UNCERTAIN",
+                    "reason": "activation_state_probe_failed",
+                    "error_type": type(exc).__name__,
+                    "counts": counts,
+                }
             orchestration_state = "IDLE"
             run_id = ""
             acceptance_pending = False

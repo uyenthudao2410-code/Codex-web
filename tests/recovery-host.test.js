@@ -190,7 +190,13 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   const gateway = {
     server: null,
     start: async function start() { calls.gatewayStart += 1; this.server = {}; },
-    stop: async function stop() { calls.gatewayStop += 1; this.server = null; }
+    stop: async function stop() { calls.gatewayStop += 1; this.server = null; },
+    metrics() {
+      return {
+        measurement: 'resident_gateway_upstream_round_trip',
+        by_kind: { mcp: { n: 3, p50_ms: 1, p90_ms: 2, p99_ms: 3, failures: 0, status_classes: { '2xx': 3 } } }
+      };
+    }
   };
   const host = new RecoveryHost({
     paths,
@@ -220,6 +226,8 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   assert.equal(descriptor.device_instance_id, host.instanceId);
   assert.equal(snapshot.recoveryHost.code_revision.state, 'current');
   assert.equal(snapshot.recoveryHost.code_revision.update_pending, false);
+  assert.equal(snapshot.recoveryHost.gateway_metrics.measurement, 'resident_gateway_upstream_round_trip');
+  assert.equal(snapshot.recoveryHost.gateway_metrics.by_kind.mcp.p90_ms, 2);
   assert.equal(calls.gatewayStart, 1);
   assert.equal(calls.supervise, 1);
 

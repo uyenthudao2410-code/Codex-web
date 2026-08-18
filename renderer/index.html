@@ -14,15 +14,32 @@
   <div class="boot-screen" id="bootScreen" role="status" aria-live="polite"><div class="boot-logo"><span></span><span></span><span></span></div><b>Đang chuẩn bị Trung tâm Quản lý</b><small>Đang đọc trạng thái không gian làm việc và dịch vụ cục bộ…</small><i></i></div>
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark"><span></span><span></span><span></span></div>
-        <div><strong>Execution Hub</strong><small>Control Center</small></div>
+        <div class="brand-mark">
+          <svg viewBox="0 0 120 120" width="32" height="32" fill="none">
+            <ellipse cx="60" cy="60" rx="52" ry="24" transform="rotate(-28 60 60)" stroke="#38bdf8" stroke-width="1.4" stroke-dasharray="8 6 2 6" opacity="0.6"/>
+            <polygon points="60,8 102,32 102,88 60,112 18,88 18,32" stroke="#3b82f6" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
+            <path d="M60,8 L60,60" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M102,32 L60,60" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M102,88 L60,60" stroke="#ec4899" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M60,112 L60,60" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M18,88 L60,60" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M18,32 L60,60" stroke="#00f2fe" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M60,26 L86,41 L86,71 L60,86 L34,71 L34,41 Z" stroke="#38bdf8" stroke-width="1.8" stroke-linejoin="round" fill="#0f172a" fill-opacity="0.2"/>
+            <polygon points="60,4 68,14 60,22 52,14" fill="#38bdf8"/>
+            <polygon points="106,30 106,42 96,36 96,24" fill="#a855f7"/>
+            <polygon points="106,90 96,96 96,84 106,78" fill="#ec4899"/>
+            <polygon points="60,116 52,106 60,98 68,106" fill="#8b5cf6"/>
+            <polygon points="14,90 24,96 24,84 14,78" fill="#38bdf8"/>
+            <polygon points="14,30 14,42 24,36 24,24" fill="#00f2fe"/>
+            <circle cx="60" cy="60" r="14" fill="#38bdf8" fill-opacity="0.3"/>
+            <circle cx="60" cy="60" r="4.5" fill="#ffffff"/>
+          </svg>
+        </div>
+        <div><strong>Codex Hub</strong><small>Control Center</small></div>
       </div>
 
       <nav class="nav-list" aria-label="Điều hướng chính">
         <button class="nav-item active" data-page="overview"><span class="nav-icon">CC</span><span>Command Center</span></button>
-        <button class="nav-item" data-page="routing"><span class="nav-icon">RT</span><span>Live Routing</span></button>
-        <button class="nav-item" data-page="traffic"><span class="nav-icon">TU</span><span>Traffic & Usage</span></button>
         <button class="nav-item" data-page="task"><span class="nav-icon">TP</span><span>Tasks & Proof</span></button>
         <button class="nav-item" data-page="device"><span class="nav-icon">DV</span><span>Thiết bị</span></button>
         <button class="nav-item" data-page="deploy"><span class="nav-icon">CN</span><span>Connections</span></button>
@@ -91,7 +108,7 @@
                 <div class="da-tile-value" id="daTokensTotal">—</div>
                 <div class="da-tile-sub"><span class="da-split in"><i></i>Model-visible</span><span id="daTokensSplit">—</span></div>
                 <div class="da-spark" id="daSpark" title="Lưu lượng 24 giờ qua"></div>
-                <div class="da-tile-sub" id="daTokensMeta">—</div>
+                <div class="da-tile-sub" id="daTokensMeta">—<span id="daTokensRate"></span></div>
               </article>
               <article class="da-tile is-cost">
                 <div class="da-tile-head"><span class="da-tile-label">Chi phí SCENARIO · recent trace</span><span class="da-tile-delta" id="daCostVnd">—</span></div>
@@ -178,51 +195,53 @@
             </div>
           </div>
 
-          <div class="cc-kpi-grid" aria-label="Operational KPIs">
-            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Runtime</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiRuntime">—</strong><small id="ccKpiRuntimeMeta">MCP — · Tunnel —</small></article>
-            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Frontends</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiClients">0/3</strong><small id="ccKpiClientsMeta">No frontend online</small></article>
-            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Active route</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiRoute">Idle</strong><small id="ccKpiRouteMeta">No model lane currently active</small></article>
-            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Proof</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiProof">0/0</strong><small id="ccKpiProofMeta">No proof recorded for current run</small></article>
-          </div>
-
-          <div class="cc-workbench">
-            <article class="cc-card">
-              <div class="cc-card-head"><div><h3>Live execution fabric</h3><p>9-node topology. Animated paths require live client, delegation or write-lease evidence.</p></div><span id="ccRouterSummary" class="cc-pill is-offline">0/3 clients · 0 active routes</span></div>
-              <div class="cc-card-body">
-                <div id="ccRouterFabric" class="ops-router" aria-label="Command Center live routing topology">
-                  <svg class="ops-router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
-                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M50 50 C82 50 118 118 150 150"></path><path id="ccEdgeChatWeb" class="ops-router-edge is-offline" d="M50 50 C82 50 118 118 150 150"></path></g>
-                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 50 C150 82 150 118 150 150"></path><path id="ccEdgeDesktop" class="ops-router-edge is-offline" d="M150 50 C150 82 150 118 150 150"></path></g>
-                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M250 50 C218 50 182 118 150 150"></path><path id="ccEdgeOpenCode" class="ops-router-edge is-offline" d="M250 50 C218 50 182 118 150 150"></path></g>
-                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 150 82 150 50 150"></path><path id="ccEdgeFast" class="ops-router-edge is-offline" d="M150 150 C118 150 82 150 50 150"></path></g>
-                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 150 218 150 250 150"></path><path id="ccEdgeDeepSeek" class="ops-router-edge is-offline" d="M150 150 C182 150 218 150 250 150"></path></g>
-                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 182 82 218 50 250"></path><path id="ccEdgeTerra" class="ops-router-edge is-offline" d="M150 150 C118 182 82 218 50 250"></path></g>
-                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C150 182 150 218 150 250"></path><path id="ccEdgeWriter" class="ops-router-edge is-offline" d="M150 150 C150 182 150 218 150 250"></path></g>
-                    <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 182 218 218 250 250"></path><path id="ccEdgeSol" class="ops-router-edge is-offline" d="M150 150 C182 182 218 218 250 250"></path></g>
-                  </svg>
-                  <div id="ccRouterChatWeb" class="ops-router-node is-offline"><b>ChatWeb</b><small>semantic control</small><span data-router-state>offline</span></div>
-                  <div id="ccRouterDesktop" class="ops-router-node is-offline"><b>Codex Desktop</b><small>deep frontend</small><span data-router-state>offline</span></div>
-                  <div id="ccRouterOpenCode" class="ops-router-node is-offline"><b>OpenCode</b><small>Go frontend</small><span data-router-state>offline</span></div>
-                  <div id="ccRouterFast" class="ops-router-node is-offline"><b>Codex Fast</b><small>Mini / Luna</small><span data-router-state>idle</span></div>
-                  <div id="ccRouterHub" class="ops-router-node is-hub is-offline"><b>Execution Hub</b><small>one runtime authority</small><span data-router-state>offline</span></div>
-                  <div id="ccRouterDeepSeek" class="ops-router-node is-offline"><b>OpenCode Go</b><small>Flash / Pro</small><span data-router-state>idle</span></div>
-                  <div id="ccRouterTerra" class="ops-router-node is-offline"><b>Codex Deep</b><small>Terra</small><span data-router-state>idle</span></div>
-                  <div id="ccRouterWriter" class="ops-router-node is-offline"><b>MCP Writer</b><small>proof + fence</small><span data-router-state>idle</span></div>
-                  <div id="ccRouterSol" class="ops-router-node is-offline"><b>Codex Critical</b><small>Sol</small><span data-router-state>idle</span></div>
-                </div>
-                <div class="ops-router-legend"><span><i></i>connected</span><span class="active"><i></i>active</span><span class="waiting"><i></i>waiting</span><span class="blocked"><i></i>blocked</span></div>
-              </div>
-            </article>
-
-            <div class="cc-side-stack">
-              <article class="cc-card"><div class="cc-card-head"><div><h3>Active execution</h3><p>Durable task/run state, not chat transcript.</p></div><span id="ccTaskStatus" class="cc-pill is-idle">idle</span></div><div class="cc-card-body"><div id="ccActivityIndicator" class="cc-activity is-offline" role="status" aria-live="polite" aria-busy="false" data-phase="idle"><span class="cc-activity-orb" aria-hidden="true"><i></i><i></i><i></i></span><span class="cc-activity-copy"><b id="ccActivityLabel">Đang rảnh</b><small id="ccActivityDetail">Không có bằng chứng thực thi đang hoạt động.</small></span><em id="ccMotionMode">Sẵn sàng</em></div><h4 id="ccTaskObjective" class="cc-task-title">No active task.</h4><div id="ccTaskStep" class="cc-detail">Waiting for work</div><div id="ccRunMeta" class="cc-detail cc-mono">No active orchestration run</div></div></article>
-              <article class="cc-card"><div class="cc-card-head"><div><h3>Authority</h3><p>Controller and writer are intentionally separate.</p></div><span id="ccContinuity" class="cc-pill is-waiting">Continuity hold</span></div><div class="cc-card-body cc-key-values"><div class="cc-key-value"><span>Controller</span><b id="ccController">Unclaimed</b></div><div class="cc-key-value"><span>Writer / fence</span><b id="ccWriter">Coding Tools MCP · idle</b></div></div></article>
+          <div style="display: none !important;">
+            <div class="cc-kpi-grid" aria-label="Operational KPIs">
+              <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Runtime</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiRuntime">—</strong><small id="ccKpiRuntimeMeta">MCP — · Tunnel —</small></article>
+              <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Frontends</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiClients">0/3</strong><small id="ccKpiClientsMeta">No frontend online</small></article>
+              <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Active route</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiRoute">Idle</strong><small id="ccKpiRouteMeta">No model lane currently active</small></article>
+              <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Proof</span><i class="cc-kpi-mark"></i></div><strong id="ccKpiProof">0/0</strong><small id="ccKpiProofMeta">No proof recorded for current run</small></article>
             </div>
-          </div>
 
-          <div class="cc-bottom-grid">
-            <article class="cc-card"><div class="cc-card-head"><div><h3>Proof & execution economics</h3><p>Fast operational evidence, without mixing billing planes.</p></div></div><div class="cc-card-body cc-evidence-summary"><div class="cc-evidence-stat"><span>Proof ledger</span><b id="ccProofCount">0 proof records</b><small id="ccProofLatest" class="cc-detail">No proof yet</small></div><div class="cc-evidence-stat"><span>Delegations</span><b id="ccDelegationCount">0 delegation records</b><small id="ccPerformance" class="cc-detail">Performance telemetry not recorded yet</small></div><div class="cc-evidence-stat"><span>Provider traffic</span><b id="ccTrafficPolicy">Limits unknown</b><small id="ccTrafficMeta" class="cc-detail">Automatic routing remains evidence-gated.</small></div><div class="cc-evidence-stat"><span>Runtime recovery</span><b id="ccRecoveryState">Stable</b><small id="ccRecoveryMeta" class="cc-detail">No local recovery evidence.</small></div><div class="cc-evidence-stat"><span>Context pressure</span><b id="ccContextPressure">Unknown</b><small id="ccContextMeta" class="cc-detail">Host does not expose conversation context pressure.</small></div></div></article>
-            <article class="cc-card"><div class="cc-card-head"><div><h3>Operator shortcuts</h3><p>High-value destinations only. Diagnostics stay under System.</p></div></div><div class="cc-card-body cc-action-grid"><button data-nav="routing">Live Routing</button><button data-nav="task">Tasks & Proof</button><button data-nav="deploy">Connections</button><button data-nav="system">System diagnostics</button></div></article>
+            <div class="cc-workbench">
+              <article class="cc-card">
+                <div class="cc-card-head"><div><h3>Live execution fabric</h3><p>9-node topology. Animated paths require live client, delegation or write-lease evidence.</p></div><span id="ccRouterSummary" class="cc-pill is-offline">0/3 clients · 0 active routes</span></div>
+                <div class="cc-card-body">
+                  <div id="ccRouterFabric" class="ops-router" aria-label="Command Center live routing topology">
+                    <svg class="ops-router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M50 50 C82 50 118 118 150 150"></path><path id="ccEdgeChatWeb" class="ops-router-edge is-offline" d="M50 50 C82 50 118 118 150 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 50 C150 82 150 118 150 150"></path><path id="ccEdgeDesktop" class="ops-router-edge is-offline" d="M150 50 C150 82 150 118 150 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M250 50 C218 50 182 118 150 150"></path><path id="ccEdgeOpenCode" class="ops-router-edge is-offline" d="M250 50 C218 50 182 118 150 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 150 82 150 50 150"></path><path id="ccEdgeFast" class="ops-router-edge is-offline" d="M150 150 C118 150 82 150 50 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 150 218 150 250 150"></path><path id="ccEdgeDeepSeek" class="ops-router-edge is-offline" d="M150 150 C182 150 218 150 250 150"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 182 82 218 50 250"></path><path id="ccEdgeTerra" class="ops-router-edge is-offline" d="M150 150 C118 182 82 218 50 250"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C150 182 150 218 150 250"></path><path id="ccEdgeWriter" class="ops-router-edge is-offline" d="M150 150 C150 182 150 218 150 250"></path></g>
+                      <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 182 218 218 250 250"></path><path id="ccEdgeSol" class="ops-router-edge is-offline" d="M150 150 C182 182 218 218 250 250"></path></g>
+                    </svg>
+                    <div id="ccRouterChatWeb" class="ops-router-node is-offline"><b>ChatWeb</b><small>semantic control</small><span data-router-state>offline</span></div>
+                    <div id="ccRouterDesktop" class="ops-router-node is-offline"><b>Codex Desktop</b><small>deep frontend</small><span data-router-state>offline</span></div>
+                    <div id="ccRouterOpenCode" class="ops-router-node is-offline"><b>OpenCode</b><small>Go frontend</small><span data-router-state>offline</span></div>
+                    <div id="ccRouterFast" class="ops-router-node is-offline"><b>Codex Fast</b><small>Mini / Luna</small><span data-router-state>idle</span></div>
+                    <div id="ccRouterHub" class="ops-router-node is-hub is-offline"><b>Execution Hub</b><small>one runtime authority</small><span data-router-state>offline</span></div>
+                    <div id="ccRouterDeepSeek" class="ops-router-node is-offline"><b>OpenCode Go</b><small>Flash / Pro</small><span data-router-state>idle</span></div>
+                    <div id="ccRouterTerra" class="ops-router-node is-offline"><b>Codex Deep</b><small>Terra</small><span data-router-state>idle</span></div>
+                    <div id="ccRouterWriter" class="ops-router-node is-offline"><b>MCP Writer</b><small>proof + fence</small><span data-router-state>idle</span></div>
+                    <div id="ccRouterSol" class="ops-router-node is-offline"><b>Codex Critical</b><small>Sol</small><span data-router-state>idle</span></div>
+                  </div>
+                  <div class="ops-router-legend"><span><i></i>connected</span><span class="active"><i></i>active</span><span class="waiting"><i></i>waiting</span><span class="blocked"><i></i>blocked</span></div>
+                </div>
+              </article>
+
+              <div class="cc-side-stack">
+                <article class="cc-card"><div class="cc-card-head"><div><h3>Active execution</h3><p>Durable task/run state, not chat transcript.</p></div><span id="ccTaskStatus" class="cc-pill is-idle">idle</span></div><div class="cc-card-body"><div id="ccActivityIndicator" class="cc-activity is-offline" role="status" aria-live="polite" aria-busy="false" data-phase="idle"><span class="cc-activity-orb" aria-hidden="true"><i></i><i></i><i></i></span><span class="cc-activity-copy"><b id="ccActivityLabel">Đang rảnh</b><small id="ccActivityDetail">Không có bằng chứng thực thi đang hoạt động.</small></span><em id="ccMotionMode">Sẵn sàng</em></div><h4 id="ccTaskObjective" class="cc-task-title">No active task.</h4><div id="ccTaskStep" class="cc-detail">Waiting for work</div><div id="ccRunMeta" class="cc-detail cc-mono">No active orchestration run</div></div></article>
+                <article class="cc-card"><div class="cc-card-head"><div><h3>Authority</h3><p>Controller and writer are intentionally separate.</p></div><span id="ccContinuity" class="cc-pill is-waiting">Continuity hold</span></div><div class="cc-card-body cc-key-values"><div class="cc-key-value"><span>Controller</span><b id="ccController">Unclaimed</b></div><div class="cc-key-value"><span>Writer / fence</span><b id="ccWriter">Coding Tools MCP · idle</b></div></div></article>
+              </div>
+            </div>
+
+            <div class="cc-bottom-grid">
+              <article class="cc-card"><div class="cc-card-head"><div><h3>Proof & execution economics</h3><p>Fast operational evidence, without mixing billing planes.</p></div></div><div class="cc-card-body cc-evidence-summary"><div class="cc-evidence-stat"><span>Proof ledger</span><b id="ccProofCount">0 proof records</b><small id="ccProofLatest" class="cc-detail">No proof yet</small></div><div class="cc-evidence-stat"><span>Delegations</span><b id="ccDelegationCount">0 delegation records</b><small id="ccPerformance" class="cc-detail">Performance telemetry not recorded yet</small></div><div class="cc-evidence-stat"><span>Provider traffic</span><b id="ccTrafficPolicy">Limits unknown</b><small id="ccTrafficMeta" class="cc-detail">Automatic routing remains evidence-gated.</small></div><div class="cc-evidence-stat"><span>Runtime recovery</span><b id="ccRecoveryState">Stable</b><small id="ccRecoveryMeta" class="cc-detail">No local recovery evidence.</small></div><div class="cc-evidence-stat"><span>Context pressure</span><b id="ccContextPressure">Unknown</b><small id="ccContextMeta" class="cc-detail">Host does not expose conversation context pressure.</small></div></div></article>
+              <article class="cc-card"><div class="cc-card-head"><div><h3>Operator shortcuts</h3><p>High-value destinations only. Diagnostics stay under System.</p></div></div><div class="cc-card-body cc-action-grid"><button data-nav="task">Tasks & Proof</button><button data-nav="deploy">Connections</button><button data-nav="system">System diagnostics</button></div></article>
+            </div>
           </div>
 
           <div class="hero-card legacy-overview">
@@ -267,62 +286,6 @@
               <div class="progress-track"><i id="progressBar"></i></div>
               <div class="compact-buttons"><button class="danger-button" id="overviewStop">Dừng dịch vụ</button><button class="secondary-button" data-nav="logs">Xem nhật ký</button></div>
             </article>
-          </div>
-        </section>
-
-        <section class="page" data-page-view="routing">
-          <div class="section-header"><div><span class="section-kicker">LIVE EXECUTION FABRIC</span><h2>Live Routing</h2><p>The control plane shows what is connected, who owns semantic control, which model lane is actually delegated, and whether the MCP writer holds the write fence.</p></div><div class="inline-actions"><span id="routingLastSync" class="cc-sync">Not synced</span><button class="secondary-button" id="routingRefreshButton">Refresh</button></div></div>
-          <div class="routing-layout">
-            <article class="cc-card"><div class="cc-card-head"><div><h3>Execution topology</h3><p>OpenCode connectivity does not imply Flash/Pro activity. DeepSeek activates only from explicit delegation/model evidence.</p></div><span id="routingRouterSummary" class="cc-pill is-offline">0/3 clients · 0 active routes</span></div><div class="cc-card-body">
-              <div id="routingRouterFabric" class="ops-router is-large" aria-label="Detailed live routing topology">
-                <svg class="ops-router-links" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
-                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M50 50 C82 50 118 118 150 150"></path><path id="routingEdgeChatWeb" class="ops-router-edge is-offline" d="M50 50 C82 50 118 118 150 150"></path></g>
-                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 50 C150 82 150 118 150 150"></path><path id="routingEdgeDesktop" class="ops-router-edge is-offline" d="M150 50 C150 82 150 118 150 150"></path></g>
-                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M250 50 C218 50 182 118 150 150"></path><path id="routingEdgeOpenCode" class="ops-router-edge is-offline" d="M250 50 C218 50 182 118 150 150"></path></g>
-                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 150 82 150 50 150"></path><path id="routingEdgeFast" class="ops-router-edge is-offline" d="M150 150 C118 150 82 150 50 150"></path></g>
-                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 150 218 150 250 150"></path><path id="routingEdgeDeepSeek" class="ops-router-edge is-offline" d="M150 150 C182 150 218 150 250 150"></path></g>
-                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C118 182 82 218 50 250"></path><path id="routingEdgeTerra" class="ops-router-edge is-offline" d="M150 150 C118 182 82 218 50 250"></path></g>
-                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C150 182 150 218 150 250"></path><path id="routingEdgeWriter" class="ops-router-edge is-offline" d="M150 150 C150 182 150 218 150 250"></path></g>
-                  <g class="ops-router-edge-group is-offline"><path class="ops-router-edge-halo" d="M150 150 C182 182 218 218 250 250"></path><path id="routingEdgeSol" class="ops-router-edge is-offline" d="M150 150 C182 182 218 218 250 250"></path></g>
-                </svg>
-                <div id="routingRouterChatWeb" class="ops-router-node is-offline"><b>ChatWeb</b><small>semantic control</small><span data-router-state>offline</span></div>
-                <div id="routingRouterDesktop" class="ops-router-node is-offline"><b>Codex Desktop</b><small>deep frontend</small><span data-router-state>offline</span></div>
-                <div id="routingRouterOpenCode" class="ops-router-node is-offline"><b>OpenCode</b><small>Go frontend</small><span data-router-state>offline</span></div>
-                <div id="routingRouterFast" class="ops-router-node is-offline"><b>Codex Fast</b><small>Mini / Luna</small><span data-router-state>idle</span></div>
-                <div id="routingRouterHub" class="ops-router-node is-hub is-offline"><b>Execution Hub</b><small>one runtime authority</small><span data-router-state>offline</span></div>
-                <div id="routingRouterDeepSeek" class="ops-router-node is-offline"><b>OpenCode Go</b><small>DeepSeek Flash / Pro</small><span data-router-state>idle</span></div>
-                <div id="routingRouterTerra" class="ops-router-node is-offline"><b>Codex Deep</b><small>Terra</small><span data-router-state>idle</span></div>
-                <div id="routingRouterWriter" class="ops-router-node is-offline"><b>MCP Writer</b><small>proof + fence</small><span data-router-state>idle</span></div>
-                <div id="routingRouterSol" class="ops-router-node is-offline"><b>Codex Critical</b><small>Sol</small><span data-router-state>idle</span></div>
-              </div>
-              <div class="ops-router-legend"><span><i></i>connected</span><span class="active"><i></i>active</span><span class="waiting"><i></i>waiting</span><span class="blocked"><i></i>blocked</span></div>
-            </div></article>
-            <div class="routing-side">
-              <article class="cc-card"><div class="cc-card-head"><div><h3>Frontends</h3><p>Client cursors expose reconnect lag.</p></div></div><div class="cc-card-body cc-client-grid"><div class="cc-client-card"><b>ChatWeb</b><span id="routingChatWebState" class="cc-pill is-offline">offline</span><small id="routingChatWebMeta">No client record</small></div><div class="cc-client-card"><b>Codex Desktop</b><span id="routingDesktopState" class="cc-pill is-offline">offline</span><small id="routingDesktopMeta">No client record</small></div><div class="cc-client-card"><b>OpenCode</b><span id="routingOpenCodeState" class="cc-pill is-offline">offline</span><small id="routingOpenCodeMeta">No client record</small></div></div></article>
-              <article class="cc-card"><div class="cc-card-head"><div><h3>Authority & continuity</h3><p>Single controller, singular writer.</p></div><span id="routingContinuity" class="cc-pill is-waiting">Hold</span></div><div class="cc-card-body cc-key-values"><div class="cc-key-value"><span>Controller</span><b id="routingAuthorityController">Unclaimed</b></div><div class="cc-key-value"><span>Writer</span><b id="routingAuthorityWriter">Coding Tools MCP · idle</b></div><div class="cc-key-value"><span>Continuity</span><b id="routingContinuityMeta">No assessment available</b></div></div></article>
-            </div>
-          </div>
-          <div class="cc-bottom-grid"><article class="cc-card"><div class="cc-card-head"><div><h3>Delegations</h3><p>Provider/model execution records for the current run.</p></div></div><div id="routingDelegations" class="cc-card-body cc-list"><div class="cc-empty">No delegation is active or retained for this run.</div></div></article><article class="cc-card"><div class="cc-card-head"><div><h3>Recent proof</h3><p>Deterministic acceptance evidence.</p></div></div><div id="routingProofs" class="cc-card-body cc-evidence-list"><div class="cc-empty">No proof records.</div></div></article></div>
-          <article class="cc-card" style="margin-top:14px"><div class="cc-card-head"><div><h3>Recent orchestration events</h3><p>State transitions, not raw transcript.</p></div></div><div id="routingEvents" class="cc-card-body cc-evidence-list"><div class="cc-empty">No recent orchestration events.</div></div></article>
-          <div class="cc-bottom-grid"><article class="cc-card"><div class="cc-card-head"><div><h3>Provider traffic & capacity</h3><p>Configured admission limits stay separate from provider-reported billing and unknown quota.</p></div></div><div id="routingProviderTraffic" class="cc-card-body cc-list"><div class="cc-empty">Provider limits are not configured.</div></div></article><article class="cc-card"><div class="cc-card-head"><div><h3>EOCL phase timing</h3><p>Durations are derived only from durable state-transition timestamps.</p></div></div><div id="routingPhaseTiming" class="cc-card-body cc-list"><div class="cc-empty">No phase timing evidence.</div></div></article></div>
-          <div class="cc-bottom-grid"><article class="cc-card"><div class="cc-card-head"><div><h3>Recent runs</h3><p>Bounded run identity and lifecycle only; no transcript or provider prompt.</p></div></div><div id="routingRunHistory" class="cc-card-body cc-list"><div class="cc-empty">No retained run history.</div></div></article><article class="cc-card"><div class="cc-card-head"><div><h3>Runtime recovery & context</h3><p>Local supervisor truth. Conversation context pressure remains unknown unless the host exposes it.</p></div></div><div class="cc-card-body cc-key-values"><div class="cc-key-value"><span>Recovery</span><b id="routingRecoveryState">Stable</b></div><div class="cc-key-value"><span>Recovery detail</span><b id="routingRecoveryMeta">No local recovery evidence.</b></div><div class="cc-key-value"><span>Context pressure</span><b id="routingContextPressure">Unknown · host_not_exposed</b></div></div></article></div>
-        </section>
-
-        <section class="page" data-page-view="traffic">
-          <div class="section-header"><div><span class="section-kicker">TRAFFIC & USAGE</span><h2>Traffic & Usage</h2><p>Provider admission, capacity, usage provenance and bounded request evidence from the existing Execution Hub read model. Unknown quota remains UNKNOWN.</p></div><div class="inline-actions"><span id="trafficLastSync" class="cc-sync">Not synced</span><button class="secondary-button" id="trafficRefreshButton">Refresh</button></div></div>
-          <div class="cc-kpi-grid" aria-label="Traffic and usage KPIs">
-            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Provider active</span><i class="cc-kpi-mark"></i></div><strong id="trafficActive">UNKNOWN</strong><small id="trafficActiveMeta">No provider activity snapshot.</small></article>
-            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Queue depth</span><i class="cc-kpi-mark"></i></div><strong id="trafficQueued">UNKNOWN</strong><small id="trafficQueuedMeta">Queue state is shown only when exposed.</small></article>
-            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Provider usage</span><i class="cc-kpi-mark"></i></div><strong id="trafficUsage">UNKNOWN</strong><small id="trafficUsageMeta">Provider tokens are never mixed with MCP byte estimates.</small></article>
-            <article class="cc-kpi"><div class="cc-kpi-head"><span class="cc-kpi-label">Admission limits</span><i class="cc-kpi-mark"></i></div><strong id="trafficLimits">UNKNOWN</strong><small id="trafficLimitsMeta">No configured provider limits.</small></article>
-          </div>
-          <div class="cc-bottom-grid">
-            <article class="cc-card"><div class="cc-card-head"><div><h3>Routes & provider admission</h3><p>Configured limits, active requests and cooldown evidence. Quota is not invented when the provider does not expose it.</p></div></div><div id="trafficRoutes" class="cc-card-body cc-list"><div class="cc-empty">No provider traffic evidence.</div></div></article>
-            <article class="cc-card"><div class="cc-card-head"><div><h3>Recent provider usage</h3><p>Bounded canonical usage events with explicit provenance.</p></div></div><div id="trafficUsageEvents" class="cc-card-body cc-list"><div class="cc-empty">No retained provider usage event.</div></div></article>
-          </div>
-          <div class="cc-bottom-grid">
-            <article class="cc-card"><div class="cc-card-head"><div><h3>Capacity & routing policy</h3><p>Cooldown and automatic-routing state from the same runtime read model used by routing.</p></div></div><div id="trafficCapacity" class="cc-card-body cc-list"><div class="cc-empty">No capacity evidence.</div></div></article>
-            <article class="cc-card"><div class="cc-card-head"><div><h3>Evidence planes</h3><p>Provider token truth and MCP model-visible bytes remain separate measurement planes.</p></div></div><div id="trafficEvidence" class="cc-card-body cc-list"><div class="cc-empty">No usage evidence.</div></div></article>
           </div>
         </section>
 

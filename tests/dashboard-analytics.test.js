@@ -49,6 +49,19 @@ test('dashboard analytics never fabricate provider billing data', () => {
   assert.doesNotMatch(js, /api\.openai\.com|platform\.openai\.com\/usage/);
 });
 
+test('dashboard analytics measure traffic over time from persisted hourly buckets, not one fixed snapshot', () => {
+  const js = read('renderer/dashboard.js');
+  const html = read('renderer/index.html');
+  assert.match(js, /hourly_metrics/);
+  assert.match(js, /function hourlyFromStore/);
+  assert.match(js, /function performanceBuckets/);
+  assert.match(js, /return hourlyFromStore\(count\) \|\| hourBuckets\(records, count\);/);
+  assert.match(js, /model_visible_bytes/);
+  assert.match(js, /Giờ gần nhất ≈/);
+  assert.match(html, /id="daTokensRate"/);
+  assert.doesNotMatch(js, /fetch\(/);
+});
+
 test('model control table attributes traffic to every running lane including ChatWeb', () => {
   const js = read('renderer/dashboard.js');
   assert.match(js, /id: 'chatweb', name: 'ChatWeb'/);

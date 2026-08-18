@@ -645,7 +645,7 @@ class ExecutionResourceGovernor:
                 continue
 
         foreign: list[dict[str, Any]] = []
-        for process in psutil.process_iter(["pid", "name", "cmdline", "cwd", "memory_info"]):
+        for process in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
                 pid = int(process.info.get("pid") or 0)
                 if pid <= 0 or pid in excluded_pids or pid in managed_pids:
@@ -655,13 +655,13 @@ class ExecutionResourceGovernor:
                 command = " ".join([name, *argv])
                 if classify_resource_class(command) != "HEAVY":
                     continue
-                in_checkout = self._path_in_checkout(process.info.get("cwd")) or any(
+                in_checkout = self._path_in_checkout(process.cwd()) or any(
                     Path(token.strip('"')).is_absolute() and self._path_in_checkout(token)
                     for token in argv
                 )
                 if not in_checkout:
                     continue
-                rss = int(getattr(process.info.get("memory_info"), "rss", 0) or 0)
+                rss = int(getattr(process.memory_info(), "rss", 0) or 0)
                 if name in {"rust-analyzer", "rust-analyzer.exe"} and rss < _RUST_ANALYZER_FOREIGN_RSS_BYTES:
                     continue
                 foreign.append({"pid": pid, "name": name[:128], "working_set_bytes": rss})

@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -48,7 +49,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             stale = Runtime._measured_result_tail({"error": {"details": {"result_tail": {"continuation_stale": True}}}})
             self.assertTrue(stale["continuation_stale"])
 
-    def test_performance_trace_v5_records_model_visible_bytes_run_metrics_and_measured_phase_timing(self) -> None:
+    def test_performance_trace_v6_records_model_visible_bytes_run_metrics_and_measured_phase_timing(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             store = PerformanceTraceStore(Path(temp))
             state = store.record(
@@ -96,7 +97,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                     "orchestration_state": "ACCEPTING",
                 },
             )
-            self.assertEqual(state["version"], 5)
+            self.assertEqual(state["version"], 6)
             self.assertEqual(state["idempotency_eligible_calls"], 1)
             self.assertEqual(state["idempotency_eligible_key_calls"], 1)
             self.assertEqual(state["idempotency_key_calls"], 1)
@@ -169,6 +170,86 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             self.assertEqual(metric["localization_samples"], 1)
             self.assertEqual(metric["lsp_handled_queries"], 2)
             self.assertEqual(metric["fallback_search_queries"], 1)
+
+    def test_performance_trace_v6_hourly_metrics_bucket_by_started_hour_and_prune_rolling_window(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = PerformanceTraceStore(Path(temp))
+            state = store.record(
+                tool="agent_workflow",
+                started_monotonic=10.0,
+                finished_monotonic=11.0,
+                started_wall_utc="2026-08-18T10:15:00.000Z",
+                finished_wall_utc="2026-08-18T10:15:01.000Z",
+                request_bytes=100,
+                response_bytes=200,
+                model_visible_bytes=80,
+                cache_hit=True,
+                orchestration={"run_id": "run-hourly"},
+            )
+            first_hour = int(datetime.fromisoformat("2026-08-18T10:15:00+00:00").timestamp() // 3600)
+            self.assertIn(first_hour, state["hourly_metrics"])
+            bucket = state["hourly_metrics"][first_hour]
+            self.assertEqual(bucket["hour"], first_hour)
+            self.assertEqual(bucket["tool_calls"], 1)
+            self.assertEqual(bucket["cache_hits"], 1)
+            self.assertEqual(bucket["model_visible_bytes"], 80)
+            self.assertEqual(bucket["request_bytes"], 100)
+            self.assertEqual(bucket["response_bytes"], 200)
+            self.assertEqual(bucket["local_execution_ms"], 1000)
+            self.assertEqual(bucket["last_finished_at"], "2026-08-18T10:15:01.000Z")
+
+            second = store.record(
+                tool="exec_command",
+                started_monotonic=12.0,
+                finished_monotonic=12.5,
+                started_wall_utc="2026-08-18T10:45:00.000Z",
+                finished_wall_utc="2026-08-18T10:45:00.500Z",
+                model_visible_bytes=20,
+                ok=False,
+            )
+            same_hour = int(datetime.fromisoformat("2026-08-18T10:45:00+00:00").timestamp() // 3600)
+            self.assertEqual(same_hour, first_hour)
+            self.assertEqual(second["hourly_metrics"][first_hour]["tool_calls"], 2)
+            self.assertEqual(second["hourly_metrics"][first_hour]["errors"], 1)
+            self.assertEqual(second["hourly_metrics"][first_hour]["model_visible_bytes"], 100)
+
+            third = store.record(
+                tool="task_control",
+                started_monotonic=13.0,
+                finished_monotonic=13.1,
+                started_wall_utc="2026-08-18T11:00:00.000Z",
+                finished_wall_utc="2026-08-18T11:00:00.100Z",
+                model_visible_bytes=7,
+            )
+            next_hour = int(datetime.fromisoformat("2026-08-18T11:00:00+00:00").timestamp() // 3600)
+            self.assertNotEqual(next_hour, first_hour)
+            self.assertEqual(third["hourly_metrics"][next_hour]["tool_calls"], 1)
+            self.assertEqual(third["hourly_metrics"][next_hour]["model_visible_bytes"], 7)
+
+    def test_performance_trace_v6_hourly_metrics_normalize_rejects_stale_and_malformed_buckets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state_dir = root / ".coding-tools"
+            state_dir.mkdir(parents=True)
+            stale_hour = int(time.time() // 3600) - 400
+            current_hour = int(time.time() // 3600)
+            (state_dir / "performance.json").write_text(json.dumps({
+                "version": 6,
+                "hourly_metrics": {
+                    str(stale_hour): {"hour": stale_hour, "tool_calls": 3, "model_visible_bytes": 99},
+                    str(current_hour): {"hour": current_hour, "tool_calls": 1, "model_visible_bytes": 10, "errors": -5, "last_finished_at": "x" * 90},
+                    "not-a-number": {"hour": 0, "tool_calls": 1},
+                    str(current_hour + 5): "garbage",
+                },
+            }), encoding="utf-8")
+            store = PerformanceTraceStore(root)
+            normalized = store.get()["hourly_metrics"]
+            self.assertNotIn(stale_hour, normalized)
+            self.assertIn(current_hour, normalized)
+            self.assertEqual(normalized[current_hour]["tool_calls"], 1)
+            self.assertEqual(normalized[current_hour]["errors"], 0)
+            self.assertEqual(normalized[current_hour]["model_visible_bytes"], 10)
+            self.assertLessEqual(len(normalized[current_hour]["last_finished_at"]), 40)
 
     def test_runtime_phase_timing_extractor_ignores_cached_or_unmeasured_values(self) -> None:
         live = {
@@ -339,7 +420,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             state_dir = root / ".coding-tools"
             state_dir.mkdir(parents=True)
             (state_dir / "performance.json").write_text(json.dumps({
-                "version": 5,
+                "version": 6,
                 "tool_calls": 463,
                 "errors": 463,
                 "error_class_counts": {"RUNTIME": 169, "UNKNOWN": 45},
@@ -376,7 +457,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertTrue(identity["runtime_version"])
                 self.assertEqual(identity["server_instance_id"], runtime.server_instance_id)
                 self.assertEqual(identity["process_instance_id"], runtime.process_instance_id)
-                self.assertEqual(identity["performance_trace_version"], 5)
+                self.assertEqual(identity["performance_trace_version"], 6)
                 self.assertEqual(identity["idempotency_policy_epoch"], "task_epoch_v1")
                 self.assertIn("git_head", identity["source"])
                 self.assertIn("worktree_fp", identity["source"])

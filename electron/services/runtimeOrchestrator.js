@@ -265,6 +265,10 @@ class RuntimeOrchestrator {
     this.autoRecoveryBlocked = false;
     this.lastStartFailure = '';
     this.deferredRecoveryCount = 0;
+    this.heartbeatFailureSince = 0;
+    this.lastRecoveryAt = 0;
+    this.lastHealthyAt = 0;
+    this.accumulatedDowntimeMs = 0;
   }
 
   progress(step, percent, message) {
@@ -285,6 +289,13 @@ class RuntimeOrchestrator {
     return snapshot;
   }
 
+  endFailureStreak(now = Date.now()) {
+    if (this.heartbeatFailureSince > 0) {
+      this.accumulatedDowntimeMs += Math.max(0, now - this.heartbeatFailureSince);
+      this.heartbeatFailureSince = 0;
+    }
+  }
+
   recoveryStatus() {
     return {
       recovering: this.recovering,
@@ -294,7 +305,12 @@ class RuntimeOrchestrator {
       nextRecoveryAt: this.nextRecoveryAt,
       recoveryBlocked: this.autoRecoveryBlocked,
       lastStartFailure: this.lastStartFailure,
-      deferredRecoveryCount: this.deferredRecoveryCount
+      deferredRecoveryCount: this.deferredRecoveryCount,
+      lastFailureAt: this.heartbeatFailureSince > 0 ? new Date(this.heartbeatFailureSince).toISOString() : null,
+      lastRecoveryAt: this.lastRecoveryAt > 0 ? new Date(this.lastRecoveryAt).toISOString() : null,
+      lastHealthyAt: this.lastHealthyAt > 0 ? new Date(this.lastHealthyAt).toISOString() : null,
+      downtimeMs: this.accumulatedDowntimeMs,
+      failureElapsedMs: this.heartbeatFailureSince > 0 ? Math.max(0, Date.now() - this.heartbeatFailureSince) : 0
     };
   }
 
@@ -683,6 +699,7 @@ class RuntimeOrchestrator {
       this.lastStartFailure = '';
       this.heartbeatFailures = 0;
       this.heartbeatFailureKind = '';
+      this.heartbeatFailureSince = 0;
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
       this.deferredRecoveryCount = 0;
@@ -741,8 +758,11 @@ class RuntimeOrchestrator {
       this.lastStartFailure = '';
       this.heartbeatFailures = 0;
       this.heartbeatFailureKind = '';
+      this.heartbeatFailureSince = 0;
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
+      this.lastRecoveryAt = Date.now();
+      this.lastHealthyAt = Date.now();
       this.progress('complete', 100, 'Triển khai hoàn tất, cả MCP và OpenAI Tunnel đều đang chạy');
       this.invalidateSnapshot();
       return await this.snapshot({ force: true, reason: 'started' });
@@ -751,6 +771,7 @@ class RuntimeOrchestrator {
       this.lastStartFailure = error.message;
       this.heartbeatFailures = 0;
       this.heartbeatFailureKind = '';
+      this.heartbeatFailureSince = Date.now();
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
       await this.tunnel.stop().catch(() => false);
@@ -981,11 +1002,15 @@ class RuntimeOrchestrator {
     }
     const status = await this.lightweightSnapshot();
     if (status.fullyReady) {
+      const wasFailing = this.heartbeatFailures > 0 || this.recovering || this.heartbeatFailureSince > 0;
+      this.endFailureStreak();
+      if (wasFailing) this.lastRecoveryAt = Date.now();
       this.heartbeatFailures = 0;
       this.heartbeatFailureKind = '';
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
       this.deferredRecoveryCount = 0;
+      this.lastHealthyAt = Date.now();
       return { ...status, ...this.recoveryStatus() };
     }
     const runtimeState = readJson(this.paths.stateFile(), {});
@@ -999,12 +1024,15 @@ class RuntimeOrchestrator {
       ? 'tunnel_unavailable'
       : (status.nativeAlive ? 'mcp_health_unavailable' : 'mcp_process_exited');
     if (failureKind !== this.heartbeatFailureKind) {
+      this.endFailureStreak();
       this.heartbeatFailureKind = failureKind;
       this.heartbeatFailures = 0;
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;
       this.deferredRecoveryCount = 0;
+      this.heartbeatFailureSince = Date.now();
     }
+    if (this.heartbeatFailureSince === 0) this.heartbeatFailureSince = Date.now();
     this.heartbeatFailures += 1;
     if (this.heartbeatFailures < 3 || Date.now() < this.nextRecoveryAt) {
       return { ...status, ...this.recoveryStatus() };
@@ -1053,6 +1081,9 @@ class RuntimeOrchestrator {
       } else {
         await this.recoverMcpOnly();
       }
+      this.endFailureStreak();
+      this.lastRecoveryAt = Date.now();
+      this.lastHealthyAt = Date.now();
       this.heartbeatFailures = 0;
       this.recoveryAttempts = 0;
       this.nextRecoveryAt = 0;

@@ -89,6 +89,8 @@ def _default_state() -> dict[str, Any]:
         "steps": [],
         "current_step": "",
         "current_command": None,
+        "last_command_result": None,
+        "completion_report": None,
         "test_results": [],
         "build_results": [],
         "last_build_report": None,
@@ -227,6 +229,38 @@ class TaskStateStore:
             self._event(state, event, {"state": str(projection.get("orchestration_state", ""))})
             return self._write(state)
 
+    def set_completion_report(self, report: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            state = self._read()
+            if not self._has_task(state):
+                return state
+            state["completion_report"] = copy.deepcopy(report)
+            failed = str(report.get("accepted_or_not") or "") in {"COMMAND_FAILED", "COMMAND_TERMINATED"}
+            state["current_step"] = "Command failed - operator report required" if failed else "Completed - operator report required"
+            state["next_step"] = _text(report.get("next_critical_action"), 4000)
+            self._event(state, "command_completion_report_required", {
+                "command_id": _text(report.get("command_id"), 200),
+                "accepted_or_not": _text(report.get("accepted_or_not"), 200),
+            })
+            return self._write(state)
+
+    def find_command_completion(self, command_id: str) -> dict[str, Any] | None:
+        needle = str(command_id or "").strip()
+        if not needle:
+            return None
+        with self._lock:
+            candidates = [self._read()]
+            history = self._read_json(self.history_path, [])
+            if isinstance(history, list):
+                candidates.extend(reversed(history[-100:]))
+            for state in candidates:
+                if not isinstance(state, dict):
+                    continue
+                report = state.get("completion_report")
+                if isinstance(report, dict) and str(report.get("command_id") or "") == needle:
+                    return copy.deepcopy(report)
+        return None
+
     def record_tool_result(self, name: str, args: dict[str, Any], payload: dict[str, Any]) -> None:
         if name.startswith("task_state_") or name == "task_history_list":
             return
@@ -274,6 +308,15 @@ class TaskStateStore:
                         elif action == "kill":
                             current["status"] = _text(payload.get("status", "terminated"), 100)
                             current["finished_at"] = utc_now()
+                            state["last_command_result"] = {
+                                "command_id": current_id,
+                                "kind": _text(current.get("kind", "command"), 100),
+                                "status": current["status"],
+                                "result_status": "failed",
+                                "exit_code": payload.get("exit_code"),
+                                "duration_ms": payload.get("elapsed_ms"),
+                                "finished_at": current["finished_at"],
+                            }
                             state["current_command"] = None
                             self._event(state, "command_terminated", {"session_id": current_id})
             elif name == "write_stdin":
@@ -285,6 +328,15 @@ class TaskStateStore:
                 if isinstance(current, dict) and current.get("session_id") == args.get("session_id"):
                     current["status"] = _text(payload.get("status", "terminated"), 100)
                     current["finished_at"] = utc_now()
+                    state["last_command_result"] = {
+                        "command_id": _text(current.get("session_id"), 200),
+                        "kind": _text(current.get("kind", "command"), 100),
+                        "status": current["status"],
+                        "result_status": "failed",
+                        "exit_code": payload.get("exit_code"),
+                        "duration_ms": payload.get("elapsed_ms"),
+                        "finished_at": current["finished_at"],
+                    }
                     state["current_command"] = None
                     self._event(state, "command_terminated", {"session_id": args.get("session_id")})
             if not ok and name not in {"task_state_get", "task_state_update", "task_state_clear"} and not terminal_orchestration:
@@ -433,6 +485,15 @@ class TaskStateStore:
         }
         if artifact_ref is not None:
             result["artifact_ref"] = artifact_ref
+        state["last_command_result"] = {
+            "command_id": session_id or _text(current.get("session_id"), 200),
+            "kind": kind,
+            "status": _text(current.get("status"), 100),
+            "result_status": result["status"],
+            "exit_code": result.get("exit_code"),
+            "duration_ms": result.get("duration_ms"),
+            "finished_at": current["finished_at"],
+        }
         if kind == "test":
             state["test_results"] = (state["test_results"] + [result])[-MAX_RESULTS:]
         elif kind == "build":
@@ -492,6 +553,10 @@ class TaskStateStore:
                 state[key] = []
         if not isinstance(state.get("orchestration"), dict):
             state["orchestration"] = {}
+        if not isinstance(state.get("last_command_result"), dict):
+            state["last_command_result"] = None
+        if not isinstance(state.get("completion_report"), dict):
+            state["completion_report"] = None
         if state.get("status") == "active" and not state.get("current_command"):
             try:
                 updated = datetime.fromisoformat(str(state.get("updated_at", "")).replace("Z", "+00:00"))

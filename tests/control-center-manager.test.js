@@ -9,7 +9,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 test('manager primary navigation is operator-first while advanced tools remain reachable from System', () => {
   const html = read('renderer/index.html');
   const nav = html.match(/<nav class="nav-list"[\s\S]*?<\/nav>/)?.[0] || '';
-  for (const page of ['overview', 'routing', 'traffic', 'task', 'device', 'deploy', 'workspace', 'system']) {
+  for (const page of ['overview', 'task', 'device', 'deploy', 'workspace', 'system']) {
     assert.match(nav, new RegExp(`data-page="${page}"`), `missing primary page ${page}`);
   }
   for (const legacy of ['build', 'health', 'guide', 'logs', 'settings']) {
@@ -19,8 +19,8 @@ test('manager primary navigation is operator-first while advanced tools remain r
   }
   assert.match(html, /control-center\.css/);
   assert.match(html, /control-center\.js/);
-  assert.match(html, /data-page-view="routing"/);
-  assert.match(html, /data-page-view="traffic"/);
+  assert.doesNotMatch(html, /data-page-view="routing"/);
+  assert.doesNotMatch(html, /data-page-view="traffic"/);
   assert.match(html, /data-page-view="system"/);
 });
 
@@ -34,18 +34,16 @@ test('manager exposes truthful current-device identity, Git and existing safe ru
   assert.match(app, /repairHealth\(\)/);
 });
 
-test('manager Command Center and Live Routing expose the truthful nine-node topology', () => {
+test('manager Command Center exposes the truthful nine-node topology in the overview fabric', () => {
   const html = read('renderer/index.html');
-  for (const prefix of ['cc', 'routing']) {
-    for (const suffix of ['ChatWeb', 'Desktop', 'OpenCode', 'Fast', 'Hub', 'DeepSeek', 'Terra', 'Writer', 'Sol']) {
-      assert.match(html, new RegExp(`id="${prefix}Router${suffix}"`), `missing ${prefix} router node ${suffix}`);
-    }
-    for (const suffix of ['ChatWeb', 'Desktop', 'OpenCode', 'Fast', 'DeepSeek', 'Terra', 'Writer', 'Sol']) {
-      assert.match(html, new RegExp(`id="${prefix}Edge${suffix}"`), `missing ${prefix} router edge ${suffix}`);
-    }
-    assert.match(html, new RegExp(`id="${prefix}RouterSummary"`));
+  for (const suffix of ['ChatWeb', 'Desktop', 'OpenCode', 'Fast', 'Hub', 'DeepSeek', 'Terra', 'Writer', 'Sol']) {
+    assert.match(html, new RegExp(`id="ccRouter${suffix}"`), `missing cc router node ${suffix}`);
   }
-  for (const id of ['ccKpiRuntime', 'ccKpiClients', 'ccKpiRoute', 'ccKpiProof', 'ccTaskStatus', 'ccTaskObjective', 'ccActivityIndicator', 'ccActivityLabel', 'ccActivityDetail', 'ccMotionMode', 'ccController', 'ccWriter', 'ccContinuity', 'ccTrafficPolicy', 'ccTrafficMeta', 'ccRecoveryState', 'ccRecoveryMeta', 'ccContextPressure', 'ccContextMeta', 'routingDelegations', 'routingEvents', 'routingProofs', 'routingProviderTraffic', 'routingPhaseTiming', 'routingRunHistory', 'routingRecoveryState', 'routingRecoveryMeta', 'routingContextPressure']) {
+  for (const suffix of ['ChatWeb', 'Desktop', 'OpenCode', 'Fast', 'DeepSeek', 'Terra', 'Writer', 'Sol']) {
+    assert.match(html, new RegExp(`id="ccEdge${suffix}"`), `missing cc router edge ${suffix}`);
+  }
+  assert.match(html, /id="ccRouterSummary"/);
+  for (const id of ['ccKpiRuntime', 'ccKpiClients', 'ccKpiRoute', 'ccKpiProof', 'ccTaskStatus', 'ccTaskObjective', 'ccActivityIndicator', 'ccActivityLabel', 'ccActivityDetail', 'ccMotionMode', 'ccController', 'ccWriter', 'ccContinuity', 'ccTrafficPolicy', 'ccTrafficMeta', 'ccRecoveryState', 'ccRecoveryMeta', 'ccContextPressure', 'ccContextMeta']) {
     assert.match(html, new RegExp(`id="${id}"`), `missing Control Center id ${id}`);
   }
 });
@@ -66,24 +64,25 @@ test('manager router treats OpenCode connectivity and DeepSeek model activity as
   assert.match(js, /DeepSeek activity requires explicit delegation evidence/);
   assert.doesNotMatch(js, /opencode\?\.online\s*\?\s*'active'/);
   assert.match(js, /setInterval\(\(\) => refresh\(false\), 2500\)/);
-  assert.match(js, /\['overview', 'routing', 'traffic', 'task'\]\.includes\(activePage\(\)\)/);
+  assert.match(js, /\['overview', 'task'\]\.includes\(activePage\(\)\)/);
 });
 
-test('Traffic & Usage reuses bounded Execution Hub read models and keeps unknown quota explicit', () => {
+test('Command Center overview keeps bounded provider admission evidence without a dedicated traffic page', () => {
   const html = read('renderer/index.html');
   const js = read('renderer/control-center.js');
   const app = read('renderer/app.js');
-  for (const id of ['trafficLastSync', 'trafficRefreshButton', 'trafficActive', 'trafficQueued', 'trafficUsage', 'trafficLimits', 'trafficRoutes', 'trafficUsageEvents', 'trafficCapacity', 'trafficEvidence']) {
-    assert.match(html, new RegExp(`id="${id}"`), `missing Traffic & Usage id ${id}`);
-  }
-  assert.match(app, /traffic:\s*\['TRAFFIC & USAGE'/);
-  assert.match(js, /function renderTrafficUsage/);
+  assert.match(html, /id="ccTrafficPolicy"/);
+  assert.match(html, /id="ccTrafficMeta"/);
+  assert.doesNotMatch(html, /id="trafficActive"|id="trafficRoutes"|id="trafficUsageEvents"/);
+  assert.doesNotMatch(app, /traffic:\s*\[/);
+  assert.match(js, /function renderProviderTraffic/);
   assert.match(js, /data\?\.provider_traffic/);
-  assert.match(js, /data\?\.usage_events/);
-  assert.match(js, /function measurementLabel/);
-  assert.match(js, /Provider tokens and MCP model-visible bytes are never added together/);
-  assert.match(js, /quota UNKNOWN/);
-  assert.match(js, /zero is not assumed/);
+  assert.match(js, /setText\('ccTrafficPolicy'/);
+  assert.match(js, /setText\('ccTrafficMeta'/);
+  assert.match(js, /automatic_routing/);
+  assert.match(js, /Provider quota is not configured; observe-only, no limit is invented/);
+  assert.match(js, /Limits unknown/);
+  assert.doesNotMatch(js, /renderTrafficUsage|normalizedUsageEvent|measurementLabel/);
   assert.doesNotMatch(js, /quota\s*=\s*100|remaining\s*=\s*100/);
 });
 
@@ -92,7 +91,7 @@ test('Live Execution Fabric uses semantic SVG paths and injects directional part
   const js = read('renderer/control-center.js');
   const css = read('renderer/control-center.css');
   assert.match(html, /<path id="ccEdgeFast"/);
-  assert.match(html, /<path id="routingEdgeSol"/);
+  assert.doesNotMatch(html, /id="routingEdgeSol"/);
   assert.doesNotMatch(html, /<line id="(?:cc|routing)Edge/);
   assert.match(html, /ops-router-edge-halo/);
   assert.match(js, /function syncEdgeParticles/);
@@ -145,9 +144,6 @@ test('Control Center renders provider admission, bounded flight recorder, histor
   assert.match(js, /provider_traffic/);
   assert.match(js, /automatic_routing/);
   assert.match(js, /Provider quota is not configured; observe-only, no limit is invented/);
-  assert.match(js, /flight_recorder\?\.phase_timing/);
-  assert.match(js, /history\?\.runs/);
-  assert.match(js, /transcript excluded/);
   assert.match(js, /function renderRecovery/);
   assert.match(js, /context_pressure/);
   assert.match(js, /host_not_exposed/);

@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ from typing import Any
 MAX_RECENT = 100
 MAX_RUN_METRICS = 200
 MAX_IDLE_GAP_MS = 30 * 60 * 1000
+MAX_HOURLY_BUCKETS = 168
 IDEMPOTENCY_POLICIES = frozenset({"none", "optional", "required"})
 IDEMPOTENCY_KEY_SOURCES = frozenset({"none", "explicit", "derived"})
 IDEMPOTENCY_POLICY_EPOCH = "task_epoch_v1"
@@ -44,7 +46,7 @@ class PerformanceTraceStore:
     estimate of model/network wait time, not local execution time.
     """
 
-    schema_version = 5
+    schema_version = 6
 
     def __init__(self, workspace: Path) -> None:
         self.workspace = workspace.resolve()
@@ -342,6 +344,29 @@ class PerformanceTraceStore:
                         bucket = metric[bucket_name]
                         bucket[value] = int(bucket.get(value, 0)) + 1
             state["recent"] = (state.get("recent", []) + [event])[-MAX_RECENT:]
+            start_hour = self._hour_of(event["started_at"])
+            if start_hour is not None:
+                bucket = state["hourly_metrics"].setdefault(start_hour, {
+                    "hour": start_hour,
+                    "tool_calls": 0,
+                    "errors": 0,
+                    "cache_hits": 0,
+                    "request_bytes": 0,
+                    "response_bytes": 0,
+                    "model_visible_bytes": 0,
+                    "local_execution_ms": 0,
+                    "estimated_wait_ms": 0,
+                    "last_finished_at": "",
+                })
+                bucket["tool_calls"] += 1
+                bucket["errors"] += 0 if ok else 1
+                bucket["cache_hits"] += 1 if cache_hit else 0
+                bucket["request_bytes"] += event["request_bytes"]
+                bucket["response_bytes"] += event["response_bytes"]
+                bucket["model_visible_bytes"] += event["model_visible_bytes"]
+                bucket["local_execution_ms"] += duration_ms
+                bucket["estimated_wait_ms"] += wait_before_ms
+                bucket["last_finished_at"] = event["finished_at"]
             self._write(state)
             return copy.deepcopy(state)
 
@@ -361,7 +386,7 @@ class PerformanceTraceStore:
     @staticmethod
     def _default() -> dict[str, Any]:
         return {
-            "version": 5,
+            "version": 6,
             "tool_calls": 0,
             "errors": 0,
             "cache_hits": 0,
@@ -414,6 +439,7 @@ class PerformanceTraceStore:
             "run_metrics": {},
             "last_finished_at": None,
             "recent": [],
+            "hourly_metrics": {},
         }
 
     def _read(self) -> dict[str, Any]:
@@ -437,6 +463,7 @@ class PerformanceTraceStore:
         state["error_taxonomy_epoch"] = ERROR_TAXONOMY_EPOCH
         if not isinstance(state.get("recent"), list):
             state["recent"] = []
+        state["hourly_metrics"] = self._normalize_hourly_metrics(state.get("hourly_metrics"))
         for key in ("execution_mode_counts", "route_resolved_counts", "orchestration_state_counts", "run_metrics", "proof_cache_miss_reasons", "error_class_counts", "error_taxonomy_current_counts", "idempotency_current_policy_by_operation"):
             if not isinstance(state.get(key), dict):
                 state[key] = {}
@@ -526,6 +553,60 @@ class PerformanceTraceStore:
             if not isinstance(metric["phase_timing_ms"], dict):
                 metric["phase_timing_ms"] = {}
         return state
+
+    @staticmethod
+    def _hour_of(iso: str) -> int | None:
+        if not isinstance(iso, str) or not iso.strip():
+            return None
+        try:
+            parsed = datetime.fromisoformat(iso.strip().replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return int(parsed.timestamp() // 3600)
+
+    @staticmethod
+    def _normalize_hourly_metrics(value: dict[str, Any] | None) -> dict[int, dict[str, Any]]:
+        if not isinstance(value, dict):
+            return {}
+        now_hour = int(time.time() // 3600)
+        lower_bound = now_hour - (MAX_HOURLY_BUCKETS - 1)
+        upper_bound = now_hour + 1
+        result: dict[int, dict[str, Any]] = {}
+        for raw_hour, raw_bucket in list(value.items())[:MAX_HOURLY_BUCKETS * 2]:
+            try:
+                hour = int(raw_hour)
+            except (TypeError, ValueError):
+                continue
+            if hour < lower_bound or hour > upper_bound:
+                continue
+            if not isinstance(raw_bucket, dict):
+                continue
+            bucket: dict[str, Any] = {
+                "hour": hour,
+                "tool_calls": 0,
+                "errors": 0,
+                "cache_hits": 0,
+                "request_bytes": 0,
+                "response_bytes": 0,
+                "model_visible_bytes": 0,
+                "local_execution_ms": 0,
+                "estimated_wait_ms": 0,
+                "last_finished_at": "",
+            }
+            for key in (
+                "tool_calls", "errors", "cache_hits", "request_bytes",
+                "response_bytes", "model_visible_bytes", "local_execution_ms",
+                "estimated_wait_ms",
+            ):
+                try:
+                    bucket[key] = max(0, int(raw_bucket.get(key, 0) or 0))
+                except (TypeError, ValueError):
+                    bucket[key] = 0
+            bucket["hour"] = hour
+            last_finished = str(raw_bucket.get("last_finished_at") or "").strip()[:40]
+            bucket["last_finished_at"] = last_finished
+            result[hour] = bucket
+        return result
 
     @staticmethod
     def _normalize_count_map(value: dict[str, Any] | None) -> dict[str, int]:

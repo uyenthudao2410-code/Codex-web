@@ -12,7 +12,7 @@ from coding_tools_mcp.performance_trace import PerformanceTraceStore
 
 
 class RuntimeActivationSnapshotTests(unittest.TestCase):
-    def test_snapshot_uses_v5_required_idempotency_gate_and_durable_tta(self) -> None:
+    def test_snapshot_uses_v6_required_idempotency_gate_and_durable_tta(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             trace = PerformanceTraceStore(root)
@@ -103,7 +103,7 @@ class RuntimeActivationSnapshotTests(unittest.TestCase):
             snapshot = build_snapshot(root)
             performance = snapshot["performance"]
             self.assertEqual(snapshot["schema_version"], 3)
-            self.assertEqual(performance["version"], 5)
+            self.assertEqual(performance["version"], 6)
             self.assertEqual(performance["idempotency_eligible_calls"], 2)
             self.assertEqual(performance["idempotency_eligible_key_calls"], 2)
             self.assertEqual(performance["idempotency_legacy_coverage"], 1.0)

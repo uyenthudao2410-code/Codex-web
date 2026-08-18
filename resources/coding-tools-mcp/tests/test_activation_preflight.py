@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import sqlite3
 import tempfile
 import threading
 import time
@@ -120,6 +121,30 @@ class ActivationPreflightTests(unittest.TestCase):
                 self.assertEqual(result["counts"]["active_tool_calls"], 1)
             finally:
                 runtime.active_tool_calls = 0
+                runtime.close()
+
+    def test_activation_state_probe_failure_is_structured_and_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                with (
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "foreign_heavy_processes",
+                        return_value=[],
+                    ),
+                    patch.object(
+                        runtime.orchestration_ledger,
+                        "list_agent_lanes",
+                        side_effect=sqlite3.OperationalError("missing durable activation state"),
+                    ),
+                ):
+                    result = runtime.activation_preflight()
+                self.assertFalse(result["safe"])
+                self.assertEqual(result["code"], "ORCHESTRATION_STATE_UNCERTAIN")
+                self.assertEqual(result["reason"], "activation_state_probe_failed")
+                self.assertEqual(result["error_type"], "OperationalError")
+            finally:
                 runtime.close()
 
     def test_owned_codex_sidecar_is_quiesced_only_when_prepare_fences_restart(self) -> None:

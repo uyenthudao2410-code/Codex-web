@@ -234,8 +234,55 @@ test('runtime recovery projection exposes only local typed supervisor evidence',
     nextRecoveryAt: 123456,
     recoveryBlocked: true,
     lastStartFailure: 'typed local failure',
-    deferredRecoveryCount: 1
+    deferredRecoveryCount: 1,
+    lastFailureAt: null,
+    lastRecoveryAt: null,
+    lastHealthyAt: null,
+    downtimeMs: 0,
+    failureElapsedMs: 0
   });
+});
+
+test('runtime recovery projection records failure and recovery time markers', async () => {
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({}) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true });
+  const before = Date.now();
+  orchestrator.heartbeatFailures = 2;
+  orchestrator.heartbeatFailureSince = before - 30_000;
+  const recovered = await orchestrator.supervise();
+  assert.equal(recovered.failures, 0);
+  assert.ok(recovered.lastFailureAt === null, 'streak đã kết thúc nên không còn mốc fail');
+  assert.ok(recovered.lastRecoveryAt && Date.parse(recovered.lastRecoveryAt) >= before - 5, 'phải ghi mốc khôi phục');
+  assert.ok(recovered.lastHealthyAt && Date.parse(recovered.lastHealthyAt) >= before - 5, 'phải ghi mốc healthy');
+  assert.ok(recovered.downtimeMs >= 29_000, `downtime phải cộng dồn chuỗi lỗi, nhận ${recovered.downtimeMs}`);
+  assert.equal(recovered.failureElapsedMs, 0);
+});
+
+test('runtime recovery projection marks when a failure streak starts', async () => {
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: false, mcpRunning: false, nativeAlive: false });
+  orchestrator.restart = async () => {};
+  orchestrator.recoverMcpOnly = async () => {};
+  orchestrator.recoverTunnelOnly = async () => {};
+  orchestrator.isManuallyStopped = () => false;
+  const before = Date.now();
+  const first = await orchestrator.supervise();
+  assert.equal(first.failures, 1);
+  assert.ok(first.lastFailureAt, 'lần fail đầu phải ghi mốc thời gian');
+  assert.ok(Date.parse(first.lastFailureAt) >= before - 5);
+  assert.ok(Number(first.failureElapsedMs) >= 0);
 });
 
 test('revision observation failure cannot break runtime supervision', () => {

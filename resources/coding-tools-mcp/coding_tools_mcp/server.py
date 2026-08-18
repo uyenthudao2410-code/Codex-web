@@ -99,7 +99,7 @@ from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, 
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class  # noqa: F401  # composition-root namespace
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
 from .orchestration_report import OrchestrationReport  # noqa: F401  # composition-root namespace
-from .operator_report import OPERATOR_REPORT_STATES, build_operator_completion_report  # noqa: F401  # composition-root namespace
+from .operator_report import OPERATOR_REPORT_STATES, build_command_completion_report, build_operator_completion_report  # noqa: F401  # composition-root namespace
 from .proof_ledger import ProofLedger  # noqa: F401  # composition-root namespace
 from .telemetry import SessionTelemetry  # noqa: F401  # composition-root namespace
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head  # noqa: F401  # composition-root namespace
@@ -2196,9 +2196,40 @@ class Runtime(
             self.emit_tool_trace(name, args, payload, started_at, started_wall_utc=started_wall_utc)
             return make_tool_result(name, payload, is_error=True)
 
+    @staticmethod
+    def _plain_command_completion_required(name: str, args: dict[str, Any], payload: dict[str, Any]) -> bool:
+        if isinstance(payload.get("completion_report"), dict):
+            return False
+        status = str(payload.get("status") or "").lower()
+        if name == "command_control":
+            action = str(args.get("action", "poll")).lower()
+            return action in {"poll", "write", "kill"} and status not in {"", "running", "terminating"}
+        if name == "exec_command":
+            return payload.get("ok") is False or status in {"failed", "timed_out", "timeout", "killed", "terminated", "stopped"}
+        if name == "write_stdin":
+            return status not in {"", "running", "terminating"}
+        if name == "kill_session":
+            return status not in {"", "running", "terminating"}
+        return False
+
     def _record_task_tool_result(self, name: str, args: dict[str, Any], payload: dict[str, Any]) -> None:
         try:
             self.task_state.record_tool_result(name, args, payload)
+            if not self._plain_command_completion_required(name, args, payload):
+                return
+            state = self.task_state.get()
+            projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+            if str(projection.get("orchestration_state") or "").strip():
+                return
+            report = build_command_completion_report(
+                task_state=state,
+                workspace_identity=self._orchestration_workspace_identity("."),
+            )
+            if report is None:
+                return
+            self.task_state.set_completion_report(report)
+            payload["completion_report"] = report
+            payload["operator_visible_required"] = True
         except Exception:
             # State persistence must never turn a successful coding operation into a failed tool call.
             pass
@@ -2413,22 +2444,38 @@ class Runtime(
             with self.sessions_lock:
                 self.legacy_session_alias_uses += 1
         command_id = self._command_handle(args) if action in {"poll", "write", "kill"} else ""
-        if action in {"poll", "write"}:
-            return self.write_stdin({
+        try:
+            if action in {"poll", "write"}:
+                return self.write_stdin({
+                    "command_id": command_id,
+                    "chars": str(args.get("chars", "")) if action == "write" else "",
+                    "yield_time_ms": args.get("yield_time_ms", 10000),
+                    "max_output_bytes": args.get("max_output_bytes", 65536),
+                    "consumer_id": args.get("consumer_id", ""),
+                    "verbosity": args.get("verbosity", "summary"),
+                })
+            if action == "kill":
+                return self.kill_session({
+                    "command_id": command_id,
+                    "signal": args.get("signal", "TERM"),
+                    "wait_ms": args.get("wait_ms", 3000),
+                    "verbosity": args.get("verbosity", "summary"),
+                })
+        except ToolFailure as exc:
+            if exc.code != "COMMAND_NOT_FOUND":
+                raise
+            report = self.task_state.find_command_completion(command_id)
+            if report is None:
+                raise
+            return {
+                "ok": True,
+                "status": "reconciled_terminal",
                 "command_id": command_id,
-                "chars": str(args.get("chars", "")) if action == "write" else "",
-                "yield_time_ms": args.get("yield_time_ms", 10000),
-                "max_output_bytes": args.get("max_output_bytes", 65536),
-                "consumer_id": args.get("consumer_id", ""),
-                "verbosity": args.get("verbosity", "summary"),
-            })
-        if action == "kill":
-            return self.kill_session({
-                "command_id": command_id,
-                "signal": args.get("signal", "TERM"),
-                "wait_ms": args.get("wait_ms", 3000),
-                "verbosity": args.get("verbosity", "summary"),
-            })
+                "reconciled": True,
+                "operator_visible_required": True,
+                "completion_report": report,
+                "warning": "The live command handle is gone; the durable terminal completion report was recovered instead.",
+            }
         if action == "read":
             return self.read_output({
                 "output_ref": args.get("output_ref", ""),

@@ -175,6 +175,40 @@
     return grid;
   }
 
+  function hourlyFromStore(buckets = 24) {
+    const map = perf?.hourly_metrics;
+    if (!map || typeof map !== 'object') return null;
+    const byHour = new Map();
+    for (const [key, bucket] of Object.entries(map)) {
+      const hour = Number(key);
+      if (!Number.isInteger(hour) || !bucket || typeof bucket !== 'object') continue;
+      const bytes = Number(bucket.model_visible_bytes) || 0;
+      byHour.set(hour, {
+        hour,
+        in: tokensFromBytes(bytes),
+        out: 0,
+        calls: Math.max(0, Number(bucket.tool_calls) || 0),
+        errors: Math.max(0, Number(bucket.errors) || 0),
+        cacheHits: Math.max(0, Number(bucket.cache_hits) || 0),
+        execMs: Math.max(0, Number(bucket.local_execution_ms) || 0),
+        waitMs: Math.max(0, Number(bucket.estimated_wait_ms) || 0)
+      });
+    }
+    if (!byHour.size) return null;
+    const nowHour = Math.floor(Date.now() / 3600000);
+    const start = nowHour - buckets + 1;
+    return Array.from({ length: buckets }, (_, index) => {
+      const hour = start + index;
+      return byHour.get(hour) || { hour, in: 0, out: 0 };
+    });
+  }
+
+  function performanceBuckets(records, count = 24) {
+    // Hourly buckets persisted server-side survive the recent-trace window;
+    // the recent trace remains the fallback when no hourly data exists yet.
+    return hourlyFromStore(count) || hourBuckets(records, count);
+  }
+
   function toolBreakdown(records) {
     const map = new Map();
     for (const record of records) {
@@ -768,7 +802,13 @@
       const type = String(event?.event_type || 'event');
       const before = String(event?.state_before || '·');
       const after = String(event?.state_after || '·');
-      const time = event?.event_time ? new Date(event.event_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+      const time = event?.event_time ? (() => {
+        const date = new Date(event.event_time);
+        const timePart = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        return date.toDateString() === new Date().toDateString()
+          ? timePart
+          : `${date.toLocaleDateString('vi-VN')} ${timePart}`;
+      })() : '—';
       const warning = ['failed', 'blocked', 'replanned', 'interrupted'].some((word) => `${type} ${after}`.toLowerCase().includes(word));
       return { text: `${time} · ${type} · ${before} → ${after}`, warning, state: before !== after };
     });
@@ -791,7 +831,7 @@
     }
   }
 
-  function renderTiles(buckets, summary, todayCount, yesterdayTokens, allCalls, allExecMs, laneTotalUsd) {
+  function renderTiles(buckets, summary, todayCount, yesterdayTokens, allCalls, allExecMs, laneTotalUsd, yesterdayCount) {
     const inTokens = summary.inTokens;
     const outTokens = summary.outTokens;
     const totalTokens = inTokens + outTokens;
@@ -801,12 +841,29 @@
     animateText(byId('daTokensTotal'), compact, totalTokens);
     setText('daTokensSplit', `Tool → model ${compact(inTokens)} context-token eq.`);
     setText('daTokensMeta', `MEASURED model-visible bytes · ESTIMATED at ${cost.bytesPerToken} byte/token · images excluded`);
+    const rateEl = byId('daTokensRate');
+    if (rateEl) {
+      const lastHour = buckets[buckets.length - 1];
+      const activeHours = buckets.filter((bucket) => bucket.in + bucket.out > 0).length;
+      const hourAverage = buckets.reduce((sum, bucket) => sum + bucket.in + bucket.out, 0) / Math.max(1, buckets.length);
+      const current = lastHour && lastHour.in + lastHour.out > 0 ? lastHour.in + lastHour.out : 0;
+      rateEl.textContent = current > 0
+        ? `Giờ gần nhất ≈ ${compact(current)} token · trung bình ≈ ${compact(hourAverage)}/giờ`
+        : activeHours > 0
+          ? `Trung bình ≈ ${compact(hourAverage)} token/giờ (24h)`
+          : 'Chưa có mẫu theo giờ';
+      rateEl.title = 'Lưu lượng token theo giờ · từ hourly metrics của runtime, không phải báo phí';
+    }
     let delta = '';
     if (yesterdayTokens > 0) {
       const change = ((totalTokens - yesterdayTokens) / yesterdayTokens) * 100;
       delta = `${change >= 0 ? '+' : ''}${change.toFixed(0)}% so hôm qua`;
+    } else if (yesterdayCount > 0) {
+      delta = '0 so hôm qua (hôm qua không có token đo được)';
+    } else if (todayCount > 0) {
+      delta = 'Chưa có dữ liệu hôm qua';
     } else {
-      delta = todayCount > 0 ? 'Previous window: 0 context eq.' : 'No measured model-visible data yet';
+      delta = 'Chưa có dữ liệu đo được';
     }
     const deltaEl = byId('daTokensDelta');
     if (deltaEl) {
@@ -852,14 +909,14 @@
     const summary = summarize(today);
     const yesterdaySummary = summarize(yesterday);
     const allSummary = summarize(records);
-    const buckets = hourBuckets(records, 24);
+    const buckets = performanceBuckets(records, 24);
     const entries = toolBreakdown(today);
     const models = modelBreakdown(today);
     const laneTotalUsd = [...models.values()]
       .filter((entry) => ['fast', 'deepseek', 'terra', 'sol'].includes(entry.model))
       .reduce((sum, entry) => sum + entry.cost, 0);
 
-    renderTiles(buckets, summary, today.length, yesterdaySummary.inTokens + yesterdaySummary.outTokens, records.length, allSummary.execMs, laneTotalUsd);
+    renderTiles(buckets, summary, today.length, yesterdaySummary.inTokens + yesterdaySummary.outTokens, records.length, allSummary.execMs, laneTotalUsd, yesterday.length);
     renderChart(buckets);
     renderDonut(entries);
     renderBars(entries);

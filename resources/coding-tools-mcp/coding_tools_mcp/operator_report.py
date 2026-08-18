@@ -15,6 +15,98 @@ REPORT_CONTRACT = [
 ]
 
 
+def build_command_completion_report(
+    *,
+    task_state: dict[str, Any],
+    workspace_identity: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Build a content-free operator checkpoint for a terminal plain command."""
+    last = task_state.get("last_command_result")
+    if not isinstance(last, dict) or not str(last.get("command_id") or "").strip():
+        return None
+    workspace_identity = dict(workspace_identity or {})
+    orchestration = task_state.get("orchestration") if isinstance(task_state.get("orchestration"), dict) else {}
+    result_status = str(last.get("result_status") or "failed").lower()
+    command_status = str(last.get("status") or "").lower()
+    terminated = command_status in {"killed", "terminated", "stopped", "timed_out", "timeout"}
+    passed = result_status == "passed" and not terminated
+    changed_files, change_source = _changed_files(task_state, {})
+    kind = str(last.get("kind") or "command")
+    proof_rows = []
+    if kind in {"test", "build"}:
+        proof_rows.append({
+            "kind": kind,
+            "status": "passed" if passed else "failed",
+            "exit_code": last.get("exit_code"),
+            "duration_ms": last.get("duration_ms"),
+            "command_id": str(last.get("command_id") or ""),
+        })
+    if terminated:
+        decision = "COMMAND_TERMINATED"
+    elif passed:
+        decision = "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT"
+    else:
+        decision = "COMMAND_FAILED"
+    blocker = None if passed else {
+        "failure_class": "COMMAND_TERMINATED" if terminated else "EXECUTION_COMMAND_FAILED",
+        "reason": "The command reached a terminal non-success state.",
+        "exit_code": last.get("exit_code"),
+    }
+    next_action = (
+        "Present this completion_report to the operator before starting another material wave."
+        if passed
+        else "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+    )
+    remaining = (
+        "No further command action is inferred from this terminal command. Report the result before continuing."
+        if passed
+        else "The terminal command failure must be reported and reconciled before another material wave."
+    )
+    return {
+        "schema_version": 1,
+        "operator_visible_required": True,
+        "report_contract": list(REPORT_CONTRACT),
+        "command_id": str(last.get("command_id") or ""),
+        "what_changed": {
+            "files": changed_files,
+            "source": change_source,
+            "raw_source_or_command_output_included": False,
+        },
+        "current_state": {
+            "task_status": str(task_state.get("status") or ""),
+            "command": {
+                "command_id": str(last.get("command_id") or ""),
+                "kind": kind,
+                "status": command_status,
+                "result_status": result_status,
+                "exit_code": last.get("exit_code"),
+                "duration_ms": last.get("duration_ms"),
+            },
+            "git": {
+                "head": str(workspace_identity.get("base_head") or ""),
+                "branch": str(workspace_identity.get("branch") or ""),
+                "worktree_fp": str(workspace_identity.get("worktree_fp") or ""),
+                "dirty_paths": list(workspace_identity.get("dirty_paths") or [])[:200],
+            },
+        },
+        "source_run_wave": {
+            "task_id": str(task_state.get("task_id") or ""),
+            "run_id": str(orchestration.get("run_id") or ""),
+            "wave_id": str(orchestration.get("wave_id") or ""),
+            "orchestration_state": str(orchestration.get("orchestration_state") or ""),
+        },
+        "proof_actually_run": {
+            "count": len(proof_rows),
+            "all_recorded_proofs_passed": bool(proof_rows) and passed,
+            "proofs": proof_rows,
+        },
+        "accepted_or_not": decision,
+        "blocker_or_failure": blocker,
+        "what_remains": remaining,
+        "next_critical_action": next_action,
+    }
+
+
 def _changed_files(task_state: dict[str, Any], checkpoint: dict[str, Any]) -> tuple[list[dict[str, Any]], str]:
     metadata = checkpoint.get("metadata") if isinstance(checkpoint.get("metadata"), dict) else {}
     accepted_files = metadata.get("accepted_files") if isinstance(metadata.get("accepted_files"), dict) else {}

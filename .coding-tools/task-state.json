@@ -1,81 +1,89 @@
 {
   "version": 2,
-  "task_id": "f14373ffaea14bad82d533d34aa69fb4",
-  "orchestration": {},
-  "objective": "Run a workspace command",
-  "status": "active",
-  "steps": [],
-  "current_step": "Execute command",
-  "current_command": {
-    "command": "python tmp/delivery_p0_docs.py",
-    "kind": "command",
-    "session_id": "HspSO24llIlmMv677PC9WAd9",
-    "workdir": ".",
-    "status": "running",
-    "started_at": "2026-08-18T09:20:17.149Z",
-    "exit_code": null,
-    "elapsed_ms": null,
-    "artifact_ref": {
-      "schema_version": 1,
-      "kind": "command_output",
-      "scope": "runtime_retained",
-      "source": "command",
-      "locator": {
-        "command_id": "HspSO24llIlmMv677PC9WAd9"
-      },
-      "durability": "process_runtime",
-      "restart_safe": false,
-      "content_addressed": false,
-      "retrieval": {
-        "tool": "command_control",
-        "action": "read"
-      },
-      "size_bytes": 4716,
-      "command_id": "HspSO24llIlmMv677PC9WAd9",
-      "streams": {
-        "stdout": {
-          "output_ref": "command:HspSO24llIlmMv677PC9WAd9:stdout",
-          "total_stream_bytes": 4616,
-          "total_retained_bytes": 4616,
-          "head_retained_bytes": 4616,
-          "tail_retained_bytes": 0,
-          "evicted_gap_bytes": 0,
-          "evicted_bytes_total": 0
-        },
-        "stderr": {
-          "output_ref": "command:HspSO24llIlmMv677PC9WAd9:stderr",
-          "total_stream_bytes": 100,
-          "total_retained_bytes": 100,
-          "head_retained_bytes": 100,
-          "tail_retained_bytes": 0,
-          "evicted_gap_bytes": 0,
-          "evicted_bytes_total": 0
-        }
-      }
-    }
+  "task_id": "7385d46a90914a5abd4ad1d0f37e949e",
+  "orchestration": {
+    "run_id": "d04acc77eb1d4b4fb1356f727736d411",
+    "wave_id": "01f25868c25044de9df3a5998a24c818",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "0febca261330ec48b326bf58d91b4f028eb68532",
+    "worktree_fp": "bd17fe430cc9465675f067e4a95c85bd6f023122a39b58819e54bcea383b133a",
+    "contract_fp": ""
   },
+  "objective": "G0 post-recovery acceptance and P4 Solution Economics Shadow implementation for feature+bugfix only; preserve P0-P3 frozen semantics and unrelated dirty worktree changes.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "g0_acceptance",
+      "text": "Complete post-restart G0 acceptance checks",
+      "status": "pending",
+      "updated_at": "2026-08-18T10:24:21.818Z"
+    },
+    {
+      "id": "p4_scope",
+      "text": "Prepare minimal P4 shadow design from existing telemetry",
+      "status": "pending",
+      "updated_at": "2026-08-18T10:24:21.818Z"
+    },
+    {
+      "id": "p4_implement",
+      "text": "Implement and verify P4 shadow without production behavior change",
+      "status": "pending",
+      "updated_at": "2026-08-18T10:24:21.818Z"
+    }
+  ],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "",
-  "created_at": "2026-08-18T09:20:16.699Z",
-  "updated_at": "2026-08-18T09:23:53.582Z",
+  "next_step": "Run read-only agent_workflow prepare, then inspect/audit the run.",
+  "created_at": "2026-08-18T10:24:21.818Z",
+  "updated_at": "2026-08-18T10:25:57.006Z",
   "events": [
     {
-      "time": "2026-08-18T09:20:16.700Z",
-      "event": "task_auto_started",
+      "time": "2026-08-18T10:24:21.818Z",
+      "event": "task_started",
       "details": {
-        "objective": "Run a workspace command"
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
       }
     },
     {
-      "time": "2026-08-18T09:20:17.149Z",
-      "event": "command_started",
+      "time": "2026-08-18T10:24:29.976Z",
+      "event": "orchestration_context_ready",
       "details": {
-        "command": "python tmp/delivery_p0_docs.py",
-        "session_id": "HspSO24llIlmMv677PC9WAd9"
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-18T10:24:31.155Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-18T10:24:31.181Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
       }
     }
   ]

@@ -1,7 +1,7 @@
-const PANEL_WIDTH = 510;
-const PANEL_WIDTH_RATIO = 0.45;
-const PANEL_MIN_WIDTH = PANEL_WIDTH;
-const PANEL_MAX_WIDTH = 880;
+const PANEL_WIDTH = 420;
+const PANEL_WIDTH_RATIO = 0.35;
+const PANEL_MIN_WIDTH = 360;
+const PANEL_MAX_WIDTH = 750;
 const MIN_CHAT_WIDTH = 560;
 
 function targetPanelWidth(width, options = {}) {
