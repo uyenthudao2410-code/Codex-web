@@ -254,6 +254,27 @@ function loadRecoveryDescriptor(paths) {
   };
 }
 
+function assertExpectedDescriptor(descriptor, options = {}) {
+  const expectedOwnerPid = Number(options.expectedOwnerPid || 0);
+  const expectedInstanceId = String(options.expectedInstanceId || '');
+  const expectedInstallationId = String(options.expectedInstallationId || '').toLowerCase();
+  const ownerMatches = !expectedOwnerPid || Number(descriptor.owner_pid) === expectedOwnerPid;
+  const instanceMatches = !expectedInstanceId || String(descriptor.instance_id || '') === expectedInstanceId;
+  const installationMatches = !expectedInstallationId || String(descriptor.installation_id || '').toLowerCase() === expectedInstallationId;
+  if (ownerMatches && instanceMatches && installationMatches) return descriptor;
+  throw Object.assign(new Error('Recovery Host descriptor changed before the authenticated request was sent.'), {
+    code: 'RECOVERY_DESCRIPTOR_CHANGED',
+    details: {
+      expected_owner_pid: expectedOwnerPid || null,
+      observed_owner_pid: Number(descriptor.owner_pid || 0) || null,
+      expected_instance_id: expectedInstanceId || null,
+      observed_instance_id: String(descriptor.instance_id || '') || null,
+      expected_installation_id: expectedInstallationId || null,
+      observed_installation_id: String(descriptor.installation_id || '') || null
+    }
+  });
+}
+
 class RecoveryIpcClient {
   constructor({ paths }) {
     this.paths = paths;
@@ -264,8 +285,10 @@ class RecoveryIpcClient {
       return Promise.reject(Object.assign(new Error('Recovery action is not allowlisted.'), { code: 'ACTION_NOT_ALLOWED' }));
     }
     let descriptor;
-    try { descriptor = loadRecoveryDescriptor(this.paths); }
-    catch (error) { return Promise.reject(error); }
+    try {
+      descriptor = loadRecoveryDescriptor(this.paths);
+      assertExpectedDescriptor(descriptor, options);
+    } catch (error) { return Promise.reject(error); }
     const body = Buffer.from(JSON.stringify({ action, args }));
     const timeout = Math.max(100, Number(options.timeout || (MUTATING_ACTIONS.has(action) ? MUTATION_TIMEOUT_MS : DEFAULT_TIMEOUT_MS)));
     return new Promise((resolve, reject) => {
@@ -310,8 +333,8 @@ class RecoveryIpcClient {
     });
   }
 
-  ping() { return this.call('recovery.ping', [], { timeout: 1500 }); }
-  status() { return this.call('recovery.status'); }
+  ping(options = {}) { return this.call('recovery.ping', [], { timeout: 1500, ...options }); }
+  status(options = {}) { return this.call('recovery.status', [], options); }
   activationPreflight(request) { return this.call('code.activation_preflight', [request]); }
   activateUpdate(request) { return this.call('code.activate_update', [request]); }
   activationStatus(operationId) { return this.call('code.activation_status', [operationId]); }
@@ -320,9 +343,9 @@ class RecoveryIpcClient {
   snapshot(options = {}) { return this.call('runtime.snapshot', [options]); }
   lightweightSnapshot() { return this.call('runtime.lightweight_snapshot'); }
   supervise() { return this.lightweightSnapshot(); }
-  start(options = {}) { return this.call('runtime.start', [options]); }
-  stop(options = {}) { return this.call('runtime.stop', [options]); }
-  restart(options = {}) { return this.call('runtime.restart', [options]); }
+  start(options = {}, callOptions = {}) { return this.call('runtime.start', [options], callOptions); }
+  stop(options = {}, callOptions = {}) { return this.call('runtime.stop', [options], callOptions); }
+  restart(options = {}, callOptions = {}) { return this.call('runtime.restart', [options], callOptions); }
   switchWorkspace(workspace) { return this.call('runtime.switch_workspace', [workspace]); }
   updateAuthorizedRoots(roots) { return this.call('runtime.update_authorized_roots', [roots]); }
   acknowledgeConnectorContract() { return this.call('runtime.acknowledge_connector_contract'); }
@@ -337,6 +360,7 @@ module.exports = {
   RecoveryIpcClient,
   RPC_ACTIONS,
   loadRecoveryDescriptor,
+  assertExpectedDescriptor,
   sameToken,
   MAX_DESCRIPTOR_BYTES,
   MAX_REQUEST_BYTES,
