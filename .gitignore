@@ -19,7 +19,7 @@ Tools-Codex-web/
 
 # Accounts & local data
 ACC/
-/data*
+data*
 /docs/ac/
 
 # Python test caches
