@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
 const { runtimeDeviceIdentity } = require('./deviceIdentity');
+const { INSTALLATION_ID_PATTERN } = require('./runtimeIdentity');
 
 const MAX_DESCRIPTOR_BYTES = 16 * 1024;
 const MAX_REQUEST_BYTES = 64 * 1024;
@@ -86,6 +87,9 @@ class RecoveryIpcServer {
   }
 
   descriptor() {
+    const runtimeIdentity = typeof this.paths.runtimeIdentity === 'function'
+      ? this.paths.runtimeIdentity()
+      : null;
     return {
       version: 1,
       host: '127.0.0.1',
@@ -94,6 +98,10 @@ class RecoveryIpcServer {
       owner: 'recovery-host',
       owner_pid: process.pid,
       instance_id: this.instanceId,
+      ...(runtimeIdentity ? {
+        installation_id: runtimeIdentity.installation_id,
+        runtime_mode: runtimeIdentity.mode
+      } : {}),
       ...(this.device ? {
         device_id: this.device.deviceId,
         device_instance_id: this.device.deviceInstanceId,
@@ -220,16 +228,30 @@ function loadRecoveryDescriptor(paths) {
   const port = Number(descriptor?.port || 0);
   const token = String(descriptor?.token || '');
   const ownerPid = Number(descriptor?.owner_pid || 0);
+  const installationId = String(descriptor?.installation_id || '').toLowerCase();
+  const runtimeMode = String(descriptor?.runtime_mode || '');
+  const hasRuntimeIdentity = Boolean(descriptor?.installation_id || descriptor?.runtime_mode);
   if (descriptor?.version !== 1 || descriptor?.host !== '127.0.0.1' || descriptor?.owner !== 'recovery-host') {
     throw Object.assign(new Error('Recovery Host descriptor endpoint is invalid.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
   }
   if (!Number.isInteger(port) || port < 1 || port > 65535 || token.length < 32 || !String(descriptor?.instance_id || '')) {
     throw Object.assign(new Error('Recovery Host descriptor is incomplete.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
   }
+  if (hasRuntimeIdentity
+    && (!INSTALLATION_ID_PATTERN.test(installationId) || !['development', 'packaged'].includes(runtimeMode))) {
+    throw Object.assign(new Error('Recovery Host installation identity is invalid.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
+  }
   if (!Number.isInteger(ownerPid) || !isProcessAlive(ownerPid)) {
     throw Object.assign(new Error('Recovery Host descriptor owner is not alive.'), { code: 'RECOVERY_DESCRIPTOR_STALE' });
   }
-  return { ...descriptor, port, token, owner_pid: ownerPid };
+  return {
+    ...descriptor,
+    port,
+    token,
+    owner_pid: ownerPid,
+    installation_id: installationId || null,
+    runtime_mode: runtimeMode || null
+  };
 }
 
 class RecoveryIpcClient {
