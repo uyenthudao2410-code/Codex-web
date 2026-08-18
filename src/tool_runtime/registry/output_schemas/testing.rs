@@ -11,6 +11,22 @@ pub(super) fn output_schema_for_tool(name: &str) -> Option<Value> {
     }
 }
 
+fn validation_compute_placement_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "requested_policy": {"type": "string", "enum": ["local_only", "server_preferred"]},
+            "actual_placement": {"type": "string", "enum": ["source", "server_compute"]},
+            "fallback_used": {"type": "boolean"},
+            "reason_code": {"type": "string", "enum": ["local_only_policy", "server_compute_selected", "server_compute_fallback_source"]},
+            "source_runner_id": {"type": "string", "minLength": 1, "maxLength": 256},
+            "executor_runner_id": {"type": "string", "minLength": 1, "maxLength": 256}
+        },
+        "required": ["requested_policy", "actual_placement", "fallback_used", "reason_code", "source_runner_id", "executor_runner_id"],
+        "additionalProperties": false
+    })
+}
+
 fn cargo_output_schema(tool_name: &str) -> Value {
     let mut fields = vec![
             ("project", schema_type("string", "Runtime project id.")),
@@ -122,6 +138,10 @@ fn cargo_output_schema(tool_name: &str) -> Value {
             ("permission", permission_decision_schema()),
     ];
     if matches!(tool_name, "cargo_check" | "cargo_test") {
+        fields.push((
+            "compute_placement",
+            validation_compute_placement_schema(),
+        ));
         fields.push((
             "diagnostics",
             cargo_test_diagnostics_schema(

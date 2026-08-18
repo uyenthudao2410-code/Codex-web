@@ -1,0 +1,787 @@
+{
+  "accepted_runs": 331,
+  "accepted_runs_scanned": 347,
+  "accepted_runs_truncated": false,
+  "causal_classification": {
+    "basis": "failure_observed_events_on_repaired_accepted_runs",
+    "largest_unclassified_failure_class": "CHECK_FAILED",
+    "mapped_event_coverage": 0.470852,
+    "mapped_failure_events": 105,
+    "total_failure_events": 223,
+    "unclassified_failure_events": 118,
+    "unclassified_zero_means_absent": false
+  },
+  "cohort": "accepted_representative_chatweb_mcp_model_free",
+  "countermeasure_evaluation": [
+    {
+      "baseline": {
+        "status": "missing_comparable_pre_intervention_epoch"
+      },
+      "effect_estimate": null,
+      "fresh_rerun": {
+        "affected_repaired_runs": 27,
+        "repair_cause_events": 33
+      },
+      "hold_reasons": [
+        "no_comparable_pre_intervention_cohort",
+        "no_frozen_activation_epoch_for_effect_estimation"
+      ],
+      "intervention": "patch_preflight",
+      "intervention_evidence": {
+        "error_codes": {
+          "PATCH_CONTEXT_AMBIGUOUS": 45,
+          "PATCH_CONTEXT_NOT_FOUND": 25
+        },
+        "meaning": "known no-write patch failures stopped before orchestration run creation",
+        "preflight_avoided_count": 70,
+        "status": "guardrail_observed"
+      },
+      "monitored_repair_category": "patch_context_ambiguity",
+      "status": "hold_not_causally_estimable"
+    },
+    {
+      "baseline": {
+        "status": "missing_comparable_pre_intervention_epoch"
+      },
+      "effect_estimate": null,
+      "fresh_rerun": {
+        "affected_repaired_runs": 0,
+        "repair_cause_events": 0
+      },
+      "hold_reasons": [
+        "no_comparable_pre_intervention_cohort",
+        "no_frozen_activation_epoch_for_effect_estimation"
+      ],
+      "intervention": "workdir_resolution",
+      "intervention_evidence": {
+        "status": "not_directly_attributed"
+      },
+      "monitored_repair_category": "environment_workdir",
+      "status": "hold_not_causally_estimable"
+    },
+    {
+      "baseline": {
+        "status": "missing_comparable_pre_intervention_epoch"
+      },
+      "effect_estimate": null,
+      "fresh_rerun": {
+        "affected_repaired_runs": 5,
+        "repair_cause_events": 5
+      },
+      "hold_reasons": [
+        "no_comparable_pre_intervention_cohort",
+        "no_frozen_activation_epoch_for_effect_estimation"
+      ],
+      "intervention": "semantic_localization",
+      "intervention_evidence": {
+        "status": "not_directly_attributed"
+      },
+      "monitored_repair_category": "runtime_tool_failure",
+      "status": "hold_not_causally_estimable"
+    },
+    {
+      "baseline": {
+        "status": "missing_comparable_pre_intervention_epoch"
+      },
+      "effect_estimate": null,
+      "fresh_rerun": {
+        "affected_repaired_runs": 17,
+        "repair_cause_events": 27
+      },
+      "hold_reasons": [
+        "no_comparable_pre_intervention_cohort",
+        "no_frozen_activation_epoch_for_effect_estimation"
+      ],
+      "intervention": "exact_source",
+      "intervention_evidence": {
+        "status": "not_directly_attributed"
+      },
+      "monitored_repair_category": "source_base_drift",
+      "status": "hold_not_causally_estimable"
+    },
+    {
+      "baseline": {
+        "status": "missing_comparable_pre_intervention_epoch"
+      },
+      "effect_estimate": null,
+      "fresh_rerun": {
+        "affected_repaired_runs": 5,
+        "repair_cause_events": 5
+      },
+      "hold_reasons": [
+        "no_comparable_pre_intervention_cohort",
+        "no_frozen_activation_epoch_for_effect_estimation"
+      ],
+      "intervention": "recovery_fencing",
+      "intervention_evidence": {
+        "status": "not_directly_attributed"
+      },
+      "monitored_repair_category": "runtime_tool_failure",
+      "status": "hold_not_causally_estimable"
+    },
+    {
+      "baseline": {
+        "status": "missing_comparable_pre_intervention_epoch"
+      },
+      "effect_estimate": null,
+      "fresh_rerun": {
+        "affected_repaired_runs": null,
+        "repair_cause_events": null
+      },
+      "hold_reasons": [
+        "intervention_not_active_in_p2"
+      ],
+      "intervention": "solution_minimization_later",
+      "intervention_evidence": {
+        "status": "not_active_in_p2"
+      },
+      "monitored_repair_category": null,
+      "status": "not_active"
+    }
+  ],
+  "excluded": {
+    "explicit_model_route": 16
+  },
+  "oracle_observation": {
+    "coverage": 0.175227,
+    "eligible_runs": 331,
+    "measurement": "oracle_preflight.strong_oracle",
+    "not_strong_runs": 56,
+    "observed_runs": 58,
+    "strong_runs": 2,
+    "unknown_not_imputed": true,
+    "unknown_runs": 273
+  },
+  "overall_repair_causes": {
+    "affected_run_counts": {
+      "acceptance_correction": 31,
+      "environment_workdir": 0,
+      "missing_requirement": 0,
+      "oracle_weakness": 0,
+      "patch_context_ambiguity": 27,
+      "proof_timeout": 2,
+      "provider_capacity": 0,
+      "runtime_tool_failure": 5,
+      "source_base_drift": 17,
+      "wrong_root_cause": 0
+    },
+    "event_counts": {
+      "acceptance_correction": 38,
+      "environment_workdir": 0,
+      "missing_requirement": 0,
+      "oracle_weakness": 0,
+      "patch_context_ambiguity": 33,
+      "proof_timeout": 2,
+      "provider_capacity": 0,
+      "runtime_tool_failure": 5,
+      "source_base_drift": 27,
+      "wrong_root_cause": 0
+    },
+    "unclassified_structured_failure_classes": {
+      "BUILD_VERIFICATION_FAILED": 27,
+      "CHECK_FAILED": 71,
+      "EXECUTION_OWNER_INVALID": 2,
+      "INVALID_ARGUMENT": 11,
+      "PATCH_FAILED": 1,
+      "PERMISSION_REQUIRED": 6
+    }
+  },
+  "overall_repair_failure_classes": {
+    "BASE_DRIFT": 27,
+    "BUILD_VERIFICATION_FAILED": 27,
+    "CHECK_FAILED": 71,
+    "EXECUTION_OWNER_INVALID": 2,
+    "INVALID_ARGUMENT": 11,
+    "PATCH_AMBIGUOUS": 25,
+    "PATCH_CONTEXT_NOT_FOUND": 8,
+    "PATCH_FAILED": 1,
+    "PERMISSION_REQUIRED": 6,
+    "PROOF_TIMEOUT": 2,
+    "RUNTIME_RESUME_REQUIRED": 4,
+    "SOL_REJECTED": 38,
+    "WORKFLOW_RUNTIME_EXCEEDED": 1
+  },
+  "policy": {
+    "accepted_only_observational_cohort": true,
+    "countermeasure_effect_requires_comparable_pre_post_or_paired_evidence": true,
+    "not_a_causal_treatment_effect_estimate": true,
+    "repair_cause_requires_structured_failure_evidence": true,
+    "scope_path_cap_censored_runs_excluded_from_scope_percentiles": true,
+    "unknown_scope_or_oracle_not_imputed": true,
+    "unmatched_structured_failures_remain_unclassified": true,
+    "zero_planned_cause_without_evidence_is_not_proof_of_absence": true
+  },
+  "preflight_avoided": {
+    "count": 70,
+    "error_codes": {
+      "PATCH_CONTEXT_AMBIGUOUS": 45,
+      "PATCH_CONTEXT_NOT_FOUND": 25
+    },
+    "meaning": "known no-write patch failures stopped before orchestration run creation"
+  },
+  "schema_version": 1,
+  "workflow_strata": [
+    {
+      "first_pass_accepted": 50,
+      "first_pass_rate": 0.490196,
+      "n": 102,
+      "oracle_strength": {
+        "measurement": "oracle_preflight.strong_oracle",
+        "not_strong_runs": 3,
+        "observed_runs": 3,
+        "strong_runs": 0,
+        "unknown_runs": 99
+      },
+      "repair_causes": {
+        "affected_run_counts": {
+          "acceptance_correction": 15,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 16,
+          "proof_timeout": 1,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 2,
+          "source_base_drift": 7,
+          "wrong_root_cause": 0
+        },
+        "event_counts": {
+          "acceptance_correction": 18,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 19,
+          "proof_timeout": 1,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 2,
+          "source_base_drift": 15,
+          "wrong_root_cause": 0
+        },
+        "unclassified_structured_failure_classes": {
+          "BUILD_VERIFICATION_FAILED": 12,
+          "CHECK_FAILED": 28,
+          "INVALID_ARGUMENT": 4,
+          "PATCH_FAILED": 1,
+          "PERMISSION_REQUIRED": 1
+        }
+      },
+      "repair_failure_classes": {
+        "BASE_DRIFT": 15,
+        "BUILD_VERIFICATION_FAILED": 12,
+        "CHECK_FAILED": 28,
+        "INVALID_ARGUMENT": 4,
+        "PATCH_AMBIGUOUS": 14,
+        "PATCH_CONTEXT_NOT_FOUND": 5,
+        "PATCH_FAILED": 1,
+        "PERMISSION_REQUIRED": 1,
+        "PROOF_TIMEOUT": 1,
+        "RUNTIME_RESUME_REQUIRED": 1,
+        "SOL_REJECTED": 18,
+        "WORKFLOW_RUNTIME_EXCEEDED": 1
+      },
+      "repaired_accepted": 52,
+      "repaired_rate": 0.509804,
+      "replan_count": 100,
+      "scope_size": {
+        "censored_at_event_path_cap_runs": 0,
+        "measurement": "context_prepared.selected_paths_unique",
+        "observed_runs": 72,
+        "p50_paths": 4,
+        "p90_paths": 20,
+        "unknown_runs": 30
+      },
+      "ttar_ms": {
+        "all_p50": 185049,
+        "all_p90": 660643,
+        "first_pass_p50": 44724,
+        "first_pass_p90": 298523,
+        "repaired_p50": 253123,
+        "repaired_p90": 1067959
+      },
+      "workflow": "feature"
+    },
+    {
+      "first_pass_accepted": 48,
+      "first_pass_rate": 0.786885,
+      "n": 61,
+      "oracle_strength": {
+        "measurement": "oracle_preflight.strong_oracle",
+        "not_strong_runs": 23,
+        "observed_runs": 23,
+        "strong_runs": 0,
+        "unknown_runs": 38
+      },
+      "repair_causes": {
+        "affected_run_counts": {
+          "acceptance_correction": 5,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 5,
+          "wrong_root_cause": 0
+        },
+        "event_counts": {
+          "acceptance_correction": 7,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 7,
+          "wrong_root_cause": 0
+        },
+        "unclassified_structured_failure_classes": {
+          "CHECK_FAILED": 10,
+          "INVALID_ARGUMENT": 2,
+          "PERMISSION_REQUIRED": 2
+        }
+      },
+      "repair_failure_classes": {
+        "BASE_DRIFT": 7,
+        "CHECK_FAILED": 10,
+        "INVALID_ARGUMENT": 2,
+        "PERMISSION_REQUIRED": 2,
+        "SOL_REJECTED": 7
+      },
+      "repaired_accepted": 13,
+      "repaired_rate": 0.213115,
+      "replan_count": 28,
+      "scope_size": {
+        "censored_at_event_path_cap_runs": 0,
+        "measurement": "context_prepared.selected_paths_unique",
+        "observed_runs": 59,
+        "p50_paths": 11,
+        "p90_paths": 21,
+        "unknown_runs": 2
+      },
+      "ttar_ms": {
+        "all_p50": 141383,
+        "all_p90": 616259,
+        "first_pass_p50": 107147,
+        "first_pass_p90": 507156,
+        "repaired_p50": 295258,
+        "repaired_p90": 1934424
+      },
+      "workflow": "diagnose"
+    },
+    {
+      "first_pass_accepted": 44,
+      "first_pass_rate": 0.656716,
+      "n": 67,
+      "oracle_strength": {
+        "measurement": "oracle_preflight.strong_oracle",
+        "not_strong_runs": 2,
+        "observed_runs": 3,
+        "strong_runs": 1,
+        "unknown_runs": 64
+      },
+      "repair_causes": {
+        "affected_run_counts": {
+          "acceptance_correction": 5,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 4,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 4,
+          "wrong_root_cause": 0
+        },
+        "event_counts": {
+          "acceptance_correction": 5,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 4,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 4,
+          "wrong_root_cause": 0
+        },
+        "unclassified_structured_failure_classes": {
+          "BUILD_VERIFICATION_FAILED": 7,
+          "CHECK_FAILED": 13,
+          "INVALID_ARGUMENT": 3,
+          "PERMISSION_REQUIRED": 2
+        }
+      },
+      "repair_failure_classes": {
+        "BASE_DRIFT": 4,
+        "BUILD_VERIFICATION_FAILED": 7,
+        "CHECK_FAILED": 13,
+        "INVALID_ARGUMENT": 3,
+        "PATCH_AMBIGUOUS": 3,
+        "PATCH_CONTEXT_NOT_FOUND": 1,
+        "PERMISSION_REQUIRED": 2,
+        "SOL_REJECTED": 5
+      },
+      "repaired_accepted": 23,
+      "repaired_rate": 0.343284,
+      "replan_count": 38,
+      "scope_size": {
+        "censored_at_event_path_cap_runs": 0,
+        "measurement": "context_prepared.selected_paths_unique",
+        "observed_runs": 40,
+        "p50_paths": 3,
+        "p90_paths": 12,
+        "unknown_runs": 27
+      },
+      "ttar_ms": {
+        "all_p50": 90694,
+        "all_p90": 518187,
+        "first_pass_p50": 54615,
+        "first_pass_p90": 212636,
+        "repaired_p50": 298213,
+        "repaired_p90": 1556928
+      },
+      "workflow": "bugfix"
+    },
+    {
+      "first_pass_accepted": 14,
+      "first_pass_rate": 0.736842,
+      "n": 19,
+      "oracle_strength": {
+        "measurement": "oracle_preflight.strong_oracle",
+        "not_strong_runs": 4,
+        "observed_runs": 4,
+        "strong_runs": 0,
+        "unknown_runs": 15
+      },
+      "repair_causes": {
+        "affected_run_counts": {
+          "acceptance_correction": 3,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 2,
+          "source_base_drift": 0,
+          "wrong_root_cause": 0
+        },
+        "event_counts": {
+          "acceptance_correction": 5,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 2,
+          "source_base_drift": 0,
+          "wrong_root_cause": 0
+        },
+        "unclassified_structured_failure_classes": {
+          "BUILD_VERIFICATION_FAILED": 3,
+          "CHECK_FAILED": 2,
+          "EXECUTION_OWNER_INVALID": 1
+        }
+      },
+      "repair_failure_classes": {
+        "BUILD_VERIFICATION_FAILED": 3,
+        "CHECK_FAILED": 2,
+        "EXECUTION_OWNER_INVALID": 1,
+        "RUNTIME_RESUME_REQUIRED": 2,
+        "SOL_REJECTED": 5
+      },
+      "repaired_accepted": 5,
+      "repaired_rate": 0.263158,
+      "replan_count": 12,
+      "scope_size": {
+        "censored_at_event_path_cap_runs": 0,
+        "measurement": "context_prepared.selected_paths_unique",
+        "observed_runs": 11,
+        "p50_paths": 0,
+        "p90_paths": 1,
+        "unknown_runs": 8
+      },
+      "ttar_ms": {
+        "all_p50": 32708,
+        "all_p90": 308089,
+        "first_pass_p50": 27878,
+        "first_pass_p90": 258647,
+        "repaired_p50": 246091,
+        "repaired_p90": 1135112
+      },
+      "workflow": "test_failure"
+    },
+    {
+      "first_pass_accepted": 15,
+      "first_pass_rate": 0.652174,
+      "n": 23,
+      "oracle_strength": {
+        "measurement": "oracle_preflight.strong_oracle",
+        "not_strong_runs": 11,
+        "observed_runs": 12,
+        "strong_runs": 1,
+        "unknown_runs": 11
+      },
+      "repair_causes": {
+        "affected_run_counts": {
+          "acceptance_correction": 1,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 1,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 0,
+          "wrong_root_cause": 0
+        },
+        "event_counts": {
+          "acceptance_correction": 1,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 1,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 0,
+          "wrong_root_cause": 0
+        },
+        "unclassified_structured_failure_classes": {
+          "BUILD_VERIFICATION_FAILED": 2,
+          "CHECK_FAILED": 5
+        }
+      },
+      "repair_failure_classes": {
+        "BUILD_VERIFICATION_FAILED": 2,
+        "CHECK_FAILED": 5,
+        "PROOF_TIMEOUT": 1,
+        "SOL_REJECTED": 1
+      },
+      "repaired_accepted": 8,
+      "repaired_rate": 0.347826,
+      "replan_count": 9,
+      "scope_size": {
+        "censored_at_event_path_cap_runs": 0,
+        "measurement": "context_prepared.selected_paths_unique",
+        "observed_runs": 19,
+        "p50_paths": 0,
+        "p90_paths": 13,
+        "unknown_runs": 4
+      },
+      "ttar_ms": {
+        "all_p50": 222833,
+        "all_p90": 497896,
+        "first_pass_p50": 120622,
+        "first_pass_p90": 833308,
+        "repaired_p50": 250672,
+        "repaired_p90": 374916
+      },
+      "workflow": "build_release"
+    },
+    {
+      "first_pass_accepted": 21,
+      "first_pass_rate": 0.617647,
+      "n": 34,
+      "oracle_strength": {
+        "measurement": "oracle_preflight.strong_oracle",
+        "not_strong_runs": 13,
+        "observed_runs": 13,
+        "strong_runs": 0,
+        "unknown_runs": 21
+      },
+      "repair_causes": {
+        "affected_run_counts": {
+          "acceptance_correction": 2,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 1,
+          "source_base_drift": 1,
+          "wrong_root_cause": 0
+        },
+        "event_counts": {
+          "acceptance_correction": 2,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 1,
+          "source_base_drift": 1,
+          "wrong_root_cause": 0
+        },
+        "unclassified_structured_failure_classes": {
+          "BUILD_VERIFICATION_FAILED": 2,
+          "CHECK_FAILED": 13,
+          "EXECUTION_OWNER_INVALID": 1,
+          "INVALID_ARGUMENT": 2,
+          "PERMISSION_REQUIRED": 1
+        }
+      },
+      "repair_failure_classes": {
+        "BASE_DRIFT": 1,
+        "BUILD_VERIFICATION_FAILED": 2,
+        "CHECK_FAILED": 13,
+        "EXECUTION_OWNER_INVALID": 1,
+        "INVALID_ARGUMENT": 2,
+        "PERMISSION_REQUIRED": 1,
+        "RUNTIME_RESUME_REQUIRED": 1,
+        "SOL_REJECTED": 2
+      },
+      "repaired_accepted": 13,
+      "repaired_rate": 0.382353,
+      "replan_count": 22,
+      "scope_size": {
+        "censored_at_event_path_cap_runs": 0,
+        "measurement": "context_prepared.selected_paths_unique",
+        "observed_runs": 26,
+        "p50_paths": 1,
+        "p90_paths": 17,
+        "unknown_runs": 8
+      },
+      "ttar_ms": {
+        "all_p50": 136704,
+        "all_p90": 604417,
+        "first_pass_p50": 91597,
+        "first_pass_p90": 592767,
+        "repaired_p50": 228037,
+        "repaired_p90": 627009
+      },
+      "workflow": "custom"
+    },
+    {
+      "first_pass_accepted": 16,
+      "first_pass_rate": 0.695652,
+      "n": 23,
+      "oracle_strength": {
+        "measurement": "oracle_preflight.strong_oracle",
+        "not_strong_runs": 0,
+        "observed_runs": 0,
+        "strong_runs": 0,
+        "unknown_runs": 23
+      },
+      "repair_causes": {
+        "affected_run_counts": {
+          "acceptance_correction": 0,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 7,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 0,
+          "wrong_root_cause": 0
+        },
+        "event_counts": {
+          "acceptance_correction": 0,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 10,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 0,
+          "wrong_root_cause": 0
+        },
+        "unclassified_structured_failure_classes": {
+          "BUILD_VERIFICATION_FAILED": 1
+        }
+      },
+      "repair_failure_classes": {
+        "BUILD_VERIFICATION_FAILED": 1,
+        "PATCH_AMBIGUOUS": 8,
+        "PATCH_CONTEXT_NOT_FOUND": 2
+      },
+      "repaired_accepted": 7,
+      "repaired_rate": 0.304348,
+      "replan_count": 11,
+      "scope_size": {
+        "censored_at_event_path_cap_runs": 0,
+        "measurement": "context_prepared.selected_paths_unique",
+        "observed_runs": 3,
+        "p50_paths": 0,
+        "p90_paths": 12,
+        "unknown_runs": 20
+      },
+      "ttar_ms": {
+        "all_p50": 37495,
+        "all_p90": 91800,
+        "first_pass_p50": 27045,
+        "first_pass_p90": 76020,
+        "repaired_p50": 85535,
+        "repaired_p90": 114240
+      },
+      "workflow": "refactor"
+    },
+    {
+      "first_pass_accepted": 2,
+      "first_pass_rate": 1.0,
+      "n": 2,
+      "oracle_strength": {
+        "measurement": "oracle_preflight.strong_oracle",
+        "not_strong_runs": 0,
+        "observed_runs": 0,
+        "strong_runs": 0,
+        "unknown_runs": 2
+      },
+      "repair_causes": {
+        "affected_run_counts": {
+          "acceptance_correction": 0,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 0,
+          "wrong_root_cause": 0
+        },
+        "event_counts": {
+          "acceptance_correction": 0,
+          "environment_workdir": 0,
+          "missing_requirement": 0,
+          "oracle_weakness": 0,
+          "patch_context_ambiguity": 0,
+          "proof_timeout": 0,
+          "provider_capacity": 0,
+          "runtime_tool_failure": 0,
+          "source_base_drift": 0,
+          "wrong_root_cause": 0
+        },
+        "unclassified_structured_failure_classes": {}
+      },
+      "repair_failure_classes": {},
+      "repaired_accepted": 0,
+      "repaired_rate": 0.0,
+      "replan_count": 0,
+      "scope_size": {
+        "censored_at_event_path_cap_runs": 0,
+        "measurement": "context_prepared.selected_paths_unique",
+        "observed_runs": 2,
+        "p50_paths": 0,
+        "p90_paths": 0,
+        "unknown_runs": 0
+      },
+      "ttar_ms": {
+        "all_p50": 17179,
+        "all_p90": 17412,
+        "first_pass_p50": 17179,
+        "first_pass_p90": 17412,
+        "repaired_p50": null,
+        "repaired_p90": null
+      },
+      "workflow": "unknown"
+    }
+  ]
+}

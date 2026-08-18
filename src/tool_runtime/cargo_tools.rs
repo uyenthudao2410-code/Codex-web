@@ -43,6 +43,7 @@ impl ToolRuntime {
                 features,
                 package,
                 timeout_secs,
+                compute_placement_policy,
             } => {
                 self.cargo_check_with_context(
                     project,
@@ -53,6 +54,7 @@ impl ToolRuntime {
                     features,
                     package,
                     timeout_secs,
+                    compute_placement_policy,
                     session_id,
                     ssh_resource,
                     sandbox,
@@ -72,6 +74,7 @@ impl ToolRuntime {
                 package,
                 no_run,
                 timeout_secs,
+                compute_placement_policy,
             } => {
                 self.cargo_test_with_context(
                     project,
@@ -84,6 +87,7 @@ impl ToolRuntime {
                     package,
                     no_run,
                     timeout_secs,
+                    compute_placement_policy,
                     session_id,
                     ssh_resource,
                     sandbox,

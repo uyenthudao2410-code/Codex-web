@@ -12,6 +12,7 @@ use super::helpers::{
 };
 use super::local_jobs::LocalJobRecord;
 use super::shell::{command_execution_state_name, ProjectCommandOutput};
+use super::tool_call::ValidationComputePlacementPolicy;
 use super::tool_result::ToolResult;
 use super::validation_parser::aggregate_cargo_test_summaries;
 use super::validation_profile::{
@@ -425,6 +426,7 @@ impl ToolRuntime {
                     package: None,
                     no_run: None,
                     timeout_secs,
+                    compute_placement_policy: None,
                     session_id,
                     ssh_resource,
                     sandbox: sandbox.map(str::to_string),
@@ -461,6 +463,7 @@ impl ToolRuntime {
             None,
             None,
             None,
+            None,
         )
         .await
     }
@@ -476,6 +479,7 @@ impl ToolRuntime {
         features: Option<String>,
         package: Option<String>,
         timeout_secs: Option<u64>,
+        compute_placement_policy: Option<ValidationComputePlacementPolicy>,
         session_id: Option<String>,
         ssh_resource: Option<&str>,
         sandbox: Option<&str>,
@@ -490,6 +494,7 @@ impl ToolRuntime {
             features,
             package,
             timeout_secs,
+            compute_placement_policy,
             sandbox,
             session_id,
             ssh_resource,
@@ -509,6 +514,7 @@ impl ToolRuntime {
         features: Option<String>,
         package: Option<String>,
         timeout_secs: Option<u64>,
+        compute_placement_policy: Option<ValidationComputePlacementPolicy>,
         sandbox: Option<&str>,
         session_id: Option<String>,
         ssh_resource: Option<&str>,
@@ -528,6 +534,7 @@ impl ToolRuntime {
                 package,
                 no_run: None,
                 timeout_secs,
+                compute_placement_policy,
                 session_id,
                 ssh_resource,
                 sandbox: sandbox.map(str::to_string),
@@ -567,6 +574,7 @@ impl ToolRuntime {
             None,
             None,
             None,
+            None,
         )
         .await
     }
@@ -584,6 +592,7 @@ impl ToolRuntime {
         package: Option<String>,
         no_run: Option<bool>,
         timeout_secs: Option<u64>,
+        compute_placement_policy: Option<ValidationComputePlacementPolicy>,
         session_id: Option<String>,
         ssh_resource: Option<&str>,
         sandbox: Option<&str>,
@@ -600,6 +609,7 @@ impl ToolRuntime {
             package,
             no_run,
             timeout_secs,
+            compute_placement_policy,
             sandbox,
             session_id,
             ssh_resource,
@@ -621,6 +631,7 @@ impl ToolRuntime {
         package: Option<String>,
         no_run: Option<bool>,
         timeout_secs: Option<u64>,
+        compute_placement_policy: Option<ValidationComputePlacementPolicy>,
         sandbox: Option<&str>,
         session_id: Option<String>,
         ssh_resource: Option<&str>,
@@ -640,6 +651,7 @@ impl ToolRuntime {
                 package,
                 no_run,
                 timeout_secs,
+                compute_placement_policy,
                 session_id,
                 ssh_resource,
                 sandbox: sandbox.map(str::to_string),
@@ -1154,6 +1166,7 @@ impl ToolRuntime {
                         adapter: adapter.tool_identity().to_string(),
                         source_identity,
                         source_snapshot_identity,
+                        compute_placement: None,
                     }),
                     visibility: crate::shell_client::ShellJobVisibility::HiddenUntilHandoff,
                     sandbox: sandbox.map(str::to_string),
@@ -2048,6 +2061,7 @@ struct ValidationRunRequest<'a> {
     package: Option<String>,
     no_run: Option<bool>,
     timeout_secs: Option<u64>,
+    compute_placement_policy: Option<ValidationComputePlacementPolicy>,
     session_id: Option<String>,
     ssh_resource: Option<&'a str>,
     sandbox: Option<String>,

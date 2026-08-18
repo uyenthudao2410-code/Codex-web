@@ -1613,6 +1613,60 @@ impl ShellJobValidationSourceSnapshotIdentity {
     }
 }
 
+/// Durable, bounded evidence for an explicitly controlled validation-compute
+/// placement. This is server-derived protocol metadata: callers select only
+/// the policy, never either Runner id.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShellJobValidationComputePlacement {
+    pub requested_policy: String,
+    pub actual_placement: String,
+    pub fallback_used: bool,
+    pub reason_code: String,
+    pub source_runner_id: String,
+    pub executor_runner_id: String,
+}
+
+impl ShellJobValidationComputePlacement {
+    pub fn is_valid(&self) -> bool {
+        fn valid_runner_id(value: &str) -> bool {
+            !value.is_empty()
+                && value.len() <= 256
+                && value.trim() == value
+                && !value.chars().any(char::is_control)
+        }
+
+        if !valid_runner_id(&self.source_runner_id)
+            || !valid_runner_id(&self.executor_runner_id)
+        {
+            return false;
+        }
+
+        match (
+            self.requested_policy.as_str(),
+            self.actual_placement.as_str(),
+            self.fallback_used,
+            self.reason_code.as_str(),
+        ) {
+            ("local_only", "source", false, "local_only_policy") => {
+                self.source_runner_id == self.executor_runner_id
+            }
+            (
+                "server_preferred",
+                "server_compute",
+                false,
+                "server_compute_selected",
+            ) => self.source_runner_id != self.executor_runner_id,
+            (
+                "server_preferred",
+                "source",
+                true,
+                "server_compute_fallback_source",
+            ) => self.source_runner_id == self.executor_runner_id,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShellJobValidationMetadata {
     pub tool: String,
@@ -1625,6 +1679,8 @@ pub struct ShellJobValidationMetadata {
     pub source_identity: Option<ShellJobValidationSourceIdentity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_snapshot_identity: Option<ShellJobValidationSourceSnapshotIdentity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compute_placement: Option<ShellJobValidationComputePlacement>,
 }
 
 impl ShellJobValidationMetadata {
@@ -1647,6 +1703,10 @@ impl ShellJobValidationMetadata {
                 .source_snapshot_identity
                 .as_ref()
                 .is_none_or(ShellJobValidationSourceSnapshotIdentity::is_valid)
+            && self
+                .compute_placement
+                .as_ref()
+                .is_none_or(ShellJobValidationComputePlacement::is_valid)
             && !(self.source_identity.is_some() && self.source_snapshot_identity.is_some())
     }
 }
@@ -3793,6 +3853,7 @@ mod filter_canonical_tests {
             adapter: "cargo_check".to_string(),
             source_identity: None,
             source_snapshot_identity: Some(snapshot_identity.clone()),
+            compute_placement: None,
         };
         assert!(metadata.is_valid());
 
@@ -3818,6 +3879,50 @@ mod filter_canonical_tests {
             .unwrap()
             .entry_count = 0;
         assert!(!metadata.is_valid());
+    }
+
+    #[test]
+    fn validation_compute_placement_is_backward_compatible_and_tuple_strict() {
+        let mut placement = ShellJobValidationComputePlacement {
+            requested_policy: "local_only".to_string(),
+            actual_placement: "source".to_string(),
+            fallback_used: false,
+            reason_code: "local_only_policy".to_string(),
+            source_runner_id: "source-runner".to_string(),
+            executor_runner_id: "source-runner".to_string(),
+        };
+        assert!(placement.is_valid());
+
+        placement.requested_policy = "server_preferred".to_string();
+        placement.actual_placement = "server_compute".to_string();
+        placement.reason_code = "server_compute_selected".to_string();
+        placement.executor_runner_id = "server-runner".to_string();
+        assert!(placement.is_valid());
+
+        placement.actual_placement = "source".to_string();
+        placement.fallback_used = true;
+        placement.reason_code = "server_compute_fallback_source".to_string();
+        placement.executor_runner_id = "source-runner".to_string();
+        assert!(placement.is_valid());
+
+        placement.executor_runner_id = " other-runner".to_string();
+        assert!(!placement.is_valid());
+        placement.executor_runner_id = "source-runner".to_string();
+        placement.reason_code = "SERVER_COMPUTE_FALLBACK_SOURCE".to_string();
+        assert!(!placement.is_valid());
+
+        let legacy = serde_json::json!({
+            "tool": "cargo_check",
+            "kind": "check",
+            "steps": [{"name": "check", "program": "cargo", "args": ["check"], "env": []}],
+            "effective_timeout_secs": 600,
+            "sync_wait_secs": 90,
+            "adapter": "cargo_check"
+        });
+        let legacy: ShellJobValidationMetadata =
+            serde_json::from_value(legacy).expect("legacy validation metadata");
+        assert!(legacy.compute_placement.is_none());
+        assert!(legacy.is_valid());
     }
 
     fn cargo_test_argv(args: Vec<&str>) -> ShellJobValidationStep {

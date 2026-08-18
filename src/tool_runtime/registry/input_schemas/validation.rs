@@ -20,6 +20,15 @@ fn with_validation_timeout_bounds(mut schema: Value, default: u64) -> Value {
     schema
 }
 
+fn with_compute_placement_policy(mut schema: Value) -> Value {
+    schema["properties"]["compute_placement_policy"] = json!({
+        "type": "string",
+        "enum": ["local_only", "server_preferred"],
+        "description": "Experimental controlled validation-compute placement for long unsandboxed Agent-backed clean exact-source cargo_check/cargo_test requests. Omit to preserve normal production routing."
+    });
+    schema
+}
+
 pub(crate) fn cargo_fmt_input_schema() -> Value {
     // `cargo_fmt(check=false)` mutates source and keeps the existing explicit
     // synchronous semantics: it never auto-promotes to a Job, so its
@@ -70,7 +79,7 @@ pub(crate) fn cargo_fmt_input_schema() -> Value {
 
 pub(crate) fn cargo_check_input_schema() -> Value {
     with_validation_timeout_bounds(
-        object_schema(with_optional_session_id(vec![
+        with_compute_placement_policy(object_schema(with_optional_session_id(vec![
             ("project", "string", "Agent-registered project id.", true),
             (
                 "cwd",
@@ -104,14 +113,14 @@ pub(crate) fn cargo_check_input_schema() -> Value {
                 VALIDATION_TIMEOUT_SECS_DESCRIPTION,
                 false,
             ),
-        ])),
+        ]))),
         600,
     )
 }
 
 pub(crate) fn cargo_test_input_schema() -> Value {
     with_validation_timeout_bounds(
-        object_schema(with_optional_session_id(vec![
+        with_compute_placement_policy(object_schema(with_optional_session_id(vec![
             ("project", "string", "Agent-registered project id.", true),
             (
                 "cwd",
@@ -142,7 +151,7 @@ pub(crate) fn cargo_test_input_schema() -> Value {
                 VALIDATION_TIMEOUT_SECS_DESCRIPTION,
                 false,
             ),
-        ])),
+        ]))),
         1800,
     )
 }

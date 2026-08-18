@@ -2341,6 +2341,7 @@ fn run_source_snapshot_validation_job_with_identity(
             adapter: "cargo_check".to_string(),
             source_identity: None,
             source_snapshot_identity: Some(source_snapshot_identity),
+            compute_placement: None,
         });
     }
     let payload = webcodex_core::source_snapshot::SourceSnapshotAgentPayloadV1::Execute {

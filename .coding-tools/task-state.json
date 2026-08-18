@@ -1,41 +1,296 @@
 {
   "version": 2,
-  "task_id": "5ba312792b5646149ca7fe3ff0064677",
-  "orchestration": {},
-  "objective": "Run a workspace command",
-  "status": "active",
-  "steps": [],
-  "current_step": "Execute command",
-  "current_command": {
-    "command": "npm run check:coding-tools-history && powershell -NoProfile -Command \"$shm='.coding-tools/orchestration/ledger.sqlite3-shm'; $wal='.coding-tools/orchestration/ledger.sqlite3-wal'; $deadline=(Get-Date).AddSeconds(10); while(((Test-Path $shm) -or (Test-Path $wal)) -and ((Get-Date) -lt $deadline)){ Start-Sleep -Milliseconds 25 }; if((Test-Path $shm) -or (Test-Path $wal)){ exit 3 }\" && git add -A -- .coding-tools && git add -- docs/research/260818_P3_SERVER_FIRST_PAIRED_EXPERIMENT_MANIFEST.md && npm run check:coding-tools-delivery && powershell -NoProfile -Command \"$shm='.coding-tools/orchestration/ledger.sqlite3-shm'; $wal='.coding-tools/orchestration/ledger.sqlite3-wal'; $deadline=(Get-Date).AddSeconds(10); while(((Test-Path $shm) -or (Test-Path $wal)) -and ((Get-Date) -lt $deadline)){ Start-Sleep -Milliseconds 25 }; if((Test-Path $shm) -or (Test-Path $wal)){ exit 3 }\" && git add -A -- .coding-tools && npm run check:coding-tools-delivery && git diff --cached --check && git commit -m \"Freeze P3 server-first pilot manifest\" && git push origin main",
-    "kind": "command",
-    "session_id": "5F6MQOSRhi03hTiVnsuoNWev",
-    "workdir": ".",
-    "status": "running",
-    "started_at": "2026-08-17T20:20:48.705Z"
+  "task_id": "2595914ac7614899971e3962f99802c6",
+  "orchestration": {
+    "run_id": "4d210f521ab54419bf35692631fa7572",
+    "wave_id": "123688d0d59e47be9f9e0ff050e2ef9b",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "bc17700e475ce74c96a9547117aade58823f0811",
+    "worktree_fp": "52389c6120a4256cc8414ce2dbd756c6b8b3ca2a80efbf3373b17dd1026c6a16",
+    "contract_fp": ""
   },
+  "objective": "Complete Layer B transport/schema/compile compatibility. Thread compute_placement_policy to ValidationRunRequest without consuming it for placement. Update cargo_check/test schemas and all ShellJobValidationMetadata literals. Preserve routing behavior. Require real diff and package compile proof.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-18T00:14:12.618Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-08-18T00:14:12.618Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "pending",
+      "updated_at": "2026-08-18T00:14:12.618Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-18T00:14:12.618Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
-  "modified_files": [],
+  "modified_files": [
+    {
+      "path": "src/tool_runtime/cargo_tools.rs",
+      "operation": "update",
+      "updated_at": "2026-08-18T00:14:13.490Z"
+    },
+    {
+      "path": "src/tool_runtime/cargo.rs",
+      "operation": "update",
+      "updated_at": "2026-08-18T00:14:13.490Z"
+    },
+    {
+      "path": "src/internal_r3b2_test_support.rs",
+      "operation": "update",
+      "updated_at": "2026-08-18T00:14:13.490Z"
+    },
+    {
+      "path": "crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs",
+      "operation": "update",
+      "updated_at": "2026-08-18T00:14:13.490Z"
+    },
+    {
+      "path": "src/tool_runtime/registry/input_schemas/validation.rs",
+      "operation": "update",
+      "updated_at": "2026-08-18T00:14:13.490Z"
+    },
+    {
+      "path": "src/tool_runtime/registry/output_schemas/testing.rs",
+      "operation": "update",
+      "updated_at": "2026-08-18T00:14:13.490Z"
+    }
+  ],
   "failure": null,
-  "next_step": "",
-  "created_at": "2026-08-17T20:20:48.438Z",
-  "updated_at": "2026-08-17T20:20:48.705Z",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-08-18T00:13:12.378Z",
+  "updated_at": "2026-08-18T00:14:13.490Z",
   "events": [
     {
-      "time": "2026-08-17T20:20:48.438Z",
+      "time": "2026-08-18T00:13:12.378Z",
       "event": "task_auto_started",
       "details": {
-        "objective": "Run a workspace command"
+        "objective": "Continue P3 compute-placement Layer B after accepted ToolCall selector checkpoint. On the exact current checkout, thread compute_placement_policy through cargo_tools.rs and cargo.rs into ValidationRunRequest without consuming it for routing yet; update input schema for cargo_check/test only; update output schema with optional strict compute_placement object for cargo_check/test only; update all compile-impacted ShellJobValidationMetadata literals with compute_placement None and the single internal_r3b2 cargo_check_with_context call with selector None. Preserve absent-selector behavior. Prove non-empty source diff, git diff --check, formatting, and cargo check for webcodex-core/webcodex. Do not change placement selection semantics, analyzer, frozen manifest, runtime activation, or P3 representative data. Preserve all .coding-tools telemetry."
       }
     },
     {
-      "time": "2026-08-17T20:20:48.705Z",
+      "time": "2026-08-18T00:13:12.874Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:18.182Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:18.185Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:31.491Z",
       "event": "command_started",
       "details": {
-        "command": "npm run check:coding-tools-history && powershell -NoProfile -Command \"$shm='.coding-tools/orchestration/ledger.sqlite3-shm'; $wal='.coding-tools/orchestration/ledger.sqlite3-wal'; $deadline=(Get-Date).AddSeconds(10); while(((Test-Path $shm) -or (Test-Path $wal)) -and ((Get-Date) -lt $deadline)){ Start-Sleep -Milliseconds 25 }; if((Test-Path $shm) -or (Test-Path $wal)){ exit 3 }\" && git add -A -- .coding-tools && git add -- docs/research/260818_P3_SERVER_FIRST_PAIRED_EXPERIMENT_MANIFEST.md && npm",
-        "session_id": "5F6MQOSRhi03hTiVnsuoNWev"
+        "command": "rg -n -A 45 -B 10 \"struct ValidationRunRequest|struct ValidationHandoff\" src\\tool_runtime\\cargo.rs",
+        "session_id": "9zaYDlRL1rR8hQiw8ZrXBAg0"
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:31.842Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 45 -B 10 \"struct ValidationRunRequest|struct ValidationHandoff\" src\\tool_runtime\\cargo.rs",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:54.855Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:57.646Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:57.651Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "orchestration"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:58.365Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:58.367Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:59.098Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-18T00:13:59.297Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:00.444Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --stat -- src/tool_runtime/cargo_tools.rs src/tool_runtime/cargo.rs src/internal_r3b2_test_support.rs crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs src/tool_runtime/registry/input_schemas/validation.rs src/tool_runtime/registry/output_schemas/testing.rs",
+        "session_id": "nV-ItJkkFo8kcz1WbSRu16fQ"
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:00.951Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --stat -- src/tool_runtime/cargo_tools.rs src/tool_runtime/cargo.rs src/internal_r3b2_test_support.rs crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs src/tool_runtime/registry/input_schemas/validation.rs src/tool_runtime/registry/output_schemas/testing.rs",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:02.049Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- src/tool_runtime/cargo_tools.rs src/tool_runtime/cargo.rs src/internal_r3b2_test_support.rs crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs src/tool_runtime/registry/input_schemas/validation.rs src/tool_runtime/registry/output_schemas/testing.rs",
+        "session_id": "z8rgTMMdFZ3p7eMAHj3o1zTU"
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:02.524Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- src/tool_runtime/cargo_tools.rs src/tool_runtime/cargo.rs src/internal_r3b2_test_support.rs crates/webcodex-runner/src/webcodex_runner/job_manager_tests.rs src/tool_runtime/registry/input_schemas/validation.rs src/tool_runtime/registry/output_schemas/testing.rs",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:03.843Z",
+      "event": "command_started",
+      "details": {
+        "command": "cargo fmt --all -- --check",
+        "session_id": "ZhyUSVcpL-mBuqExVaviFCpi"
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:11.770Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cargo fmt --all -- --check",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:12.619Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:13.166Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:13.168Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:13.169Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:13.170Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-18T00:14:13.490Z",
+      "event": "files_modified",
+      "details": {
+        "count": 6
       }
     }
   ]

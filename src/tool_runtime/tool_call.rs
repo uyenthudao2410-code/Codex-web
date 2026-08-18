@@ -35,6 +35,22 @@ pub enum SearchResultMode {
     Count,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ValidationComputePlacementPolicy {
+    LocalOnly,
+    ServerPreferred,
+}
+
+impl ValidationComputePlacementPolicy {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::LocalOnly => "local_only",
+            Self::ServerPreferred => "server_preferred",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReadFilesItem {
@@ -723,6 +739,8 @@ pub enum ToolCall {
         package: Option<String>,
         #[serde(default)]
         timeout_secs: Option<u64>,
+        #[serde(default)]
+        compute_placement_policy: Option<ValidationComputePlacementPolicy>,
     },
 
     /// Run `cargo test` in an agent-registered Rust project.
@@ -748,6 +766,8 @@ pub enum ToolCall {
         no_run: Option<bool>,
         #[serde(default)]
         timeout_secs: Option<u64>,
+        #[serde(default)]
+        compute_placement_policy: Option<ValidationComputePlacementPolicy>,
     },
 
     /// Read a file from a project.

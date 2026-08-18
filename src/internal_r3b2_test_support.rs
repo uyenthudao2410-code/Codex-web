@@ -214,6 +214,7 @@ fn spawn_check(
                 None,
                 None,
                 None,
+                None,
             )
             .await
     })
@@ -426,6 +427,7 @@ async fn mismatched_snapshot_identity_is_rejected_before_enqueue() -> Result<(),
                         snapshot_sha256: "0".repeat(64),
                         entry_count: source_snapshot.entries.len(),
                     }),
+                    compute_placement: None,
                 }),
                 visibility: ShellJobVisibility::HiddenUntilHandoff,
                 stdin: Some(payload),
