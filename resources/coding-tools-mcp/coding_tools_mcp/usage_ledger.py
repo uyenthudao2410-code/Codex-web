@@ -228,6 +228,18 @@ def usage_analytics(ledger: Any, *, days: int = 7, now: str | None = None) -> di
         if event_time >= rolling_start:
             add(rolling, payload, canonical)
 
+    controller_summary = finish(actors["controller"]) if "controller" in actors else None
+    controller_observed = bool(controller_summary and int(controller_summary["event_count"]) > 0)
+    controller_usage = {
+        "status": "observed" if controller_observed else "unobserved",
+        "event_count": int(controller_summary["event_count"]) if controller_observed else 0,
+        "usage": dict(controller_summary["usage"]) if controller_observed else None,
+        "cost": dict(controller_summary["cost"]) if controller_observed else None,
+        "provenance": dict(controller_summary["provenance"]) if controller_observed else None,
+        "missing_measurement_policy": "unknown_not_zero",
+        "missing_reason": None if controller_observed else "no_exact_controller_usage_event_in_window",
+    }
+
     return {
         "schema_version": 1,
         "source": "durable_usage_events",
@@ -241,6 +253,7 @@ def usage_analytics(ledger: Any, *, days: int = 7, now: str | None = None) -> di
             "aggregated_event_count": int(overall["event_count"]),
             "invalid_event_count": invalid_event_count,
         },
+        "controller_usage": controller_usage,
         "overall": finish(overall),
         "rolling_5m": {"start": iso(rolling_start), "end": iso(end), **finish(rolling)},
         "hourly": [{"hour": key, **finish(hours[key])} for key in sorted(hours)],
