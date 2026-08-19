@@ -219,6 +219,45 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 },
                 "description": "Optional measurement tags for controlled paired evaluation. Server-owned task/tool/runtime fingerprints are added at run creation. Missing controller usage/cost remains unknown rather than zero.",
             },
+            "solution_shadow_recommendation": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "recommendation_id": {**string, "maxLength": 128},
+                    "candidate_solution_scope": {**string, "enum": ["localized_symbol", "localized_file", "bounded_multi_file", "cross_subsystem", "unknown"]},
+                    "estimated_touched_surface": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "files": {**integer, "minimum": 0},
+                            "symbols": {**integer, "minimum": 0},
+                            "lines": {**integer, "minimum": 0},
+                        },
+                    },
+                    "root_cause_confidence": {**string, "enum": ["low", "medium", "high", "unknown"]},
+                    "oracle_strength": {**string, "enum": ["weak", "moderate", "strong", "unknown"]},
+                    "expected_repair_risk": {**string, "enum": ["low", "medium", "high", "unknown"]},
+                    "smallest_causal_solution": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "scope": {**string, "enum": ["localized_symbol", "localized_file", "bounded_multi_file", "cross_subsystem", "unknown"]},
+                            "estimated_touched_surface": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "properties": {
+                                    "files": {**integer, "minimum": 0},
+                                    "symbols": {**integer, "minimum": 0},
+                                    "lines": {**integer, "minimum": 0},
+                                },
+                            },
+                        },
+                        "required": ["scope", "estimated_touched_surface"],
+                    },
+                },
+                "required": ["recommendation_id", "candidate_solution_scope", "estimated_touched_surface", "root_cause_confidence", "oracle_strength", "expected_repair_risk", "smallest_causal_solution"],
+                "description": "P4 shadow-only pre-mutation solution recommendation. Representative feature/bugfix mutation fails closed unless this recommendation was supplied here or already recorded before the first write lease.",
+            },
             "objective": {**string, "description": "Concrete task objective, for example 'find and fix the login crash' or 'create a React dashboard from zero'."},
             "path": {**string, "default": ".", "description": "Project path relative to the configured workspace."},
             "workdir": {**string, "description": "Command working directory relative to the workspace; defaults to path."},

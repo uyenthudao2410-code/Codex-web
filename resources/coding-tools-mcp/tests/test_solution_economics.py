@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.evaluation_report import current_ledger_baseline_report, evaluation_plane_report
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.server import Runtime
@@ -14,6 +15,7 @@ from coding_tools_mcp.solution_economics import (
     solution_shadow_population_report,
     solution_shadow_run_report,
 )
+from coding_tools_mcp.tool_schema import input_schemas
 
 
 def recommendation(recommendation_id: str, *, risk: str = "low") -> dict[str, object]:
@@ -530,6 +532,59 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertEqual(population["cohort"]["terminal_provenance_counts"], {"unlabeled": 1})
             self.assertEqual(population["cohort"]["representative_terminal_shadow_tasks"], 0)
             self.assertFalse(population["p4_gate"]["can_answer_which_signals_predict_repair"])
+
+    def test_agent_workflow_records_representative_shadow_before_first_write_lease(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "run",
+                    "objective": "replace the wrong value",
+                    "execution_mode": "mcp_only",
+                    "evaluation": {"provenance": "representative", "task_class": "bugfix"},
+                    "solution_shadow_recommendation": recommendation("agent-workflow-rec"),
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                })
+                run_id = result["orchestration"]["run_id"]
+                events = runtime.orchestration_ledger.list_events(run_id)
+                shadow = next(item for item in events if item["event_type"] == "solution_shadow_recommended")
+                first_write = next(item for item in events if item["event_type"] == "write_lease_acquired")
+                self.assertLess(shadow["seq"], first_write["seq"])
+                self.assertTrue(result["solution_shadow_enrollment"]["required"])
+                self.assertTrue(result["solution_shadow_enrollment"]["enrolled"])
+                self.assertEqual((root / "app.py").read_text(encoding="utf-8"), "VALUE = 2\n")
+                self.assertIn("solution_shadow_recommendation", input_schemas()["agent_workflow"]["properties"])
+                self.assertEqual(len(runtime.exposed_tool_names()), 8)
+            finally:
+                runtime.close()
+
+    def test_agent_workflow_blocks_representative_mutation_without_shadow(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                with self.assertRaises(ToolFailure) as blocked:
+                    runtime.agent_workflow({
+                        "workflow": "feature",
+                        "phase": "run",
+                        "objective": "replace the value",
+                        "execution_mode": "mcp_only",
+                        "evaluation": {"provenance": "representative", "task_class": "feature"},
+                        "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                        "verification": "none",
+                    })
+                self.assertEqual(blocked.exception.code, "SOLUTION_SHADOW_REQUIRED")
+                projection = runtime.task_state.get().get("orchestration", {})
+                events = runtime.orchestration_ledger.list_events(str(projection.get("run_id") or ""))
+                self.assertFalse(any(item["event_type"] == "write_lease_acquired" for item in events))
+                self.assertEqual((root / "app.py").read_text(encoding="utf-8"), "VALUE = 1\n")
+            finally:
+                runtime.close()
 
     def test_task_control_and_reports_expose_shadow_without_new_public_tool(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):

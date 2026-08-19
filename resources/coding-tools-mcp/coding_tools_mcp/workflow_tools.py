@@ -13,6 +13,7 @@ from .errors import ToolFailure
 from .git_utils import DIFF_CONTINUATION_OPERATION
 from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
+from .solution_economics import SOLUTION_SHADOW_EVENT, record_solution_shadow
 from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
 
@@ -344,6 +345,73 @@ class AgentWorkflowMixin:
 
         self._project_orchestration(current_ctx, event="orchestration_context_ready")
         return current_ctx, identity
+
+    def _agent_solution_shadow_enrollment(
+        self,
+        args: dict[str, Any],
+        *,
+        ctx: RunContext,
+        workflow: str,
+        require_for_mutation: bool,
+    ) -> dict[str, Any]:
+        run = self.orchestration_ledger.get_run(ctx.run_id) or {}
+        metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
+        run_workflow = str(metadata.get("workflow") or workflow or "custom").strip().lower()
+        evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+        provenance = str(evaluation.get("provenance") or "").strip().lower()
+        events = self.orchestration_ledger.list_events(ctx.run_id)
+        enrolled = any(str(item.get("event_type") or "") == SOLUTION_SHADOW_EVENT for item in events)
+        recommendation = args.get("solution_shadow_recommendation")
+        recording: dict[str, Any] | None = None
+
+        if recommendation is not None:
+            if not isinstance(recommendation, dict):
+                raise ToolFailure(
+                    "INVALID_ARGUMENT",
+                    "solution_shadow_recommendation must be an object.",
+                    category="validation",
+                )
+            try:
+                recording = record_solution_shadow(
+                    self.orchestration_ledger,
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                    recommendation=recommendation,
+                )
+            except ValueError as exc:
+                raise ToolFailure(
+                    "SOLUTION_SHADOW_INVALID",
+                    str(exc),
+                    category="validation",
+                    retryable=False,
+                ) from exc
+            enrolled = True
+
+        required = provenance == "representative" and run_workflow in {"feature", "bugfix"}
+        if require_for_mutation and required and not enrolled:
+            raise ToolFailure(
+                "SOLUTION_SHADOW_REQUIRED",
+                "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+                category="validation",
+                retryable=False,
+                details={
+                    "run_id": ctx.run_id,
+                    "wave_id": ctx.wave_id,
+                    "workflow": run_workflow,
+                    "provenance": provenance,
+                },
+            )
+
+        return {
+            "required": required,
+            "enrolled": enrolled,
+            "workflow": run_workflow,
+            "provenance": provenance or "unlabeled",
+            "recording": recording,
+            "recording_policy": "agent_workflow_pre_first_write_v1",
+            "automatic_policy_activation": False,
+            "production_behavior_changed": False,
+        }
 
     def _validate_execution_mode_route(self, requested_mode: str, route: dict[str, Any]) -> str:
         requested_mode = str(requested_mode or "auto").strip().lower() or "auto"
@@ -700,6 +768,13 @@ class AgentWorkflowMixin:
                 "task": self.task_state.get(),
             }
 
+        solution_shadow_enrollment = self._agent_solution_shadow_enrollment(
+            args,
+            ctx=ctx,
+            workflow=workflow,
+            require_for_mutation=phase in {"execute", "run"},
+        )
+
         should_prepare = phase in {"prepare", "run"}
         should_execute = phase in {"execute", "run"}
         prepared = None
@@ -743,6 +818,7 @@ class AgentWorkflowMixin:
                 "workflow": workflow,
                 "phase": "prepare",
                 "context": prepared,
+                "solution_shadow_enrollment": solution_shadow_enrollment,
                 "orchestration": self._orchestration_result(ctx, write_reports=False),
                 "recommended_next_action": "Reason once over this bundle, then call agent_workflow phase=execute with the complete change set and verification plan.",
             }
@@ -992,6 +1068,7 @@ class AgentWorkflowMixin:
                 "directories": directory_result,
                 "execution_route": execution_route,
                 "execution": execution,
+                "solution_shadow_enrollment": solution_shadow_enrollment,
                 "external_review": {"plane": "none", "status": "skipped", "reason": "execution_not_accepted"},
                 "orchestration": self._orchestration_result(ctx),
                 "task": self.task_state.get(),
@@ -1030,6 +1107,7 @@ class AgentWorkflowMixin:
             "directories": directory_result,
             "execution_route": execution_route,
             "execution": execution,
+            "solution_shadow_enrollment": solution_shadow_enrollment,
             "external_review": external_review,
             "orchestration": self._orchestration_result(ctx),
             "task": self.task_state.get(),
