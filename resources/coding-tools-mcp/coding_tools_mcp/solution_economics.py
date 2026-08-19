@@ -368,6 +368,15 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
     repair_taxonomy = _repair_taxonomy(events, replan_count)
     run_status = str(run.get("status") or "")
     outcome_final = run_status != "active"
+    repair_result = repair_taxonomy if outcome_final else {
+        "repaired": None,
+        "workflow_replanned": None,
+        "proof_only_replan": None,
+        "replan_count": replan_count,
+        "first_replan_seq": repair_taxonomy["first_replan_seq"],
+        "post_replan_patch_surface_events": repair_taxonomy["post_replan_patch_surface_events"],
+        "label_method": repair_taxonomy["label_method"],
+    }
     return {
         "schema_version": 1,
         "run_id": run_id,
@@ -384,18 +393,7 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
             "final": outcome_final,
             "accepted": bool(economics.get("accepted")),
             "first_pass_accepted": bool(economics.get("first_pass_accepted")) if outcome_final else None,
-            "repair": {
-                "final": outcome_final,
-                **repair_taxonomy if outcome_final else {
-                    "repaired": None,
-                    "workflow_replanned": None,
-                    "proof_only_replan": None,
-                    "replan_count": replan_count,
-                    "first_replan_seq": repair_taxonomy["first_replan_seq"],
-                    "post_replan_patch_surface_events": repair_taxonomy["post_replan_patch_surface_events"],
-                    "label_method": repair_taxonomy["label_method"],
-                },
-            },
+            "repair": {"final": outcome_final, **repair_result},
             "ttar_ms": milestones.get("time_to_accepted_ms"),
             "touched_surface": touched_surface,
             "proof_cost": {
