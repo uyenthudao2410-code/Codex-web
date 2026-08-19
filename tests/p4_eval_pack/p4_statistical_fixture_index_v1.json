@@ -1,0 +1,66 @@
+{
+  "seed": 24042026,
+  "total_rows": 4716,
+  "cases": {
+    "S001": {
+      "rows": 0,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S002": {
+      "rows": 160,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S003": {
+      "rows": 160,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S004": {
+      "rows": 12,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S005": {
+      "rows": 512,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S006": {
+      "rows": 512,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S007": {
+      "rows": 512,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S008": {
+      "rows": 384,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S009": {
+      "rows": 512,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S010": {
+      "rows": 512,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S011": {
+      "rows": 640,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    },
+    "S012": {
+      "rows": 800,
+      "promotion_eligible": false,
+      "storage": "isolated_temporary_fixture_only"
+    }
+  }
+}

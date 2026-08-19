@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "report": "/mnt/data/test_workspace/p4_eval_pack/p4_eval_run_report.json",
+  "checks": {
+    "passed": 32,
+    "failed": 0,
+    "total": 32
+  },
+  "metrics": {
+    "S005_null_correlations": {
+      "root_confidence_rank": 0.026545047682848908,
+      "oracle_strength_rank": -0.021421347192329084,
+      "expected_repair_risk_rank": -0.08508855195970519,
+      "surface_underestimate_ratio": -0.0009156987135749597,
+      "scope_rank": 0.040629257813743366
+    },
+    "S006_known_correlations": {
+      "root_confidence_rank": -0.6432675209026769,
+      "oracle_strength_rank": -0.6116863468502852,
+      "expected_repair_risk_rank": 0.6700904154922466,
+      "surface_underestimate_ratio": 0.8085007439314724,
+      "scope_rank": 0.6740398126412653
+    },
+    "S008_leakage_corr": 1.0,
+    "S011_tier_correlations": {
+      "S": 0.866637650386338,
+      "M": 0.8579875502406918,
+      "L": 0.8471882237129958,
+      "XL": -0.855448174149897
+    },
+    "S012_split_correlations": {
+      "development": 0.7328801114905935,
+      "temporal_holdout": 0.7323105918071195
+    }
+  }
+}

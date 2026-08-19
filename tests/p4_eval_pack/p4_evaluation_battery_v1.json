@@ -1,0 +1,4925 @@
+{
+  "schema_version": 1,
+  "battery_id": "p4-ms1-evaluation-battery-v1",
+  "purpose": "Evaluate P4/MS1 measurement integrity, readiness discrimination, and large-context robustness without manufacturing canonical promotion evidence.",
+  "canonical_readiness_authority": "resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+  "threshold_policy": "Never hardcode or weaken canonical readiness thresholds in the benchmark. Import/read them from the canonical implementation at integration time.",
+  "global_server_first": "OFF",
+  "promotion_policy": {
+    "synthetic_benchmark": false,
+    "replay_fixture": false,
+    "organic_representative": "Only canonical organic observations may be promotion-eligible, subject to repository provenance rules."
+  },
+  "counts": {
+    "contract_integrity": 20,
+    "statistical_readiness": 12,
+    "workflow_challenge": 64,
+    "total": 96
+  },
+  "context_tiers": {
+    "S": {
+      "files": [
+        1,
+        3
+      ],
+      "relevant_loc": [
+        100,
+        800
+      ],
+      "dependency_hops": [
+        0,
+        1
+      ],
+      "target_symbols": [
+        1,
+        4
+      ],
+      "distractor_ratio": 0.2,
+      "description": "Localized context with a small dependency surface."
+    },
+    "M": {
+      "files": [
+        4,
+        10
+      ],
+      "relevant_loc": [
+        800,
+        4000
+      ],
+      "dependency_hops": [
+        1,
+        3
+      ],
+      "target_symbols": [
+        5,
+        15
+      ],
+      "distractor_ratio": 0.4,
+      "description": "Subsystem-sized context with multiple related modules."
+    },
+    "L": {
+      "files": [
+        11,
+        25
+      ],
+      "relevant_loc": [
+        4000,
+        15000
+      ],
+      "dependency_hops": [
+        2,
+        5
+      ],
+      "target_symbols": [
+        16,
+        45
+      ],
+      "distractor_ratio": 0.6,
+      "description": "Cross-subsystem context with nontrivial localization and proof surface."
+    },
+    "XL": {
+      "files": [
+        26,
+        60
+      ],
+      "relevant_loc": [
+        15000,
+        50000
+      ],
+      "dependency_hops": [
+        4,
+        8
+      ],
+      "target_symbols": [
+        46,
+        120
+      ],
+      "distractor_ratio": 0.75,
+      "description": "Repository-scale challenge context with substantial distractor material."
+    }
+  },
+  "task_families": {
+    "local_bugfix": {
+      "scope": "localized_file",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests."
+    },
+    "api_feature": {
+      "scope": "bounded_multi_file",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks."
+    },
+    "cross_file_refactor": {
+      "scope": "cross_subsystem",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks."
+    },
+    "test_ci_repair": {
+      "scope": "bounded_multi_file",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun."
+    },
+    "data_schema_migration": {
+      "scope": "cross_subsystem",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks."
+    },
+    "concurrency_lifecycle": {
+      "scope": "cross_subsystem",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants."
+    },
+    "orchestration_state": {
+      "scope": "cross_subsystem",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries."
+    },
+    "performance_resource_boundary": {
+      "scope": "bounded_multi_file",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes."
+    }
+  },
+  "cases": [
+    {
+      "id": "C001",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "missing_solution_shadow",
+      "setup": "Attempt first mutation without a solution shadow.",
+      "expected": "fail_closed"
+    },
+    {
+      "id": "C002",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "late_solution_shadow",
+      "setup": "Record the shadow only after first_write_seq.",
+      "expected": "fail_closed"
+    },
+    {
+      "id": "C003",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "conflicting_solution_shadow",
+      "setup": "Record conflicting shadow recommendations for one wave.",
+      "expected": "fail_closed_or_integrity_error"
+    },
+    {
+      "id": "C004",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "workspace_identity_mismatch",
+      "setup": "Observation belongs to a different workspace identity.",
+      "expected": "exclude_or_fail_closed"
+    },
+    {
+      "id": "C005",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "measurement_epoch_mismatch",
+      "setup": "Observation was produced under a stale measurement epoch.",
+      "expected": "exclude_or_fail_closed"
+    },
+    {
+      "id": "C006",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "missing_proof_lineage",
+      "setup": "Accepted-looking observation has no proof lineage.",
+      "expected": "incomplete_not_promotion_eligible"
+    },
+    {
+      "id": "C007",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "wrong_wave_proof",
+      "setup": "Proof belongs to a different run/wave.",
+      "expected": "integrity_error"
+    },
+    {
+      "id": "C008",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "missing_quality_outcome",
+      "setup": "Accepted checkpoint lacks a quality outcome.",
+      "expected": "incomplete_not_promotion_eligible"
+    },
+    {
+      "id": "C009",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "operator_report_wrong_owner",
+      "setup": "Completion report is attached to the wrong run/wave.",
+      "expected": "integrity_error"
+    },
+    {
+      "id": "C010",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "operator_report_unacknowledged",
+      "setup": "A valid accepted report remains unacknowledged before replacement work.",
+      "expected": "block_next_material_wave_only"
+    },
+    {
+      "id": "C011",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "duplicate_run_wave",
+      "setup": "Duplicate ingestion of the same run/wave is attempted.",
+      "expected": "deduplicate"
+    },
+    {
+      "id": "C012",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "benchmark_exclusion",
+      "setup": "Synthetic benchmark row is present in the evaluation corpus.",
+      "expected": "must_not_affect_canonical_readiness"
+    },
+    {
+      "id": "C013",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "replay_provenance_spoof",
+      "setup": "Replay fixture claims organic/representative provenance.",
+      "expected": "reject_provenance"
+    },
+    {
+      "id": "C014",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "malformed_outcome_class",
+      "setup": "Outcome class is missing, unknown, or contradictory.",
+      "expected": "fail_closed"
+    },
+    {
+      "id": "C015",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "unobserved_cost_semantics",
+      "setup": "Provider/candidate cost is unobserved.",
+      "expected": "remain_unobserved_not_zero"
+    },
+    {
+      "id": "C016",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "route_drift_in_measurement_epoch",
+      "setup": "A deterministic measurement run silently changes route.",
+      "expected": "flag_or_fail_closed"
+    },
+    {
+      "id": "C017",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "base_or_worktree_drift",
+      "setup": "Base/worktree changes after preflight without controlled rebase.",
+      "expected": "fail_closed"
+    },
+    {
+      "id": "C018",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "outcome_contradiction",
+      "setup": "first_pass_accepted conflicts with repair/replan evidence.",
+      "expected": "integrity_error"
+    },
+    {
+      "id": "C019",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "readiness_non_interference",
+      "setup": "Run entire benchmark corpus against isolated storage.",
+      "expected": "canonical_readiness_unchanged"
+    },
+    {
+      "id": "C020",
+      "kind": "contract_integrity",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "canonical_ledger_write_barrier",
+      "setup": "Harness attempts to write benchmark fixtures to canonical ledger.",
+      "expected": "hard_block"
+    },
+    {
+      "id": "S001",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "empty_population",
+      "setup": "No eligible observations.",
+      "expected": "collecting_insufficient_sample",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S002",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "single_class_positive",
+      "setup": "Only rework-required observations.",
+      "expected": "collecting_insufficient_class_support",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S003",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "single_class_negative",
+      "setup": "Only first-pass accepted observations.",
+      "expected": "collecting_insufficient_class_support",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S004",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "tiny_balanced_population",
+      "setup": "Balanced classes but intentionally below canonical support requirements.",
+      "expected": "collecting_insufficient_sample",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S005",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "large_null_signal",
+      "setup": "Large balanced population with outcomes randomized independently of all candidate signals.",
+      "expected": "no_validated_signal",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S006",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "strong_known_signal",
+      "setup": "Large balanced isolated population with a deliberately injected monotonic signal.",
+      "expected": "recover_signal_in_isolated_eval",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S007",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "duplicate_leakage",
+      "setup": "A small set is duplicated many times to imitate support growth.",
+      "expected": "no_support_gain_after_dedup",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S008",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "temporal_leakage",
+      "setup": "A feature is derived from information unavailable at prediction time.",
+      "expected": "reject_or_flag_leakage",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S009",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "context_confounding",
+      "setup": "A candidate signal only works because context tier correlates with outcome.",
+      "expected": "reject_unstable_signal",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S010",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "task_family_confounding",
+      "setup": "A candidate signal only works in one task family.",
+      "expected": "reject_unstable_signal",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S011",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "xl_direction_reversal",
+      "setup": "Signal direction reverses in XL while looking strong in S/M/L.",
+      "expected": "reject_or_mark_unstable",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "S012",
+      "kind": "statistical_readiness",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "name": "temporal_holdout_confirmation",
+      "setup": "Signal survives an untouched later-time holdout across multiple context tiers.",
+      "expected": "diagnostic_confirmation",
+      "storage": "isolated_temporary_fixture_only"
+    },
+    {
+      "id": "W001",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "local_bugfix",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "localized_file",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "localized_file",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 14,
+          "symbols": 2
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W002",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "local_bugfix",
+      "expected_outcome": "rework_required",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "localized_file",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "localized_file",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 3,
+          "lines": 20,
+          "symbols": 3
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W003",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "api_feature",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 12,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W004",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "api_feature",
+      "expected_outcome": "rework_required",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 16,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W005",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "cross_file_refactor",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 14,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W006",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "cross_file_refactor",
+      "expected_outcome": "rework_required",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 3,
+          "lines": 20,
+          "symbols": 3
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W007",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "test_ci_repair",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 12,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W008",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "test_ci_repair",
+      "expected_outcome": "rework_required",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 16,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W009",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "data_schema_migration",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 14,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W010",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "data_schema_migration",
+      "expected_outcome": "rework_required",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 3,
+          "lines": 20,
+          "symbols": 3
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W011",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "concurrency_lifecycle",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 12,
+          "symbols": 2
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W012",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "concurrency_lifecycle",
+      "expected_outcome": "rework_required",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 16,
+          "symbols": 2
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W013",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "orchestration_state",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 14,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W014",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "orchestration_state",
+      "expected_outcome": "rework_required",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 3,
+          "lines": 20,
+          "symbols": 3
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W015",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "performance_resource_boundary",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 12,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W016",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "S",
+      "task_family": "performance_resource_boundary",
+      "expected_outcome": "rework_required",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes.",
+      "context": {
+        "files": [
+          1,
+          3
+        ],
+        "relevant_loc": [
+          100,
+          800
+        ],
+        "dependency_hops": [
+          0,
+          1
+        ],
+        "target_symbols": [
+          1,
+          4
+        ],
+        "distractor_ratio": 0.2,
+        "description": "Localized context with a small dependency surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 2,
+          "lines": 13,
+          "symbols": 2
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 1,
+            "lines": 9,
+            "symbols": 1
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 2,
+          "lines": 16,
+          "symbols": 2
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W017",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "local_bugfix",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "localized_file",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "localized_file",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 6,
+          "lines": 65,
+          "symbols": 9
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W018",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "local_bugfix",
+      "expected_outcome": "rework_required",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "localized_file",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "localized_file",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 8,
+          "lines": 86,
+          "symbols": 12
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W019",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "api_feature",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 7,
+          "lines": 76,
+          "symbols": 10
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W020",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "api_feature",
+      "expected_outcome": "rework_required",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 10,
+          "lines": 108,
+          "symbols": 15
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W021",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "cross_file_refactor",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 6,
+          "lines": 65,
+          "symbols": 9
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W022",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "cross_file_refactor",
+      "expected_outcome": "rework_required",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 8,
+          "lines": 86,
+          "symbols": 12
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W023",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "test_ci_repair",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 7,
+          "lines": 76,
+          "symbols": 10
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W024",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "test_ci_repair",
+      "expected_outcome": "rework_required",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 10,
+          "lines": 108,
+          "symbols": 15
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W025",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "data_schema_migration",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 6,
+          "lines": 65,
+          "symbols": 9
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W026",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "data_schema_migration",
+      "expected_outcome": "rework_required",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 8,
+          "lines": 86,
+          "symbols": 12
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W027",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "concurrency_lifecycle",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 7,
+          "lines": 76,
+          "symbols": 10
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W028",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "concurrency_lifecycle",
+      "expected_outcome": "rework_required",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 10,
+          "lines": 108,
+          "symbols": 15
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W029",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "orchestration_state",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 6,
+          "lines": 65,
+          "symbols": 9
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W030",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "orchestration_state",
+      "expected_outcome": "rework_required",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 8,
+          "lines": 86,
+          "symbols": 12
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W031",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "performance_resource_boundary",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 7,
+          "lines": 76,
+          "symbols": 10
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W032",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "M",
+      "task_family": "performance_resource_boundary",
+      "expected_outcome": "rework_required",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes.",
+      "context": {
+        "files": [
+          4,
+          10
+        ],
+        "relevant_loc": [
+          800,
+          4000
+        ],
+        "dependency_hops": [
+          1,
+          3
+        ],
+        "target_symbols": [
+          5,
+          15
+        ],
+        "distractor_ratio": 0.4,
+        "description": "Subsystem-sized context with multiple related modules."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 7,
+          "lines": 72,
+          "symbols": 10
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 4,
+            "lines": 48,
+            "symbols": 7
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 10,
+          "lines": 108,
+          "symbols": 15
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W033",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "local_bugfix",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "localized_file",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "localized_file",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 19,
+          "lines": 299,
+          "symbols": 32
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W034",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "local_bugfix",
+      "expected_outcome": "rework_required",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "localized_file",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "localized_file",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 27,
+          "lines": 428,
+          "symbols": 45
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W035",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "api_feature",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 16,
+          "lines": 256,
+          "symbols": 27
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W036",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "api_feature",
+      "expected_outcome": "rework_required",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 22,
+          "lines": 342,
+          "symbols": 36
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W037",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "cross_file_refactor",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 19,
+          "lines": 299,
+          "symbols": 32
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W038",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "cross_file_refactor",
+      "expected_outcome": "rework_required",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 27,
+          "lines": 428,
+          "symbols": 45
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W039",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "test_ci_repair",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 16,
+          "lines": 256,
+          "symbols": 27
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W040",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "test_ci_repair",
+      "expected_outcome": "rework_required",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 22,
+          "lines": 342,
+          "symbols": 36
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W041",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "data_schema_migration",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 19,
+          "lines": 299,
+          "symbols": 32
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W042",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "data_schema_migration",
+      "expected_outcome": "rework_required",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 27,
+          "lines": 428,
+          "symbols": 45
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W043",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "concurrency_lifecycle",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 16,
+          "lines": 256,
+          "symbols": 27
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W044",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "concurrency_lifecycle",
+      "expected_outcome": "rework_required",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 22,
+          "lines": 342,
+          "symbols": 36
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W045",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "orchestration_state",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 19,
+          "lines": 299,
+          "symbols": 32
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W046",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "orchestration_state",
+      "expected_outcome": "rework_required",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 27,
+          "lines": 428,
+          "symbols": 45
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W047",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "performance_resource_boundary",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 16,
+          "lines": 256,
+          "symbols": 27
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W048",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "L",
+      "task_family": "performance_resource_boundary",
+      "expected_outcome": "rework_required",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes.",
+      "context": {
+        "files": [
+          11,
+          25
+        ],
+        "relevant_loc": [
+          4000,
+          15000
+        ],
+        "dependency_hops": [
+          2,
+          5
+        ],
+        "target_symbols": [
+          16,
+          45
+        ],
+        "distractor_ratio": 0.6,
+        "description": "Cross-subsystem context with nontrivial localization and proof surface."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 18,
+          "lines": 285,
+          "symbols": 30
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 12,
+            "lines": 190,
+            "symbols": 21
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 22,
+          "lines": 342,
+          "symbols": 36
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W049",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "local_bugfix",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "localized_file",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "localized_file",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 39,
+          "lines": 878,
+          "symbols": 75
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W050",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "local_bugfix",
+      "expected_outcome": "rework_required",
+      "challenge": "Fix a behavior defect with nearby misleading code and preserve boundary semantics.",
+      "oracle": "Focused regression plus neighboring invariant tests.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "localized_file",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "localized_file",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 52,
+          "lines": 1170,
+          "symbols": 100
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W051",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "api_feature",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 45,
+          "lines": 1024,
+          "symbols": 87
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W052",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "api_feature",
+      "expected_outcome": "rework_required",
+      "challenge": "Add an API capability while preserving backward compatibility and serialization contracts.",
+      "oracle": "Contract tests, compatibility tests, and end-to-end request/response checks.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 64,
+          "lines": 1462,
+          "symbols": 124
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W053",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "cross_file_refactor",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 39,
+          "lines": 878,
+          "symbols": 75
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W054",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "cross_file_refactor",
+      "expected_outcome": "rework_required",
+      "challenge": "Refactor ownership or symbol boundaries across modules without behavior drift.",
+      "oracle": "Full focused suite plus import/contract and semantic-equivalence checks.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 52,
+          "lines": 1170,
+          "symbols": 100
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W055",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "test_ci_repair",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 45,
+          "lines": 1024,
+          "symbols": 87
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W056",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "test_ci_repair",
+      "expected_outcome": "rework_required",
+      "challenge": "Repair a deterministic CI/test failure with environment and fixture interactions.",
+      "oracle": "Reproducing failing test, targeted suite, and clean rerun.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 64,
+          "lines": 1462,
+          "symbols": 124
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W057",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "data_schema_migration",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 39,
+          "lines": 878,
+          "symbols": 75
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W058",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "data_schema_migration",
+      "expected_outcome": "rework_required",
+      "challenge": "Evolve persisted schema with forward/backward compatibility and migration idempotence.",
+      "oracle": "Round-trip migration, old/new fixtures, rollback or downgrade safety checks.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 52,
+          "lines": 1170,
+          "symbols": 100
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W059",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "concurrency_lifecycle",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 45,
+          "lines": 1024,
+          "symbols": 87
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W060",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "concurrency_lifecycle",
+      "expected_outcome": "rework_required",
+      "challenge": "Fix ordering, lease, ownership, or stale-state behavior under interleaving events.",
+      "oracle": "Deterministic concurrency schedule tests and state-machine invariants.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 64,
+          "lines": 1462,
+          "symbols": 124
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W061",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "orchestration_state",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 39,
+          "lines": 878,
+          "symbols": 75
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W062",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "orchestration_state",
+      "expected_outcome": "rework_required",
+      "challenge": "Preserve run/wave identity, acceptance ownership, and fail-closed orchestration transitions.",
+      "oracle": "Ledger lineage assertions and state-transition tests across restart/reconcile boundaries.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "cross_subsystem",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "high",
+        "oracle_strength": "strong",
+        "expected_repair_risk": "low",
+        "smallest_causal_solution": {
+          "scope": "cross_subsystem",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 52,
+          "lines": 1170,
+          "symbols": 100
+        },
+        "counter_signal_case": true
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W063",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "performance_resource_boundary",
+      "expected_outcome": "first_pass_accepted",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "low",
+        "oracle_strength": "moderate",
+        "expected_repair_risk": "medium",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": true,
+        "replan_count": 0,
+        "manual_fix_required": false,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 45,
+          "lines": 1024,
+          "symbols": 87
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    },
+    {
+      "id": "W064",
+      "kind": "workflow_challenge",
+      "source_class": "synthetic_benchmark",
+      "promotion_eligible": false,
+      "context_tier": "XL",
+      "task_family": "performance_resource_boundary",
+      "expected_outcome": "rework_required",
+      "challenge": "Separate resource pressure or queue noise from actual repair/rework causality.",
+      "oracle": "Resource-admission fixtures plus functional proof that capacity noise does not relabel outcomes.",
+      "context": {
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "target_symbols": [
+          46,
+          120
+        ],
+        "distractor_ratio": 0.75,
+        "description": "Repository-scale challenge context with substantial distractor material."
+      },
+      "shadow": {
+        "candidate_solution_scope": "bounded_multi_file",
+        "estimated_touched_surface": {
+          "files": 43,
+          "lines": 975,
+          "symbols": 83
+        },
+        "root_cause_confidence": "medium",
+        "oracle_strength": "weak",
+        "expected_repair_risk": "high",
+        "smallest_causal_solution": {
+          "scope": "bounded_multi_file",
+          "estimated_touched_surface": {
+            "files": 30,
+            "lines": 650,
+            "symbols": 58
+          }
+        }
+      },
+      "ground_truth": {
+        "first_pass_accepted": false,
+        "replan_count": 1,
+        "manual_fix_required": true,
+        "oracle_pass": true,
+        "actual_touched_surface": {
+          "files": 64,
+          "lines": 1462,
+          "symbols": 124
+        },
+        "counter_signal_case": false
+      },
+      "assertions": [
+        "solution_shadow_precedes_first_write",
+        "workspace_and_measurement_identity_match",
+        "proof_lineage_is_owned_by_same_run_wave",
+        "quality_outcome_is_recorded",
+        "benchmark_provenance_is_excluded_from_promotion_population",
+        "observed_outcome_matches_fixture_ground_truth"
+      ]
+    }
+  ]
+}

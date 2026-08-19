@@ -1,0 +1,360 @@
+{
+  "battery_id": "p4-ms1-evaluation-battery-v1",
+  "canonical_promotion_mutated": false,
+  "checks": {
+    "failed": 0,
+    "passed": 32,
+    "total": 32
+  },
+  "limitations": [
+    "C001-C020 are validated here as fail-closed contract specifications, not executed against the live repository runtime.",
+    "W001-W064 are validated for coverage/context/ground-truth shape, not executed as 64 real repository repair tasks.",
+    "Canonical report_p4_readiness.py was not invoked by this isolated runner; integration must prove pre/post canonical readiness is unchanged."
+  ],
+  "metrics": {
+    "S005_null_correlations": {
+      "expected_repair_risk_rank": -0.08508855195970519,
+      "oracle_strength_rank": -0.021421347192329084,
+      "root_confidence_rank": 0.026545047682848908,
+      "scope_rank": 0.040629257813743366,
+      "surface_underestimate_ratio": -0.0009156987135749597
+    },
+    "S006_known_correlations": {
+      "expected_repair_risk_rank": 0.6700904154922466,
+      "oracle_strength_rank": -0.6116863468502852,
+      "root_confidence_rank": -0.6432675209026769,
+      "scope_rank": 0.6740398126412653,
+      "surface_underestimate_ratio": 0.8085007439314724
+    },
+    "S008_leakage_corr": 1.0,
+    "S011_tier_correlations": {
+      "L": 0.8471882237129958,
+      "M": 0.8579875502406918,
+      "S": 0.866637650386338,
+      "XL": -0.855448174149897
+    },
+    "S012_split_correlations": {
+      "development": 0.7328801114905935,
+      "temporal_holdout": 0.7323105918071195
+    }
+  },
+  "results": [
+    {
+      "detail": {
+        "after": {
+          "p4_evaluation_battery_v1.json": "327e1ee3d81df892840d2521b4d337653d6a7a42ea319e34b757e1351a0fe238",
+          "p4_statistical_fixture_index_v1.json": "5a40d2848262a6e0a861ac98d8f57dcc1922821913e237621958ee08fb324fad",
+          "p4_statistical_fixtures_v1.jsonl": "a9be1f33f45e071c0e18cfb72f8de6aa1e68e2c3ad59bb0f8871f02c9caac0f5"
+        },
+        "before": {
+          "p4_evaluation_battery_v1.json": "327e1ee3d81df892840d2521b4d337653d6a7a42ea319e34b757e1351a0fe238",
+          "p4_statistical_fixture_index_v1.json": "5a40d2848262a6e0a861ac98d8f57dcc1922821913e237621958ee08fb324fad",
+          "p4_statistical_fixtures_v1.jsonl": "a9be1f33f45e071c0e18cfb72f8de6aa1e68e2c3ad59bb0f8871f02c9caac0f5"
+        }
+      },
+      "layer": "isolated",
+      "name": "generator_determinism",
+      "status": "PASS"
+    },
+    {
+      "detail": 96,
+      "layer": "isolated",
+      "name": "manifest_total_96",
+      "status": "PASS"
+    },
+    {
+      "detail": 96,
+      "layer": "isolated",
+      "name": "manifest_unique_ids",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "contract_integrity": 20,
+        "statistical_readiness": 12,
+        "workflow_challenge": 64
+      },
+      "layer": "isolated",
+      "name": "manifest_layer_counts",
+      "status": "PASS"
+    },
+    {
+      "detail": "OFF",
+      "layer": "isolated",
+      "name": "global_server_first_off",
+      "status": "PASS"
+    },
+    {
+      "detail": null,
+      "layer": "isolated",
+      "name": "synthetic_promotion_policy_false",
+      "status": "PASS"
+    },
+    {
+      "detail": 96,
+      "layer": "isolated",
+      "name": "all_benchmark_cases_nonpromotable",
+      "status": "PASS"
+    },
+    {
+      "detail": [],
+      "layer": "spec",
+      "name": "contract_specs_all_fail_closed_or_excluded",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "unique_combos": 64
+      },
+      "layer": "spec",
+      "name": "workflow_cross_product_complete",
+      "status": "PASS"
+    },
+    {
+      "detail": null,
+      "layer": "spec",
+      "name": "workflow_assertion_contract_complete",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "L": [
+          11,
+          25
+        ],
+        "M": [
+          4,
+          10
+        ],
+        "S": [
+          1,
+          3
+        ],
+        "XL": [
+          26,
+          60
+        ]
+      },
+      "layer": "spec",
+      "name": "context_files_monotonic",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "L": [
+          4000,
+          15000
+        ],
+        "M": [
+          800,
+          4000
+        ],
+        "S": [
+          100,
+          800
+        ],
+        "XL": [
+          15000,
+          50000
+        ]
+      },
+      "layer": "spec",
+      "name": "context_loc_monotonic",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "dependency_hops": [
+          4,
+          8
+        ],
+        "description": "Repository-scale challenge context with substantial distractor material.",
+        "distractor_ratio": 0.75,
+        "files": [
+          26,
+          60
+        ],
+        "relevant_loc": [
+          15000,
+          50000
+        ],
+        "target_symbols": [
+          46,
+          120
+        ]
+      },
+      "layer": "spec",
+      "name": "xl_context_is_repository_scale",
+      "status": "PASS"
+    },
+    {
+      "detail": 14,
+      "layer": "spec",
+      "name": "workflow_counter_signal_present",
+      "status": "PASS"
+    },
+    {
+      "detail": 4716,
+      "layer": "isolated",
+      "name": "fixture_row_count_4716",
+      "status": "PASS"
+    },
+    {
+      "detail": 4716,
+      "layer": "isolated",
+      "name": "fixture_index_matches_rows",
+      "status": "PASS"
+    },
+    {
+      "detail": null,
+      "layer": "isolated",
+      "name": "fixture_all_nonpromotable",
+      "status": "PASS"
+    },
+    {
+      "detail": null,
+      "layer": "isolated",
+      "name": "fixture_all_synthetic",
+      "status": "PASS"
+    },
+    {
+      "detail": null,
+      "layer": "isolated",
+      "name": "fixture_workspace_isolated",
+      "status": "PASS"
+    },
+    {
+      "detail": null,
+      "layer": "isolated",
+      "name": "fixture_shadow_prewrite",
+      "status": "PASS"
+    },
+    {
+      "detail": 0,
+      "layer": "isolated",
+      "name": "S001_empty_population",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "n": 160,
+        "positive": 160
+      },
+      "layer": "isolated",
+      "name": "S002_single_class",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "n": 160,
+        "positive": 0
+      },
+      "layer": "isolated",
+      "name": "S003_single_class",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "n": 12,
+        "positive": 6
+      },
+      "layer": "isolated",
+      "name": "S004_tiny_balanced",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "correlations": {
+          "expected_repair_risk_rank": -0.08508855195970519,
+          "oracle_strength_rank": -0.021421347192329084,
+          "root_confidence_rank": 0.026545047682848908,
+          "scope_rank": 0.040629257813743366,
+          "surface_underestimate_ratio": -0.0009156987135749597
+        },
+        "max_abs_corr": 0.08508855195970519
+      },
+      "layer": "isolated",
+      "name": "S005_null_signal",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "expected_repair_risk_rank": 0.6700904154922466,
+        "oracle_strength_rank": -0.6116863468502852,
+        "root_confidence_rank": -0.6432675209026769,
+        "scope_rank": 0.6740398126412653,
+        "surface_underestimate_ratio": 0.8085007439314724
+      },
+      "layer": "isolated",
+      "name": "S006_known_signal_recovered",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "duplicates": 448,
+        "raw": 512,
+        "unique_support": 64
+      },
+      "layer": "isolated",
+      "name": "S007_duplicate_support_dedup",
+      "status": "PASS"
+    },
+    {
+      "detail": 1.0,
+      "layer": "isolated",
+      "name": "S008_temporal_leakage_detected",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "between_corr": 0.4424245222211985,
+        "within_group_signal_constant": true
+      },
+      "layer": "isolated",
+      "name": "S009_context_confounding_flagged",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "between_corr": 0.40951235383723883,
+        "within_group_signal_constant": true
+      },
+      "layer": "isolated",
+      "name": "S010_family_confounding_flagged",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "L": 0.8471882237129958,
+        "M": 0.8579875502406918,
+        "S": 0.866637650386338,
+        "XL": -0.855448174149897
+      },
+      "layer": "isolated",
+      "name": "S011_xl_direction_reversal",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "correlations": {
+          "development": 0.7328801114905935,
+          "temporal_holdout": 0.7323105918071195
+        },
+        "counts": {
+          "development": {
+            "n": 600,
+            "positive": 301
+          },
+          "temporal_holdout": {
+            "n": 200,
+            "positive": 99
+          }
+        }
+      },
+      "layer": "isolated",
+      "name": "S012_temporal_holdout_confirmation",
+      "status": "PASS"
+    }
+  ],
+  "scope": "isolated synthetic evaluation only; canonical reporter adapter not executed"
+}

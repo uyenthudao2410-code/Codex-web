@@ -1,72 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "de58623f68a54be78b5ef6e1b6fe3f92",
-    "orchestration": {
-      "run_id": "d0a45286b83f4b44bfbaad08f021e60e",
-      "wave_id": "f8b2e8f771b84291a97c3b1c8716ca05",
-      "orchestration_state": "ABORTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "359a5f231e1950e8d97303e0d2b798984c145fe6",
-      "worktree_fp": "c2d6ee4bd926d126434929e7936f589ab41367adb39fa31250075e5a83ae33cd",
-      "contract_fp": ""
-    },
-    "objective": "Fix Codex-web realtime performance card with exact rolling 5-minute provider-measured TPM and exact rolling 5-minute command latency, explicit freshness/no-data states, no stale hourly/daily/all-history fallbacks, no backend/public-tool changes, and focused renderer tests only. Preserve unrelated work. No restart, commit, push, or deploy.",
-    "status": "active",
-    "steps": [],
-    "current_step": "Run complete agent workflow",
-    "current_command": null,
-    "last_command_result": null,
-    "completion_report": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
-    "next_step": "",
-    "created_at": "2026-08-19T06:11:53.287Z",
-    "updated_at": "2026-08-19T06:11:57.081Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:11:53.287Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Fix Codex-web realtime performance card with exact rolling 5-minute provider-measured TPM and exact rolling 5-minute command latency, explicit freshness/no-data states, no stale hourly/daily/all-history fallbacks, no backend/public-tool changes, and focused renderer tests only. Preserve unrelated work. No restart, commit, push, or deploy."
-        }
-      },
-      {
-        "time": "2026-08-19T06:11:54.157Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:11:54.281Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "SOLUTION_SHADOW_REQUIRED"
-        }
-      },
-      {
-        "time": "2026-08-19T06:11:57.081Z",
-        "event": "task_orchestration_aborted",
-        "details": {
-          "state": "ABORTED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:11:57.090Z",
-    "archive_reason": "cleared"
-  },
-  {
-    "version": 2,
     "task_id": "a63449e8e3f245d4ac768e5217f26766",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -47395,6 +47329,194 @@
       }
     ],
     "archived_at": "2026-08-19T17:25:38.362Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "69d2a166d025498bbf54ff607c00747c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-19T17:38:27.655Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "-MLOQRKOpdmpvOBp7Vt3ESt2",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "waiting",
+        "command": {
+          "command_id": "-MLOQRKOpdmpvOBp7Vt3ESt2",
+          "kind": "command",
+          "status": "exited",
+          "result_status": "passed",
+          "exit_code": 0,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "4d32761cfef0a1d24de6774cf195d2db53501b61",
+          "branch": "main",
+          "worktree_fp": "8aa02010e45457e37969b3a3491090de1d1f40a0c824f7c46daa782e47c5f929",
+          "dirty_paths": []
+        }
+      },
+      "source_run_wave": {
+        "task_id": "69d2a166d025498bbf54ff607c00747c",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+      "blocker_or_failure": null,
+      "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "cab93950cf38a999366d59020924bb2d36edce03c9308f7f8e3c14fcba03622d",
+    "completion_report_acknowledged_id": "cab93950cf38a999366d59020924bb2d36edce03c9308f7f8e3c14fcba03622d",
+    "completion_report_acknowledged_at": "2026-08-19T17:28:09.093Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "Present this completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-19T17:25:38.414Z",
+    "updated_at": "2026-08-19T17:38:27.655Z",
+    "events": [
+      {
+        "time": "2026-08-19T17:25:38.414Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-19T17:25:38.654Z",
+        "event": "command_started",
+        "details": {
+          "command": "git add -- renderer/dashboard.js renderer/index.html resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py resources/coding-tools-mcp/tests/test_operations_analytics.py tests/dashboard-analytics.test.js && git add -f -- .coding-tools \":(exclude).coding-tools/orchestration/ledger.sqlite3\" \":(exclude).coding-tools/orchestration/ledger.sqlite3-shm\" \":(exclude).coding-tools/orchestration/ledger.sqlite3-wal\" && git update-i",
+          "session_id": "-MLOQRKOpdmpvOBp7Vt3ESt2"
+        }
+      },
+      {
+        "time": "2026-08-19T17:25:55.768Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git add -- renderer/dashboard.js renderer/index.html resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py resources/coding-tools-mcp/tests/test_operations_analytics.py tests/dashboard-analytics.test.js && git add -f -- .coding-tools \":(exclude).coding-tools/orchestration/ledger.sqlite3\" \":(exclude).coding-tools/orchestration/ledger.sqlite3-shm\" \":(exclude).coding-tools/orchestration/ledger.sqlite3-wal\" && git update-i",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-19T17:25:56.228Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "-MLOQRKOpdmpvOBp7Vt3ESt2",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "cab93950cf38a999366d59020924bb2d36edce03c9308f7f8e3c14fcba03622d"
+        }
+      },
+      {
+        "time": "2026-08-19T17:28:09.093Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "cab93950cf38a999366d59020924bb2d36edce03c9308f7f8e3c14fcba03622d"
+        }
+      },
+      {
+        "time": "2026-08-19T17:28:18.893Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --stat && echo NUMSTAT && git diff --numstat && echo STATUS && git status --short --untracked-files=all && echo SIDECARS && git status --short --ignored --untracked-files=all -- .coding-tools/orchestration/ledger.sqlite3-shm .coding-tools/orchestration/ledger.sqlite3-wal && echo SYNC && git rev-list --left-right --count HEAD...origin/main",
+          "session_id": "DvC2A7bm-bm280oj_mSMTRQm"
+        }
+      },
+      {
+        "time": "2026-08-19T17:28:20.725Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --stat && echo NUMSTAT && git diff --numstat && echo STATUS && git status --short --untracked-files=all && echo SIDECARS && git status --short --ignored --untracked-files=all -- .coding-tools/orchestration/ledger.sqlite3-shm .coding-tools/orchestration/ledger.sqlite3-wal && echo SYNC && git rev-list --left-right --count HEAD...origin/main",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-19T17:33:16.878Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+          "session_id": "hfccLtgPLjxpd_sfaTS-SwbV"
+        }
+      },
+      {
+        "time": "2026-08-19T17:33:19.841Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-19T17:38:07.049Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n --glob \"*.md\" --glob \"*.json\" --glob \"*.py\" \"\\bP[5-9]\\b|phase 5|phase 6|phase 7|phase 8|phase 9|P5|P6|P7|P8|P9\" .",
+          "session_id": "v5y80Cl-tG5I3yg_oKDsnLLj"
+        }
+      },
+      {
+        "time": "2026-08-19T17:38:16.850Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n --glob \"*.md\" --glob \"*.json\" --glob \"*.py\" \"\\bP[5-9]\\b|phase 5|phase 6|phase 7|phase 8|phase 9|P5|P6|P7|P8|P9\" .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-19T17:38:27.655Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"\\bP[5-9][A-Z0-9_-]*\\b|Phase [5-9]|phase [5-9]\" docs README.md CURRENT_STATE.md ROADMAP.md AGENTS.md 2>NUL",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-19T17:38:27.655Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-19T17:38:35.826Z",
     "archive_reason": "finished"
   }
 ]
