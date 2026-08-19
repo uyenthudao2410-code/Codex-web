@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-18
+> **Status date:** 2026-08-19
 > **Desktop package:** `web-mcp-assistant 0.3.4`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
@@ -143,13 +143,15 @@ Repository operators can evaluate the canonical committed ledger with:
 ```text
 python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .
 python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-ready
+python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-p5-ready
+npm run check:p5-readiness
 ```
 
 The manual-only GitHub workflow `.github/workflows/p4-readiness.yml` exposes the same gate without enabling ordinary push/PR Actions consumption. `--require-ready` succeeds only when `p4_gate.can_answer_which_signals_predict_repair=true`; missing or insufficient evidence cannot be converted into a green P4 closure claim.
 
-**Live collection health remains a separate boundary.** `solution_shadow` schema publication has been observed after controlled activation work, but after the subsequent Recovery Host handoff the current ChatWeb/Coding-VP tool-call plane has again returned raw `ExceptionGroup` failures. Therefore post-handoff end-to-end live collection is **RECHECK REQUIRED** before describing the currently connected process as healthy. This runtime-health issue does not invalidate the accepted source/gate implementation, and it must not be papered over by backfilling or synthetic representative rows.
+**Live collection health remains a separate boundary, and the currently connected process has now passed it.** On 2026-08-19 the live ChatWeb/Coding-VP plane exposes `task_control.solution_shadow`, reports exactly 8 `smart-v3` public tools with contract SHA `bd5c09aeffe02bb60d0f548ed02912e8a21e78b91404186e6896f6d6cbdedd70`, and reports zero stale orchestration runs, unresolved stale runs, orphaned background operations, and orphaned idempotency records. Live P4 collection is therefore active on this runtime instance. Future runtime-affecting changes still require their own activation check; historical raw `ExceptionGroup` incidents remain historical evidence rather than current runtime status.
 
-The P4 empirical gate remains **COLLECTING unless the canonical ledger reporter says `EMPIRICALLY_COMPLETE`**. P5 controlled treatment stays closed until that representative predictive gate passes and is explicitly opened by the semantic controller. `automatic_policy_activation=false` and `p5_automatic_start=false` remain invariants.
+The P4 empirical gate remains **COLLECTING unless the canonical ledger reporter says `EMPIRICALLY_COMPLETE`**. The current 2026-08-19 snapshot has 9 representative terminal shadow tasks, 0 representative causal-solution repairs, and `validated_signals=[]`, so predictive validity is not established yet. P5 controlled treatment stays closed until all three fail-closed readiness conditions are simultaneously true: the P4 gate can answer which signals predict repair, at least one validated predictive signal is present, and the Git baseline is clean with `HEAD` matching its configured upstream. `npm run check:p5-readiness` is the operator-facing transition check. `automatic_policy_activation=false` and `p5_automatic_start=false` remain invariants.
 
 ### P0 live activation incident — CLOSED / ACCEPTED
 
@@ -262,9 +264,9 @@ The following are deliberate evidence/authority gates, not documentation bugs:
 - automatic global server-first: **OFF** pending representative compute-placement evidence;
 - P3 representative efficacy: **DEFERRED**, separate from the closed engineering gate;
 - P4 source/gate engineering: **ACCEPTED**; development launch authority is pinned to the current checkout and `solution_shadow` schema publication has been observed;
-- P4 post-handoff live tool-call health: **RECHECK REQUIRED** because the current ChatWeb/Coding-VP call plane has returned raw `ExceptionGroup` failures after Recovery Host handoff;
+- P4 live tool-call health: **LIVE ACTIVE / VERIFIED** on the current 2026-08-19 ChatWeb/Coding-VP runtime contract; future runtime-affecting changes still require their own activation proof;
 - P4 predictive validity: **COLLECTING unless `report_p4_readiness.py` reports `EMPIRICALLY_COMPLETE`**; benchmark, synthetic, and unlabeled shadow rows are not promotion evidence;
-- P5 controlled rework-reduction treatment: **CLOSED / NOT STARTED** until the P4 predictive gate is satisfied and explicitly opened;
+- P5 controlled rework-reduction treatment: **CLOSED / NOT STARTED** until `npm run check:p5-readiness` passes, which requires P4 predictive completion, a non-empty validated-signal set, and a clean upstream-matched baseline; explicit semantic-controller opening remains separate from automatic activation;
 - auto-handoff: **OFF** pending more real A/B evidence;
 - paid Flash terminal reproduction: **requires explicit external-cost authorization**;
 - provider/model write authority over the primary checkout: **not granted by telemetry or routing alone**;

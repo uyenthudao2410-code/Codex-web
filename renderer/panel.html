@@ -120,7 +120,7 @@
             </div>
             <div class="kpi-copy">
               <small>BẰNG CHỨNG ĐIỀU TUYẾN</small>
-              <strong class="text-orange kpi-value-evidence">2/3 client · 0 tuyến chạy</strong>
+              <strong class="text-orange kpi-value-evidence" id="routingEvidenceKpi">0/3 client · 0 tuyến chạy</strong>
               <span>Chỉ tính tuyến có bằng chứng</span>
             </div>
           </article>
@@ -177,18 +177,18 @@
               </linearGradient>
             </defs>
             <!-- Left Frontends to Center Hub -->
-            <path id="routerEdgeChatWeb" class="router-edge active" d="M 145,54 C 175,54 175,95 205,95" stroke="url(#edgeChatWebGrad)"></path>
+            <path id="routerEdgeChatWeb" class="router-edge offline" d="M 145,54 C 175,54 175,95 205,95" stroke="url(#edgeChatWebGrad)"></path>
             <path id="routerEdgeDesktop" class="router-edge offline" d="M 145,174 C 175,174 175,95 205,95"></path>
-            <path id="routerEdgeOpenCode" class="router-edge active" d="M 145,294 C 175,294 175,95 205,95" stroke="url(#edgeOpenCodeGrad)"></path>
+            <path id="routerEdgeOpenCode" class="router-edge offline" d="M 145,294 C 175,294 175,95 205,95" stroke="url(#edgeOpenCodeGrad)"></path>
 
             <!-- Center Hub to Right Compute Lanes -->
-            <path id="routerEdgeFast" class="router-edge connected" d="M 335,95 C 365,95 365,49 395,49"></path>
-            <path id="routerEdgeDeepSeek" class="router-edge connected" d="M 335,95 C 365,95 365,132 395,132"></path>
-            <path id="routerEdgeTerra" class="router-edge connected" d="M 335,95 C 365,95 365,215 395,215"></path>
-            <path id="routerEdgeSol" class="router-edge connected" d="M 335,95 C 365,95 365,299 395,299"></path>
+            <path id="routerEdgeFast" class="router-edge waiting" d="M 335,95 C 365,95 365,49 395,49"></path>
+            <path id="routerEdgeDeepSeek" class="router-edge waiting" d="M 335,95 C 365,95 365,132 395,132"></path>
+            <path id="routerEdgeTerra" class="router-edge waiting" d="M 335,95 C 365,95 365,215 395,215"></path>
+            <path id="routerEdgeSol" class="router-edge waiting" d="M 335,95 C 365,95 365,299 395,299"></path>
 
             <!-- Center Hub to Bottom MCP Writer -->
-            <path id="routerEdgeWriter" class="router-edge writer-edge" d="M 270,160 L 270,264" stroke-dasharray="4 4"></path>
+            <path id="routerEdgeWriter" class="router-edge writer-edge offline" d="M 270,160 L 270,264" stroke-dasharray="4 4"></path>
 
             <!-- Connection Anchor Pins -->
             <circle cx="145" cy="54" r="3.5" fill="#10b981"/>
@@ -211,14 +211,14 @@
               <small>Client kết nối giao diện</small>
             </div>
             <div class="routing-stack">
-              <div id="routerChatWeb" class="router-node active">
+              <div id="routerChatWeb" class="router-node offline">
                 <span class="node-icon icon-chatweb">
                   <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2"><path d="M3 10a7 7 0 0112.5-4.5A7 7 0 0117 10c0 4-3.5 7-8 7-1.5 0-3-.4-4.2-1.2L2 16l1.2-2.8C2.4 12 2 11 2 10z"/></svg>
                 </span>
                 <div class="node-info">
                   <b>ChatWeb</b>
                   <small>semantic controller</small>
-                  <span class="router-state text-green">● HOẠT ĐỘNG</span>
+                  <span class="router-state text-gray">● NGOẠI TUYẾN</span>
                 </div>
               </div>
 
@@ -233,14 +233,14 @@
                 </div>
               </div>
 
-              <div id="routerOpenCode" class="router-node active">
+              <div id="routerOpenCode" class="router-node offline">
                 <span class="node-icon icon-opencode">
                   <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M7 6L3 10l4 4M13 6l4 4-4 4M11 4l-2 12"/></svg>
                 </span>
                 <div class="node-info">
                   <b>OpenCode</b>
                   <small>Go frontend</small>
-                  <span class="router-state text-green">● TRỰC TUYẾN</span>
+                  <span class="router-state text-gray">● NGOẠI TUYẾN</span>
                 </div>
               </div>
             </div>
@@ -254,7 +254,7 @@
             </div>
 
             <!-- Giant Hub Orb -->
-            <div id="routerHub" class="router-node hub active">
+            <div id="routerHub" class="router-node hub offline">
               <div class="hub-orb-glow"></div>
               <span class="hub-glyph">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -265,7 +265,7 @@
               <span class="hub-role">QUYỀN HẠN RUNTIME</span>
               <b>Execution Hub</b>
               <small>một cơ quan điều phối duy nhất</small>
-              <span class="router-state text-green">● TRỰC TUYẾN</span>
+              <span class="router-state text-gray">● NGOẠI TUYẾN</span>
             </div>
 
             <div class="hub-caption">
@@ -274,7 +274,7 @@
             </div>
 
             <!-- MCP Writer & Proof Node -->
-            <div id="routerWriter" class="router-node writer-authority active" title="Cơ chế Ghi & Xác minh Bằng chứng Độc quyền">
+            <div id="routerWriter" class="router-node writer-authority offline" title="Cơ chế Ghi & Xác minh Bằng chứng Độc quyền">
               <span class="node-icon icon-writer">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -284,7 +284,7 @@
               <div class="node-info">
                 <b>MCP Write &amp; Proof</b>
                 <small>single writer • fence</small>
-                <span class="router-state text-green">● TRỰC TUYẾN</span>
+                <span class="router-state text-gray">● NGOẠI TUYẾN</span>
               </div>
             </div>
           </div>
@@ -296,47 +296,47 @@
               <small>Luồng tính toán Model</small>
             </div>
             <div class="routing-stack lane-stack">
-              <div id="routerFast" class="router-node active">
+              <div id="routerFast" class="router-node waiting">
                 <span class="node-icon icon-fast">
                   <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M11 2L4 11h6l-1 7 7-9h-6l1-7z"/></svg>
                 </span>
                 <div class="node-info">
                   <b>Codex Fast</b>
                   <small>Mini / Luna</small>
-                  <span class="router-state text-green">● ĐANG RẢNH</span>
+                  <span class="router-state">● CHỜ EVIDENCE</span>
                 </div>
               </div>
 
-              <div id="routerDeepSeek" class="router-node active">
+              <div id="routerDeepSeek" class="router-node waiting">
                 <span class="node-icon icon-deepseek">
                   <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#0891b2" stroke-width="2"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 9h2v2H9zM9 1v3M15 1v3M9 16v3M15 16v3M1 9h3M1 13h3M16 9h3M16 13h3"/></svg>
                 </span>
                 <div class="node-info">
                   <b>OpenCode Go</b>
                   <small>DeepSeek Flash / Pro</small>
-                  <span class="router-state text-green">● ĐANG RẢNH</span>
+                  <span class="router-state">● CHỜ EVIDENCE</span>
                 </div>
               </div>
 
-              <div id="routerTerra" class="router-node active">
+              <div id="routerTerra" class="router-node waiting">
                 <span class="node-icon icon-terra">
                   <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M10 2l8 4.5v7L10 18l-8-4.5v-7L10 2zM2 6.5l8 4.5 8-4.5M10 11v7"/></svg>
                 </span>
                 <div class="node-info">
                   <b>Codex Deep</b>
                   <small>Terra</small>
-                  <span class="router-state text-green">● ĐANG RẢNH</span>
+                  <span class="router-state">● CHỜ EVIDENCE</span>
                 </div>
               </div>
 
-              <div id="routerSol" class="router-node active">
+              <div id="routerSol" class="router-node waiting">
                 <span class="node-icon icon-sol">
                   <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#e11d48" stroke-width="2"><polygon points="10,2 12.5,7.5 18,8.5 14,12.5 15,18 10,15 5,18 6,12.5 2,8.5 7.5,7.5"/></svg>
                 </span>
                 <div class="node-info">
                   <b>Codex Critical</b>
                   <small>Sol</small>
-                  <span class="router-state text-green">● ĐANG RẢNH</span>
+                  <span class="router-state">● CHỜ EVIDENCE</span>
                 </div>
               </div>
             </div>

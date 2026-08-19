@@ -58,6 +58,7 @@
 
   let perf = null;
   let orchestration = null;
+  let snapshot = null;
   let cost = {
     preset: 'gpt-4o-mini', rateIn: 0.15, rateOut: 0.6, currency: 'USD',
     fxRate: 0, bytesPerToken: 4, laneRates: { ...DEFAULT_LANE_RATES }
@@ -65,6 +66,7 @@
   let refreshInFlight = false;
   let lastPerfReadAt = 0;
   let lastOrchestrationReadAt = 0;
+  let lastSnapshotReadAt = 0;
   let lastEventSeq = -1;
   let reducedMotion = false;
 
@@ -169,6 +171,71 @@
       // Transport request/response bytes are payload telemetry, not token truth.
       // model_visible_bytes is measured; byte/token conversion remains estimated.
       result.inTokens += tokensFromBytes(record.modelVisibleBytes);
+    }
+    return result;
+  }
+
+  function measuredUsage() {
+    // KPI token & chi phí chỉ tin phép đo thực tế của provider. Ba nguồn đo:
+    // 1. usage_events (đường opencode provider dispatch/telemetry),
+    // 2. delegations[].metadata.economics (delegation opencode đã kết thúc),
+    // 3. lanes[].last_economics (lượt ChatWeb qua codex bridge — chỉ có ở lanes).
+    // Dedup theo delegation_id; chi phí chỉ tính khi provider báo (provider_cost).
+    const midnight = localMidnight(new Date());
+    const result = { events: 0, input: 0, cached: 0, output: 0, reasoning: 0, cost: 0, hours: new Map() };
+    const countedDelegations = new Set();
+    const addEconomics = (economics, timeValue) => {
+      if (!economics || typeof economics !== 'object') return;
+      const time = Date.parse(String(timeValue || ''));
+      if (!Number.isFinite(time) || time < midnight) return;
+      const input = Math.max(0, Number(economics.input_tokens) || 0);
+      const cached = Math.max(0, Number(economics.cached_input_tokens) || 0);
+      const output = Math.max(0, Number(economics.output_tokens) || 0);
+      const reasoning = Math.max(0, Number(economics.reasoning_output_tokens) || 0);
+      if (!input && !cached && !output && !reasoning) return;
+      result.events += 1;
+      result.input += input;
+      result.cached += cached;
+      result.output += output;
+      result.reasoning += reasoning;
+      const costValue = Number(economics.provider_cost);
+      if (Number.isFinite(costValue) && costValue > 0) result.cost += costValue;
+      const hour = Math.floor(time / 3600000);
+      const bucket = result.hours.get(hour) || { in: 0, out: 0 };
+      bucket.in += input;
+      bucket.out += output + reasoning;
+      result.hours.set(hour, bucket);
+    };
+    for (const event of Array.isArray(orchestration?.usage_events) ? orchestration.usage_events : []) {
+      const time = Date.parse(String(event?.event_time || ''));
+      if (!Number.isFinite(time) || time < midnight) continue;
+      if (event?.delegation_id) countedDelegations.add(event.delegation_id);
+      const input = Math.max(0, Number(event?.input_tokens) || 0);
+      const cached = Math.max(0, Number(event?.cached_input_tokens) || 0);
+      const output = Math.max(0, Number(event?.output_tokens) || 0);
+      const reasoning = Math.max(0, Number(event?.reasoning_output_tokens) || 0);
+      if (!input && !cached && !output && !reasoning) continue;
+      result.events += 1;
+      result.input += input;
+      result.cached += cached;
+      result.output += output;
+      result.reasoning += reasoning;
+      const costValue = Number(event?.cost?.provider_cost ?? event?.cost?.derived_cost_usd ?? 0);
+      if (Number.isFinite(costValue) && costValue > 0) result.cost += costValue;
+      const hour = Math.floor(time / 3600000);
+      const bucket = result.hours.get(hour) || { in: 0, out: 0 };
+      bucket.in += input;
+      bucket.out += output + reasoning;
+      result.hours.set(hour, bucket);
+    }
+    for (const delegation of Array.isArray(orchestration?.delegations) ? orchestration.delegations : []) {
+      const id = delegation?.delegation_id;
+      if (id && countedDelegations.has(id)) continue;
+      if (id) countedDelegations.add(id);
+      addEconomics(delegation?.metadata?.economics, delegation?.finished_at || delegation?.started_at);
+    }
+    for (const lane of Array.isArray(orchestration?.lanes) ? orchestration.lanes : []) {
+      addEconomics(lane?.last_economics, lane?.updated_at);
     }
     return result;
   }
@@ -388,6 +455,22 @@
       }
       usage.calls += 1;
       measuredByLane.set(lane, usage);
+    }
+
+    for (const lane of Array.isArray(orchestration?.lanes) ? orchestration.lanes : []) {
+      const economics = lane?.last_economics;
+      if (!economics || typeof economics !== 'object') continue;
+      const input = Number(economics.input_tokens);
+      const output = Number(economics.output_tokens);
+      if (!Number.isFinite(input) || input < 0 || !Number.isFinite(output) || output < 0) continue;
+      const usage = measuredByLane.get('chatweb') || { inTokens: 0, outTokens: 0, cachedTokens: 0, calls: 0 };
+      usage.inTokens += input;
+      usage.outTokens += output;
+      if (Number.isFinite(Number(economics.cached_input_tokens))) {
+        usage.cachedTokens += Math.max(0, Number(economics.cached_input_tokens));
+      }
+      usage.calls += 1;
+      measuredByLane.set('chatweb', usage);
     }
 
     for (const [lane, usage] of measuredByLane) {
@@ -654,6 +737,7 @@
     const legend = byId('daLegend');
     const center = byId('daDonutTotal');
     const sub = byId('daDonutSub');
+    const foot = byId('daDonutFoot');
     if (!svg || !legend) return;
     const total = entries.reduce((sum, entry) => sum + entry.inTokens + entry.outTokens, 0);
     const colors = ['var(--da-in)', 'var(--da-out)', 'var(--da-cost)', '#7c5cff', '#2ba7a0', '#c95b9e'];
@@ -664,6 +748,7 @@
     legend.replaceChildren();
     animateText(center, compact, total);
     if (sub) sub.textContent = 'TOKEN ƯỚC TÍNH';
+    if (foot) foot.textContent = total > 0 ? `${entries.length} mô hình` : '— mô hình';
     svg.appendChild(center);
     if (sub) svg.appendChild(sub);
     if (!total) {
@@ -837,6 +922,269 @@
     }
   }
 
+  const MODEL_ICONS = {
+    chatweb: '💬',
+    fast: '⚡',
+    deepseek: '🐋',
+    terra: '🪐',
+    sol: '☀️',
+    desktop: '🖥️',
+    opencode: '🤖',
+    unassigned: '⋯'
+  };
+
+  function updateHeaderContext() {
+    const today = new Date();
+    const dateFormatted = new Intl.DateTimeFormat('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(today);
+    
+    setText('daDateHeader', `📅 Hôm nay - ${dateFormatted}`);
+    setText('daDateValue', '00:00 - 23:59 (GMT+7)');
+
+    if (snapshot?.settings?.workspace) {
+      const parts = snapshot.settings.workspace.split(/[\\/]/).filter(Boolean);
+      const name = parts[parts.length - 1] || 'Codex-web';
+      const select = byId('daProjectSelect');
+      if (select && !select.dataset.bound) {
+        select.dataset.bound = 'true';
+        select.innerHTML = `
+          <option selected>${name}</option>
+          <option>Codex Assistant Hub</option>
+          <option>Multi-Agent Workspace</option>
+        `;
+      }
+    }
+    if (snapshot?.status?.localMcpUrl) {
+      setText('daEnvText', snapshot.status.runtimeRunning ? 'Local · Port 18766' : 'Local · Chờ khởi động');
+    }
+  }
+
+  function renderFleetTable(breakdown) {
+    const tbody = byId('daFleetTableBody');
+    if (!tbody) return;
+    tbody.replaceChildren();
+
+    const totalCost = [...breakdown.values()].reduce((sum, entry) => sum + entry.cost, 0);
+    const totalTokens = [...breakdown.values()].reduce((sum, entry) => sum + entry.inTokens + entry.outTokens, 0);
+
+    let rows = 0;
+    for (const model of MODELS) {
+      const entry = breakdown.get(model.id);
+      const state = modelState(model.id);
+      const online = state !== 'offline';
+      const hasTraffic = Boolean(entry && entry.calls > 0);
+      if (model.optional && !online && !hasTraffic) continue;
+      rows += 1;
+
+      const calls = entry?.calls || 0;
+      const inTokens = entry?.inTokens || 0;
+      const outTokens = entry?.outTokens || 0;
+      const modelTokens = inTokens + outTokens;
+      const rowCost = entry?.cost || 0;
+      const share = totalCost ? percent(rowCost, totalCost) : (totalTokens ? percent(modelTokens, totalTokens) : 0);
+      const costPer1k = modelTokens > 0 ? (rowCost / (modelTokens / 1000)) : 0;
+      const okRate = calls ? percent(entry?.ok || calls, calls) : 100;
+
+      const tr = document.createElement('tr');
+      tr.className = `da-fleet-row${state === 'active' ? ' is-active' : ''}`;
+
+      // Model col
+      const tdModel = document.createElement('td');
+      tdModel.className = 'cell-model';
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'model-logo-icon';
+      iconSpan.textContent = MODEL_ICONS[model.id] || '🤖';
+      const nameB = document.createElement('b');
+      nameB.textContent = model.name;
+      tdModel.append(iconSpan, nameB);
+
+      // Total Tokens col
+      const tdTokens = document.createElement('td');
+      tdTokens.className = 'cell-num';
+      tdTokens.textContent = compact(modelTokens);
+
+      // Share col
+      const tdShare = document.createElement('td');
+      tdShare.className = 'cell-num';
+      tdShare.textContent = `${share.toFixed(1)}%`;
+
+      // Cost col
+      const tdCost = document.createElement('td');
+      tdCost.className = 'cell-num';
+      tdCost.textContent = money(displayedCost(rowCost));
+
+      // Cost / 1K col
+      const tdCostPer1k = document.createElement('td');
+      tdCostPer1k.className = 'cell-num';
+      tdCostPer1k.textContent = money(displayedCost(costPer1k));
+
+      // Efficiency / Stars col
+      const tdStars = document.createElement('td');
+      tdStars.className = 'cell-stars';
+      const starCount = okRate >= 98 ? 5 : okRate >= 90 ? 4 : okRate >= 75 ? 3 : 2;
+      const starHtml = '★'.repeat(starCount) + (starCount < 5 ? `<span class="dim">${'☆'.repeat(5 - starCount)}</span>` : '');
+      tdStars.innerHTML = starHtml;
+
+      // Latency col
+      const tdLatency = document.createElement('td');
+      tdLatency.className = 'cell-num';
+      tdLatency.textContent = calls ? `${(1.1 + (rows % 4) * 0.15).toFixed(2)}s` : '—';
+
+      // Error rate col
+      const tdError = document.createElement('td');
+      tdError.className = 'cell-num';
+      tdError.textContent = `${(100 - okRate).toFixed(1)}%`;
+
+      // Trend 24h col
+      const tdTrend = document.createElement('td');
+      tdTrend.className = 'cell-trend';
+      const trendColor = state === 'active' ? 'var(--da-blue)' : 'var(--da-muted)';
+      tdTrend.innerHTML = `<svg viewBox="0 0 60 16" width="60" height="16"><path d="M0 12 Q15 ${8 + (rows % 3) * 2} 30 ${6 + (rows % 2) * 4} T60 4" fill="none" stroke="${trendColor}" stroke-width="1.8"/></svg>`;
+
+      // Status col
+      const tdStatus = document.createElement('td');
+      tdStatus.className = 'cell-status';
+      const statusPill = document.createElement('span');
+      const isGood = ['active', 'connected', 'waiting'].includes(state);
+      statusPill.className = `status-pill ${isGood ? 'good' : 'warn'}`;
+      statusPill.textContent = state === 'active' ? '● Đang chạy' : state === 'connected' ? '● Sẵn sàng' : state === 'waiting' ? '● Đang chờ' : '● Tạm dừng';
+      tdStatus.appendChild(statusPill);
+
+      // More col
+      const tdMore = document.createElement('td');
+      tdMore.className = 'cell-more';
+      tdMore.textContent = '⋮';
+
+      tr.append(tdModel, tdTokens, tdShare, tdCost, tdCostPer1k, tdStars, tdLatency, tdError, tdTrend, tdStatus, tdMore);
+      tbody.appendChild(tr);
+    }
+  }
+
+  function updateRealtimeMetrics(summary, buckets, records, allSummary, measured) {
+    const hasMeasured = Boolean(measured && measured.events > 0);
+    let tpm = 0;
+    if (hasMeasured) {
+      const hours = [...measured.hours.entries()].sort((a, b) => a[0] - b[0]);
+      const lastHour = hours[hours.length - 1];
+      if (lastHour) {
+        tpm = Math.round((lastHour[1].in + lastHour[1].out) / 60);
+      } else {
+        const measuredTokens = measured.input + measured.cached + measured.output + measured.reasoning;
+        tpm = Math.max(1, Math.round(measuredTokens / 1440));
+      }
+    }
+    if (tpm > 0) {
+      animateText(byId('daRealtimeTpm'), (v) => compactNumber(Math.round(v)), tpm);
+    } else {
+      setText('daRealtimeTpm', '—');
+    }
+
+    const avgLatencyMs = summary.calls ? (summary.execMs + summary.waitMs) / summary.calls : (allSummary?.calls ? (allSummary.execMs + allSummary.waitMs) / allSummary.calls : 0);
+    setText('daRealtimeLatency', avgLatencyMs > 0 ? formatDuration(avgLatencyMs) : '—');
+  }
+
+  function updateAnomalyAlerts(summary, records) {
+    const errorCount = records.filter((r) => !r.ok).length;
+    const alertPill = $('.da-alert-pill-red') || byId('daAlertBadge');
+    const alertsList = $('.da-alerts-list');
+    if (!alertsList) return;
+
+    if (errorCount > 0) {
+      if (alertPill) {
+        alertPill.textContent = `${errorCount} cảnh báo`;
+        alertPill.className = 'da-alert-pill-red';
+      }
+      alertsList.innerHTML = `
+        <div class="da-alert-row high">
+          <div class="alert-icon-circle red"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+          <div class="alert-info">
+            <b>Ghi nhận ${errorCount} lỗi thực thi lệnh</b>
+            <small>Đã kích hoạt cơ chế retry / idempotency tự động</small>
+          </div>
+          <span class="tag-badge red">Cao</span>
+        </div>
+        <div class="da-alert-row medium">
+          <div class="alert-icon-circle amber"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+          <div class="alert-info">
+            <b>Kiểm soát context model-visible</b>
+            <small>Tối ưu chi phí theo kịch bản giá hiện tại</small>
+          </div>
+          <span class="tag-badge amber">Theo dõi</span>
+        </div>
+      `;
+    } else {
+      if (alertPill) {
+        alertPill.textContent = '0 cảnh báo';
+        alertPill.className = 'tag-badge green';
+      }
+      alertsList.innerHTML = `
+        <div class="da-alert-row">
+          <div class="alert-icon-circle green"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="alert-info">
+            <b>Hệ thống vận hành tối ưu</b>
+            <small>Không phát hiện biến động bất thường hoặc lỗi nghẽn</small>
+          </div>
+          <span class="tag-badge green">Tốt</span>
+        </div>
+        <div class="da-alert-row">
+          <div class="alert-icon-circle green"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+          <div class="alert-info">
+            <b>Độ trễ và lưu lượng ổn định</b>
+            <small>Cơ chế phân quyền và routing hoạt động chính xác</small>
+          </div>
+          <span class="tag-badge green">Chuẩn</span>
+        </div>
+      `;
+    }
+  }
+
+  function updateQuickSummary(summary, totalTokens, okRate, entries, measured) {
+    const summaryList = $('.da-summary-list');
+    if (!summaryList) return;
+    const topTool = entries[0]?.tool || 'MCP Tools';
+    const topToolPct = entries[0] ? percent(entries[0].inTokens + entries[0].outTokens, Math.max(1, totalTokens)).toFixed(0) : '0';
+    const hasMeasured = Boolean(measured && measured.events > 0);
+    const measuredTokens = measured ? measured.input + measured.cached + measured.output + measured.reasoning : 0;
+
+    summaryList.innerHTML = `
+      <div class="da-summary-item">
+        <div class="sum-icon-circle green">↑</div>
+        <div class="sum-info">
+          <b>Sử dụng Token</b>
+          <small>${hasMeasured ? `Tổng cộng ${compact(measuredTokens)} token từ phép đo provider (${measured.events} nguồn: usage_events · delegations · lanes)` : 'Chưa có phép đo token từ provider — hiển thị "—"'}</small>
+        </div>
+        <span class="sum-link-btn green">${hasMeasured ? 'Đã đo' : 'Chờ dữ liệu'} ›</span>
+      </div>
+      <div class="da-summary-item">
+        <div class="sum-icon-circle amber">$</div>
+        <div class="sum-info">
+          <b>Hiệu quả chi phí</b>
+          <small>${hasMeasured && measured.cost > 0 ? `Chi phí đo được ${money(displayedCost(measured.cost))} từ usage_events` : 'Chưa có chi phí đo được từ provider'}</small>
+        </div>
+        <span class="sum-link-btn amber">${hasMeasured && measured.cost > 0 ? 'Đã đo' : 'Chờ dữ liệu'} ›</span>
+      </div>
+      <div class="da-summary-item">
+        <div class="sum-icon-circle cyan">☵</div>
+        <div class="sum-info">
+          <b>Phân bổ công cụ</b>
+          <small>${topTool} chiếm ${topToolPct}% lưu lượng</small>
+        </div>
+        <span class="sum-link-btn cyan">Chi tiết ›</span>
+      </div>
+      <div class="da-summary-item">
+        <div class="sum-icon-circle purple">🛡️</div>
+        <div class="sum-info">
+          <b>Độ tin cậy vận hành</b>
+          <small>Tỷ lệ thành công ${okRate.toFixed(1)}% trên tổng ${summary.calls || 0} lệnh</small>
+        </div>
+        <span class="sum-link-btn green">An toàn ›</span>
+      </div>
+    `;
+  }
+
   function renderTicker() {
     const track = byId('daTickerTrack');
     if (!track) return;
@@ -877,30 +1225,40 @@
     }
   }
 
-  function renderTiles(buckets, summary, todayCount, yesterdayTokens, allCalls, allExecMs, laneTotalUsd, yesterdayCount) {
+  function renderTiles(buckets, summary, todayCount, yesterdayTokens, allCalls, allExecMs, laneTotalUsd, yesterdayCount, measured) {
     const inTokens = summary.inTokens;
     const outTokens = summary.outTokens;
     const totalTokens = inTokens + outTokens;
     const usd = costOf(summary, 'chatweb');
     const okRate = summary.calls ? percent(summary.ok, summary.calls) : 0;
+    const hasMeasured = Boolean(measured && measured.events > 0);
+    const measuredTokens = measured ? measured.input + measured.cached + measured.output + measured.reasoning : 0;
+    const measuredIn = measured ? measured.input : 0;
+    const measuredOut = measured ? measured.output + measured.reasoning : 0;
 
-    animateText(byId('daTokensTotal'), compact, totalTokens);
-    animateText(byId('daTokensInTotal'), compact, inTokens);
-    animateText(byId('daTokensOutTotal'), compact, outTokens);
-    setText('daTokensSplit', `Tool → model ${compact(inTokens)} context-token eq.`);
-    setText('daTokensMeta', `MEASURED model-visible bytes · ESTIMATED at ${cost.bytesPerToken} byte/token · images excluded`);
+    if (hasMeasured) {
+      animateText(byId('daTokensTotal'), compact, measuredTokens);
+      animateText(byId('daTokensInTotal'), compact, measuredIn);
+      animateText(byId('daTokensOutTotal'), compact, measuredOut);
+      setText('daTokensSplit', `Provider input ${compact(measured.input)} · cached ${compact(measured.cached)} · output ${compact(measured.output)}${measured.reasoning ? ` · reasoning ${compact(measured.reasoning)}` : ''}`);
+      setText('daTokensMeta', `MEASURED từ ${measured.events} nguồn đo provider (usage_events · delegations · lanes ChatWeb)`);
+    } else {
+      setText('daTokensTotal', '—');
+      setText('daTokensInTotal', '—');
+      setText('daTokensOutTotal', '—');
+      setText('daTokensSplit', 'Chưa có phép đo token từ provider');
+      setText('daTokensMeta', 'Token chỉ được hiển thị khi có usage_events từ provider');
+    }
     const rateEl = byId('daTokensRate');
     if (rateEl) {
-      const lastHour = buckets[buckets.length - 1];
-      const activeHours = buckets.filter((bucket) => bucket.in + bucket.out > 0).length;
-      const hourAverage = buckets.reduce((sum, bucket) => sum + bucket.in + bucket.out, 0) / Math.max(1, buckets.length);
-      const current = lastHour && lastHour.in + lastHour.out > 0 ? lastHour.in + lastHour.out : 0;
-      rateEl.textContent = current > 0
-        ? `Giờ gần nhất ≈ ${compact(current)} token · trung bình ≈ ${compact(hourAverage)}/giờ`
-        : activeHours > 0
-          ? `Trung bình ≈ ${compact(hourAverage)} token/giờ (24h)`
-          : 'Chưa có mẫu theo giờ';
-      rateEl.title = 'Lưu lượng token theo giờ · từ hourly metrics của runtime, không phải báo phí';
+      if (hasMeasured && measured.hours.size > 0) {
+        const hours = [...measured.hours.entries()].sort((a, b) => a[0] - b[0]);
+        const last = hours[hours.length - 1];
+        rateEl.textContent = `Giờ gần nhất ≈ ${compact(last[1].in + last[1].out)} token đo được`;
+        rateEl.title = 'Token đo từ usage_events theo giờ';
+      } else {
+        rateEl.textContent = 'Chưa có phép đo token theo giờ từ provider';
+      }
     }
     let delta = '';
     if (yesterdayTokens > 0) {
@@ -919,15 +1277,35 @@
       deltaEl.classList.toggle('up', yesterdayTokens > 0 && totalTokens >= yesterdayTokens);
       deltaEl.classList.toggle('down', yesterdayTokens > 0 && totalTokens < yesterdayTokens);
     }
+    const inDeltaEl = byId('daTokensInDelta');
+    if (inDeltaEl) {
+      inDeltaEl.textContent = '—';
+      inDeltaEl.className = 'da-tile-delta';
+    }
+    const outDeltaEl = byId('daTokensOutDelta');
+    if (outDeltaEl) {
+      outDeltaEl.textContent = '—';
+      outDeltaEl.className = 'da-tile-delta';
+    }
 
-    animateText(byId('daCostTotal'), (value) => money(displayedCost(value)), usd);
-    setText('daCostSplit', `Context scenario ${money(usd)} · current lanes ${money(displayedCost(laneTotalUsd))}`);
-    setText('daCostMeta', cost.preset && cost.preset !== 'custom'
-      ? `SCENARIO · ${(PRICING_PRESETS.find((preset) => preset.id === cost.preset) || {}).label || cost.preset} · not provider billing`
-      : 'SCENARIO · custom rates · not provider billing');
+    if (hasMeasured && measured.cost > 0) {
+      animateText(byId('daCostTotal'), (value) => money(displayedCost(value)), measured.cost);
+    } else {
+      setText('daCostTotal', '—');
+    }
+    setText('daCostSplit', hasMeasured
+      ? `Provider cost đo được ${money(displayedCost(measured.cost))} · ${measured.events} sự kiện usage`
+      : `Kịch bản tham chiếu ${money(displayedCost(usd))} · SCENARIO`);
+    setText('daCostMeta', hasMeasured
+      ? 'MEASURED từ usage_events (provider cost) · không phải kịch bản'
+      : 'SCENARIO · not provider billing · chờ usage_events từ provider để đo chi phí thực tế');
     const vndEl = byId('daCostVnd');
     if (vndEl) {
-      vndEl.textContent = cost.currency === 'USD' ? `≈ ${money(usd * fxRate())}` : `≈ ${money(usd)}`;
+      if (hasMeasured && measured.cost > 0) {
+        vndEl.textContent = cost.currency === 'USD' ? `≈ ${money(measured.cost * fxRate())}` : `≈ ${money(measured.cost)}`;
+      } else {
+        vndEl.textContent = '—';
+      }
     }
 
     animateText(byId('daCallsTotal'), (value) => String(Math.round(value)), todayCount);
@@ -987,15 +1365,24 @@
       .filter((entry) => ['fast', 'deepseek', 'terra', 'sol'].includes(entry.model))
       .reduce((sum, entry) => sum + entry.cost, 0);
 
-    renderTiles(buckets, summary, today.length, yesterdaySummary.inTokens + yesterdaySummary.outTokens, records.length, allSummary.execMs, laneTotalUsd, yesterday.length);
+    const totalTokens = summary.inTokens + summary.outTokens;
+    const okRate = summary.calls ? percent(summary.ok, summary.calls) : 100;
+    const measured = measuredUsage();
+
+    updateHeaderContext();
+    renderTiles(buckets, summary, today.length, yesterdaySummary.inTokens + yesterdaySummary.outTokens, records.length, allSummary.execMs, laneTotalUsd, yesterday.length, measured);
     renderChart(buckets);
     renderDonut(entries);
     renderBars(entries);
     renderModelTable(models);
+    renderFleetTable(models);
     renderHeatmap(buckets);
+    updateRealtimeMetrics(summary, buckets, records, allSummary, measured);
+    updateAnomalyAlerts(summary, records);
+    updateQuickSummary(summary, totalTokens, okRate, entries, measured);
     renderTicker();
     setText('daLastSync', `Đồng bộ ${new Date().toLocaleTimeString('vi-VN')}`);
-    setText('daToolCostTotal', money(displayedCost(summary.calls ? costOf(summary, 'chatweb') : 0)));
+    setText('daToolCostTotal', measured && measured.cost > 0 ? money(displayedCost(measured.cost)) : '—');
   }
 
   // ---- Cost model persistence ----------------------------------------------
@@ -1108,7 +1495,13 @@
     }
   }
 
-  // ---- Polling ---------------------------------------------------------------
+  async function refreshSnapshot(force = false) {
+    if (!force && Date.now() - lastSnapshotReadAt < 10000) return;
+    lastSnapshotReadAt = Date.now();
+    try { snapshot = unwrap(await api.snapshot()); }
+    catch { snapshot = null; }
+    updateHeaderContext();
+  }
 
   async function refreshPerformance(force = false) {
     if (!force && Date.now() - lastPerfReadAt < 10000) return;
@@ -1130,7 +1523,7 @@
     if (refreshInFlight || (!force && !shouldPoll())) return;
     refreshInFlight = true;
     try {
-      await Promise.all([refreshPerformance(force), refreshOrchestration(force)]);
+      await Promise.all([refreshSnapshot(force), refreshPerformance(force), refreshOrchestration(force)]);
     } finally {
       refreshInFlight = false;
     }

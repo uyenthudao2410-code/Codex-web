@@ -84,9 +84,15 @@ def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, objec
     workload_guidance = population.get("workload_guidance") if isinstance(population.get("workload_guidance"), dict) else {}
     measurement_design = population.get("measurement_design") if isinstance(population.get("measurement_design"), dict) else {}
     replan_diagnostics = population.get("replan_diagnostics") if isinstance(population.get("replan_diagnostics"), dict) else {}
-    empirically_complete = gate.get("can_answer_which_signals_predict_repair") is True
+    gate_predictive_ready = gate.get("can_answer_which_signals_predict_repair") is True
+    validated_signals = validation.get("validated_signals") if isinstance(validation.get("validated_signals"), list) else []
+    validated_predictive_signal_ready = any(
+        isinstance(signal, str) and bool(signal.strip()) for signal in validated_signals
+    )
+    empirically_complete = gate_predictive_ready and validated_predictive_signal_ready
     git_baseline = _git_baseline_status(root)
     p5_baseline_ready = git_baseline.get("p5_baseline_ready") is True
+    p5_treatment_ready = empirically_complete and validated_predictive_signal_ready and p5_baseline_ready
     shadow_tasks = int(cohort.get("shadow_tasks") or 0)
     if empirically_complete and p5_baseline_ready:
         state = "EMPIRICALLY_COMPLETE"
@@ -112,7 +118,12 @@ def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, objec
         "p4_empirically_complete": empirically_complete,
         "git_baseline": git_baseline,
         "p5_baseline_ready": p5_baseline_ready,
-        "p5_controlled_treatment_may_be_opened": empirically_complete and p5_baseline_ready,
+        "p5_readiness_requirements": {
+            "p4_gate_can_answer_which_signals_predict_repair": gate_predictive_ready,
+            "validated_predictive_signal_present": validated_predictive_signal_ready,
+            "clean_upstream_matched_baseline": p5_baseline_ready,
+        },
+        "p5_controlled_treatment_may_be_opened": p5_treatment_ready,
         "automatic_policy_activation": False,
         "p5_automatic_start": False,
         "policy": policy,
@@ -134,7 +145,10 @@ def main() -> int:
     parser.add_argument(
         "--require-p5-ready",
         action="store_true",
-        help="Exit non-zero unless P4 is empirically complete and the Git baseline is clean and upstream-matched.",
+        help=(
+            "Exit non-zero unless the P4 predictive gate is complete, at least one validated predictive signal "
+            "is present, and the Git baseline is clean and upstream-matched."
+        ),
     )
     args = parser.parse_args()
     result = p4_readiness_report(Path(args.workspace), limit=args.limit)

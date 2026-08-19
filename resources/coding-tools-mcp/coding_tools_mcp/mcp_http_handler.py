@@ -503,6 +503,18 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "controller": controller_view,
             "pending_message_count": len(pending_messages),
         }
+        lane_view = [
+            {
+                "lane_id": str(item.get("lane_id") or ""),
+                "lifecycle": item.get("lifecycle"),
+                "provider": item.get("provider"),
+                "profile": item.get("profile"),
+                "model": item.get("model"),
+                "updated_at": item.get("updated_at"),
+                "last_economics": (item.get("metadata") or {}).get("last_economics"),
+            }
+            for item in (ledger.list_agent_lanes(run_id=run_id) or [])[:12]
+        ]
         return {
             "schema_version": 2,
             "task": {
@@ -522,6 +534,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "events": compact_events,
             "proofs": proofs,
             "delegations": (summary.get("delegations") or [])[-4:],
+            "lanes": lane_view,
             "usage_events": ledger.list_usage_events(run_id, limit=8) if run_id else [],
             "routing_evidence": ledger.routing_evidence(run_id, limit=8) if run_id else {
                 "shadow_recommendations": [], "actual_delegations": [], "usage_events": []

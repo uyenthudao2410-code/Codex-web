@@ -158,6 +158,82 @@ function renderHub(data) {
   $('#continuityStatus').className = `badge kpi-mini-badge ${safe ? 'status-active' : 'status-hold'}`;
 }
 
+const TERMINAL_DELEGATION_STATUSES = new Set(['completed', 'failed', 'cancelled', 'stopped', 'rejected']);
+const LANE_MATCHERS = [
+  { key: 'Fast', test: (text) => /(?:^|[^a-z])(mini|luna)(?:[^a-z]|$)/.test(text) },
+  { key: 'DeepSeek', test: (text) => text.includes('deepseek') || /(?:^|\s)opencode(?:\s|$)/.test(text) },
+  { key: 'Terra', test: (text) => text.includes('terra') },
+  { key: 'Sol', test: (text) => /sol_(xhigh|max|ultra)/.test(text) || /(?:^|\s)sol(?:\s|$)/.test(text) },
+];
+
+function setFabricState(element, state) {
+  if (!element) return;
+  element.classList.remove('active', 'connected', 'waiting', 'blocked', 'offline');
+  element.classList.add(state);
+}
+
+function renderRouting(data) {
+  const clients = Array.isArray(data?.clients) ? data.clients : [];
+  const clientByType = (type) => clients.find((client) => client?.client_type === type);
+  const frontends = [
+    ['ChatWeb', clientByType('chatweb')],
+    ['Desktop', clientByType('codex_desktop')],
+    ['OpenCode', clientByType('opencode')],
+  ];
+  let onlineClients = 0;
+  frontends.forEach(([key, client]) => {
+    const online = Boolean(client?.online);
+    if (online) onlineClients += 1;
+    setFabricState($(`#router${key}`), online ? 'active' : 'offline');
+    setFabricState($(`#routerEdge${key}`), online ? 'active' : 'offline');
+    const label = $(`#router${key} .router-state`);
+    if (label) label.textContent = online ? '● TRỰC TUYẾN' : '● NGOẠI TUYẾN';
+  });
+
+  const hubUp = Boolean(data?.run || data?.task || Array.isArray(data?.events));
+  setFabricState($('#routerHub'), hubUp ? 'active' : 'offline');
+  const hubLabel = $('#routerHub .router-state');
+  if (hubLabel) hubLabel.textContent = hubUp ? '● TRỰC TUYẾN' : '● NGOẠI TUYẾN';
+
+  const write = data?.authority?.write || {};
+  const writing = String(write.status || '').toLowerCase() === 'active';
+  setFabricState($('#routerWriter'), writing ? 'active' : hubUp ? 'connected' : 'offline');
+  setFabricState($('#routerEdgeWriter'), writing ? 'active' : hubUp ? 'connected' : 'offline');
+  const writerLabel = $('#routerWriter .router-state');
+  if (writerLabel) writerLabel.textContent = writing ? '● ĐANG GHI' : hubUp ? '● SẴN SÀNG' : '● NGOẠI TUYẾN';
+
+  const delegations = Array.isArray(data?.delegations) ? data.delegations : [];
+  const runningCount = delegations.filter((item) => {
+    const status = String(item?.status || '').toLowerCase();
+    return status !== '' && !TERMINAL_DELEGATION_STATUSES.has(status);
+  }).length;
+  const laneEvidence = {};
+  delegations.forEach((delegation) => {
+    const text = `${delegation.route_resolved || ''} ${delegation.model || ''}`.toLowerCase();
+    const lane = LANE_MATCHERS.find(({ test }) => test(text));
+    if (!lane) return;
+    const terminal = TERMINAL_DELEGATION_STATUSES.has(String(delegation.status || '').toLowerCase());
+    if (!terminal) laneEvidence[lane.key] = 'active';
+    else if (!laneEvidence[lane.key]) laneEvidence[lane.key] = 'connected';
+  });
+  const automatic = data?.provider_traffic?.automatic_routing || {};
+  LANE_MATCHERS.forEach(({ key }) => {
+    let state = laneEvidence[key] || '';
+    let label = '';
+    if (state === 'active') label = '● ĐANG HOẠT ĐỘNG';
+    else if (state === 'connected') label = '● CÓ BẰNG CHỨNG';
+    else if (automatic.enabled) { state = 'connected'; label = '● SẴN SÀNG'; }
+    else { state = 'waiting'; label = '● CHỜ EVIDENCE'; }
+    setFabricState($(`#router${key}`), state);
+    setFabricState($(`#routerEdge${key}`), state);
+    const laneLabel = $(`#router${key} .router-state`);
+    if (laneLabel) laneLabel.textContent = label;
+  });
+
+  const kpi = $('#routingEvidenceKpi');
+  if (kpi) kpi.textContent = `${onlineClients}/3 client · ${runningCount} tuyến chạy`;
+}
+
 function renderEvents(events) {
   const list = $('#eventList');
   const items = Array.isArray(events) ? events : [];
@@ -234,6 +310,7 @@ async function refreshOrchestration(force = false) {
       renderTask(data?.task);
       renderRun(data);
       renderHub(data);
+      renderRouting(data);
       renderEvents(data?.events);
       renderProofs(data?.proofs);
       renderDelegations(data?.delegations);

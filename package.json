@@ -20,6 +20,7 @@
     "check:repository-secrets": "node scripts/check-sensitive-tracked.js",
     "check:coding-tools-history": "npm run check:repository-secrets && node scripts/check-coding-tools-history.js",
     "check:coding-tools-delivery": "npm run check:repository-secrets && node scripts/check-coding-tools-history.js --require-staged",
+    "check:p5-readiness": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-p5-ready",
     "benchmark:routing": "cd resources/coding-tools-mcp && python -m benchmarks.routing_economics",
     "benchmark:activation": "cd resources/coding-tools-mcp && python -m benchmarks.runtime_activation",
     "probe:execution-hub": "node scripts/execution-hub-activation-probe.js",

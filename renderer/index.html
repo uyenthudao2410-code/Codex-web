@@ -92,7 +92,7 @@
             <div class="da-section-head">
               <div>
                 <h2>Phân tích Context & Chi phí</h2>
-                <p>Model-visible bytes được đo từ text MCP thực sự trả cho model trong recent trace. Token chỉ là ước tính theo hệ số byte/token (ESTIMATED); usage token của lane model chỉ được coi là MEASURED khi có delegation economics. Chi phí luôn là SCENARIO, không phải billing của nhà cung cấp. Request/response transport bytes không được coi là token và không dữ liệu nào ở đây là hóa đơn nhà cung cấp.</p>
+                <p>Model-visible bytes được đo từ text MCP thực sự trả cho model trong recent trace; token chỉ là ước tính (ESTIMATED) và không hiển thị ở KPI chính. KPI token & chi phí chỉ hiển thị phép đo THỰC TẾ từ provider (usage_events của các delegation); khi chưa có phép đo nào hiển thị "—" thay vì số giả định. Chi phí SCENARIO chỉ là tham chiếu, không phải hóa đơn nhà cung cấp. Request/response transport bytes không được coi là token và không dữ liệu nào ở đây là hóa đơn nhà cung cấp.</p>
               </div>
             </div>
 
@@ -103,8 +103,8 @@
                   <div class="filter-copy">
                     <small>Dự án</small>
                     <select id="daProjectSelect">
-                      <option selected>Nền tảng AI Doanh nghiệp</option>
-                      <option>Codex Assistant Hub</option>
+                      <option selected>Codex-web</option>
+                      <option>Nền tảng AI Doanh nghiệp</option>
                       <option>Multi-Agent Workspace</option>
                     </select>
                   </div>
@@ -113,14 +113,14 @@
                 <div class="da-filter-pill">
                   <div class="filter-copy">
                     <small>Môi trường</small>
-                    <b><i class="env-dot-live"></i>Production</b>
+                    <b><i class="env-dot-live"></i><span id="daEnvText">Production</span></b>
                   </div>
                 </div>
 
-                <div class="da-filter-pill date-pill">
+                <div class="da-filter-pill date-pill" id="daDatePill">
                   <div class="filter-copy">
-                    <small>📅 Hôm nay - 23/05/2025</small>
-                    <b>00:00 - 23:59 (GMT+7)</b>
+                    <small id="daDateHeader">📅 Hôm nay</small>
+                    <b id="daDateValue">00:00 - 23:59 (GMT+7)</b>
                   </div>
                 </div>
               </div>
@@ -166,9 +166,9 @@
                   </div>
                   <span class="da-tile-label">TỔNG TOKEN</span>
                 </div>
-                <div class="da-tile-value" id="daTokensTotal">216.8M</div>
+                <div class="da-tile-value" id="daTokensTotal">—</div>
                 <div class="da-tile-foot-row">
-                  <span class="da-tile-delta positive" id="daTokensDelta">↑ 18.7% <small>so với hôm qua</small></span>
+                  <span class="da-tile-delta" id="daTokensDelta">—</span>
                   <div class="da-mini-spark-wave blue" id="daSpark">
                     <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 16 Q15 6 30 12 T60 4" fill="none" stroke="#38bdf8" stroke-width="2.2"/></svg>
                   </div>
@@ -185,9 +185,9 @@
                   </div>
                   <span class="da-tile-label">TOKEN ĐẦU VÀO</span>
                 </div>
-                <div class="da-tile-value" id="daTokensInTotal">148.9M</div>
+                <div class="da-tile-value" id="daTokensInTotal">—</div>
                 <div class="da-tile-foot-row">
-                  <span class="da-tile-delta positive" id="daTokensInDelta">↑ 16.2% <small>so với hôm qua</small></span>
+                  <span class="da-tile-delta" id="daTokensInDelta">—</span>
                   <div class="da-mini-spark-wave cyan">
                     <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 15 Q15 18 30 8 T60 5" fill="none" stroke="#06b6d4" stroke-width="2.2"/></svg>
                   </div>
@@ -202,9 +202,9 @@
                   </div>
                   <span class="da-tile-label">TOKEN ĐẦU RA</span>
                 </div>
-                <div class="da-tile-value" id="daTokensOutTotal">67.9M</div>
+                <div class="da-tile-value" id="daTokensOutTotal">—</div>
                 <div class="da-tile-foot-row">
-                  <span class="da-tile-delta positive" id="daTokensOutDelta">↑ 22.3% <small>so với hôm qua</small></span>
+                  <span class="da-tile-delta" id="daTokensOutDelta">—</span>
                   <div class="da-mini-spark-wave purple">
                     <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 18 Q15 5 30 14 T60 6" fill="none" stroke="#a855f7" stroke-width="2.2"/></svg>
                   </div>
@@ -219,15 +219,15 @@
                   </div>
                   <span class="da-tile-label">CHI PHÍ HÔM NAY</span>
                 </div>
-                <div class="da-tile-value" id="daCostTotal">$1,382.74</div>
+                <div class="da-tile-value" id="daCostTotal">—</div>
                 <div class="da-tile-foot-row">
-                  <span class="da-tile-delta is-cost" id="daCostVnd">↑ 12.1% <small>so với hôm qua</small></span>
+                  <span class="da-tile-delta is-cost" id="daCostVnd">—</span>
                   <div class="da-mini-spark-wave green">
                     <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 14 Q15 18 30 10 T60 4" fill="none" stroke="#10b981" stroke-width="2.2"/></svg>
                   </div>
                 </div>
-                <div class="da-tile-sub" id="daCostSplit" hidden>Ước tính theo SCENARIO</div>
-                <div class="da-tile-sub" id="daCostMeta" hidden>so với hôm qua</div>
+                <div class="da-tile-sub" id="daCostSplit" hidden>—</div>
+                <div class="da-tile-sub" id="daCostMeta" hidden>—</div>
               </article>
 
               <!-- Tile 5: HIỆU SUẤT / 1K TOKEN -->
@@ -238,15 +238,15 @@
                   </div>
                   <span class="da-tile-label">HIỆU SUẤT / 1K TOKEN</span>
                 </div>
-                <div class="da-tile-value" id="daEfficiencyTotal">$0.0064</div>
+                <div class="da-tile-value" id="daEfficiencyTotal">—</div>
                 <div class="da-tile-foot-row">
-                  <span class="da-tile-delta positive" id="daEfficiencyDelta">↓ 8.4% <small>so với hôm qua</small></span>
+                  <span class="da-tile-delta" id="daEfficiencyDelta">—</span>
                   <div class="da-mini-spark-wave amber">
                     <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 8 Q15 16 30 11 T60 17" fill="none" stroke="#f59e0b" stroke-width="2.2"/></svg>
                   </div>
                 </div>
-                <div class="da-tile-sub" id="daEfficiencyMeta" hidden>Tối ưu chi phí</div>
-                <div class="da-tile-sub" id="daEfficiencySub" hidden>so với hôm qua</div>
+                <div class="da-tile-sub" id="daEfficiencyMeta" hidden>—</div>
+                <div class="da-tile-sub" id="daEfficiencySub" hidden>—</div>
                 <svg id="daCallsRing" width="36" height="36" style="position:absolute;right:14px;bottom:12px" aria-hidden="true" hidden></svg>
               </article>
 
@@ -258,14 +258,14 @@
                   </div>
                   <span class="da-tile-label">TỶ LỆ LỖI</span>
                 </div>
-                <div class="da-tile-value" id="daCallsTotal">0.42%</div>
+                <div class="da-tile-value" id="daCallsTotal">—</div>
                 <div class="da-tile-foot-row">
-                  <span class="da-tile-delta positive" id="daCallsDelta">↓ 0.18% <small>so với hôm qua</small></span>
+                  <span class="da-tile-delta" id="daCallsDelta">—</span>
                   <div class="da-mini-spark-wave teal">
                     <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 6 Q15 14 30 8 T60 16" fill="none" stroke="#14b8a6" stroke-width="2.2"/></svg>
                   </div>
                 </div>
-                <div class="da-tile-sub" id="daCallsMeta" hidden>Lượt gọi</div>
+                <div class="da-tile-sub" id="daCallsMeta" hidden>—</div>
               </article>
             </div>
 
@@ -292,69 +292,7 @@
                 </div>
                 <div class="cc-card-body">
                   <div class="da-chart-wrap" id="daChartCard">
-                    <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Context model-visible trong recent trace" role="img">
-                      <defs>
-                        <linearGradient id="chartBlueGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>
-                          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
-                        </linearGradient>
-                        <linearGradient id="chartCyanGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.25"/>
-                          <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0"/>
-                        </linearGradient>
-                        <linearGradient id="chartPurpleGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stop-color="#a855f7" stop-opacity="0.25"/>
-                          <stop offset="100%" stop-color="#a855f7" stop-opacity="0.0"/>
-                        </linearGradient>
-                      </defs>
-                      <!-- Horizontal Grid Lines -->
-                      <line x1="40" x2="630" y1="30" y2="30" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3 3"/>
-                      <text x="32" y="34" fill="#64748b" font-size="9" text-anchor="end">200M</text>
-                      <line x1="40" x2="630" y1="65" y2="65" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3 3"/>
-                      <text x="32" y="69" fill="#64748b" font-size="9" text-anchor="end">160M</text>
-                      <line x1="40" x2="630" y1="100" y2="100" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3 3"/>
-                      <text x="32" y="104" fill="#64748b" font-size="9" text-anchor="end">120M</text>
-                      <line x1="40" x2="630" y1="135" y2="135" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3 3"/>
-                      <text x="32" y="139" fill="#64748b" font-size="9" text-anchor="end">80M</text>
-                      <line x1="40" x2="630" y1="170" y2="170" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3 3"/>
-                      <text x="32" y="174" fill="#64748b" font-size="9" text-anchor="end">40M</text>
-                      <line x1="40" x2="630" y1="195" y2="195" stroke="rgba(255,255,255,0.1)"/>
-                      <text x="32" y="198" fill="#64748b" font-size="9" text-anchor="end">0</text>
-                      
-                      <!-- X-Axis Labels -->
-                      <text x="45" y="208" fill="#64748b" font-size="8.5" text-anchor="middle">00:00</text>
-                      <text x="128" y="208" fill="#64748b" font-size="8.5" text-anchor="middle">03:00</text>
-                      <text x="211" y="208" fill="#64748b" font-size="8.5" text-anchor="middle">06:00</text>
-                      <text x="294" y="208" fill="#64748b" font-size="8.5" text-anchor="middle">09:00</text>
-                      <text x="377" y="208" fill="#64748b" font-size="8.5" text-anchor="middle">12:00</text>
-                      <text x="460" y="208" fill="#64748b" font-size="8.5" text-anchor="middle">15:00</text>
-                      <text x="543" y="208" fill="#64748b" font-size="8.5" text-anchor="middle">18:00</text>
-                      <text x="620" y="208" fill="#64748b" font-size="8.5" text-anchor="middle">21:00</text>
-
-                      <!-- Area fills & Curves -->
-                      <path d="M45 195 C128 175 211 145 294 110 C377 75 460 70 543 115 C580 135 620 160 620 195 Z" fill="url(#chartBlueGrad)"/>
-                      <path d="M45 195 C128 175 211 145 294 110 C377 75 460 70 543 115 C580 135 620 160 620 195" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/>
-                      
-                      <path d="M45 195 C128 182 211 160 294 135 C377 105 460 100 543 138 C580 152 620 175 620 195 Z" fill="url(#chartCyanGrad)"/>
-                      <path d="M45 195 C128 182 211 160 294 135 C377 105 460 100 543 138 C580 152 620 175 620 195" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"/>
-
-                      <path d="M45 195 C128 188 211 178 294 165 C377 148 460 142 543 162 C580 172 620 185 620 195 Z" fill="url(#chartPurpleGrad)"/>
-                      <path d="M45 195 C128 188 211 178 294 165 C377 148 460 142 543 162 C580 172 620 185 620 195" fill="none" stroke="#a855f7" stroke-width="1.8" stroke-linecap="round"/>
-
-                      <!-- Pinpoint at 15:00 -->
-                      <line x1="460" x2="460" y1="30" y2="195" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2 2"/>
-                      <circle cx="460" cy="70" r="5" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
-                      <circle cx="460" cy="100" r="4" fill="#06b6d4" stroke="#ffffff" stroke-width="1.5"/>
-                      <circle cx="460" cy="142" r="3.5" fill="#a855f7" stroke="#ffffff" stroke-width="1.5"/>
-                    </svg>
-
-                    <!-- Interactive Tooltip Overlay Box -->
-                    <div class="da-chart-static-tooltip">
-                      <div class="tooltip-header">15:00</div>
-                      <div class="tooltip-row"><span class="dot-blue"></span><span>Tổng token</span><b>156.7M</b></div>
-                      <div class="tooltip-row"><span class="dot-cyan"></span><span>Đầu vào</span><b>106.3M</b></div>
-                      <div class="tooltip-row"><span class="dot-purple"></span><span>Đầu ra</span><b>50.4M</b></div>
-                    </div>
+                    <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Context model-visible trong recent trace" role="img"></svg>
 
                     <div id="daChartEmpty" class="da-chart-empty" hidden>Chưa có dữ liệu</div>
                     <div id="daChartTooltip" class="da-chart-tooltip" hidden></div>
@@ -379,21 +317,16 @@
                       <circle cx="65" cy="65" r="48" fill="none" stroke="#f97316" stroke-width="16" stroke-dasharray="29 301" stroke-dashoffset="-247"/>
                       <circle cx="65" cy="65" r="48" fill="none" stroke="#8b5cf6" stroke-width="16" stroke-dasharray="22 301" stroke-dashoffset="-278"/>
                       <circle cx="65" cy="65" r="48" fill="none" stroke="#6366f1" stroke-width="16" stroke-dasharray="10 301" stroke-dashoffset="-302"/>
-                      <text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">216.8M</text>
-                      <text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Tổng token</text>
+                      <text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">—</text>
+                      <text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Token ước tính</text>
                     </svg>
                     <div class="da-legend-list" id="daLegend">
-                      <div class="da-legend-item"><span class="legend-name"><i style="background:#3b82f6"></i>GPT-4o</span><b>45.4%</b></div>
-                      <div class="da-legend-item"><span class="legend-name"><i style="background:#06b6d4"></i>Claude 3.5 Sonnet</span><b>20.7%</b></div>
-                      <div class="da-legend-item"><span class="legend-name"><i style="background:#eab308"></i>Gemini 1.5 Pro</span><b>13.8%</b></div>
-                      <div class="da-legend-item"><span class="legend-name"><i style="background:#f97316"></i>DeepSeek-V3</span><b>9.6%</b></div>
-                      <div class="da-legend-item"><span class="legend-name"><i style="background:#8b5cf6"></i>Llama 3.1</span><b>7.3%</b></div>
-                      <div class="da-legend-item"><span class="legend-name"><i style="background:#6366f1"></i>Khác</span><b>3.2%</b></div>
+                      <div class="da-legend-item"><span class="legend-name">Đang chờ dữ liệu lưu lượng</span><b>—</b></div>
                     </div>
                   </div>
                 </div>
                 <div class="da-donut-foot">
-                  <span>6 mô hình</span>
+                  <span id="daDonutFoot">— mô hình</span>
                   <span id="daModelSummary" class="cc-pill is-clickable">Xem chi tiết</span>
                 </div>
               </article>
@@ -411,41 +344,12 @@
                 </div>
                 <div class="cc-card-body">
                   <div class="da-bars" id="daToolBars">
-                    <div class="da-tool-rank-row">
-                      <div class="tool-meta-left"><span class="tool-icon-bg">💬</span><span class="tool-name">ChatWeb</span></div>
-                      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:85%; background:#06b6d4;"></div></div>
-                      <div class="tool-meta-right"><b>$612.45</b><small>44.3%</small></div>
-                    </div>
-                    <div class="da-tool-rank-row">
-                      <div class="tool-meta-left"><span class="tool-icon-bg">⚡</span><span class="tool-name">Codex Fast</span></div>
-                      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:48%; background:#3b82f6;"></div></div>
-                      <div class="tool-meta-right"><b>$287.91</b><small>20.8%</small></div>
-                    </div>
-                    <div class="da-tool-rank-row">
-                      <div class="tool-meta-left"><span class="tool-icon-bg">🔍</span><span class="tool-name">Tìm kiếm tri thức</span></div>
-                      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:38%; background:#3b82f6;"></div></div>
-                      <div class="tool-meta-right"><b>$186.22</b><small>13.5%</small></div>
-                    </div>
-                    <div class="da-tool-rank-row">
-                      <div class="tool-meta-left"><span class="tool-icon-bg">📊</span><span class="tool-name">Phân tích dữ liệu</span></div>
-                      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:30%; background:#14b8a6;"></div></div>
-                      <div class="tool-meta-right"><b>$134.14</b><small>9.7%</small></div>
-                    </div>
-                    <div class="da-tool-rank-row">
-                      <div class="tool-meta-left"><span class="tool-icon-bg">📝</span><span class="tool-name">Tóm tắt văn bản</span></div>
-                      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:22%; background:#14b8a6;"></div></div>
-                      <div class="tool-meta-right"><b>$82.46</b><small>6.0%</small></div>
-                    </div>
-                    <div class="da-tool-rank-row">
-                      <div class="tool-meta-left"><span class="tool-icon-bg">⋯</span><span class="tool-name">Khác</span></div>
-                      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:20%; background:#06b6d4;"></div></div>
-                      <div class="tool-meta-right"><b>$79.56</b><small>5.7%</small></div>
-                    </div>
+                    <div class="cc-empty">Chưa có bản ghi công cụ để xếp hạng.</div>
                   </div>
                 </div>
                 <div class="da-tools-foot">
                   <span>Tổng chi phí</span>
-                  <strong id="daToolCostTotal">$1,382.74</strong>
+                  <strong id="daToolCostTotal">—</strong>
                 </div>
               </article>
             </div>
@@ -460,16 +364,16 @@
                 <div class="cc-card-body da-perf-split">
                   <div class="sub-stat-block">
                     <small>Thông lượng (TPM)</small>
-                    <strong id="daRealtimeTpm">6,124</strong>
-                    <span class="stat-change positive">↑ 14.5%</span>
+                    <strong id="daRealtimeTpm">—</strong>
+                    <span class="stat-change">—</span>
                     <div class="mini-wave-chart">
                       <svg viewBox="0 0 100 24" width="100%" height="24"><path d="M0 20 Q25 5 50 14 T100 8" fill="none" stroke="#06b6d4" stroke-width="2.2"/></svg>
                     </div>
                   </div>
                   <div class="sub-stat-block">
                     <small>Độ trễ trung bình</small>
-                    <strong id="daRealtimeLatency">1.28s</strong>
-                    <span class="stat-change positive">↓ 9.6%</span>
+                    <strong id="daRealtimeLatency">—</strong>
+                    <span class="stat-change">—</span>
                     <div class="mini-wave-chart">
                       <svg viewBox="0 0 100 24" width="100%" height="24"><path d="M0 10 Q25 18 50 12 T100 16" fill="none" stroke="#f59e0b" stroke-width="2.2"/></svg>
                     </div>
@@ -481,24 +385,16 @@
               <article class="cc-card da-sub-card">
                 <div class="cc-card-head">
                   <div><h3>Phát hiện bất thường <i class="da-info-icon" title="Các tín hiệu biến động cần lưu ý">ⓘ</i></h3></div>
-                  <span class="da-alert-pill-red">2 cảnh báo</span>
+                  <span class="da-alert-pill-red" id="daAlertBadge">0 cảnh báo</span>
                 </div>
                 <div class="cc-card-body da-alerts-list">
-                  <div class="da-alert-row high">
-                    <div class="alert-icon-circle red"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ef4444" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                  <div class="da-alert-row">
+                    <div class="alert-icon-circle green"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
                     <div class="alert-info">
-                      <b>Tăng đột biến token đầu ra</b>
-                      <small>15:00 - 15:30 • +189% so với trung bình</small>
+                      <b>Đang chờ dữ liệu đo</b>
+                      <small>Chưa có ghi nhận lỗi hoặc biến động nào từ runtime</small>
                     </div>
-                    <span class="tag-badge red">Cao</span>
-                  </div>
-                  <div class="da-alert-row medium">
-                    <div class="alert-icon-circle amber"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f59e0b" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-                    <div class="alert-info">
-                      <b>Chi phí vượt ngưỡng dự kiến</b>
-                      <small>Dự báo ngày mai có thể vượt +18%</small>
-                    </div>
-                    <span class="tag-badge amber">Trung bình</span>
+                    <span class="tag-badge green">—</span>
                   </div>
                 </div>
                 <div class="da-card-foot-link">
@@ -539,33 +435,33 @@
                     <div class="sum-icon-circle green">↑</div>
                     <div class="sum-info">
                       <b>Sử dụng Token</b>
-                      <small>Tăng 18.7% so với hôm qua</small>
+                      <small>—</small>
                     </div>
-                    <span class="sum-link-btn green">Xu hướng tích cực ›</span>
+                    <span class="sum-link-btn green">Chờ dữ liệu ›</span>
                   </div>
                   <div class="da-summary-item">
                     <div class="sum-icon-circle amber">$</div>
                     <div class="sum-info">
                       <b>Hiệu quả chi phí</b>
-                      <small>Giảm 8.4% / 1K token</small>
+                      <small>—</small>
                     </div>
-                    <span class="sum-link-btn amber">Hiệu quả hơn ›</span>
+                    <span class="sum-link-btn amber">Chờ dữ liệu ›</span>
                   </div>
                   <div class="da-summary-item">
                     <div class="sum-icon-circle cyan">☵</div>
                     <div class="sum-info">
                       <b>Phân bổ mô hình</b>
-                      <small>GPT-4o chiếm 45.4% tổng token</small>
+                      <small>—</small>
                     </div>
-                    <span class="sum-link-btn cyan">Hợp lý ›</span>
+                    <span class="sum-link-btn cyan">Chờ dữ liệu ›</span>
                   </div>
                   <div class="da-summary-item">
                     <div class="sum-icon-circle purple">🛡️</div>
                     <div class="sum-info">
                       <b>Sức khỏe hệ thống</b>
-                      <small>Tỷ lệ lỗi 0.42% trong ngưỡng an toàn</small>
+                      <small>—</small>
                     </div>
-                    <span class="sum-link-btn green">Tốt ›</span>
+                    <span class="sum-link-btn green">Chờ dữ liệu ›</span>
                   </div>
                 </div>
               </article>
@@ -598,81 +494,16 @@
                     </thead>
                     <tbody id="daFleetTableBody">
                       <tr class="da-fleet-row">
-                        <td class="cell-model"><span class="model-logo-icon">🤖</span><b>GPT-4o</b></td>
-                        <td class="cell-num">98.4M</td>
-                        <td class="cell-num">45.4%</td>
-                        <td class="cell-num">$628.31</td>
-                        <td class="cell-num">$0.0064</td>
-                        <td class="cell-stars"><span class="stars-5">★★★★★</span></td>
-                        <td class="cell-num">1.21s</td>
-                        <td class="cell-num">0.32%</td>
-                        <td class="cell-trend"><svg viewBox="0 0 60 16" width="60" height="16"><path d="M0 12 Q15 6 30 10 T60 4" fill="none" stroke="#3b82f6" stroke-width="1.8"/></svg></td>
-                        <td class="cell-status"><span class="status-pill good">● Tốt</span></td>
-                        <td class="cell-more">⋮</td>
-                      </tr>
-                      <tr class="da-fleet-row">
-                        <td class="cell-model"><span class="model-logo-icon">🦊</span><b>Claude 3.5 Sonnet</b></td>
-                        <td class="cell-num">44.8M</td>
-                        <td class="cell-num">20.7%</td>
-                        <td class="cell-num">$286.21</td>
-                        <td class="cell-num">$0.0064</td>
-                        <td class="cell-stars"><span class="stars-4">★★★★<span class="dim">☆</span></span></td>
-                        <td class="cell-num">1.45s</td>
-                        <td class="cell-num">0.41%</td>
-                        <td class="cell-trend"><svg viewBox="0 0 60 16" width="60" height="16"><path d="M0 10 Q15 14 30 8 T60 5" fill="none" stroke="#06b6d4" stroke-width="1.8"/></svg></td>
-                        <td class="cell-status"><span class="status-pill good">● Tốt</span></td>
-                        <td class="cell-more">⋮</td>
-                      </tr>
-                      <tr class="da-fleet-row">
-                        <td class="cell-model"><span class="model-logo-icon">✦</span><b>Gemini 1.5 Pro</b></td>
-                        <td class="cell-num">29.9M</td>
-                        <td class="cell-num">13.8%</td>
-                        <td class="cell-num">$188.74</td>
-                        <td class="cell-num">$0.0063</td>
-                        <td class="cell-stars"><span class="stars-4">★★★★<span class="dim">☆</span></span></td>
-                        <td class="cell-num">1.36s</td>
-                        <td class="cell-num">0.35%</td>
-                        <td class="cell-trend"><svg viewBox="0 0 60 16" width="60" height="16"><path d="M0 14 Q15 6 30 12 T60 8" fill="none" stroke="#a855f7" stroke-width="1.8"/></svg></td>
-                        <td class="cell-status"><span class="status-pill good">● Tốt</span></td>
-                        <td class="cell-more">⋮</td>
-                      </tr>
-                      <tr class="da-fleet-row">
-                        <td class="cell-model"><span class="model-logo-icon">🐋</span><b>DeepSeek-V3</b></td>
-                        <td class="cell-num">20.8M</td>
-                        <td class="cell-num">9.6%</td>
-                        <td class="cell-num">$132.58</td>
-                        <td class="cell-num">$0.0064</td>
-                        <td class="cell-stars"><span class="stars-3">★★★<span class="dim">☆☆</span></span></td>
-                        <td class="cell-num">1.58s</td>
-                        <td class="cell-num">0.55%</td>
-                        <td class="cell-trend"><svg viewBox="0 0 60 16" width="60" height="16"><path d="M0 8 Q15 14 30 10 T60 15" fill="none" stroke="#f59e0b" stroke-width="1.8"/></svg></td>
-                        <td class="cell-status"><span class="status-pill warn">● Cảnh báo</span></td>
-                        <td class="cell-more">⋮</td>
-                      </tr>
-                      <tr class="da-fleet-row">
-                        <td class="cell-model"><span class="model-logo-icon">♾️</span><b>Llama 3.1 70B</b></td>
-                        <td class="cell-num">15.9M</td>
-                        <td class="cell-num">7.3%</td>
-                        <td class="cell-num">$100.91</td>
-                        <td class="cell-num">$0.0063</td>
-                        <td class="cell-stars"><span class="stars-3">★★★<span class="dim">☆☆</span></span></td>
-                        <td class="cell-num">1.72s</td>
-                        <td class="cell-num">0.48%</td>
-                        <td class="cell-trend"><svg viewBox="0 0 60 16" width="60" height="16"><path d="M0 12 Q15 8 30 14 T60 6" fill="none" stroke="#6366f1" stroke-width="1.8"/></svg></td>
-                        <td class="cell-status"><span class="status-pill good">● Tốt</span></td>
-                        <td class="cell-more">⋮</td>
-                      </tr>
-                      <tr class="da-fleet-row">
-                        <td class="cell-model"><span class="model-logo-icon">⋯</span><b>Khác</b></td>
-                        <td class="cell-num">6.9M</td>
-                        <td class="cell-num">3.2%</td>
-                        <td class="cell-num">$45.99</td>
-                        <td class="cell-num">$0.0067</td>
-                        <td class="cell-stars"><span class="stars-2">★★<span class="dim">☆☆☆</span></span></td>
-                        <td class="cell-num">1.94s</td>
-                        <td class="cell-num">0.62%</td>
-                        <td class="cell-trend"><svg viewBox="0 0 60 16" width="60" height="16"><path d="M0 10 Q15 15 30 11 T60 14" fill="none" stroke="#ec4899" stroke-width="1.8"/></svg></td>
-                        <td class="cell-status"><span class="status-pill warn">● Cảnh báo</span></td>
+                        <td class="cell-model"><span class="model-logo-icon">⋯</span><b>Đang chờ dữ liệu</b></td>
+                        <td class="cell-num">—</td>
+                        <td class="cell-num">—</td>
+                        <td class="cell-num">—</td>
+                        <td class="cell-num">—</td>
+                        <td class="cell-stars"><span class="stars-1">★<span class="dim">☆☆☆☆</span></span></td>
+                        <td class="cell-num">—</td>
+                        <td class="cell-num">—</td>
+                        <td class="cell-trend">—</td>
+                        <td class="cell-status"><span class="status-pill good">● Chờ đo</span></td>
                         <td class="cell-more">⋮</td>
                       </tr>
                     </tbody>
