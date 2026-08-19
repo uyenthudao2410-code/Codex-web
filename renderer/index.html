@@ -158,13 +158,13 @@
 
             <!-- 2. Top 6 Metric KPI Cards (1:1 with Screenshot) -->
             <div class="da-grid-tiles da-grid-6">
-              <!-- Tile 1: TỔNG TOKEN -->
+              <!-- Tile 1: ACCEPTED RESULT -->
               <article class="da-tile card-blue">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-blue">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                   </div>
-                  <span class="da-tile-label">TỔNG TOKEN</span>
+                  <span class="da-tile-label">ACCEPTED</span>
                 </div>
                 <div class="da-tile-value" id="daTokensTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -177,13 +177,13 @@
                 <div class="da-tile-sub" id="daTokensMeta" hidden>—<span id="daTokensRate"></span></div>
               </article>
 
-              <!-- Tile 2: TOKEN ĐẦU VÀO -->
+              <!-- Tile 2: TIME / ACCEPT -->
               <article class="da-tile card-cyan">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-cyan">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 3v12m0 0l-4-4m4 4l4-4"/></svg>
                   </div>
-                  <span class="da-tile-label">TOKEN ĐẦU VÀO</span>
+                  <span class="da-tile-label">TIME / ACCEPT</span>
                 </div>
                 <div class="da-tile-value" id="daTokensInTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -194,13 +194,13 @@
                 </div>
               </article>
 
-              <!-- Tile 3: TOKEN ĐẦU RA -->
+              <!-- Tile 3: FIRST PASS -->
               <article class="da-tile card-purple">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-purple">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 8V7a2 2 0 012-2h12a2 2 0 012 2v1M12 21V9m0 0l-4 4m4-4l4 4"/></svg>
                   </div>
-                  <span class="da-tile-label">TOKEN ĐẦU RA</span>
+                  <span class="da-tile-label">FIRST PASS</span>
                 </div>
                 <div class="da-tile-value" id="daTokensOutTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -211,13 +211,13 @@
                 </div>
               </article>
 
-              <!-- Tile 4: CHI PHÍ HÔM NAY -->
+              <!-- Tile 4: OBSERVED COST -->
               <article class="da-tile card-green is-cost">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-green">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                   </div>
-                  <span class="da-tile-label">CHI PHÍ HÔM NAY</span>
+                  <span class="da-tile-label">OBSERVED COST</span>
                 </div>
                 <div class="da-tile-value" id="daCostTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -230,13 +230,13 @@
                 <div class="da-tile-sub" id="daCostMeta" hidden>—</div>
               </article>
 
-              <!-- Tile 5: HIỆU SUẤT / 1K TOKEN -->
+              <!-- Tile 5: TOOLS / ACCEPT -->
               <article class="da-tile card-amber is-health">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-amber">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                   </div>
-                  <span class="da-tile-label">HIỆU SUẤT / 1K TOKEN</span>
+                  <span class="da-tile-label">TOOLS / ACCEPT</span>
                 </div>
                 <div class="da-tile-value" id="daEfficiencyTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -250,13 +250,13 @@
                 <svg id="daCallsRing" width="36" height="36" style="position:absolute;right:14px;bottom:12px" aria-hidden="true" hidden></svg>
               </article>
 
-              <!-- Tile 6: TỶ LỆ LỖI -->
+              <!-- Tile 6: REWORK / REPLAN -->
               <article class="da-tile card-teal is-health">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-emerald">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
                   </div>
-                  <span class="da-tile-label">TỶ LỆ LỖI</span>
+                  <span class="da-tile-label">REWORK / REPLAN</span>
                 </div>
                 <div class="da-tile-value" id="daCallsTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -268,6 +268,21 @@
                 <div class="da-tile-sub" id="daCallsMeta" hidden>—</div>
               </article>
             </div>
+
+            <article class="cc-card da-model-card" aria-labelledby="daOperationsTitle">
+              <div class="cc-card-head">
+                <div><h3 id="daOperationsTitle">Accepted result gần đây <i class="da-info-icon" title="Kết quả terminal trong cửa sổ 7 ngày; metric thiếu dữ liệu giữ unknown, không quy về 0">ⓘ</i></h3></div>
+              </div>
+              <div class="cc-card-body">
+                <div class="da-model-table-wrap">
+                  <table class="da-fleet-table">
+                    <thead><tr><th>KẾT QUẢ</th><th>TTAR</th><th>FIRST PASS</th><th>REPLAN</th><th>WAVES</th><th>TOOL CALLS</th><th>PROVIDER COST</th><th>SYSTEM COST</th></tr></thead>
+                    <tbody id="daOperationsTableBody"><tr class="da-fleet-row"><td colspan="8" class="cell-num">Đang chờ accepted-result evidence…</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="da-model-table-foot"><span id="daOperationsCoverage">Chưa có coverage evidence</span></div>
+            </article>
 
             <!-- 3. Main 3-Column Charts Row (1:1 with Screenshot) -->
             <div class="da-main-charts-row">

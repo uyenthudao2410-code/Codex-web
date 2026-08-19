@@ -41,6 +41,7 @@ from .protocol import (
     validate_rpc_envelope,
 )
 from .controller_usage_ingress import active_controller_usage_context, controller_usage_request, decorate_controller_usage_status, record_controller_usage, tool_call_name
+from .operations_analytics import operations_analytics
 from .tool_schema import tool_annotations
 from .transport_http import (
     STATELESS_HTTP_2026_ENV,
@@ -542,6 +543,11 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "lanes": lane_view,
             "usage_events": ledger.recent_usage_events(limit=8),
             "usage_analytics": ledger.usage_analytics(days=7),
+            "operations_analytics": operations_analytics(
+                ledger,
+                performance=runtime.performance_trace.get(),
+                days=7,
+            ),
             "routing_evidence": ledger.routing_evidence(run_id, limit=8) if run_id else {
                 "shadow_recommendations": [], "actual_delegations": [], "usage_events": []
             },

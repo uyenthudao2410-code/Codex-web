@@ -125,6 +125,12 @@
     return `${Math.floor(value / 60000)}m ${Math.round((value % 60000) / 1000)}s`;
   }
 
+  function observedNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? number : null;
+  }
+
   function normalizeRecords() {
     const list = Array.isArray(perf?.recent)
       ? perf.recent
@@ -176,6 +182,34 @@
       result.inTokens += tokensFromBytes(record.modelVisibleBytes);
     }
     return result;
+  }
+
+  function canonicalControllerUsageState() {
+    const analytics = orchestration?.usage_analytics;
+    if (!analytics || analytics.measurement !== 'canonical_non_overlapping') return null;
+    if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
+    const controller = analytics.controller_usage;
+    if (!controller || typeof controller !== 'object') return null;
+    if (controller.missing_measurement_policy !== 'unknown_not_zero') return null;
+    const status = String(controller.status || '').trim().toLowerCase();
+    if (status !== 'observed' && status !== 'unobserved') return null;
+    const eventCount = Math.max(0, Number(controller.event_count) || 0);
+    if ((status === 'observed' && eventCount < 1) || (status === 'unobserved' && eventCount !== 0)) return null;
+    return {
+      status,
+      eventCount,
+      missingReason: status === 'unobserved'
+        ? String(controller.missing_reason || 'no_exact_controller_usage_event_in_window')
+        : ''
+    };
+  }
+
+  function canonicalOperationsAnalytics() {
+    const analytics = orchestration?.operations_analytics;
+    if (!analytics || analytics.measurement !== 'accepted_result_operations_v1') return null;
+    if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
+    if (!analytics.outcomes || !analytics.speed || !analytics.efficiency || !analytics.cost) return null;
+    return analytics;
   }
 
   function canonicalMeasuredUsage() {
@@ -845,7 +879,7 @@
     });
   }
 
-  function renderModelTable(breakdown) {
+  function renderModelTable(breakdown, controllerUsage = null) {
     const container = byId('daModelTable');
     const summary = byId('daModelSummary');
     if (!container) return;
@@ -889,8 +923,16 @@
       const title = document.createElement('b');
       title.textContent = model.name;
       const sub = document.createElement('small');
-      const evidence = entry?.usageEvidence || (hasTraffic ? 'ESTIMATED' : 'NO USAGE');
-      sub.textContent = `${model.sub} · ${evidence}`;
+      const evidence = model.id === 'chatweb' && controllerUsage?.status === 'observed' && !hasTraffic
+        ? 'NO ROW ESTIMATE'
+        : (entry?.usageEvidence || (hasTraffic ? 'ESTIMATED' : 'NO USAGE'));
+      const controllerEvidence = model.id === 'chatweb' && controllerUsage
+        ? `CONTROLLER ${controllerUsage.status.toUpperCase()}`
+        : '';
+      sub.textContent = `${model.sub} · ${evidence}${controllerEvidence ? ` · ${controllerEvidence}` : ''}`;
+      if (model.id === 'chatweb' && controllerUsage?.status === 'unobserved') {
+        sub.title = 'Không có exact controller UsageEvent trong cửa sổ canonical; token controller là unknown, không phải 0.';
+      }
       copy.append(title, sub);
       name.append(dot, copy);
 
@@ -1278,7 +1320,7 @@
     }
   }
 
-  function renderTiles(buckets, summary, todayCount, yesterdayTokens, allCalls, allExecMs, laneTotalUsd, yesterdayCount, measured) {
+  function renderTiles(buckets, summary, todayCount, yesterdayTokens, allCalls, allExecMs, laneTotalUsd, yesterdayCount, measured, controllerUsage) {
     const inTokens = summary.inTokens;
     const outTokens = summary.outTokens;
     const totalTokens = inTokens + outTokens;
@@ -1288,19 +1330,24 @@
     const measuredTokens = measured ? measured.total : 0;
     const measuredIn = measured ? measured.input : 0;
     const measuredOut = measured ? measured.output : 0;
+    const controllerCoverage = controllerUsage?.status === 'observed'
+      ? ` · controller OBSERVED (${controllerUsage.eventCount} UsageEvent)`
+      : controllerUsage?.status === 'unobserved'
+        ? ' · controller UNOBSERVED (unknown, not zero)'
+        : '';
 
     if (hasMeasured) {
       animateText(byId('daTokensTotal'), compact, measuredTokens);
       animateText(byId('daTokensInTotal'), compact, measuredIn);
       animateText(byId('daTokensOutTotal'), compact, measuredOut);
       setText('daTokensSplit', `Input total ${compact(measured.input)} · cached subset ${compact(measured.cached)} · output total ${compact(measured.output)}${measured.reasoning ? ` · reasoning component ${compact(measured.reasoning)}` : ''}`);
-      setText('daTokensMeta', `MEASURED · canonical non-overlap · ${measured.events} UsageEvent · 7 ngày`);
+      setText('daTokensMeta', `MEASURED · canonical non-overlap · ${measured.events} UsageEvent · 7 ngày${controllerCoverage}`);
     } else {
       setText('daTokensTotal', '—');
       setText('daTokensInTotal', '—');
       setText('daTokensOutTotal', '—');
       setText('daTokensSplit', 'Chưa có UsageEvent canonical');
-      setText('daTokensMeta', 'KPI token giữ unknown; biểu đồ context fallback được gắn nhãn ESTIMATED riêng');
+      setText('daTokensMeta', `KPI token giữ unknown; biểu đồ context fallback được gắn nhãn ESTIMATED riêng${controllerCoverage}`);
     }
     const rateEl = byId('daTokensRate');
     if (rateEl) {
@@ -1389,6 +1436,121 @@
     renderSparkline(buckets);
   }
 
+  function renderOperationsTiles(analytics) {
+    if (!analytics) {
+      for (const id of ['daTokensTotal', 'daTokensInTotal', 'daTokensOutTotal', 'daCostTotal', 'daEfficiencyTotal', 'daCallsTotal']) setText(id, '—');
+      setText('daTokensDelta', 'Chưa có operations analytics');
+      setText('daTokensInDelta', 'TTAR unknown');
+      setText('daTokensOutDelta', 'First-pass unknown');
+      setText('daCostVnd', 'Cost unknown, not zero');
+      setText('daEfficiencyDelta', 'Coverage unknown');
+      setText('daCallsDelta', 'Rework unknown');
+      renderSparkline([]);
+      return;
+    }
+    const outcomes = analytics.outcomes || {};
+    const speed = analytics.speed || {};
+    const efficiency = analytics.efficiency || {};
+    const tools = efficiency.tool_calls || {};
+    const providerCost = analytics.cost?.provider_observed || {};
+    const systemCost = analytics.cost?.total_system || {};
+    const accepted = Math.max(0, Number(outcomes.accepted) || 0);
+    const terminal = Math.max(0, Number(outcomes.terminal_runs) || 0);
+    const acceptanceRate = observedNumber(outcomes.acceptance_rate);
+    const firstPassRate = observedNumber(outcomes.first_pass_rate);
+    const replanRate = observedNumber(efficiency.replan_rate);
+    const ttaP50 = observedNumber(speed.p50_ms);
+    const ttaP90 = observedNumber(speed.p90_ms);
+    const wavesPerAccepted = observedNumber(efficiency.waves_per_accepted);
+
+    animateText(byId('daTokensTotal'), compact, accepted);
+    setText('daTokensDelta', acceptanceRate === null ? `${terminal} terminal · rate unknown` : `${(acceptanceRate * 100).toFixed(1)}% / ${terminal} terminal`);
+    setText('daTokensMeta', `Accepted-result outcome · ${analytics.window?.days || 7} ngày`);
+
+    if (ttaP50 !== null) animateText(byId('daTokensInTotal'), (value) => formatDuration(value), ttaP50);
+    else setText('daTokensInTotal', '—');
+    setText('daTokensInDelta', ttaP90 !== null ? `P90 ${formatDuration(ttaP90)}` : 'P90 unknown');
+    setText('daTokensRate', `${Math.max(0, Number(speed.tta_samples) || 0)}/${accepted} accepted có TTAR`);
+
+    if (firstPassRate === null) setText('daTokensOutTotal', '—');
+    else animateText(byId('daTokensOutTotal'), (value) => `${value.toFixed(1)}%`, firstPassRate * 100);
+    setText('daTokensOutDelta', `${Math.max(0, Number(outcomes.first_pass_accepted) || 0)}/${accepted} accepted first-pass`);
+
+    const providerUsd = observedNumber(providerCost.total_usd);
+    if (providerUsd === null) setText('daCostTotal', '—');
+    else animateText(byId('daCostTotal'), (value) => money(displayedCost(value)), providerUsd);
+    setText('daCostVnd', `${Math.max(0, Number(providerCost.complete_accepted) || 0)}/${accepted} provider-cost complete`);
+    setText('daCostSplit', providerUsd === null ? 'Provider observed cost unknown' : `Provider observed ${money(displayedCost(providerUsd))}`);
+    setText('daCostMeta', `System total complete ${Math.max(0, Number(systemCost.complete_accepted) || 0)}/${accepted}; phần thiếu giữ unknown, không quy về 0`);
+
+    const toolMean = observedNumber(tools.mean_per_observed_accepted);
+    if (toolMean === null) setText('daEfficiencyTotal', '—');
+    else animateText(byId('daEfficiencyTotal'), (value) => value.toFixed(1), toolMean);
+    const toolCoverage = observedNumber(tools.coverage);
+    setText('daEfficiencyDelta', toolCoverage === null ? 'Coverage unknown' : `${(toolCoverage * 100).toFixed(0)}% coverage`);
+    setText('daEfficiencyMeta', `${Math.max(0, Number(tools.observed_accepted) || 0)}/${accepted} accepted có performance run_metrics`);
+    setText('daEfficiencySub', `Missing ${Math.max(0, Number(tools.missing_accepted) || 0)} giữ unknown, không tính như 0 call`);
+
+    if (replanRate === null) setText('daCallsTotal', '—');
+    else animateText(byId('daCallsTotal'), (value) => `${value.toFixed(1)}%`, replanRate * 100);
+    setText('daCallsDelta', `${Math.max(0, Number(efficiency.replanned_accepted) || 0)}/${accepted} accepted có replan`);
+    setText('daCallsMeta', `${Math.max(0, Number(efficiency.replan_count_total) || 0)} replans · ${wavesPerAccepted !== null ? wavesPerAccepted.toFixed(2) : '—'} waves / accepted`);
+
+    const trend = Array.isArray(analytics.hourly)
+      ? analytics.hourly.map((row) => ({ in: Math.max(0, Number(row?.accepted) || 0), out: 0 }))
+      : [];
+    renderSparkline(trend);
+  }
+
+  function renderOperationsTable(analytics) {
+    const body = byId('daOperationsTableBody');
+    if (!body) return;
+    body.replaceChildren();
+    const rows = Array.isArray(analytics?.runs) ? analytics.runs.slice(0, 12) : [];
+    if (!rows.length) {
+      const tr = document.createElement('tr');
+      tr.className = 'da-fleet-row';
+      const td = document.createElement('td');
+      td.colSpan = 8;
+      td.className = 'cell-num';
+      td.textContent = 'Chưa có terminal result trong cửa sổ 7 ngày.';
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+    const addCell = (tr, text, className = 'cell-num', title = '') => {
+      const td = document.createElement('td');
+      td.className = className;
+      td.textContent = text;
+      if (title) td.title = title;
+      tr.appendChild(td);
+    };
+    for (const row of rows) {
+      const tr = document.createElement('tr');
+      tr.className = 'da-fleet-row';
+      const status = String(row?.status || 'unknown');
+      const ttaMs = observedNumber(row?.tta_ms);
+      const replanCount = observedNumber(row?.replan_count);
+      const waveCount = observedNumber(row?.wave_count);
+      const toolCalls = observedNumber(row?.tool_calls);
+      const providerUsd = observedNumber(row?.provider_cost_usd);
+      const systemUsd = observedNumber(row?.total_system_cost_usd);
+      addCell(tr, `${status.toUpperCase()} · ${String(row?.run_id || '').slice(0, 8)}`, 'cell-model', String(row?.run_id || ''));
+      addCell(tr, ttaMs !== null ? formatDuration(ttaMs) : '—', 'cell-num', ttaMs === null ? 'TTAR unobserved / not applicable' : 'Accepted-result time');
+      addCell(tr, row?.first_pass === true ? 'YES' : row?.first_pass === false ? 'NO' : '—');
+      addCell(tr, replanCount !== null ? String(replanCount) : '—');
+      addCell(tr, waveCount !== null ? String(waveCount) : '—');
+      addCell(tr, toolCalls !== null ? String(toolCalls) : '—', 'cell-num', toolCalls === null ? 'Tool calls unobserved; unknown, not zero' : 'Performance trace run_metrics');
+      addCell(tr, providerUsd !== null ? money(displayedCost(providerUsd)) : '—', 'cell-num', providerUsd === null ? 'Provider cost incomplete or unobserved' : row.provider_cost_measurement);
+      addCell(tr, systemUsd !== null ? money(displayedCost(systemUsd)) : '—', 'cell-num', systemUsd === null ? 'System cost incomplete; controller/provider missing remains unknown' : row.total_system_cost_measurement);
+      body.appendChild(tr);
+    }
+    const accepted = Math.max(0, Number(analytics?.outcomes?.accepted) || 0);
+    const tools = analytics?.efficiency?.tool_calls || {};
+    const provider = analytics?.cost?.provider_observed || {};
+    const system = analytics?.cost?.total_system || {};
+    setText('daOperationsCoverage', `Coverage accepted: TTAR ${Math.max(0, Number(analytics?.speed?.tta_samples) || 0)}/${accepted} · tool calls ${Math.max(0, Number(tools.observed_accepted) || 0)}/${accepted} · provider cost ${Math.max(0, Number(provider.complete_accepted) || 0)}/${accepted} · system cost ${Math.max(0, Number(system.complete_accepted) || 0)}/${accepted}`);
+  }
+
   function renderHeatmap(measured) {
     const container = byId('daHeatmapGrid');
     if (!container) return;
@@ -1430,6 +1592,8 @@
     const yesterdaySummary = summarize(yesterday);
     const allSummary = summarize(records);
     const measured = canonicalMeasuredUsage();
+    const controllerUsage = canonicalControllerUsageState();
+    const operations = canonicalOperationsAnalytics();
     const buckets = chartTrendBuckets(measured, records, chartTimeMode);
     const estimatedEntries = toolBreakdown(today);
     const entries = measured?.byModel?.length ? measured.byModel : estimatedEntries;
@@ -1443,22 +1607,24 @@
     const okRate = summary.calls ? percent(summary.ok, summary.calls) : 100;
 
     updateHeaderContext();
-    setText('daDateValue', measured ? 'Cửa sổ 7 ngày · canonical UsageEvent' : 'Cửa sổ 7 ngày · KPI token unknown · context fallback ESTIMATED');
+    const controllerWindowLabel = controllerUsage
+      ? ` · ChatWeb controller ${controllerUsage.status.toUpperCase()}`
+      : '';
+    setText('daDateValue', operations
+      ? `Cửa sổ 7 ngày · accepted-result operations${controllerWindowLabel}`
+      : `Cửa sổ 7 ngày · operations analytics unavailable${controllerWindowLabel}`);
     const chart = byId('daChart');
     if (chart) chart.setAttribute('aria-label', measured ? 'Canonical measured token trend' : 'Estimated model-visible context trend');
     const donutHeading = byId('daDonut')?.closest('.da-card')?.querySelector('h3');
     if (donutHeading?.firstChild) donutHeading.firstChild.textContent = measured ? 'Phân bố Token theo mô hình ' : 'Phân bố Context theo công cụ ';
     const costHeading = byId('daToolBars')?.closest('.da-card')?.querySelector('h3');
     if (costHeading?.firstChild) costHeading.firstChild.textContent = measured ? 'Chi phí theo mô hình ' : 'Chi phí kịch bản theo công cụ ';
-    const costLabel = byId('daCostTotal')?.closest('.da-tile')?.querySelector('.da-tile-label');
-    if (costLabel) costLabel.textContent = 'CHI PHÍ 7 NGÀY';
-    const efficiencyLabel = byId('daEfficiencyTotal')?.closest('.da-tile')?.querySelector('.da-tile-label');
-    if (efficiencyLabel) efficiencyLabel.textContent = 'HIỆU SUẤT THỰC THI';
-    renderTiles(buckets, summary, today.length, yesterdaySummary.inTokens + yesterdaySummary.outTokens, records.length, allSummary.execMs, laneTotalUsd, yesterday.length, measured);
+    renderOperationsTiles(operations);
+    renderOperationsTable(operations);
     renderChart(buckets, chartTimeMode);
     renderDonut(entries, evidence);
     renderBars(entries, evidence);
-    renderModelTable(models);
+    renderModelTable(models, controllerUsage);
     renderFleetTable(models);
     renderHeatmap(measured);
     updateRealtimeMetrics(records, measured);

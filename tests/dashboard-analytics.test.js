@@ -6,13 +6,32 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
-test('manager overview embeds the token/cost analytics dashboard', () => {
+test('manager overview embeds accepted-result KPIs plus secondary token/cost diagnostics', () => {
   const html = read('renderer/index.html');
   assert.match(html, /dashboard\.css/);
   assert.match(html, /dashboard\.js/);
-  for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daBytesPerToken', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn', 'daRealtimeTpm', 'daRealtimeTpmMeta', 'daRealtimeLatency', 'daRealtimeLatencyMeta']) {
+  for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daOperationsTableBody', 'daOperationsCoverage', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daBytesPerToken', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn', 'daRealtimeTpm', 'daRealtimeTpmMeta', 'daRealtimeLatency', 'daRealtimeLatencyMeta']) {
     assert.match(html, new RegExp(`id="${id}"`), `missing analytics id ${id}`);
   }
+  for (const label of ['ACCEPTED', 'TIME / ACCEPT', 'FIRST PASS', 'OBSERVED COST', 'TOOLS / ACCEPT', 'REWORK / REPLAN']) assert.match(html, new RegExp(label.replace('/', '\\/')));
+});
+
+test('operations dashboard consumes a coverage-qualified accepted-result projection', () => {
+  const js = read('renderer/dashboard.js');
+  const handler = read('resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py');
+  assert.match(js, /function canonicalOperationsAnalytics/);
+  assert.match(js, /accepted_result_operations_v1/);
+  assert.match(js, /analytics\.missing_measurement_policy !== 'unknown_not_zero'/);
+  assert.match(js, /function renderOperationsTiles/);
+  assert.match(js, /function renderOperationsTable/);
+  assert.match(js, /function observedNumber\(value\)/);
+  assert.match(js, /value === null \|\| value === undefined \|\| value === ''/);
+  assert.match(js, /observedNumber\(outcomes\.acceptance_rate\)/);
+  assert.match(js, /observedNumber\(providerCost\.total_usd\)/);
+  assert.match(js, /mean_per_observed_accepted/);
+  assert.match(js, /Tool calls unobserved; unknown, not zero/);
+  assert.match(handler, /"operations_analytics": operations_analytics\(/);
+  assert.match(handler, /performance=runtime\.performance_trace\.get\(\)/);
 });
 
 test('realtime performance uses exact rolling five-minute evidence without stale aggregate fallbacks', () => {
@@ -158,10 +177,17 @@ test('dashboard styling is themed, animated and honors reduced motion', () => {
 
 test('operations overview renders measured token KPIs from canonical non-overlapping usage analytics', () => {
   const js = read('renderer/dashboard.js');
+  assert.match(js, /function canonicalControllerUsageState/);
   assert.match(js, /function canonicalMeasuredUsage/);
   assert.match(js, /orchestration\?\.usage_analytics/);
   assert.match(js, /analytics\.measurement !== 'canonical_non_overlapping'/);
   assert.match(js, /missing_measurement_policy !== 'unknown_not_zero'/);
+  assert.match(js, /analytics\.controller_usage/);
+  assert.match(js, /controller\.missing_measurement_policy !== 'unknown_not_zero'/);
+  assert.match(js, /CONTROLLER \$\{controllerUsage\.status\.toUpperCase\(\)\}/);
+  assert.match(js, /token controller là unknown, không phải 0/);
+  assert.match(js, /controller UNOBSERVED \(unknown, not zero\)/);
+  assert.match(js, /renderModelTable\(models, controllerUsage\)/);
   assert.match(js, /usage\.input_total_tokens/);
   assert.match(js, /usage\.input_cached_tokens/);
   assert.match(js, /usage\.output_total_tokens/);
@@ -212,11 +238,13 @@ test('operations overview heatmap is built from real canonical hourly evidence',
   assert.doesNotMatch(js, /buckets\[hour % buckets\.length\]/);
 });
 
-test('operations overview displays actual error rate and correct cost and efficiency semantics', () => {
+test('operations overview keeps accepted-result KPIs primary while token cost diagnostics stay fail-closed', () => {
   const js = read('renderer/dashboard.js');
-  assert.match(js, /const errorRate = summary\.calls \? Math\.max\(0, 100 - okRate\) : 0/);
-  assert.match(js, /CHI PHÍ 7 NGÀY/);
-  assert.match(js, /HIỆU SUẤT THỰC THI/);
+  assert.match(js, /renderOperationsTiles\(operations\)/);
+  assert.match(js, /renderOperationsTable\(operations\)/);
+  assert.match(js, /const providerUsd = observedNumber\(providerCost\.total_usd\)/);
+  assert.match(js, /const toolMean = observedNumber\(tools\.mean_per_observed_accepted\)/);
+  assert.match(js, /const replanRate = observedNumber\(efficiency\.replan_rate\)/);
   assert.match(js, /measured\.costSource !== 'unobserved'/);
   assert.match(js, /DERIVED từ canonical token pricing/);
 });
