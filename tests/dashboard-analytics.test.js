@@ -19,7 +19,7 @@ test('realtime performance uses exact rolling five-minute evidence without stale
   const js = read('renderer/dashboard.js');
   const html = read('renderer/index.html');
   assert.match(js, /REALTIME_WINDOW_MS = 5 \* 60 \* 1000/);
-  assert.match(js, /samples: \[\]/);
+  assert.match(js, /analytics\.rolling_5m/);
   assert.match(js, /function rollingProviderUsage/);
   assert.match(js, /function rollingLatency/);
   assert.match(js, /updateRealtimeMetrics\(records, measured\)/);
@@ -176,13 +176,32 @@ test('operations overview renders measured token KPIs from canonical non-overlap
 
 test('operations overview uses canonical hourly and rolling evidence with explicit estimated fallback', () => {
   const js = read('renderer/dashboard.js');
+  assert.match(js, /const DASHBOARD_WINDOW_HOURS = 7 \* 24/);
   assert.match(js, /function canonicalHourBuckets/);
+  assert.match(js, /function aggregateHourBuckets/);
+  assert.match(js, /function chartTrendBuckets/);
   assert.match(js, /Array\.isArray\(analytics\.hourly\)/);
   assert.match(js, /analytics\.rolling_5m/);
-  assert.match(js, /canonicalHourBuckets\(measured, 24\) \|\| performanceBuckets\(records, 24\)/);
+  assert.match(js, /canonicalHourBuckets\(measured, DASHBOARD_WINDOW_HOURS\)/);
+  assert.match(js, /performanceBuckets\(records, DASHBOARD_WINDOW_HOURS\)/);
+  assert.match(js, /aggregateHourBuckets\(hourly, 24\)/);
+  assert.doesNotMatch(js, /canonicalHourBuckets\(measured, 24\)/);
   assert.match(js, /TOKEN MEASURED/);
   assert.match(js, /TOKEN ESTIMATED/);
   assert.match(js, /Estimated model-visible context trend/);
+});
+
+test('token trend time selector switches between full-window hourly and daily rendering', () => {
+  const html = read('renderer/index.html');
+  const js = read('renderer/dashboard.js');
+  assert.match(html, /id="daChartTimeMode"/);
+  assert.match(html, /<option value="hour" selected>Theo giờ<\/option>/);
+  assert.match(html, /<option value="day">Theo ngày<\/option>/);
+  assert.match(js, /byId\('daChartTimeMode'\)\?\.addEventListener\('change'/);
+  assert.match(js, /chartTimeMode = event\.currentTarget\?\.value === 'day' \? 'day' : 'hour'/);
+  assert.match(js, /const buckets = chartTrendBuckets\(measured, records, chartTimeMode\)/);
+  assert.match(js, /renderChart\(buckets, chartTimeMode\)/);
+  assert.match(js, /const tickEvery = timeMode === 'day'/);
 });
 
 test('operations overview heatmap is built from real canonical hourly evidence', () => {
@@ -218,9 +237,9 @@ test('secondary model and fleet economics stay explicitly estimated and scenario
   assert.match(html, /Token ESTIMATED và chi phí SCENARIO theo model/);
 });
 
-test('dead legacy measuredUsage helper is not called by dashboard rendering', () => {
+test('dead legacy measuredUsage helper is absent and dashboard rendering stays canonical', () => {
   const js = read('renderer/dashboard.js');
-  const calls = js.match(/measuredUsage\(/g) || [];
-  assert.equal(calls.length, 1);
+  assert.doesNotMatch(js, /\bmeasuredUsage\(/);
+  assert.doesNotMatch(js, /function measuredUsage/);
   assert.match(js, /const measured = canonicalMeasuredUsage\(\)/);
 });

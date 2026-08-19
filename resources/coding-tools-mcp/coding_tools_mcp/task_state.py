@@ -320,6 +320,15 @@ class TaskStateStore:
             state = self._read()
             if not self._has_task(state):
                 return state
+            source = report.get("source_run_wave") if isinstance(report.get("source_run_wave"), dict) else {}
+            report_run_id = str(source.get("run_id") or "").strip()
+            report_wave_id = str(source.get("wave_id") or "").strip()
+            if report_run_id:
+                projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+                projected_run_id = str(projection.get("run_id") or "").strip()
+                projected_wave_id = str(projection.get("wave_id") or "").strip()
+                if report_run_id != projected_run_id or report_wave_id != projected_wave_id:
+                    return copy.deepcopy(state)
             report_id = self._completion_report_id(report)
             previous_id = str(state.get("completion_report_id") or "")
             state["completion_report"] = copy.deepcopy(report)

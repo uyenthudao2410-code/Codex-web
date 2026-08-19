@@ -12,9 +12,109 @@ from unittest.mock import patch
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.protocol import PROTOCOL_VERSION
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
+from coding_tools_mcp.task_state import TaskStateStore
 
 
 class OperatorReportIsolationTests(unittest.TestCase):
+    def test_historical_audit_cannot_replace_current_operator_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                first = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "first accepted run",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "include_diff": False,
+                })
+                first_run_id = first["orchestration"]["run_id"]
+                runtime.task_control({
+                    "action": "accept",
+                    "run_id": first_run_id,
+                    "reason": "fixture accepts first run",
+                })
+                first_pending = runtime.task_state.pending_completion_report()
+                self.assertIsNotNone(first_pending)
+                runtime.task_control({
+                    "action": "update",
+                    "payload": {
+                        "extension": "operator_report_ack_v1",
+                        "report_id": first_pending["report_id"],
+                    },
+                })
+                runtime.task_control({"action": "start", "objective": "second accepted run"})
+
+                second = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "second accepted run",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 2\n+VALUE = 3\n*** End Patch",
+                    "verification": "none",
+                    "include_diff": False,
+                })
+                second_run_id = second["orchestration"]["run_id"]
+                runtime.task_control({
+                    "action": "accept",
+                    "run_id": second_run_id,
+                    "reason": "fixture accepts second run",
+                })
+                before = runtime.task_state.get()
+                current_report_id = before["completion_report_id"]
+                self.assertEqual(
+                    before["completion_report"]["source_run_wave"]["run_id"],
+                    second_run_id,
+                )
+
+                historical = runtime.task_control({
+                    "action": "audit",
+                    "run_id": first_run_id,
+                    "limit": 20,
+                })
+                self.assertEqual(
+                    historical["completion_report"]["source_run_wave"]["run_id"],
+                    first_run_id,
+                )
+                historical_report_id = TaskStateStore._completion_report_id(
+                    historical["completion_report"]
+                )
+                after = runtime.task_state.get()
+                self.assertEqual(after["completion_report_id"], current_report_id)
+                self.assertEqual(
+                    after["completion_report"]["source_run_wave"]["run_id"],
+                    second_run_id,
+                )
+                self.assertEqual(
+                    runtime.task_state.pending_completion_report()["report_id"],
+                    current_report_id,
+                )
+
+                with self.assertRaises(ToolFailure) as stale_ack:
+                    runtime.task_control({
+                        "action": "update",
+                        "payload": {
+                            "extension": "operator_report_ack_v1",
+                            "report_id": historical_report_id,
+                        },
+                    })
+                self.assertEqual(stale_ack.exception.code, "OPERATOR_REPORT_ACK_INVALID")
+                acknowledged = runtime.task_control({
+                    "action": "update",
+                    "payload": {
+                        "extension": "operator_report_ack_v1",
+                        "report_id": current_report_id,
+                    },
+                })
+                self.assertTrue(acknowledged["acknowledged"])
+                started = runtime.task_control({"action": "start", "objective": "third task"})
+                self.assertEqual(started["state"]["objective"], "third task")
+            finally:
+                runtime.close()
+
     def test_operator_report_latch_blocks_replacement_until_exact_ack(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp))

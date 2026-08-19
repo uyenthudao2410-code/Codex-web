@@ -54,6 +54,7 @@
   // counting them as tokens would systematically inflate the estimate.
   const NON_TOKEN_TOOLS = new Set(['view_image']);
   const REALTIME_WINDOW_MS = 5 * 60 * 1000;
+  const DASHBOARD_WINDOW_HOURS = 7 * 24;
 
   const STATE_RANK = { offline: 0, connected: 1, waiting: 2, blocked: 3, active: 4 };
 
@@ -70,6 +71,7 @@
   let lastSnapshotReadAt = 0;
   let lastEventSeq = -1;
   let reducedMotion = false;
+  let chartTimeMode = 'hour';
 
   const $ = (selector) => document.querySelector(selector);
   const byId = (id) => document.getElementById(id);
@@ -172,80 +174,6 @@
       // Transport request/response bytes are payload telemetry, not token truth.
       // model_visible_bytes is measured; byte/token conversion remains estimated.
       result.inTokens += tokensFromBytes(record.modelVisibleBytes);
-    }
-    return result;
-  }
-
-  function measuredUsage() {
-    // KPI token & chi phí chỉ tin phép đo thực tế của provider. Ba nguồn đo:
-    // 1. usage_events (đường opencode provider dispatch/telemetry) — token nằm
-    //    trong event.usage.{input_tokens,...}, cost ở event.cost.provider_cost,
-    // 2. delegations[].metadata.economics (delegation opencode đã kết thúc),
-    // 3. lanes[].last_economics (lượt ChatWeb qua codex bridge — chỉ có ở lanes).
-    // Dedup theo delegation_id; chi phí chỉ tính khi provider báo (provider_cost).
-    // Cửa sổ đo: 7 ngày gần nhất (tổng quan vận hành là view giám sát, không
-    // khóa theo run_id hiện tại — phép đo thực tế nằm ở mọi run gần đây).
-    const midnight = localMidnight(new Date());
-    const windowStart = midnight - 6 * 86400000;
-    const result = { events: 0, input: 0, cached: 0, output: 0, reasoning: 0, cost: 0, hours: new Map(), samples: [] };
-    const countedDelegations = new Set();
-    const addEconomics = (economics, timeValue) => {
-      if (!economics || typeof economics !== 'object') return;
-      const time = Date.parse(String(timeValue || ''));
-      if (!Number.isFinite(time) || time < windowStart) return;
-      const input = Math.max(0, Number(economics.input_tokens) || 0);
-      const cached = Math.max(0, Number(economics.cached_input_tokens) || 0);
-      const output = Math.max(0, Number(economics.output_tokens) || 0);
-      const reasoning = Math.max(0, Number(economics.reasoning_output_tokens) || 0);
-      const costValue = Number(economics.provider_cost);
-      if (!input && !cached && !output && !reasoning && !(Number.isFinite(costValue) && costValue > 0)) return;
-      result.events += 1;
-      result.input += input;
-      result.cached += cached;
-      result.output += output;
-      result.reasoning += reasoning;
-      if (Number.isFinite(costValue) && costValue > 0) result.cost += costValue;
-      const sampleTokens = input + output + reasoning;
-      if (sampleTokens > 0) result.samples.push({ time, tokens: sampleTokens });
-      const hour = Math.floor(time / 3600000);
-      const bucket = result.hours.get(hour) || { in: 0, out: 0 };
-      bucket.in += input;
-      bucket.out += output + reasoning;
-      result.hours.set(hour, bucket);
-    };
-    for (const event of Array.isArray(orchestration?.usage_events) ? orchestration.usage_events : []) {
-      const time = Date.parse(String(event?.event_time || ''));
-      if (!Number.isFinite(time) || time < windowStart) continue;
-      if (event?.delegation_id) countedDelegations.add(event.delegation_id);
-      const usage = (event && typeof event.usage === 'object') ? event.usage : {};
-      const input = Math.max(0, Number(event?.input_tokens ?? usage.input_tokens) || 0);
-      const cached = Math.max(0, Number(event?.cached_input_tokens ?? usage.cached_input_tokens) || 0);
-      const output = Math.max(0, Number(event?.output_tokens ?? usage.output_tokens) || 0);
-      const reasoning = Math.max(0, Number(event?.reasoning_output_tokens ?? usage.reasoning_output_tokens) || 0);
-      const costValue = Number(event?.cost?.provider_cost ?? event?.cost?.derived_cost_usd ?? 0);
-      if (!input && !cached && !output && !reasoning && !(Number.isFinite(costValue) && costValue > 0)) continue;
-      result.events += 1;
-      result.input += input;
-      result.cached += cached;
-      result.output += output;
-      result.reasoning += reasoning;
-      if (Number.isFinite(costValue) && costValue > 0) result.cost += costValue;
-      const sampleTokens = input + output + reasoning;
-      if (sampleTokens > 0) result.samples.push({ time, tokens: sampleTokens });
-      const hour = Math.floor(time / 3600000);
-      const bucket = result.hours.get(hour) || { in: 0, out: 0 };
-      bucket.in += input;
-      bucket.out += output + reasoning;
-      result.hours.set(hour, bucket);
-    }
-    for (const delegation of Array.isArray(orchestration?.delegations) ? orchestration.delegations : []) {
-      const id = delegation?.delegation_id;
-      if (id && countedDelegations.has(id)) continue;
-      if (id) countedDelegations.add(id);
-      addEconomics(delegation?.metadata?.economics, delegation?.finished_at || delegation?.started_at);
-    }
-    for (const lane of Array.isArray(orchestration?.lanes) ? orchestration.lanes : []) {
-      addEconomics(lane?.last_economics, lane?.updated_at);
     }
     return result;
   }
@@ -383,7 +311,7 @@
     return hourlyFromStore(count) || hourBuckets(records, count);
   }
 
-  function canonicalHourBuckets(measured, count = 24) {
+  function canonicalHourBuckets(measured, count = DASHBOARD_WINDOW_HOURS) {
     if (!measured?.hours || !(measured.hours instanceof Map)) return null;
     const nowHour = Math.floor(Date.now() / 3600000);
     const start = nowHour - count + 1;
@@ -392,6 +320,29 @@
       const bucket = measured.hours.get(hour);
       return { hour, in: bucket?.in || 0, out: bucket?.out || 0 };
     });
+  }
+
+  function aggregateHourBuckets(buckets, hoursPerBucket = 24) {
+    if (!Array.isArray(buckets) || !buckets.length) return [];
+    const size = Math.max(1, Math.floor(Number(hoursPerBucket) || 1));
+    const aggregated = [];
+    for (let start = 0; start < buckets.length; start += size) {
+      const slice = buckets.slice(start, start + size);
+      if (!slice.length) continue;
+      aggregated.push({
+        hour: slice[0].hour,
+        endHour: slice[slice.length - 1].hour,
+        in: slice.reduce((sum, bucket) => sum + (Number(bucket.in) || 0), 0),
+        out: slice.reduce((sum, bucket) => sum + (Number(bucket.out) || 0), 0)
+      });
+    }
+    return aggregated;
+  }
+
+  function chartTrendBuckets(measured, records, mode = chartTimeMode) {
+    const hourly = canonicalHourBuckets(measured, DASHBOARD_WINDOW_HOURS)
+      || performanceBuckets(records, DASHBOARD_WINDOW_HOURS);
+    return mode === 'day' ? aggregateHourBuckets(hourly, 24) : hourly;
   }
 
   function toolBreakdown(records) {
@@ -687,7 +638,7 @@
     return `${head} L${last[0].toFixed(1)},${baseline} L${first[0].toFixed(1)},${baseline} Z`;
   }
 
-  function renderChart(buckets) {
+  function renderChart(buckets, timeMode = 'hour') {
     const svg = byId('daChart');
     const empty = byId('daChartEmpty');
     if (!svg || !empty) return;
@@ -742,12 +693,16 @@
       }));
     }
 
+    const tickEvery = timeMode === 'day' ? 1 : Math.max(1, Math.ceil(buckets.length / 7));
     for (let index = 0; index < buckets.length; index += 1) {
-      if (index % 4 !== 0) continue;
-      const date = new Date(buckets[index].hour * 3600000);
+      if (index % tickEvery !== 0) continue;
+      const bucket = buckets[index];
+      const date = new Date((timeMode === 'day' ? bucket.endHour : bucket.hour) * 3600000);
       const x = pad.left + (plotW * index) / Math.max(1, buckets.length - 1);
       svg.appendChild(svgEl('text', { x, y: height - 8, 'text-anchor': 'middle', class: 'axis-label' },
-        date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })));
+        timeMode === 'day'
+          ? date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+          : date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })));
     }
 
     const tooltip = byId('daChartTooltip');
@@ -769,7 +724,11 @@
       svg.appendChild(svgEl('circle', { cx: px, cy: y, r: 4, fill: 'var(--cc-blue)', class: 'hover-dot' }));
       if (tooltip) {
         tooltip.hidden = false;
-        tooltip.textContent = `${new Date(bucket.hour * 3600000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · vào ${compact(bucket.in)} · ra ${compact(bucket.out)}`;
+        const bucketDate = new Date((timeMode === 'day' ? bucket.endHour : bucket.hour) * 3600000);
+        const timeLabel = timeMode === 'day'
+          ? `24 giờ kết thúc ${bucketDate.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+          : bucketDate.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        tooltip.textContent = `${timeLabel} · vào ${compact(bucket.in)} · ra ${compact(bucket.out)}`;
         const card = byId('daChartCard');
         if (card) {
           const cardBounds = card.getBoundingClientRect();
@@ -1471,7 +1430,7 @@
     const yesterdaySummary = summarize(yesterday);
     const allSummary = summarize(records);
     const measured = canonicalMeasuredUsage();
-    const buckets = canonicalHourBuckets(measured, 24) || performanceBuckets(records, 24);
+    const buckets = chartTrendBuckets(measured, records, chartTimeMode);
     const estimatedEntries = toolBreakdown(today);
     const entries = measured?.byModel?.length ? measured.byModel : estimatedEntries;
     const evidence = measured?.byModel?.length ? 'measured' : 'estimated';
@@ -1496,7 +1455,7 @@
     const efficiencyLabel = byId('daEfficiencyTotal')?.closest('.da-tile')?.querySelector('.da-tile-label');
     if (efficiencyLabel) efficiencyLabel.textContent = 'HIỆU SUẤT THỰC THI';
     renderTiles(buckets, summary, today.length, yesterdaySummary.inTokens + yesterdaySummary.outTokens, records.length, allSummary.execMs, laneTotalUsd, yesterday.length, measured);
-    renderChart(buckets);
+    renderChart(buckets, chartTimeMode);
     renderDonut(entries, evidence);
     renderBars(entries, evidence);
     renderModelTable(models);
@@ -1656,6 +1615,11 @@
 
   byId('daRefreshButton')?.addEventListener('click', () => refresh(true));
   byId('daApply')?.addEventListener('click', applyCostModel);
+
+  byId('daChartTimeMode')?.addEventListener('change', (event) => {
+    chartTimeMode = event.currentTarget?.value === 'day' ? 'day' : 'hour';
+    renderAll();
+  });
 
   byId('daPreset')?.addEventListener('change', () => {
     const preset = PRICING_PRESETS.find((item) => item.id === byId('daPreset').value);
