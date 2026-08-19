@@ -736,7 +736,11 @@ class ContextualTaskStateStore:
             store = self._stores.get(scope_id)
             if store is None:
                 store = TaskStateStore(self.workspace, scope_id=scope_id)
-                if not store.path.exists():
+                if (
+                    not store.path.exists()
+                    and not scope_id.startswith("mcp2026:")
+                    and not scope_id.startswith("legacy:")
+                ):
                     context_dir = self.workspace / ".coding-tools" / "task-contexts"
                     existing_contexts = list(context_dir.glob("*.json")) if context_dir.exists() else []
                     existing_contexts = [
@@ -746,7 +750,9 @@ class ContextualTaskStateStore:
                     legacy = self._global_store.get()
                     if not existing_contexts and TaskStateStore._has_task(legacy):
                         # One-time migration: the first stateful ChatWeb context adopts
-                        # the pre-isolation task. Later contexts always start clean.
+                        # the pre-isolation task. Modern MCP 2026 stateless handles are
+                        # explicit new application-state scopes and never adopt global
+                        # state; later stateful contexts also always start clean.
                         store._write(legacy)
                 self._stores[scope_id] = store
             return store

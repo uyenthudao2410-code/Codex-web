@@ -141,6 +141,14 @@ function clientFor(data, type, id) {
     || null;
 }
 
+function clientActivity(client) {
+  const state = String(client?.activity_state || '').toUpperCase()
+    || (client?.online ? 'ACTIVE' : client?.last_seen_at ? 'RECENT' : 'NO_SIGNAL');
+  if (state === 'ACTIVE') return { state, fabric: 'active', label: '● ĐANG HOẠT ĐỘNG' };
+  if (state === 'RECENT') return { state, fabric: 'connected', label: '● VỪA HOẠT ĐỘNG' };
+  return { state: 'NO_SIGNAL', fabric: 'waiting', label: '● CHƯA CÓ TÍN HIỆU' };
+}
+
 function renderHub(data) {
   const chatweb = clientFor(data, 'chatweb', 'chatweb');
   const desktop = clientFor(data, 'codex_desktop', 'codex-desktop');
@@ -148,8 +156,14 @@ function renderHub(data) {
   const controller = data?.authority?.controller || {};
   const write = data?.authority?.write || {};
   const controllerOwner = controller.owner_client_id || 'chưa claim';
-  const onlineClientCount = [chatweb, desktop, opencode].filter((client) => client?.online).length;
-  $('#hubStatus').textContent = onlineClientCount ? `${onlineClientCount} client` : 'Ngoại tuyến';
+  const activities = [chatweb, desktop, opencode].map(clientActivity);
+  const activeClientCount = activities.filter((item) => item.state === 'ACTIVE').length;
+  const recentClientCount = activities.filter((item) => item.state === 'RECENT').length;
+  $('#hubStatus').textContent = activeClientCount
+    ? `${activeClientCount} hoạt động${recentClientCount ? ` · ${recentClientCount} gần đây` : ''}`
+    : recentClientCount
+      ? `${recentClientCount} gần đây`
+      : 'Chưa có tín hiệu';
   $('#toDesktopButton').disabled = !desktop?.online || controllerOwner === 'codex-desktop' || !data?.run?.run_id;
   $('#toChatWebButton').disabled = !chatweb?.online || controllerOwner === 'chatweb' || !data?.run?.run_id;
   const continuity = data?.continuity || {};
@@ -180,27 +194,38 @@ function renderRouting(data) {
     ['Desktop', clientByType('codex_desktop')],
     ['OpenCode', clientByType('opencode')],
   ];
-  let onlineClients = 0;
+  let activeClients = 0;
+  let recentClients = 0;
   frontends.forEach(([key, client]) => {
-    const online = Boolean(client?.online);
-    if (online) onlineClients += 1;
-    setFabricState($(`#router${key}`), online ? 'active' : 'offline');
-    setFabricState($(`#routerEdge${key}`), online ? 'active' : 'offline');
+    const activity = clientActivity(client);
+    if (activity.state === 'ACTIVE') activeClients += 1;
+    if (activity.state === 'RECENT') recentClients += 1;
+    setFabricState($(`#router${key}`), activity.fabric);
+    setFabricState($(`#routerEdge${key}`), activity.fabric);
     const label = $(`#router${key} .router-state`);
-    if (label) label.textContent = online ? '● TRỰC TUYẾN' : '● NGOẠI TUYẾN';
+    if (label) label.textContent = activity.label;
   });
 
-  const hubUp = Boolean(data?.run || data?.task || Array.isArray(data?.events));
-  setFabricState($('#routerHub'), hubUp ? 'active' : 'offline');
+  const runtimeActivity = data?.runtime_activity || {};
+  const hubState = String(runtimeActivity.state || 'IDLE').toUpperCase();
+  const hubReady = Boolean(data?.runtime?.process_instance_id || data?.runtime?.server_instance_id);
+  const hubVisual = !hubReady ? 'offline' : hubState === 'IDLE' ? 'connected' : 'active';
+  const hubLabels = {
+    IDLE: '● IDLE',
+    ACTIVE: '● ACTIVE',
+    WRITING: '● WRITING',
+    DELEGATING: '● DELEGATING',
+  };
+  setFabricState($('#routerHub'), hubVisual);
   const hubLabel = $('#routerHub .router-state');
-  if (hubLabel) hubLabel.textContent = hubUp ? '● TRỰC TUYẾN' : '● NGOẠI TUYẾN';
+  if (hubLabel) hubLabel.textContent = hubReady ? (hubLabels[hubState] || `● ${hubState}`) : '● NGOẠI TUYẾN';
 
   const write = data?.authority?.write || {};
   const writing = String(write.status || '').toLowerCase() === 'active';
-  setFabricState($('#routerWriter'), writing ? 'active' : hubUp ? 'connected' : 'offline');
-  setFabricState($('#routerEdgeWriter'), writing ? 'active' : hubUp ? 'connected' : 'offline');
+  setFabricState($('#routerWriter'), writing ? 'active' : hubReady ? 'connected' : 'offline');
+  setFabricState($('#routerEdgeWriter'), writing ? 'active' : hubReady ? 'connected' : 'offline');
   const writerLabel = $('#routerWriter .router-state');
-  if (writerLabel) writerLabel.textContent = writing ? '● ĐANG GHI' : hubUp ? '● SẴN SÀNG' : '● NGOẠI TUYẾN';
+  if (writerLabel) writerLabel.textContent = writing ? '● ĐANG GHI' : hubReady ? '● SẴN SÀNG' : '● NGOẠI TUYẾN';
 
   const delegations = Array.isArray(data?.delegations) ? data.delegations : [];
   const runningCount = delegations.filter((item) => {
@@ -231,7 +256,33 @@ function renderRouting(data) {
   });
 
   const kpi = $('#routingEvidenceKpi');
-  if (kpi) kpi.textContent = `${onlineClients}/3 client · ${runningCount} tuyến chạy`;
+  if (kpi) kpi.textContent = `${activeClients}/3 active · ${recentClients} recent · ${runningCount} tuyến chạy`;
+}
+
+function renderRuntimeActivity(activity) {
+  const summary = $('#runtimeActivitySummary');
+  const list = $('#runtimeActivityList');
+  if (!summary || !list) return;
+  const state = String(activity?.state || 'IDLE').toUpperCase();
+  const jobs = Array.isArray(activity?.managed_jobs) ? activity.managed_jobs : [];
+  const background = Array.isArray(activity?.background_operations) ? activity.background_operations : [];
+  summary.textContent = `${state} · ${Number(activity?.active_tool_calls || 0)} tool · ${Number(activity?.active_commands || 0)} command · ${Number(activity?.active_background_operations || 0)} background`;
+  list.replaceChildren();
+  jobs.forEach((job) => {
+    const item = document.createElement('li');
+    item.textContent = `PID ${job?.root_pid || '—'} · ${job?.resource_class || '—'} · ${job?.lifecycle_state || '—'} · ${String(job?.command_id || job?.job_id || '').slice(0, 24)}`;
+    list.appendChild(item);
+  });
+  background.forEach((operation) => {
+    const item = document.createElement('li');
+    item.textContent = `${operation?.tool || 'background'} · ${operation?.status || 'running'} · ${Number(operation?.elapsed_seconds || 0)}s · ${String(operation?.operation_id || '').slice(0, 24)}`;
+    list.appendChild(item);
+  });
+  if (!jobs.length && !background.length) {
+    const item = document.createElement('li');
+    item.textContent = 'Không có command/background job đang hoạt động.';
+    list.appendChild(item);
+  }
 }
 
 function renderEvents(events) {
@@ -311,6 +362,7 @@ async function refreshOrchestration(force = false) {
       renderRun(data);
       renderHub(data);
       renderRouting(data);
+      renderRuntimeActivity(data?.runtime_activity);
       renderEvents(data?.events);
       renderProofs(data?.proofs);
       renderDelegations(data?.delegations);

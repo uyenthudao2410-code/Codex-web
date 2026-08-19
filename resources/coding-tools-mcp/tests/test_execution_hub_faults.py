@@ -3,7 +3,9 @@ import json
 import os
 import tempfile
 import threading
+import time
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from coding_tools_mcp.server import MCPHandler, PROTOCOL_VERSION, Runtime, RuntimeHTTPServer
@@ -115,6 +117,99 @@ class ExecutionHubFaultTests(unittest.TestCase):
         )
         hub.runtime.task_state.set_orchestration_projection(ctx.projection(), event="fault_test_linked")
         return state, ctx
+
+    def test_orchestration_snapshot_projects_runtime_activity_and_client_recency(self) -> None:
+        hub = HubServer(self.root, self.TOKEN)
+        admission = None
+        operation_id = "fabric-runtime-activity-test"
+        try:
+            now = datetime.now(timezone.utc)
+            self.assertEqual(
+                hub.runtime.hub_client_activity_state(now.isoformat(), active_seconds=45.0),
+                "ACTIVE",
+            )
+            self.assertEqual(
+                hub.runtime.hub_client_activity_state(
+                    (now - timedelta(seconds=120)).isoformat(), active_seconds=45.0
+                ),
+                "RECENT",
+            )
+            self.assertEqual(
+                hub.runtime.hub_client_activity_state(
+                    (now - timedelta(hours=1)).isoformat(), active_seconds=45.0
+                ),
+                "NO_SIGNAL",
+            )
+            self.assertEqual(
+                hub.runtime.hub_client_activity_state("", active_seconds=45.0),
+                "NO_SIGNAL",
+            )
+
+            status, _headers, response = hub.post_rpc(
+                tool_call(1, "get"), client_id="chatweb", client_type="chatweb"
+            )
+            self.assertEqual(status, 200, response)
+            admission = hub.runtime.execution_resource_governor.admit(
+                command="python -V",
+                command_id="fabric-runtime-command",
+                resource_class="LIGHT",
+            )
+            hub.runtime.active_tool_calls = 2
+            operation = {
+                "operation_id": operation_id,
+                "tool": "agent_workflow",
+                "workspace": str(self.root),
+                "started_monotonic": time.monotonic(),
+                "event": threading.Event(),
+                "budget": None,
+            }
+            with hub.runtime.background_operations_lock:
+                hub.runtime.background_operations[operation_id] = operation
+
+            snapshot_status, snapshot = hub.snapshot()
+            self.assertEqual(snapshot_status, 200, snapshot)
+            activity = snapshot["runtime_activity"]
+            self.assertEqual(activity["state"], "ACTIVE")
+            self.assertEqual(activity["active_tool_calls"], 2)
+            self.assertGreaterEqual(activity["active_commands"], 1)
+            self.assertEqual(activity["active_background_operations"], 1)
+            self.assertFalse(activity["write_active"])
+            self.assertEqual(activity["active_delegations"], 0)
+            self.assertTrue(
+                any(item["command_id"] == "fabric-runtime-command" for item in activity["managed_jobs"])
+            )
+            self.assertTrue(
+                any(item["operation_id"] == operation_id for item in activity["background_operations"])
+            )
+            chat_client = next(
+                item for item in snapshot["clients"] if item.get("client_type") == "chatweb"
+            )
+            self.assertEqual(chat_client["activity_state"], "ACTIVE")
+
+            hub.runtime.active_tool_calls = 0
+            with hub.runtime.background_operations_lock:
+                hub.runtime.background_operations.pop(operation_id, None)
+            hub.runtime.execution_resource_governor.complete(
+                admission.job_id, lifecycle_state="exited", exit_code=0
+            )
+            admission = None
+            idle = hub.runtime.runtime_activity_snapshot(write_active=False, delegations=[])
+            self.assertEqual(idle["state"], "IDLE")
+            writing = hub.runtime.runtime_activity_snapshot(write_active=True, delegations=[])
+            self.assertEqual(writing["state"], "WRITING")
+            delegating = hub.runtime.runtime_activity_snapshot(
+                write_active=True, delegations=[{"status": "active"}]
+            )
+            self.assertEqual(delegating["state"], "DELEGATING")
+        finally:
+            hub.runtime.active_tool_calls = 0
+            with hub.runtime.background_operations_lock:
+                hub.runtime.background_operations.pop(operation_id, None)
+            if admission is not None:
+                hub.runtime.execution_resource_governor.complete(
+                    admission.job_id, lifecycle_state="exited", exit_code=0
+                )
+            hub.close()
 
     def test_two_clients_share_one_runtime_with_independent_cursors_and_fenced_controller(self) -> None:
         hub = HubServer(self.root, self.TOKEN)

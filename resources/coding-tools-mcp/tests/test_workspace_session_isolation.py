@@ -401,17 +401,74 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                     del runtime.request_context.hub_client
                 runtime.close()
 
-    def test_legacy_unscoped_session_alias_remains_migratable_on_same_workspace(self) -> None:
+    def test_legacy_unscoped_session_alias_is_stably_isolated_from_global_task(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            runtime = Runtime(Path(temp), transport="http")
+            with patch.dict(os.environ, {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+                runtime = Runtime(Path(temp), transport="http")
             server = RuntimeHTTPServer(("127.0.0.1", 0), MCPHandler, runtime, runtime_factory=None)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            port = int(server.server_address[1])
             try:
-                resolved = server.sessions.get("legacy-session-from-pre-scope-runtime")
-                self.assertIs(resolved, runtime)
-                self.assertEqual(runtime.legacy_session_alias_uses, 1)
-                self.assertTrue(runtime.http_session_id.startswith("ws1."))
+                runtime.task_state.update({"objective": "global-sentinel", "status": "active"})
+                alias_a = "legacy-session-from-pre-scope-runtime-a"
+                alias_b = runtime.http_session_id
+
+                resolved_a = server.sessions.get(alias_a)
+                resolved_a_repeat = server.sessions.get(alias_a)
+                resolved_b = server.sessions.get(alias_b)
+                self.assertIsNot(resolved_a, runtime)
+                self.assertIs(resolved_a_repeat, resolved_a)
+                self.assertIsNot(resolved_b, runtime)
+                self.assertTrue(resolved_a.execution_context_id.startswith("legacy:"))
+                self.assertTrue(resolved_b.execution_context_id.startswith("legacy:"))
+                self.assertNotEqual(resolved_a.execution_context_id, resolved_b.execution_context_id)
+                self.assertTrue(resolved_a.http_session_id.startswith("ws1."))
+                self.assertIn(".ctxl_", resolved_a.http_session_id)
+
+                def task_call(request_id: int, session_id: str, arguments: dict) -> tuple[dict, str]:
+                    status, headers, body = self._post(
+                        port,
+                        {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "method": "tools/call",
+                            "params": {"name": "task_control", "arguments": arguments},
+                        },
+                        session_id=session_id,
+                        protocol_version=PROTOCOL_VERSION,
+                    )
+                    self.assertEqual(status, 200, body)
+                    self.assertIn("result", body, body)
+                    self.assertFalse(body["result"]["isError"], body)
+                    return body["result"]["structuredContent"], headers.get("mcp-session-id", "")
+
+                state_a, canonical_a = task_call(1, alias_a, {"action": "get"})
+                state_b, canonical_b = task_call(2, alias_b, {"action": "get"})
+                self.assertNotEqual(state_a["state"].get("objective"), "global-sentinel")
+                self.assertNotEqual(state_b["state"].get("objective"), "global-sentinel")
+                self.assertNotEqual(canonical_a, alias_a)
+                self.assertNotEqual(canonical_b, alias_b)
+                self.assertIn(".ctxl_", canonical_a)
+                self.assertIn(".ctxl_", canonical_b)
+
+                started_a, _ = task_call(3, alias_a, {"action": "start", "objective": "legacy-alias-a"})
+                started_b, _ = task_call(4, alias_b, {"action": "start", "objective": "legacy-alias-b"})
+                self.assertEqual(started_a["state"]["objective"], "legacy-alias-a")
+                self.assertEqual(started_b["state"]["objective"], "legacy-alias-b")
+
+                current_a, _ = task_call(5, canonical_a, {"action": "get"})
+                current_b, _ = task_call(6, canonical_b, {"action": "get"})
+                self.assertEqual(current_a["state"]["objective"], "legacy-alias-a")
+                self.assertEqual(current_b["state"]["objective"], "legacy-alias-b")
+                self.assertNotEqual(current_a["state"]["task_id"], current_b["state"]["task_id"])
+                self.assertEqual(runtime.task_state.get()["objective"], "global-sentinel")
+                self.assertGreaterEqual(runtime.legacy_session_alias_uses, 2)
             finally:
+                server.shutdown()
                 server.server_close()
+                thread.join(timeout=5)
+                self.assertFalse(thread.is_alive())
 
     @staticmethod
     def _post(

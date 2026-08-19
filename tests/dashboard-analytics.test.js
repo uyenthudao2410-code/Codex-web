@@ -99,8 +99,9 @@ test('dashboard honors real evidence: delegations drive lanes, controller lease 
   const js = read('renderer/dashboard.js');
   assert.match(js, /route_resolved/);
   assert.match(js, /authority\?\.controller\?\.owner_client_id/);
-  assert.match(js, /metadata\?\.economics/);
-  assert.match(js, /usageEvidence = 'MEASURED'/);
+  assert.match(js, /function modelState/);
+  assert.match(js, /delegationLane\(delegation\)/);
+  assert.doesNotMatch(js, /const measuredByLane = new Map/);
   assert.match(js, /usageEvidence = 'ESTIMATED'/);
   assert.match(js, /Chưa phân bổ/);
   assert.match(js, /không có bằng chứng delegation\/controller/);
@@ -125,18 +126,18 @@ test('cost model settings are allowlisted, normalized and persisted', () => {
   assert.equal(repaired.terra.out, 10);
 });
 
-test('dashboard prices measured tokens per canonical model and prefers provider-reported cost', () => {
+test('dashboard prices canonical measured tokens while secondary estimates stay scenario-only', () => {
   const js = read('renderer/dashboard.js');
   assert.match(js, /MODEL_PRICING = \{/);
   assert.match(js, /'deepseek-v4-flash': \{ in: 0\.28, out: 0\.42, cached: 0\.028 \}/);
   assert.match(js, /'gpt-5\.6-sol': \{ in: 10, out: 40 \}/);
   assert.match(js, /function modelPriceOf/);
-  assert.match(js, /economics\.provider_cost/);
   assert.match(js, /costSource = 'provider_reported'/);
-  assert.match(js, /\? 'pricing_derived' : 'settings_estimate'/);
+  assert.match(js, /entry\.costSource = 'pricing_derived'/);
+  assert.match(js, /entry\.costSource = 'settings_estimate'/);
   assert.match(js, /cachedTokens = Number\(summary\.cachedTokens\) \|\| 0/);
   assert.match(js, /uncached = Math\.max\(0, Number\(summary\.inTokens\) - cachedTokens\)/);
-  assert.match(js, /derived from \$\/1M pricing/);
+  assert.match(js, /DERIVED từ canonical token pricing/);
 });
 
 test('dashboard styling is themed, animated and honors reduced motion', () => {
@@ -153,4 +154,73 @@ test('dashboard styling is themed, animated and honors reduced motion', () => {
   assert.match(css, /\.da-model-row\.is-active/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /@media \(max-width: 1080px\)/);
+});
+
+test('operations overview renders measured token KPIs from canonical non-overlapping usage analytics', () => {
+  const js = read('renderer/dashboard.js');
+  assert.match(js, /function canonicalMeasuredUsage/);
+  assert.match(js, /orchestration\?\.usage_analytics/);
+  assert.match(js, /analytics\.measurement !== 'canonical_non_overlapping'/);
+  assert.match(js, /missing_measurement_policy !== 'unknown_not_zero'/);
+  assert.match(js, /usage\.input_total_tokens/);
+  assert.match(js, /usage\.input_cached_tokens/);
+  assert.match(js, /usage\.output_total_tokens/);
+  assert.match(js, /usage\.output_reasoning_tokens/);
+  assert.match(js, /usage\.total_tokens/);
+  assert.match(js, /Array\.isArray\(analytics\.by_model\)/);
+  assert.match(js, /const measuredTokens = measured \? measured\.total : 0/);
+  assert.match(js, /const measuredOut = measured \? measured\.output : 0/);
+  assert.doesNotMatch(js, /measured\.input \+ measured\.cached \+ measured\.output \+ measured\.reasoning/);
+  assert.doesNotMatch(js, /measured\.output \+ measured\.reasoning/);
+});
+
+test('operations overview uses canonical hourly and rolling evidence with explicit estimated fallback', () => {
+  const js = read('renderer/dashboard.js');
+  assert.match(js, /function canonicalHourBuckets/);
+  assert.match(js, /Array\.isArray\(analytics\.hourly\)/);
+  assert.match(js, /analytics\.rolling_5m/);
+  assert.match(js, /canonicalHourBuckets\(measured, 24\) \|\| performanceBuckets\(records, 24\)/);
+  assert.match(js, /TOKEN MEASURED/);
+  assert.match(js, /TOKEN ESTIMATED/);
+  assert.match(js, /Estimated model-visible context trend/);
+});
+
+test('operations overview heatmap is built from real canonical hourly evidence', () => {
+  const js = read('renderer/dashboard.js');
+  assert.match(js, /function renderHeatmap\(measured\)/);
+  assert.match(js, /measured\?\.hours instanceof Map/);
+  assert.doesNotMatch(js, /day >= 5 \? 0\.35 : 0\.85/);
+  assert.doesNotMatch(js, /buckets\[hour % buckets\.length\]/);
+});
+
+test('operations overview displays actual error rate and correct cost and efficiency semantics', () => {
+  const js = read('renderer/dashboard.js');
+  assert.match(js, /const errorRate = summary\.calls \? Math\.max\(0, 100 - okRate\) : 0/);
+  assert.match(js, /CHI PHÍ 7 NGÀY/);
+  assert.match(js, /HIỆU SUẤT THỰC THI/);
+  assert.match(js, /measured\.costSource !== 'unobserved'/);
+  assert.match(js, /DERIVED từ canonical token pricing/);
+});
+
+test('secondary model and fleet economics stay explicitly estimated and scenario-only', () => {
+  const js = read('renderer/dashboard.js');
+  const html = read('renderer/index.html');
+  assert.doesNotMatch(js, /const measuredByLane = new Map/);
+  assert.doesNotMatch(js, /entry\.usageEvidence = 'MEASURED'/);
+  assert.match(js, /entry\.costSource = 'settings_estimate'/);
+  assert.match(js, /Input \/ context \(EST\.\)/);
+  assert.match(js, /Output \(EST\.\)/);
+  assert.match(js, /ESTIMATED từ model-visible bytes trong performance trace/);
+  assert.match(js, /SCENARIO settings estimate/);
+  assert.match(html, /TOKEN \(EST\.\)/);
+  assert.match(html, /CHI PHÍ \(SCENARIO\)/);
+  assert.match(html, /SCENARIO \/ 1K EST\. TOKEN/);
+  assert.match(html, /Token ESTIMATED và chi phí SCENARIO theo model/);
+});
+
+test('dead legacy measuredUsage helper is not called by dashboard rendering', () => {
+  const js = read('renderer/dashboard.js');
+  const calls = js.match(/measuredUsage\(/g) || [];
+  assert.equal(calls.length, 1);
+  assert.match(js, /const measured = canonicalMeasuredUsage\(\)/);
 });

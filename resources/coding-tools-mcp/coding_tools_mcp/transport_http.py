@@ -18,6 +18,7 @@ HTTP_SESSION_TTL_SECONDS = 60 * 60
 MAX_TRACKED_SESSION_ALIASES = 512
 HTTP_SESSION_SCOPE_PREFIX = "ws1"
 HTTP_SESSION_SCOPE_HEX_CHARS = 16
+LEGACY_ALIAS_CONTEXT_PREFIX = "legacy:"
 
 
 class StaleHTTPSessionError(RuntimeError):
@@ -44,9 +45,12 @@ def new_workspace_session_id(
     scope = workspace_session_scope(workspace, auth_token)
     if execution_scoped:
         context_id = str(execution_context_id or secrets.token_hex(8)).lower()
-        if len(context_id) != 16 or any(char not in "0123456789abcdef" for char in context_id):
-            raise ValueError("execution_context_id must be 16 lowercase hex characters")
-        token = f"ctx_{context_id}_{secrets.token_urlsafe(12)}"
+        legacy_alias = context_id.startswith(LEGACY_ALIAS_CONTEXT_PREFIX)
+        encoded_context_id = context_id[len(LEGACY_ALIAS_CONTEXT_PREFIX):] if legacy_alias else context_id
+        if len(encoded_context_id) != 16 or any(char not in "0123456789abcdef" for char in encoded_context_id):
+            raise ValueError("execution_context_id must be 16 lowercase hex characters or legacy:<16 lowercase hex>")
+        token_prefix = "ctxl" if legacy_alias else "ctx"
+        token = f"{token_prefix}_{encoded_context_id}_{secrets.token_urlsafe(12)}"
     else:
         token = f"legacy_{secrets.token_urlsafe(18)}"
     return f"{HTTP_SESSION_SCOPE_PREFIX}.{scope}.{token}"
@@ -57,15 +61,24 @@ def session_execution_context_id(session_id: str) -> str:
     if len(parts) != 3:
         return ""
     token = parts[2]
-    if not token.startswith("ctx_"):
+    legacy_alias = token.startswith("ctxl_")
+    if not legacy_alias and not token.startswith("ctx_"):
         return ""
-    raw = token[4:]
+    raw = token[5:] if legacy_alias else token[4:]
     context_id, separator, alias = raw.partition("_")
     if not separator or not alias:
         return ""
     if len(context_id) != 16 or any(char not in "0123456789abcdef" for char in context_id):
         return ""
-    return context_id
+    return f"{LEGACY_ALIAS_CONTEXT_PREFIX}{context_id}" if legacy_alias else context_id
+
+
+def legacy_alias_execution_context_id(session_id: str) -> str:
+    digest = hashlib.sha256(
+        b"coding-tools-mcp-legacy-session-alias-v1\0"
+        + str(session_id).encode("utf-8", errors="surrogatepass")
+    ).hexdigest()[:16]
+    return f"{LEGACY_ALIAS_CONTEXT_PREFIX}{digest}"
 
 
 def _session_workspace_scope(session_id: str) -> str | None:
@@ -155,7 +168,11 @@ class HTTPSessionManager:
             record = self._sessions.get(session_id)
             if record is not None:
                 record.last_seen = time.time()
-                return record.runtime
+                if isinstance(record.runtime, HTTPSessionRuntimeView):
+                    return record.runtime
+                # Historical managers could retain a process-global record for a
+                # legacy alias. Rebind it below instead of re-exposing global task
+                # state to another ChatWeb conversation.
 
             execution_context_id = session_execution_context_id(session_id)
             if execution_context_id:
@@ -179,16 +196,25 @@ class HTTPSessionManager:
                 self._trim_locked()
                 return view
 
-            if presented_scope is None:
-                self._runtime.legacy_session_alias_uses += 1
-            # Legacy ids remain aliases for the process-global projection. This
-            # preserves old tunnel/reconnect behavior during migration.
-            self._sessions[session_id] = HTTPSessionRecord(
-                runtime=self._runtime,
-                last_seen=time.time(),
+            self._runtime.legacy_session_alias_uses += 1
+            execution_context_id = legacy_alias_execution_context_id(session_id)
+            canonical_id = new_workspace_session_id(
+                self._runtime.workspace.root,
+                getattr(self._runtime, "auth_token", None),
+                execution_scoped=True,
+                execution_context_id=execution_context_id,
             )
+            view = HTTPSessionRuntimeView(
+                self._runtime,
+                session_id=canonical_id,
+                execution_context_id=execution_context_id,
+            )
+            now = time.time()
+            rebound = HTTPSessionRecord(runtime=view, last_seen=now)
+            self._sessions[session_id] = rebound
+            self._sessions[canonical_id] = rebound
             self._trim_locked()
-            return self._runtime
+            return view
 
     def delete(self, session_id: str) -> bool:
         with self._lock:

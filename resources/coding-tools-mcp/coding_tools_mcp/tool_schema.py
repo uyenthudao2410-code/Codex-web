@@ -16,6 +16,19 @@ EVALUATION_SCHEMA_VERSION = 2
 def object_schema(properties: dict[str, Any] | None = None, required: list[str] | None = None) -> dict[str, Any]:
     merged = dict(properties or {})
     merged.setdefault(
+        "task_context_id",
+        {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": (
+                "Optional MCP 2026 application-state handle. Reuse the task_context_id returned by a prior "
+                "tool result to continue the same isolated task/run across stateless calls. Omitting it starts "
+                "a fresh isolated context rather than inheriting another client's task."
+            ),
+        },
+    )
+    merged.setdefault(
         "idempotency_key",
         {
             "type": "string",

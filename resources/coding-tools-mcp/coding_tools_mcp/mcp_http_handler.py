@@ -40,6 +40,7 @@ from .protocol import (
     response_id,
     validate_rpc_envelope,
 )
+from .controller_usage_ingress import active_controller_usage_context, controller_usage_request, decorate_controller_usage_status, record_controller_usage, tool_call_name
 from .tool_schema import tool_annotations
 from .transport_http import (
     STATELESS_HTTP_2026_ENV,
@@ -63,11 +64,13 @@ if TYPE_CHECKING:
 
 
 HUB_CLIENT_ONLINE_SECONDS = 45.0
-
 HUB_CONTROLLER_LEASE_SECONDS = 60.0
 
 HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
 
+STATELESS_TASK_CONTEXT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+
+STATELESS_TASK_CONTEXT_META_KEY = "io.coding-tools/taskContextId"
 MCP_ENDPOINT_PATH = "/mcp"
 
 MAX_HTTP_REQUEST_BYTES = 1_048_576
@@ -411,6 +414,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "role": client.get("role"),
                 "status": client.get("status"),
                 "online": bool(client.get("online")),
+                "activity_state": runtime.hub_client_activity_state(client.get("last_seen_at"), active_seconds=HUB_CLIENT_ONLINE_SECONDS),
                 "last_seen_at": client.get("last_seen_at"),
                 "runtime_instance_id": client.get("runtime_instance_id"),
                 "contract_sha": client.get("contract_sha"),
@@ -537,6 +541,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "delegations": (summary.get("delegations") or [])[-4:],
             "lanes": lane_view,
             "usage_events": ledger.recent_usage_events(limit=8),
+            "usage_analytics": ledger.usage_analytics(days=7),
             "routing_evidence": ledger.routing_evidence(run_id, limit=8) if run_id else {
                 "shadow_recommendations": [], "actual_delegations": [], "usage_events": []
             },
@@ -553,6 +558,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             ]},
             "capsule": summary.get("latest_handoff_capsule"),
             "background_operations": ledger.list_background_operations(limit=8),
+            "runtime_activity": runtime.runtime_activity_snapshot(write_active=bool(write_lease), delegations=summary.get("delegations") or []),
             "counts": {
                 "events": len(events),
                 "waves": len(summary.get("waves") or []),
@@ -976,7 +982,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 # Recreate a compatible initialized session instead of returning a
                 # hard 404 that causes an aggressive reconnect loop.
                 try:
-                    runtime = self.server.sessions.create()  # type: ignore[attr-defined]
+                    runtime = self.server.sessions.create(execution_scoped=True)  # type: ignore[attr-defined]
                     runtime.initialized = True
                     runtime.protocol_version = protocol_version or PROTOCOL_VERSION
                     self._runtime = runtime
@@ -1045,10 +1051,37 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
     ) -> dict[str, Any] | None:
         runtime = self.runtime
         try:
+            dispatch_request = request
+            task_context_id = ""
+            execution_context_id = ""
+            if stateless_2026:
+                dispatch_request, task_context_id, execution_context_id = self._stateless_task_context(request)
             identity = self._hub_identity_from_request(request)
+            if stateless_2026:
+                identity["execution_context_id"] = execution_context_id
+            dispatch_request, controller_usage = controller_usage_request(dispatch_request, identity)
             runtime.request_context.hub_client = identity
             runtime._touch_hub_client(identity)
-            return dispatch_rpc(runtime, request, stateless_2026=stateless_2026)
+            usage_receipt = None
+            deferred_controller_usage = False
+            if controller_usage is not None:
+                usage_context = active_controller_usage_context(runtime)
+                if usage_context is not None:
+                    usage_receipt = record_controller_usage(runtime, controller_usage, usage_context)
+                elif tool_call_name(dispatch_request) == "agent_workflow":
+                    deferred_controller_usage = True
+                else:
+                    raise ValueError("controller usage requires a scoped active orchestration run and wave")
+            response = dispatch_rpc(runtime, dispatch_request, stateless_2026=stateless_2026)
+            if controller_usage is not None and deferred_controller_usage:
+                usage_context = active_controller_usage_context(runtime)
+                if usage_context is not None:
+                    usage_receipt = record_controller_usage(runtime, controller_usage, usage_context)
+            if response is not None and usage_receipt is not None:
+                decorate_controller_usage_status(response, usage_receipt)
+            if stateless_2026 and response is not None:
+                self._decorate_stateless_task_context(response, task_context_id)
+            return response
         except ValueError as exc:
             return jsonrpc_error(response_id(request), -32602, str(exc))
         except Exception as exc:  # noqa: BLE001 - HTTP must always answer with JSON-RPC
@@ -1056,6 +1089,55 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         finally:
             if hasattr(runtime.request_context, "hub_client"):
                 delattr(runtime.request_context, "hub_client")
+
+    def _stateless_task_context(self, request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
+        """Return a request copy plus an isolated MCP-2026 application-state context."""
+        task_context_id = ""
+        dispatch_request = request
+        if request.get("method") == "tools/call":
+            params = request.get("params") if isinstance(request.get("params"), dict) else {}
+            arguments = params.get("arguments") if isinstance(params.get("arguments"), dict) else None
+            if arguments is not None:
+                supplied = arguments.get("task_context_id")
+                if supplied is not None:
+                    if not isinstance(supplied, str) or not STATELESS_TASK_CONTEXT_ID_RE.fullmatch(supplied):
+                        raise ValueError(
+                            "task_context_id must match [A-Za-z0-9][A-Za-z0-9._:-]{0,127}"
+                        )
+                    task_context_id = supplied
+                if "task_context_id" in arguments:
+                    clean_arguments = dict(arguments)
+                    clean_arguments.pop("task_context_id", None)
+                    clean_params = dict(params)
+                    clean_params["arguments"] = clean_arguments
+                    dispatch_request = dict(request)
+                    dispatch_request["params"] = clean_params
+        if not task_context_id:
+            task_context_id = f"ctx_{secrets.token_hex(16)}"
+        execution_context_id = "mcp2026:" + hashlib.sha256(
+            f"mcp2026-task:{task_context_id}".encode("utf-8")
+        ).hexdigest()[:56]
+        return dispatch_request, task_context_id, execution_context_id
+
+    @staticmethod
+    def _decorate_stateless_task_context(response: dict[str, Any], task_context_id: str) -> None:
+        result = response.get("result")
+        if isinstance(result, dict):
+            meta = result.get("_meta")
+            if not isinstance(meta, dict):
+                meta = {}
+                result["_meta"] = meta
+            meta[STATELESS_TASK_CONTEXT_META_KEY] = task_context_id
+            structured = result.get("structuredContent")
+            if isinstance(structured, dict):
+                structured.setdefault("task_context_id", task_context_id)
+        error = response.get("error")
+        if isinstance(error, dict):
+            data = error.get("data")
+            if not isinstance(data, dict):
+                data = {}
+                error["data"] = data
+            data.setdefault("task_context_id", task_context_id)
 
     def _hub_identity_from_values(
         self,

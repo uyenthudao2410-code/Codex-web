@@ -250,6 +250,88 @@
     return result;
   }
 
+  function canonicalMeasuredUsage() {
+    const analytics = orchestration?.usage_analytics;
+    if (!analytics || analytics.measurement !== 'canonical_non_overlapping') return null;
+    if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
+    const overall = analytics.overall && typeof analytics.overall === 'object' ? analytics.overall : {};
+    const events = Math.max(0, Number(overall.event_count) || 0);
+    if (!events) return null;
+    const usage = overall.usage && typeof overall.usage === 'object' ? overall.usage : {};
+    const costStats = overall.cost && typeof overall.cost === 'object' ? overall.cost : {};
+    const measuredCostEvents = Math.max(0, Number(costStats.measured_event_count) || 0);
+    const derivedCostEvents = Math.max(0, Number(costStats.derived_event_count) || 0);
+    const unobservedCostEvents = Math.max(0, Number(costStats.unobserved_event_count) || 0);
+    const measuredCost = Math.max(0, Number(costStats.measured_usd) || 0);
+    const derivedCost = Math.max(0, Number(costStats.derived_usd) || 0);
+    const costSource = measuredCostEvents > 0 ? 'provider_reported' : derivedCostEvents > 0 ? 'pricing_derived' : 'unobserved';
+    const cost = costSource === 'provider_reported' ? measuredCost : costSource === 'pricing_derived' ? derivedCost : 0;
+    const hours = new Map();
+    for (const row of Array.isArray(analytics.hourly) ? analytics.hourly : []) {
+      const time = Date.parse(String(row?.hour || ''));
+      if (!Number.isFinite(time)) continue;
+      const rowUsage = row?.usage && typeof row.usage === 'object' ? row.usage : {};
+      hours.set(Math.floor(time / 3600000), {
+        in: Math.max(0, Number(rowUsage.input_total_tokens) || 0),
+        out: Math.max(0, Number(rowUsage.output_total_tokens) || 0),
+        total: Math.max(0, Number(rowUsage.total_tokens) || 0),
+        events: Math.max(0, Number(row?.event_count) || 0)
+      });
+    }
+    const rollingRow = analytics.rolling_5m && typeof analytics.rolling_5m === 'object' ? analytics.rolling_5m : {};
+    const rollingUsage = rollingRow.usage && typeof rollingRow.usage === 'object' ? rollingRow.usage : {};
+    const rolling = {
+      events: Math.max(0, Number(rollingRow.event_count) || 0),
+      tokens: Math.max(0, Number(rollingUsage.total_tokens) || 0),
+      end: String(rollingRow.end || analytics?.window?.end || '')
+    };
+    const modelMap = new Map();
+    for (const row of Array.isArray(analytics.by_model) ? analytics.by_model : []) {
+      const model = String(row?.model || row?.model_id || 'unknown').trim() || 'unknown';
+      const rowUsage = row?.usage && typeof row.usage === 'object' ? row.usage : {};
+      const rowCost = row?.cost && typeof row.cost === 'object' ? row.cost : {};
+      const entry = modelMap.get(model) || {
+        tool: model, model, calls: 0, ok: 0, inTokens: 0, outTokens: 0, cachedTokens: 0,
+        cost: 0, costSource: 'unobserved', usageEvidence: 'MEASURED',
+        measuredCost: 0, derivedCost: 0, measuredCostEvents: 0, derivedCostEvents: 0
+      };
+      entry.calls += Math.max(0, Number(row?.event_count) || 0);
+      entry.inTokens += Math.max(0, Number(rowUsage.input_total_tokens) || 0);
+      entry.outTokens += Math.max(0, Number(rowUsage.output_total_tokens) || 0);
+      entry.cachedTokens += Math.max(0, Number(rowUsage.input_cached_tokens) || 0);
+      entry.measuredCost += Math.max(0, Number(rowCost.measured_usd) || 0);
+      entry.derivedCost += Math.max(0, Number(rowCost.derived_usd) || 0);
+      entry.measuredCostEvents += Math.max(0, Number(rowCost.measured_event_count) || 0);
+      entry.derivedCostEvents += Math.max(0, Number(rowCost.derived_event_count) || 0);
+      modelMap.set(model, entry);
+    }
+    for (const entry of modelMap.values()) {
+      if (entry.measuredCostEvents > 0) {
+        entry.cost = entry.measuredCost;
+        entry.costSource = 'provider_reported';
+      } else if (entry.derivedCostEvents > 0) {
+        entry.cost = entry.derivedCost;
+        entry.costSource = 'pricing_derived';
+      }
+    }
+    return {
+      events,
+      input: Math.max(0, Number(usage.input_total_tokens) || 0),
+      cached: Math.max(0, Number(usage.input_cached_tokens) || 0),
+      output: Math.max(0, Number(usage.output_total_tokens) || 0),
+      reasoning: Math.max(0, Number(usage.output_reasoning_tokens) || 0),
+      total: Math.max(0, Number(usage.total_tokens) || 0),
+      cost,
+      costSource,
+      measuredCostEvents,
+      derivedCostEvents,
+      unobservedCostEvents,
+      hours,
+      rolling,
+      byModel: [...modelMap.values()].sort((a, b) => (b.inTokens + b.outTokens) - (a.inTokens + a.outTokens))
+    };
+  }
+
   function hourBuckets(records, buckets = 24) {
     const nowHour = Math.floor(Date.now() / 3600000);
     const start = nowHour - buckets + 1;
@@ -299,6 +381,17 @@
     // Hourly buckets persisted server-side survive the recent-trace window;
     // the recent trace remains the fallback when no hourly data exists yet.
     return hourlyFromStore(count) || hourBuckets(records, count);
+  }
+
+  function canonicalHourBuckets(measured, count = 24) {
+    if (!measured?.hours || !(measured.hours instanceof Map)) return null;
+    const nowHour = Math.floor(Date.now() / 3600000);
+    const start = nowHour - count + 1;
+    return Array.from({ length: count }, (_, index) => {
+      const hour = start + index;
+      const bucket = measured.hours.get(hour);
+      return { hour, in: bucket?.in || 0, out: bucket?.out || 0 };
+    });
   }
 
   function toolBreakdown(records) {
@@ -449,74 +542,10 @@
       entry.usageEvidence = 'ESTIMATED';
     }
 
-    const measuredByLane = new Map();
-    for (const delegation of Array.isArray(orchestration?.delegations) ? orchestration.delegations : []) {
-      const lane = delegationLane(delegation);
-      const economics = delegation?.metadata?.economics;
-      if (!lane || !economics || typeof economics !== 'object') continue;
-      const input = Number(economics.input_tokens);
-      const output = Number(economics.output_tokens);
-      if (!Number.isFinite(input) || input < 0 || !Number.isFinite(output) || output < 0) continue;
-      const usage = measuredByLane.get(lane) || { inTokens: 0, outTokens: 0, cachedTokens: 0, calls: 0, model: '' };
-      usage.inTokens += input;
-      usage.outTokens += output;
-      if (Number.isFinite(Number(economics.cached_input_tokens))) {
-        usage.cachedTokens += Math.max(0, Number(economics.cached_input_tokens));
-      }
-      usage.calls += 1;
-      usage.model = String(economics.model || delegation?.model || lane);
-      const providerCost = Number(economics.provider_cost);
-      if (Number.isFinite(providerCost) && providerCost >= 0) {
-        usage.providerCost = (usage.providerCost || 0) + providerCost;
-      }
-      measuredByLane.set(lane, usage);
-    }
-
-    for (const lane of Array.isArray(orchestration?.lanes) ? orchestration.lanes : []) {
-      const economics = lane?.last_economics;
-      if (!economics || typeof economics !== 'object') continue;
-      const input = Number(economics.input_tokens);
-      const output = Number(economics.output_tokens);
-      if (!Number.isFinite(input) || input < 0 || !Number.isFinite(output) || output < 0) continue;
-      const usage = measuredByLane.get('chatweb') || { inTokens: 0, outTokens: 0, cachedTokens: 0, calls: 0, model: '' };
-      usage.inTokens += input;
-      usage.outTokens += output;
-      if (Number.isFinite(Number(economics.cached_input_tokens))) {
-        usage.cachedTokens += Math.max(0, Number(economics.cached_input_tokens));
-      }
-      usage.calls += 1;
-      usage.model = String(economics.model || lane?.model || 'chatweb');
-      const providerCost = Number(economics.provider_cost);
-      if (Number.isFinite(providerCost) && providerCost >= 0) {
-        usage.providerCost = (usage.providerCost || 0) + providerCost;
-      }
-      measuredByLane.set('chatweb', usage);
-    }
-
-    for (const [lane, usage] of measuredByLane) {
-      let entry = map.get(lane);
-      if (!entry) {
-        entry = { model: lane, calls: 0, ok: 0, inTokens: 0, outTokens: 0, cost: 0 };
-        map.set(lane, entry);
-      }
-      entry.inTokens = usage.inTokens;
-      entry.outTokens = usage.outTokens;
-      entry.cachedTokens = usage.cachedTokens;
-      entry.calls = Math.max(entry.calls, usage.calls);
-      entry.usageEvidence = 'MEASURED';
-      entry.modelId = usage.model || '';
-      if (Number.isFinite(Number(usage.providerCost)) && Number(usage.providerCost) >= 0) {
-        entry.providerCost = Number(usage.providerCost);
-      }
-    }
     for (const entry of map.values()) {
-      if (Number.isFinite(Number(entry.providerCost)) && Number(entry.providerCost) >= 0) {
-        entry.cost = Number(entry.providerCost);
-        entry.costSource = 'provider_reported';
-      } else {
-        entry.cost = costOf(entry, entry.model);
-        entry.costSource = entry.usageEvidence === 'MEASURED' ? 'pricing_derived' : 'settings_estimate';
-      }
+      entry.cost = costOf(entry, entry.model);
+      entry.costSource = 'settings_estimate';
+      if (entry.calls > 0) entry.usageEvidence = 'ESTIMATED';
     }
     return map;
   }
@@ -751,7 +780,7 @@
     });
   }
 
-  function renderDonut(entries) {
+  function renderDonut(entries, evidence = 'estimated') {
     const svg = byId('daDonut');
     const legend = byId('daLegend');
     const center = byId('daDonutTotal');
@@ -768,6 +797,10 @@
     animateText(center, compact, total);
     if (sub) sub.textContent = 'TOKEN ƯỚC TÍNH';
     if (foot) foot.textContent = total > 0 ? `${entries.length} mô hình` : '— mô hình';
+    if (sub) sub.textContent = evidence === 'measured' ? 'TOKEN MEASURED' : 'TOKEN ESTIMATED';
+    if (foot) foot.textContent = total > 0
+      ? `${entries.length} ${evidence === 'measured' ? 'model' : 'tool'}`
+      : `— ${evidence === 'measured' ? 'model' : 'tool'}`;
     svg.appendChild(center);
     if (sub) svg.appendChild(sub);
     if (!total) {
@@ -808,11 +841,11 @@
     });
   }
 
-  function renderBars(entries) {
+  function renderBars(entries, evidence = 'estimated') {
     const container = byId('daToolBars');
     if (!container) return;
     container.replaceChildren();
-    const top = entries.slice(0, 6);
+    const top = entries.slice().sort((a, b) => (b.cost || 0) - (a.cost || 0)).slice(0, 6);
     if (!top.length) {
       const empty = document.createElement('div');
       empty.className = 'cc-empty';
@@ -832,6 +865,12 @@
       name.textContent = entry.tool;
       const meta = document.createElement('small');
       meta.textContent = `${entry.calls} lượt gọi · ${entry.ok}/${entry.calls} OK`;
+      if (evidence === 'measured') {
+        const source = entry.costSource === 'provider_reported' ? 'MEASURED' : entry.costSource === 'pricing_derived' ? 'DERIVED' : 'NO COST';
+        meta.textContent = `${entry.calls} UsageEvent · ${source}`;
+      } else {
+        meta.textContent += ' · ESTIMATED';
+      }
       name.appendChild(meta);
       const track = document.createElement('span');
       track.className = 'da-bar-track';
@@ -860,7 +899,7 @@
 
     const head = document.createElement('div');
     head.className = 'da-model-head';
-    for (const label of ['Model', 'State', 'Input / context', 'Output', 'Calls', 'Share', 'Scenario cost']) {
+    for (const label of ['Model', 'State', 'Input / context (EST.)', 'Output (EST.)', 'Calls', 'Share', 'Scenario cost']) {
       const cell = document.createElement('span');
       cell.textContent = label;
       head.appendChild(cell);
@@ -926,8 +965,8 @@
       const costCell = document.createElement('span');
       costCell.className = 'da-model-cell da-model-cost';
       const isSubscription = model.id === 'desktop' || model.id === 'opencode';
-      const costSourceText = { provider_reported: 'provider reported', pricing_derived: 'derived from $/1M pricing', settings_estimate: 'settings estimate' }[entry?.costSource] || 'estimate';
-      costCell.title = `Nguồn giá trị token: ${costSourceText}`;
+      const costSourceText = entry?.costSource === 'settings_estimate' ? 'SCENARIO settings estimate' : 'no usage estimate';
+      costCell.title = `Token ESTIMATED · cost ${costSourceText}`;
       costCell.innerHTML = `<b>${isSubscription && !rowCost ? '—' : money(displayedCost(rowCost))}</b>`;
 
       row.append(name, stateCell, inCell, outCell, callsCell, shareWrap, costCell);
@@ -1024,6 +1063,7 @@
       const tdTokens = document.createElement('td');
       tdTokens.className = 'cell-num';
       tdTokens.textContent = compact(modelTokens);
+      tdTokens.title = 'ESTIMATED từ model-visible bytes trong performance trace; không phải UsageEvent canonical';
 
       // Share col
       const tdShare = document.createElement('td');
@@ -1034,11 +1074,13 @@
       const tdCost = document.createElement('td');
       tdCost.className = 'cell-num';
       tdCost.textContent = money(displayedCost(rowCost));
+      tdCost.title = 'SCENARIO settings estimate; không phải provider billing';
 
       // Cost / 1K col
       const tdCostPer1k = document.createElement('td');
       tdCostPer1k.className = 'cell-num';
       tdCostPer1k.textContent = money(displayedCost(costPer1k));
+      tdCostPer1k.title = 'SCENARIO / 1K ESTIMATED token; không phải provider billing';
 
       // Efficiency / Stars col
       const tdStars = document.createElement('td');
@@ -1091,13 +1133,12 @@
   }
 
   function rollingProviderUsage(measured, now = Date.now(), windowMs = REALTIME_WINDOW_MS) {
-    const start = now - windowMs;
-    const samples = (Array.isArray(measured?.samples) ? measured.samples : [])
-      .filter((sample) => Number.isFinite(Number(sample?.time)) && Number(sample.time) >= start && Number(sample.time) <= now);
-    const tokens = samples.reduce((sum, sample) => sum + Math.max(0, Number(sample.tokens) || 0), 0);
-    const latestAt = samples.reduce((latest, sample) => Math.max(latest, Number(sample.time) || 0), 0) || null;
+    const samples = Math.max(0, Number(measured?.rolling?.events) || 0);
+    const tokens = Math.max(0, Number(measured?.rolling?.tokens) || 0);
+    const end = Date.parse(String(measured?.rolling?.end || ''));
+    const latestAt = samples > 0 && Number.isFinite(end) ? Math.min(now, end) : null;
     return {
-      samples: samples.length,
+      samples,
       tokens,
       tpm: tokens / Math.max(1, windowMs / 60000),
       latestAt
@@ -1197,16 +1238,17 @@
     const summaryList = $('.da-summary-list');
     if (!summaryList) return;
     const topTool = entries[0]?.tool || 'MCP Tools';
-    const topToolPct = entries[0] ? percent(entries[0].inTokens + entries[0].outTokens, Math.max(1, totalTokens)).toFixed(0) : '0';
     const hasMeasured = Boolean(measured && measured.events > 0);
-    const measuredTokens = measured ? measured.input + measured.cached + measured.output + measured.reasoning : 0;
+    const distributionTotal = hasMeasured ? measured.total : totalTokens;
+    const topToolPct = entries[0] ? percent(entries[0].inTokens + entries[0].outTokens, Math.max(1, distributionTotal)).toFixed(0) : '0';
+    const measuredTokens = measured ? measured.total : 0;
 
     summaryList.innerHTML = `
       <div class="da-summary-item">
         <div class="sum-icon-circle green">↑</div>
         <div class="sum-info">
           <b>Sử dụng Token</b>
-          <small>${hasMeasured ? `Tổng cộng ${compact(measuredTokens)} token từ phép đo provider (${measured.events} nguồn: usage_events · delegations · lanes)` : 'Chưa có phép đo token từ provider — hiển thị "—"'}</small>
+          <small>${hasMeasured ? `Tổng cộng ${compact(measuredTokens)} token canonical từ ${measured.events} UsageEvent` : 'Chưa có UsageEvent canonical — KPI token hiển thị "—"'}</small>
         </div>
         <span class="sum-link-btn green">${hasMeasured ? 'Đã đo' : 'Chờ dữ liệu'} ›</span>
       </div>
@@ -1214,15 +1256,15 @@
         <div class="sum-icon-circle amber">$</div>
         <div class="sum-info">
           <b>Hiệu quả chi phí</b>
-          <small>${hasMeasured && measured.cost > 0 ? `Chi phí đo được ${money(displayedCost(measured.cost))} từ usage_events` : 'Chưa có chi phí đo được từ provider'}</small>
+          <small>${!hasMeasured || measured.costSource === 'unobserved' ? 'Chưa có cost evidence trong UsageEvent canonical' : measured.costSource === 'provider_reported' ? `Chi phí MEASURED ${money(displayedCost(measured.cost))}` : `Chi phí DERIVED ${money(displayedCost(measured.cost))} · không phải provider billing`}</small>
         </div>
-        <span class="sum-link-btn amber">${hasMeasured && measured.cost > 0 ? 'Đã đo' : 'Chờ dữ liệu'} ›</span>
+        <span class="sum-link-btn amber">${hasMeasured && measured.costSource !== 'unobserved' ? (measured.costSource === 'provider_reported' ? 'Đã đo' : 'Đã suy ra') : 'Chờ dữ liệu'} ›</span>
       </div>
       <div class="da-summary-item">
         <div class="sum-icon-circle cyan">☵</div>
         <div class="sum-info">
-          <b>Phân bổ công cụ</b>
-          <small>${topTool} chiếm ${topToolPct}% lưu lượng</small>
+          <b>${hasMeasured ? 'Phân bổ mô hình' : 'Phân bổ context ước tính'}</b>
+          <small>${topTool} chiếm ${topToolPct}% ${hasMeasured ? 'token canonical' : 'context ESTIMATED'}</small>
         </div>
         <span class="sum-link-btn cyan">Chi tiết ›</span>
       </div>
@@ -1284,22 +1326,22 @@
     const usd = costOf(summary, 'chatweb');
     const okRate = summary.calls ? percent(summary.ok, summary.calls) : 0;
     const hasMeasured = Boolean(measured && measured.events > 0);
-    const measuredTokens = measured ? measured.input + measured.cached + measured.output + measured.reasoning : 0;
+    const measuredTokens = measured ? measured.total : 0;
     const measuredIn = measured ? measured.input : 0;
-    const measuredOut = measured ? measured.output + measured.reasoning : 0;
+    const measuredOut = measured ? measured.output : 0;
 
     if (hasMeasured) {
       animateText(byId('daTokensTotal'), compact, measuredTokens);
       animateText(byId('daTokensInTotal'), compact, measuredIn);
       animateText(byId('daTokensOutTotal'), compact, measuredOut);
-      setText('daTokensSplit', `Provider input ${compact(measured.input)} · cached ${compact(measured.cached)} · output ${compact(measured.output)}${measured.reasoning ? ` · reasoning ${compact(measured.reasoning)}` : ''}`);
-      setText('daTokensMeta', `MEASURED từ ${measured.events} nguồn đo provider trong 7 ngày gần nhất (usage_events · delegations · lanes ChatWeb)`);
+      setText('daTokensSplit', `Input total ${compact(measured.input)} · cached subset ${compact(measured.cached)} · output total ${compact(measured.output)}${measured.reasoning ? ` · reasoning component ${compact(measured.reasoning)}` : ''}`);
+      setText('daTokensMeta', `MEASURED · canonical non-overlap · ${measured.events} UsageEvent · 7 ngày`);
     } else {
       setText('daTokensTotal', '—');
       setText('daTokensInTotal', '—');
       setText('daTokensOutTotal', '—');
-      setText('daTokensSplit', 'Chưa có phép đo token từ provider');
-      setText('daTokensMeta', 'Token chỉ được hiển thị khi có usage_events từ provider');
+      setText('daTokensSplit', 'Chưa có UsageEvent canonical');
+      setText('daTokensMeta', 'KPI token giữ unknown; biểu đồ context fallback được gắn nhãn ESTIMATED riêng');
     }
     const rateEl = byId('daTokensRate');
     if (rateEl) {
@@ -1323,11 +1365,13 @@
     } else {
       delta = 'Chưa có dữ liệu đo được';
     }
+    if (hasMeasured) delta = `${measured.events} UsageEvent · cửa sổ 7 ngày`;
     const deltaEl = byId('daTokensDelta');
     if (deltaEl) {
       deltaEl.textContent = delta;
       deltaEl.classList.toggle('up', yesterdayTokens > 0 && totalTokens >= yesterdayTokens);
       deltaEl.classList.toggle('down', yesterdayTokens > 0 && totalTokens < yesterdayTokens);
+      if (hasMeasured) deltaEl.classList.remove('up', 'down');
     }
     const inDeltaEl = byId('daTokensInDelta');
     if (inDeltaEl) {
@@ -1340,30 +1384,37 @@
       outDeltaEl.className = 'da-tile-delta';
     }
 
-    if (hasMeasured && measured.cost > 0) {
+    const hasCost = hasMeasured && measured.costSource !== 'unobserved';
+    if (hasCost) {
       animateText(byId('daCostTotal'), (value) => money(displayedCost(value)), measured.cost);
     } else {
       setText('daCostTotal', '—');
     }
+    const costSourceLabel = measured?.costSource === 'provider_reported' ? 'MEASURED' : measured?.costSource === 'pricing_derived' ? 'DERIVED' : 'UNOBSERVED';
     setText('daCostSplit', hasMeasured
-      ? `Provider cost đo được ${money(displayedCost(measured.cost))} · ${measured.events} sự kiện usage`
+      ? `${costSourceLabel} ${hasCost ? money(displayedCost(measured.cost)) : '—'} · measured ${measured.measuredCostEvents} · derived ${measured.derivedCostEvents} · unobserved ${measured.unobservedCostEvents}`
       : `Kịch bản tham chiếu ${money(displayedCost(usd))} · SCENARIO`);
     setText('daCostMeta', hasMeasured
-      ? 'MEASURED từ usage_events (provider cost) · không phải kịch bản'
-      : 'SCENARIO · not provider billing · chờ usage_events từ provider để đo chi phí thực tế');
+      ? (measured.costSource === 'provider_reported'
+        ? 'MEASURED provider/client-reported cost · derived events không được cộng lẫn'
+        : measured.costSource === 'pricing_derived'
+          ? 'DERIVED từ canonical token pricing · không phải provider billing'
+          : 'Không có cost evidence trong UsageEvent canonical')
+      : 'SCENARIO · not provider billing · chờ UsageEvent canonical');
     const vndEl = byId('daCostVnd');
     if (vndEl) {
-      if (hasMeasured && measured.cost > 0) {
+      if (hasCost) {
         vndEl.textContent = cost.currency === 'USD' ? `≈ ${money(measured.cost * fxRate())}` : `≈ ${money(measured.cost)}`;
       } else {
         vndEl.textContent = '—';
       }
     }
 
-    animateText(byId('daCallsTotal'), (value) => String(Math.round(value)), todayCount);
-    setText('daCallsMeta', `${summary.ok}/${summary.calls} lệnh OK · ${allCalls} lượt tổng`);
+    const errorRate = summary.calls ? Math.max(0, 100 - okRate) : 0;
+    animateText(byId('daCallsTotal'), (value) => `${value.toFixed(1)}%`, errorRate);
+    setText('daCallsMeta', `${Math.max(0, summary.calls - summary.ok)} lỗi / ${summary.calls} lệnh hôm nay · ${allCalls} lượt trace`);
     const callsDelta = byId('daCallsDelta');
-    if (callsDelta) callsDelta.textContent = `${okRate.toFixed(0)}% thành công`;
+    if (callsDelta) callsDelta.textContent = `${okRate.toFixed(1)}% thành công`;
     renderRing('daCallsRing', okRate);
 
     const latency = summary.execMs + summary.waitMs;
@@ -1379,24 +1430,33 @@
     renderSparkline(buckets);
   }
 
-  function renderHeatmap(buckets) {
+  function renderHeatmap(measured) {
     const container = byId('daHeatmapGrid');
     if (!container) return;
     container.replaceChildren();
     const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-    const totals = buckets.map((b) => b.in + b.out);
-    const maxVal = Math.max(1, ...totals);
+    const cells = new Map();
+    if (measured?.hours instanceof Map) {
+      for (const [unixHour, bucket] of measured.hours.entries()) {
+        const date = new Date(Number(unixHour) * 3600000);
+        const day = (date.getDay() + 6) % 7;
+        const hour = date.getHours();
+        const key = `${day}:${hour}`;
+        cells.set(key, (cells.get(key) || 0) + Math.max(0, Number(bucket?.total) || Number(bucket?.in || 0) + Number(bucket?.out || 0)));
+      }
+    }
+    const maxVal = Math.max(1, ...cells.values(), 0);
 
     for (let day = 0; day < 7; day += 1) {
       for (let hour = 0; hour < 24; hour += 1) {
         const cell = document.createElement('div');
         cell.className = 'heatmap-cell';
-        const bucketVal = buckets[hour % buckets.length];
-        const val = bucketVal ? (bucketVal.in + bucketVal.out) : 0;
-        const factor = (day >= 5 ? 0.35 : 0.85) * (0.2 + 0.8 * (val / maxVal));
-        const intensity = Math.min(1, Math.max(0.08, factor));
+        const val = cells.get(`${day}:${hour}`) || 0;
+        const intensity = val > 0 ? Math.min(1, 0.15 + 0.85 * (val / maxVal)) : 0.04;
         cell.style.background = `rgba(37, 99, 235, ${intensity.toFixed(2)})`;
-        cell.title = `${days[day]} ${hour}:00 — Mật độ: ${(intensity * 100).toFixed(0)}%`;
+        cell.title = measured
+          ? `${days[day]} ${hour}:00 — ${compact(val)} token canonical`
+          : `${days[day]} ${hour}:00 — chưa có UsageEvent canonical`;
         container.appendChild(cell);
       }
     }
@@ -1410,8 +1470,11 @@
     const summary = summarize(today);
     const yesterdaySummary = summarize(yesterday);
     const allSummary = summarize(records);
-    const buckets = performanceBuckets(records, 24);
-    const entries = toolBreakdown(today);
+    const measured = canonicalMeasuredUsage();
+    const buckets = canonicalHourBuckets(measured, 24) || performanceBuckets(records, 24);
+    const estimatedEntries = toolBreakdown(today);
+    const entries = measured?.byModel?.length ? measured.byModel : estimatedEntries;
+    const evidence = measured?.byModel?.length ? 'measured' : 'estimated';
     const models = modelBreakdown(today);
     const laneTotalUsd = [...models.values()]
       .filter((entry) => ['fast', 'deepseek', 'terra', 'sol'].includes(entry.model))
@@ -1419,22 +1482,32 @@
 
     const totalTokens = summary.inTokens + summary.outTokens;
     const okRate = summary.calls ? percent(summary.ok, summary.calls) : 100;
-    const measured = measuredUsage();
 
     updateHeaderContext();
+    setText('daDateValue', measured ? 'Cửa sổ 7 ngày · canonical UsageEvent' : 'Cửa sổ 7 ngày · KPI token unknown · context fallback ESTIMATED');
+    const chart = byId('daChart');
+    if (chart) chart.setAttribute('aria-label', measured ? 'Canonical measured token trend' : 'Estimated model-visible context trend');
+    const donutHeading = byId('daDonut')?.closest('.da-card')?.querySelector('h3');
+    if (donutHeading?.firstChild) donutHeading.firstChild.textContent = measured ? 'Phân bố Token theo mô hình ' : 'Phân bố Context theo công cụ ';
+    const costHeading = byId('daToolBars')?.closest('.da-card')?.querySelector('h3');
+    if (costHeading?.firstChild) costHeading.firstChild.textContent = measured ? 'Chi phí theo mô hình ' : 'Chi phí kịch bản theo công cụ ';
+    const costLabel = byId('daCostTotal')?.closest('.da-tile')?.querySelector('.da-tile-label');
+    if (costLabel) costLabel.textContent = 'CHI PHÍ 7 NGÀY';
+    const efficiencyLabel = byId('daEfficiencyTotal')?.closest('.da-tile')?.querySelector('.da-tile-label');
+    if (efficiencyLabel) efficiencyLabel.textContent = 'HIỆU SUẤT THỰC THI';
     renderTiles(buckets, summary, today.length, yesterdaySummary.inTokens + yesterdaySummary.outTokens, records.length, allSummary.execMs, laneTotalUsd, yesterday.length, measured);
     renderChart(buckets);
-    renderDonut(entries);
-    renderBars(entries);
+    renderDonut(entries, evidence);
+    renderBars(entries, evidence);
     renderModelTable(models);
     renderFleetTable(models);
-    renderHeatmap(buckets);
+    renderHeatmap(measured);
     updateRealtimeMetrics(records, measured);
     updateAnomalyAlerts(summary, records);
     updateQuickSummary(summary, totalTokens, okRate, entries, measured);
     renderTicker();
     setText('daLastSync', `Đồng bộ ${new Date().toLocaleTimeString('vi-VN')}`);
-    setText('daToolCostTotal', measured && measured.cost > 0 ? money(displayedCost(measured.cost)) : '—');
+    setText('daToolCostTotal', measured && measured.costSource !== 'unobserved' ? money(displayedCost(measured.cost)) : '—');
   }
 
   // ---- Cost model persistence ----------------------------------------------

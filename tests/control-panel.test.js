@@ -76,11 +76,13 @@ test('MCP exposes an authorized orchestration snapshot endpoint', () => {
   assert.match(httpHandler, /def control_orchestration_snapshot/);
   assert.match(httpHandler, /current_active_run/);
   assert.match(httpHandler, /latest_handoff_capsule/);
+  assert.match(httpHandler, /runtime_activity_snapshot/);
+  assert.match(httpHandler, /activity_state/);
 });
 
 test('control panel renders task plus multi-client authority and continuity controls', () => {
   const html = read('renderer/panel.html');
-  for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'continuityStatus', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton']) {
+  for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'continuityStatus', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton', 'runtimeActivitySection', 'runtimeActivitySummary', 'runtimeActivityList']) {
     assert.match(html, new RegExp(`id="${id}"`), `panel.html thiếu id ${id}`);
   }
   assert.match(html, /Operator Control Panel/);
@@ -112,6 +114,11 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(js, /renderEvents/);
   assert.match(js, /renderProofs/);
   assert.match(js, /renderHub/);
+  assert.match(js, /renderRuntimeActivity/);
+  assert.match(js, /runtime_activity/);
+  assert.match(js, /activity_state/);
+  assert.match(js, /NO_SIGNAL/);
+  assert.doesNotMatch(js, /const hubUp = Boolean/);
   assert.match(js, /clientFor\(data, 'opencode', 'opencode'\)/);
   assert.doesNotMatch(js, /renderRouterFabric|routerGeometry|getBoundingClientRect|updateRouterGeometry|scheduleRouterGeometry|requestAnimationFrame|ResizeObserver|routerNodeIds|routerEdgeIds/);
   assert.doesNotMatch(js, /renderClient\(/);

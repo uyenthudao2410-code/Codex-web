@@ -14,6 +14,14 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .artifact_refs import handoff_capsule_artifact_ref, proof_artifact_ref
+from .usage_ledger import (
+    CANONICAL_USAGE_KEYS,
+    canonical_usage_payload,
+    list_usage_events as _list_usage_events,
+    recent_usage_events as _recent_usage_events,
+    record_usage_event as _record_usage_event,
+    usage_analytics as _usage_analytics,
+)
 
 
 SCHEMA_VERSION = 7
@@ -29,6 +37,7 @@ _SAFE_NUMERIC_USAGE_KEYS = {
     "cached_tokens",
     "cache_read_tokens",
     "cache_write_tokens",
+    *CANONICAL_USAGE_KEYS,
 }
 _PROVIDER_MESSAGE_NUMERIC_KEYS = frozenset({
     "input_tokens",
@@ -990,61 +999,24 @@ class OrchestrationLedger:
         delegation_id: str,
         usage_event: dict[str, Any],
     ) -> dict[str, Any]:
-        """Persist one sanitized canonical provider-usage fact in the audit chain."""
-        usage_id = _bounded_text(usage_event.get("usage_id"), 256).strip()
-        with self._lock:
-            with self._connect() as connection:
-                rows = connection.execute(
-                    "SELECT event_id,payload_json FROM events WHERE run_id=? AND delegation_id=? AND event_type='usage_event' ORDER BY seq",
-                    (_bounded_text(run_id, 256), _bounded_text(delegation_id, 256)),
-                ).fetchall()
-            for row in rows:
-                payload = json.loads(row["payload_json"] or "{}")
-                if usage_id and str(payload.get("usage_id") or "") == usage_id:
-                    return {"recorded": False, "event_id": row["event_id"], "usage_id": usage_id}
-            event_id = self.append_event(
-                run_id,
-                wave_id=wave_id,
-                delegation_id=delegation_id,
-                event_type="usage_event",
-                payload=usage_event,
-            )
-            return {"recorded": True, "event_id": event_id, "usage_id": usage_id}
+        """Persist one sanitized canonical provider/controller usage fact."""
+        return _record_usage_event(
+            self,
+            run_id=run_id,
+            wave_id=wave_id,
+            delegation_id=delegation_id,
+            usage_event=_sanitize(usage_event),
+        )
 
-    def list_usage_events(self, run_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
-        bounded_limit = max(1, min(int(limit), 500))
-        with self._lock, self._connect() as connection:
-            rows = connection.execute(
-                "SELECT * FROM events WHERE run_id=? AND event_type='usage_event' ORDER BY seq DESC LIMIT ?",
-                (_bounded_text(run_id, 256), bounded_limit),
-            ).fetchall()
-        events = [self._event_row(row) for row in reversed(rows)]
-        return [
-            {
-                **(item.get("payload") or {}),
-                "seq": item["seq"],
-                "event_time": item["event_time"],
-            }
-            for item in events
-        ]
+    def list_usage_events(self, run_id: str, *, limit: int | None = 100) -> list[dict[str, Any]]:
+        return _list_usage_events(self, run_id, limit=limit)
 
     def recent_usage_events(self, *, limit: int = 8) -> list[dict[str, Any]]:
-        """Monitoring view: latest usage events across all runs (not run-scoped)."""
-        bounded_limit = max(1, min(int(limit), 500))
-        with self._lock, self._connect() as connection:
-            rows = connection.execute(
-                "SELECT * FROM events WHERE event_type='usage_event' ORDER BY seq DESC LIMIT ?",
-                (bounded_limit,),
-            ).fetchall()
-        events = [self._event_row(row) for row in reversed(rows)]
-        return [
-            {
-                **(item.get("payload") or {}),
-                "seq": item["seq"],
-                "event_time": item["event_time"],
-            }
-            for item in events
-        ]
+        """Debug/monitoring projection only; never use this bounded view for analytics."""
+        return _recent_usage_events(self, limit=limit)
+
+    def usage_analytics(self, *, days: int = 7, now: str | None = None) -> dict[str, Any]:
+        return _usage_analytics(self, days=days, now=now)
 
     def record_quality_outcome(self, *, run_id: str, outcome: dict[str, Any], wave_id: str = "") -> dict[str, Any]:
         """Append one bounded immediate/delayed quality observation."""
@@ -1665,24 +1637,37 @@ class OrchestrationLedger:
         tta_coverage = phase_timing.get("tta_coverage")
 
         quality_outcome = self.latest_quality_outcome(run_id)
-        usage_events = self.list_usage_events(run_id, limit=500)
-        usage_totals = {
-            "input_tokens": 0,
-            "cached_input_tokens": 0,
-            "uncached_input_tokens": 0,
-            "output_tokens": 0,
-            "reasoning_output_tokens": 0,
-            "cache_read_tokens": 0,
-            "cache_write_tokens": 0,
-        }
+        usage_events = [
+            item
+            for item in self.list_usage_events(run_id, limit=None)
+            if str(item.get("actor") or "provider").strip().lower() != "controller"
+        ]
+        legacy_usage_keys = (
+            "input_tokens",
+            "cached_input_tokens",
+            "uncached_input_tokens",
+            "output_tokens",
+            "reasoning_output_tokens",
+            "cache_read_tokens",
+            "cache_write_tokens",
+        )
+        usage_totals = {key: 0 for key in (*legacy_usage_keys, *CANONICAL_USAGE_KEYS)}
         measured_costs: list[float] = []
         attribution_sources: set[str] = set()
         provider_models: set[str] = set()
         provider_ids: set[str] = set()
         for usage_event in usage_events:
             usage = usage_event.get("usage") if isinstance(usage_event.get("usage"), dict) else {}
-            for key in usage_totals:
+            for key in legacy_usage_keys:
                 value = usage.get(key)
+                if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+                    usage_totals[key] += int(value)
+            try:
+                canonical = canonical_usage_payload(usage_event)
+            except ValueError:
+                canonical = {}
+            for key in CANONICAL_USAGE_KEYS:
+                value = canonical.get(key)
                 if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
                     usage_totals[key] += int(value)
             measurement = usage_event.get("measurement") if isinstance(usage_event.get("measurement"), dict) else {}
