@@ -1,0 +1,90 @@
+{
+  "canonical_readiness_after": {
+    "command": [
+      "C:\\Users\\daoth\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+      "E:\\Github\\Tools-Codex-web\\resources\\coding-tools-mcp\\scripts\\report_p4_readiness.py",
+      "--workspace",
+      "E:\\Github\\Tools-Codex-web"
+    ],
+    "exit_code": 0,
+    "output_tail": "\"derived_category_counts\": {\n          \"causal_solution_repair\": 2,\n          \"environment_or_baseline_repair\": 2,\n          \"formatting_only_repair\": 1,\n          \"oracle_selection_repair\": 0,\n          \"orchestration_repair\": 4,\n          \"unclassified\": 7\n        },\n        \"failure_class_counts\": {\n          \"BASE_DRIFT\": 1,\n          \"BUILD_VERIFICATION_FAILED\": 6,\n          \"CHECK_FAILED\": 2,\n          \"PATCH_AMBIGUOUS\": 2,\n          \"PERMISSION_REQUIRED\": 1,\n          \"RUNTIME_RESUME_REQUIRED\": 1,\n          \"SOL_REJECTED\": 3\n        },\n        \"high_confidence_reason_rule_counts\": {\n          \"known_unrelated_test_baseline\": 1,\n          \"rustfmt_formatting_only\": 1\n        },\n        \"post_replan_patch_surface_events\": 21,\n        \"reason_fallback_events\": 2,\n        \"replan_transition_events\": 16,\n        \"replanned_run_count\": 9,\n        \"run_count\": 9,\n        \"structured_failure_class_coverage\": 1.0,\n        \"structured_failure_class_events\": 16,\n        \"unclassified_structured_failure_classes\": {\n          \"BUILD_VERIFICATION_FAILED\": 6,\n          \"CHECK_FAILED\": 2,\n          \"PERMISSION_REQUIRED\": 1\n        }\n      }\n    },\n    \"diagnostic_classification_method\": \"structured_failure_class_then_durable_replan_reason_v2\",\n    \"diagnostic_only_not_repair_label\": true,\n    \"free_text_replan_reason_used\": true,\n    \"historical_repair_label_method\": \"post_replan_applied_patch_delta_v1\",\n    \"historical_repaired_boolean_unchanged\": true,\n    \"overall\": {\n      \"cause_counts\": {\n        \"acceptance_correction\": 5,\n        \"patch_context_ambiguity\": 2,\n        \"runtime_tool_failure\": 2,\n        \"source_base_drift\": 1\n      },\n      \"classification_coverage\": 0.608696,\n      \"classification_source_counts\": {\n        \"durable_wave_replanned_reason_high_confidence\": 4,\n        \"structured_failure_class\": 10,\n        \"unclassified\": 9\n      },\n      \"classified_replan_events\": 14,\n      \"derived_category_counts\": {\n        \"causal_solution_repair\": 2,\n        \"environment_or_baseline_repair\": 3,\n        \"formatting_only_repair\": 1,\n        \"oracle_selection_repair\": 1,\n        \"orchestration_repair\": 7,\n        \"unclassified\": 9\n      },\n      \"failure_class_counts\": {\n        \"BASE_DRIFT\": 1,\n        \"BUILD_VERIFICATION_FAILED\": 9,\n        \"CHECK_FAILED\": 2,\n        \"EXECUTION_OWNER_INVALID\": 1,\n        \"PATCH_AMBIGUOUS\": 2,\n        \"PERMISSION_REQUIRED\": 1,\n        \"RUNTIME_RESUME_REQUIRED\": 2,\n        \"SOL_REJECTED\": 5\n      },\n      \"high_confidence_reason_rule_counts\": {\n        \"cargo_binary_name_used_as_package\": 1,\n        \"known_unrelated_test_baseline\": 2,\n        \"rustfmt_formatting_only\": 1\n      },\n      \"post_replan_patch_surface_events\": 21,\n      \"reason_fallback_events\": 4,\n      \"replan_transition_events\": 23,\n      \"replanned_run_count\": 11,\n      \"run_count\": 34,\n      \"structured_failure_class_coverage\": 1.0,\n      \"structured_failure_class_events\": 23,\n      \"unclassified_structured_failure_classes\": {\n        \"BUILD_VERIFICATION_FAILED\": 9,\n        \"CHECK_FAILED\": 2,\n        \"EXECUTION_OWNER_INVALID\": 1,\n        \"PERMISSION_REQUIRED\": 1\n      }\n    },\n    \"predictive_repair_label_method\": \"replan_diagnostics_plus_post_replan_patch_v1\",\n    \"schema_version\": 1,\n    \"scope\": \"representative_terminal_runs\"\n  },\n  \"representative_predictor_variation\": {\n    \"candidate_solution_scope\": true,\n    \"expected_repair_risk\": true,\n    \"oracle_strength\": false,\n    \"root_cause_confidence\": false,\n    \"smallest_causal_solution_scope\": true\n  },\n  \"scan_limit\": 100,\n  \"scan_limit_semantics\": \"shadow_runs_with_solution_shadow_event\",\n  \"schema_version\": 1,\n  \"state\": \"COLLECTING\",\n  \"workload_guidance\": {\n    \"low_variance_signals\": [\n      \"root_cause_confidence\",\n      \"oracle_strength\"\n    ],\n    \"naturally_diverse_representative_workload_required\": true,\n    \"representative_task_class_counts\": {\n      \"bugfix\": 20,\n      \"feature\": 14\n    },\n    \"shadow_prediction_manipulation_for_variance_forbidden\": true\n  }\n}\n",
+    "snapshot": {
+      "status": "representative_descriptive_comparison_available_but_unvalidated",
+      "validated_signals": []
+    }
+  },
+  "canonical_readiness_before": {
+    "command": [
+      "C:\\Users\\daoth\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+      "E:\\Github\\Tools-Codex-web\\resources\\coding-tools-mcp\\scripts\\report_p4_readiness.py",
+      "--workspace",
+      "E:\\Github\\Tools-Codex-web"
+    ],
+    "exit_code": 0,
+    "output_tail": "\"derived_category_counts\": {\n          \"causal_solution_repair\": 2,\n          \"environment_or_baseline_repair\": 2,\n          \"formatting_only_repair\": 1,\n          \"oracle_selection_repair\": 0,\n          \"orchestration_repair\": 4,\n          \"unclassified\": 7\n        },\n        \"failure_class_counts\": {\n          \"BASE_DRIFT\": 1,\n          \"BUILD_VERIFICATION_FAILED\": 6,\n          \"CHECK_FAILED\": 2,\n          \"PATCH_AMBIGUOUS\": 2,\n          \"PERMISSION_REQUIRED\": 1,\n          \"RUNTIME_RESUME_REQUIRED\": 1,\n          \"SOL_REJECTED\": 3\n        },\n        \"high_confidence_reason_rule_counts\": {\n          \"known_unrelated_test_baseline\": 1,\n          \"rustfmt_formatting_only\": 1\n        },\n        \"post_replan_patch_surface_events\": 21,\n        \"reason_fallback_events\": 2,\n        \"replan_transition_events\": 16,\n        \"replanned_run_count\": 9,\n        \"run_count\": 9,\n        \"structured_failure_class_coverage\": 1.0,\n        \"structured_failure_class_events\": 16,\n        \"unclassified_structured_failure_classes\": {\n          \"BUILD_VERIFICATION_FAILED\": 6,\n          \"CHECK_FAILED\": 2,\n          \"PERMISSION_REQUIRED\": 1\n        }\n      }\n    },\n    \"diagnostic_classification_method\": \"structured_failure_class_then_durable_replan_reason_v2\",\n    \"diagnostic_only_not_repair_label\": true,\n    \"free_text_replan_reason_used\": true,\n    \"historical_repair_label_method\": \"post_replan_applied_patch_delta_v1\",\n    \"historical_repaired_boolean_unchanged\": true,\n    \"overall\": {\n      \"cause_counts\": {\n        \"acceptance_correction\": 5,\n        \"patch_context_ambiguity\": 2,\n        \"runtime_tool_failure\": 2,\n        \"source_base_drift\": 1\n      },\n      \"classification_coverage\": 0.608696,\n      \"classification_source_counts\": {\n        \"durable_wave_replanned_reason_high_confidence\": 4,\n        \"structured_failure_class\": 10,\n        \"unclassified\": 9\n      },\n      \"classified_replan_events\": 14,\n      \"derived_category_counts\": {\n        \"causal_solution_repair\": 2,\n        \"environment_or_baseline_repair\": 3,\n        \"formatting_only_repair\": 1,\n        \"oracle_selection_repair\": 1,\n        \"orchestration_repair\": 7,\n        \"unclassified\": 9\n      },\n      \"failure_class_counts\": {\n        \"BASE_DRIFT\": 1,\n        \"BUILD_VERIFICATION_FAILED\": 9,\n        \"CHECK_FAILED\": 2,\n        \"EXECUTION_OWNER_INVALID\": 1,\n        \"PATCH_AMBIGUOUS\": 2,\n        \"PERMISSION_REQUIRED\": 1,\n        \"RUNTIME_RESUME_REQUIRED\": 2,\n        \"SOL_REJECTED\": 5\n      },\n      \"high_confidence_reason_rule_counts\": {\n        \"cargo_binary_name_used_as_package\": 1,\n        \"known_unrelated_test_baseline\": 2,\n        \"rustfmt_formatting_only\": 1\n      },\n      \"post_replan_patch_surface_events\": 21,\n      \"reason_fallback_events\": 4,\n      \"replan_transition_events\": 23,\n      \"replanned_run_count\": 11,\n      \"run_count\": 34,\n      \"structured_failure_class_coverage\": 1.0,\n      \"structured_failure_class_events\": 23,\n      \"unclassified_structured_failure_classes\": {\n        \"BUILD_VERIFICATION_FAILED\": 9,\n        \"CHECK_FAILED\": 2,\n        \"EXECUTION_OWNER_INVALID\": 1,\n        \"PERMISSION_REQUIRED\": 1\n      }\n    },\n    \"predictive_repair_label_method\": \"replan_diagnostics_plus_post_replan_patch_v1\",\n    \"schema_version\": 1,\n    \"scope\": \"representative_terminal_runs\"\n  },\n  \"representative_predictor_variation\": {\n    \"candidate_solution_scope\": true,\n    \"expected_repair_risk\": true,\n    \"oracle_strength\": false,\n    \"root_cause_confidence\": false,\n    \"smallest_causal_solution_scope\": true\n  },\n  \"scan_limit\": 100,\n  \"scan_limit_semantics\": \"shadow_runs_with_solution_shadow_event\",\n  \"schema_version\": 1,\n  \"state\": \"COLLECTING\",\n  \"workload_guidance\": {\n    \"low_variance_signals\": [\n      \"root_cause_confidence\",\n      \"oracle_strength\"\n    ],\n    \"naturally_diverse_representative_workload_required\": true,\n    \"representative_task_class_counts\": {\n      \"bugfix\": 20,\n      \"feature\": 14\n    },\n    \"shadow_prediction_manipulation_for_variance_forbidden\": true\n  }\n}\n",
+    "snapshot": {
+      "status": "representative_descriptive_comparison_available_but_unvalidated",
+      "validated_signals": []
+    }
+  },
+  "canonical_readiness_non_interference": {
+    "after": {
+      "status": "representative_descriptive_comparison_available_but_unvalidated",
+      "validated_signals": []
+    },
+    "before": {
+      "status": "representative_descriptive_comparison_available_but_unvalidated",
+      "validated_signals": []
+    },
+    "status": "PASS"
+  },
+  "execution_model": "host_python_capability_aware",
+  "isolated_battery": {
+    "canonical_promotion_mutated": false,
+    "checks": {
+      "failed": 0,
+      "passed": 32,
+      "total": 32
+    },
+    "limitations": [
+      "C001-C020 are validated here as fail-closed contract specifications, not executed against the live repository runtime.",
+      "W001-W064 are validated for coverage/context/ground-truth shape, not executed as 64 real repository repair tasks.",
+      "Canonical report_p4_readiness.py was not invoked by this isolated runner; integration must prove pre/post canonical readiness is unchanged."
+    ],
+    "metrics": {
+      "S005_null_correlations": {
+        "expected_repair_risk_rank": -0.08508855195970519,
+        "oracle_strength_rank": -0.021421347192329084,
+        "root_confidence_rank": 0.026545047682848908,
+        "scope_rank": 0.040629257813743366,
+        "surface_underestimate_ratio": -0.0009156987135749656
+      },
+      "S006_known_correlations": {
+        "expected_repair_risk_rank": 0.6700904154922466,
+        "oracle_strength_rank": -0.6116863468502852,
+        "root_confidence_rank": -0.6432675209026769,
+        "scope_rank": 0.6740398126412653,
+        "surface_underestimate_ratio": 0.8085007439314712
+      },
+      "S008_leakage_corr": 1.0,
+      "S011_tier_correlations": {
+        "L": 0.8471882237129953,
+        "M": 0.8579875502406925,
+        "S": 0.8666376503863378,
+        "XL": -0.8554481741498972
+      },
+      "S012_split_correlations": {
+        "development": 0.7328801114905908,
+        "temporal_holdout": 0.732310591807119
+      }
+    }
+  },
+  "repo_root": "E:\\Github\\Tools-Codex-web",
+  "runner": "p4-current-config-v1",
+  "runtime_capabilities": {
+    "canonical_reporter": true,
+    "live_task_control_ack": "not_required_for_this_battery",
+    "synthetic_canonical_promotion": false
+  },
+  "status": "PASS"
+}
