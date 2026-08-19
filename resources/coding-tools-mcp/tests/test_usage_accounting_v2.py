@@ -91,6 +91,46 @@ class UsageAccountingV2Tests(unittest.TestCase):
                     usage_event=conflicting,
                 )
 
+    def test_controller_usage_unobserved_is_unknown_not_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="provider-only-window")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            provider = build_usage_event(
+                run_id=run_id,
+                wave_id=wave_id,
+                delegation_id="provider-only",
+                provider_id="opencode-go",
+                model_id="deepseek-v4-flash",
+                status="completed",
+                source="opencode:provider_dispatch",
+                input_tokens=100,
+                cached_input_tokens=20,
+                output_tokens=10,
+                reasoning_output_tokens=2,
+                provider_cost=0.001,
+            )
+            ledger.append_event(
+                run_id,
+                wave_id=wave_id,
+                delegation_id="provider-only",
+                event_type="usage_event",
+                payload=provider,
+                event_time="2026-08-19T07:58:00Z",
+            )
+
+            analytics = ledger.usage_analytics(days=7, now="2026-08-19T08:00:00Z")
+            controller = analytics["controller_usage"]
+            self.assertEqual(controller["status"], "unobserved")
+            self.assertEqual(controller["event_count"], 0)
+            self.assertIsNone(controller["usage"])
+            self.assertIsNone(controller["cost"])
+            self.assertIsNone(controller["provenance"])
+            self.assertEqual(controller["missing_measurement_policy"], "unknown_not_zero")
+            self.assertEqual(controller["missing_reason"], "no_exact_controller_usage_event_in_window")
+            self.assertEqual(analytics["overall"]["event_count"], 1)
+            self.assertEqual(analytics["overall"]["usage"]["total_tokens"], 110)
+
     def test_seven_day_analytics_is_unbounded_and_separates_cost_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))
@@ -178,6 +218,12 @@ class UsageAccountingV2Tests(unittest.TestCase):
             self.assertEqual(analytics["overall"]["usage"]["total_tokens"], 1210)
             self.assertEqual(analytics["rolling_5m"]["event_count"], 2)
             self.assertEqual(analytics["rolling_5m"]["usage"]["total_tokens"], 110)
+            controller = analytics["controller_usage"]
+            self.assertEqual(controller["status"], "observed")
+            self.assertEqual(controller["event_count"], 2)
+            self.assertEqual(controller["usage"]["total_tokens"], 110)
+            self.assertEqual(controller["provenance"]["usage"]["client_reported"], 2)
+            self.assertIsNone(controller["missing_reason"])
             actors = {item["actor"]: item for item in analytics["by_actor"]}
             self.assertEqual(actors["provider"]["event_count"], 10)
             self.assertEqual(actors["controller"]["event_count"], 2)
