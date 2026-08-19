@@ -694,6 +694,7 @@ async fn inspect_session_landlocks_cargo_and_async_job_entry_points() {
                         no_default_features: None,
                         features: None,
                         package: None,
+                        compute_placement_policy: None,
                         timeout_secs: Some(30),
                     },
                     Some(&auth_context(None, true)),

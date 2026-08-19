@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from collections import Counter
 import hashlib
 import math
 from statistics import NormalDist
 from typing import Any
 
 from .orchestration_ledger import OrchestrationLedger
+from .rework_diagnosis import repair_cause_for_failure_class
 
 
 SOLUTION_SHADOW_EVENT = "solution_shadow_recommended"
@@ -25,6 +27,26 @@ PREDICTIVE_SIGNAL_NAMES = (
     "expected_repair_risk",
     "smallest_causal_solution_scope",
 )
+REPLAN_DIAGNOSTIC_CATEGORIES = (
+    "causal_solution_repair",
+    "oracle_selection_repair",
+    "formatting_only_repair",
+    "environment_or_baseline_repair",
+    "orchestration_repair",
+    "unclassified",
+)
+REPLAN_DIAGNOSTIC_CATEGORY_BY_CAUSE = {
+    "patch_context_ambiguity": "causal_solution_repair",
+    "wrong_root_cause": "causal_solution_repair",
+    "missing_requirement": "causal_solution_repair",
+    "oracle_weakness": "oracle_selection_repair",
+    "source_base_drift": "environment_or_baseline_repair",
+    "environment_workdir": "environment_or_baseline_repair",
+    "runtime_tool_failure": "orchestration_repair",
+    "provider_capacity": "orchestration_repair",
+    "proof_timeout": "orchestration_repair",
+    "acceptance_correction": "orchestration_repair",
+}
 
 
 def _run_workflow(run: dict[str, Any] | None) -> str:
@@ -304,6 +326,124 @@ def _surface_comparison(estimated: Any, actual: dict[str, Any]) -> dict[str, Any
     return {"metrics": metrics, "all_metrics_comparable": all(item["delta"] is not None for item in metrics.values())}
 
 
+def _replan_reason_category(reason: Any) -> tuple[str | None, str | None]:
+    text = " ".join(str(reason or "").strip().lower().split())
+    if not text:
+        return (None, None)
+    if "rustfmt" in text and "formatting-only" in text:
+        return ("formatting_only_repair", "rustfmt_formatting_only")
+    if "oracle selection" in text and "cargo package" in text and "binary target name" in text:
+        return ("oracle_selection_repair", "cargo_binary_name_used_as_package")
+    baseline_markers = (
+        "19 unrelated",
+        "19 errors",
+        "compute_placement_policy",
+        "broken root lib-test harness",
+    )
+    if any(marker in text for marker in baseline_markers) and (
+        "unrelated" in text or "known" in text or "root lib-test" in text or "cfg(test)" in text
+    ):
+        return ("environment_or_baseline_repair", "known_unrelated_test_baseline")
+    if "wrong root cause" in text:
+        return ("causal_solution_repair", "explicit_wrong_root_cause")
+    if "missing requirement" in text:
+        return ("causal_solution_repair", "explicit_missing_requirement")
+    if "supervisor_not_ready" in text or "provider capacity" in text:
+        return ("orchestration_repair", "explicit_orchestration_failure")
+    return (None, None)
+
+
+def _structured_replan_diagnostics(events: list[dict[str, Any]]) -> dict[str, Any]:
+    replan_events = sorted(
+        [item for item in events if str(item.get("state_after") or "").upper() == "REPLAN"],
+        key=lambda item: int(item.get("seq") or 0),
+    )
+    reason_events = sorted(
+        [item for item in events if str(item.get("event_type") or "") == "wave_replanned"],
+        key=lambda item: int(item.get("seq") or 0),
+    )
+    failure_classes: Counter[str] = Counter()
+    causes: Counter[str] = Counter()
+    categories: Counter[str] = Counter()
+    unclassified_failure_classes: Counter[str] = Counter()
+    classification_sources: Counter[str] = Counter()
+    reason_rules: Counter[str] = Counter()
+    structured = 0
+    classified = 0
+    reason_fallback = 0
+    for index, event in enumerate(replan_events):
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        failure_class = str(payload.get("failure_class") or "").strip().upper()
+        cause = None
+        if failure_class:
+            structured += 1
+            failure_classes[failure_class] += 1
+            cause = repair_cause_for_failure_class(failure_class)
+        if cause is not None:
+            causes[cause] += 1
+            categories[REPLAN_DIAGNOSTIC_CATEGORY_BY_CAUSE.get(cause, "unclassified")] += 1
+            classification_sources["structured_failure_class"] += 1
+            classified += 1
+            continue
+
+        if failure_class:
+            unclassified_failure_classes[failure_class] += 1
+        reason_payload = (
+            reason_events[index].get("payload")
+            if index < len(reason_events) and isinstance(reason_events[index].get("payload"), dict)
+            else {}
+        )
+        reason_category, reason_rule = _replan_reason_category(reason_payload.get("reason"))
+        if reason_category is not None and reason_rule is not None:
+            categories[reason_category] += 1
+            classification_sources["durable_wave_replanned_reason_high_confidence"] += 1
+            reason_rules[reason_rule] += 1
+            reason_fallback += 1
+            classified += 1
+            continue
+        categories["unclassified"] += 1
+        classification_sources["unclassified"] += 1
+    return {
+        "schema_version": 1,
+        "classification_method": "structured_failure_class_then_durable_replan_reason_v2",
+        "diagnostic_only_not_repair_label": True,
+        "historical_repaired_boolean_unchanged": True,
+        "durable_replan_reason_used": reason_fallback > 0,
+        "free_text_replan_reason_used": reason_fallback > 0,
+        "reason_fallback_is_high_confidence_rules_only": True,
+        "replan_transition_events": len(replan_events),
+        "structured_failure_class_events": structured,
+        "durable_wave_replanned_reason_events": len(reason_events),
+        "classified_replan_events": classified,
+        "classification_coverage": round(classified / len(replan_events), 6) if replan_events else None,
+        "reason_fallback_events": reason_fallback,
+        "classification_source_counts": dict(sorted(classification_sources.items())),
+        "high_confidence_reason_rule_counts": dict(sorted(reason_rules.items())),
+        "failure_class_counts": dict(sorted(failure_classes.items())),
+        "cause_counts": dict(sorted(causes.items())),
+        "derived_category_counts": {name: int(categories.get(name, 0)) for name in REPLAN_DIAGNOSTIC_CATEGORIES},
+        "unclassified_structured_failure_classes": dict(sorted(unclassified_failure_classes.items())),
+    }
+
+
+def _causal_solution_repair_label(repair: dict[str, Any]) -> bool | None:
+    if repair.get("workflow_replanned") is False:
+        return False
+    if repair.get("workflow_replanned") is not True:
+        return None
+    diagnostics = repair.get("replan_diagnostics") if isinstance(repair.get("replan_diagnostics"), dict) else {}
+    total = int(diagnostics.get("replan_transition_events") or 0)
+    classified = int(diagnostics.get("classified_replan_events") or 0)
+    categories = diagnostics.get("derived_category_counts") if isinstance(diagnostics.get("derived_category_counts"), dict) else {}
+    causal_events = int(categories.get("causal_solution_repair") or 0)
+    post_replan_patch_events = int(repair.get("post_replan_patch_surface_events") or 0)
+    if causal_events > 0 and post_replan_patch_events > 0:
+        return True
+    if total > 0 and classified == total:
+        return False
+    return None
+
+
 def _repair_taxonomy(events: list[dict[str, Any]], replan_count: int) -> dict[str, Any]:
     replan_seqs = [
         int(item.get("seq") or 0)
@@ -320,7 +460,7 @@ def _repair_taxonomy(events: list[dict[str, Any]], replan_count: int) -> dict[st
     ]
     workflow_replanned = replan_count > 0
     source_reworked_after_replan = bool(workflow_replanned and post_replan_patch_events)
-    return {
+    result = {
         "repaired": source_reworked_after_replan,
         "workflow_replanned": workflow_replanned,
         "proof_only_replan": bool(workflow_replanned and not source_reworked_after_replan),
@@ -328,6 +468,31 @@ def _repair_taxonomy(events: list[dict[str, Any]], replan_count: int) -> dict[st
         "first_replan_seq": first_replan_seq,
         "post_replan_patch_surface_events": len(post_replan_patch_events),
         "label_method": "post_replan_applied_patch_delta_v1",
+        "replan_diagnostics": _structured_replan_diagnostics(events),
+    }
+    result["causal_solution_repair"] = _causal_solution_repair_label(result)
+    result["causal_solution_repair_label_method"] = "replan_diagnostics_plus_post_replan_patch_v1"
+    return result
+
+
+def _source_state_summary(ledger: OrchestrationLedger, run_id: str) -> dict[str, Any]:
+    waves = ledger.list_waves(run_id)
+    base_heads = sorted({str(item.get("base_head") or "").strip() for item in waves if str(item.get("base_head") or "").strip()})
+    worktree_fingerprints = sorted({
+        str(item.get("worktree_fp") or "").strip()
+        for item in waves
+        if str(item.get("worktree_fp") or "").strip()
+    })
+    return {
+        "measurement": "orchestration_wave_identity_v1",
+        "wave_count": len(waves),
+        "base_head_count": len(base_heads),
+        "worktree_fingerprint_count": len(worktree_fingerprints),
+        "base_head_changed_within_run": len(base_heads) > 1,
+        "worktree_changed_within_run": len(worktree_fingerprints) > 1,
+        "base_head_identities": base_heads,
+        "worktree_fingerprint_identities": worktree_fingerprints,
+        "content_free": True,
     }
 
 
@@ -376,6 +541,9 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
         "first_replan_seq": repair_taxonomy["first_replan_seq"],
         "post_replan_patch_surface_events": repair_taxonomy["post_replan_patch_surface_events"],
         "label_method": repair_taxonomy["label_method"],
+        "replan_diagnostics": repair_taxonomy["replan_diagnostics"],
+        "causal_solution_repair": None,
+        "causal_solution_repair_label_method": repair_taxonomy["causal_solution_repair_label_method"],
     }
     return {
         "schema_version": 1,
@@ -383,6 +551,7 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
         "status": "observed",
         "task_class": _run_workflow(run) or None,
         "evidence_provenance": _run_evidence_provenance(run),
+        "source_state": _source_state_summary(ledger, run_id),
         "recommendation": {**recommendation, "seq": shadow.get("seq"), "event_time": shadow.get("event_time")},
         "pre_mutation": {
             "recorded_before_first_write": first_write is None or int(shadow.get("seq") or 0) < int(first_write.get("seq") or 0),
@@ -436,10 +605,109 @@ def _signal_value(report: dict[str, Any], signal: str) -> str:
     return str(recommendation.get(signal) or "unknown")
 
 
-def _repair_label(report: dict[str, Any]) -> int | None:
+def _raw_repair_label(report: dict[str, Any]) -> int | None:
     repair = (report.get("outcome") or {}).get("repair") if isinstance(report.get("outcome"), dict) else {}
     repaired = repair.get("repaired") if isinstance(repair, dict) else None
     return 1 if repaired is True else 0 if repaired is False else None
+
+
+def _repair_label(report: dict[str, Any]) -> int | None:
+    repair = (report.get("outcome") or {}).get("repair") if isinstance(report.get("outcome"), dict) else {}
+    repaired = repair.get("causal_solution_repair") if isinstance(repair, dict) else None
+    return 1 if repaired is True else 0 if repaired is False else None
+
+
+def _aggregate_replan_diagnostics(reports: list[dict[str, Any]]) -> dict[str, Any]:
+    def summarize(group: list[dict[str, Any]]) -> dict[str, Any]:
+        failure_classes: Counter[str] = Counter()
+        causes: Counter[str] = Counter()
+        categories: Counter[str] = Counter()
+        unclassified_failure_classes: Counter[str] = Counter()
+        classification_sources: Counter[str] = Counter()
+        reason_rules: Counter[str] = Counter()
+        replan_events = 0
+        structured_events = 0
+        classified_events = 0
+        reason_fallback_events = 0
+        post_replan_patch_surface_events = 0
+        replanned_runs = 0
+        for report in group:
+            repair = (report.get("outcome") or {}).get("repair") if isinstance(report.get("outcome"), dict) else {}
+            if not isinstance(repair, dict):
+                continue
+            if repair.get("workflow_replanned") is True:
+                replanned_runs += 1
+            post_replan_patch_surface_events += int(repair.get("post_replan_patch_surface_events") or 0)
+            diagnostics = repair.get("replan_diagnostics") if isinstance(repair.get("replan_diagnostics"), dict) else {}
+            replan_events += int(diagnostics.get("replan_transition_events") or 0)
+            structured_events += int(diagnostics.get("structured_failure_class_events") or 0)
+            classified_events += int(diagnostics.get("classified_replan_events") or 0)
+            reason_fallback_events += int(diagnostics.get("reason_fallback_events") or 0)
+            failure_classes.update({str(key): int(value) for key, value in (diagnostics.get("failure_class_counts") or {}).items()})
+            causes.update({str(key): int(value) for key, value in (diagnostics.get("cause_counts") or {}).items()})
+            categories.update({str(key): int(value) for key, value in (diagnostics.get("derived_category_counts") or {}).items()})
+            classification_sources.update({
+                str(key): int(value)
+                for key, value in (diagnostics.get("classification_source_counts") or {}).items()
+            })
+            reason_rules.update({
+                str(key): int(value)
+                for key, value in (diagnostics.get("high_confidence_reason_rule_counts") or {}).items()
+            })
+            unclassified_failure_classes.update({
+                str(key): int(value)
+                for key, value in (diagnostics.get("unclassified_structured_failure_classes") or {}).items()
+            })
+        return {
+            "run_count": len(group),
+            "replanned_run_count": replanned_runs,
+            "replan_transition_events": replan_events,
+            "structured_failure_class_events": structured_events,
+            "structured_failure_class_coverage": (
+                round(structured_events / replan_events, 6) if replan_events else None
+            ),
+            "classified_replan_events": classified_events,
+            "classification_coverage": round(classified_events / replan_events, 6) if replan_events else None,
+            "reason_fallback_events": reason_fallback_events,
+            "post_replan_patch_surface_events": post_replan_patch_surface_events,
+            "classification_source_counts": dict(sorted(classification_sources.items())),
+            "high_confidence_reason_rule_counts": dict(sorted(reason_rules.items())),
+            "failure_class_counts": dict(sorted(failure_classes.items())),
+            "cause_counts": dict(sorted(causes.items())),
+            "derived_category_counts": {
+                name: int(categories.get(name, 0)) for name in REPLAN_DIAGNOSTIC_CATEGORIES
+            },
+            "unclassified_structured_failure_classes": dict(sorted(unclassified_failure_classes.items())),
+        }
+
+    raw_repaired = [item for item in reports if _raw_repair_label(item) == 1]
+    raw_nonrepaired = [item for item in reports if _raw_repair_label(item) == 0]
+    causal_repaired = [item for item in reports if _repair_label(item) == 1]
+    causal_nonrepaired = [item for item in reports if _repair_label(item) == 0]
+    causal_unknown = [item for item in reports if _repair_label(item) is None]
+    return {
+        "schema_version": 1,
+        "scope": "representative_terminal_runs",
+        "historical_repair_label_method": "post_replan_applied_patch_delta_v1",
+        "predictive_repair_label_method": "replan_diagnostics_plus_post_replan_patch_v1",
+        "diagnostic_classification_method": "structured_failure_class_then_durable_replan_reason_v2",
+        "diagnostic_only_not_repair_label": True,
+        "historical_repaired_boolean_unchanged": True,
+        "free_text_replan_reason_used": any(
+            bool((((item.get("outcome") or {}).get("repair") or {}).get("replan_diagnostics") or {}).get("free_text_replan_reason_used"))
+            for item in reports
+        ),
+        "overall": summarize(reports),
+        "by_source_repair_label": {
+            "repaired": summarize(raw_repaired),
+            "nonrepaired": summarize(raw_nonrepaired),
+        },
+        "by_causal_solution_repair_label": {
+            "repaired": summarize(causal_repaired),
+            "nonrepaired": summarize(causal_nonrepaired),
+            "unknown": summarize(causal_unknown),
+        },
+    }
 
 
 def _wilson_interval(successes: int, total: int, z: float) -> tuple[float, float]:
@@ -544,8 +812,9 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
         "familywise_confidence": 0.95,
         "comparison_count": comparison_count,
         "per_comparison_alpha": round(per_comparison_alpha, 8) if per_comparison_alpha is not None else None,
-        "method": "leave_one_out_brier_plus_bonferroni_wilson_separation_v2_source_repair",
-        "repair_label_method": "post_replan_applied_patch_delta_v1",
+        "method": "leave_one_out_brier_plus_bonferroni_wilson_separation_v3_causal_solution_repair",
+        "repair_label_method": "replan_diagnostics_plus_post_replan_patch_v1",
+        "historical_repair_label_method": "post_replan_applied_patch_delta_v1",
         "validated_signals": validated,
         "signals": signals,
         "causal_claim_allowed": False,
@@ -591,10 +860,16 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             outcomes = [item.get("outcome") or {} for item in group]
             representative_group = [item for item in group if item.get("evidence_provenance") == "representative"]
             representative_outcomes = [item.get("outcome") or {} for item in representative_group]
-            repaired = sum(1 for item in outcomes if (item.get("repair") or {}).get("repaired") is True)
-            representative_repaired = sum(
+            raw_repaired = sum(1 for item in outcomes if (item.get("repair") or {}).get("repaired") is True)
+            representative_raw_repaired = sum(
                 1 for item in representative_outcomes if (item.get("repair") or {}).get("repaired") is True
             )
+            repair_labels = [_repair_label(item) for item in group]
+            known_repair_labels = [label for label in repair_labels if label is not None]
+            repaired = sum(1 for label in known_repair_labels if label == 1)
+            representative_repair_labels = [_repair_label(item) for item in representative_group]
+            representative_known_repair_labels = [label for label in representative_repair_labels if label is not None]
+            representative_repaired = sum(1 for label in representative_known_repair_labels if label == 1)
             accepted = sum(1 for item in outcomes if item.get("accepted") is True)
             first_pass = sum(1 for item in outcomes if item.get("first_pass_accepted") is True)
             ttar = [float(item["ttar_ms"]) for item in outcomes if isinstance(item.get("ttar_ms"), (int, float)) and not isinstance(item.get("ttar_ms"), bool)]
@@ -604,12 +879,20 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
                 "accepted_count": accepted,
                 "first_pass_accepted_count": first_pass,
                 "first_pass_acceptance_rate": round(first_pass / len(group), 6) if group else None,
+                "raw_post_replan_patch_repaired_count": raw_repaired,
+                "raw_post_replan_patch_repair_rate": round(raw_repaired / len(group), 6) if group else None,
                 "repaired_count": repaired,
-                "repair_rate": round(repaired / len(group), 6) if group else None,
+                "repair_label_known_count": len(known_repair_labels),
+                "repair_label_unknown_count": len(group) - len(known_repair_labels),
+                "repair_rate": round(repaired / len(known_repair_labels), 6) if known_repair_labels else None,
                 "representative_sample_count": len(representative_group),
+                "representative_raw_post_replan_patch_repaired_count": representative_raw_repaired,
                 "representative_repaired_count": representative_repaired,
+                "representative_repair_label_known_count": len(representative_known_repair_labels),
+                "representative_repair_label_unknown_count": len(representative_group) - len(representative_known_repair_labels),
                 "representative_repair_rate": (
-                    round(representative_repaired / len(representative_group), 6) if representative_group else None
+                    round(representative_repaired / len(representative_known_repair_labels), 6)
+                    if representative_known_repair_labels else None
                 ),
                 "ttar_samples": len(ttar),
                 "ttar_p50_ms": _p50(ttar),
@@ -618,10 +901,63 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
         variation[signal] = len(groups) >= 2
         representative_variation[signal] = sum(1 for row in rows if row["representative_sample_count"] > 0) >= 2
 
+    predictor_coverage: dict[str, Any] = {}
+    low_variance_signals: list[str] = []
+    for signal in signals:
+        representative_rows = [row for row in by_signal[signal] if row["representative_sample_count"] > 0]
+        observed_values = {
+            str(row["value"]): int(row["representative_sample_count"])
+            for row in representative_rows
+            if str(row["value"]) != "unknown"
+        }
+        known_samples = sum(observed_values.values())
+        low_variance = len(observed_values) < 2
+        if low_variance:
+            low_variance_signals.append(signal)
+        predictor_coverage[signal] = {
+            "representative_samples": sum(int(row["representative_sample_count"]) for row in representative_rows),
+            "known_value_samples": known_samples,
+            "unknown_value_samples": sum(
+                int(row["representative_sample_count"])
+                for row in representative_rows
+                if str(row["value"]) == "unknown"
+            ),
+            "observed_non_unknown_values": observed_values,
+            "bucket_count": len(observed_values),
+            "low_variance": low_variance,
+        }
+
+    representative_task_class_counts = dict(sorted(Counter(
+        str(item.get("task_class") or "unknown") for item in representative_terminal
+    ).items()))
+    representative_base_heads = sorted({
+        identity
+        for item in representative_terminal
+        for identity in (item.get("source_state") or {}).get("base_head_identities", [])
+        if isinstance(identity, str) and identity
+    })
+    representative_worktree_fingerprints = sorted({
+        identity
+        for item in representative_terminal
+        for identity in (item.get("source_state") or {}).get("worktree_fingerprint_identities", [])
+        if isinstance(identity, str) and identity
+    })
+    representative_event_times = sorted(
+        str((item.get("recommendation") or {}).get("event_time") or "")
+        for item in representative_terminal
+        if str((item.get("recommendation") or {}).get("event_time") or "")
+    )
+
     overall_repaired = sum(1 for item in terminal if ((item.get("outcome") or {}).get("repair") or {}).get("repaired") is True)
     representative_repaired = sum(
         1 for item in representative_terminal if ((item.get("outcome") or {}).get("repair") or {}).get("repaired") is True
     )
+    causal_labels = [_repair_label(item) for item in terminal]
+    causal_known = [label for label in causal_labels if label is not None]
+    causal_repaired = sum(1 for label in causal_known if label == 1)
+    representative_causal_labels = [_repair_label(item) for item in representative_terminal]
+    representative_causal_known = [label for label in representative_causal_labels if label is not None]
+    representative_causal_repaired = sum(1 for label in representative_causal_known if label == 1)
     provenance_counts: dict[str, int] = {}
     terminal_provenance_counts: dict[str, int] = {}
     for item in reports:
@@ -635,6 +971,7 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "run_id": item.get("run_id"),
             "task_class": item.get("task_class"),
             "evidence_provenance": item.get("evidence_provenance"),
+            "source_state": item.get("source_state"),
             "predictors": {
                 "candidate_solution_scope": (item.get("recommendation") or {}).get("candidate_solution_scope"),
                 "estimated_touched_surface": (item.get("recommendation") or {}).get("estimated_touched_surface"),
@@ -651,6 +988,7 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
     descriptive_available = bool(terminal and any(variation.values()))
     representative_descriptive_available = bool(representative_terminal and any(representative_variation.values()))
     predictive_validation = _predictive_validation(representative_terminal)
+    replan_diagnostics = _aggregate_replan_diagnostics(representative_terminal)
     can_answer = bool(predictive_validation["validated_signals"])
     return {
         "schema_version": 1,
@@ -663,14 +1001,42 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "terminal_shadow_tasks": len(terminal),
             "repaired_tasks": overall_repaired,
             "repair_rate": round(overall_repaired / len(terminal), 6) if terminal else None,
+            "historical_repair_label_method": "post_replan_applied_patch_delta_v1",
+            "causal_solution_repair_tasks": causal_repaired,
+            "causal_solution_nonrepair_tasks": len(causal_known) - causal_repaired,
+            "causal_solution_repair_unknown_tasks": len(terminal) - len(causal_known),
+            "causal_solution_repair_rate": round(causal_repaired / len(causal_known), 6) if causal_known else None,
+            "predictive_repair_label_method": "replan_diagnostics_plus_post_replan_patch_v1",
             "provenance_counts": provenance_counts,
             "terminal_provenance_counts": terminal_provenance_counts,
             "representative_terminal_shadow_tasks": len(representative_terminal),
             "representative_repaired_tasks": representative_repaired,
             "representative_nonrepaired_tasks": len(representative_terminal) - representative_repaired,
+            "representative_causal_solution_repair_tasks": representative_causal_repaired,
+            "representative_causal_solution_nonrepair_tasks": len(representative_causal_known) - representative_causal_repaired,
+            "representative_causal_solution_repair_unknown_tasks": len(representative_terminal) - len(representative_causal_known),
         },
         "predictor_variation": variation,
         "representative_predictor_variation": representative_variation,
+        "predictor_coverage": predictor_coverage,
+        "workload_guidance": {
+            "low_variance_signals": low_variance_signals,
+            "naturally_diverse_representative_workload_required": bool(low_variance_signals),
+            "representative_task_class_counts": representative_task_class_counts,
+            "shadow_prediction_manipulation_for_variance_forbidden": True,
+        },
+        "measurement_design": {
+            "design": "longitudinal_evolving_checkout_v1",
+            "representative_base_head_count": len(representative_base_heads),
+            "representative_worktree_fingerprint_count": len(representative_worktree_fingerprints),
+            "source_state_drift_observed": len(representative_base_heads) > 1 or len(representative_worktree_fingerprints) > 1,
+            "first_representative_shadow_event_time": representative_event_times[0] if representative_event_times else None,
+            "last_representative_shadow_event_time": representative_event_times[-1] if representative_event_times else None,
+            "iid_assumption": False,
+            "association_only": True,
+            "time_or_source_state_confounding_eliminated": False,
+        },
+        "replan_diagnostics": replan_diagnostics,
         "by_signal": by_signal,
         "predictive_validation": predictive_validation,
         "records": records,
@@ -680,8 +1046,11 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "reason": predictive_validation["reason"] if representative_terminal else "representative_evidence_required" if descriptive_available else "predictive_validation_not_yet_established",
             "validated_signals": list(predictive_validation["validated_signals"]),
             "representative_terminal_tasks": len(representative_terminal),
-            "representative_repaired_tasks": representative_repaired,
-            "representative_nonrepaired_tasks": len(representative_terminal) - representative_repaired,
+            "representative_repaired_tasks": representative_causal_repaired,
+            "representative_nonrepaired_tasks": len(representative_causal_known) - representative_causal_repaired,
+            "representative_unknown_repair_tasks": len(representative_terminal) - len(representative_causal_known),
+            "representative_raw_post_replan_patch_repaired_tasks": representative_repaired,
+            "repair_label_method": "replan_diagnostics_plus_post_replan_patch_v1",
             "automatic_policy_activation": False,
         },
         "policy": {
@@ -692,7 +1061,13 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "predictive_promotion_requires_representative_provenance": True,
             "benchmark_synthetic_unlabeled_are_not_promotion_evidence": True,
             "predictive_validation_is_association_not_causality": True,
+            "longitudinal_evolving_checkout_not_iid": True,
+            "source_state_time_drift_reported": True,
+            "semantic_localization_is_measurement_context_not_repair_label": True,
             "repair_label_uses_post_replan_patch_surface": True,
+            "historical_repaired_boolean_preserved": True,
+            "predictive_repair_label_uses_causal_replan_diagnostics": True,
+            "durable_replan_reason_fallback_is_diagnostic_only": True,
             "workflow_replan_is_not_solution_repair": True,
             "p5_automatic_start": False,
         },

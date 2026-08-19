@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFile, spawn } from "node:child_process";
+import { execFile, spawn, spawnSync } from "node:child_process";
 import {
   copyFile,
   mkdir,
@@ -178,4 +178,14 @@ test("development output is ignored by Git", async () => {
     ["check-ignore", "--quiet", "frontend/.dev-dist/app.js"],
     { cwd: repositoryRoot }
   );
+});
+
+test("production output is visible to Git", () => {
+  const result = spawnSync(
+    "git",
+    ["check-ignore", "--quiet", "frontend/dist/app.js"],
+    { cwd: repositoryRoot, encoding: "utf8", windowsHide: true }
+  );
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 1, result.stderr || result.stdout);
 });

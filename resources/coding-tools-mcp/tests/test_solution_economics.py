@@ -230,6 +230,7 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
                 event_type="failure_observed",
                 state_before="PROVING",
                 state_after="REPLAN",
+                payload={"failure_class": "PROOF_TIMEOUT"},
             )
             ledger.finish_wave(proof_wave, status="replanned")
             proof_wave = ledger.create_wave(proof_only, execution_mode="mcp_only")
@@ -253,6 +254,7 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
                 event_type="failure_observed",
                 state_before="PROVING",
                 state_after="REPLAN",
+                payload={"failure_class": "PATCH_CONTEXT_AMBIGUOUS"},
             )
             ledger.finish_wave(source_wave, status="replanned")
             source_wave = ledger.create_wave(source_repair, execution_mode="mcp_only")
@@ -270,18 +272,44 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertTrue(proof_report["outcome"]["repair"]["workflow_replanned"])
             self.assertTrue(proof_report["outcome"]["repair"]["proof_only_replan"])
             self.assertFalse(proof_report["outcome"]["repair"]["repaired"])
+            self.assertFalse(proof_report["outcome"]["repair"]["causal_solution_repair"])
             self.assertEqual(proof_report["outcome"]["repair"]["post_replan_patch_surface_events"], 0)
+            self.assertEqual(
+                proof_report["outcome"]["repair"]["replan_diagnostics"]["derived_category_counts"]["orchestration_repair"],
+                1,
+            )
             self.assertTrue(source_report["outcome"]["repair"]["workflow_replanned"])
             self.assertFalse(source_report["outcome"]["repair"]["proof_only_replan"])
             self.assertTrue(source_report["outcome"]["repair"]["repaired"])
+            self.assertTrue(source_report["outcome"]["repair"]["causal_solution_repair"])
             self.assertEqual(source_report["outcome"]["repair"]["post_replan_patch_surface_events"], 1)
+            self.assertEqual(
+                source_report["outcome"]["repair"]["replan_diagnostics"]["derived_category_counts"]["causal_solution_repair"],
+                1,
+            )
 
             population = solution_shadow_population_report(ledger)
             self.assertEqual(population["cohort"]["representative_repaired_tasks"], 1)
             self.assertEqual(population["cohort"]["representative_nonrepaired_tasks"], 1)
+            diagnostics = population["replan_diagnostics"]
+            self.assertEqual(diagnostics["overall"]["replan_transition_events"], 2)
+            self.assertEqual(diagnostics["overall"]["structured_failure_class_events"], 2)
+            self.assertEqual(diagnostics["overall"]["structured_failure_class_coverage"], 1.0)
+            self.assertEqual(diagnostics["overall"]["derived_category_counts"]["causal_solution_repair"], 1)
+            self.assertEqual(diagnostics["overall"]["derived_category_counts"]["orchestration_repair"], 1)
+            self.assertEqual(
+                diagnostics["by_source_repair_label"]["repaired"]["derived_category_counts"]["causal_solution_repair"],
+                1,
+            )
+            self.assertEqual(
+                diagnostics["by_source_repair_label"]["nonrepaired"]["derived_category_counts"]["orchestration_repair"],
+                1,
+            )
+            self.assertTrue(diagnostics["diagnostic_only_not_repair_label"])
+            self.assertFalse(diagnostics["free_text_replan_reason_used"])
             self.assertEqual(
                 population["predictive_validation"]["repair_label_method"],
-                "post_replan_applied_patch_delta_v1",
+                "replan_diagnostics_plus_post_replan_patch_v1",
             )
             self.assertTrue(population["policy"]["repair_label_uses_post_replan_patch_surface"])
             self.assertTrue(population["policy"]["workflow_replan_is_not_solution_repair"])
@@ -298,7 +326,14 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
                 wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
                 record_solution_shadow(ledger, run_id=run_id, wave_id=wave_id, recommendation=recommendation(f"rec-{risk}", risk=risk))
                 if risk == "high":
-                    ledger.append_event(run_id, wave_id=wave_id, event_type="failure_observed", state_before="EXECUTING", state_after="REPLAN")
+                    ledger.append_event(
+                        run_id,
+                        wave_id=wave_id,
+                        event_type="failure_observed",
+                        state_before="EXECUTING",
+                        state_after="REPLAN",
+                        payload={"failure_class": "PATCH_CONTEXT_AMBIGUOUS"},
+                    )
                     ledger.finish_wave(wave_id, status="replanned")
                     wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
                     record_repair_patch(ledger, run_id=run_id, wave_id=wave_id, label=f"repair_{risk}")
@@ -319,11 +354,119 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertEqual(risks["high"]["representative_repair_rate"], 1.0)
             self.assertTrue(population["representative_predictor_variation"]["expected_repair_risk"])
             self.assertFalse(population["representative_predictor_variation"]["smallest_causal_solution_scope"])
+            self.assertFalse(population["predictor_coverage"]["expected_repair_risk"]["low_variance"])
+            self.assertTrue(population["predictor_coverage"]["smallest_causal_solution_scope"]["low_variance"])
+            self.assertIn("smallest_causal_solution_scope", population["workload_guidance"]["low_variance_signals"])
+            self.assertTrue(population["workload_guidance"]["shadow_prediction_manipulation_for_variance_forbidden"])
             self.assertEqual(population["p4_gate"]["status"], "representative_descriptive_comparison_available_but_unvalidated")
             self.assertFalse(population["p4_gate"]["can_answer_which_signals_predict_repair"])
             self.assertFalse(population["p4_gate"]["automatic_policy_activation"])
             self.assertTrue(population["policy"]["loc_is_explanatory_not_objective"])
             self.assertTrue(population["policy"]["predictive_promotion_requires_representative_provenance"])
+
+    def test_population_reports_longitudinal_source_state_without_claiming_iid(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            for index in range(2):
+                run_id = ledger.create_run(
+                    objective=f"longitudinal-{index}",
+                    metadata={"workflow": "feature", "evaluation": {"provenance": "representative"}},
+                )
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only",
+                    base_head=f"head-{index}",
+                    worktree_fp=f"worktree-{index}",
+                )
+                record_solution_shadow(
+                    ledger,
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    recommendation=recommendation(f"longitudinal-rec-{index}"),
+                )
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+
+            population = solution_shadow_population_report(ledger)
+            design = population["measurement_design"]
+            self.assertEqual(design["representative_base_head_count"], 2)
+            self.assertEqual(design["representative_worktree_fingerprint_count"], 2)
+            self.assertTrue(design["source_state_drift_observed"])
+            self.assertFalse(design["iid_assumption"])
+            self.assertTrue(design["association_only"])
+            self.assertFalse(design["time_or_source_state_confounding_eliminated"])
+            self.assertTrue(population["policy"]["longitudinal_evolving_checkout_not_iid"])
+            self.assertTrue(population["policy"]["source_state_time_drift_reported"])
+
+    def test_durable_replan_reason_removes_formatting_and_baseline_noise_from_predictive_label(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            cases = (
+                (
+                    "formatting",
+                    "Wave 1 applied the intended patch but rustfmt --check failed on one formatting-only delta. No semantic defect was reported.",
+                    "formatting_only_repair",
+                ),
+                (
+                    "baseline",
+                    "Wave 1 hit the known unrelated root lib-test compilation failure (19 errors) before any source patch; do not retry the broken root lib-test harness.",
+                    "environment_or_baseline_repair",
+                ),
+            )
+            for label, reason, category in cases:
+                run_id = ledger.create_run(
+                    objective=label,
+                    metadata={"workflow": "bugfix", "evaluation": {"provenance": "representative"}},
+                )
+                wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                record_solution_shadow(
+                    ledger,
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    recommendation=recommendation(f"{label}-rec"),
+                )
+                ledger.append_event(
+                    run_id,
+                    wave_id=wave_id,
+                    event_type="failure_observed",
+                    state_before="PROVING",
+                    state_after="REPLAN",
+                    payload={"failure_class": "CHECK_FAILED"},
+                )
+                ledger.finish_wave(wave_id, status="replanned")
+                repair_wave = ledger.create_wave(run_id, execution_mode="mcp_only")
+                ledger.append_event(
+                    run_id,
+                    wave_id=repair_wave,
+                    event_type="wave_replanned",
+                    state_after="PREFLIGHT",
+                    payload={"reason": reason, "execution_mode": "mcp_only"},
+                )
+                record_repair_patch(
+                    ledger,
+                    run_id=run_id,
+                    wave_id=repair_wave,
+                    label=f"{label}_patch",
+                )
+                ledger.finish_wave(repair_wave, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+
+                report = solution_shadow_run_report(ledger, run_id)
+                repair = report["outcome"]["repair"]
+                self.assertTrue(repair["repaired"])
+                self.assertFalse(repair["causal_solution_repair"])
+                self.assertEqual(repair["replan_diagnostics"]["derived_category_counts"][category], 1)
+                self.assertEqual(repair["replan_diagnostics"]["classification_coverage"], 1.0)
+                self.assertEqual(repair["replan_diagnostics"]["reason_fallback_events"], 1)
+
+            population = solution_shadow_population_report(ledger)
+            self.assertEqual(population["cohort"]["representative_repaired_tasks"], 2)
+            self.assertEqual(population["cohort"]["representative_causal_solution_repair_tasks"], 0)
+            self.assertEqual(population["cohort"]["representative_causal_solution_nonrepair_tasks"], 2)
+            self.assertEqual(population["p4_gate"]["representative_repaired_tasks"], 0)
+            self.assertEqual(population["p4_gate"]["representative_raw_post_replan_patch_repaired_tasks"], 2)
+            self.assertFalse(population["p4_gate"]["can_answer_which_signals_predict_repair"])
+            self.assertEqual(population["predictive_validation"]["reason"], "representative_repair_outcome_variation_missing")
 
     def test_predictive_gate_requires_out_of_sample_gain_and_familywise_separation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -349,6 +492,7 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
                         event_type="failure_observed",
                         state_before="EXECUTING",
                         state_after="REPLAN",
+                        payload={"failure_class": "PATCH_CONTEXT_AMBIGUOUS"},
                     )
                     ledger.finish_wave(wave_id, status="replanned")
                     wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")

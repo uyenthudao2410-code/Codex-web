@@ -57,12 +57,17 @@ def _workflow_name(metadata: dict[str, Any]) -> str:
     return workflow if workflow in WORKFLOW_ORDER else "unknown"
 
 
-def _repair_cause(failure_class: str) -> str | None:
+def repair_cause_for_failure_class(failure_class: str) -> str | None:
+    """Map a durable structured failure class to the existing rework cause taxonomy."""
     normalized = str(failure_class or "").strip().upper()
     for cause, codes in REPAIR_CAUSE_CODES.items():
         if normalized in codes:
             return cause
     return None
+
+
+def _repair_cause(failure_class: str) -> str | None:
+    return repair_cause_for_failure_class(failure_class)
 
 
 def _scope_observation(events: list[dict[str, Any]]) -> tuple[int | None, bool]:

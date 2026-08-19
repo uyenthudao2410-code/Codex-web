@@ -4,6 +4,8 @@ node_modules/
 **/node_modules/
 dist/
 **/dist/
+!/frontend/dist/
+!/frontend/dist/**
 build/
 out/
 .electron-builder-cache/

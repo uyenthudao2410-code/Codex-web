@@ -421,6 +421,7 @@ async fn session_ssh_resource_rejects_structured_cargo_before_legacy_sync_start(
                 no_default_features: None,
                 features: None,
                 package: None,
+                compute_placement_policy: None,
                 timeout_secs: Some(30),
             },
             Some(&auth),
