@@ -8,6 +8,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from coding_tools_mcp.runtime_activity import hub_client_activity_state, runtime_activity_snapshot
 from coding_tools_mcp.server import MCPHandler, PROTOCOL_VERSION, Runtime, RuntimeHTTPServer
 
 
@@ -125,23 +126,23 @@ class ExecutionHubFaultTests(unittest.TestCase):
         try:
             now = datetime.now(timezone.utc)
             self.assertEqual(
-                hub.runtime.hub_client_activity_state(now.isoformat(), active_seconds=45.0),
+                hub_client_activity_state(now.isoformat(), active_seconds=45.0),
                 "ACTIVE",
             )
             self.assertEqual(
-                hub.runtime.hub_client_activity_state(
+                hub_client_activity_state(
                     (now - timedelta(seconds=120)).isoformat(), active_seconds=45.0
                 ),
                 "RECENT",
             )
             self.assertEqual(
-                hub.runtime.hub_client_activity_state(
+                hub_client_activity_state(
                     (now - timedelta(hours=1)).isoformat(), active_seconds=45.0
                 ),
                 "NO_SIGNAL",
             )
             self.assertEqual(
-                hub.runtime.hub_client_activity_state("", active_seconds=45.0),
+                hub_client_activity_state("", active_seconds=45.0),
                 "NO_SIGNAL",
             )
 
@@ -193,12 +194,12 @@ class ExecutionHubFaultTests(unittest.TestCase):
                 admission.job_id, lifecycle_state="exited", exit_code=0
             )
             admission = None
-            idle = hub.runtime.runtime_activity_snapshot(write_active=False, delegations=[])
+            idle = runtime_activity_snapshot(hub.runtime, write_active=False, delegations=[])
             self.assertEqual(idle["state"], "IDLE")
-            writing = hub.runtime.runtime_activity_snapshot(write_active=True, delegations=[])
+            writing = runtime_activity_snapshot(hub.runtime, write_active=True, delegations=[])
             self.assertEqual(writing["state"], "WRITING")
-            delegating = hub.runtime.runtime_activity_snapshot(
-                write_active=True, delegations=[{"status": "active"}]
+            delegating = runtime_activity_snapshot(
+                hub.runtime, write_active=True, delegations=[{"status": "active"}]
             )
             self.assertEqual(delegating["state"], "DELEGATING")
         finally:
