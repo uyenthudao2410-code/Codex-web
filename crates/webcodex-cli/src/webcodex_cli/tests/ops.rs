@@ -117,27 +117,75 @@ fn ops_common_flags_parse_without_printing_token() {
         "status",
         "--url",
         "http://runtime.example",
-        "--env-file",
-        "/tmp/webcodex.env",
         "--token-file",
         "/tmp/token",
-        "--token",
-        "secret-token-value",
         "--json",
         "--strict",
     ]) {
         CliAction::Ops(OpsCommand::Status(opts)) => {
             assert_eq!(opts.server_url, "http://runtime.example");
-            assert_eq!(
-                opts.env_file.as_deref(),
-                Some(Path::new("/tmp/webcodex.env"))
-            );
+            assert!(opts.env_file.is_none());
             assert_eq!(opts.token_file.as_deref(), Some(Path::new("/tmp/token")));
-            assert_eq!(opts.token.as_deref(), Some("secret-token-value"));
+            assert!(opts.token.is_none());
             assert!(opts.json);
             assert!(opts.strict);
         }
         other => panic!("expected ops status action, got {other:?}"),
+    }
+}
+
+#[test]
+fn ops_explicit_auth_sources_are_mutually_exclusive() {
+    let secret = "secret-token-value";
+    let cases: &[&[&str]] = &[
+        &[
+            "ops",
+            "status",
+            "--token",
+            secret,
+            "--token-file",
+            "/tmp/token",
+        ],
+        &[
+            "ops",
+            "agents",
+            "--token",
+            secret,
+            "--env-file",
+            "/tmp/webcodex.env",
+        ],
+        &[
+            "ops",
+            "projects",
+            "--token-file",
+            "/tmp/token",
+            "--env-file",
+            "/tmp/webcodex.env",
+        ],
+        &[
+            "ops",
+            "smoke-preflight",
+            "--project",
+            "agent:ops:smoke",
+            "--token",
+            secret,
+            "--env-file",
+            "/tmp/webcodex.env",
+        ],
+    ];
+
+    for args in cases {
+        match cli_action(args.iter().copied()) {
+            CliAction::Exit { code, stderr, .. } => {
+                assert_eq!(code, 2, "expected conflict for {args:?}");
+                assert!(
+                    stderr.contains("use only one of --token, --token-file, or --env-file"),
+                    "unexpected error for {args:?}: {stderr}"
+                );
+                assert!(!stderr.contains(secret));
+            }
+            other => panic!("expected auth-source conflict for {args:?}, got {other:?}"),
+        }
     }
 }
 

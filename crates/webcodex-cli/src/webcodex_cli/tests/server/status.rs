@@ -141,7 +141,7 @@ async fn server_status_parses_env_token_posts_and_does_not_print_token() {
 }
 
 #[tokio::test]
-async fn server_status_token_file_takes_priority_over_env_file() {
+async fn server_status_token_file_overrides_implicit_default_env_file() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -161,16 +161,12 @@ async fn server_status_token_file_takes_priority_over_env_file() {
         .unwrap();
     });
     let tmp = tempfile::tempdir().unwrap();
-    let env_file = tmp.path().join("webcodex.env");
     let token_file = tmp.path().join("token");
-    std::fs::write(&env_file, "WEBCODEX_TOKEN=env-token\n").unwrap();
     std::fs::write(&token_file, "file-token\n").unwrap();
     let opts = parse_server_status(&args(&[
         "--url",
         &format!("http://{}", addr),
         "--no-system-proxy",
-        "--env-file",
-        env_file.to_str().unwrap(),
         "--token-file",
         token_file.to_str().unwrap(),
         "--json",
@@ -182,11 +178,30 @@ async fn server_status_token_file_takes_priority_over_env_file() {
     assert!(request
         .to_ascii_lowercase()
         .contains("authorization: bearer file-token"));
-    assert!(!request
-        .to_ascii_lowercase()
-        .contains("authorization: bearer env-token"));
     assert!(!output.contains("file-token"));
-    assert!(!output.contains("env-token"));
+}
+
+#[tokio::test]
+async fn server_status_rejects_explicit_token_file_with_explicit_env_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env_file = tmp.path().join("webcodex.env");
+    let token_file = tmp.path().join("token");
+    let env_token = "explicit-env-token";
+    let file_token = "explicit-file-token";
+    std::fs::write(&env_file, format!("WEBCODEX_TOKEN={env_token}\n")).unwrap();
+    std::fs::write(&token_file, format!("{file_token}\n")).unwrap();
+    let opts = parse_server_status(&args(&[
+        "--env-file",
+        env_file.to_str().unwrap(),
+        "--token-file",
+        token_file.to_str().unwrap(),
+    ]))
+    .unwrap();
+
+    let error = run_server_status(opts).await.unwrap_err();
+    assert!(error.contains("use only one of --token-file or --env-file"));
+    assert!(!error.contains(env_token));
+    assert!(!error.contains(file_token));
 }
 
 #[tokio::test]

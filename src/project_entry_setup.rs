@@ -917,20 +917,18 @@ fn state_path_unavailable() -> ProductError {
     )
 }
 
-fn default_state_base() -> Result<PathBuf, ProductError> {
-    if let Some(path) = std::env::var_os("XDG_STATE_HOME").filter(|value| !value.is_empty()) {
-        return Ok(PathBuf::from(path).join("webcodex/projects"));
-    }
-    let home = std::env::var_os("HOME")
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
+pub(super) fn default_state_base() -> Result<PathBuf, ProductError> {
+    webcodex_agent_config::paths::default_client_state_base_dir()
+        .map(|base| base.join("projects"))
+        .map_err(|message| {
             ProductError::new(
                 "project_not_configured",
-                "HOME is unavailable and no --state-dir was provided",
-                Some("Set HOME or pass an absolute --state-dir."),
+                message,
+                Some(
+                    "Pass an absolute --state-dir if the default user state directory is unavailable.",
+                ),
             )
-        })?;
-    Ok(PathBuf::from(home).join(".local/state/webcodex/projects"))
+        })
 }
 
 fn read_toml<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T, ProductError> {

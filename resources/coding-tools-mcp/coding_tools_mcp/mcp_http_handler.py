@@ -174,7 +174,10 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
 
     @property
     def runtime(self) -> Runtime:
-        return cast(Any, getattr(self, "_runtime", self.server.control_runtime))  # type: ignore[attr-defined]
+        runtime = getattr(self, "_runtime", None)
+        if runtime is not None:
+            return cast(Any, runtime)
+        return cast(Any, self.server.control_runtime)  # type: ignore[attr-defined]
 
     def log_message(self, format: str, *args: Any) -> None:
         print(format % args, file=sys.stderr)
@@ -296,6 +299,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "tool_profile": runtime.tool_contract["profile"],
                 "tool_count": len(runtime.exposed_tool_names()),
                 "tool_contract": dict(runtime.tool_contract),
+                "connector_tool_discovery": runtime.connector_tool_discovery(),
                 "workspace_generation": runtime.workspace_generation,
                 "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
                 "device_id": str(os.environ.get(f"{ENV_PREFIX}_DEVICE_ID", "")).strip() or None,

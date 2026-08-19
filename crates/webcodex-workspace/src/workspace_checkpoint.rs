@@ -257,11 +257,12 @@ fn restore_workspace_checkpoint_inner(root: &Path, checkpoint: &Value) -> Result
         ));
     }
 
+    let staged_paths = changed_paths_from_diff(staged_diff)
+        .map_err(|detail| invalid_checkpoint_diff_header("staged_diff", detail))?;
+    let tracked_paths = changed_paths_from_diff(tracked_diff)
+        .map_err(|detail| invalid_checkpoint_diff_header("tracked_diff", detail))?;
     let mut changed_paths = Vec::new();
-    for path in changed_paths_from_diff(staged_diff)
-        .into_iter()
-        .chain(changed_paths_from_diff(tracked_diff))
-    {
+    for path in staged_paths.into_iter().chain(tracked_paths) {
         push_unique(&mut changed_paths, &path);
     }
     for item in &untracked_files {
@@ -656,7 +657,9 @@ fn validate_checkpoint_diff(label: &str, diff: &str) -> Result<(), Value> {
             ],
         ));
     }
-    for path in changed_paths_from_diff(diff) {
+    let paths = changed_paths_from_diff(diff)
+        .map_err(|detail| invalid_checkpoint_diff_header(label, detail))?;
+    for path in paths {
         if invalid_rel_path(&path) || sensitive_path(&path) {
             return Err(fail_extra(
                 "invalid_checkpoint",
@@ -666,6 +669,14 @@ fn validate_checkpoint_diff(label: &str, diff: &str) -> Result<(), Value> {
         }
     }
     Ok(())
+}
+
+fn invalid_checkpoint_diff_header(label: &str, detail: String) -> Value {
+    fail_extra(
+        "invalid_checkpoint",
+        format!("{label} contains an invalid Git path header"),
+        vec![("detail", json!(detail))],
+    )
 }
 
 fn validate_untracked_checkpoint_files(
@@ -887,24 +898,132 @@ fn binaryish(data: &[u8]) -> bool {
         .any(|byte| *byte == 0 || (*byte < 32 && !matches!(*byte, b'\t' | b'\n' | b'\r')))
 }
 
-fn changed_paths_from_diff(diff: &str) -> Vec<String> {
+fn changed_paths_from_diff(diff: &str) -> Result<Vec<String>, String> {
     let mut paths = Vec::new();
+    let mut in_hunk = false;
     for line in diff.lines() {
         if let Some(rest) = line.strip_prefix("diff --git ") {
-            if let Some(pos) = rest.rfind(" b/") {
-                push_unique(&mut paths, &rest[pos + 3..]);
+            in_hunk = false;
+            if rest.trim_start().starts_with('"') {
+                let (old_path, rest) = parse_git_quoted_path_token(rest)?;
+                let (new_path, trailing) = parse_git_path_token(rest)?;
+                if !trailing.trim().is_empty() {
+                    return Err("diff --git path header has trailing content".to_string());
+                }
+                push_git_side_path(&mut paths, &old_path, "a/")?;
+                push_git_side_path(&mut paths, &new_path, "b/")?;
+            } else if let Some(pos) = rest.rfind(" b/") {
+                push_git_side_path(&mut paths, &rest[..pos], "a/")?;
+                push_git_side_path(&mut paths, &rest[pos + 1..], "b/")?;
+            } else {
+                return Err("diff --git path header is malformed".to_string());
             }
             continue;
         }
-        for prefix in ["+++ b/", "--- a/"] {
-            if let Some(path) = line.strip_prefix(prefix) {
-                if path != "/dev/null" {
-                    push_unique(&mut paths, path);
+        if line.starts_with("@@") {
+            in_hunk = true;
+            continue;
+        }
+        if in_hunk {
+            continue;
+        }
+        for (marker, side) in [("+++ ", "b/"), ("--- ", "a/")] {
+            let Some(raw_path) = line.strip_prefix(marker) else {
+                continue;
+            };
+            if raw_path == "/dev/null" {
+                continue;
+            }
+            if raw_path.starts_with(side) {
+                push_unique(&mut paths, &raw_path[side.len()..]);
+            } else if raw_path.starts_with('"') {
+                let (path, trailing) = parse_git_quoted_path_token(raw_path)?;
+                if !trailing.trim().is_empty() {
+                    return Err(format!("{marker}path header has trailing content"));
                 }
+                push_git_side_path(&mut paths, &path, side)?;
             }
         }
     }
-    paths
+    Ok(paths)
+}
+
+fn push_git_side_path(paths: &mut Vec<String>, path: &str, side: &str) -> Result<(), String> {
+    let path = path
+        .strip_prefix(side)
+        .ok_or_else(|| format!("Git path header is missing expected {side} prefix"))?;
+    push_unique(paths, path);
+    Ok(())
+}
+
+fn parse_git_path_token(input: &str) -> Result<(String, &str), String> {
+    let input = input.trim_start();
+    if input.starts_with('"') {
+        return parse_git_quoted_path_token(input);
+    }
+    let end = input.find(char::is_whitespace).unwrap_or(input.len());
+    if end == 0 {
+        return Err("Git path token is empty".to_string());
+    }
+    Ok((input[..end].to_string(), &input[end..]))
+}
+
+fn parse_git_quoted_path_token(input: &str) -> Result<(String, &str), String> {
+    let bytes = input.as_bytes();
+    if bytes.first() != Some(&b'"') {
+        return Err("Git quoted path must start with a quote".to_string());
+    }
+    let mut decoded = Vec::new();
+    let mut index = 1usize;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'"' => {
+                let path = String::from_utf8(decoded)
+                    .map_err(|_| "Git quoted path is not valid UTF-8".to_string())?;
+                return Ok((path, &input[index + 1..]));
+            }
+            b'\\' => {
+                index += 1;
+                let escaped = *bytes
+                    .get(index)
+                    .ok_or_else(|| "Git quoted path ends with an escape".to_string())?;
+                match escaped {
+                    b'a' => decoded.push(0x07),
+                    b'b' => decoded.push(0x08),
+                    b't' => decoded.push(b'\t'),
+                    b'n' => decoded.push(b'\n'),
+                    b'v' => decoded.push(0x0b),
+                    b'f' => decoded.push(0x0c),
+                    b'r' => decoded.push(b'\r'),
+                    b'"' => decoded.push(b'"'),
+                    b'\\' => decoded.push(b'\\'),
+                    b'0'..=b'7' => {
+                        let mut value = (escaped - b'0') as u16;
+                        let mut digits = 1usize;
+                        while digits < 3 {
+                            let Some(next) = bytes.get(index + 1) else {
+                                break;
+                            };
+                            if !(b'0'..=b'7').contains(next) {
+                                break;
+                            }
+                            index += 1;
+                            digits += 1;
+                            value = value * 8 + (bytes[index] - b'0') as u16;
+                        }
+                        if value > u8::MAX as u16 {
+                            return Err("Git quoted path octal escape exceeds one byte".to_string());
+                        }
+                        decoded.push(value as u8);
+                    }
+                    _ => return Err("Git quoted path contains an unsupported escape".to_string()),
+                }
+            }
+            byte => decoded.push(byte),
+        }
+        index += 1;
+    }
+    Err("Git quoted path is missing its closing quote".to_string())
 }
 
 fn push_unique(paths: &mut Vec<String>, path: &str) {
@@ -949,4 +1068,71 @@ fn fail_extra(kind: &str, message: impl Into<String>, extra: Vec<(&str, Value)>)
         obj.insert(key.to_string(), value);
     }
     Value::Object(obj)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn git_c_quote(value: &str) -> String {
+        let mut quoted = String::from("\"");
+        for byte in value.as_bytes() {
+            match *byte {
+                b'\\' => quoted.push_str("\\\\"),
+                b'"' => quoted.push_str("\\\""),
+                0x20..=0x7e => quoted.push(*byte as char),
+                other => quoted.push_str(&format!("\\{other:03o}")),
+            }
+        }
+        quoted.push('"');
+        quoted
+    }
+
+    fn quoted_diff(path: &str) -> String {
+        let old = git_c_quote(&format!("a/{path}"));
+        let new = git_c_quote(&format!("b/{path}"));
+        format!("diff --git {old} {new}\n--- {old}\n+++ {new}\n@@ -1 +1 @@\n-old\n+new\n")
+    }
+
+    #[test]
+    fn workspace_checkpoint_extracts_ordinary_diff_path() {
+        let diff = "diff --git a/src/main.rs b/src/main.rs\n--- a/src/main.rs\n+++ b/src/main.rs\n";
+        assert_eq!(
+            changed_paths_from_diff(diff).unwrap(),
+            vec!["src/main.rs".to_string()]
+        );
+    }
+
+    #[test]
+    fn workspace_checkpoint_accepts_valid_c_quoted_non_ascii_path() {
+        let path = "dữ liệu/tệp ghi chú.txt";
+        let diff = quoted_diff(path);
+        assert_eq!(
+            changed_paths_from_diff(&diff).unwrap(),
+            vec![path.to_string()]
+        );
+        assert!(validate_checkpoint_diff("tracked_diff", &diff).is_ok());
+    }
+
+    #[test]
+    fn workspace_checkpoint_rejects_sensitive_c_quoted_path() {
+        let path = "dữ liệu/token/config.txt";
+        let error = validate_checkpoint_diff("tracked_diff", &quoted_diff(path)).unwrap_err();
+        assert_eq!(
+            error.get("error_kind").and_then(Value::as_str),
+            Some("invalid_checkpoint")
+        );
+        assert_eq!(error.get("path").and_then(Value::as_str), Some(path));
+    }
+
+    #[test]
+    fn workspace_checkpoint_rejects_malformed_or_non_utf8_c_quoted_path() {
+        let malformed = "diff --git \"a/bad\\777.txt\" \"b/bad\\777.txt\"\n";
+        let error = validate_checkpoint_diff("tracked_diff", malformed).unwrap_err();
+        assert_eq!(
+            error.get("error_kind").and_then(Value::as_str),
+            Some("invalid_checkpoint")
+        );
+        assert!(error.get("detail").and_then(Value::as_str).is_some());
+    }
 }

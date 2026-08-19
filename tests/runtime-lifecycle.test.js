@@ -359,7 +359,7 @@ test('revision observation failure cannot break runtime supervision', () => {
   });
 });
 
-test('connector contract stays pending until operator acknowledges the current hash', () => {
+test('connector contract stays pending until current tools/list rediscovery is observed', () => {
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
     secrets: { get: () => '' },
@@ -368,11 +368,22 @@ test('connector contract stays pending until operator acknowledges the current h
     emitProgress() {}
   });
   const contract = { schema_version: 1, profile: 'smart-v3', sha256: 'a'.repeat(64) };
-  assert.equal(orchestrator.connectorContractStatus(contract).refreshRequired, true);
-  orchestrator.acknowledgeConnectorContractHash(contract);
-  const acknowledged = orchestrator.connectorContractStatus(contract);
+  const pending = orchestrator.connectorContractStatus(contract);
+  assert.equal(pending.refreshRequired, true);
+  assert.equal(pending.rediscovered, false);
+  assert.throws(
+    () => orchestrator.acknowledgeConnectorContractHash(contract),
+    (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+  );
+  const discovery = {
+    current_contract_observed: true,
+    contract_sha256: contract.sha256,
+    observed_at: '2026-08-18T00:00:00.000Z'
+  };
+  const acknowledged = orchestrator.synchronizeConnectorContract(contract, discovery);
   assert.equal(acknowledged.refreshRequired, false);
   assert.equal(acknowledged.acknowledgedSha256, contract.sha256);
+  assert.equal(acknowledged.rediscovered, true);
 });
 
 test('supervisor consumes a fresh workspace-bound restart ticket exactly once', async () => {

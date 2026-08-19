@@ -352,7 +352,7 @@ function renderSnapshot(snapshot, options = {}) {
     connectorContractNotice.hidden = !status.connectorRefreshRequired;
     if (status.connectorRefreshRequired) {
       const shortHash = status.toolContract?.sha256 ? `${status.toolContract.sha256.slice(0, 12)}…` : 'không xác định';
-      $('#connectorContractMessage').textContent = `Tool contract MCP hiện tại (${shortHash}) khác bản đã xác nhận cho ChatGPT. Hãy Refresh actions hoặc cài lại app MCP trong ChatGPT, sau đó bấm xác nhận bên dưới.`;
+      $('#connectorContractMessage').textContent = `Tool contract MCP hiện tại (${shortHash}) chưa được ChatGPT đọc lại. Hãy dùng Refresh trong Action control của app MCP; nếu workspace không hỗ trợ cập nhật app đã publish, hãy tạo/publish lại app. Cảnh báo chỉ tự đóng sau khi MCP quan sát được tools/list cho đúng contract này.`;
     }
   }
   renderEnvironment(environment);
@@ -832,10 +832,15 @@ function bindEvents() {
   $('#repairHealth').addEventListener('click', repairHealth);
   $('#ackConnectorContract')?.addEventListener('click', async () => {
     try {
-      const snapshot = unwrap(await api.acknowledgeConnectorContract());
+      const snapshot = unwrap(await api.snapshot());
       renderSnapshot(snapshot, { forceForms: false });
-      toast('Đã xác nhận tool contract', 'Cảnh báo sẽ xuất hiện lại khi schema/tool contract MCP thay đổi lần tiếp theo.');
-    } catch (error) { toast('Không thể xác nhận tool contract', error.message, 'error'); }
+      toast(
+        'Đã kiểm tra lại tool contract',
+        snapshot.status?.connectorRefreshRequired
+          ? 'ChatGPT chưa đọc lại tools/list cho contract hiện tại.'
+          : 'ChatGPT đã đọc lại contract hiện tại.'
+      );
+    } catch (error) { toast('Không thể kiểm tra tool contract', error.message, 'error'); }
   });
   $('#toolModeSelect')?.addEventListener('change', async () => {
     try {

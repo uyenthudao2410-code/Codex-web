@@ -418,6 +418,9 @@ pub fn validate_project_relative_path(path: &str) -> Result<(), String> {
         return Err("path must be project-relative".to_string());
     }
     for component in trimmed.split(['/', '\\']) {
+        if component.is_empty() {
+            return Err("path cannot contain empty segments".to_string());
+        }
         if component == ".." {
             return Err("path cannot contain '..'".to_string());
         }
@@ -620,6 +623,9 @@ mod tests {
     #[test]
     fn validate_project_relative_path_rejects_escapes() {
         assert!(validate_project_relative_path("src/app.py").is_ok());
+        assert!(validate_project_relative_path("src//app.py").is_err());
+        assert!(validate_project_relative_path(r"src\\app.py").is_err());
+        assert!(validate_project_relative_path("src/").is_err());
         assert!(validate_project_relative_path("/abs/path").is_err());
         assert!(validate_project_relative_path("../secret").is_err());
         assert!(validate_project_relative_path("a/../b").is_err());

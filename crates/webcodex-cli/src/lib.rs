@@ -1165,6 +1165,12 @@ fn validate_ops_common(opts: &OpsCommonOptions) -> Result<OpsCommonOptions, Stri
     if opts.server_url.trim().is_empty() {
         return Err("--server-url cannot be empty".to_string());
     }
+    let auth_sources = opts.token.is_some() as u8
+        + opts.token_file.is_some() as u8
+        + opts.env_file.is_some() as u8;
+    if auth_sources > 1 {
+        return Err("use only one of --token, --token-file, or --env-file".to_string());
+    }
     if opts
         .token
         .as_ref()

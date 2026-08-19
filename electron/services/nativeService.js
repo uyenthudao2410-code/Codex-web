@@ -95,7 +95,7 @@ function currentRuntimeState(input = {}) {
     'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId',
     'nativeRuntimeMode', 'nativeModuleRoot',
     'nativeDeviceId', 'nativeDeviceInstanceId', 'startedAt',
-    'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt'
+    'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt', 'chatgptToolContractRediscoveredAt'
   ]);
   return Object.fromEntries(Object.entries(input).filter(([key]) => allowed.has(key)));
 }

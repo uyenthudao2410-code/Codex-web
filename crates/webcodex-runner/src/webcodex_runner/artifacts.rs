@@ -52,18 +52,18 @@ pub(crate) fn validate_artifact_agent_path(path: &str) -> Result<(), String> {
 }
 
 fn is_sensitive_artifact_path(path: &str) -> bool {
-    for comp in path.to_lowercase().split('/') {
-        if matches!(
-            comp,
+    Path::new(path).components().any(|component| {
+        let Component::Normal(component) = component else {
+            return false;
+        };
+        let comp = component.to_string_lossy().to_ascii_lowercase();
+        matches!(
+            comp.as_str(),
             ".git" | "target" | "node_modules" | "secrets" | "tokens"
-        ) {
-            return true;
-        }
-        if comp == ".env" || comp.starts_with(".env") || comp.ends_with(".pem") {
-            return true;
-        }
-    }
-    false
+        ) || comp == ".env"
+            || comp.starts_with(".env")
+            || comp.ends_with(".pem")
+    })
 }
 
 fn parse_json_payload(request: &ShellAgentShellRequest) -> Result<Value, String> {
@@ -1469,6 +1469,34 @@ fn handle_read_project_artifact(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sensitive_artifact_path_uses_native_components() {
+        for path in [
+            "artifacts/.git/config",
+            "artifacts/target/output.bin",
+            "artifacts/.env.local",
+        ] {
+            assert!(
+                validate_artifact_agent_path(path).is_err(),
+                "sensitive path was accepted: {path}"
+            );
+        }
+
+        #[cfg(windows)]
+        for path in [r"artifacts\.git\config", r"artifacts\target\output.bin"] {
+            assert!(
+                validate_artifact_agent_path(path).is_err(),
+                "Windows sensitive path was accepted: {path}"
+            );
+        }
+
+        #[cfg(not(windows))]
+        assert!(
+            validate_artifact_agent_path(r"artifacts\.git\config").is_ok(),
+            "Unix must keep backslash as a literal path character"
+        );
+    }
 
     fn artifact_request(
         root: &Path,

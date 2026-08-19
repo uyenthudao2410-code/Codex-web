@@ -932,6 +932,46 @@ class CoordinationMixin:
         self._project_orchestration(ctx, event="task_orchestration_aborted")
         return ctx.projection()
 
+    def _solution_shadow_control(
+        self,
+        args: dict[str, Any],
+        recommendation: Any,
+        *,
+        transport: str,
+    ) -> dict[str, Any]:
+        _state, projection, run_id, wave_id = self._coordination_ids(args)
+        if not run_id:
+            raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "No orchestration run is available for solution shadow evidence.", category="not_found")
+        recording = None
+        if recommendation is not None:
+            if not isinstance(recommendation, dict):
+                raise ToolFailure("SOLUTION_SHADOW_INVALID", "solution shadow recommendation must be an object.", category="validation")
+            projected_run = str(projection.get("run_id") or "").strip()
+            projected_wave = str(projection.get("wave_id") or "").strip()
+            if run_id != projected_run or not wave_id or wave_id != projected_wave:
+                raise ToolFailure(
+                    "SOLUTION_SHADOW_CONTEXT_MISMATCH",
+                    "Solution shadow recording requires the current task-projected run and wave.",
+                    category="runtime",
+                    retryable=True,
+                    details={"run_id": run_id, "wave_id": wave_id, "projected_run_id": projected_run, "projected_wave_id": projected_wave},
+                )
+            try:
+                recording = record_solution_shadow(
+                    self.orchestration_ledger,
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    recommendation=recommendation,
+                )
+            except ValueError as exc:
+                raise ToolFailure("SOLUTION_SHADOW_INVALID", str(exc), category="validation", retryable=False) from exc
+        return {
+            "recording": recording,
+            "solution_shadow": solution_shadow_run_report(self.orchestration_ledger, run_id),
+            "transport": transport,
+            "production_behavior_changed": False,
+        }
+
     def task_control(self, args: dict[str, Any]) -> dict[str, Any]:
         action = str(args.get("action", "get")).lower()
         if action == "restart_runtime":
@@ -1113,38 +1153,11 @@ class CoordinationMixin:
                 "critical_path": self.orchestration_ledger.critical_path_analysis(run_id),
             }
         if action == "solution_shadow":
-            state, projection, run_id, wave_id = self._coordination_ids(args)
-            if not run_id:
-                raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "No orchestration run is available for solution shadow evidence.", category="not_found")
-            recommendation = args.get("solution_shadow_recommendation")
-            recording = None
-            if recommendation is not None:
-                if not isinstance(recommendation, dict):
-                    raise ToolFailure("SOLUTION_SHADOW_INVALID", "solution_shadow_recommendation must be an object.", category="validation")
-                projected_run = str(projection.get("run_id") or "").strip()
-                projected_wave = str(projection.get("wave_id") or "").strip()
-                if run_id != projected_run or not wave_id or wave_id != projected_wave:
-                    raise ToolFailure(
-                        "SOLUTION_SHADOW_CONTEXT_MISMATCH",
-                        "Solution shadow recording requires the current task-projected run and wave.",
-                        category="runtime",
-                        retryable=True,
-                        details={"run_id": run_id, "wave_id": wave_id, "projected_run_id": projected_run, "projected_wave_id": projected_wave},
-                    )
-                try:
-                    recording = record_solution_shadow(
-                        self.orchestration_ledger,
-                        run_id=run_id,
-                        wave_id=wave_id,
-                        recommendation=recommendation,
-                    )
-                except ValueError as exc:
-                    raise ToolFailure("SOLUTION_SHADOW_INVALID", str(exc), category="validation", retryable=False) from exc
-            return {
-                "recording": recording,
-                "solution_shadow": solution_shadow_run_report(self.orchestration_ledger, run_id),
-                "production_behavior_changed": False,
-            }
+            return self._solution_shadow_control(
+                args,
+                args.get("solution_shadow_recommendation"),
+                transport="typed_solution_shadow",
+            )
         if action in {"audit", "accept", "reject"}:
             state = self.task_state.get()
             projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
@@ -1316,6 +1329,28 @@ class CoordinationMixin:
             }
             return {"state": self.task_state.update(changes, event="task_started")}
         if action == "update":
+            payload = args.get("payload")
+            if isinstance(payload, dict) and payload.get("extension") == "solution_shadow_v1":
+                unexpected = sorted(set(payload) - {"extension", "recommendation"})
+                if unexpected:
+                    raise ToolFailure(
+                        "SOLUTION_SHADOW_EXTENSION_INVALID",
+                        "solution_shadow_v1 payload contains unsupported fields.",
+                        category="validation",
+                        details={"unsupported": unexpected},
+                    )
+                recommendation = payload.get("recommendation")
+                if not isinstance(recommendation, dict):
+                    raise ToolFailure(
+                        "SOLUTION_SHADOW_INVALID",
+                        "solution_shadow_v1 payload.recommendation must be an object.",
+                        category="validation",
+                    )
+                return self._solution_shadow_control(
+                    args,
+                    recommendation,
+                    transport="frozen_chatgpt_schema_extension_v1",
+                )
             changes = {key: args[key] for key in ("objective", "steps", "current_step", "next_step", "status", "failure", "complete_step_ids") if key in args}
             return {"state": self.task_state.update(changes)}
         if action == "pause":

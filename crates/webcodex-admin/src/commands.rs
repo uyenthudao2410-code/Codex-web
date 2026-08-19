@@ -155,8 +155,14 @@ fn require_common(opts: &AdminOptions) -> Result<(), String> {
     if opts.server_url.trim().is_empty() {
         return Err("--server-url is required".to_string());
     }
-    if opts.token.is_some() && opts.token_file.is_some() {
-        return Err("use only one of --token/--admin-token or --token-file".to_string());
+    let token_sources = opts.token.is_some() as u8
+        + opts.token_file.is_some() as u8
+        + opts.token_env.is_some() as u8;
+    if token_sources > 1 {
+        return Err(
+            "use only one of --token/--admin-token, --token-file, or --token-env/--admin-token-env"
+                .to_string(),
+        );
     }
     opts.server_http.validate()?;
     Ok(())

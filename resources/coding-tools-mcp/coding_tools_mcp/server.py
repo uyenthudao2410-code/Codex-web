@@ -608,6 +608,8 @@ class Runtime(
         self.request_sessions: dict[str | int, str] = {}
         self.request_sessions_lock = threading.Lock()
         self.request_context = threading.local()
+        self.tool_discovery_lock = threading.Lock()
+        self.tool_discovery_receipts: dict[str, dict[str, Any]] = {}
         # Background operations are process-scoped rather than HTTP-session-scoped.
         # A reconnect in the same MCP process must be able to poll the original
         # Event/result instead of falsely declaring it orphaned.
@@ -1011,11 +1013,59 @@ class Runtime(
         }
 
     def list_tools(self) -> dict[str, Any]:
+        self._record_tool_discovery()
         return self._tools_list_payload
 
     def _current_hub_client(self) -> dict[str, Any] | None:
         value = getattr(self.request_context, "hub_client", None)
         return value if isinstance(value, dict) and value.get("client_id") else None
+
+    def _record_tool_discovery(self) -> None:
+        identity = self._current_hub_client()
+        if identity is None:
+            return
+        client_id = str(identity.get("client_id") or "").strip()
+        if not client_id:
+            return
+        capabilities = identity.get("capabilities") if isinstance(identity.get("capabilities"), dict) else {}
+        receipt = {
+            "client_id": client_id,
+            "client_type": str(identity.get("client_type") or "client"),
+            "client_name": str(capabilities.get("client_name") or "")[:100],
+            "client_version": str(capabilities.get("client_version") or "")[:50],
+            "contract_sha256": str(self.tool_contract.get("sha256") or ""),
+            "process_instance_id": self.process_instance_id,
+            "server_instance_id": self.server_instance_id,
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+        }
+        with self.tool_discovery_lock:
+            self.tool_discovery_receipts[client_id] = receipt
+
+    def connector_tool_discovery(self) -> dict[str, Any]:
+        with self.tool_discovery_lock:
+            candidates = [
+                dict(receipt)
+                for receipt in self.tool_discovery_receipts.values()
+                if str(receipt.get("client_type") or "") == "chatweb"
+            ]
+        latest = max(candidates, key=lambda item: str(item.get("observed_at") or ""), default=None)
+        current_sha = str(self.tool_contract.get("sha256") or "")
+        current = bool(
+            latest
+            and str(latest.get("contract_sha256") or "") == current_sha
+            and str(latest.get("process_instance_id") or "") == self.process_instance_id
+            and str(latest.get("server_instance_id") or "") == self.server_instance_id
+        )
+        return {
+            "observed": latest is not None,
+            "current_contract_observed": current,
+            "contract_sha256": str((latest or {}).get("contract_sha256") or "") or None,
+            "observed_at": str((latest or {}).get("observed_at") or "") or None,
+            "client_id": str((latest or {}).get("client_id") or "") or None,
+            "client_name": str((latest or {}).get("client_name") or "") or None,
+            "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
+            "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
+        }
 
     def _maybe_reconcile_stale_orchestration(self, *, force: bool = False) -> list[str]:
         """Run bounded stale cleanup without making every UI poll scan the ledger."""

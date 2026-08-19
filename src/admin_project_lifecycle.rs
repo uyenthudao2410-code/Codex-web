@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -582,12 +583,25 @@ fn validate_common(
         || name.len() > 120
         || path.is_empty()
         || path.len() > 4096
-        || !path.starts_with('/')
+        || !is_agent_absolute_path(path)
         || description.is_some_and(|v| v.len() > 500)
     {
         return Err(api_error(400, "invalid_request"));
     }
     Ok(())
+}
+
+fn is_agent_absolute_path(path: &str) -> bool {
+    if Path::new(path).is_absolute() || path.starts_with('/') {
+        return true;
+    }
+    let bytes = path.as_bytes();
+    let windows_drive_absolute = bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && matches!(bytes[2], b'\\' | b'/');
+    let windows_unc_or_device = bytes.starts_with(b"\\\\");
+    windows_drive_absolute || windows_unc_or_device
 }
 
 fn validate_revision(value: &str) -> Result<(), ServiceResponse> {
@@ -656,6 +670,34 @@ fn map_agent_error(error: &str) -> ServiceResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn validate_project_path(path: &str) -> Result<(), ServiceResponse> {
+        validate_common("oe", "demo", "Demo", None, path)
+    }
+
+    #[test]
+    fn project_lifecycle_accepts_agent_host_absolute_path_formats() {
+        for path in [
+            "/var/tmp/demo",
+            r"C:\repo\demo",
+            "C:/repo/demo",
+            r"\\server\share\demo",
+            r"\\?\C:\repo\demo",
+        ] {
+            assert!(validate_project_path(path).is_ok(), "rejected {path:?}");
+        }
+    }
+
+    #[test]
+    fn project_lifecycle_rejects_relative_and_drive_relative_paths() {
+        for path in ["repo/demo", r"repo\demo", r"\repo\demo", r"C:repo\demo"] {
+            assert_eq!(
+                validate_project_path(path).unwrap_err().status,
+                400,
+                "accepted {path:?}"
+            );
+        }
+    }
 
     #[test]
     fn project_lifecycle_error_mapping_is_stable_and_safe() {

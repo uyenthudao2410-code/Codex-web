@@ -587,29 +587,53 @@ class RuntimeOrchestrator {
     }));
   }
 
-  connectorContractStatus(toolContract) {
+  connectorContractStatus(toolContract, discovery = null) {
     const currentSha256 = String(toolContract?.sha256 || '').trim();
     const runtimeState = readJson(this.paths.stateFile(), {});
     const acknowledgedSha256 = String(runtimeState.chatgptToolContractSha256 || '').trim();
+    const rediscoveredSha256 = String(discovery?.contract_sha256 || '').trim();
+    const rediscovered = Boolean(
+      currentSha256
+      && discovery?.current_contract_observed === true
+      && rediscoveredSha256 === currentSha256
+    );
+    const contractChanged = Boolean(currentSha256 && currentSha256 !== acknowledgedSha256);
     return {
       available: Boolean(currentSha256),
       schemaVersion: Number(toolContract?.schema_version || 0),
       profile: String(toolContract?.profile || ''),
       currentSha256,
       acknowledgedSha256,
-      refreshRequired: Boolean(currentSha256 && currentSha256 !== acknowledgedSha256)
+      rediscovered,
+      rediscoveredSha256,
+      rediscoveredAt: rediscovered ? (String(discovery?.observed_at || '').trim() || null) : null,
+      refreshRequired: Boolean(contractChanged && !rediscovered),
+      acknowledgementPending: Boolean(contractChanged && rediscovered)
     };
   }
 
-  acknowledgeConnectorContractHash(toolContract) {
-    const status = this.connectorContractStatus(toolContract);
+  acknowledgeConnectorContractHash(toolContract, discovery = null) {
+    const status = this.connectorContractStatus(toolContract, discovery);
     if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
+    if (status.currentSha256 === status.acknowledgedSha256) return status;
+    if (!status.rediscovered) {
+      throw Object.assign(new Error('ChatGPT chưa đọc lại tools/list cho tool contract hiện tại.'), {
+        code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+      });
+    }
     updateJsonAtomic(this.paths.stateFile(), (state) => ({
       ...state,
       chatgptToolContractSha256: status.currentSha256,
-      chatgptToolContractAcknowledgedAt: new Date().toISOString()
+      chatgptToolContractAcknowledgedAt: new Date().toISOString(),
+      chatgptToolContractRediscoveredAt: status.rediscoveredAt || new Date().toISOString()
     }));
-    return this.connectorContractStatus(toolContract);
+    return this.connectorContractStatus(toolContract, discovery);
+  }
+
+  synchronizeConnectorContract(toolContract, discovery = null) {
+    const status = this.connectorContractStatus(toolContract, discovery);
+    if (!status.acknowledgementPending) return status;
+    return this.acknowledgeConnectorContractHash(toolContract, discovery);
   }
 
   async acknowledgeConnectorContract() {
@@ -617,7 +641,7 @@ class RuntimeOrchestrator {
     const token = this.secrets.get('mcpAuthToken');
     const health = token ? await readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '') : null;
     if (!health?.tool_contract) throw new Error('Coding Tools MCP chưa chạy hoặc chưa cung cấp tool contract fingerprint.');
-    this.acknowledgeConnectorContractHash(health.tool_contract);
+    this.acknowledgeConnectorContractHash(health.tool_contract, health.connector_tool_discovery);
     this.invalidateSnapshot();
     return this.snapshot({ force: true, reason: 'connector-contract-acknowledged' });
   }
@@ -1115,7 +1139,10 @@ class RuntimeOrchestrator {
       this.gitStatus(settings.workspace)
     ]);
     const runtimeRunning = Boolean(health);
-    const connectorContract = this.connectorContractStatus(health?.tool_contract || null);
+    const connectorContract = this.synchronizeConnectorContract(
+      health?.tool_contract || null,
+      health?.connector_tool_discovery || null
+    );
     const nativeAlive = await this.native.status().catch(() => false);
     return this.publishSnapshot({
       settings,
@@ -1137,6 +1164,8 @@ class RuntimeOrchestrator {
         } : null,
         connectorContractAcknowledgedSha256: connectorContract.acknowledgedSha256,
         connectorRefreshRequired: connectorContract.refreshRequired,
+        connectorRediscovered: connectorContract.rediscovered,
+        connectorRediscoveredAt: connectorContract.rediscoveredAt,
         codeRevision: { codingMcp: this.codingMcpRevisionStatus() },
         ...this.recoveryStatus()
       }

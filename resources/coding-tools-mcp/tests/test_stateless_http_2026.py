@@ -79,6 +79,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
             connection.close()
 
     def test_discover_and_tools_list_are_stateless_and_self_describing(self) -> None:
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
         status, headers, body = self.request("server/discover", modern_params())
         self.assertEqual(status, 200)
         self.assertNotIn("mcp-session-id", headers)
@@ -94,6 +95,19 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertNotIn("mcp-session-id", headers)
         self.assertEqual({tool["name"] for tool in body["result"]["tools"]}, EXPECTED_SMART_TOOLS)
         self.assertEqual(body["result"]["resultType"], "complete")
+        discovery = self.runtime.connector_tool_discovery()
+        self.assertTrue(discovery["current_contract_observed"])
+        self.assertEqual(discovery["contract_sha256"], self.runtime.tool_contract["sha256"])
+        self.assertEqual(discovery["client_id"], "chatweb")
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("GET", "/__control/health")
+            response = connection.getresponse()
+            health = json.loads(response.read().decode("utf-8"))
+        finally:
+            connection.close()
+        self.assertEqual(response.status, 200)
+        self.assertTrue(health["connector_tool_discovery"]["current_contract_observed"])
 
     def test_tools_call_ignores_legacy_session_header_and_never_echoes_it(self) -> None:
         status, headers, body = self.request(

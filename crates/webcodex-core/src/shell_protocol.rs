@@ -889,14 +889,16 @@ pub fn process_uses_shell_command_mode(process: &ShellProcessArgv) -> bool {
                         && !lower.starts_with("--")
                         && lower[1..].contains('c'))
             }),
-        "powershell" | "powershell.exe" | "pwsh" | "pwsh.exe" => process
-            .args
-            .iter()
-            .any(|arg| matches!(arg.to_ascii_lowercase().as_str(), "-command" | "-c")),
+        "powershell" | "powershell.exe" | "pwsh" | "pwsh.exe" => process.args.iter().any(|arg| {
+            matches!(
+                arg.to_ascii_lowercase().as_str(),
+                "-command" | "-c" | "-encodedcommand"
+            )
+        }),
         "cmd" | "cmd.exe" => process
             .args
             .iter()
-            .any(|arg| arg.eq_ignore_ascii_case("/c")),
+            .any(|arg| arg.eq_ignore_ascii_case("/c") || arg.eq_ignore_ascii_case("/k")),
         _ => false,
     }
 }
@@ -2921,10 +2923,26 @@ mod envelope_tests {
                 ],
             ),
             (
+                "pwsh",
+                vec![
+                    "-NoProfile".to_string(),
+                    "-EncodedCommand".to_string(),
+                    "ZQBjAGgAbwAgAHUAbgBzAGEAZgBlAA==".to_string(),
+                ],
+            ),
+            (
                 "cmd.exe",
                 vec![
                     "/D".to_string(),
                     "/C".to_string(),
+                    "echo unsafe".to_string(),
+                ],
+            ),
+            (
+                "cmd.exe",
+                vec![
+                    "/D".to_string(),
+                    "/K".to_string(),
                     "echo unsafe".to_string(),
                 ],
             ),

@@ -193,6 +193,9 @@ pub(crate) fn run_server_service(opts: ServiceActionOptions) -> Result<String, S
 }
 
 fn resolve_status_token(opts: &ServerStatusOptions) -> Result<Option<String>, String> {
+    if opts.token_file.is_some() && opts.env_file_explicit {
+        return Err("use only one of --token-file or --env-file".to_string());
+    }
     if let Some(path) = &opts.token_file {
         let token = std::fs::read_to_string(path)
             .map_err(|e| format!("failed to read token file {}: {}", path.display(), e))?

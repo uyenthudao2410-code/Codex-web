@@ -306,6 +306,33 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_frozen_chatgpt_task_control_schema_can_record_the_same_shadow_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            root = Path(temp)
+            runtime = Runtime(root, permission_mode="dangerous")
+            runtime._orchestration_workspace_identity = lambda _path: {"branch": "test", "base_head": "head", "worktree_fp": "worktree"}
+            try:
+                ctx, _ = runtime._agent_orchestration_context(
+                    {"workflow": "bugfix", "phase": "prepare", "execution_mode": "mcp_only"},
+                    objective="frozen schema shadow bugfix",
+                )
+                result = runtime.task_control({
+                    "action": "update",
+                    "run_id": ctx.run_id,
+                    "wave_id": ctx.wave_id,
+                    "payload": {
+                        "extension": "solution_shadow_v1",
+                        "recommendation": recommendation("frozen-runtime-rec"),
+                    },
+                })
+                self.assertTrue(result["recording"]["recorded"])
+                self.assertEqual(result["transport"], "frozen_chatgpt_schema_extension_v1")
+                self.assertEqual(result["solution_shadow"]["recommendation"]["recommendation_id"], "frozen-runtime-rec")
+                self.assertFalse(result["production_behavior_changed"])
+                self.assertEqual(len(runtime.exposed_tool_names()), 8)
+            finally:
+                runtime.close()
+
 
 if __name__ == "__main__":
     unittest.main()

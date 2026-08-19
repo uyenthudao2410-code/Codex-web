@@ -288,6 +288,43 @@ fn token_file_is_read() {
 }
 
 #[test]
+fn bearer_token_sources_are_mutually_exclusive() {
+    for conflicting in [
+        ["--token", "fake-admin", "--token-env", "CUSTOM_ADMIN_TOKEN"],
+        [
+            "--token-file",
+            "token.txt",
+            "--token-env",
+            "CUSTOM_ADMIN_TOKEN",
+        ],
+    ] {
+        let mut values = vec!["users", "list", "--server-url", "https://example.test"];
+        values.extend(conflicting);
+        let error = parse_admin_cli(&args(&values)).unwrap_err();
+        assert!(error.contains("use only one of"));
+        assert!(error.contains("--token-env/--admin-token-env"));
+    }
+}
+
+#[test]
+fn explicit_token_env_source_is_valid() {
+    let _guard = TEST_ENV_LOCK.lock().unwrap();
+    std::env::set_var("CUSTOM_ADMIN_TOKEN", "fake-custom-admin");
+    let cmd = parse_admin_cli(&args(&[
+        "users",
+        "list",
+        "--server-url",
+        "https://example.test",
+        "--token-env",
+        "CUSTOM_ADMIN_TOKEN",
+    ]))
+    .unwrap();
+    let req = build_admin_request(&cmd).unwrap();
+    assert_eq!(req.token, "fake-custom-admin");
+    std::env::remove_var("CUSTOM_ADMIN_TOKEN");
+}
+
+#[test]
 fn env_token_fallback_is_used() {
     let _guard = TEST_ENV_LOCK.lock().unwrap();
     std::env::set_var("WEBCODEX_TOKEN", "fake-env-token");

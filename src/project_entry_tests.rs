@@ -986,6 +986,14 @@ async fn state_directory_boundary_is_shared_and_has_no_failure_side_effects() {
 }
 
 #[test]
+fn project_entry_default_state_base_uses_shared_platform_policy() {
+    let expected = webcodex_agent_config::paths::default_client_state_base_dir()
+        .unwrap()
+        .join("projects");
+    assert_eq!(setup_service::default_state_base().unwrap(), expected);
+}
+
+#[test]
 fn state_directory_allows_absolute_and_relative_paths_outside_checkout() {
     let (temp, root, _) = repo("outside-state");
 

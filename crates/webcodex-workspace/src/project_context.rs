@@ -617,7 +617,8 @@ fn worktree_sha256(root: &Path, status: &[u8], has_head: bool, state: &mut Captu
                 &["diff", "--no-ext-diff", "--no-textconv", "--binary", "--"],
             ]
         };
-        for args in diff_commands {
+        let diff_command_count = diff_commands.len();
+        for (index, args) in diff_commands.into_iter().enumerate() {
             match bounded_git_output(root, args, remaining, state.deadline()) {
                 Ok(output) => {
                     let digest = sha256_bytes(&output.stdout);
@@ -630,7 +631,9 @@ fn worktree_sha256(root: &Path, status: &[u8], has_head: bool, state: &mut Captu
                 Err(_) => state.mark_partial("worktree", "tracked_diff_unavailable"),
             }
             if remaining == 0 {
-                state.mark_partial("worktree", "tracked_diff_budget_exceeded");
+                if index + 1 < diff_command_count {
+                    state.mark_partial("worktree", "tracked_diff_budget_exceeded");
+                }
                 break;
             }
         }
@@ -1470,6 +1473,41 @@ mod tests {
 
         assert!(second.completeness.complete);
         assert_ne!(first.git.worktree_sha256, second.git.worktree_sha256);
+    }
+
+    #[test]
+    fn tracked_diff_exactly_fitting_budget_remains_complete() {
+        let repo = repo("context-exact-diff-budget");
+        std::fs::write(repo.path().join("src/lib.rs"), "pub fn changed() {}\n").unwrap();
+        let diff = Command::new("git")
+            .args([
+                "diff",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--binary",
+                "HEAD",
+                "--",
+            ])
+            .current_dir(repo.path())
+            .output()
+            .unwrap();
+        assert!(diff.status.success());
+        assert!(!diff.stdout.is_empty());
+        let budget = ProjectContextBudget {
+            max_tracked_diff_bytes: diff.stdout.len(),
+            ..Default::default()
+        };
+
+        let fingerprint = capture_project_context_with_budget(repo.path(), None, budget).unwrap();
+        assert!(
+            fingerprint.completeness.complete,
+            "unexpected warnings: {:?}",
+            fingerprint.completeness.warnings
+        );
+        assert!(!fingerprint
+            .completeness
+            .warnings
+            .contains(&"tracked_diff_budget_exceeded".to_string()));
     }
 
     #[test]
