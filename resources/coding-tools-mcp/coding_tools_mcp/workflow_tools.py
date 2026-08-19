@@ -13,7 +13,7 @@ from .errors import ToolFailure
 from .git_utils import DIFF_CONTINUATION_OPERATION
 from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
-from .solution_economics import SOLUTION_SHADOW_EVENT, record_solution_shadow
+from .solution_economics import ELIGIBLE_WORKFLOWS, SOLUTION_SHADOW_EVENT, record_solution_shadow
 from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
 
@@ -193,6 +193,8 @@ class AgentWorkflowMixin:
         *,
         objective: str,
     ) -> tuple[RunContext, dict[str, Any]]:
+        self._preflight_tool_workspace_scope("agent_workflow", args)
+        identity = self._orchestration_workspace_identity(args.get("path", "."))
         current_task = self.task_state.get()
         projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
         run_id = str(projection.get("run_id") or "")
@@ -207,7 +209,6 @@ class AgentWorkflowMixin:
             run_id = str(projection.get("run_id") or "")
             current_ctx = self.orchestration_control.snapshot(run_id) if run_id else None
 
-        identity = self._orchestration_workspace_identity(args.get("path", "."))
         requested_mode = str(args.get("execution_mode", "auto")).strip().lower() or "auto"
         contract_fp = self.orchestration_control.stable_contract_fingerprint(args.get("contract_fingerprint", ""))
         replan_reason = str(args.get("replan_reason", "")).strip()
@@ -292,12 +293,19 @@ class AgentWorkflowMixin:
                     {"objective": objective, "status": "active", "failure": None, "current_step": "Orchestration preflight", "new_task": True},
                     event="task_started",
                 )
+            workflow = str(args.get("workflow", "custom")).strip().lower() or "custom"
             run_metadata: dict[str, Any] = {
-                "workflow": str(args.get("workflow", "custom")),
+                "workflow": workflow,
                 "phase": str(args.get("phase", "prepare")),
                 "branch": identity.get("branch"),
+                "workspace_identity": dict(identity.get("workspace_identity") or {}),
+                "measurement_integrity_epoch": "workspace_identity_v1",
             }
             evaluation = dict(args["evaluation"]) if isinstance(args.get("evaluation"), dict) else {}
+            if workflow in ELIGIBLE_WORKFLOWS and not str(evaluation.get("provenance") or "").strip():
+                evaluation["provenance"] = "representative"
+                evaluation.setdefault("task_class", workflow)
+                run_metadata["provenance_source"] = "runtime_default_organic_v1"
             explicit_evaluation_identity = bool(
                 str(evaluation.get("trace_id") or "").strip()
                 or str(evaluation.get("turn_id") or "").strip()
@@ -336,6 +344,7 @@ class AgentWorkflowMixin:
                     contract_fp=contract_fp,
                     metadata=run_metadata,
                 )
+                self._claim_hub_controller_for_run(current_ctx.run_id)
             except Exception:
                 if claimed_host_turn:
                     self._restore_pending_host_turn(claimed_host_turn)
@@ -523,6 +532,7 @@ class AgentWorkflowMixin:
         }
 
     def agent_workflow(self, args: dict[str, Any]) -> dict[str, Any]:
+        self._preflight_tool_workspace_scope("agent_workflow", args)
         normalized, budget = self._agent_admission_budget(args)
         phase = str(normalized.get("phase", "prepare")).lower()
         idempotency_key = str(normalized.get("idempotency_key", "") or "").strip()

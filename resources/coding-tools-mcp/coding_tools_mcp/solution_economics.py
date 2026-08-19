@@ -12,6 +12,8 @@ from .rework_diagnosis import repair_cause_for_failure_class
 
 SOLUTION_SHADOW_EVENT = "solution_shadow_recommended"
 SOLUTION_SHADOW_PATCH_SURFACE_EVENT = "solution_shadow_patch_surface_observed"
+PATCH_SURFACE_EVENT = "patch_surface_observed"
+PATCH_SURFACE_EVENT_TYPES = frozenset({PATCH_SURFACE_EVENT, SOLUTION_SHADOW_PATCH_SURFACE_EVENT})
 ELIGIBLE_WORKFLOWS = frozenset({"feature", "bugfix"})
 SCOPE_VALUES = frozenset({"localized_symbol", "localized_file", "bounded_multi_file", "cross_subsystem", "unknown"})
 CONFIDENCE_VALUES = frozenset({"low", "medium", "high", "unknown"})
@@ -184,19 +186,7 @@ def record_solution_shadow(
     }
 
 
-def record_solution_shadow_patch_surface(
-    ledger: OrchestrationLedger,
-    *,
-    run_id: str,
-    wave_id: str,
-    patch_result: dict[str, Any],
-) -> dict[str, Any]:
-    """Record exact applied-patch line work without persisting source paths/content."""
-    events = ledger.list_events(run_id)
-    if not any(str(item.get("event_type") or "") == SOLUTION_SHADOW_EVENT for item in events):
-        return {"recorded": False, "reason": "solution_shadow_unenrolled"}
-    if patch_result.get("dry_run") is True:
-        return {"recorded": False, "reason": "dry_run"}
+def _patch_surface_payload(patch_result: dict[str, Any]) -> dict[str, Any]:
     additions = patch_result.get("additions")
     removals = patch_result.get("removals")
     if (
@@ -219,22 +209,57 @@ def record_solution_shadow_patch_surface(
     if not file_ids:
         raise ValueError("patch surface requires at least one affected file")
     complete = len(file_ids) <= PATCH_SURFACE_FILE_ID_LIMIT
+    return {
+        "schema_version": 1,
+        "measurement": "applied_patch_delta_v1",
+        "file_count": len(file_ids),
+        "file_ids": file_ids[:PATCH_SURFACE_FILE_ID_LIMIT],
+        "complete": complete,
+        "additions": additions,
+        "removals": removals,
+        "line_changes": additions + removals,
+        "content_free": True,
+        "production_behavior_changed": False,
+    }
+
+
+def record_patch_surface(
+    ledger: OrchestrationLedger,
+    *,
+    run_id: str,
+    wave_id: str,
+    patch_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Record content-free applied-patch work for every authoritative mutation."""
+    if patch_result.get("dry_run") is True:
+        return {"recorded": False, "reason": "dry_run"}
+    event = ledger.append_event(
+        run_id,
+        wave_id=wave_id,
+        event_type=PATCH_SURFACE_EVENT,
+        payload=_patch_surface_payload(patch_result),
+    )
+    return {"recorded": True, "event_id": event["event_id"], "seq": event["seq"]}
+
+
+def record_solution_shadow_patch_surface(
+    ledger: OrchestrationLedger,
+    *,
+    run_id: str,
+    wave_id: str,
+    patch_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Backward-compatible P4-only patch event for historical callers/fixtures."""
+    events = ledger.list_events(run_id)
+    if not any(str(item.get("event_type") or "") == SOLUTION_SHADOW_EVENT for item in events):
+        return {"recorded": False, "reason": "solution_shadow_unenrolled"}
+    if patch_result.get("dry_run") is True:
+        return {"recorded": False, "reason": "dry_run"}
     event = ledger.append_event(
         run_id,
         wave_id=wave_id,
         event_type=SOLUTION_SHADOW_PATCH_SURFACE_EVENT,
-        payload={
-            "schema_version": 1,
-            "measurement": "applied_patch_delta_v1",
-            "file_count": len(file_ids),
-            "file_ids": file_ids[:PATCH_SURFACE_FILE_ID_LIMIT],
-            "complete": complete,
-            "additions": additions,
-            "removals": removals,
-            "line_changes": additions + removals,
-            "content_free": True,
-            "production_behavior_changed": False,
-        },
+        payload=_patch_surface_payload(patch_result),
     )
     return {"recorded": True, "event_id": event["event_id"], "seq": event["seq"]}
 
@@ -273,7 +298,7 @@ def _accepted_touched_surface(
 
     surface_events = [
         item for item in ledger.list_events(run_id)
-        if str(item.get("event_type") or "") == SOLUTION_SHADOW_PATCH_SURFACE_EVENT
+        if str(item.get("event_type") or "") in PATCH_SURFACE_EVENT_TYPES
     ]
     observed_ids: set[str] = set()
     additions = 0
@@ -456,7 +481,7 @@ def _repair_taxonomy(events: list[dict[str, Any]], replan_count: int) -> dict[st
         for item in events
         if first_replan_seq is not None
         and int(item.get("seq") or 0) > first_replan_seq
-        and str(item.get("event_type") or "") == SOLUTION_SHADOW_PATCH_SURFACE_EVENT
+        and str(item.get("event_type") or "") in PATCH_SURFACE_EVENT_TYPES
     ]
     workflow_replanned = replan_count > 0
     source_reworked_after_replan = bool(workflow_replanned and post_replan_patch_events)

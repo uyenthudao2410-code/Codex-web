@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import os
+import secrets
 import threading
 import time
 import urllib.parse
@@ -13,6 +16,70 @@ from .envutils import ENV_PREFIX, truthy_env
 
 HTTP_SESSION_TTL_SECONDS = 60 * 60
 MAX_TRACKED_SESSION_ALIASES = 512
+HTTP_SESSION_SCOPE_PREFIX = "ws1"
+HTTP_SESSION_SCOPE_HEX_CHARS = 16
+
+
+class StaleHTTPSessionError(RuntimeError):
+    pass
+
+
+def workspace_session_scope(workspace: Any, auth_token: str | None = None) -> str:
+    normalized = os.path.normcase(os.path.abspath(os.fspath(workspace)))
+    material = b"coding-tools-mcp-workspace-session-v1\0" + normalized.encode("utf-8", errors="surrogatepass")
+    if auth_token:
+        digest = hmac.new(str(auth_token).encode("utf-8"), material, hashlib.sha256).hexdigest()
+    else:
+        digest = hashlib.sha256(material).hexdigest()
+    return digest[:HTTP_SESSION_SCOPE_HEX_CHARS]
+
+
+def new_workspace_session_id(
+    workspace: Any,
+    auth_token: str | None = None,
+    *,
+    execution_scoped: bool = False,
+    execution_context_id: str = "",
+) -> str:
+    scope = workspace_session_scope(workspace, auth_token)
+    if execution_scoped:
+        context_id = str(execution_context_id or secrets.token_hex(8)).lower()
+        if len(context_id) != 16 or any(char not in "0123456789abcdef" for char in context_id):
+            raise ValueError("execution_context_id must be 16 lowercase hex characters")
+        token = f"ctx_{context_id}_{secrets.token_urlsafe(12)}"
+    else:
+        token = f"legacy_{secrets.token_urlsafe(18)}"
+    return f"{HTTP_SESSION_SCOPE_PREFIX}.{scope}.{token}"
+
+
+def session_execution_context_id(session_id: str) -> str:
+    parts = str(session_id).split(".", 2)
+    if len(parts) != 3:
+        return ""
+    token = parts[2]
+    if not token.startswith("ctx_"):
+        return ""
+    raw = token[4:]
+    context_id, separator, alias = raw.partition("_")
+    if not separator or not alias:
+        return ""
+    if len(context_id) != 16 or any(char not in "0123456789abcdef" for char in context_id):
+        return ""
+    return context_id
+
+
+def _session_workspace_scope(session_id: str) -> str | None:
+    if not str(session_id).startswith(f"{HTTP_SESSION_SCOPE_PREFIX}."):
+        return None
+    parts = str(session_id).split(".", 2)
+    if len(parts) != 3:
+        return ""
+    scope = parts[1].lower()
+    if len(scope) != HTTP_SESSION_SCOPE_HEX_CHARS or any(char not in "0123456789abcdef" for char in scope):
+        return ""
+    if not parts[2]:
+        return ""
+    return scope
 
 
 @dataclass
@@ -21,13 +88,22 @@ class HTTPSessionRecord:
     last_seen: float
 
 
-class HTTPSessionManager:
-    """Route all authenticated HTTP sessions through one shared Runtime.
+class HTTPSessionRuntimeView:
+    """Per-session protocol/task identity backed by one shared process Runtime."""
 
-    Tunnel clients may create a fresh MCP session for nearly every command.
-    Protocol ids are lightweight aliases; commands, outputs, caches and task
-    state remain process-global.
-    """
+    def __init__(self, runtime: Any, *, session_id: str, execution_context_id: str) -> None:
+        self._runtime = runtime
+        self.http_session_id = session_id
+        self.execution_context_id = execution_context_id
+        self.initialized = False
+        self.protocol_version = getattr(runtime, "protocol_version", "")
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._runtime, name)
+
+
+class HTTPSessionManager:
+    """Share one physical Runtime while isolating stateful ChatWeb execution contexts."""
 
     def __init__(self, runtime: Any) -> None:
         self._runtime = runtime
@@ -35,25 +111,78 @@ class HTTPSessionManager:
         self._lock = threading.Lock()
         self._closed = False
 
-    def create(self) -> Any:
+    def create(self, *, execution_scoped: bool = False) -> Any:
         self.prune()
         with self._lock:
             if self._closed:
                 raise RuntimeError("HTTP session manager is closed")
-            self._sessions[self._runtime.http_session_id] = HTTPSessionRecord(
-                runtime=self._runtime,
-                last_seen=time.time(),
+            if not execution_scoped:
+                session_id = self._runtime.http_session_id
+                self._sessions[session_id] = HTTPSessionRecord(
+                    runtime=self._runtime,
+                    last_seen=time.time(),
+                )
+                self._trim_locked()
+                return self._runtime
+            context_id = secrets.token_hex(8)
+            session_id = new_workspace_session_id(
+                self._runtime.workspace.root,
+                getattr(self._runtime, "auth_token", None),
+                execution_scoped=True,
+                execution_context_id=context_id,
             )
+            view = HTTPSessionRuntimeView(
+                self._runtime,
+                session_id=session_id,
+                execution_context_id=context_id,
+            )
+            self._sessions[session_id] = HTTPSessionRecord(runtime=view, last_seen=time.time())
             self._trim_locked()
-            return self._runtime
+            return view
 
     def get(self, session_id: str) -> Any | None:
         self.prune()
+        presented_scope = _session_workspace_scope(session_id)
+        current_scope = workspace_session_scope(
+            self._runtime.workspace.root,
+            getattr(self._runtime, "auth_token", None),
+        )
+        if presented_scope is not None and presented_scope != current_scope:
+            raise StaleHTTPSessionError("MCP session is scoped to a different workspace")
         with self._lock:
             if self._closed:
                 return None
-            # An authenticated session id is an alias for the process Runtime.
-            # This keeps reconnects working when a proxy retains an old id.
+            record = self._sessions.get(session_id)
+            if record is not None:
+                record.last_seen = time.time()
+                return record.runtime
+
+            execution_context_id = session_execution_context_id(session_id)
+            if execution_context_id:
+                # A stateful alias can survive server recreation. Mint a new alias
+                # while retaining the encoded execution-context id and task state.
+                canonical_id = new_workspace_session_id(
+                    self._runtime.workspace.root,
+                    getattr(self._runtime, "auth_token", None),
+                    execution_scoped=True,
+                    execution_context_id=execution_context_id,
+                )
+                view = HTTPSessionRuntimeView(
+                    self._runtime,
+                    session_id=canonical_id,
+                    execution_context_id=execution_context_id,
+                )
+                now = time.time()
+                rebound = HTTPSessionRecord(runtime=view, last_seen=now)
+                self._sessions[session_id] = rebound
+                self._sessions[canonical_id] = rebound
+                self._trim_locked()
+                return view
+
+            if presented_scope is None:
+                self._runtime.legacy_session_alias_uses += 1
+            # Legacy ids remain aliases for the process-global projection. This
+            # preserves old tunnel/reconnect behavior during migration.
             self._sessions[session_id] = HTTPSessionRecord(
                 runtime=self._runtime,
                 last_seen=time.time(),
@@ -65,7 +194,14 @@ class HTTPSessionManager:
         with self._lock:
             if self._closed:
                 return False
-            self._sessions.pop(session_id, None)
+            record = self._sessions.pop(session_id, None)
+            if record is not None and isinstance(record.runtime, HTTPSessionRuntimeView):
+                aliases = [
+                    key for key, value in self._sessions.items()
+                    if value.runtime is record.runtime
+                ]
+                for key in aliases:
+                    self._sessions.pop(key, None)
             return True
 
     def prune(self) -> None:
@@ -92,9 +228,15 @@ class HTTPSessionManager:
 
     def stats(self) -> dict[str, int]:
         with self._lock:
+            context_ids = {
+                str(getattr(record.runtime, "execution_context_id", "") or "")
+                for record in self._sessions.values()
+                if str(getattr(record.runtime, "execution_context_id", "") or "")
+            }
             return {
                 "tracked_aliases": len(self._sessions),
                 "shared_runtimes": 0 if self._closed else 1,
+                "execution_contexts": len(context_ids),
             }
 
     def close(self) -> None:

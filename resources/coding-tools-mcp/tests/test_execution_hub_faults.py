@@ -326,7 +326,7 @@ class ExecutionHubFaultTests(unittest.TestCase):
             new_session = headers.get("Mcp-Session-Id")
             self.assertTrue(new_session)
             self.assertNotEqual(new_session, old_session)
-            self.assertEqual(new_session, second.runtime.http_session_id)
+            self.assertNotEqual(new_session, second.runtime.http_session_id)
 
             snapshot_status, snapshot = second.snapshot()
             self.assertEqual(snapshot_status, 200)

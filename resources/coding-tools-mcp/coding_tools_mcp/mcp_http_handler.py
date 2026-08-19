@@ -44,6 +44,7 @@ from .tool_schema import tool_annotations
 from .transport_http import (
     STATELESS_HTTP_2026_ENV,
     HTTPSessionManager,
+    StaleHTTPSessionError,
     _decode_mcp_name_header,
     _first_form_value,
     _first_header_value,
@@ -513,7 +514,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "updated_at": item.get("updated_at"),
                 "last_economics": (item.get("metadata") or {}).get("last_economics"),
             }
-            for item in (ledger.list_agent_lanes(run_id=run_id) or [])[:12]
+            for item in (ledger.list_agent_lanes() or [])[:12]
         ]
         return {
             "schema_version": 2,
@@ -535,7 +536,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "proofs": proofs,
             "delegations": (summary.get("delegations") or [])[-4:],
             "lanes": lane_view,
-            "usage_events": ledger.list_usage_events(run_id, limit=8) if run_id else [],
+            "usage_events": ledger.recent_usage_events(limit=8),
             "routing_evidence": ledger.routing_evidence(run_id, limit=8) if run_id else {
                 "shadow_recommendations": [], "actual_delegations": [], "usage_events": []
             },
@@ -947,14 +948,29 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 )
                 return
             try:
-                self._runtime = self.server.sessions.create()  # type: ignore[attr-defined]
+                self._runtime = self.server.sessions.create(execution_scoped=True)  # type: ignore[attr-defined]
             except RuntimeError as exc:
                 self.send_rpc_error(-32000, str(exc), status=503, request_id=request.get("id"))
                 return
             self._send_session_header = True
             created_session = True
         elif session_id:
-            runtime = self.server.sessions.get(session_id)  # type: ignore[attr-defined]
+            try:
+                runtime = self.server.sessions.get(session_id)  # type: ignore[attr-defined]
+            except StaleHTTPSessionError:
+                control_runtime = self.server.control_runtime  # type: ignore[attr-defined]
+                self.send_rpc_error(
+                    -32023,
+                    "MCP session belongs to a different workspace. Reinitialize before calling tools in the current workspace.",
+                    status=409,
+                    request_id=request.get("id"),
+                    data={
+                        "code": "STALE_WORKSPACE_CONTEXT",
+                        "workspace": str(control_runtime.workspace.root),
+                        "workspace_generation": control_runtime.workspace_generation,
+                    },
+                )
+                return
             if runtime is None:
                 # Tunnel clients can retain an expired session id while reconnecting.
                 # Recreate a compatible initialized session instead of returning a
@@ -1047,6 +1063,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         client_name: str = "",
         client_version: str = "",
         session_instance: str = "",
+        execution_context_id: str = "",
     ) -> dict[str, Any]:
         client_id = client_id.strip()
         client_type = client_type.strip().lower().replace("-", "_") or "client"
@@ -1060,6 +1077,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "client_type": client_type,
             "role": role,
             "session_instance": session_instance,
+            "execution_context_id": str(execution_context_id or "")[:64],
             "capabilities": {"client_name": client_name[:100], "client_version": client_version[:50]},
         }
 
@@ -1074,13 +1092,15 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         if request.get("method") == "initialize" and isinstance(params.get("clientInfo"), dict):
             client_info = params.get("clientInfo")
         raw_session = str(self.headers.get("Mcp-Session-Id") or "")
-        session_instance = hashlib.sha256(raw_session.encode("utf-8")).hexdigest()[:16] if raw_session else ""
+        logical_session = raw_session or str(getattr(self.runtime, "http_session_id", "") or "")
+        session_instance = hashlib.sha256(logical_session.encode("utf-8")).hexdigest()[:16] if logical_session else ""
         return self._hub_identity_from_values(
             client_id=client_id,
             client_type=client_type,
             client_name=str(client_info.get("name") or ""),
             client_version=str(client_info.get("version") or ""),
             session_instance=session_instance,
+            execution_context_id=str(getattr(self.runtime, "execution_context_id", "") or ""),
         )
 
     def is_authorized(self) -> bool:

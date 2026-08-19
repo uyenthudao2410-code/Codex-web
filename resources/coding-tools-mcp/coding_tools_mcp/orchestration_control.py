@@ -553,13 +553,15 @@ class OrchestrationControl:
             raise OrchestrationControlError("REPLAN_REQUIRED", "A replacement wave requires REPLAN state.")
         self.assert_quiescent(ctx)
         self.ledger.finish_wave(ctx.wave_id, status="replanned", metadata={"reason": reason})
+        run = self.ledger.get_run(ctx.run_id)
+        run_metadata = run.get("metadata") if isinstance(run, dict) and isinstance(run.get("metadata"), dict) else {}
         wave_id = self.ledger.create_wave(
             ctx.run_id,
             execution_mode=execution_mode,
             base_head=base_head,
             worktree_fp=worktree_fp,
             contract_fp=contract_fp,
-            metadata={"replan_reason": reason},
+            metadata={**run_metadata, "replan_reason": reason},
         )
         ctx.wave_id = wave_id
         ctx.state = "PREFLIGHT"

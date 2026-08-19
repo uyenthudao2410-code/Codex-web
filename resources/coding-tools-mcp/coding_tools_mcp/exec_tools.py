@@ -310,6 +310,9 @@ class ExecToolsMixin:
                 )
             owner_run = requested_run or projected_run
             owner_wave = requested_wave or projected_wave
+            command_workspace_identity = self._workspace_scope_identity(workdir)
+            if owner_run:
+                self._assert_orchestration_workspace_scope(command_workspace_identity, run_id=owner_run)
             try:
                 admission = self.execution_resource_governor.admit(
                     command=cmd,
@@ -318,6 +321,7 @@ class ExecToolsMixin:
                     wave_id=owner_wave,
                     owner=principal_id,
                     resource_class=args.get("resource_class", ""),
+                    metadata={"workspace_identity": command_workspace_identity},
                 )
             except ExecutionResourceError as exc:
                 raise ToolFailure(

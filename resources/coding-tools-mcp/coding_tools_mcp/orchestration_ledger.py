@@ -1028,6 +1028,24 @@ class OrchestrationLedger:
             for item in events
         ]
 
+    def recent_usage_events(self, *, limit: int = 8) -> list[dict[str, Any]]:
+        """Monitoring view: latest usage events across all runs (not run-scoped)."""
+        bounded_limit = max(1, min(int(limit), 500))
+        with self._lock, self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM events WHERE event_type='usage_event' ORDER BY seq DESC LIMIT ?",
+                (bounded_limit,),
+            ).fetchall()
+        events = [self._event_row(row) for row in reversed(rows)]
+        return [
+            {
+                **(item.get("payload") or {}),
+                "seq": item["seq"],
+                "event_time": item["event_time"],
+            }
+            for item in events
+        ]
+
     def record_quality_outcome(self, *, run_id: str, outcome: dict[str, Any], wave_id: str = "") -> dict[str, Any]:
         """Append one bounded immediate/delayed quality observation."""
         if self.get_run(run_id) is None:

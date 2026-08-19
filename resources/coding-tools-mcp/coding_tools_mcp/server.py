@@ -94,7 +94,7 @@ from .semantic_localization import (  # noqa: F401  # composition-root namespace
     semantic_localizer_from_env,
     semantic_provider_status,
 )
-from .task_state import TaskStateStore  # noqa: F401  # composition-root namespace
+from .task_state import ContextualTaskStateStore, TaskStateStore  # noqa: F401  # composition-root namespace
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, utc_now  # noqa: F401  # composition-root namespace
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class  # noqa: F401  # composition-root namespace
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
@@ -144,7 +144,7 @@ from .image_utils import IMAGE_RESIZE_MAX_DIMENSION, identify_image, resize_imag
 from .landlock_exec import SPECIAL_DEVICE_PATHS, guard_allow_roots, landlock_exec_argv, landlock_status_payload, landlock_unavailable_warning, open_landlock_ruleset  # noqa: F401  # compatibility re-export
 from .runtime_config import PERMISSION_MODE_CAPABILITIES, PERMISSION_MODE_CHOICES, RuntimePolicy, SHELL_ENV_INHERIT_CHOICES, ShellEnvPolicy, WINDOWS_CORE_ENV_NAMES, env_int, env_pattern_matches, fallback_runtime_dir_for_workspace, is_core_command_env_name, is_filtered_env_var, runtime_dir_for_workspace, runtime_policy_from_args  # noqa: F401  # compatibility re-export
 from .tool_schema import DIFF_CONTINUATION_TOKEN_MAX_CHARS, EVALUATION_SCHEMA_VERSION, input_schemas, tool_annotations, tool_definition, validate_arguments  # noqa: F401  # compatibility re-export
-from .transport_http import STATELESS_HTTP_2026_ENV, _decode_mcp_name_header, _first_form_value, _first_header_value, _forwarded_header_param, _http_base_for_bind_host, _request_mcp_name, _safe_external_host, stateless_http_2026_enabled  # noqa: F401  # compatibility re-export
+from .transport_http import STATELESS_HTTP_2026_ENV, _decode_mcp_name_header, _first_form_value, _first_header_value, _forwarded_header_param, _http_base_for_bind_host, _request_mcp_name, _safe_external_host, new_workspace_session_id, stateless_http_2026_enabled  # noqa: F401  # compatibility re-export
 
 
 
@@ -583,7 +583,7 @@ class Runtime(
         self.legacy_session_alias_uses = 0
         self.starting_sessions = 0
         self._closed = False
-        self.http_session_id = secrets.token_urlsafe(24)
+        self.http_session_id = new_workspace_session_id(self.workspace.root, self.auth_token)
         self.protocol_version = PROTOCOL_VERSION
         self.patch_baselines: dict[str, str | None] = {}
         self.patch_lock = threading.Lock()
@@ -617,7 +617,7 @@ class Runtime(
         self.background_operations_lock = PROCESS_BACKGROUND_OPERATIONS_LOCK
         self.initialized = False
         self.telemetry = SessionTelemetry(permission_mode=self.permission_mode, transport=transport)
-        self.task_state = TaskStateStore(self.workspace.root)
+        self.task_state = ContextualTaskStateStore(self.workspace.root, self._current_task_scope_id)
         self.performance_trace = PerformanceTraceStore(self.workspace.root)
         self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
         self.execution_resource_governor = ExecutionResourceGovernor(
@@ -696,7 +696,11 @@ class Runtime(
             return False
         projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
         run_id = str(projection.get("run_id") or "").strip()
-        if not run_id:
+        task_id = str(state.get("task_id") or "").strip()
+        if not run_id and task_id:
+            active = self.orchestration_ledger.current_active_run(task_id=task_id)
+            run_id = str(active.get("run_id") or "") if active else ""
+        if not run_id and not self.task_state.is_scoped():
             active = self.orchestration_ledger.current_active_run()
             run_id = str(active.get("run_id") or "") if active else ""
         if not run_id:
@@ -871,13 +875,14 @@ class Runtime(
             self._invalidate_fast_cache()
             self._clear_context_bundle_cache()
             self.workspace = Workspace(target, self.authorized_roots)
+            self.http_session_id = new_workspace_session_id(self.workspace.root, self.auth_token)
             self.default_cwd = self.workspace.root
             self._set_runtime_dir(runtime_dir_for_workspace(self.workspace.root, self.server_instance_id))
             self.fallback_runtime_dir = fallback_runtime_dir_for_workspace(self.workspace.root, self.server_instance_id)
             self.project_context = load_project_context(self.workspace.root)
             if not self._semantic_localizer_injected:
                 self.semantic_localizer = semantic_localizer_from_env(self.workspace.root)
-            self.task_state = TaskStateStore(self.workspace.root)
+            self.task_state = ContextualTaskStateStore(self.workspace.root, self._current_task_scope_id)
             self.performance_trace = PerformanceTraceStore(self.workspace.root)
             self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
             self.execution_resource_governor = ExecutionResourceGovernor(
@@ -1020,6 +1025,20 @@ class Runtime(
         value = getattr(self.request_context, "hub_client", None)
         return value if isinstance(value, dict) and value.get("client_id") else None
 
+    def _current_task_scope_id(self) -> str:
+        identity = self._current_hub_client()
+        if identity is None or str(identity.get("client_type") or "") != "chatweb":
+            return ""
+        return str(identity.get("execution_context_id") or "").strip()
+
+    @staticmethod
+    def _hub_client_record_id(identity: dict[str, Any]) -> str:
+        client_id = str(identity.get("client_id") or "").strip()
+        execution_context_id = str(identity.get("execution_context_id") or "").strip()
+        if str(identity.get("client_type") or "") == "chatweb" and execution_context_id:
+            return f"{client_id}:{execution_context_id[:16]}"
+        return client_id
+
     def _record_tool_discovery(self) -> None:
         identity = self._current_hub_client()
         if identity is None:
@@ -1089,11 +1108,19 @@ class Runtime(
             run = self.orchestration_ledger.get_run(run_id)
             if run and str(run.get("status") or "") == "active":
                 return run_id
+        task_id = str(state.get("task_id") or "").strip()
+        if task_id:
+            active = self.orchestration_ledger.current_active_run(task_id=task_id)
+            if active:
+                return str(active.get("run_id") or "")
+        if self.task_state.is_scoped():
+            return ""
         active = self.orchestration_ledger.current_active_run()
         return str(active.get("run_id") or "") if active else ""
 
     def _touch_hub_client(self, identity: dict[str, Any]) -> dict[str, Any]:
-        client_id = str(identity.get("client_id") or "").strip()
+        logical_client_id = str(identity.get("client_id") or "").strip()
+        client_id = self._hub_client_record_id(identity)
         client_type = str(identity.get("client_type") or "client").strip()
         role = str(identity.get("role") or "client").strip()
         if not HUB_CLIENT_ID_RE.fullmatch(client_id):
@@ -1115,6 +1142,10 @@ class Runtime(
             runtime_instance_id=self.process_instance_id,
             contract_sha=str(self.tool_contract.get("sha256") or ""),
             capabilities=identity.get("capabilities") if isinstance(identity.get("capabilities"), dict) else {},
+            metadata={
+                "logical_client_id": logical_client_id,
+                "execution_context_id": str(identity.get("execution_context_id") or "")[:64],
+            },
         )
         run_id = self._projected_hub_run_id()
         controller = self.orchestration_ledger.get_controller_lease(run_id) if run_id else None
@@ -1511,7 +1542,7 @@ class Runtime(
             return None
         self._touch_hub_client(identity)
         controller = self.orchestration_ledger.get_controller_lease(run_id)
-        client_id = str(identity.get("client_id") or "")
+        client_id = self._hub_client_record_id(identity)
         client_type = str(identity.get("client_type") or "client")
         run = self.orchestration_ledger.get_run(run_id)
         if run and run.get("status") == "active":
@@ -1549,6 +1580,22 @@ class Runtime(
             )
         return controller
 
+    def _claim_hub_controller_for_run(self, run_id: str) -> dict[str, Any] | None:
+        identity = self._current_hub_client()
+        if identity is None or str(identity.get("client_type") or "") != "chatweb":
+            return None
+        client_id = self._hub_client_record_id(identity)
+        current = self.orchestration_ledger.get_controller_lease(run_id)
+        if current and current.get("status") == "active" and current.get("owner_client_id") != client_id:
+            return current
+        claimed = self.orchestration_ledger.acquire_controller_lease(
+            run_id=run_id,
+            owner_client_id=client_id,
+            lease_id=f"client:{client_id}",
+            ttl_seconds=HUB_CONTROLLER_LEASE_SECONDS,
+        )
+        return claimed if claimed.get("acquired") else self.orchestration_ledger.get_controller_lease(run_id)
+
     def exposed_tool_names(self) -> list[str]:
         return list(self._exposed_tool_names)
 
@@ -1563,6 +1610,128 @@ class Runtime(
 
     def resolve_existing(self, raw_path: str = ".") -> ResolvedPath:
         return self.workspace.resolve_existing_at(self.default_cwd, raw_path)
+
+    def _resolve_authorized_execution_scope(self, raw_path: object, *, field: str) -> ResolvedPath:
+        """Resolve a tool target against the primary workspace plus explicit authorized roots."""
+        raw = str(raw_path or ".")
+        try:
+            return self.resolve_existing(raw)
+        except ToolFailure as exc:
+            if exc.code == "PATH_OUTSIDE_WORKSPACE":
+                raise ToolFailure(
+                    "STALE_WORKSPACE_CONTEXT",
+                    f"{field} is outside the configured workspace and authorized roots.",
+                    category="security",
+                    retryable=False,
+                    details={
+                        "field": field,
+                        "workspace": str(self.workspace.root),
+                        "authorized_roots": [
+                            str(item)
+                            for item in self.workspace.authorized_roots
+                            if item != self.workspace.root
+                        ],
+                        "received": raw,
+                    },
+                ) from exc
+            raise
+
+    @staticmethod
+    def _content_free_workspace_root_id(path: Path) -> str:
+        normalized = os.path.normcase(os.path.normpath(str(path.resolve(strict=False))))
+        return hashlib.sha256(
+            ("coding-tools-workspace-root-v1\0" + normalized).encode("utf-8", errors="replace")
+        ).hexdigest()
+
+    def _workspace_scope_identity(self, resolved: ResolvedPath) -> dict[str, Any]:
+        scope_root = self.workspace._containing_root(resolved.path) or self.workspace.root
+        workspace_id = self._content_free_workspace_root_id(self.workspace.root)
+        root_id = self._content_free_workspace_root_id(scope_root)
+        requested_path_id = hashlib.sha256(
+            ("coding-tools-requested-path-v1\0" + os.path.normcase(str(resolved.path))).encode(
+                "utf-8", errors="replace"
+            )
+        ).hexdigest()
+        return {
+            "schema_version": 1,
+            "content_free": True,
+            "workspace_id": workspace_id,
+            "session_workspace_id": workspace_id,
+            "root_id": root_id,
+            "requested_path_id": requested_path_id,
+            "scope_kind": "primary" if scope_root == self.workspace.root else "authorized",
+            "scope_matches_session_workspace": root_id == workspace_id,
+            "workspace_generation": int(self.workspace_generation),
+        }
+
+    def _workspace_root_for_identity(self, root_id: object) -> Path | None:
+        expected = str(root_id or "").strip()
+        if not expected:
+            return None
+        for root in self.workspace.authorized_roots:
+            if self._content_free_workspace_root_id(root) == expected:
+                return root
+        return None
+
+    def _assert_orchestration_workspace_scope(self, identity: dict[str, Any], *, run_id: object = "") -> None:
+        owner_run = str(run_id or "").strip()
+        if not owner_run:
+            state = self.task_state.get()
+            projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+            owner_run = str(projection.get("run_id") or "").strip()
+        if not owner_run:
+            return
+        run = self.orchestration_ledger.get_run(owner_run)
+        if not isinstance(run, dict) or str(run.get("status") or "") != "active":
+            return
+        metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
+        expected = metadata.get("workspace_identity") if isinstance(metadata.get("workspace_identity"), dict) else {}
+        expected_root = str(expected.get("root_id") or "").strip()
+        expected_workspace = str(expected.get("workspace_id") or "").strip()
+        actual_root = str(identity.get("root_id") or "").strip()
+        actual_workspace = str(identity.get("workspace_id") or "").strip()
+        if (
+            (expected_root and actual_root and expected_root != actual_root)
+            or (expected_workspace and actual_workspace and expected_workspace != actual_workspace)
+        ):
+            raise ToolFailure(
+                "ORCHESTRATION_WORKSPACE_MISMATCH",
+                "The requested project root does not match the active orchestration run.",
+                category="security",
+                retryable=False,
+                details={
+                    "run_id": owner_run,
+                    "expected_root_id": expected_root,
+                    "received_root_id": actual_root,
+                    "content_free": True,
+                },
+            )
+
+    def _preflight_tool_workspace_scope(self, name: str, args: dict[str, Any]) -> None:
+        if name == "agent_workflow":
+            path_value = args.get("path", ".")
+            path_scope = self._resolve_authorized_execution_scope(path_value, field="path")
+            path_identity = self._workspace_scope_identity(path_scope)
+            if "workdir" in args:
+                workdir_scope = self._resolve_authorized_execution_scope(args.get("workdir", path_value), field="workdir")
+                workdir_identity = self._workspace_scope_identity(workdir_scope)
+                if workdir_identity["root_id"] != path_identity["root_id"]:
+                    raise ToolFailure(
+                        "ORCHESTRATION_WORKSPACE_MISMATCH",
+                        "agent_workflow path and workdir resolve to different authorized project roots.",
+                        category="security",
+                        retryable=False,
+                        details={"content_free": True},
+                    )
+            self._assert_orchestration_workspace_scope(path_identity)
+            return
+        if name == "exec_command":
+            workdir_value = args.get("workdir", args.get("cwd", "."))
+            workdir_scope = self._resolve_authorized_execution_scope(workdir_value, field="workdir")
+            self._assert_orchestration_workspace_scope(
+                self._workspace_scope_identity(workdir_scope),
+                run_id=args.get("run_id", ""),
+            )
 
     def resolve_for_write(self, raw_path: str) -> ResolvedPath:
         return self.workspace.resolve_for_write_at(self.default_cwd, raw_path)
@@ -1699,10 +1868,12 @@ class Runtime(
                 workflow_runtime_seconds = 600
             timeout_seconds = min(timeout_seconds, workflow_runtime_seconds)
         budget = BudgetDeadline(max_runtime_seconds=timeout_seconds)
+        hub_identity = dict(self._current_hub_client() or {})
         operation: dict[str, Any] = {
             "operation_id": operation_id,
             "tool": name,
             "workspace": str(self.workspace.root),
+            "execution_context_id": str(hub_identity.get("execution_context_id") or "")[:64],
             "started_monotonic": time.monotonic(),
             "started_at": datetime.now(timezone.utc).isoformat(),
             "event": done,
@@ -1756,8 +1927,12 @@ class Runtime(
         def worker() -> None:
             previous_cancel_event = getattr(self.request_context, "background_cancel_event", None)
             previous_budget = getattr(self.request_context, "background_budget", None)
+            had_hub_client = hasattr(self.request_context, "hub_client")
+            previous_hub_client = getattr(self.request_context, "hub_client", None)
             self.request_context.background_cancel_event = cancel_event
             self.request_context.background_budget = budget
+            if hub_identity:
+                self.request_context.hub_client = dict(hub_identity)
             try:
                 operation["result"] = self._call_tool_sync(name, arguments, request_id=request_id)
             except Exception as exc:  # noqa: BLE001 - background errors must become inspectable state
@@ -1782,6 +1957,13 @@ class Runtime(
                         pass
                 else:
                     self.request_context.background_budget = previous_budget
+                if had_hub_client:
+                    self.request_context.hub_client = previous_hub_client
+                else:
+                    try:
+                        del self.request_context.hub_client
+                    except AttributeError:
+                        pass
                 try:
                     result = operation.get("result")
                     result_status = ""
@@ -1865,6 +2047,22 @@ class Runtime(
         args = dict(arguments or {})
         dispatch_started_wall_utc = utc_now()
         dispatch_started_at = time.monotonic()
+        if name in {"agent_workflow", "exec_command"}:
+            try:
+                self._preflight_tool_workspace_scope(name, args)
+            except ToolFailure as exc:
+                payload = {
+                    "ok": False,
+                    "error": {
+                        "code": exc.code,
+                        "message": exc.message,
+                        "category": exc.category,
+                        "retryable": exc.retryable,
+                        "details": exc.details,
+                    },
+                }
+                payload["presentation"] = TOOL_CONTRACT_RUNTIME.presentation(name, payload)
+                return make_tool_result(name, payload, is_error=True)
         try:
             self._activation_enter_tool_call(name, args)
         except ToolFailure as exc:
@@ -2089,6 +2287,7 @@ class Runtime(
         should_handoff = name == "agent_workflow" and str(args.get("phase", "prepare")).lower() in {"execute", "run"}
         if not should_handoff:
             return self._call_tool_sync(name, args, request_id=request_id)
+        self._preflight_tool_workspace_scope(name, args)
         operation, done = self._start_background_tool(name, args, request_id=request_id)
         if done.wait(LONG_TOOL_HANDOFF_SECONDS):
             if operation.get("error"):
@@ -2144,6 +2343,8 @@ class Runtime(
             raise JsonRpcError(-32602, f"Unknown tool: {name}", {"reason": "unknown_tool"})
         spec = TOOL_REGISTRY[name]
         validate_arguments(name, args)
+        if name in {"agent_workflow", "exec_command"}:
+            self._preflight_tool_workspace_scope(name, args)
         try:
             replay = self._idempotency_claim_or_replay(name, args)
             if replay is not None:
@@ -2363,8 +2564,11 @@ class Runtime(
         threading.Thread(target=preheat, name="coding-tools-preheat", daemon=True).start()
 
     def _orchestration_workspace_identity(self, path_value: object = ".") -> dict[str, Any]:
+        resolved = self._resolve_authorized_execution_scope(path_value, field="path")
+        workspace_identity = self._workspace_scope_identity(resolved)
+        scope_root = self._workspace_root_for_identity(workspace_identity.get("root_id")) or self.workspace.root
         try:
-            status = self.git_status({"path": str(path_value or "."), "max_entries": 2000})
+            status = self.git_status({"path": str(resolved.path), "max_entries": 2000})
         except (ToolFailure, OSError, ValueError):
             status = {"is_repo": False, "head": "", "branch": "", "entries": []}
         raw_entries = status.get("entries") if isinstance(status.get("entries"), list) else []
@@ -2382,7 +2586,7 @@ class Runtime(
         dirty_paths = [item["path"] for item in entries]
         head = str(status.get("head") or "")
         worktree_fp = fingerprint_paths(
-            self.workspace.root,
+            scope_root,
             dirty_paths,
             extra={"head": head, "branch": status.get("branch"), "entries": entries},
         )
@@ -2392,6 +2596,7 @@ class Runtime(
             "branch": str(status.get("branch") or ""),
             "worktree_fp": worktree_fp,
             "dirty_paths": dirty_paths,
+            "workspace_identity": workspace_identity,
         }
 
     @staticmethod
@@ -2800,6 +3005,7 @@ class Runtime(
     def _ensure_agent_workflow_task_epoch(self, args: dict[str, Any]) -> str:
         if str(args.get("phase", "prepare")).strip().lower() != "execute":
             return ""
+        self._preflight_tool_workspace_scope("agent_workflow", args)
         current = self.task_state.get()
         projection = current.get("orchestration") if isinstance(current.get("orchestration"), dict) else {}
         run_id = str(projection.get("run_id") or "").strip()

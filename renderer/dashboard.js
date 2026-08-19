@@ -177,28 +177,32 @@
 
   function measuredUsage() {
     // KPI token & chi phí chỉ tin phép đo thực tế của provider. Ba nguồn đo:
-    // 1. usage_events (đường opencode provider dispatch/telemetry),
+    // 1. usage_events (đường opencode provider dispatch/telemetry) — token nằm
+    //    trong event.usage.{input_tokens,...}, cost ở event.cost.provider_cost,
     // 2. delegations[].metadata.economics (delegation opencode đã kết thúc),
     // 3. lanes[].last_economics (lượt ChatWeb qua codex bridge — chỉ có ở lanes).
     // Dedup theo delegation_id; chi phí chỉ tính khi provider báo (provider_cost).
+    // Cửa sổ đo: 7 ngày gần nhất (tổng quan vận hành là view giám sát, không
+    // khóa theo run_id hiện tại — phép đo thực tế nằm ở mọi run gần đây).
     const midnight = localMidnight(new Date());
+    const windowStart = midnight - 6 * 86400000;
     const result = { events: 0, input: 0, cached: 0, output: 0, reasoning: 0, cost: 0, hours: new Map() };
     const countedDelegations = new Set();
     const addEconomics = (economics, timeValue) => {
       if (!economics || typeof economics !== 'object') return;
       const time = Date.parse(String(timeValue || ''));
-      if (!Number.isFinite(time) || time < midnight) return;
+      if (!Number.isFinite(time) || time < windowStart) return;
       const input = Math.max(0, Number(economics.input_tokens) || 0);
       const cached = Math.max(0, Number(economics.cached_input_tokens) || 0);
       const output = Math.max(0, Number(economics.output_tokens) || 0);
       const reasoning = Math.max(0, Number(economics.reasoning_output_tokens) || 0);
-      if (!input && !cached && !output && !reasoning) return;
+      const costValue = Number(economics.provider_cost);
+      if (!input && !cached && !output && !reasoning && !(Number.isFinite(costValue) && costValue > 0)) return;
       result.events += 1;
       result.input += input;
       result.cached += cached;
       result.output += output;
       result.reasoning += reasoning;
-      const costValue = Number(economics.provider_cost);
       if (Number.isFinite(costValue) && costValue > 0) result.cost += costValue;
       const hour = Math.floor(time / 3600000);
       const bucket = result.hours.get(hour) || { in: 0, out: 0 };
@@ -208,19 +212,20 @@
     };
     for (const event of Array.isArray(orchestration?.usage_events) ? orchestration.usage_events : []) {
       const time = Date.parse(String(event?.event_time || ''));
-      if (!Number.isFinite(time) || time < midnight) continue;
+      if (!Number.isFinite(time) || time < windowStart) continue;
       if (event?.delegation_id) countedDelegations.add(event.delegation_id);
-      const input = Math.max(0, Number(event?.input_tokens) || 0);
-      const cached = Math.max(0, Number(event?.cached_input_tokens) || 0);
-      const output = Math.max(0, Number(event?.output_tokens) || 0);
-      const reasoning = Math.max(0, Number(event?.reasoning_output_tokens) || 0);
-      if (!input && !cached && !output && !reasoning) continue;
+      const usage = (event && typeof event.usage === 'object') ? event.usage : {};
+      const input = Math.max(0, Number(event?.input_tokens ?? usage.input_tokens) || 0);
+      const cached = Math.max(0, Number(event?.cached_input_tokens ?? usage.cached_input_tokens) || 0);
+      const output = Math.max(0, Number(event?.output_tokens ?? usage.output_tokens) || 0);
+      const reasoning = Math.max(0, Number(event?.reasoning_output_tokens ?? usage.reasoning_output_tokens) || 0);
+      const costValue = Number(event?.cost?.provider_cost ?? event?.cost?.derived_cost_usd ?? 0);
+      if (!input && !cached && !output && !reasoning && !(Number.isFinite(costValue) && costValue > 0)) continue;
       result.events += 1;
       result.input += input;
       result.cached += cached;
       result.output += output;
       result.reasoning += reasoning;
-      const costValue = Number(event?.cost?.provider_cost ?? event?.cost?.derived_cost_usd ?? 0);
       if (Number.isFinite(costValue) && costValue > 0) result.cost += costValue;
       const hour = Math.floor(time / 3600000);
       const bucket = result.hours.get(hour) || { in: 0, out: 0 };
@@ -447,13 +452,18 @@
       const input = Number(economics.input_tokens);
       const output = Number(economics.output_tokens);
       if (!Number.isFinite(input) || input < 0 || !Number.isFinite(output) || output < 0) continue;
-      const usage = measuredByLane.get(lane) || { inTokens: 0, outTokens: 0, cachedTokens: 0, calls: 0 };
+      const usage = measuredByLane.get(lane) || { inTokens: 0, outTokens: 0, cachedTokens: 0, calls: 0, model: '' };
       usage.inTokens += input;
       usage.outTokens += output;
       if (Number.isFinite(Number(economics.cached_input_tokens))) {
         usage.cachedTokens += Math.max(0, Number(economics.cached_input_tokens));
       }
       usage.calls += 1;
+      usage.model = String(economics.model || delegation?.model || lane);
+      const providerCost = Number(economics.provider_cost);
+      if (Number.isFinite(providerCost) && providerCost >= 0) {
+        usage.providerCost = (usage.providerCost || 0) + providerCost;
+      }
       measuredByLane.set(lane, usage);
     }
 
@@ -463,13 +473,18 @@
       const input = Number(economics.input_tokens);
       const output = Number(economics.output_tokens);
       if (!Number.isFinite(input) || input < 0 || !Number.isFinite(output) || output < 0) continue;
-      const usage = measuredByLane.get('chatweb') || { inTokens: 0, outTokens: 0, cachedTokens: 0, calls: 0 };
+      const usage = measuredByLane.get('chatweb') || { inTokens: 0, outTokens: 0, cachedTokens: 0, calls: 0, model: '' };
       usage.inTokens += input;
       usage.outTokens += output;
       if (Number.isFinite(Number(economics.cached_input_tokens))) {
         usage.cachedTokens += Math.max(0, Number(economics.cached_input_tokens));
       }
       usage.calls += 1;
+      usage.model = String(economics.model || lane?.model || 'chatweb');
+      const providerCost = Number(economics.provider_cost);
+      if (Number.isFinite(providerCost) && providerCost >= 0) {
+        usage.providerCost = (usage.providerCost || 0) + providerCost;
+      }
       measuredByLane.set('chatweb', usage);
     }
 
@@ -484,10 +499,9 @@
       entry.cachedTokens = usage.cachedTokens;
       entry.calls = Math.max(entry.calls, usage.calls);
       entry.usageEvidence = 'MEASURED';
-      entry.modelId = String(delegation?.model || '');
-      const providerCost = Number(economics.provider_cost);
-      if (Number.isFinite(providerCost) && providerCost >= 0) {
-        entry.providerCost = providerCost;
+      entry.modelId = usage.model || '';
+      if (Number.isFinite(Number(usage.providerCost)) && Number(usage.providerCost) >= 0) {
+        entry.providerCost = Number(usage.providerCost);
       }
     }
     for (const entry of map.values()) {
@@ -941,8 +955,8 @@
       year: 'numeric'
     }).format(today);
     
-    setText('daDateHeader', `📅 Hôm nay - ${dateFormatted}`);
-    setText('daDateValue', '00:00 - 23:59 (GMT+7)');
+    setText('daDateHeader', `📅 7 ngày gần nhất - ${dateFormatted}`);
+    setText('daDateValue', 'Cửa sổ đo: 7 ngày gần nhất (phép đo provider)');
 
     if (snapshot?.settings?.workspace) {
       const parts = snapshot.settings.workspace.split(/[\\/]/).filter(Boolean);
@@ -1241,7 +1255,7 @@
       animateText(byId('daTokensInTotal'), compact, measuredIn);
       animateText(byId('daTokensOutTotal'), compact, measuredOut);
       setText('daTokensSplit', `Provider input ${compact(measured.input)} · cached ${compact(measured.cached)} · output ${compact(measured.output)}${measured.reasoning ? ` · reasoning ${compact(measured.reasoning)}` : ''}`);
-      setText('daTokensMeta', `MEASURED từ ${measured.events} nguồn đo provider (usage_events · delegations · lanes ChatWeb)`);
+      setText('daTokensMeta', `MEASURED từ ${measured.events} nguồn đo provider trong 7 ngày gần nhất (usage_events · delegations · lanes ChatWeb)`);
     } else {
       setText('daTokensTotal', '—');
       setText('daTokensInTotal', '—');

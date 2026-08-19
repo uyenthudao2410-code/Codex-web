@@ -1213,9 +1213,26 @@ class CoordinationMixin:
                 proof_fp = hashlib.sha256(
                     "|".join(f"{item['proof_id']}:{item['input_fingerprint']}" for item in proofs).encode("utf-8")
                 ).hexdigest() if proofs else ""
-                identity = self._orchestration_workspace_identity(".")
+                run = self.orchestration_ledger.get_run(run_id)
+                run_metadata = run.get("metadata") if isinstance(run, dict) and isinstance(run.get("metadata"), dict) else {}
+                run_workspace_identity = (
+                    run_metadata.get("workspace_identity")
+                    if isinstance(run_metadata.get("workspace_identity"), dict)
+                    else {}
+                )
+                scope_root = self._workspace_root_for_identity(run_workspace_identity.get("root_id")) or self.workspace.root
+                identity = self._orchestration_workspace_identity(str(scope_root))
+                if run_workspace_identity:
+                    self._assert_orchestration_workspace_scope(identity.get("workspace_identity") or {}, run_id=run_id)
                 accepted_by = str((self._current_hub_client() or {}).get("client_id") or "ChatWeb Sol")
-                accepted_files = _accepted_file_receipts(self.workspace.root, state.get("modified_files"))
+                accepted_files = _accepted_file_receipts(scope_root, state.get("modified_files"))
+                if proofs and any(str(item.get("status") or "") == "passed" for item in proofs):
+                    if self.orchestration_ledger.latest_quality_outcome(run_id) is None:
+                        self.orchestration_ledger.record_quality_outcome(
+                            run_id=run_id,
+                            wave_id=ctx.wave_id,
+                            outcome={"source": "accepted_proof_auto_v1", "oracle_pass": True},
+                        )
                 self.orchestration_control.checkpoint(ctx, reason="controller_acceptance" if controller else "chatweb_sol_acceptance")
                 self.orchestration_ledger.record_checkpoint(
                     run_id=run_id,
@@ -1226,6 +1243,7 @@ class CoordinationMixin:
                     metadata={
                         "accepted_by": accepted_by,
                         "worktree_fp": identity.get("worktree_fp"),
+                        "workspace_identity": dict(identity.get("workspace_identity") or {}),
                         "accepted_files": accepted_files,
                     },
                 )

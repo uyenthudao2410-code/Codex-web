@@ -20,7 +20,7 @@ from .semantic_localization import (
     semantic_resource_cost,
     semantic_scope_mode,
 )
-from .solution_economics import record_solution_shadow_patch_surface
+from .solution_economics import record_patch_surface
 from .tool_contract import tool_metadata_contract
 
 
@@ -678,15 +678,15 @@ class ContextToolsMixin:
                 affected_files.extend(result.get("affected_files", []))
                 if ctx is not None and not bool(args.get("dry_run", False)):
                     try:
-                        record_solution_shadow_patch_surface(
+                        record_patch_surface(
                             self.orchestration_ledger,
                             run_id=ctx.run_id,
                             wave_id=ctx.wave_id,
                             patch_result=result,
                         )
                     except Exception:
-                        # P4 is shadow telemetry. Missing telemetry remains unknown
-                        # rather than changing mutation/proof behavior.
+                        # Measurement telemetry remains non-authoritative. Missing
+                        # evidence stays unknown rather than changing mutation/proof behavior.
                         pass
         except ToolFailure as exc:
             record_failure(exc.code, message=str(exc))
@@ -798,7 +798,11 @@ class ContextToolsMixin:
                     input_fingerprint=proof_fp,
                     command=command,
                     upstream_proof_ids=upstream_proof_ids,
-                    metadata={"kind": "check", "workdir": workdir},
+                    metadata={
+                        "kind": "check",
+                        "workdir": workdir,
+                        "workspace_identity": dict(proof_identity.get("workspace_identity") or {}),
+                    },
                     runner=lambda command=command, command_timeout_ms=command_timeout_ms: self._run_continuous_check(
                         command,
                         workdir,
@@ -867,7 +871,11 @@ class ContextToolsMixin:
                     input_fingerprint=proof_fp,
                     command=f"verify_build:{verification}",
                     upstream_proof_ids=upstream_proof_ids,
-                    metadata={"kind": "verify", "verification": verification},
+                    metadata={
+                        "kind": "verify",
+                        "verification": verification,
+                        "workspace_identity": dict(proof_identity.get("workspace_identity") or {}),
+                    },
                     runner=lambda: self.verify_build(verify_args),
                 )
                 proof_ids.append(proof_id)

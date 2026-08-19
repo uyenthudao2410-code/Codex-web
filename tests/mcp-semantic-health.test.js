@@ -33,8 +33,36 @@ test('semantic probe proves workspace_context can execute, not only HTTP health'
       response.end(payload);
     });
   }, async (port) => {
-    const result = await probeMcpSemanticHealth({ port, token: 'token', timeoutMs: 1000 });
+    const result = await probeMcpSemanticHealth({
+      port,
+      token: 'token',
+      expectedWorkspace: 'C:\\work\\one',
+      timeoutMs: 1000
+    });
     assert.deepEqual(result, { ok: true, workspace: 'C:\\work\\one' });
+  });
+});
+
+test('semantic probe rejects a live runtime bound to a different configured workspace', async () => {
+  await withServer((_request, response) => {
+    const payload = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 'recovery-semantic-health',
+      result: { structuredContent: { workspace: 'C:\\work\\old' } }
+    });
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(payload);
+  }, async (port) => {
+    const result = await probeMcpSemanticHealth({
+      port,
+      token: 'token',
+      expectedWorkspace: 'C:\\work\\current',
+      timeoutMs: 1000
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'workspace_mismatch');
+    assert.equal(result.workspace, 'C:\\work\\old');
+    assert.equal(result.expectedWorkspace, 'C:\\work\\current');
   });
 });
 
@@ -68,11 +96,14 @@ test('watchdog restarts through the existing orchestrator only after repeated se
     }
   };
   const watchdog = new SemanticMcpHealthWatchdog({
-    settings: { load: () => ({ mcpPort: 18766 }) },
+    settings: { load: () => ({ mcpPort: 18766, workspace: 'C:\\work\\current' }) },
     secrets: { get: () => 'token' },
     orchestrator,
     log: { info() {}, warn() {}, error() {} },
-    probe: async () => ({ ok: false, reason: 'jsonrpc_error', errorCode: -32603 }),
+    probe: async ({ expectedWorkspace }) => {
+      assert.equal(expectedWorkspace, 'C:\\work\\current');
+      return { ok: false, reason: 'jsonrpc_error', errorCode: -32603 };
+    },
     failureThreshold: 3,
     restartCooldownMs: 1000
   });
@@ -83,6 +114,61 @@ test('watchdog restarts through the existing orchestrator only after repeated se
   assert.equal(third.failures, 3);
   assert.equal(calls.restart, 1);
   assert.equal(watchdog.failures, 0);
+});
+
+test('watchdog immediately recovers a deterministic configured-workspace mismatch', async () => {
+  const calls = { restart: 0 };
+  const orchestrator = {
+    busy: false,
+    recovering: false,
+    isManuallyStopped: () => false,
+    restart: async (options) => {
+      assert.deepEqual(options, { automatic: true });
+      calls.restart += 1;
+    }
+  };
+  const watchdog = new SemanticMcpHealthWatchdog({
+    settings: { load: () => ({ mcpPort: 18766, workspace: 'C:\\work\\current' }) },
+    secrets: { get: () => 'token' },
+    orchestrator,
+    log: { info() {}, warn() {}, error() {} },
+    probe: async ({ expectedWorkspace }) => {
+      assert.equal(expectedWorkspace, 'C:\\work\\current');
+      return {
+        ok: false,
+        reason: 'workspace_mismatch',
+        workspace: 'C:\\work\\old',
+        expectedWorkspace
+      };
+    },
+    failureThreshold: 3,
+    restartCooldownMs: 1000
+  });
+  const result = await watchdog.checkOnce();
+  assert.equal(result.recovered, true);
+  assert.equal(result.failures, 1);
+  assert.equal(calls.restart, 1);
+  assert.equal(watchdog.failures, 0);
+});
+
+test('watchdog skips semantic probing until a workspace is configured', async () => {
+  let probes = 0;
+  const watchdog = new SemanticMcpHealthWatchdog({
+    settings: { load: () => ({ mcpPort: 18766, workspace: '' }) },
+    secrets: { get: () => 'token' },
+    orchestrator: {
+      busy: false,
+      recovering: false,
+      isManuallyStopped: () => false,
+      restart: async () => {}
+    },
+    log: { info() {}, warn() {}, error() {} },
+    probe: async () => { probes += 1; return { ok: true, workspace: 'C:\\unexpected' }; }
+  });
+  const result = await watchdog.checkOnce();
+  assert.equal(result.skipped, true);
+  assert.equal(result.reason, 'not_configured');
+  assert.equal(probes, 0);
 });
 
 test('watchdog never restarts while the existing lifecycle controller is busy', async () => {

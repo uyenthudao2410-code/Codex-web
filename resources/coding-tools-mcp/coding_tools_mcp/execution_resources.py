@@ -805,6 +805,7 @@ class ExecutionResourceGovernor:
         wave_id: str = "",
         owner: str = "default",
         resource_class: object = "",
+        metadata: dict[str, Any] | None = None,
     ) -> ManagedProcessAdmission:
         resource = classify_resource_class(command, resource_class)
         run_id = str(run_id or "").strip()
@@ -865,8 +866,14 @@ class ExecutionResourceGovernor:
         job_id = uuid.uuid4().hex
         now = utc_now()
         command_hash = hashlib.sha256(str(command).encode("utf-8", errors="replace")).hexdigest()
-        metadata = json.dumps(
-            {"command_sha256": command_hash, "classification": "explicit" if resource_class else "automatic"},
+        job_metadata: dict[str, Any] = {
+            "command_sha256": command_hash,
+            "classification": "explicit" if resource_class else "automatic",
+        }
+        if isinstance(metadata, dict):
+            job_metadata.update(metadata)
+        metadata_json = json.dumps(
+            job_metadata,
             sort_keys=True,
             separators=(",", ":"),
         )
@@ -908,7 +915,7 @@ class ExecutionResourceGovernor:
                         "starting",
                         now,
                         now,
-                        metadata,
+                        metadata_json,
                     ),
                 )
         except sqlite3.IntegrityError as exc:

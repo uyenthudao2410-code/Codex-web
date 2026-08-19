@@ -1,11 +1,12 @@
 const http = require('node:http');
+const { normalizeWorkspacePath, workspaceKey } = require('./config');
 
 const DEFAULT_INTERVAL_MS = 60_000;
 const DEFAULT_FAILURE_THRESHOLD = 2;
 const DEFAULT_TIMEOUT_MS = 2_500;
 const DEFAULT_RESTART_COOLDOWN_MS = 120_000;
 
-function probeMcpSemanticHealth({ port, token, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+function probeMcpSemanticHealth({ port, token, expectedWorkspace = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {
   return new Promise((resolve) => {
     const body = JSON.stringify({
       jsonrpc: '2.0',
@@ -67,7 +68,18 @@ function probeMcpSemanticHealth({ port, token, timeoutMs = DEFAULT_TIMEOUT_MS })
           finish({ ok: false, reason: 'unexpected_result' });
           return;
         }
-        finish({ ok: true, workspace: structured.workspace });
+        const workspace = normalizeWorkspacePath(structured.workspace);
+        const expected = normalizeWorkspacePath(expectedWorkspace);
+        if (expected && workspaceKey(workspace) !== workspaceKey(expected)) {
+          finish({
+            ok: false,
+            reason: 'workspace_mismatch',
+            workspace,
+            expectedWorkspace: expected
+          });
+          return;
+        }
+        finish({ ok: true, workspace });
       });
     });
     request.on('timeout', () => {
@@ -124,11 +136,12 @@ class SemanticMcpHealthWatchdog {
       const current = this.settings?.load?.() || {};
       const port = Number(current.mcpPort || 0);
       const token = String(this.secrets?.get?.('mcpAuthToken') || '');
-      if (!Number.isInteger(port) || port <= 0 || !token) {
+      const expectedWorkspace = normalizeWorkspacePath(current.workspace);
+      if (!Number.isInteger(port) || port <= 0 || !token || !expectedWorkspace) {
         return { ok: true, skipped: true, reason: 'not_configured' };
       }
 
-      const result = await this.probe({ port, token });
+      const result = await this.probe({ port, token, expectedWorkspace });
       if (result?.ok) {
         if (this.failures > 0) {
           this.log?.info?.('Coding MCP semantic tool-plane health recovered', { previousFailures: this.failures });
@@ -138,13 +151,18 @@ class SemanticMcpHealthWatchdog {
       }
 
       this.failures += 1;
+      // A workspace mismatch is an identity/safety failure, not a transient
+      // semantic-plane blip. Recover it on the first observation so an old or
+      // deleted checkout cannot remain the live target. Other failures (for
+      // example a raw TaskGroup/JSON-RPC failure) retain the normal debounce.
+      const failureThreshold = result?.reason === 'workspace_mismatch' ? 1 : this.failureThreshold;
       this.log?.warn?.('Coding MCP HTTP health is reachable but semantic tool-plane probe failed', {
         failures: this.failures,
-        threshold: this.failureThreshold,
+        threshold: failureThreshold,
         reason: String(result?.reason || 'unknown'),
         errorCode: result?.errorCode ?? null
       });
-      if (this.failures < this.failureThreshold) return { ...result, failures: this.failures };
+      if (this.failures < failureThreshold) return { ...result, failures: this.failures };
       if (Date.now() < this.nextRestartAt || this.suppressed()) {
         return { ...result, failures: this.failures, recoveryDeferred: true };
       }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import errno
+import hashlib
 import json
 import os
 import re
@@ -10,7 +11,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .artifact_refs import command_output_artifact_ref
 from .landlock_exec import landlock_status_payload
@@ -125,12 +126,29 @@ def _replace_atomic(source: Path, target: Path) -> None:
 class TaskStateStore:
     """Workspace-local, atomic task state used across browser chats and MCP restarts."""
 
-    def __init__(self, workspace: Path) -> None:
+    def __init__(self, workspace: Path, *, scope_id: str = "") -> None:
         self.workspace = workspace.resolve()
-        self.state_dir = self.workspace / ".coding-tools"
-        self.path = self.state_dir / "task-state.json"
-        self.history_path = self.state_dir / "task-history.json"
+        self.scope_id = str(scope_id or "").strip()
+        root_state_dir = self.workspace / ".coding-tools"
+        if self.scope_id:
+            scope_digest = hashlib.sha256(
+                self.scope_id.encode("utf-8", errors="surrogatepass")
+            ).hexdigest()[:24]
+            self.state_dir = root_state_dir / "task-contexts"
+            self.path = self.state_dir / f"{scope_digest}.json"
+            self.history_path = self.state_dir / f"{scope_digest}-history.json"
+        else:
+            self.state_dir = root_state_dir
+            self.path = self.state_dir / "task-state.json"
+            self.history_path = self.state_dir / "task-history.json"
         self._lock = threading.RLock()
+
+    @property
+    def state_file_display(self) -> str:
+        try:
+            return self.path.relative_to(self.workspace).as_posix()
+        except ValueError:
+            return str(self.path)
 
     def get(self) -> dict[str, Any]:
         with self._lock:
@@ -582,6 +600,91 @@ class TaskStateStore:
         return copy.deepcopy(state)
 
 
+class ContextualTaskStateStore:
+    """Route task projections by execution context while preserving legacy global state."""
+
+    def __init__(self, workspace: Path, scope_provider: Callable[[], str]) -> None:
+        self.workspace = workspace.resolve()
+        self._scope_provider = scope_provider
+        self._global_store = TaskStateStore(self.workspace)
+        self._stores: dict[str, TaskStateStore] = {}
+        self._lock = threading.RLock()
+
+    def current_scope_id(self) -> str:
+        try:
+            return str(self._scope_provider() or "").strip()
+        except Exception:
+            return ""
+
+    def is_scoped(self) -> bool:
+        return bool(self.current_scope_id())
+
+    def _current_store(self) -> TaskStateStore:
+        scope_id = self.current_scope_id()
+        if not scope_id:
+            return self._global_store
+        with self._lock:
+            store = self._stores.get(scope_id)
+            if store is None:
+                store = TaskStateStore(self.workspace, scope_id=scope_id)
+                if not store.path.exists():
+                    context_dir = self.workspace / ".coding-tools" / "task-contexts"
+                    existing_contexts = list(context_dir.glob("*.json")) if context_dir.exists() else []
+                    existing_contexts = [
+                        path for path in existing_contexts
+                        if not path.name.endswith("-history.json")
+                    ]
+                    legacy = self._global_store.get()
+                    if not existing_contexts and TaskStateStore._has_task(legacy):
+                        # One-time migration: the first stateful ChatWeb context adopts
+                        # the pre-isolation task. Later contexts always start clean.
+                        store._write(legacy)
+                self._stores[scope_id] = store
+            return store
+
+    @property
+    def state_file_display(self) -> str:
+        return self._current_store().state_file_display
+
+    def contexts(self, limit: int = 20) -> list[dict[str, Any]]:
+        context_dir = self.workspace / ".coding-tools" / "task-contexts"
+        if not context_dir.exists():
+            return []
+        candidates: list[tuple[float, Path, dict[str, Any]]] = []
+        for path in context_dir.glob("*.json"):
+            if path.name.endswith("-history.json"):
+                continue
+            try:
+                state = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(state, dict):
+                    continue
+                candidates.append((path.stat().st_mtime, path, state))
+            except (OSError, ValueError):
+                continue
+        bounded = max(1, min(int(limit), 100))
+        summaries: list[dict[str, Any]] = []
+        for _mtime, path, state in sorted(candidates, key=lambda item: item[0], reverse=True)[:bounded]:
+            projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+            summaries.append({
+                "context_id": path.stem,
+                "task_id": state.get("task_id"),
+                "objective": state.get("objective"),
+                "status": state.get("status"),
+                "current_step": state.get("current_step"),
+                "updated_at": state.get("updated_at"),
+                "run_id": projection.get("run_id"),
+                "wave_id": projection.get("wave_id"),
+                "orchestration_state": projection.get("orchestration_state"),
+                "state_file": path.relative_to(self.workspace).as_posix(),
+            })
+        return summaries
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return getattr(self._current_store(), name)
+
+
 class TaskStateToolsMixin:
     def check_exec_environment(self, args: dict[str, Any]) -> dict[str, Any]:
         landlock = landlock_status_payload()
@@ -620,16 +723,16 @@ class TaskStateToolsMixin:
         }
 
     def task_state_get(self, args: dict[str, Any]) -> dict[str, Any]:
-        return {"state_file": ".coding-tools/task-state.json", "state": self.task_state.get()}
+        return {"state_file": self.task_state.state_file_display, "state": self.task_state.get()}
 
     def task_state_update(self, args: dict[str, Any]) -> dict[str, Any]:
         changes = dict(args)
         if changes.get("objective") and "status" not in changes:
             changes["status"] = "active"
-        return {"state_file": ".coding-tools/task-state.json", "state": self.task_state.update(changes)}
+        return {"state_file": self.task_state.state_file_display, "state": self.task_state.update(changes)}
 
     def task_state_clear(self, args: dict[str, Any]) -> dict[str, Any]:
-        return {"cleared": True, "state_file": ".coding-tools/task-state.json", "state": self.task_state.clear()}
+        return {"cleared": True, "state_file": self.task_state.state_file_display, "state": self.task_state.clear()}
 
     def task_state_pause(self, args: dict[str, Any]) -> dict[str, Any]:
         return {"state": self.task_state.pause(str(args.get("reason", "")))}
