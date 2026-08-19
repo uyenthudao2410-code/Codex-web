@@ -31,6 +31,26 @@ def recommendation(recommendation_id: str, *, risk: str = "low") -> dict[str, ob
     }
 
 
+def record_repair_patch(
+    ledger: OrchestrationLedger,
+    *,
+    run_id: str,
+    wave_id: str,
+    label: str,
+) -> None:
+    record_solution_shadow_patch_surface(
+        ledger,
+        run_id=run_id,
+        wave_id=wave_id,
+        patch_result={
+            "dry_run": False,
+            "additions": 1,
+            "removals": 0,
+            "affected_files": [{"path": f"src/{label}.py", "operation": "update"}],
+        },
+    )
+
+
 class SolutionEconomicsShadowTests(unittest.TestCase):
     def test_record_is_task_level_pre_write_and_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -104,6 +124,9 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertTrue(report["pre_mutation"]["recorded_before_first_write"])
             self.assertTrue(outcome["first_pass_accepted"])
             self.assertFalse(outcome["repair"]["repaired"])
+            self.assertFalse(outcome["repair"]["workflow_replanned"])
+            self.assertFalse(outcome["repair"]["proof_only_replan"])
+            self.assertEqual(outcome["repair"]["label_method"], "post_replan_applied_patch_delta_v1")
             self.assertEqual(outcome["touched_surface"]["files"], 2)
             self.assertIsNone(outcome["touched_surface"]["lines"])
             self.assertIsNone(outcome["touched_surface"]["symbols"])
@@ -186,6 +209,83 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertFalse(partial["line_coverage_complete"])
             self.assertEqual(partial["lines_measurement"], "applied_patch_delta_incomplete_v1")
 
+    def test_repair_label_requires_source_rework_after_replan(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+
+            proof_only = ledger.create_run(
+                objective="proof-only replan",
+                metadata={"workflow": "bugfix", "evaluation": {"provenance": "representative"}},
+            )
+            proof_wave = ledger.create_wave(proof_only, execution_mode="mcp_only")
+            record_solution_shadow(
+                ledger,
+                run_id=proof_only,
+                wave_id=proof_wave,
+                recommendation=recommendation("proof-only", risk="low"),
+            )
+            ledger.append_event(
+                proof_only,
+                wave_id=proof_wave,
+                event_type="failure_observed",
+                state_before="PROVING",
+                state_after="REPLAN",
+            )
+            ledger.finish_wave(proof_wave, status="replanned")
+            proof_wave = ledger.create_wave(proof_only, execution_mode="mcp_only")
+            ledger.finish_wave(proof_wave, status="accepted")
+            ledger.finish_run(proof_only, status="accepted")
+
+            source_repair = ledger.create_run(
+                objective="source repair",
+                metadata={"workflow": "bugfix", "evaluation": {"provenance": "representative"}},
+            )
+            source_wave = ledger.create_wave(source_repair, execution_mode="mcp_only")
+            record_solution_shadow(
+                ledger,
+                run_id=source_repair,
+                wave_id=source_wave,
+                recommendation=recommendation("source-repair", risk="high"),
+            )
+            ledger.append_event(
+                source_repair,
+                wave_id=source_wave,
+                event_type="failure_observed",
+                state_before="PROVING",
+                state_after="REPLAN",
+            )
+            ledger.finish_wave(source_wave, status="replanned")
+            source_wave = ledger.create_wave(source_repair, execution_mode="mcp_only")
+            record_repair_patch(
+                ledger,
+                run_id=source_repair,
+                wave_id=source_wave,
+                label="source_repair",
+            )
+            ledger.finish_wave(source_wave, status="accepted")
+            ledger.finish_run(source_repair, status="accepted")
+
+            proof_report = solution_shadow_run_report(ledger, proof_only)
+            source_report = solution_shadow_run_report(ledger, source_repair)
+            self.assertTrue(proof_report["outcome"]["repair"]["workflow_replanned"])
+            self.assertTrue(proof_report["outcome"]["repair"]["proof_only_replan"])
+            self.assertFalse(proof_report["outcome"]["repair"]["repaired"])
+            self.assertEqual(proof_report["outcome"]["repair"]["post_replan_patch_surface_events"], 0)
+            self.assertTrue(source_report["outcome"]["repair"]["workflow_replanned"])
+            self.assertFalse(source_report["outcome"]["repair"]["proof_only_replan"])
+            self.assertTrue(source_report["outcome"]["repair"]["repaired"])
+            self.assertEqual(source_report["outcome"]["repair"]["post_replan_patch_surface_events"], 1)
+
+            population = solution_shadow_population_report(ledger)
+            self.assertEqual(population["cohort"]["representative_repaired_tasks"], 1)
+            self.assertEqual(population["cohort"]["representative_nonrepaired_tasks"], 1)
+            self.assertEqual(
+                population["predictive_validation"]["repair_label_method"],
+                "post_replan_applied_patch_delta_v1",
+            )
+            self.assertTrue(population["policy"]["repair_label_uses_post_replan_patch_surface"])
+            self.assertTrue(population["policy"]["workflow_replan_is_not_solution_repair"])
+
     def test_population_is_descriptive_only_and_exposes_repair_signal_buckets(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))
@@ -201,6 +301,7 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
                     ledger.append_event(run_id, wave_id=wave_id, event_type="failure_observed", state_before="EXECUTING", state_after="REPLAN")
                     ledger.finish_wave(wave_id, status="replanned")
                     wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                    record_repair_patch(ledger, run_id=run_id, wave_id=wave_id, label=f"repair_{risk}")
                 ledger.finish_wave(wave_id, status="accepted")
                 ledger.finish_run(run_id, status="accepted")
 
@@ -251,6 +352,12 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
                     )
                     ledger.finish_wave(wave_id, status="replanned")
                     wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                    record_repair_patch(
+                        ledger,
+                        run_id=run_id,
+                        wave_id=wave_id,
+                        label=f"predict_{index}",
+                    )
                 ledger.finish_wave(wave_id, status="accepted")
                 ledger.finish_run(run_id, status="accepted")
 

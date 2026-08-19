@@ -304,6 +304,18 @@ impl SourceSnapshotV1 {
     }
 }
 
+fn is_windows_reserved_device_component(component: &str) -> bool {
+    let basename = component.split_once('.').map_or(component, |(basename, _)| basename);
+    let upper = basename.to_ascii_uppercase();
+    if matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL") {
+        return true;
+    }
+    let bytes = upper.as_bytes();
+    bytes.len() == 4
+        && (bytes.starts_with(b"COM") || bytes.starts_with(b"LPT"))
+        && matches!(bytes[3], b'1'..=b'9')
+}
+
 pub fn validate_source_snapshot_path(path: &str) -> Result<(), String> {
     if path.is_empty() || path.len() > SOURCE_SNAPSHOT_MAX_PATH_BYTES {
         return Err("source snapshot path is empty or too long".to_string());
@@ -322,6 +334,7 @@ pub fn validate_source_snapshot_path(path: &str) -> Result<(), String> {
             || component.eq_ignore_ascii_case(".git")
             || component.ends_with('.')
             || component.ends_with(' ')
+            || is_windows_reserved_device_component(component)
         {
             return Err("source snapshot path contains an unsafe component".to_string());
         }
@@ -382,10 +395,21 @@ mod tests {
             "dir/../file",
             "C:/drive",
             "dir//file",
+            "CON",
+            "nul.txt",
+            "dir/PRN.log",
+            "COM1.rs",
+            "lpt9",
         ] {
             assert!(
                 SourceSnapshotEntryV1::delete(unsafe_path).is_err(),
                 "{unsafe_path}"
+            );
+        }
+        for portable_path in ["console.rs", "auxiliary.txt", "com10.txt"] {
+            assert!(
+                SourceSnapshotEntryV1::delete(portable_path).is_ok(),
+                "{portable_path}"
             );
         }
         assert!(SourceSnapshotEntryV1::upsert(
