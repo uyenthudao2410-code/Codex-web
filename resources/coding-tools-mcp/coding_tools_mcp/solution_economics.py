@@ -304,6 +304,33 @@ def _surface_comparison(estimated: Any, actual: dict[str, Any]) -> dict[str, Any
     return {"metrics": metrics, "all_metrics_comparable": all(item["delta"] is not None for item in metrics.values())}
 
 
+def _repair_taxonomy(events: list[dict[str, Any]], replan_count: int) -> dict[str, Any]:
+    replan_seqs = [
+        int(item.get("seq") or 0)
+        for item in events
+        if str(item.get("state_after") or "").upper() == "REPLAN"
+    ]
+    first_replan_seq = min(replan_seqs) if replan_seqs else None
+    post_replan_patch_events = [
+        item
+        for item in events
+        if first_replan_seq is not None
+        and int(item.get("seq") or 0) > first_replan_seq
+        and str(item.get("event_type") or "") == SOLUTION_SHADOW_PATCH_SURFACE_EVENT
+    ]
+    workflow_replanned = replan_count > 0
+    source_reworked_after_replan = bool(workflow_replanned and post_replan_patch_events)
+    return {
+        "repaired": source_reworked_after_replan,
+        "workflow_replanned": workflow_replanned,
+        "proof_only_replan": bool(workflow_replanned and not source_reworked_after_replan),
+        "replan_count": replan_count,
+        "first_replan_seq": first_replan_seq,
+        "post_replan_patch_surface_events": len(post_replan_patch_events),
+        "label_method": "post_replan_applied_patch_delta_v1",
+    }
+
+
 def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict[str, Any]:
     run = ledger.get_run(run_id)
     if run is None:
@@ -338,6 +365,7 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
     proof_records = mcp.get("proof_records") if isinstance(mcp.get("proof_records"), int) else 0
     proof_duration = mcp.get("proof_duration_ms") if proof_records > 0 else None
     replan_count = int((economics.get("repair") or {}).get("replan_count") or 0)
+    repair_taxonomy = _repair_taxonomy(events, replan_count)
     run_status = str(run.get("status") or "")
     outcome_final = run_status != "active"
     return {
@@ -358,8 +386,15 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
             "first_pass_accepted": bool(economics.get("first_pass_accepted")) if outcome_final else None,
             "repair": {
                 "final": outcome_final,
-                "repaired": (replan_count > 0) if outcome_final else None,
-                "replan_count": replan_count,
+                **repair_taxonomy if outcome_final else {
+                    "repaired": None,
+                    "workflow_replanned": None,
+                    "proof_only_replan": None,
+                    "replan_count": replan_count,
+                    "first_replan_seq": repair_taxonomy["first_replan_seq"],
+                    "post_replan_patch_surface_events": repair_taxonomy["post_replan_patch_surface_events"],
+                    "label_method": repair_taxonomy["label_method"],
+                },
             },
             "ttar_ms": milestones.get("time_to_accepted_ms"),
             "touched_surface": touched_surface,
@@ -511,7 +546,8 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
         "familywise_confidence": 0.95,
         "comparison_count": comparison_count,
         "per_comparison_alpha": round(per_comparison_alpha, 8) if per_comparison_alpha is not None else None,
-        "method": "leave_one_out_brier_plus_bonferroni_wilson_separation_v1",
+        "method": "leave_one_out_brier_plus_bonferroni_wilson_separation_v2_source_repair",
+        "repair_label_method": "post_replan_applied_patch_delta_v1",
         "validated_signals": validated,
         "signals": signals,
         "causal_claim_allowed": False,
@@ -658,6 +694,8 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "predictive_promotion_requires_representative_provenance": True,
             "benchmark_synthetic_unlabeled_are_not_promotion_evidence": True,
             "predictive_validation_is_association_not_causality": True,
+            "repair_label_uses_post_replan_patch_surface": True,
+            "workflow_replan_is_not_solution_repair": True,
             "p5_automatic_start": False,
         },
         "content_free": True,
