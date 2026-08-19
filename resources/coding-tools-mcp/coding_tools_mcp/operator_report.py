@@ -15,6 +15,42 @@ REPORT_CONTRACT = [
 ]
 
 
+def build_orchestration_runtime_result(
+    runtime: Any,
+    ctx: Any | None,
+    *,
+    write_reports: bool = True,
+) -> dict[str, Any] | None:
+    """Build and persist the content-free orchestration/operator projection for a Runtime."""
+    if ctx is None:
+        return None
+    reports: dict[str, Any] = {}
+    if write_reports:
+        try:
+            reports = runtime.orchestration_report.write_reports(ctx.run_id)
+        except (OSError, ValueError, KeyError) as exc:
+            reports = {"error": str(exc)[:500]}
+    result = {
+        **ctx.projection(),
+        "integrity": runtime.orchestration_ledger.verify_chain(ctx.run_id),
+        "reports": reports,
+        "final_acceptance_required": ctx.state == "ACCEPTING",
+    }
+    if str(ctx.state or "").upper() in OPERATOR_REPORT_STATES:
+        completion_report = build_operator_completion_report(
+            ledger=runtime.orchestration_ledger,
+            ctx=ctx,
+            task_state=runtime.task_state.get(),
+            reports=reports,
+        )
+        result["completion_report"] = completion_report
+        try:
+            runtime.task_state.set_completion_report(completion_report)
+        except (OSError, ValueError, RuntimeError):
+            pass
+    return result
+
+
 def build_command_completion_report(
     *,
     task_state: dict[str, Any],

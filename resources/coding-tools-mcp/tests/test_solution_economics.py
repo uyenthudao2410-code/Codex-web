@@ -639,6 +639,71 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_frozen_chatgpt_shadow_recovers_explicit_preflight_run_after_projection_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            root = Path(temp)
+            runtime = Runtime(root, permission_mode="dangerous")
+            runtime._orchestration_workspace_identity = lambda _path: {"branch": "test", "base_head": "head", "worktree_fp": "worktree"}
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb",
+                "client_type": "chatweb",
+                "execution_context_id": "realtime-tab",
+            }
+            try:
+                runtime.orchestration_ledger.upsert_hub_client(
+                    client_id=runtime._hub_client_record_id(runtime.request_context.hub_client),
+                    client_type="chatweb",
+                    role="controller",
+                    session_instance="realtime-tab",
+                )
+                target, _ = runtime._agent_orchestration_context(
+                    {"workflow": "bugfix", "phase": "prepare", "execution_mode": "mcp_only"},
+                    objective="realtime bugfix",
+                )
+                other = runtime.orchestration_control.begin(
+                    objective="other tab",
+                    task_id="other-task",
+                    execution_mode="mcp_only",
+                    base_head="head",
+                    worktree_fp="worktree",
+                    contract_fp="",
+                    metadata={"workflow": "diagnose"},
+                )
+                runtime._claim_hub_controller_for_run(other.run_id)
+                runtime._project_orchestration(other, event="test_projection_drift")
+
+                result = runtime.task_control({
+                    "action": "update",
+                    "run_id": target.run_id,
+                    "wave_id": target.wave_id,
+                    "payload": {
+                        "extension": "solution_shadow_v1",
+                        "recommendation": recommendation("detached-frozen-rec"),
+                    },
+                })
+
+                self.assertTrue(result["recording"]["recorded"])
+                self.assertTrue(result["context_recovered"])
+                self.assertEqual(runtime.task_state.get()["orchestration"]["run_id"], target.run_id)
+                events = runtime.orchestration_ledger.list_events(target.run_id)
+                shadow = next(item for item in events if item["event_type"] == "solution_shadow_recommended")
+                self.assertFalse(any(item["event_type"] == "write_lease_acquired" and item["seq"] < shadow["seq"] for item in events))
+
+                with self.assertRaises(ToolFailure) as wrong_wave:
+                    runtime.task_control({
+                        "action": "update",
+                        "run_id": other.run_id,
+                        "wave_id": target.wave_id,
+                        "payload": {
+                            "extension": "solution_shadow_v1",
+                            "recommendation": recommendation("wrong-wave"),
+                        },
+                    })
+                self.assertEqual(wrong_wave.exception.code, "SOLUTION_SHADOW_CONTEXT_MISMATCH")
+            finally:
+                runtime.request_context.hub_client = None
+                runtime.close()
+
 
 if __name__ == "__main__":
     unittest.main()

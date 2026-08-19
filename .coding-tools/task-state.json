@@ -1,172 +1,285 @@
 {
   "version": 2,
-  "task_id": "e07d32d9bb5b4b46a018818667a311dc",
-  "orchestration": {},
-  "objective": "Run a workspace command",
-  "status": "waiting",
-  "steps": [],
-  "current_step": "Waiting for model",
-  "current_command": null,
+  "task_id": "75ca822b81564922acc8ab1e15aaa765",
+  "orchestration": {
+    "run_id": "3a98e08ac7c34e01980d531c855e18b3",
+    "wave_id": "2cdbfa0bed504e75bbbec5a49f54cb80",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "359a5f231e1950e8d97303e0d2b798984c145fe6",
+    "worktree_fp": "785feb9643c632ac097da643f31f8a0c24a18cadc154c0c23676486c10a5998b",
+    "contract_fp": ""
+  },
+  "objective": "Final verification-only acceptance for the complete Codex-web execution/reporting integrity source now present in the worktree. Do not modify source. Verify same-root/preinitialize session isolation, durable operator completion-report latch/ACK, command-to-run attribution, Execution Hub scoped controller/cursor semantics, P4 solution-shadow compatibility, orchestration lifecycle ordering, module-size guard, and diff integrity across the current MCP control-plane files. Reporter/evaluation additions are already separately accepted; preserve them and all unrelated realtime/HR work. No commit/push/restart.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "completed",
+      "updated_at": "2026-08-19T07:42:32.687Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-19T07:42:32.687Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": {
+    "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_operator_report_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_workspace_session_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_execution_hub_faults.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_solution_economics.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_orchestration_workflow.py && python resources\\coding-tools-mcp\\scripts\\check_module_size.py && git diff --check -- resources\\coding-tools-mcp\\coding_tools_mcp\\task_state.py resources\\coding-tools-mcp\\coding_tools_mcp\\exec_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\coding_tools_mcp\\operator_report.py resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\coding_tools_mcp\\transport_http.py resources\\coding-tools-mcp\\tests\\test_operator_report_isolation.py resources\\coding-tools-mcp\\tests\\test_task_state_and_build.py resources\\coding-tools-mcp\\tests\\test_execution_hub_faults.py resources\\coding-tools-mcp\\tests\\test_orchestration_workflow.py resources\\coding-tools-mcp\\tests\\test_solution_economics.py\"",
+    "kind": "command",
+    "session_id": "oF-uPLnQqzF6eH3oZ_8b2s4J",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-19T07:41:47.977Z"
+  },
   "last_command_result": {
-    "command_id": "9abdraawTPDlBAtw2F_H3x1U",
+    "command_id": "lxt-flxlA1qE-M9P32K0T0LB",
     "kind": "command",
     "status": "exited",
     "result_status": "passed",
     "exit_code": 0,
-    "duration_ms": 1375,
-    "finished_at": "2026-08-19T05:46:07.282Z"
+    "duration_ms": null,
+    "finished_at": "2026-08-19T07:41:44.818Z"
   },
   "completion_report": null,
-  "test_results": [],
+  "test_results": [
+    {
+      "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_operator_report_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_workspace_session_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_execution_hub_faults.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_solution_economics.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_orchestration_workflow.py && python resources\\coding-tools-mcp\\scripts\\check_module_size.py && git diff --check -- resources\\coding-tools-mcp\\coding_tools_mcp\\task_state.py resources\\coding-tools-mcp\\coding_tools_mcp\\exec_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\coding_tools_mcp\\operator_report.py resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\coding_tools_mcp\\transport_http.py resources\\coding-tools-mcp\\tests\\test_operator_report_isolation.py resources\\coding-tools-mcp\\tests\\test_task_state_and_build.py resources\\coding-tools-mcp\\tests\\test_execution_hub_faults.py resources\\coding-tools-mcp\\tests\\test_orchestration_workflow.py resources\\coding-tools-mcp\\tests\\test_solution_economics.py\"",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 45162,
+      "summary": "exit 0 | 0.0s | 165 lines | tail: 'OK'"
+    }
+  ],
   "build_results": [],
-  "last_build_report": null,
+  "last_build_report": {
+    "project": {
+      "type": "electron",
+      "name": "web-mcp-assistant",
+      "version": "0.3.4",
+      "package_manager": "npm",
+      "test_command": "npm run test",
+      "build_command": "npm run dist",
+      "artifact_paths": [
+        "dist",
+        "build"
+      ]
+    },
+    "commands": {
+      "test": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_operator_report_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_workspace_session_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_execution_hub_faults.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_solution_economics.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_orchestration_workflow.py && python resources\\coding-tools-mcp\\scripts\\check_module_size.py && git diff --check -- resources\\coding-tools-mcp\\coding_tools_mcp\\task_state.py resources\\coding-tools-mcp\\coding_tools_mcp\\exec_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\coding_tools_mcp\\operator_report.py resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\coding_tools_mcp\\transport_http.py resources\\coding-tools-mcp\\tests\\test_operator_report_isolation.py resources\\coding-tools-mcp\\tests\\test_task_state_and_build.py resources\\coding-tools-mcp\\tests\\test_execution_hub_faults.py resources\\coding-tools-mcp\\tests\\test_orchestration_workflow.py resources\\coding-tools-mcp\\tests\\test_solution_economics.py\"",
+      "build": "npm run dist"
+    },
+    "test_result": {
+      "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_operator_report_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_workspace_session_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_execution_hub_faults.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_solution_economics.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_orchestration_workflow.py && python resources\\coding-tools-mcp\\scripts\\check_module_size.py && git diff --check -- resources\\coding-tools-mcp\\coding_tools_mcp\\task_state.py resources\\coding-tools-mcp\\coding_tools_mcp\\exec_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\coding_tools_mcp\\operator_report.py resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\coding_tools_mcp\\transport_http.py resources\\coding-tools-mcp\\tests\\test_operator_report_isolation.py resources\\coding-tools-mcp\\tests\\test_task_state_and_build.py resources\\coding-tools-mcp\\tests\\test_execution_hub_faults.py resources\\coding-tools-mcp\\tests\\test_orchestration_workflow.py resources\\coding-tools-mcp\\tests\\test_solution_economics.py\"",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 45162,
+      "summary": "exit 0 | 0.0s | 165 lines | tail: 'OK'"
+    },
+    "build_result": null,
+    "artifacts": [],
+    "hash_algorithm": "sha256",
+    "overall_status": "passed",
+    "failure": null,
+    "report_generated_at": "2026-08-19T07:42:32.420Z"
+  },
   "modified_files": [],
   "failure": null,
-  "next_step": "",
-  "created_at": "2026-08-19T05:41:30.591Z",
-  "updated_at": "2026-08-19T05:48:16.108Z",
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-19T07:40:52.630Z",
+  "updated_at": "2026-08-19T08:00:17.041Z",
   "events": [
     {
-      "time": "2026-08-19T05:41:30.591Z",
+      "time": "2026-08-19T07:40:52.630Z",
       "event": "task_auto_started",
       "details": {
-        "objective": "Run a workspace command"
+        "objective": "Final verification-only acceptance for the complete Codex-web execution/reporting integrity source now present in the worktree. Do not modify source. Verify same-root/preinitialize session isolation, durable operator completion-report latch/ACK, command-to-run attribution, Execution Hub scoped controller/cursor semantics, P4 solution-shadow compatibility, orchestration lifecycle ordering, module-size guard, and diff integrity across the current MCP control-plane files. Reporter/evaluation additions are already separately accepted; preserve them and all unrelated realtime/HR work. No commit/push/restart."
       }
     },
     {
-      "time": "2026-08-19T05:41:30.869Z",
+      "time": "2026-08-19T07:40:53.553Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-19T07:40:54.575Z",
       "event": "command_started",
       "details": {
-        "command": "node -",
-        "session_id": "zoIvo5I7SqFNt7Zix8HwEk_w"
+        "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_operator_report_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_workspace_session_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_execution_hub_faults.py && python -m unittest discov",
+        "session_id": "lxt-flxlA1qE-M9P32K0T0LB"
       }
     },
     {
-      "time": "2026-08-19T05:41:31.187Z",
+      "time": "2026-08-19T07:41:44.818Z",
       "event": "command_finished",
       "details": {
-        "command": "node -",
+        "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_operator_report_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_workspace_session_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_execution_hub_faults.py && python -m unittest discov",
         "status": "passed"
       }
     },
     {
-      "time": "2026-08-19T05:41:54.074Z",
-      "event": "command_started",
+      "time": "2026-08-19T07:41:45.597Z",
+      "event": "orchestration_routed",
       "details": {
-        "command": "powershell.exe -NoProfile -Command \"'---HELPER PID---'; Get-Process -Id 27400 -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime; '---RESULT---'; if(Test-Path 'tmp/full-restart-result.json'){Get-Content 'tmp/full-restart-result.json' -Raw}else{'<missing>'}; '---HELPER---'; if(Test-Path 'tmp/full-restart-helper.js'){Get-Content 'tmp/full-restart-helper.js' -Raw}else{'<missing>'}; '---STATE---'; Get-Content 'C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\runtime-state.json' -",
-        "session_id": "6hAzR6o--SKYl2on9XSiQKvP"
+        "state": "ROUTED"
       }
     },
     {
-      "time": "2026-08-19T05:41:55.777Z",
-      "event": "command_finished",
+      "time": "2026-08-19T07:41:46.256Z",
+      "event": "mcp_write_lease_active",
       "details": {
-        "command": "powershell.exe -NoProfile -Command \"'---HELPER PID---'; Get-Process -Id 27400 -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime; '---RESULT---'; if(Test-Path 'tmp/full-restart-result.json'){Get-Content 'tmp/full-restart-result.json' -Raw}else{'<missing>'}; '---HELPER---'; if(Test-Path 'tmp/full-restart-helper.js'){Get-Content 'tmp/full-restart-helper.js' -Raw}else{'<missing>'}; '---STATE---'; Get-Content 'C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\runtime-state.json' -",
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-19T07:41:46.256Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-19T07:41:46.934Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-19T07:41:47.120Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-19T07:41:47.977Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_operator_report_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_workspace_session_isolation.py && python -m unittest discover -v -s resources\\coding-tools-mcp\\tests -p test_execution_hub_faults.py && python -m unittest discov",
+        "session_id": "oF-uPLnQqzF6eH3oZ_8b2s4J"
+      }
+    },
+    {
+      "time": "2026-08-19T07:42:32.420Z",
+      "event": "build_verification_finished",
+      "details": {
         "status": "passed"
       }
     },
     {
-      "time": "2026-08-19T05:42:07.618Z",
-      "event": "command_started",
+      "time": "2026-08-19T07:42:32.687Z",
+      "event": "task_updated",
       "details": {
-        "command": "node -",
-        "session_id": "5IsPU_AWux2Uh0aIlpkftIaR"
+        "fields": [
+          "current_step",
+          "steps"
+        ]
       }
     },
     {
-      "time": "2026-08-19T05:42:07.919Z",
-      "event": "command_finished",
+      "time": "2026-08-19T07:42:32.687Z",
+      "event": "continuous_workflow_completed",
       "details": {
-        "command": "node -",
-        "status": "passed"
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
       }
     },
     {
-      "time": "2026-08-19T05:42:21.011Z",
-      "event": "command_started",
+      "time": "2026-08-19T07:42:32.850Z",
+      "event": "awaiting_final_acceptance",
       "details": {
-        "command": "node -",
-        "session_id": "6RDutJ1oZrEiyvXhuQm4eek-"
+        "state": "ACCEPTING"
       }
     },
     {
-      "time": "2026-08-19T05:42:21.287Z",
-      "event": "command_finished",
+      "time": "2026-08-19T07:42:32.855Z",
+      "event": "final_acceptance_required",
       "details": {
-        "command": "node -",
-        "status": "passed"
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     },
     {
-      "time": "2026-08-19T05:42:33.572Z",
-      "event": "command_started",
+      "time": "2026-08-19T07:42:33.014Z",
+      "event": "files_modified",
       "details": {
-        "command": "node -",
-        "session_id": "Y6DLOvXibjM6Jd8quQGhxF_B"
+        "count": 0
       }
     },
     {
-      "time": "2026-08-19T05:42:33.885Z",
-      "event": "command_finished",
+      "time": "2026-08-19T07:42:56.199Z",
+      "event": "orchestration_projection_reconciled",
       "details": {
-        "command": "node -",
-        "status": "passed"
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     },
     {
-      "time": "2026-08-19T05:42:44.792Z",
-      "event": "command_started",
+      "time": "2026-08-19T07:42:57.761Z",
+      "event": "final_acceptance_recorded",
       "details": {
-        "command": "node --check tmp/full-restart-helper.js",
-        "session_id": "mlQCclnCitzs6KcAxO3PZzTY"
+        "state": "CHECKPOINTED"
       }
     },
     {
-      "time": "2026-08-19T05:42:45.041Z",
-      "event": "command_finished",
+      "time": "2026-08-19T07:42:57.761Z",
+      "event": "task_accepted",
       "details": {
-        "command": "node --check tmp/full-restart-helper.js",
-        "status": "passed"
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     },
     {
-      "time": "2026-08-19T05:42:51.100Z",
-      "event": "command_started",
+      "time": "2026-08-19T07:43:16.621Z",
+      "event": "orchestration_projection_reconciled",
       "details": {
-        "command": "node tmp/full-restart-helper.js",
-        "session_id": "zLnq--ltHZMyw96qP2PcodNH"
-      }
-    },
-    {
-      "time": "2026-08-19T05:45:43.095Z",
-      "event": "command_started",
-      "details": {
-        "command": "node -",
-        "session_id": "D0AqrtZjf9RgtIocZZ4e0COC"
-      }
-    },
-    {
-      "time": "2026-08-19T05:45:43.392Z",
-      "event": "command_finished",
-      "details": {
-        "command": "node -",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-19T05:46:05.922Z",
-      "event": "command_started",
-      "details": {
-        "command": "powershell.exe -NoProfile -Command \"Remove-Item -LiteralPath 'tmp/full-restart-helper.js','tmp/full-restart-result.json' -Force -ErrorAction SilentlyContinue; Write-Output ('helper=' + (Test-Path 'tmp/full-restart-helper.js')); Write-Output ('result=' + (Test-Path 'tmp/full-restart-result.json'))\"",
-        "session_id": "9abdraawTPDlBAtw2F_H3x1U"
-      }
-    },
-    {
-      "time": "2026-08-19T05:46:07.282Z",
-      "event": "command_finished",
-      "details": {
-        "command": "powershell.exe -NoProfile -Command \"Remove-Item -LiteralPath 'tmp/full-restart-helper.js','tmp/full-restart-result.json' -Force -ErrorAction SilentlyContinue; Write-Output ('helper=' + (Test-Path 'tmp/full-restart-helper.js')); Write-Output ('result=' + (Test-Path 'tmp/full-restart-result.json'))\"",
-        "status": "passed"
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     }
   ]

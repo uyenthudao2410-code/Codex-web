@@ -53,6 +53,7 @@
   // Tools whose payload bytes are binary (images) rather than model text —
   // counting them as tokens would systematically inflate the estimate.
   const NON_TOKEN_TOOLS = new Set(['view_image']);
+  const REALTIME_WINDOW_MS = 5 * 60 * 1000;
 
   const STATE_RANK = { offline: 0, connected: 1, waiting: 2, blocked: 3, active: 4 };
 
@@ -186,7 +187,7 @@
     // khóa theo run_id hiện tại — phép đo thực tế nằm ở mọi run gần đây).
     const midnight = localMidnight(new Date());
     const windowStart = midnight - 6 * 86400000;
-    const result = { events: 0, input: 0, cached: 0, output: 0, reasoning: 0, cost: 0, hours: new Map() };
+    const result = { events: 0, input: 0, cached: 0, output: 0, reasoning: 0, cost: 0, hours: new Map(), samples: [] };
     const countedDelegations = new Set();
     const addEconomics = (economics, timeValue) => {
       if (!economics || typeof economics !== 'object') return;
@@ -204,6 +205,8 @@
       result.output += output;
       result.reasoning += reasoning;
       if (Number.isFinite(costValue) && costValue > 0) result.cost += costValue;
+      const sampleTokens = input + output + reasoning;
+      if (sampleTokens > 0) result.samples.push({ time, tokens: sampleTokens });
       const hour = Math.floor(time / 3600000);
       const bucket = result.hours.get(hour) || { in: 0, out: 0 };
       bucket.in += input;
@@ -227,6 +230,8 @@
       result.output += output;
       result.reasoning += reasoning;
       if (Number.isFinite(costValue) && costValue > 0) result.cost += costValue;
+      const sampleTokens = input + output + reasoning;
+      if (sampleTokens > 0) result.samples.push({ time, tokens: sampleTokens });
       const hour = Math.floor(time / 3600000);
       const bucket = result.hours.get(hour) || { in: 0, out: 0 };
       bucket.in += input;
@@ -1077,27 +1082,60 @@
     }
   }
 
-  function updateRealtimeMetrics(summary, buckets, records, allSummary, measured) {
-    const hasMeasured = Boolean(measured && measured.events > 0);
-    let tpm = 0;
-    if (hasMeasured) {
-      const hours = [...measured.hours.entries()].sort((a, b) => a[0] - b[0]);
-      const lastHour = hours[hours.length - 1];
-      if (lastHour) {
-        tpm = Math.round((lastHour[1].in + lastHour[1].out) / 60);
-      } else {
-        const measuredTokens = measured.input + measured.cached + measured.output + measured.reasoning;
-        tpm = Math.max(1, Math.round(measuredTokens / 1440));
-      }
-    }
-    if (tpm > 0) {
-      animateText(byId('daRealtimeTpm'), (v) => compactNumber(Math.round(v)), tpm);
+  function realtimeAgeLabel(time, now = Date.now()) {
+    if (!Number.isFinite(Number(time))) return 'chưa có mẫu mới';
+    const ageMs = Math.max(0, now - Number(time));
+    if (ageMs < 10000) return 'vừa cập nhật';
+    if (ageMs < 60000) return `${Math.floor(ageMs / 1000)} giây trước`;
+    return `${Math.floor(ageMs / 60000)} phút trước`;
+  }
+
+  function rollingProviderUsage(measured, now = Date.now(), windowMs = REALTIME_WINDOW_MS) {
+    const start = now - windowMs;
+    const samples = (Array.isArray(measured?.samples) ? measured.samples : [])
+      .filter((sample) => Number.isFinite(Number(sample?.time)) && Number(sample.time) >= start && Number(sample.time) <= now);
+    const tokens = samples.reduce((sum, sample) => sum + Math.max(0, Number(sample.tokens) || 0), 0);
+    const latestAt = samples.reduce((latest, sample) => Math.max(latest, Number(sample.time) || 0), 0) || null;
+    return {
+      samples: samples.length,
+      tokens,
+      tpm: tokens / Math.max(1, windowMs / 60000),
+      latestAt
+    };
+  }
+
+  function rollingLatency(records, now = Date.now(), windowMs = REALTIME_WINDOW_MS) {
+    const start = now - windowMs;
+    const recent = records.filter((record) => record.time >= start && record.time <= now);
+    const summary = summarize(recent);
+    const latestAt = recent.reduce((latest, record) => Math.max(latest, record.time), 0) || null;
+    return {
+      calls: summary.calls,
+      averageMs: summary.calls ? (summary.execMs + summary.waitMs) / summary.calls : 0,
+      latestAt
+    };
+  }
+
+  function updateRealtimeMetrics(records, measured) {
+    const now = Date.now();
+    const throughput = rollingProviderUsage(measured, now);
+    if (throughput.samples > 0) {
+      if (throughput.tpm > 0 && throughput.tpm < 1) setText('daRealtimeTpm', '<1');
+      else animateText(byId('daRealtimeTpm'), (value) => compact(Math.round(value)), throughput.tpm);
+      setText('daRealtimeTpmMeta', `5 phút · ${throughput.samples} phép đo · ${realtimeAgeLabel(throughput.latestAt, now)}`);
     } else {
       setText('daRealtimeTpm', '—');
+      setText('daRealtimeTpmMeta', 'Không có phép đo provider trong 5 phút gần nhất');
     }
 
-    const avgLatencyMs = summary.calls ? (summary.execMs + summary.waitMs) / summary.calls : (allSummary?.calls ? (allSummary.execMs + allSummary.waitMs) / allSummary.calls : 0);
-    setText('daRealtimeLatency', avgLatencyMs > 0 ? formatDuration(avgLatencyMs) : '—');
+    const latency = rollingLatency(records, now);
+    if (latency.calls > 0) {
+      setText('daRealtimeLatency', formatDuration(latency.averageMs));
+      setText('daRealtimeLatencyMeta', `5 phút · ${latency.calls} lệnh · ${realtimeAgeLabel(latency.latestAt, now)}`);
+    } else {
+      setText('daRealtimeLatency', '—');
+      setText('daRealtimeLatencyMeta', 'Không có lệnh trong 5 phút gần nhất');
+    }
   }
 
   function updateAnomalyAlerts(summary, records) {
@@ -1391,7 +1429,7 @@
     renderModelTable(models);
     renderFleetTable(models);
     renderHeatmap(buckets);
-    updateRealtimeMetrics(summary, buckets, records, allSummary, measured);
+    updateRealtimeMetrics(records, measured);
     updateAnomalyAlerts(summary, records);
     updateQuickSummary(summary, totalTokens, okRate, entries, measured);
     renderTicker();

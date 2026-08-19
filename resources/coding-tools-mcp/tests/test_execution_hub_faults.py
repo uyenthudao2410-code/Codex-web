@@ -122,9 +122,11 @@ class ExecutionHubFaultTests(unittest.TestCase):
             state, ctx = self.start_linked_run(hub)
             hub.runtime.orchestration_ledger.append_event(ctx.run_id, event_type="shared_truth_1", payload={"n": 1})
 
-            status, _headers, chat_get = hub.post_rpc(tool_call(1, "get"), client_id="chatweb", client_type="chatweb")
+            status, chat_headers, chat_get = hub.post_rpc(tool_call(1, "get"), client_id="chatweb", client_type="chatweb")
             self.assertEqual(status, 200, chat_get)
             self.assertNotIn("error", chat_get, chat_get)
+            chat_session = chat_headers.get("Mcp-Session-Id")
+            self.assertTrue(chat_session)
             chat_state = chat_get["result"]["structuredContent"]["state"]
             self.assertEqual(chat_state["task_id"], state["task_id"])
 
@@ -138,11 +140,16 @@ class ExecutionHubFaultTests(unittest.TestCase):
             self.assertEqual(hub.server.sessions.stats()["shared_runtimes"], 1)
 
             controller = hub.runtime.orchestration_ledger.get_controller_lease(ctx.run_id)
-            self.assertEqual(controller["owner_client_id"], "chatweb")
+            chatweb_controller_id = str(controller["owner_client_id"])
+            self.assertTrue(chatweb_controller_id.startswith("chatweb:"), chatweb_controller_id)
             self.assertEqual(controller["fencing_token"], 1)
 
             _status, _headers, chat_events = hub.post_rpc(
-                tool_call(3, "events", after_seq=0), client_id="chatweb", client_type="chatweb"
+                tool_call(3, "events", after_seq=0),
+                session_id=chat_session,
+                client_id="chatweb",
+                client_type="chatweb",
+                protocol_version=PROTOCOL_VERSION,
             )
             chat_cursor = chat_events["result"]["structuredContent"]["client_cursor"]["last_event_seq"]
             _status, _headers, desktop_events = hub.post_rpc(
@@ -153,7 +160,11 @@ class ExecutionHubFaultTests(unittest.TestCase):
 
             hub.runtime.orchestration_ledger.append_event(ctx.run_id, event_type="shared_truth_2", payload={"n": 2})
             _status, _headers, chat_events_2 = hub.post_rpc(
-                tool_call(5, "events", after_seq=chat_cursor), client_id="chatweb", client_type="chatweb"
+                tool_call(5, "events", after_seq=chat_cursor),
+                session_id=chat_session,
+                client_id="chatweb",
+                client_type="chatweb",
+                protocol_version=PROTOCOL_VERSION,
             )
             chat_cursor_2 = chat_events_2["result"]["structuredContent"]["client_cursor"]["last_event_seq"]
             self.assertGreater(chat_cursor_2, chat_cursor)
@@ -169,14 +180,18 @@ class ExecutionHubFaultTests(unittest.TestCase):
             self.assertEqual(transfer["fencing_token"], 2)
             stale = hub.runtime.orchestration_ledger.assert_controller_lease(
                 run_id=ctx.run_id,
-                owner_client_id="chatweb",
-                lease_id="client:chatweb",
+                owner_client_id=chatweb_controller_id,
+                lease_id=f"client:{chatweb_controller_id}",
                 fencing_token=1,
             )
             self.assertFalse(stale["valid"])
 
             status, _headers, rejected = hub.post_rpc(
-                tool_call(6, "accept", run_id=ctx.run_id), client_id="chatweb", client_type="chatweb"
+                tool_call(6, "accept", run_id=ctx.run_id),
+                session_id=chat_session,
+                client_id="chatweb",
+                client_type="chatweb",
+                protocol_version=PROTOCOL_VERSION,
             )
             self.assertEqual(status, 200)
             self.assertIn("CONTROLLER_LEASE_REQUIRED", json.dumps(rejected))
@@ -194,13 +209,16 @@ class ExecutionHubFaultTests(unittest.TestCase):
         hub = HubServer(self.root, self.TOKEN)
         try:
             _state, historical = self.start_linked_run(hub)
-            status, _headers, initial = hub.post_rpc(
+            status, initial_headers, initial = hub.post_rpc(
                 tool_call(1, "get"), client_id="chatweb", client_type="chatweb"
             )
             self.assertEqual(status, 200, initial)
+            chat_session = initial_headers.get("Mcp-Session-Id")
+            self.assertTrue(chat_session)
             first_controller = hub.runtime.orchestration_ledger.get_controller_lease(historical.run_id)
             self.assertIsNotNone(first_controller)
-            self.assertEqual(first_controller["owner_client_id"], "chatweb")
+            first_chatweb_controller_id = str(first_controller["owner_client_id"])
+            self.assertTrue(first_chatweb_controller_id.startswith("chatweb:"), first_chatweb_controller_id)
             self.assertEqual(first_controller["fencing_token"], 1)
 
             control = hub.runtime.orchestration_control
@@ -231,8 +249,10 @@ class ExecutionHubFaultTests(unittest.TestCase):
             self.assertNotEqual(ambient.run_id, historical.run_id)
             status, _headers, accepted = hub.post_rpc(
                 tool_call(2, "accept", run_id=historical.run_id),
+                session_id=chat_session,
                 client_id="chatweb",
                 client_type="chatweb",
+                protocol_version=PROTOCOL_VERSION,
             )
             self.assertEqual(status, 200, accepted)
             self.assertNotIn("error", accepted, accepted)
@@ -240,7 +260,9 @@ class ExecutionHubFaultTests(unittest.TestCase):
             self.assertTrue(structured["accepted"])
             self.assertEqual(structured["orchestration"]["orchestration_state"], "CHECKPOINTED")
             reclaimed = hub.runtime.orchestration_ledger.get_controller_lease(historical.run_id)
-            self.assertEqual(reclaimed["owner_client_id"], "chatweb")
+            reclaimed_chatweb_controller_id = str(reclaimed["owner_client_id"])
+            self.assertTrue(reclaimed_chatweb_controller_id.startswith("chatweb:"), reclaimed_chatweb_controller_id)
+            self.assertEqual(reclaimed_chatweb_controller_id, first_chatweb_controller_id)
             self.assertEqual(reclaimed["status"], "active")
             self.assertEqual(reclaimed["fencing_token"], 2)
             self.assertEqual(hub.runtime.orchestration_ledger.get_run(historical.run_id)["status"], "accepted")

@@ -10,9 +10,27 @@ test('manager overview embeds the token/cost analytics dashboard', () => {
   const html = read('renderer/index.html');
   assert.match(html, /dashboard\.css/);
   assert.match(html, /dashboard\.js/);
-  for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daBytesPerToken', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn']) {
+  for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daBytesPerToken', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn', 'daRealtimeTpm', 'daRealtimeTpmMeta', 'daRealtimeLatency', 'daRealtimeLatencyMeta']) {
     assert.match(html, new RegExp(`id="${id}"`), `missing analytics id ${id}`);
   }
+});
+
+test('realtime performance uses exact rolling five-minute evidence without stale aggregate fallbacks', () => {
+  const js = read('renderer/dashboard.js');
+  const html = read('renderer/index.html');
+  assert.match(js, /REALTIME_WINDOW_MS = 5 \* 60 \* 1000/);
+  assert.match(js, /samples: \[\]/);
+  assert.match(js, /function rollingProviderUsage/);
+  assert.match(js, /function rollingLatency/);
+  assert.match(js, /updateRealtimeMetrics\(records, measured\)/);
+  assert.match(js, /Không có phép đo provider trong 5 phút gần nhất/);
+  assert.match(js, /Không có lệnh trong 5 phút gần nhất/);
+  assert.match(html, /id="daRealtimeTpmMeta"/);
+  assert.match(html, /id="daRealtimeLatencyMeta"/);
+  assert.doesNotMatch(js, /lastHour\[1\]\.in \+ lastHour\[1\]\.out\) \/ 60/);
+  assert.doesNotMatch(js, /measuredTokens \/ 1440/);
+  assert.doesNotMatch(js, /allSummary\?\.calls/);
+  assert.doesNotMatch(js, /compactNumber/);
 });
 
 test('dashboard analytics derive context estimates from measured model-visible bytes', () => {

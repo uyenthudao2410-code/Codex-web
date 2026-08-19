@@ -103,7 +103,7 @@ class HTTPSessionRuntimeView:
 
 
 class HTTPSessionManager:
-    """Share one physical Runtime while isolating stateful ChatWeb execution contexts."""
+    """Route all authenticated HTTP sessions through one shared Runtime while isolating stateful ChatWeb execution contexts."""
 
     def __init__(self, runtime: Any) -> None:
         self._runtime = runtime

@@ -1009,9 +1009,11 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         elif method in {"server/discover", "tools/list", "tools/call"}:
             # Compatibility path for stateless/proxying MCP clients. The response
             # includes Mcp-Session-Id so capable clients become stateful after the
-            # first request, while discovery no longer fails before initialize.
+            # first request. Give each compatibility conversation its own execution
+            # context instead of aliasing every pre-initialize ChatWeb call to the
+            # process-global task projection.
             try:
-                self._runtime = self.server.sessions.create()  # type: ignore[attr-defined]
+                self._runtime = self.server.sessions.create(execution_scoped=True)  # type: ignore[attr-defined]
             except RuntimeError as exc:
                 self.send_rpc_error(-32000, str(exc), status=503, request_id=request.get("id"))
                 return

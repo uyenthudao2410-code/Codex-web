@@ -92,6 +92,9 @@ def _default_state() -> dict[str, Any]:
         "current_command": None,
         "last_command_result": None,
         "completion_report": None,
+        "completion_report_id": "",
+        "completion_report_acknowledged_id": "",
+        "completion_report_acknowledged_at": None,
         "test_results": [],
         "build_results": [],
         "last_build_report": None,
@@ -154,6 +157,67 @@ class TaskStateStore:
         with self._lock:
             return copy.deepcopy(self._read())
 
+    @staticmethod
+    def _completion_report_id(report: dict[str, Any]) -> str:
+        encoded = json.dumps(report, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8", errors="surrogatepass"
+        )
+        return hashlib.sha256(encoded).hexdigest()
+
+    @classmethod
+    def _pending_completion_report_from_state(cls, state: dict[str, Any]) -> dict[str, Any] | None:
+        report = state.get("completion_report")
+        if not isinstance(report, dict) or report.get("operator_visible_required") is not True:
+            return None
+        report_id = str(state.get("completion_report_id") or cls._completion_report_id(report))
+        if str(state.get("completion_report_acknowledged_id") or "") == report_id:
+            return None
+        current = report.get("current_state") if isinstance(report.get("current_state"), dict) else {}
+        return {
+            "report_id": report_id,
+            "accepted_or_not": _text(report.get("accepted_or_not"), 200),
+            "command_id": _text(report.get("command_id"), 200),
+            "orchestration_state": _text(current.get("orchestration_state"), 100),
+            "next_critical_action": _text(report.get("next_critical_action"), 1000),
+        }
+
+    def pending_completion_report(self) -> dict[str, Any] | None:
+        with self._lock:
+            pending = self._pending_completion_report_from_state(self._read())
+            return copy.deepcopy(pending) if pending is not None else None
+
+    def ack_completion_report(self, report_id: str) -> dict[str, Any]:
+        expected = str(report_id or "").strip()
+        with self._lock:
+            state = self._read()
+            pending = self._pending_completion_report_from_state(state)
+            if pending is None:
+                raise ValueError("No operator completion report is awaiting acknowledgement.")
+            if not expected or expected != pending["report_id"]:
+                raise ValueError("completion report acknowledgement does not match the pending report id")
+            state["completion_report_acknowledged_id"] = expected
+            state["completion_report_acknowledged_at"] = utc_now()
+            orchestration_state = str(pending.get("orchestration_state") or "").upper()
+            if orchestration_state == "ACCEPTING":
+                state["current_step"] = "Waiting for ChatWeb Sol acceptance"
+            elif orchestration_state == "REPLAN":
+                state["current_step"] = "Replan report acknowledged"
+            elif orchestration_state == "BLOCKED":
+                state["current_step"] = "Blocked report acknowledged"
+            elif orchestration_state == "ABORTED":
+                state["current_step"] = "Aborted report acknowledged"
+            else:
+                state["current_step"] = "Operator report acknowledged"
+            self._event(state, "operator_completion_report_acknowledged", {"report_id": expected})
+            return self._write(state)
+
+    def _require_no_pending_report(self, state: dict[str, Any], operation: str) -> None:
+        pending = self._pending_completion_report_from_state(state)
+        if pending is not None:
+            raise RuntimeError(
+                f"operator completion report {pending['report_id']} must be acknowledged before {operation}"
+            )
+
     def ensure_started(self, objective: str, *, current_step: str = "") -> dict[str, Any]:
         """Create a visible task automatically when a client skips explicit task setup."""
         with self._lock:
@@ -161,6 +225,7 @@ class TaskStateStore:
             if self._has_task(state) and str(state.get("status", "")) not in {"completed", "failed", "stopped"}:
                 return copy.deepcopy(state)
             if self._has_task(state):
+                self._require_no_pending_report(state, "starting a replacement task")
                 self._archive(state, "finished")
             state = _default_state()
             state["task_id"] = uuid.uuid4().hex
@@ -174,6 +239,7 @@ class TaskStateStore:
         with self._lock:
             state = self._read()
             if self._has_task(state):
+                self._require_no_pending_report(state, "clearing the task")
                 self._archive(state, "cleared")
             if self.path.exists():
                 self.path.unlink()
@@ -199,6 +265,7 @@ class TaskStateStore:
             state = self._read()
             if not self._has_task(state):
                 return state
+            self._require_no_pending_report(state, "resuming the task")
             state["status"] = "active"
             state["pause_reason"] = ""
             if next_step:
@@ -213,6 +280,7 @@ class TaskStateStore:
                 # Discard anonymous tool traces left before a model explicitly started a task.
                 state = _default_state()
             elif changes.get("objective") and self._has_task(state) and changes.get("new_task"):
+                self._require_no_pending_report(state, "superseding the task")
                 self._archive(state, "superseded")
                 state = _default_state()
             if changes.get("objective") and not state.get("task_id"):
@@ -252,13 +320,32 @@ class TaskStateStore:
             state = self._read()
             if not self._has_task(state):
                 return state
+            report_id = self._completion_report_id(report)
+            previous_id = str(state.get("completion_report_id") or "")
             state["completion_report"] = copy.deepcopy(report)
-            failed = str(report.get("accepted_or_not") or "") in {"COMMAND_FAILED", "COMMAND_TERMINATED"}
-            state["current_step"] = "Command failed - operator report required" if failed else "Completed - operator report required"
+            state["completion_report_id"] = report_id
+            if previous_id != report_id:
+                state["completion_report_acknowledged_id"] = ""
+                state["completion_report_acknowledged_at"] = None
+            accepted_or_not = str(report.get("accepted_or_not") or "")
+            current = report.get("current_state") if isinstance(report.get("current_state"), dict) else {}
+            orchestration_state = str(current.get("orchestration_state") or "").upper()
+            failed = accepted_or_not in {"COMMAND_FAILED", "COMMAND_TERMINATED"}
+            if orchestration_state == "ACCEPTING":
+                state["current_step"] = "Acceptance decision - operator report required"
+            elif orchestration_state == "REPLAN":
+                state["current_step"] = "Replan required - operator report required"
+            elif orchestration_state == "BLOCKED":
+                state["current_step"] = "Blocked - operator report required"
+            elif orchestration_state == "ABORTED":
+                state["current_step"] = "Aborted - operator report required"
+            else:
+                state["current_step"] = "Command failed - operator report required" if failed else "Completed - operator report required"
             state["next_step"] = _text(report.get("next_critical_action"), 4000)
             self._event(state, "command_completion_report_required", {
                 "command_id": _text(report.get("command_id"), 200),
-                "accepted_or_not": _text(report.get("accepted_or_not"), 200),
+                "accepted_or_not": _text(accepted_or_not, 200),
+                "report_id": report_id,
             })
             return self._write(state)
 
@@ -300,6 +387,12 @@ class TaskStateStore:
                         self._add_file(state, str(item["path"]), str(item.get("operation", "update")))
                 self._event(state, "files_modified", {"count": len(affected_files)})
             elif name == "exec_command":
+                projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+                projected_run = str(projection.get("run_id") or "")
+                execution_owner = payload.get("execution_owner") if isinstance(payload.get("execution_owner"), dict) else {}
+                owner_run = str(execution_owner.get("run_id") or "")
+                if projected_run and not terminal_orchestration and owner_run != projected_run:
+                    return
                 self._record_command_payload(state, _text(args.get("cmd"), 4000), payload)
             elif name == "command_control":
                 action = str(args.get("action", "poll")).lower()
@@ -380,10 +473,26 @@ class TaskStateStore:
                         state["current_step"] = "Waiting for model"
             self._write(state)
 
-    def record_command_started(self, command: str, session_id: str, workdir: str) -> None:
+    def record_command_started(
+        self,
+        command: str,
+        session_id: str,
+        workdir: str,
+        *,
+        owner_run_id: str = "",
+        owner_wave_id: str = "",
+    ) -> None:
         with self._lock:
             state = self._read()
             if not self._has_task(state):
+                return
+            terminal_orchestration = self._has_terminal_orchestration(state)
+            projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+            projected_run = str(projection.get("run_id") or "")
+            projected_wave = str(projection.get("wave_id") or "")
+            if not terminal_orchestration and projected_run and str(owner_run_id or "") != projected_run:
+                return
+            if not terminal_orchestration and projected_wave and str(owner_wave_id or "") != projected_wave:
                 return
             state["current_command"] = {
                 "command": _text(command, 4000),

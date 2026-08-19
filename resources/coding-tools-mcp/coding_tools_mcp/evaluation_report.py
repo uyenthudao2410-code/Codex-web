@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .evidence_completeness import evidence_completeness_population_report, evidence_completeness_run_report
 from .orchestration_ledger import OrchestrationLedger
 from .rework_diagnosis import stratified_rework_diagnosis
 from .solution_economics import solution_shadow_population_report, solution_shadow_run_report
@@ -171,6 +172,7 @@ def host_binding_summary(workspace: Path, *, ledger: OrchestrationLedger | None 
 def current_ledger_baseline_report(workspace: Path) -> dict[str, Any]:
     root = workspace.resolve()
     ledger = OrchestrationLedger(root)
+    host_events, _ = _load_host_events(root)
     routing_regret = ledger.paired_policy_evaluation()
     performance_path = root / '.coding-tools' / 'performance.json'
     performance = _read_json_object(performance_path)
@@ -189,6 +191,11 @@ def current_ledger_baseline_report(workspace: Path) -> dict[str, Any]:
         'organic_rework': ledger.organic_rework_summary(limit=5000),
         'p2_rework_diagnosis': stratified_rework_diagnosis(ledger, limit=5000),
         'solution_economics_shadow': solution_shadow_population_report(ledger),
+        'evidence_completeness': evidence_completeness_population_report(
+            root,
+            ledger=ledger,
+            host_events=host_events,
+        ),
         'routing_placement_regret': routing_regret,
         'host_visible': host_visible_summary(root),
         'host_binding': host_binding_summary(root, ledger=ledger),
@@ -250,12 +257,23 @@ def evaluation_plane_report(workspace: Path, *, run_id: str = '') -> dict[str, A
             'outcome': None,
             'automatic_policy_activation': False,
         }
+        evidence_completeness = {
+            'schema_version': 1,
+            'status': 'not_requested',
+            'promotion_eligible': 'NO',
+        }
     else:
         ledger = OrchestrationLedger(root)
         if ledger.get_run(run_id) is None:
             raise ValueError('run_id was not found in orchestration ledger')
         causal = ledger.critical_path_analysis(run_id)
         solution_shadow = solution_shadow_run_report(ledger, run_id)
+        evidence_completeness = evidence_completeness_run_report(
+            root,
+            run_id,
+            ledger=ledger,
+            host_events=host_events,
+        )
         spans = ledger.list_observation_spans(run_id, limit=1000)
         journal_host_spans = [
             item for item in host_events
@@ -293,6 +311,7 @@ def evaluation_plane_report(workspace: Path, *, run_id: str = '') -> dict[str, A
         'host_visible': host,
         'causal_run': causal,
         'solution_economics_shadow': solution_shadow,
+        'evidence_completeness': evidence_completeness,
         'host_to_run_correlation': correlation,
         'policy': {
             'never_treat_inter_tool_wait_as_model_latency': True,

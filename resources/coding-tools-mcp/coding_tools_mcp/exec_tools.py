@@ -352,7 +352,13 @@ class ExecToolsMixin:
                 pty_master_fd=pty_master_fd,
             )
             try:
-                self.task_state.record_command_started(cmd, session.session_id, workdir.display)
+                self.task_state.record_command_started(
+                    cmd,
+                    session.session_id,
+                    workdir.display,
+                    owner_run_id=admission.run_id,
+                    owner_wave_id=admission.wave_id,
+                )
             except Exception:
                 pass
             with self.sessions_lock:

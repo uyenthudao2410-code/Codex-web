@@ -1550,6 +1550,7 @@ class ToolModeTests(unittest.TestCase):
             ):
                 result = runtime.agent_workflow({
                     "workflow": "bugfix",
+                    "evaluation": {"provenance": "benchmark"},
                     "phase": "run",
                     "execution_route": "mini",
                     "objective": "change VALUE",
@@ -1600,6 +1601,7 @@ class ToolModeTests(unittest.TestCase):
             ) as bridge_run, patch.dict(server_module.os.environ, {server_module.AGENT_EXTERNAL_REVIEW_ENV: "packet"}):
                 result = runtime.agent_workflow({
                     "workflow": "feature",
+                    "evaluation": {"provenance": "benchmark"},
                     "phase": "execute",
                     "objective": "change app behavior",
                     "patch": "*** Begin Patch\n*** End Patch",
@@ -1630,6 +1632,7 @@ class ToolModeTests(unittest.TestCase):
                 server_module.os.environ.pop(server_module.AGENT_EXTERNAL_REVIEW_ENV, None)
                 result = runtime.agent_workflow({
                     "workflow": "feature",
+                    "evaluation": {"provenance": "benchmark"},
                     "phase": "execute",
                     "objective": "change app behavior",
                     "patch": "*** Begin Patch\n*** End Patch",
@@ -1661,6 +1664,7 @@ class ToolModeTests(unittest.TestCase):
             ) as bridge_run, patch.dict(server_module.os.environ, {server_module.AGENT_EXTERNAL_REVIEW_ENV: "auto"}):
                 result = runtime.agent_workflow({
                     "workflow": "bugfix",
+                    "evaluation": {"provenance": "benchmark"},
                     "phase": "execute",
                     "objective": "fix localized bug",
                     "patch": "*** Begin Patch\n*** End Patch",

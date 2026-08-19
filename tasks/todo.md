@@ -1,31 +1,29 @@
-# Task List: Redesign Control Center (Light Theme, Elegant Balance & Real Data)
+# Tasks: UI Enhancement for Cost Tab & Control Center
 
-- [x] 1. Architectural & Layout Design for Light Theme & Dynamic Data <!-- id: 0 -->
-  - [x] Review all CSS design tokens in `control-center.css` & `dashboard.css` for light mode purity and dark mode compatibility <!-- id: 1 -->
-  - [x] Audit all DOM elements in `index.html` and dynamic render logic in `dashboard.js` & `control-center.js` <!-- id: 2 -->
-- [x] 2. Implementation: HTML Structure & Markup Refinement <!-- id: 3 -->
-  - [x] Update filter bar in `index.html` with dynamic date, workspace title binding, and clean pill layout <!-- id: 4 -->
-  - [x] Fix formatting templates for Donut legend, Tool ranking list, and Fleet table <!-- id: 5 -->
-  - [x] Ensure all test IDs and required telemetry strings (`Phân tích Context & Chi phí`, `recent trace`, `MEASURED`, `ESTIMATED`, `SCENARIO`, etc.) are 100% preserved <!-- id: 6 -->
-- [x] 3. Implementation: CSS Light Theme & Balanced Layout Styles <!-- id: 7 -->
-  - [x] Update `dashboard.css` to implement a crisp, modern light theme by default (`#f8fafc`, `#ffffff`, `#e2e8f0`) with rich dark mode tokens under `body[data-theme="dark"]` <!-- id: 8 -->
-  - [x] Fix squashed tool rows in Chart 3 (proper flex/grid columns for rank, tool name, stats, bar, cost) <!-- id: 9 -->
-  - [x] Fix squashed donut legend items in Chart 2 (dot, name, count, percentage badges) <!-- id: 10 -->
-  - [x] Perfect the 6 KPI cards, 3 Main chart columns, and 4 Subcards for balanced proportions and spacing <!-- id: 11 -->
-  - [x] Polish SVG charts, line gradients, grid lines, and interactive hover tooltips for light/dark backgrounds <!-- id: 12 -->
-  - [x] Style the Model Fleet Table with clean borders, headers, and status badges <!-- id: 13 -->
-- [x] 4. Implementation: Real Data Binding in `dashboard.js` & `control-center.js` <!-- id: 14 -->
-  - [x] Bind real workspace name to Project dropdown and real date dynamically <!-- id: 15 -->
-  - [x] Dynamically populate the Model Fleet Table (`#daFleetTableBody`) from real model/delegation evidence <!-- id: 16 -->
-  - [x] Compute real-time TPM, Latency, Anomaly detection, and Quick summary from live `performance` & `orchestration` trace <!-- id: 17 -->
-  - [x] Ensure Donut and Tool bars render real tool telemetry with proper text formatting <!-- id: 18 -->
-- [x] 5. Verification & Testing <!-- id: 19 -->
-  - [x] Run `npm test` to verify all 234+ test suites pass cleanly <!-- id: 20 -->
-  - [x] Verify light theme toggle and layout responsiveness <!-- id: 21 -->
-  - [x] Review git status and staging invariants <!-- id: 22 -->
+- [x] 1. Architecture & Design Specification <!-- id: 0 -->
+  - [x] Analyze reference screenshot layout: Project Hero Header, 6 Financial KPI Cards, Search & Filter Toolbar, Master Cost Table (Left), Detail Inspector Drawer (Right) <!-- id: 1 -->
+  - [x] Define comprehensive design system tokens (Light theme primary, Dark theme supported, Plus Jakarta Sans typography, sleek card shadows, refined pills & status badges) <!-- id: 2 -->
+- [x] 2. Implementation: HTML Structure & Markup <!-- id: 3 -->
+  - [x] Create `renderer/cost-tab.html` as a standalone interactive viewer with mock construction project data (DA2532 - Ký túc xá WISTRON) <!-- id: 4 -->
+  - [x] Embed Cost Management view (`<section data-page-view="cost">`) and navigation tab (`CP - Chi phí DA`) into `renderer/index.html` <!-- id: 5 -->
+- [x] 3. Implementation: CSS Stylesheet (`renderer/cost-tab.css`) <!-- id: 6 -->
+  - [x] Implement Project Hero Card (Thumbnail, Project meta, Value 28 tỷ, Radial progress gauge, live status pills) <!-- id: 7 -->
+  - [x] Implement 6 Financial KPI Metric Cards (Total Cost 3.42 tỷ, Approved, Pending Approval, Paid, Remaining, Overdue) <!-- id: 8 -->
+  - [x] Implement Search & Filter Toolbar with dropdowns, date picker, search input, and action buttons <!-- id: 9 -->
+  - [x] Implement Master-Detail layout: Data table with sorting, category chips, money badges, approval pills, and action dropdown <!-- id: 10 -->
+  - [x] Implement Detail Inspector Drawer with sub-tabs (General Info, Source Payments, Attachments, Approval Flow, Audit Log) <!-- id: 11 -->
+  - [x] Add Modal "Thêm chi phí mới" and Toast notification system <!-- id: 12 -->
+- [x] 4. Implementation: Interactive JavaScript Logic (`renderer/cost-tab.js`) <!-- id: 13 -->
+  - [x] Add rich realistic dataset based on construction & enterprise project expenses (Materials, Labor, Transport, Heavy Machinery, Subcontractors) <!-- id: 14 -->
+  - [x] Implement real-time search, multi-filter filtering, column sorting, and pagination <!-- id: 15 -->
+  - [x] Implement Master-Detail selection: click row to load detail into inspector drawer with smooth animation <!-- id: 16 -->
+  - [x] Implement Add Expense modal with form validation, quick approval actions, and export simulation <!-- id: 17 -->
+- [x] 5. Verification & Testing <!-- id: 18 -->
+  - [x] Run `npm test` to ensure all 238 test suites continue to pass without regression <!-- id: 19 -->
+  - [x] Test layout balance, responsive master-detail resizing, interactive filtering, and drawer toggle <!-- id: 20 -->
+  - [x] Check coding-tools delivery and git invariants <!-- id: 21 -->
 
 ## Review & Verification Results
-- **Theme**: Hoàn thiện toàn bộ giao diện Sáng (Light Theme) tinh tế, sang trọng với các token chuẩn `#f8fafc` / `#ffffff`, viền nhẹ `#e2e8f0`, đổ bóng mềm mại, đồng thời bảo lưu đầy đủ Dark Theme.
-- **Bố cục & Căn chỉnh**: Sửa triệt để các lỗi dính chữ và tràn text ở Biểu đồ Donut (tách biệt cột tên, token, % thị phần), Bảng xếp hạng công cụ (huy hiệu rank, tên, progress bar, chi phí), 6 thẻ KPI, và 4 thẻ phụ.
-- **Dữ liệu Thực**: Tự động liên kết ngày giờ thực tế (`📅 Hôm nay - 19/08/2026`), tên workspace thực tế (`Codex-web`), hiển thị đầy đủ Bảng hiệu quả mô hình (Fleet Table), TPM/độ trễ và cảnh báo thực tế từ MCP telemetry trace và orchestration ledger.
-- **Test Suite**: 234/234 test pass 100% không có hồi quy nào (`dashboard-analytics.test.js`, `control-panel.test.js`, v.v.).
+- **Hoàn thiện UI Tab Chi Phí**: Tạo thành công trang giao diện chuyên nghiệp tại [`renderer/cost-tab.html`](file:///e:/DEV/Codex-web/renderer/cost-tab.html), [`renderer/cost-tab.css`](file:///e:/DEV/Codex-web/renderer/cost-tab.css), [`renderer/cost-tab.js`](file:///e:/DEV/Codex-web/renderer/cost-tab.js).
+- **Thiết kế chuẩn Enterprise**: Layout Master-Detail cân đối tinh tế, 6 thẻ KPI tài chính trực quan, thanh lọc đa tiêu chí, drawer inspector xem chi tiết chi phí với 4 tab con, modal tạo phát sinh chi phí mới và hỗ trợ chuyển đổi Light/Dark theme.
+- **Kiểm thử**: 238/238 test pass 100%, bảo đảm toàn bộ hệ thống vận hành trơn tru.

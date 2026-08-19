@@ -99,7 +99,7 @@ from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, 
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class  # noqa: F401  # composition-root namespace
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
 from .orchestration_report import OrchestrationReport  # noqa: F401  # composition-root namespace
-from .operator_report import OPERATOR_REPORT_STATES, build_command_completion_report, build_operator_completion_report  # noqa: F401  # composition-root namespace
+from .operator_report import build_command_completion_report, build_orchestration_runtime_result  # noqa: F401  # composition-root namespace
 from .proof_ledger import ProofLedger  # noqa: F401  # composition-root namespace
 from .telemetry import SessionTelemetry  # noqa: F401  # composition-root namespace
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head  # noqa: F401  # composition-root namespace
@@ -2619,28 +2619,7 @@ class Runtime(
             pass
 
     def _orchestration_result(self, ctx: RunContext | None, *, write_reports: bool = True) -> dict[str, Any] | None:
-        if ctx is None:
-            return None
-        reports: dict[str, Any] = {}
-        if write_reports:
-            try:
-                reports = self.orchestration_report.write_reports(ctx.run_id)
-            except (OSError, ValueError, KeyError) as exc:
-                reports = {"error": str(exc)[:500]}
-        result = {
-            **ctx.projection(),
-            "integrity": self.orchestration_ledger.verify_chain(ctx.run_id),
-            "reports": reports,
-            "final_acceptance_required": ctx.state == "ACCEPTING",
-        }
-        if str(ctx.state or "").upper() in OPERATOR_REPORT_STATES:
-            result["completion_report"] = build_operator_completion_report(
-                ledger=self.orchestration_ledger,
-                ctx=ctx,
-                task_state=self.task_state.get(),
-                reports=reports,
-            )
-        return result
+        return build_orchestration_runtime_result(self, ctx, write_reports=write_reports)
 
     def codex_bridge(self, args: dict[str, Any]) -> dict[str, Any]:
         try:

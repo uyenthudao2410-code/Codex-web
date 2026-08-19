@@ -345,13 +345,25 @@ class CoordinationMixin:
         projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
         run_id = str(args.get("run_id") or projection.get("run_id") or "").strip()
         wave_id = str(args.get("wave_id") or projection.get("wave_id") or "").strip()
-        if not run_id:
+        if not run_id and not self.task_state.is_scoped():
             active = self.orchestration_ledger.current_active_run()
             run_id = str(active.get("run_id") or "") if active else ""
             if run_id and not wave_id:
                 waves = self.orchestration_ledger.list_waves(run_id)
                 wave_id = str(waves[-1].get("wave_id") or "") if waves else ""
         return state, projection, run_id, wave_id
+
+    def _require_operator_report_ack(self, operation: str) -> None:
+        pending = self.task_state.pending_completion_report()
+        if pending is None:
+            return
+        raise ToolFailure(
+            "OPERATOR_REPORT_ACK_REQUIRED",
+            f"Present and acknowledge the pending operator completion report before {operation}.",
+            category="runtime",
+            retryable=True,
+            details=pending,
+        )
 
     @staticmethod
     def _coordination_lane_outcome(bridge_result: dict[str, Any]) -> dict[str, Any]:
@@ -943,19 +955,40 @@ class CoordinationMixin:
         if not run_id:
             raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "No orchestration run is available for solution shadow evidence.", category="not_found")
         recording = None
+        context_recovered = False
         if recommendation is not None:
             if not isinstance(recommendation, dict):
                 raise ToolFailure("SOLUTION_SHADOW_INVALID", "solution shadow recommendation must be an object.", category="validation")
             projected_run = str(projection.get("run_id") or "").strip()
             projected_wave = str(projection.get("wave_id") or "").strip()
             if run_id != projected_run or not wave_id or wave_id != projected_wave:
-                raise ToolFailure(
-                    "SOLUTION_SHADOW_CONTEXT_MISMATCH",
-                    "Solution shadow recording requires the current task-projected run and wave.",
-                    category="runtime",
-                    retryable=True,
-                    details={"run_id": run_id, "wave_id": wave_id, "projected_run_id": projected_run, "projected_wave_id": projected_wave},
-                )
+                explicit_run = str(args.get("run_id") or "").strip()
+                explicit_wave = str(args.get("wave_id") or "").strip()
+                ctx = self.orchestration_control.snapshot(run_id) if explicit_run and explicit_wave else None
+                if (
+                    ctx is None
+                    or ctx.run_id != explicit_run
+                    or ctx.wave_id != explicit_wave
+                    or ctx.state not in {"PREFLIGHT", "READY"}
+                ):
+                    raise ToolFailure(
+                        "SOLUTION_SHADOW_CONTEXT_MISMATCH",
+                        "Solution shadow recording requires the current task-projected run/wave or an explicit current PREFLIGHT/READY run/wave.",
+                        category="runtime",
+                        retryable=True,
+                        details={
+                            "run_id": run_id,
+                            "wave_id": wave_id,
+                            "projected_run_id": projected_run,
+                            "projected_wave_id": projected_wave,
+                            "explicit_context_recovery": bool(explicit_run and explicit_wave),
+                        },
+                    )
+                self._require_hub_controller(run_id)
+                context_recovered = True
+            else:
+                ctx = self.orchestration_control.snapshot(run_id)
+                self._require_hub_controller(run_id)
             try:
                 recording = record_solution_shadow(
                     self.orchestration_ledger,
@@ -965,10 +998,13 @@ class CoordinationMixin:
                 )
             except ValueError as exc:
                 raise ToolFailure("SOLUTION_SHADOW_INVALID", str(exc), category="validation", retryable=False) from exc
+            if context_recovered and ctx is not None:
+                self._project_orchestration(ctx, event="solution_shadow_context_recovered")
         return {
             "recording": recording,
             "solution_shadow": solution_shadow_run_report(self.orchestration_ledger, run_id),
             "transport": transport,
+            "context_recovered": context_recovered,
             "production_behavior_changed": False,
         }
 
@@ -1032,7 +1068,7 @@ class CoordinationMixin:
             observed = replay.get("events") or []
             if identity and observed:
                 replay["client_cursor"] = self.orchestration_ledger.advance_hub_client_cursor(
-                    client_id=str(identity["client_id"]),
+                    client_id=self._hub_client_record_id(identity),
                     run_id=run_id,
                     last_event_seq=int(observed[-1].get("seq") or 0),
                 )
@@ -1329,12 +1365,14 @@ class CoordinationMixin:
         if action == "history":
             return {"tasks": self.task_state.history(int(args.get("limit", 20)))}
         if action == "clear":
+            self._require_operator_report_ack("clearing the current task")
             self._abort_task_orchestration(self.task_state.get(), reason="task_cleared")
             return {"state": self.task_state.clear(), "cleared": True}
         if action == "start":
             objective = str(args.get("objective", "")).strip()
             if not objective:
                 raise ToolFailure("INVALID_ARGUMENT", "objective is required when action=start.", category="validation")
+            self._require_operator_report_ack("starting a new task")
             self._abort_task_orchestration(self.task_state.get(), reason="task_replaced")
             changes = {
                 "objective": objective,
@@ -1348,6 +1386,33 @@ class CoordinationMixin:
             return {"state": self.task_state.update(changes, event="task_started")}
         if action == "update":
             payload = args.get("payload")
+            if isinstance(payload, dict) and payload.get("extension") == "operator_report_ack_v1":
+                unexpected = sorted(set(payload) - {"extension", "report_id"})
+                if unexpected:
+                    raise ToolFailure(
+                        "OPERATOR_REPORT_ACK_INVALID",
+                        "operator_report_ack_v1 payload contains unsupported fields.",
+                        category="validation",
+                        details={"unsupported": unexpected},
+                    )
+                report_id = str(payload.get("report_id") or "").strip()
+                if not report_id:
+                    raise ToolFailure(
+                        "OPERATOR_REPORT_ACK_INVALID",
+                        "operator_report_ack_v1 payload.report_id is required.",
+                        category="validation",
+                    )
+                try:
+                    state = self.task_state.ack_completion_report(report_id)
+                except ValueError as exc:
+                    raise ToolFailure(
+                        "OPERATOR_REPORT_ACK_INVALID",
+                        str(exc),
+                        category="runtime",
+                        retryable=True,
+                        details={"report_id": report_id},
+                    ) from exc
+                return {"state": state, "acknowledged": True, "report_id": report_id}
             if isinstance(payload, dict) and payload.get("extension") == "solution_shadow_v1":
                 unexpected = sorted(set(payload) - {"extension", "recommendation"})
                 if unexpected:
@@ -1369,6 +1434,7 @@ class CoordinationMixin:
                     recommendation,
                     transport="frozen_chatgpt_schema_extension_v1",
                 )
+            self._require_operator_report_ack("updating the task")
             changes = {key: args[key] for key in ("objective", "steps", "current_step", "next_step", "status", "failure", "complete_step_ids") if key in args}
             return {"state": self.task_state.update(changes)}
         if action == "pause":
@@ -1381,6 +1447,7 @@ class CoordinationMixin:
                     pass
             return {"state": self.task_state.get(), "paused": True}
         if action == "resume":
+            self._require_operator_report_ack("resuming the task")
             return {"state": self.task_state.resume(str(args.get("next_step", "")))}
         if action == "stop":
             explicit_run_id = str(args.get("run_id") or "").strip()

@@ -194,6 +194,7 @@ class AgentWorkflowMixin:
         objective: str,
     ) -> tuple[RunContext, dict[str, Any]]:
         self._preflight_tool_workspace_scope("agent_workflow", args)
+        self._require_operator_report_ack("starting or continuing a material agent workflow")
         identity = self._orchestration_workspace_identity(args.get("path", "."))
         current_task = self.task_state.get()
         projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}

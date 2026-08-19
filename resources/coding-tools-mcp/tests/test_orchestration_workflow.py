@@ -24,10 +24,28 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
                 "phase": "run",
                 "objective": "change value",
                 "execution_mode": "coordinated_multi_worktree",
+                "evaluation": {"provenance": "benchmark"},
                 "verification": "none",
             })
             self.assertEqual(blocked["orchestration"]["orchestration_state"], "REPLAN")
             self.assertEqual(blocked["execution"]["reason"], "SUPERVISOR_NOT_READY")
+
+            with self.assertRaises(ToolFailure) as pending_report:
+                runtime.agent_workflow({
+                    "workflow": "feature",
+                    "phase": "execute",
+                    "objective": "change value",
+                    "execution_mode": "mcp_only",
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                })
+            self.assertEqual(pending_report.exception.code, "OPERATOR_REPORT_ACK_REQUIRED")
+            report_id = runtime.task_state.pending_completion_report()["report_id"]
+            acknowledged = runtime.task_control({
+                "action": "update",
+                "payload": {"extension": "operator_report_ack_v1", "report_id": report_id},
+            })
+            self.assertTrue(acknowledged["acknowledged"])
 
             with self.assertRaises(ToolFailure) as missing_reason:
                 runtime.agent_workflow({
@@ -96,6 +114,7 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
                 "workflow": "bugfix",
                 "phase": "execute",
                 "objective": "change value",
+                "evaluation": {"provenance": "benchmark"},
                 "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
                 "verification": "none",
                 "include_diff": False,
@@ -122,6 +141,7 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
                 "workflow": "bugfix",
                 "phase": "execute",
                 "objective": "change value",
+                "evaluation": {"provenance": "benchmark"},
                 "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
                 "verification": "none",
                 "include_diff": False,
