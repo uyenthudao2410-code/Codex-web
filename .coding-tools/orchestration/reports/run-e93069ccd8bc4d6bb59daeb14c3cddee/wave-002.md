@@ -7,7 +7,7 @@
 - Base HEAD: `66c2d17b68969c3a413b867cc7281f80fbaf4b45`
 - Worktree fingerprint: `49df1bd45be44847a81ecf6f72ac256ef772a2548b2ee066fa371120889e626c`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **replanned**
 
 ## Delegations
 
@@ -42,6 +42,12 @@
 | 23940 | 2026-08-20T11:28:20.851Z | managed_process_terminal |  |  | owner=default |
 | 23941 | 2026-08-20T11:28:29.165Z | proof_recorded |  |  | stage_id=verify:all; status=passed; cache_hit=False; input_fingerprint=8392025387041075b4e96edbfdde3cb3c39bf6a67e70ddfb707393f664f8e790 |
 | 23942 | 2026-08-20T11:28:29.455Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 23943 | 2026-08-20T11:39:07.019Z | managed_process_admitted |  |  | owner=default |
+| 23944 | 2026-08-20T11:39:07.325Z | managed_process_started |  |  | owner=default |
+| 23945 | 2026-08-20T11:39:08.662Z | managed_process_terminal |  |  | owner=default |
+| 23946 | 2026-08-20T11:39:26.185Z | failure_observed | ACCEPTING | ACCEPTING | reason=Controller rejection: acceptance oracle was false-green. Current source tree has no W1 required symbols include_project_instructions/include_workflow_guidance or the three required sparsifiers, and Git diff contains no W1 source changes. Focused cargo test filters passed without proving implementation presence. Replan must add explicit source-presence assertions/non-zero matching regression tests and implement W1 deterministically before acceptance.; failure_class=SOL_REJECTED |
+| 23947 | 2026-08-20T11:39:28.219Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
+| 23948 | 2026-08-20T11:39:28.586Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
 
 ## Proof
 
@@ -59,5 +65,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `63`
-- Chain head: `4bff2b05eb94b3c4e379ac5c293c742e9cd2b261bb76e4d2e81ae85ffb67466e`
+- Events checked: `86`
+- Chain head: `86ff6f220ed633371c16f8c9d708dbab4535a3695e2f74d603db51e9f0749d54`

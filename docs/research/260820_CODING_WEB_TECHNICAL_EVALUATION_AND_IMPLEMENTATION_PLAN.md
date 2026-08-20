@@ -2,7 +2,7 @@
 
 > **Baseline đánh giá ban đầu:** 2026-08-20  
 > **Chuyển sang active implementation control:** 2026-08-20  
-> **Checkpoint cập nhật gần nhất:** 2026-08-20 18:20 +07:00  
+> **Checkpoint cập nhật gần nhất:** 2026-08-20 18:36 +07:00  
 > **Workspace canonical:** `E:\DEV\Codex-web`  
 > **Topology được operator chốt:** **một checkout canonical, một source writer tại một thời điểm, không dùng Git worktree cho chương trình này**  
 > **Product:** Windows Electron Execution Hub + Recovery Host + **một** Coding Tools MCP Runtime  
@@ -74,7 +74,7 @@ Các nguyên tắc bắt buộc:
 |---|---|---|---|---|
 | **S0** | P4 residual closeout | **ACCEPTED** | RUN `f914183e232d4684aab696e81c1144df`, WAVE `5752420f2e44402f885bf9f9b4ec3294`; `test_orchestration_tax.py` **3/3 PASS**; `test_model_extreme_closeout.py` **2/2 PASS**; proof fp `aec5f237b342c5285efc4b83664964c31c9c3c7e30b54716b6a759b05b306365` | Preserve accepted diff; no implicit commit/push |
 | **S1** | Convert proposal -> active control plan; replace worktree design | **ACCEPTED** | Active control plan established; single-checkout/single-writer topology, W6 coordinator contract and W14 candidate-only shadow are now authoritative for this program | Keep document synchronized after each accepted/material wave |
-| **S2** | W0 baseline + W1/W2/W3 audit and bounded quick wins | **IN_PROGRESS** | **W3 ACCEPTED/CHECKPOINTED** on RUN `405ae4561b174ae9b228fdbdf6a172ec`, WAVE `c5ff66f9602e4bfda9982e7d36938bb1`; W0/W1/W2 remain to close | Finish current-vs-upstream-vs-proposed matrix and evidence-backed W1/W2 deltas |
+| **S2** | W0 baseline + W1/W2/W3 audit and bounded quick wins | **IN_PROGRESS / W1 REPLAN** | **W3 ACCEPTED/CHECKPOINTED** on RUN `405ae4561b174ae9b228fdbdf6a172ec`, WAVE `c5ff66f9602e4bfda9982e7d36938bb1`; W1 RUN `e93069ccd8bc4d6bb59daeb14c3cddee` WAVE `84706097ef7f4c81b87bb8b6edb35c89` rejected after controller found a false-green zero-match oracle and no W1 source implementation | Replan W1 with source-presence + exact named-test existence gates; then close W2/W0 |
 | **S3** | Semantic provider health + W4 Semantic Repository Graph MVP | **PLANNED** | Native provider currently reported unavailable with `NATIVE_LSP_BINDING_NOT_CONFIGURED`; safe fallback required | Focused graph/provider proof |
 | **S4** | W5 Context Compiler + paired evaluation | **PLANNED** | Deterministic context packet, budget/dedupe/stale handling | Representative efficacy gate |
 | **S5** | W6 Single-Checkout Mutation Coordinator | **PLANNED** | Single-writer lease, dirty ownership/fingerprint fence, reconnect rules | Concurrency/fail-closed proof |
@@ -181,6 +181,55 @@ ChatWeb/Sol final-controller review đã kiểm full 7-file diff và adjacent-ri
 **Claim:** source + focused proof. **Không claim live-active/package/released. Chưa commit/push/restart/deploy/release.**
 
 **Next critical action:** hoàn tất W0/W1/W2 audit và chỉ implement sparse/artifact delta có evidence trước khi mở S3.
+
+## 0.7. S2/W1 control checkpoint — false-green oracle rejected
+
+**CHECKPOINT:** `S2 / W1 / sparse-projection-false-green-rejection`  
+**TIME:** `2026-08-20T18:36:00+07:00`  
+**STATUS:** **REPLAN / NOT ACCEPTED**  
+**BASE:** `66c2d17b68969c3a413b867cc7281f80fbaf4b45`  
+**RUN/WAVE:** RUN `e93069ccd8bc4d6bb59daeb14c3cddee`, rejected WAVE `84706097ef7f4c81b87bb8b6edb35c89`  
+**WORKSPACE FP:** `49df1bd45be44847a81ecf6f72ac256ef772a2548b2ee066fa371120889e626c`
+
+Controller inspection phát hiện acceptance oracle của W1 có thể trả xanh dù implementation không tồn tại. Hai proof được durable ledger ghi PASS:
+
+```text
+proof_id: 1e1ed9d7911449d29e30238ad3dcb63b
+proof_id: f2ccc1a24c5c409e9c1db269d0fb980a
+```
+
+không đủ để accept W1, vì command test dùng substring filter `sparsif` / `work_on_project_projection` mà không có gate chứng minh exact regression test tồn tại và thực sự được chạy. Controller đã đối chiếu trực tiếp current source/Git state và xác nhận:
+
+```text
+required symbols absent:
+  include_project_instructions
+  include_workflow_guidance
+  sparsify_complete_read_success
+  sparsify_complete_default_search_success
+  sparsify_terminal_structured_execution_success
+
+Git source diff for W1:
+  none
+
+Dirty paths observed:
+  .coding-tools/orchestration/ledger.sqlite3
+  .coding-tools/performance.json
+  .coding-tools/task-history.json
+  .coding-tools/task-state.json
+```
+
+Do đó wave đã bị ChatWeb/Sol **REJECT** thay vì accept mù. EOCL chuyển sang `REPLAN`; không có W1 source write để rollback và resources vẫn quiescent.
+
+Hai lần thử trước cũng không tạo source mutation:
+
+1. W1 v1: broad existing-test oracle bị baseline harness debt làm nhiễu — phần lớn failure do test-process environment không tìm thấy external `git`, thêm một fixture relative-path không còn phù hợp absolute-path contract.
+2. W1 v2: delegated `sol_xhigh` fail closed với `DELEGATED_FULL_COMPLETION_REQUIRED` trước source write.
+
+**Changed strategy cho W1 v3:** deterministic MCP-only, một writer; acceptance oracle bắt buộc gồm cả **source-presence assertion** và **exact named-test existence assertion** trước khi chạy focused regressions. Zero-match test run không được coi là proof. Sau đó mới chạy format/check và controller review full diff.
+
+**Claim:** control/evidence correction only. **W1 chưa source-present, chưa focused-proof accepted, chưa live-active, chưa packaged/released.**
+
+**Next critical action:** mở W1 v3 replan wave, localize exact implementation points, implement minimal #105 adaptation, proof bằng non-zero exact regressions, rồi chỉ accept/checkpoint khi source diff và durable proof khớp nhau.
 
 ---
 
@@ -350,7 +399,7 @@ Project đã có `turn_id`, `trace_id`, `span_id`, performance telemetry, host o
 | ID | Workstream | Ưu tiên | Giá trị | Rủi ro | Ghi chú active |
 |---|---|---:|---:|---:|---|
 | W0 | Baseline + upstream feature-family audit | P0 | Cao | Thấp | S2 — in progress |
-| W1 | Sparse model-facing projection audit | P0 | Cao | Thấp–TB | S2; port invariant, không broad merge |
+| W1 | Sparse model-facing projection audit | P0 | Cao | Thấp–TB | **S2 — REPLAN**; prior acceptance oracle rejected as false-green; deterministic implementation required |
 | W2 | Artifact bridge/import/export/streaming audit | P0 | Cao | TB | S2; generalize `artifact_refs` |
 | W3 | Caller attribution audit | P0 | Cao | Thấp–TB | **S2 ACCEPTED/CHECKPOINTED**; source + focused proof |
 | W4 | Semantic Repository Graph | P0 | Rất cao | TB–Cao | S3; provider health + safe fallback |
@@ -459,7 +508,7 @@ Theo dõi:
 
 Chỉ giảm payload nếu vẫn giữ failure class, `timeout/outcome_unknown`, continuation identity, proof/source identity và retry-safety semantics.
 
-**S2 state:** upstream sparse projection invariant đã được xác định là partially present trong fork; exact missing projection surfaces vẫn phải được localized trước patch. Không broad-port PR #105.
+**S2 state:** upstream PR #105 family đã được localized thành gap thật: current source chưa có hai `work_on_project` projection controls (`include_project_instructions`, `include_workflow_guidance`) và chưa có ba post-recording success sparsifiers cho complete default read, ordinary default rg search và synchronous structured execution. W1 chưa source-present. Một prior wave đã bị controller reject vì zero-match test filter tạo false-green proof. W1 v3 bắt buộc deterministic MCP-only + source-presence assertion + exact named-test existence assertion + focused regressions; không broad-port PR #105.
 
 ## W2 — Artifact pipeline
 
@@ -809,7 +858,7 @@ Chỉ mở khi có consumer thật. Nếu mở, map vào existing Task Coordinat
 
 ## S2 — W0/W1/W2/W3
 
-**Status: IN_PROGRESS. W3 đã ACCEPTED.**
+**Status: IN_PROGRESS. W3 đã ACCEPTED; W1 đang REPLAN.**
 
 1. Snapshot baseline đại diện.
 2. Feature-family audit.
@@ -820,10 +869,12 @@ Current checkpoint:
 
 ```text
 W0  feature-family matrix      IN_PROGRESS
-W1  sparse projection          AUDIT / LOCALIZE EXACT DELTA
+W1  sparse projection          REPLAN — FALSE-GREEN ORACLE REJECTED; IMPLEMENTATION REQUIRED
 W2  artifact pipeline          AUDIT / LOCALIZE EXACT DELTA
 W3  caller attribution         ACCEPTED / CHECKPOINTED
 ```
+
+**W1 acceptance hardening:** mọi W1 wave tiếp theo phải fail nếu required source symbols không tồn tại, fail nếu exact named regressions không xuất hiện trong `cargo test -- --list`, và chỉ sau đó mới được chạy test/check làm acceptance evidence.
 
 **Exit:** W0/W1/W2/W3 đều có quyết định rõ; quick win không phá P4/P5 semantics; mọi implemented delta có focused proof + acceptance.
 
@@ -977,7 +1028,7 @@ upstream invariant
 
 Thứ tự audit: sparse projection -> artifact pipeline -> caller attribution -> Computer Use sau W7 -> detached Job invariants -> release/platform hardening liên quan trực tiếp.
 
-W3 caller attribution đã hoàn thành theo chiến lược `adapt`, không broad cherry-pick. W1/W2 tiếp tục theo cùng quy tắc.
+W3 caller attribution đã hoàn thành theo chiến lược `adapt`, không broad cherry-pick. W1/W2 tiếp tục theo cùng quy tắc. W1 false-green incident ở §0.7 được dùng để harden acceptance oracle cho các wave còn lại: source/test existence phải được chứng minh, không suy ra từ exit code của substring filter.
 
 ---
 
@@ -1027,10 +1078,10 @@ Representative khác benchmark/synthetic; experiment không tự đổi authorit
 Problem, non-goals, owner/boundary, no duplicate authority.
 
 ### G1 — Source
-Smallest coherent implementation + compatibility/schema + focused tests.
+Smallest coherent implementation + compatibility/schema + focused tests. Source-presence assertions phải chứng minh implementation được kiểm thực sự; test filters không được xem là đủ nếu zero-match có thể exit 0.
 
 ### G2 — Proof
-Exact changed behavior + negative/edge cases; không chạy full-suite vô điều kiện.
+Exact changed behavior + negative/edge cases; không chạy full-suite vô điều kiện. Regression names/identities phải được xác nhận tồn tại trước execution khi acceptance dùng filtered test commands.
 
 ### G3 — EOCL acceptance
 Proof lineage hoàn chỉnh; one-writer ownership rõ; no unresolved source contamination/conflict/job state.
@@ -1056,6 +1107,7 @@ Representative evidence + stable oracle + no quality regression + preregistered 
 | Hai session cùng mutation canonical checkout | One active source lease; non-owner read/candidate-only; fail closed |
 | Foreign dirty source làm proof sai fingerprint | Pre/post-write dirty snapshot + base/source fingerprint fence + REPLAN |
 | Reconnect tạo duplicate writer | Durable owner/lease identity + terminalization/recovery reconciliation |
+| False-green filtered tests | Assert required source symbols + enumerate exact named tests before accepting filtered proof; zero-match is rejection/replan |
 | Secret exfiltration | Opaque handles + scoped injection + deny-by-default + negative tests |
 | CAS/cache sai môi trường | Cache deterministic data trước; execution cache chỉ khi hermetic key đủ |
 | Retry duplicate side effect | Exactly-once identity; explicit unknown/recovering/lost; no unsafe replay |
@@ -1097,7 +1149,8 @@ Rollback không xóa evidence ledger và không giả side effect chưa xảy ra
 - broad upstream merge;
 - chỉnh `.coding-tools` evidence để report đẹp hơn;
 - reset/rebase/clean unrelated WIP để tạo “clean baseline” giả;
-- gọi source-present là live/released.
+- gọi source-present là live/released;
+- accept wave chỉ vì filtered test command exit 0 nếu chưa chứng minh filter match đúng regression cần thiết.
 
 ---
 
@@ -1110,7 +1163,9 @@ S0  P4 residual closeout                         ACCEPTED
 S1  Active control plan + no-worktree topology  ACCEPTED
 S2  W0 + W1/W2/W3 audit/quick wins              IN_PROGRESS
     W3 caller attribution                       ACCEPTED
-    W0/W1/W2                                     NEXT
+    W1 sparse projection                        REPLAN — IMPLEMENT W1 v3 WITH HARDENED ORACLE
+    W2 artifact pipeline                        AFTER W1 ACCEPTANCE
+    W0 feature-family matrix                    CLOSE BEFORE S3
 S3  Semantic provider health + W4               QUEUED
 S4  W5 Context Compiler                         QUEUED
 S5  W6 Single-Checkout Mutation Coordinator     QUEUED
@@ -1126,6 +1181,7 @@ Mỗi stage được chia thành wave nhỏ đủ để:
 preflight
  -> one writer lease nếu cần
  -> causal change
+ -> source/test existence gate
  -> focused proof
  -> acceptance
  -> update document
@@ -1147,7 +1203,7 @@ Phase chỉ hoàn thành khi chứng minh được:
 5. **Observability:** task có causal trace caller -> route -> tool/executor -> proof/acceptance không join bằng timestamp heuristic.
 6. **Recovery:** reconnect/restart giữ fail-closed retry semantics, không duplicate unsafe side effects hoặc writer authority.
 7. **Surface discipline:** `smart-v3` vẫn đúng 8 public tools; internal intelligence không thành tool sprawl.
-8. **Evidence discipline:** source, focused proof, live activation, package/release và empirical efficacy là claim riêng.
+8. **Evidence discipline:** source, focused proof, live activation, package/release và empirical efficacy là claim riêng; acceptance oracle không được xanh nếu required tests/source không tồn tại.
 9. **Shadow discipline:** shadow/model evaluation candidate-only, không direct filesystem mutation hoặc promotion.
 10. **Control discipline:** tài liệu này có checkpoint đủ để operator biết stage nào accepted, stage nào gated và proof nào thực sự tồn tại.
 
@@ -1175,6 +1231,9 @@ Không cần filesystem clone/worktree để đo candidate quality; so sánh pro
 
 ### G — Caller attribution đã đóng ở source + focused proof
 W3 đã accepted với durable nullable attribution, aggregate-only audit reporting và OAuth-only client identity. Live activation/package claim vẫn tách riêng và chưa được suy ra.
+
+### H — Filtered-test proof phải có existence gate
+W1 false-green rejection thiết lập control precedent: substring-filtered test exit code không đủ để chứng minh behavior nếu zero-match có thể thành công. Material acceptance phải chứng minh required source symbol/test identity tồn tại và exact regression thực sự chạy.
 
 ---
 
@@ -1208,6 +1267,7 @@ view_image
 - auto-handoff: OFF nếu maintained source-of-truth chưa đổi.
 - provider/model write authority không được cấp chỉ nhờ telemetry/routing.
 - W3 caller attribution: source + focused proof accepted; không đồng nghĩa runtime hiện chạy đã load behavior hoặc release artifact đã chứa nó.
+- W1 sparse projection: hiện **REPLAN / NOT ACCEPTED**; prior green proof đã bị controller reject vì implementation absent và oracle có thể zero-match.
 
 ---
 
