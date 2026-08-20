@@ -384,6 +384,8 @@ impl ToolRuntime {
             }
         };
 
+        let model_result_projection =
+            super::model_result_projection::ModelResultProjection::from_tool_call(&call);
         let project = tool_project(&call);
         // Permission is evaluated once inside dispatch (pre-exec gate). Kernel
         // only reuses the attached decision for the outer recording session —
@@ -440,6 +442,7 @@ impl ToolRuntime {
                 outer_event_id,
             );
         }
+        model_result_projection.apply(&mut result);
         ToolCallOutcome {
             success: result.success,
             result: Some(result),

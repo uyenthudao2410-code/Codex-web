@@ -13,7 +13,7 @@ pub(super) fn tool_specs() -> Vec<ToolSpec> {
         ),
         tool_spec(
             "work_on_project",
-            "Start normal coding from an existing project or Runner-owned absolute path, or continue exactly by session_id. Unregistered paths are permanently registered before Session handling. Returns compact context; use start_coding_task for advanced modes, guards, temporary projects, or binding.",
+            "Start normal coding from an existing project or Runner-owned absolute path, or continue exactly by session_id. Unregistered paths are permanently registered before Session handling. Returns compact context; optional projection controls can hide instruction prose or workflow guidance without changing durable startup observation. Use start_coding_task for advanced modes, guards, temporary projects, or binding.",
             work_on_project_input_schema(),
         ),
         tool_spec(

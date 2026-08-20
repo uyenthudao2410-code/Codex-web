@@ -1144,6 +1144,8 @@ impl ToolRuntime {
         path: Option<String>,
         instruction: String,
         session_id: Option<String>,
+        include_project_instructions: bool,
+        include_workflow_guidance: bool,
         auth: Option<&AuthContext>,
         transport: SessionTransport,
         window: Option<&crate::client_window::ClientWindow>,
@@ -1239,7 +1241,16 @@ impl ToolRuntime {
         } else {
             project
         };
-        project_work_on_project_output(projected_project, result.output)
+        if include_project_instructions && include_workflow_guidance {
+            project_work_on_project_output(projected_project, result.output)
+        } else {
+            project_work_on_project_output_with_options(
+                projected_project,
+                result.output,
+                include_project_instructions,
+                include_workflow_guidance,
+            )
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1987,6 +1998,15 @@ struct WorkOnProjectStartupVerdictProjection {
 /// `work_on_project` contract. The delegated call may already have changed
 /// Session state, so protocol drift fails closed with `state_changed=true`.
 pub(crate) fn project_work_on_project_output(project: String, output: Value) -> ToolResult {
+    project_work_on_project_output_with_options(project, output, true, true)
+}
+
+pub(crate) fn project_work_on_project_output_with_options(
+    project: String,
+    output: Value,
+    include_project_instructions: bool,
+    include_workflow_guidance: bool,
+) -> ToolResult {
     let permission = output.get("permission").cloned();
     let Some(brief) = startup_brief_from_output(&output) else {
         return work_on_project_projection_failed(
@@ -2072,6 +2092,16 @@ pub(crate) fn project_work_on_project_output(project: String, output: Value) -> 
     if let Some(changed_sources) = projection.instructions.changed_sources {
         instructions["changed_sources"] = json!(changed_sources);
     }
+    if !include_project_instructions {
+        instructions["content_included"] = json!(false);
+        if let Some(sources) = instructions["sources"].as_array_mut() {
+            for source in sources {
+                source["headings"] = json!([]);
+                source["content"] = Value::Null;
+                source["read_more"] = Value::Null;
+            }
+        }
+    }
     let semantic_navigation = json!({
         "supported": projection.semantic_navigation.supported,
         "available": projection.semantic_navigation.available,
@@ -2115,6 +2145,9 @@ pub(crate) fn project_work_on_project_output(project: String, output: Value) -> 
         "deterministic": true,
         "llm_summary": false,
     }));
+    if !include_workflow_guidance {
+        result.output["suggested_next_actions"] = json!([]);
+    }
     if let Some(permission) = permission {
         result.output["permission"] = permission;
     }

@@ -9,11 +9,11 @@
 
 ## Outcome metrics
 
-- Waves: **3**
-- Route decisions: **3**
-- Failures observed: **3**
-- REPLAN transitions: **3**
-- Proof stages: **5**
+- Waves: **5**
+- Route decisions: **4**
+- Failures observed: **5**
+- REPLAN transitions: **5**
+- Proof stages: **6**
 - Proof cache hits: **0**
 - Acceptance checkpoints: **0**
 
@@ -23,7 +23,9 @@
 |---:|---|---|---|---|
 | 1 | `6659d288b4a749c391a3593b47d6c299` | `mcp_only` | `66c2d17b68969c3a413b867cc7281f80fbaf4b45` | replanned |
 | 2 | `84706097ef7f4c81b87bb8b6edb35c89` | `mcp_only` | `66c2d17b68969c3a413b867cc7281f80fbaf4b45` | replanned |
-| 3 | `d0384c40d65846ecadaa5cde5863aca7` | `mcp_only` | `936c3dbe10f40f097e63bf0e0aa6e6498ab7957f` | active |
+| 3 | `d0384c40d65846ecadaa5cde5863aca7` | `mcp_only` | `936c3dbe10f40f097e63bf0e0aa6e6498ab7957f` | replanned |
+| 4 | `e95b302239814d46bc8b8b7c82aa1b5c` | `mcp_only` | `936c3dbe10f40f097e63bf0e0aa6e6498ab7957f` | replanned |
+| 5 | `818e5cf22af6405497c7629503fc9870` | `mcp_only` | `4db5ac764be4328edf76245bd1214fb953c2460e` | active |
 
 ## Acceptance checkpoints
 
@@ -38,6 +40,7 @@
 | 23901 | `deterministic` | `deterministic` | explicit_request |
 | 23923 | `deterministic` | `deterministic` | explicit_request |
 | 23952 | `deterministic` | `deterministic` | explicit_request |
+| 24029 | `deterministic` | `deterministic` | caller_supplied_change_set |
 
 ## Failures / replans
 
@@ -46,11 +49,13 @@
 | 23917 | `BUILD_VERIFICATION_FAILED` | `PROVING` |  |
 | 23946 | `SOL_REJECTED` | `ACCEPTING` | Controller rejection: acceptance oracle was false-green. Current source tree has no W1 required symbols include_project_instructions/include_workflow_guidance or the three required sparsifiers, and Git diff contains no W1 source changes. Focused cargo test filters passed without proving implementation presence. Replan must add explicit source-presence assertions/non-zero matching regression tests and implement W1 deterministically before acceptance. |
 | 23963 | `BUILD_VERIFICATION_FAILED` | `PROVING` |  |
+| 24023 | `BASE_DRIFT` | `PREFLIGHT` |  |
+| 24044 | `BUILD_VERIFICATION_FAILED` | `PROVING` |  |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `86`
-- Chain head: `86ff6f220ed633371c16f8c9d708dbab4535a3695e2f74d603db51e9f0749d54`
+- Events checked: `167`
+- Chain head: `2d93c07aa55a2434a0de487e2e786f3afd4124773e109182ef753d1fb51e0efb`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

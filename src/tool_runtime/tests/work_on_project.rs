@@ -500,6 +500,63 @@ fn work_on_project_tool_call_requires_project_and_instruction() {
 }
 
 #[test]
+fn work_on_project_projection_flags_preserve_durable_state() {
+    let startup_output = valid_work_on_project_projection_input();
+    let durable_snapshot = startup_output.clone();
+    assert!(durable_snapshot["instructions"]["sources"][0]["content"].is_string());
+
+    let projected = crate::tool_runtime::coding_task::project_work_on_project_output_with_options(
+        SAMPLE_PROJECT.to_string(),
+        startup_output,
+        false,
+        false,
+    );
+    assert!(projected.success);
+    assert_eq!(
+        projected.output["instructions"]["sources"][0]["fingerprint"],
+        durable_snapshot["instructions"]["sources"][0]["fingerprint"]
+    );
+    assert_eq!(
+        projected.output["instructions"]["sources"][0]["truncated"],
+        durable_snapshot["instructions"]["sources"][0]["truncated"]
+    );
+    assert!(projected.output["instructions"]["sources"][0]["content"].is_null());
+    assert!(projected.output["instructions"]["sources"][0]["read_more"].is_null());
+    assert_eq!(
+        projected.output["instructions"]["sources"][0]["headings"],
+        json!([])
+    );
+    assert_eq!(
+        projected.output["instructions"]["content_included"],
+        json!(false)
+    );
+    assert_eq!(projected.output["suggested_next_actions"], json!([]));
+    assert_eq!(projected.output["blockers"], durable_snapshot["blockers"]);
+    assert_eq!(projected.output["warnings"], durable_snapshot["warnings"]);
+    assert_eq!(
+        projected.output["readiness"]["status"],
+        durable_snapshot["startup_verdict"]["status"]
+    );
+
+    let defaults = ToolCall::from_tool_name(
+        "work_on_project",
+        json!({"project": SAMPLE_PROJECT, "instruction": "do it"}),
+    )
+    .unwrap();
+    match defaults {
+        ToolCall::WorkOnProject {
+            include_project_instructions,
+            include_workflow_guidance,
+            ..
+        } => {
+            assert!(include_project_instructions);
+            assert!(include_workflow_guidance);
+        }
+        _ => panic!("expected WorkOnProject"),
+    }
+}
+
+#[test]
 fn work_on_project_projection_fails_closed_when_required_field_is_missing() {
     let mut output = valid_work_on_project_projection_input();
     output["session"]

@@ -53,6 +53,8 @@ impl ToolRuntime {
                 path,
                 instruction,
                 session_id,
+                include_project_instructions,
+                include_workflow_guidance,
             } => {
                 self.work_on_project(
                     project,
@@ -60,6 +62,8 @@ impl ToolRuntime {
                     path,
                     instruction,
                     session_id,
+                    include_project_instructions,
+                    include_workflow_guidance,
                     auth,
                     transport,
                     window,

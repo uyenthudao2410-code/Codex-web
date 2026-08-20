@@ -137,6 +137,16 @@ pub(crate) fn work_on_project_input_schema() -> Value {
                 "type": "string",
                 "pattern": "^wc_sess_[A-Za-z0-9_]+$",
                 "description": "Optional explicit Workflow Session to continue exactly. It must match the project and be active and accessible; failure never falls back, guesses, or creates a new Session. This is explicit business input, distinct from wrapper recording_session_id and never a current-session fallback."
+            },
+            "include_project_instructions": {
+                "type": "boolean",
+                "default": true,
+                "description": "Model-facing projection control only. When false, instruction prose/navigation payload is omitted while instruction status, source identity/fingerprint, truncation, and other durable startup state remain intact."
+            },
+            "include_workflow_guidance": {
+                "type": "boolean",
+                "default": true,
+                "description": "Model-facing projection control only. When false, suggested workflow actions are omitted while blockers, warnings, readiness, jobs, project resolution, and execution context remain intact."
             }
         },
         "required": ["instruction"],

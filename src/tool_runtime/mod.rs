@@ -32,6 +32,7 @@ pub(crate) mod kernel;
 mod local_jobs;
 mod lsp_tools;
 pub(crate) mod metadata;
+mod model_result_projection;
 pub(crate) mod observations;
 mod observe_jobs;
 mod patch;

@@ -3,44 +3,215 @@
   "task_id": "733cfe4dd27c425da8f7b678964b4255",
   "orchestration": {
     "run_id": "e93069ccd8bc4d6bb59daeb14c3cddee",
-    "wave_id": "e95b302239814d46bc8b8b7c82aa1b5c",
-    "orchestration_state": "PREFLIGHT",
+    "wave_id": "86344d01240f4f90a8325092d2711065",
+    "orchestration_state": "PROVING",
     "execution_mode": "mcp_only",
-    "route_requested": "",
-    "route_resolved": "",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "936c3dbe10f40f097e63bf0e0aa6e6498ab7957f",
-    "worktree_fp": "b4a27b9454f2daa752cde5282ca7f73ff31fe224f306fcd1aa5b8b8134080bb6",
+    "base_head": "4db5ac764be4328edf76245bd1214fb953c2460e",
+    "worktree_fp": "40dbf980046dc3c9c10e19ba7ac69d1e6f5827daec0a46899ed2b1a8d022e9a6",
     "contract_fp": ""
   },
-  "objective": "Run a workspace command",
-  "status": "waiting",
-  "steps": [],
-  "current_step": "Waiting for model",
-  "current_command": null,
+  "objective": "Replan W1 v3 verification only. Preserve the already-applied 9-file W1 source patch exactly. The prior proof failed solely because Windows PowerShell treated native Cargo progress on stderr as NativeCommandError under ErrorActionPreference=Stop. Rerun the same hardened oracle using cmd.exe to merge native stdout/stderr before PowerShell sees it: prove all five source symbols exist, enumerate cargo tests and require exactly one match for each of the four required regression names, run each resolved full test path with --exact, then cargo fmt --check and cargo check. Do not modify source unless a real compile/test failure is subsequently diagnosed in a separate replan. No commit/push/restart/deploy/release/reset/restore/clean/rebase.",
+  "status": "active",
+  "steps": [
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "in_progress",
+      "updated_at": "2026-08-20T12:02:13.364Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-20T12:02:13.364Z"
+    }
+  ],
+  "current_step": "Testing and building",
+  "current_command": {
+    "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Continue'; $symbols=@('include_project_instructions','include_workflow_guidance','sparsify_complete_read_success','sparsify_complete_default_search_success','sparsify_terminal_structured_execution_success'); foreach($s in $symbols){ & rg -n --fixed-strings $s src | Out-Null; if($LASTEXITCODE -ne 0){ Write-Output ('MISSING_SOURCE_SYMBOL '+$s); exit 1 } }; $required=@('work_on_project_projection_flags_preserve_durable_state','sparsify_complete_read_success_only_for_whole_file','sparsify_complete_default_search_success_preserves_nondefault_states','sparsify_terminal_structured_execution_success_rejects_unsafe_outcomes'); $listed=@(& cmd.exe /d /s /c 'cargo test -p webcodex --lib -- --list 2>&1'); if($LASTEXITCODE -ne 0){ $listed; exit $LASTEXITCODE }; foreach($t in $required){ $hits=@($listed | Select-String -SimpleMatch $t); if($hits.Count -ne 1){ Write-Output ('TEST_EXISTENCE_GATE_FAILED '+$t+' count='+$hits.Count); exit 1 }; $full=(($hits[0].Line -replace ': test$','').Trim()); Write-Output ('RUN_EXACT '+$full); & cmd.exe /d /s /c ('cargo test -p webcodex '+$full+' --lib -- --exact 2>&1'); if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }; & cmd.exe /d /s /c 'cargo fmt -p webcodex -- --check 2>&1'; exit $LASTEXITCODE\"",
+    "kind": "command",
+    "session_id": "U2Pu7ZmI4R3Ib-iGLBV_qK_E",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-20T12:02:14.388Z"
+  },
   "last_command_result": {
-    "command_id": "G4G16NW1KTDJxi-wAiJ1sTVQ",
+    "command_id": "6It9COIceHQuos5poxuH0gNn",
     "kind": "command",
     "status": "exited",
     "result_status": "passed",
     "exit_code": 0,
-    "duration_ms": 677,
-    "finished_at": "2026-08-20T11:54:46.533Z"
+    "duration_ms": 728,
+    "finished_at": "2026-08-20T11:59:52.361Z"
   },
-  "completion_report": null,
-  "completion_report_id": "",
-  "completion_report_acknowledged_id": "",
-  "completion_report_acknowledged_at": null,
-  "test_results": [],
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 167,
+        "head_hash": "2d93c07aa55a2434a0de487e2e786f3afd4124773e109182ef753d1fb51e0efb"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e93069ccd8bc4d6bb59daeb14c3cddee\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e93069ccd8bc4d6bb59daeb14c3cddee\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e93069ccd8bc4d6bb59daeb14c3cddee\\wave-002.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e93069ccd8bc4d6bb59daeb14c3cddee\\wave-003.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e93069ccd8bc4d6bb59daeb14c3cddee\\wave-004.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e93069ccd8bc4d6bb59daeb14c3cddee\\wave-005.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "e93069ccd8bc4d6bb59daeb14c3cddee",
+      "wave_id": "818e5cf22af6405497c7629503fc9870",
+      "base_head": "4db5ac764be4328edf76245bd1214fb953c2460e",
+      "worktree_fp": "690d461663c1f94b329cb112d77851c480f231620e6bd6e8374562095d292268",
+      "contract_fp": ""
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "7f900b79f85c4e9ab75c24f90f8bec01",
+          "stage_id": "verify:all",
+          "status": "failed",
+          "duration_ms": 2094,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "BUILD_VERIFICATION_FAILED",
+      "reason": null,
+      "event_seq": 24044
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "12084c6211f5af3aa04b941a7e2b32196287affefeed336d4e0ae10b56a40638",
+  "completion_report_acknowledged_id": "12084c6211f5af3aa04b941a7e2b32196287affefeed336d4e0ae10b56a40638",
+  "completion_report_acknowledged_at": "2026-08-20T12:01:50.149Z",
+  "test_results": [
+    {
+      "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; $symbols=@('include_project_instructions','include_workflow_guidance','sparsify_complete_read_success','sparsify_complete_default_search_success','sparsify_terminal_structured_execution_success'); foreach($s in $symbols){ rg -n --fixed-strings $s src | Out-Null; if($LASTEXITCODE -ne 0){ throw ('missing required source symbol: '+$s) } }; $required=@('work_on_project_projection_flags_preserve_durable_state','sparsify_complete_read_success_only_for_whole_file','sparsify_complete_default_search_success_preserves_nondefault_states','sparsify_terminal_structured_execution_success_rejects_unsafe_outcomes'); $listed=& cargo test -p webcodex --lib -- --list 2>&1; if($LASTEXITCODE -ne 0){ $listed; exit $LASTEXITCODE }; foreach($t in $required){ $hits=@($listed | Select-String -SimpleMatch $t); if($hits.Count -ne 1){ throw ('expected exactly one listed regression for '+$t+', found '+$hits.Count) }; $full=(($hits[0].Line -replace ': test$','').Trim()); Write-Output ('RUN_EXACT '+$full); & cargo test -p webcodex $full --lib -- --exact; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }; & cargo fmt -p webcodex -- --check; exit $LASTEXITCODE\"",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": 2097,
+      "summary": "exit 1 | 1.6s | 8 lines | tail: '+ FullyQualifiedErrorId : NativeCommandError'"
+    }
+  ],
   "build_results": [],
-  "last_build_report": null,
-  "modified_files": [],
+  "last_build_report": {
+    "project": {
+      "type": "electron",
+      "name": "web-mcp-assistant",
+      "version": "0.3.4",
+      "package_manager": "npm",
+      "test_command": "npm run test",
+      "build_command": "npm run dist",
+      "artifact_paths": [
+        "dist",
+        "build"
+      ]
+    },
+    "commands": {
+      "test": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; $symbols=@('include_project_instructions','include_workflow_guidance','sparsify_complete_read_success','sparsify_complete_default_search_success','sparsify_terminal_structured_execution_success'); foreach($s in $symbols){ rg -n --fixed-strings $s src | Out-Null; if($LASTEXITCODE -ne 0){ throw ('missing required source symbol: '+$s) } }; $required=@('work_on_project_projection_flags_preserve_durable_state','sparsify_complete_read_success_only_for_whole_file','sparsify_complete_default_search_success_preserves_nondefault_states','sparsify_terminal_structured_execution_success_rejects_unsafe_outcomes'); $listed=& cargo test -p webcodex --lib -- --list 2>&1; if($LASTEXITCODE -ne 0){ $listed; exit $LASTEXITCODE }; foreach($t in $required){ $hits=@($listed | Select-String -SimpleMatch $t); if($hits.Count -ne 1){ throw ('expected exactly one listed regression for '+$t+', found '+$hits.Count) }; $full=(($hits[0].Line -replace ': test$','').Trim()); Write-Output ('RUN_EXACT '+$full); & cargo test -p webcodex $full --lib -- --exact; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }; & cargo fmt -p webcodex -- --check; exit $LASTEXITCODE\"",
+      "build": "cargo check -p webcodex --lib"
+    },
+    "test_result": {
+      "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; $symbols=@('include_project_instructions','include_workflow_guidance','sparsify_complete_read_success','sparsify_complete_default_search_success','sparsify_terminal_structured_execution_success'); foreach($s in $symbols){ rg -n --fixed-strings $s src | Out-Null; if($LASTEXITCODE -ne 0){ throw ('missing required source symbol: '+$s) } }; $required=@('work_on_project_projection_flags_preserve_durable_state','sparsify_complete_read_success_only_for_whole_file','sparsify_complete_default_search_success_preserves_nondefault_states','sparsify_terminal_structured_execution_success_rejects_unsafe_outcomes'); $listed=& cargo test -p webcodex --lib -- --list 2>&1; if($LASTEXITCODE -ne 0){ $listed; exit $LASTEXITCODE }; foreach($t in $required){ $hits=@($listed | Select-String -SimpleMatch $t); if($hits.Count -ne 1){ throw ('expected exactly one listed regression for '+$t+', found '+$hits.Count) }; $full=(($hits[0].Line -replace ': test$','').Trim()); Write-Output ('RUN_EXACT '+$full); & cargo test -p webcodex $full --lib -- --exact; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }; & cargo fmt -p webcodex -- --check; exit $LASTEXITCODE\"",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": 2097,
+      "summary": "exit 1 | 1.6s | 8 lines | tail: '+ FullyQualifiedErrorId : NativeCommandError'"
+    },
+    "build_result": null,
+    "artifacts": [],
+    "hash_algorithm": "sha256",
+    "overall_status": "failed",
+    "failure": "Tests failed.",
+    "report_generated_at": "2026-08-20T12:00:57.678Z"
+  },
+  "modified_files": [
+    {
+      "path": "src/tool_runtime/model_result_projection.rs",
+      "operation": "add",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    },
+    {
+      "path": "src/tool_runtime/mod.rs",
+      "operation": "update",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    },
+    {
+      "path": "src/tool_runtime/tool_call.rs",
+      "operation": "update",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    },
+    {
+      "path": "src/tool_runtime/registry/input_schemas/coding.rs",
+      "operation": "update",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    },
+    {
+      "path": "src/tool_runtime/registry/tool_specs/coding_tasks.rs",
+      "operation": "update",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    },
+    {
+      "path": "src/tool_runtime/coding_task_tools.rs",
+      "operation": "update",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    },
+    {
+      "path": "src/tool_runtime/coding_task.rs",
+      "operation": "update",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    },
+    {
+      "path": "src/tool_runtime/kernel.rs",
+      "operation": "update",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    },
+    {
+      "path": "src/tool_runtime/tests/work_on_project.rs",
+      "operation": "update",
+      "updated_at": "2026-08-20T12:00:58.925Z"
+    }
+  ],
   "failure": null,
-  "next_step": "",
+  "next_step": "Run all requested checks and summarize the result.",
   "created_at": "2026-08-20T11:51:10.614Z",
-  "updated_at": "2026-08-20T11:54:46.533Z",
+  "updated_at": "2026-08-20T12:02:14.388Z",
   "events": [
     {
       "time": "2026-08-20T11:51:10.614Z",
@@ -216,6 +387,263 @@
       "details": {
         "command": "powershell.exe -NoProfile -Command \"$c=Get-Content 'src/tool_runtime/coding_task.rs'; $c[2090..2160]\"",
         "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-20T11:58:30.900Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-20T11:59:42.808Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-20T11:59:51.861Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'src/tool_runtime/tests/work_on_project.rs'; $w[455..515]\"",
+        "session_id": "6It9COIceHQuos5poxuH0gNn"
+      }
+    },
+    {
+      "time": "2026-08-20T11:59:52.361Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'src/tool_runtime/tests/work_on_project.rs'; $w[455..515]\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:51.578Z",
+      "event": "orchestration_drift_detected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:51.945Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:52.698Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:53.348Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:53.348Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:55.201Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:55.400Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:56.266Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Stop'; $symbols=@('include_project_instructions','include_workflow_guidance','sparsify_complete_read_success','sparsify_complete_default_search_success','sparsify_terminal_structured_execution_success'); foreach($s in $symbols){ rg -n --fixed-strings $s src | Out-Null; if($LASTEXITCODE -ne 0){ throw ('missing required source symbol: '+$s) } }; $required=@('work_on_project_projection_flags_preserve_durable_state','sparsify_complete_read_",
+        "session_id": "7e09LL7xzRLfwWQa5bHwuiwi"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:57.679Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:58.044Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:58.620Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:58.621Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:58.621Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:58.810Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "12084c6211f5af3aa04b941a7e2b32196287affefeed336d4e0ae10b56a40638"
+      }
+    },
+    {
+      "time": "2026-08-20T12:00:58.925Z",
+      "event": "files_modified",
+      "details": {
+        "count": 9
+      }
+    },
+    {
+      "time": "2026-08-20T12:01:15.545Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-20T12:01:16.066Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-08-20T12:01:50.149Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "12084c6211f5af3aa04b941a7e2b32196287affefeed336d4e0ae10b56a40638"
+      }
+    },
+    {
+      "time": "2026-08-20T12:01:55.796Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-20T12:02:11.163Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-20T12:02:11.949Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-20T12:02:12.536Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-20T12:02:12.536Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-20T12:02:13.193Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-20T12:02:13.364Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-20T12:02:14.388Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='Continue'; $symbols=@('include_project_instructions','include_workflow_guidance','sparsify_complete_read_success','sparsify_complete_default_search_success','sparsify_terminal_structured_execution_success'); foreach($s in $symbols){ & rg -n --fixed-strings $s src | Out-Null; if($LASTEXITCODE -ne 0){ Write-Output ('MISSING_SOURCE_SYMBOL '+$s); exit 1 } }; $required=@('work_on_project_projection_flags_preserve_durable_state','sparsify_com",
+        "session_id": "U2Pu7ZmI4R3Ib-iGLBV_qK_E"
       }
     }
   ]

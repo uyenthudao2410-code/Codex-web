@@ -315,6 +315,10 @@ pub enum ToolCall {
         instruction: String,
         #[serde(default)]
         session_id: Option<String>,
+        #[serde(default = "default_true")]
+        include_project_instructions: bool,
+        #[serde(default = "default_true")]
+        include_workflow_guidance: bool,
     },
 
     /// Return deterministic finish context for an explicit task session:
