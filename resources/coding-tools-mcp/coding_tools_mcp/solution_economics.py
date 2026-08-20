@@ -642,6 +642,65 @@ def _repair_label(report: dict[str, Any]) -> int | None:
     return 1 if repaired is True else 0 if repaired is False else None
 
 
+def _predictive_validation_fingerprint(report: dict[str, Any]) -> tuple[Any, ...]:
+    recommendation = report.get("recommendation") if isinstance(report.get("recommendation"), dict) else {}
+    source_state = report.get("source_state") if isinstance(report.get("source_state"), dict) else {}
+    base_heads = tuple(sorted({
+        str(item).strip()
+        for item in source_state.get("base_head_identities", [])
+        if isinstance(item, str) and str(item).strip()
+    }))
+    worktrees = tuple(sorted({
+        str(item).strip()
+        for item in source_state.get("worktree_fingerprint_identities", [])
+        if isinstance(item, str) and str(item).strip()
+    }))
+    return (
+        str(report.get("run_id") or "").strip(),
+        str(report.get("task_class") or "").strip(),
+        base_heads,
+        worktrees,
+        str(recommendation.get("event_time") or "").strip(),
+        tuple(_signal_value(report, signal) for signal in PREDICTIVE_SIGNAL_NAMES),
+        _repair_label(report),
+    )
+
+
+def _deduplicate_predictive_rows(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    unique: list[dict[str, Any]] = []
+    seen: set[tuple[Any, ...]] = set()
+    duplicate_count = 0
+    for row in rows:
+        fingerprint = _predictive_validation_fingerprint(row)
+        if fingerprint in seen:
+            duplicate_count += 1
+            continue
+        seen.add(fingerprint)
+        unique.append(row)
+    return (unique, duplicate_count)
+
+
+def _source_state_identity(report: dict[str, Any]) -> str:
+    source_state = report.get("source_state") if isinstance(report.get("source_state"), dict) else {}
+    base_heads = sorted({
+        str(item).strip()
+        for item in source_state.get("base_head_identities", [])
+        if isinstance(item, str) and str(item).strip()
+    })
+    worktrees = sorted({
+        str(item).strip()
+        for item in source_state.get("worktree_fingerprint_identities", [])
+        if isinstance(item, str) and str(item).strip()
+    })
+    if len(base_heads) == 1 and len(worktrees) == 1:
+        return f"base:{base_heads[0]}|worktree:{worktrees[0]}"
+    if len(base_heads) == 1 and not worktrees:
+        return f"base:{base_heads[0]}"
+    if len(worktrees) == 1 and not base_heads:
+        return f"worktree:{worktrees[0]}"
+    return ""
+
+
 def _aggregate_replan_diagnostics(reports: list[dict[str, Any]]) -> dict[str, Any]:
     def summarize(group: list[dict[str, Any]]) -> dict[str, Any]:
         failure_classes: Counter[str] = Counter()
@@ -859,6 +918,92 @@ def _leave_task_class_out_brier(rows: list[dict[str, Any]], signal: str) -> dict
     }
 
 
+def _leave_source_state_out_brier(rows: list[dict[str, Any]], signal: str) -> dict[str, Any]:
+    candidates = [
+        (row, label)
+        for row in rows
+        for label in [_repair_label(row)]
+        if label is not None and _signal_value(row, signal) != "unknown"
+    ]
+    usable = [(row, label, _source_state_identity(row)) for row, label in candidates]
+    missing_identity = sum(1 for _, _, identity in usable if not identity)
+    if missing_identity:
+        return {
+            "evaluable": False,
+            "reason": "single_source_state_identity_required_for_every_sample",
+            "source_state_count": len({identity for _, _, identity in usable if identity}),
+            "source_state_sample_counts": {},
+            "missing_source_state_samples": missing_identity,
+            "required_folds": 0,
+            "evaluated_folds": 0,
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+        }
+    source_states = sorted({identity for _, _, identity in usable})
+    sample_counts = {
+        identity: sum(1 for _, _, observed in usable if observed == identity)
+        for identity in source_states
+    }
+    if len(source_states) < 2:
+        return {
+            "evaluable": False,
+            "reason": "at_least_two_source_states_required",
+            "source_state_count": len(source_states),
+            "source_state_sample_counts": sample_counts,
+            "missing_source_state_samples": 0,
+            "required_folds": len(source_states),
+            "evaluated_folds": 0,
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+        }
+
+    baseline_errors: list[float] = []
+    signal_errors: list[float] = []
+    evaluated_folds = 0
+    fold_failures: list[str] = []
+    for source_state in source_states:
+        training = [(row, label) for row, label, identity in usable if identity != source_state]
+        held_out = [(row, label) for row, label, identity in usable if identity == source_state]
+        fold_baseline, fold_signal = _holdout_brier(training, held_out, signal)
+        if not fold_baseline:
+            fold_failures.append(source_state)
+            continue
+        baseline_errors.extend(fold_baseline)
+        signal_errors.extend(fold_signal)
+        evaluated_folds += 1
+    evaluable = bool(baseline_errors and evaluated_folds == len(source_states))
+    if not evaluable:
+        return {
+            "evaluable": False,
+            "reason": "every_source_state_fold_requires_training_outcome_variation",
+            "source_state_count": len(source_states),
+            "source_state_sample_counts": sample_counts,
+            "missing_source_state_samples": 0,
+            "required_folds": len(source_states),
+            "evaluated_folds": evaluated_folds,
+            "unevaluable_source_states": fold_failures,
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+        }
+    baseline = sum(baseline_errors) / len(baseline_errors)
+    signal_score = sum(signal_errors) / len(signal_errors)
+    return {
+        "evaluable": True,
+        "reason": "leave_one_source_state_out",
+        "source_state_count": len(source_states),
+        "source_state_sample_counts": sample_counts,
+        "missing_source_state_samples": 0,
+        "required_folds": len(source_states),
+        "evaluated_folds": evaluated_folds,
+        "baseline_brier": round(baseline, 6),
+        "signal_brier": round(signal_score, 6),
+        "brier_gain": round(baseline - signal_score, 6),
+    }
+
+
 def _temporal_holdout_brier(rows: list[dict[str, Any]], signal: str) -> dict[str, Any]:
     usable = [
         (row, label, str((row.get("recommendation") or {}).get("event_time") or "").strip())
@@ -922,8 +1067,103 @@ def _temporal_holdout_brier(rows: list[dict[str, Any]], signal: str) -> dict[str
     }
 
 
+def _rolling_temporal_holdout_brier(
+    rows: list[dict[str, Any]],
+    signal: str,
+    *,
+    blocks: int = 10,
+) -> dict[str, Any]:
+    usable = [
+        (row, label, str((row.get("recommendation") or {}).get("event_time") or "").strip())
+        for row in rows
+        for label in [_repair_label(row)]
+        if label is not None
+        and _signal_value(row, signal) != "unknown"
+        and isinstance(row.get("recommendation"), dict)
+        and str((row.get("recommendation") or {}).get("event_time") or "").strip()
+    ]
+    usable.sort(key=lambda item: item[2])
+    if len(usable) < 6:
+        return {
+            "evaluable": False,
+            "reason": "ordered_rolling_training_and_holdout_support_required",
+            "ordered_samples": len(usable),
+            "block_count": blocks,
+            "required_windows": 0,
+            "evaluated_windows": 0,
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+            "min_brier_gain": None,
+            "window_brier_gains": [],
+        }
+    block_count = max(3, min(int(blocks), len(usable) // 2))
+    block_size = max(1, len(usable) // block_count)
+    baseline_errors: list[float] = []
+    signal_errors: list[float] = []
+    window_gains: list[float] = []
+    unevaluable_windows: list[int] = []
+    required_windows = 0
+    for block in range(2, block_count):
+        start = block * block_size
+        if start >= len(usable):
+            break
+        end = len(usable) if block == block_count - 1 else min(len(usable), (block + 1) * block_size)
+        if end <= start:
+            continue
+        required_windows += 1
+        training = [(row, label) for row, label, _ in usable[:start]]
+        held_out = [(row, label) for row, label, _ in usable[start:end]]
+        if len({label for _, label in training}) < 2 or len({label for _, label in held_out}) < 2:
+            unevaluable_windows.append(block)
+            continue
+        fold_baseline, fold_signal = _holdout_brier(training, held_out, signal)
+        if not fold_baseline:
+            unevaluable_windows.append(block)
+            continue
+        baseline_errors.extend(fold_baseline)
+        signal_errors.extend(fold_signal)
+        gain = (sum(fold_baseline) - sum(fold_signal)) / len(fold_baseline)
+        window_gains.append(round(gain, 6))
+    evaluable = bool(required_windows >= 2 and len(window_gains) == required_windows and baseline_errors)
+    if not evaluable:
+        return {
+            "evaluable": False,
+            "reason": "every_rolling_window_requires_training_and_holdout_outcome_variation",
+            "ordered_samples": len(usable),
+            "block_count": block_count,
+            "block_size": block_size,
+            "required_windows": required_windows,
+            "evaluated_windows": len(window_gains),
+            "unevaluable_windows": unevaluable_windows,
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+            "min_brier_gain": None,
+            "window_brier_gains": window_gains,
+        }
+    baseline = sum(baseline_errors) / len(baseline_errors)
+    signal_score = sum(signal_errors) / len(signal_errors)
+    return {
+        "evaluable": True,
+        "reason": "expanding_training_rolling_forward_holdouts",
+        "ordered_samples": len(usable),
+        "block_count": block_count,
+        "block_size": block_size,
+        "required_windows": required_windows,
+        "evaluated_windows": len(window_gains),
+        "unevaluable_windows": [],
+        "baseline_brier": round(baseline, 6),
+        "signal_brier": round(signal_score, 6),
+        "brier_gain": round(baseline - signal_score, 6),
+        "min_brier_gain": min(window_gains),
+        "window_brier_gains": window_gains,
+    }
+
+
 def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
-    labeled = [item for item in reports if _repair_label(item) is not None]
+    raw_labeled = [item for item in reports if _repair_label(item) is not None]
+    labeled, exact_duplicate_count = _deduplicate_predictive_rows(raw_labeled)
     outcome_variation = len({_repair_label(item) for item in labeled}) >= 2
     group_counts = {
         signal: len({value for item in labeled for value in [_signal_value(item, signal)] if value != "unknown"})
@@ -955,7 +1195,9 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
                 if intervals[left][1] < intervals[right][0] or intervals[right][1] < intervals[left][0]:
                     separated_pairs.append([left, right])
         family_holdout = _leave_task_class_out_brier(labeled, signal)
+        source_state_holdout = _leave_source_state_out_brier(labeled, signal)
         temporal_holdout = _temporal_holdout_brier(labeled, signal)
+        rolling_temporal_holdout = _rolling_temporal_holdout_brier(labeled, signal)
         pooled_validated = bool(outcome_variation and brier_gain is not None and brier_gain > 0 and separated_pairs)
         blockers: list[str] = []
         if not outcome_variation:
@@ -968,10 +1210,18 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
             blockers.append("task_family_holdout_not_evaluable")
         elif not isinstance(family_holdout.get("brier_gain"), (int, float)) or family_holdout["brier_gain"] <= 0:
             blockers.append("task_family_holdout_brier_gain_not_positive")
+        if source_state_holdout.get("evaluable") is not True:
+            blockers.append("source_state_holdout_not_evaluable")
+        elif not isinstance(source_state_holdout.get("brier_gain"), (int, float)) or source_state_holdout["brier_gain"] <= 0:
+            blockers.append("source_state_holdout_brier_gain_not_positive")
         if temporal_holdout.get("evaluable") is not True:
             blockers.append("temporal_holdout_not_evaluable")
         elif not isinstance(temporal_holdout.get("brier_gain"), (int, float)) or temporal_holdout["brier_gain"] <= 0:
             blockers.append("temporal_holdout_brier_gain_not_positive")
+        if rolling_temporal_holdout.get("evaluable") is not True:
+            blockers.append("rolling_temporal_holdout_not_evaluable")
+        elif not isinstance(rolling_temporal_holdout.get("min_brier_gain"), (int, float)) or rolling_temporal_holdout["min_brier_gain"] <= 0:
+            blockers.append("rolling_temporal_holdout_brier_gain_not_positive")
         signal_validated = bool(pooled_validated and not blockers)
         if signal_validated:
             validated.append(signal)
@@ -986,13 +1236,15 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
             "separated_bucket_pairs": separated_pairs,
             "pooled_predictive_signal": pooled_validated,
             "task_family_holdout": family_holdout,
+            "source_state_holdout": source_state_holdout,
             "temporal_holdout": temporal_holdout,
+            "rolling_temporal_holdout": rolling_temporal_holdout,
             "validation_blockers": blockers,
             "validated_predictive_signal": signal_validated,
         }
     if validated:
         status = "predictive_signal_validation_available"
-        reason = "representative_pooled_family_temporal_robustness_established"
+        reason = "representative_pooled_family_source_temporal_robustness_established"
     elif not labeled:
         status = "collecting"
         reason = "no_representative_terminal_outcomes"
@@ -1007,16 +1259,23 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
         "status": status,
         "reason": reason,
         "representative_terminal_outcomes": len(labeled),
+        "representative_terminal_outcomes_raw": len(raw_labeled),
+        "exact_duplicate_terminal_outcomes_excluded": exact_duplicate_count,
+        "duplicate_support_policy": "exact_validation_evidence_deduplicated_v1",
+        "source_state_identity_policy": "single_base_head_and_worktree_with_single_component_fallback_v1",
         "outcome_variation": outcome_variation,
         "familywise_confidence": 0.95,
         "comparison_count": comparison_count,
         "per_comparison_alpha": round(per_comparison_alpha, 8) if per_comparison_alpha is not None else None,
-        "method": "pooled_loocv_brier_plus_bonferroni_wilson_plus_family_temporal_holdout_v4_causal_solution_repair",
+        "method": "pooled_loocv_brier_plus_bonferroni_wilson_plus_family_source_rolling_temporal_holdout_v5_causal_solution_repair",
         "robustness_requirements": {
+            "exact_duplicate_support_excluded": True,
             "pooled_leave_one_out_brier_gain_positive": True,
             "familywise_wilson_separation": True,
             "leave_one_task_class_out_brier_gain_positive": True,
+            "leave_one_source_state_out_brier_gain_positive": True,
             "latest_third_temporal_holdout_brier_gain_positive": True,
+            "rolling_temporal_holdout_min_brier_gain_positive": True,
         },
         "repair_label_method": "replan_diagnostics_plus_post_replan_patch_v1",
         "historical_repair_label_method": "post_replan_applied_patch_delta_v1",
@@ -1241,7 +1500,9 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "association_only": True,
             "time_or_source_state_confounding_eliminated": False,
             "predictive_task_family_holdout_required": True,
+            "predictive_source_state_holdout_required": True,
             "predictive_temporal_holdout_required": True,
+            "predictive_rolling_temporal_holdout_required": True,
         },
         "replan_diagnostics": replan_diagnostics,
         "by_signal": by_signal,
@@ -1269,7 +1530,9 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "benchmark_synthetic_unlabeled_are_not_promotion_evidence": True,
             "predictive_validation_is_association_not_causality": True,
             "predictive_validation_requires_task_family_holdout": True,
+            "predictive_validation_requires_source_state_holdout": True,
             "predictive_validation_requires_temporal_holdout": True,
+            "predictive_validation_requires_rolling_temporal_holdout": True,
             "longitudinal_evolving_checkout_not_iid": True,
             "source_state_time_drift_reported": True,
             "semantic_localization_is_measurement_context_not_repair_label": True,

@@ -59,16 +59,19 @@ Recommended secondary diagnostics per candidate signal:
 - bootstrap confidence interval or repeated time-block sensitivity analysis when sample size permits;
 - calibration/reliability diagnostics only when the signal is interpreted probabilistically.
 
-### Canonical robustness gate v4
+### Canonical robustness gate v5
 
-Before P5 controlled treatment may open, a representative P4 signal must now pass all four canonical conditions:
+Before P5 controlled treatment may open, a representative P4 signal must now pass all seven canonical conditions:
 
-1. positive pooled leave-one-out Brier gain;
-2. at least one Bonferroni-familywise Wilson-separated signal bucket pair;
-3. positive leave-one-task-family-out Brier gain, with every observed task-family fold evaluable;
-4. positive Brier gain on the later one-third temporal holdout trained only on the earlier two-thirds, with repair outcome variation on both sides of the split.
+1. exact duplicate validation evidence is excluded from effective support;
+2. positive pooled leave-one-out Brier gain;
+3. at least one Bonferroni-familywise Wilson-separated signal bucket pair;
+4. positive leave-one-task-family-out Brier gain, with every observed task-family fold evaluable;
+5. positive leave-one-source-state-out Brier gain, with every observed single-source-state fold evaluable;
+6. positive Brier gain on the later one-third temporal holdout trained only on the earlier two-thirds, with repair outcome variation on both sides of the split;
+7. positive Brier gain in every evaluable rolling forward temporal window, so the minimum rolling-window gain remains positive.
 
-This makes pooled task-family proxies and late direction reversals fail closed instead of being promoted. It remains an association gate, not a causal claim. Source-state drift is still reported explicitly and no synthetic challenge may make a canonical signal promotion-eligible.
+This makes duplicate-support inflation, pooled task-family proxies, source-state proxies, late direction reversals, and recurrent middle drift fail closed instead of being promoted. It remains an association gate, not a causal claim: source/time confounding is not claimed to be eliminated. Source-state drift is still reported explicitly and no synthetic challenge may make a canonical signal promotion-eligible.
 
 The deep challenge runner is:
 
@@ -108,7 +111,7 @@ A green battery means P4 measurement/readiness behavior is trustworthy under con
 
 ## Research-driven stress suite v1
 
-P4 also has a literature-inspired adversarial suite that is intentionally broader than the 96-case engineering battery and the eight v4 deep challenges:
+P4 also has a literature-inspired adversarial suite that is intentionally broader than the 96-case engineering battery and the eight v5 deep challenges:
 
 ```bash
 python tests/p4_eval_pack/run_p4_research_stress_suite.py --repo-root .
@@ -129,7 +132,7 @@ Research themes encoded by the runner include:
 
 The stress suite has six families of checks: data/label integrity, temporal drift, class imbalance/statistical power, subgroup/source-state robustness, metamorphic invariants, and out-of-sample empirical-bucket reliability diagnostics. Calibration checks use probabilities estimated from training bucket outcomes only; the ordinal `low/medium/high` risk labels are never treated as native probabilities.
 
-Unlike the canonical promotion gate, this suite is expected to fail when it discovers a structural blind spot. A failing counterexample starts a replan: first reproduce and classify the failure, then harden the smallest canonical mechanism that actually permits the false promotion, then rerun this suite plus the existing v4 deep runner and focused P4 tests. Threshold relaxation, synthetic promotion, fabricated representative outcomes, and automatic P5 activation remain forbidden.
+Unlike the canonical promotion gate, this suite starts a replan whenever it discovers a structural canonical blind spot. Its raw process may remain nonzero while separately tracked fixture defects exist. For a canonical counterexample, first reproduce and classify the failure, then harden the smallest canonical mechanism that actually permits the false promotion, then rerun this suite plus the existing v5 deep runner and focused P4 tests. Threshold relaxation, synthetic promotion, fabricated representative outcomes, and automatic P5 activation remain forbidden.
 
 ## Multilayer continuous challenge suite v1
 
@@ -145,7 +148,7 @@ The suite contains twelve layers: repository/cross-file reasoning; long-horizon 
 
 Scoring is multidimensional. A passed deterministic answer contributes to its named dimensions, an actual failure contributes zero, and missing/unobservable evidence remains `UNKNOWN` with a null score contribution rather than being coerced to zero. This preserves the repository-wide unknown-is-not-zero measurement rule.
 
-The aggregate runner executes the existing research stress suite as a subordinate diagnostic and checks its exact reviewed signature from `known_diagnostics_v1.json`. The current baseline deliberately distinguishes three canonical blind spots from two fixture defects. In default regression mode those three blind spots are reported as `KNOWN_DIAGNOSTIC` and are not silently scored as passes or zeros; any signature drift, new failure, missing case, canonical before/after mutation, or promotion-policy violation fails the run and requires review.
+The aggregate runner executes the existing research stress suite as a subordinate diagnostic and checks its exact reviewed signature from `known_diagnostics_v1.json`. The current v5 baseline has **zero canonical blind spots** and keeps the two remaining research-runner fixture defects separate. `G03_interleaved_source_epoch_proxy_rejected`, `M01_exact_duplicate_support_cannot_promote`, and `T02_recurrent_middle_drift_rejected` are deterministic regression passes. Fixture defects are reported separately and are not canonical product failures; any signature drift, new failure, missing case, canonical before/after mutation, or promotion-policy violation fails the run and requires review.
 
 For closure work, use the strict gate:
 
@@ -153,7 +156,7 @@ For closure work, use the strict gate:
 npm run benchmark:multilayer:strict
 ```
 
-Strict mode remains nonzero while a known canonical blind spot is still reproduced. A future fix must therefore make the underlying counterexample pass and then deliberately update the reviewed diagnostic baseline; simply deleting a test, weakening an oracle, changing expected counts, or promoting synthetic evidence is not a valid closure.
+Strict mode remains nonzero whenever a canonical blind spot is reproduced. The reviewed v5 baseline currently contains none, so strict mode must pass. Any future regression of a resolved counterexample must fail the run; simply deleting a test, weakening an oracle, changing expected counts to hide a regression, or promoting synthetic evidence is not a valid closure.
 
 To grade an external model or agent, save structured answers under a `responses` object and run:
 

@@ -366,7 +366,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "max_events": {**integer, "minimum": 1, "maximum": 100, "default": 50},
             "contract_fingerprint": {**string, "maxLength": 128, "description": "Optional interface/contract fingerprint used by the lane drift gate."},
             "allow_rebase": {**boolean, "default": False, "description": "Allow a lane to continue after base/worktree/contract drift only with a material reason."},
-            "message_id": {**string, "description": "Coordination message id required by action=ack."},
+            "message_id": {**string, "description": "Coordination message id or current operator completion report id required by action=ack."},
             "message_status": {**string, "enum": ["pending", "acknowledged"], "default": "pending"},
             "direction": {**string, "enum": ["chatweb_to_codex", "codex_to_chatweb", "system"]},
             "handoff_action": {**string, "enum": ["get", "record"], "default": "get"},

@@ -192,6 +192,17 @@ class TaskStateStore:
             state = self._read()
             pending = self._pending_completion_report_from_state(state)
             if pending is None:
+                report = state.get("completion_report")
+                current_id = str(state.get("completion_report_id") or "").strip()
+                acknowledged_id = str(state.get("completion_report_acknowledged_id") or "").strip()
+                if (
+                    isinstance(report, dict)
+                    and report.get("operator_visible_required") is True
+                    and expected
+                    and expected == current_id
+                    and acknowledged_id == current_id
+                ):
+                    return copy.deepcopy(state)
                 raise ValueError("No operator completion report is awaiting acknowledgement.")
             if not expected or expected != pending["report_id"]:
                 raise ValueError("completion report acknowledgement does not match the pending report id")

@@ -165,12 +165,17 @@ class OperatorReportIsolationTests(unittest.TestCase):
                     })
                 self.assertEqual(wrong_ack.exception.code, "OPERATOR_REPORT_ACK_INVALID")
 
-                acknowledged = runtime.task_control({
-                    "action": "update",
-                    "payload": {"extension": "operator_report_ack_v1", "report_id": report_id},
-                })
+                with self.assertRaises(ToolFailure) as wrong_legacy_ack:
+                    runtime.task_control({"action": "ack", "message_id": "wrong"})
+                self.assertEqual(wrong_legacy_ack.exception.code, "MESSAGE_NOT_FOUND")
+
+                acknowledged = runtime.task_control({"action": "ack", "message_id": report_id})
                 self.assertTrue(acknowledged["acknowledged"])
+                self.assertEqual(acknowledged["acknowledgement_type"], "operator_completion_report")
                 self.assertIsNone(runtime.task_state.pending_completion_report())
+                repeated = runtime.task_control({"action": "ack", "message_id": report_id})
+                self.assertTrue(repeated["acknowledged"])
+                self.assertEqual(repeated["report_id"], report_id)
                 started = runtime.task_control({"action": "start", "objective": "replacement"})
                 self.assertEqual(started["state"]["objective"], "replacement")
             finally:

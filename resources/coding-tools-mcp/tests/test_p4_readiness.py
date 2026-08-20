@@ -108,6 +108,9 @@ class P4ReadinessTests(unittest.TestCase):
             self.assertTrue(report["p4_empirically_complete"])
             self.assertFalse(report["p5_baseline_ready"])
             self.assertFalse(report["p5_controlled_treatment_may_be_opened"])
+            self.assertEqual(report["p5_implementation"]["implementation_status"], "OPEN_DORMANT")
+            self.assertEqual(report["p5_implementation"]["treatment_status"], "GATED_OFF")
+            self.assertFalse(report["p5_implementation"]["treatment_active"])
             self.assertEqual(
                 report["p5_readiness_requirements"],
                 {
@@ -128,6 +131,9 @@ class P4ReadinessTests(unittest.TestCase):
             ):
                 ready = P4.p4_readiness_report(root)
             self.assertTrue(ready["p5_controlled_treatment_may_be_opened"])
+            self.assertEqual(ready["p5_implementation"]["treatment_status"], "READY_FOR_EXPLICIT_ENROLLMENT")
+            self.assertFalse(ready["p5_implementation"]["treatment_active"])
+            self.assertFalse(ready["p5_implementation"]["automatic_start"])
             self.assertEqual(ready["state"], "EMPIRICALLY_COMPLETE")
             self.assertTrue(all(ready["p5_readiness_requirements"].values()))
 

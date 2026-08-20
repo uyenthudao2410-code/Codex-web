@@ -1089,9 +1089,28 @@ class CoordinationMixin:
             if not message_id:
                 raise ToolFailure("MESSAGE_ID_REQUIRED", "message_id is required when action=ack.", category="validation")
             message = self.orchestration_ledger.acknowledge_coordination_message(message_id)
-            if message is None:
-                raise ToolFailure("MESSAGE_NOT_FOUND", "The coordination message was not found.", category="not_found")
-            return {"acknowledged": True, "message": message}
+            if message is not None:
+                return {"acknowledged": True, "message": message}
+            state = self.task_state.get()
+            current_report_id = str(state.get("completion_report_id") or "").strip()
+            if current_report_id and message_id == current_report_id:
+                try:
+                    acknowledged_state = self.task_state.ack_completion_report(message_id)
+                except ValueError as exc:
+                    raise ToolFailure(
+                        "OPERATOR_REPORT_ACK_INVALID",
+                        str(exc),
+                        category="runtime",
+                        retryable=True,
+                        details={"report_id": message_id},
+                    ) from exc
+                return {
+                    "acknowledged": True,
+                    "acknowledgement_type": "operator_completion_report",
+                    "report_id": message_id,
+                    "state": acknowledged_state,
+                }
+            raise ToolFailure("MESSAGE_NOT_FOUND", "The coordination message or current completion report was not found.", category="not_found")
         if action == "handoff":
             state, projection, run_id, wave_id = self._coordination_ids(args)
             handoff_action = str(args.get("handoff_action") or "get").strip().lower()

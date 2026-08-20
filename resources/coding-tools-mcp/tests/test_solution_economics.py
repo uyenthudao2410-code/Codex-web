@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import tempfile
 import unittest
 from pathlib import Path
@@ -60,12 +61,20 @@ def predictive_report(
     task_class: str,
     risk: str,
     repaired: bool | None,
+    source_epoch: str | None = None,
+    run_id: str | None = None,
 ) -> dict[str, object]:
     day = 1 + index // 24
     hour = index % 24
+    epoch = source_epoch or f"epoch-{(index // 4) % 4}"
     return {
+        "run_id": run_id or f"predictive-{index}",
         "task_class": task_class,
         "evidence_provenance": "representative",
+        "source_state": {
+            "base_head_identities": [epoch],
+            "worktree_fingerprint_identities": [f"wt-{epoch}"],
+        },
         "recommendation": {
             "candidate_solution_scope": "localized_file",
             "root_cause_confidence": "high",
@@ -508,11 +517,19 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
                 task_class = "bugfix" if index % 2 == 0 else "feature"
                 repaired = (index // 2) % 2 == 1
                 risk = "high" if repaired else "low"
+                source_index = (index // 4) % 4
+                base_head = f"head-{source_index}"
+                worktree_fp = f"worktree-{source_index}"
                 run_id = ledger.create_run(
                     objective=f"{task_class}-{index}",
                     metadata={"workflow": task_class, "evaluation": {"provenance": "representative"}},
                 )
-                wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only",
+                    base_head=base_head,
+                    worktree_fp=worktree_fp,
+                )
                 record_solution_shadow(
                     ledger,
                     run_id=run_id,
@@ -529,7 +546,12 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
                         payload={"failure_class": "PATCH_CONTEXT_AMBIGUOUS"},
                     )
                     ledger.finish_wave(wave_id, status="replanned")
-                    wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                    wave_id = ledger.create_wave(
+                        run_id,
+                        execution_mode="mcp_only",
+                        base_head=base_head,
+                        worktree_fp=worktree_fp,
+                    )
                     record_repair_patch(
                         ledger,
                         run_id=run_id,
@@ -545,9 +567,15 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertGreater(validation["signals"]["expected_repair_risk"]["leave_one_out_brier_gain"], 0)
             self.assertTrue(validation["signals"]["expected_repair_risk"]["separated_bucket_pairs"])
             self.assertGreater(validation["signals"]["expected_repair_risk"]["task_family_holdout"]["brier_gain"], 0)
+            self.assertGreater(validation["signals"]["expected_repair_risk"]["source_state_holdout"]["brier_gain"], 0)
             self.assertGreater(validation["signals"]["expected_repair_risk"]["temporal_holdout"]["brier_gain"], 0)
+            self.assertGreater(validation["signals"]["expected_repair_risk"]["rolling_temporal_holdout"]["min_brier_gain"], 0)
             self.assertEqual(validation["signals"]["expected_repair_risk"]["validation_blockers"], [])
-            self.assertIn("family_temporal_holdout_v4", validation["method"])
+            self.assertIn("family_source_rolling_temporal_holdout_v5", validation["method"])
+            self.assertEqual(
+                validation["source_state_identity_policy"],
+                "single_base_head_and_worktree_with_single_component_fallback_v1",
+            )
             self.assertTrue(population["p4_gate"]["can_answer_which_signals_predict_repair"])
             self.assertEqual(population["p4_gate"]["status"], "predictive_signal_validation_available")
             self.assertFalse(population["p4_gate"]["automatic_policy_activation"])
@@ -604,10 +632,79 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
         signal = validation["signals"]["expected_repair_risk"]
         self.assertTrue(signal["pooled_predictive_signal"])
         self.assertGreater(signal["task_family_holdout"]["brier_gain"], 0)
+        self.assertGreater(signal["source_state_holdout"]["brier_gain"], 0)
         self.assertGreater(signal["temporal_holdout"]["brier_gain"], 0)
+        self.assertGreater(signal["rolling_temporal_holdout"]["min_brier_gain"], 0)
         self.assertEqual(signal["validation_blockers"], [])
         self.assertTrue(signal["validated_predictive_signal"])
         self.assertIn("expected_repair_risk", validation["validated_signals"])
+
+    def test_predictive_gate_deduplicates_exact_evidence_support(self) -> None:
+        rows = []
+        bucket_seen = {"low": 0, "high": 0}
+        for index in range(200):
+            risk = "high" if index % 2 else "low"
+            ordinal = bucket_seen[risk]
+            bucket_seen[risk] += 1
+            repaired = ((ordinal * 37) % 100) < (58 if risk == "high" else 42)
+            rows.append(predictive_report(
+                index,
+                task_class="bugfix" if (index // 2) % 2 == 0 else "feature",
+                risk=risk,
+                repaired=repaired,
+            ))
+        original = _predictive_validation(rows)
+        duplicated = _predictive_validation([
+            copy.deepcopy(item)
+            for _ in range(4)
+            for item in rows
+        ])
+        self.assertEqual(original["validated_signals"], duplicated["validated_signals"])
+        self.assertEqual(original["representative_terminal_outcomes"], duplicated["representative_terminal_outcomes"])
+        self.assertEqual(duplicated["representative_terminal_outcomes_raw"], 800)
+        self.assertEqual(duplicated["exact_duplicate_terminal_outcomes_excluded"], 600)
+        self.assertEqual(duplicated["duplicate_support_policy"], "exact_validation_evidence_deduplicated_v1")
+
+    def test_predictive_gate_rejects_interleaved_source_state_proxy(self) -> None:
+        rows = []
+        for index in range(320):
+            repaired = index % 2 == 1
+            rows.append(predictive_report(
+                index,
+                task_class="bugfix" if (index // 2) % 2 == 0 else "feature",
+                risk="high" if repaired else "low",
+                repaired=repaired,
+                source_epoch="epoch-b" if repaired else "epoch-a",
+            ))
+        validation = _predictive_validation(rows)
+        signal = validation["signals"]["expected_repair_risk"]
+        self.assertTrue(signal["pooled_predictive_signal"])
+        self.assertFalse(signal["source_state_holdout"]["evaluable"])
+        self.assertIn("source_state_holdout_not_evaluable", signal["validation_blockers"])
+        self.assertFalse(signal["validated_predictive_signal"])
+        self.assertNotIn("expected_repair_risk", validation["validated_signals"])
+
+    def test_predictive_gate_rejects_recurrent_middle_temporal_drift(self) -> None:
+        rows = []
+        for index in range(600):
+            repaired = (index // 2) % 2 == 1
+            reversed_window = 200 <= index < 260
+            aligned = "high" if repaired else "low"
+            risk = ("low" if repaired else "high") if reversed_window else aligned
+            rows.append(predictive_report(
+                index,
+                task_class="bugfix" if index % 2 == 0 else "feature",
+                risk=risk,
+                repaired=repaired,
+            ))
+        validation = _predictive_validation(rows)
+        signal = validation["signals"]["expected_repair_risk"]
+        self.assertTrue(signal["temporal_holdout"]["evaluable"])
+        self.assertGreater(signal["temporal_holdout"]["brier_gain"], 0)
+        self.assertTrue(signal["rolling_temporal_holdout"]["evaluable"])
+        self.assertLessEqual(signal["rolling_temporal_holdout"]["min_brier_gain"], 0)
+        self.assertIn("rolling_temporal_holdout_brier_gain_not_positive", signal["validation_blockers"])
+        self.assertFalse(signal["validated_predictive_signal"])
 
     def test_missing_evaluation_provenance_is_unlabeled_not_representative(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

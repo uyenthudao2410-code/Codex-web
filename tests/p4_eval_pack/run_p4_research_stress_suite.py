@@ -167,11 +167,13 @@ def rare_positive_rows(count: int = 2000, *, signal: bool) -> list[dict[str, Any
     rows: list[dict[str, Any]] = []
     high_seen = 0
     for index in range(count):
-        is_high = index % 20 == 0
+        block = index // 20
+        high_offset = block % 4
+        is_high = index % 20 == high_offset
         if is_high:
             ordinal = high_seen
             high_seen += 1
-            repaired = ((ordinal * 17) % 100) < 40
+            repaired = ordinal % 10 < 4
         else:
             repaired = False
         if signal:
@@ -250,7 +252,7 @@ def stable_cross_source_rows(count: int = 320) -> list[dict[str, Any]]:
             risk="high" if repaired else "low",
             repaired=repaired,
             task_class="bugfix" if index % 2 == 0 else "feature",
-            source_epoch=f"epoch-{index % 4}",
+            source_epoch=f"epoch-{(index // 4) % 4}",
             stress_group=f"group-{(index // 4) % 4}",
         ))
     return rows

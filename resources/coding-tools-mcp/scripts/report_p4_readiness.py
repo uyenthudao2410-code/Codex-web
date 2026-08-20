@@ -11,6 +11,7 @@ if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
+from coding_tools_mcp.p5_treatment import p5_implementation_contract
 from coding_tools_mcp.solution_economics import solution_shadow_population_report
 
 
@@ -118,6 +119,10 @@ def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, objec
     git_baseline = _git_baseline_status(root)
     p5_baseline_ready = git_baseline.get("p5_baseline_ready") is True
     p5_treatment_ready = empirically_complete and validated_predictive_signal_ready and p5_baseline_ready
+    p5_implementation = p5_implementation_contract(
+        treatment_readiness=p5_treatment_ready,
+        validated_signals=validated_signals,
+    )
     shadow_tasks = int(cohort.get("shadow_tasks") or 0)
     if empirically_complete and p5_baseline_ready:
         state = "EMPIRICALLY_COMPLETE"
@@ -149,6 +154,7 @@ def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, objec
             "clean_upstream_matched_baseline": p5_baseline_ready,
         },
         "p5_controlled_treatment_may_be_opened": p5_treatment_ready,
+        "p5_implementation": p5_implementation,
         "automatic_policy_activation": False,
         "p5_automatic_start": False,
         "policy": policy,

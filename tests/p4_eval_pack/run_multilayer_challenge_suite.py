@@ -453,20 +453,23 @@ def run_research_stress(repo_root: Path, known: dict[str, Any]) -> dict[str, Any
     blind_spots = sorted(str(item) for item in result.get("blind_spots", []))
     expected_failed_ids = sorted(str(item) for item in known.get("expected_failed_case_ids", []))
     expected_blind_spots = sorted(str(item) for item in known.get("expected_blind_spots", []))
+    expected_failed = int(known.get("expected_failed") or 0)
+    expected_returncode = 1 if expected_failed else 0
     signature_matches = (
         result.get("runner") == known.get("stress_runner")
         and int(result.get("case_count") or 0) == int(known.get("expected_case_count") or -1)
         and int(result.get("passed") or 0) == int(known.get("expected_passed") or -1)
-        and int(result.get("failed") or 0) == int(known.get("expected_failed") or -1)
+        and int(result.get("failed") or 0) == expected_failed
         and failed_ids == expected_failed_ids
         and blind_spots == expected_blind_spots
-        and proc.returncode == 1
+        and proc.returncode == expected_returncode
         and result.get("canonical_before") == result.get("canonical_after")
         and (result.get("evidence_policy") or {}).get("promotion_eligible") is False
         and (result.get("evidence_policy") or {}).get("canonical_mutation_allowed") is False
     )
+    status = "CLEAN" if signature_matches and expected_failed == 0 else "KNOWN_DIAGNOSTIC_STABLE" if signature_matches else "DRIFT"
     return {
-        "status": "KNOWN_DIAGNOSTIC_STABLE" if signature_matches else "DRIFT",
+        "status": status,
         "exit_code": proc.returncode,
         "signature_matches": signature_matches,
         "case_count": result.get("case_count"),
@@ -543,7 +546,7 @@ def main() -> int:
     unknown = [item for item in results if item["status"] == "UNKNOWN"]
     known_diagnostics = [item for item in results if item["status"] == "KNOWN_DIAGNOSTIC"]
     strict_blocked = bool(args.strict_known_diagnostics and known_diagnostics)
-    regression_ok = stress.get("status") == "KNOWN_DIAGNOSTIC_STABLE" and canonical_unchanged and not failures
+    regression_ok = stress.get("status") in {"KNOWN_DIAGNOSTIC_STABLE", "CLEAN"} and canonical_unchanged and not failures
     if not regression_ok or strict_blocked:
         status = "FAIL"
         exit_code = 1

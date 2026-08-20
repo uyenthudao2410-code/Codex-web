@@ -80,14 +80,16 @@ class MultilayerChallengeSuiteTests(unittest.TestCase):
         self.assertEqual(detail["cost"], 19)
         self.assertEqual(detail["minimum_cost"], 19)
 
-    def test_known_diagnostic_baseline_keeps_fixture_defects_separate(self) -> None:
+    def test_resolved_canonical_and_fixture_diagnostics_are_clean(self) -> None:
         canonical = set(self.known["canonical_blind_spot_case_ids"])
         fixtures = set(self.known["fixture_defect_case_ids"])
         failed = set(self.known["expected_failed_case_ids"])
-        self.assertEqual(len(canonical), 3)
-        self.assertEqual(len(fixtures), 2)
+        self.assertEqual(canonical, set())
+        self.assertEqual(fixtures, set())
         self.assertFalse(canonical & fixtures)
-        self.assertEqual(canonical | fixtures, failed)
+        self.assertEqual(fixtures, failed)
+        self.assertEqual(self.known["expected_passed"], 35)
+        self.assertEqual(self.known["expected_failed"], 0)
 
 
 if __name__ == "__main__":

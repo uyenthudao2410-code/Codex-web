@@ -29,11 +29,11 @@ function removeTempTree(target) {
   fs.rmSync(target, {
     recursive: true,
     force: true,
-    // Windows can keep a just-exited child process directory briefly locked.
-    // Node retries EBUSY/EPERM/ENOTEMPTY only for recursive removal, so keep
-    // cleanup deterministic with a small bounded retry window instead of an
-    // unbounded sleep or masking the failure.
-    maxRetries: process.platform === 'win32' ? 10 : 0,
+    // Windows can keep a just-exited child process directory briefly locked,
+    // especially while the broader test suite is releasing concurrent process
+    // handles. Keep cleanup deterministic with a bounded retry window instead
+    // of an unbounded sleep or masking a persistent lifecycle leak.
+    maxRetries: process.platform === 'win32' ? 20 : 0,
     retryDelay: process.platform === 'win32' ? 100 : 0
   });
 }
