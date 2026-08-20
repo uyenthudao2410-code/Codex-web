@@ -3,19 +3,19 @@
 - Run: `4ad922eb82bc44b2ba8871495d5f8fcf`
 - Task: `415834495ac44124960a74b0695813e8`
 - Objective: Continue the same post-P4-MX run after a read-only shell quoting failure. Read only the exact non-overlapping files needed to implement the already-settled patch; do not write. Preserve protected Control Panel paths untouched.
-- Status: **active**
+- Status: **accepted**
 - Started: `2026-08-20T08:26:13.851Z`
-- Finished: `None`
+- Finished: `2026-08-20T09:55:37.349Z`
 
 ## Outcome metrics
 
-- Waves: **3**
-- Route decisions: **1**
+- Waves: **4**
+- Route decisions: **2**
 - Failures observed: **3**
 - REPLAN transitions: **3**
-- Proof stages: **6**
+- Proof stages: **12**
 - Proof cache hits: **0**
-- Acceptance checkpoints: **0**
+- Acceptance checkpoints: **1**
 
 ## Waves
 
@@ -23,19 +23,21 @@
 |---:|---|---|---|---|
 | 1 | `1db6c137e6eb4e79b06625bedd7e3efa` | `mcp_only` | `dc40d9764887bba7400dccb13ad37f5b47881841` | replanned |
 | 2 | `2d74dc41c3084d2fba2ca6b50d4588d8` | `mcp_only` | `dc40d9764887bba7400dccb13ad37f5b47881841` | replanned |
-| 3 | `507e6d69cfaf4c6dabdcec288d441013` | `mcp_only` | `dc40d9764887bba7400dccb13ad37f5b47881841` | active |
+| 3 | `507e6d69cfaf4c6dabdcec288d441013` | `mcp_only` | `dc40d9764887bba7400dccb13ad37f5b47881841` | replanned |
+| 4 | `08ad9861ea424b25b847735a57d1b338` | `mcp_only` | `66c2d17b68969c3a413b867cc7281f80fbaf4b45` | accepted |
 
 ## Acceptance checkpoints
 
 | Checkpoint | Wave | Status | Git HEAD | Proof fingerprint | Accepted by |
 |---|---|---|---|---|---|
-| - | - | - | - | - | - |
+| a6ec0ab57cab428d9612837dd6b6b1fb | 08ad9861ea424b25b847735a57d1b338 | accepted | 66c2d17b68969c3a413b867cc7281f80fbaf4b45 | 0ea88883bc137c1deac481f7cd8de34ed800b70911ef8635af480d852dbf1d75 | chatweb |
 
 ## Route decisions
 
 | Seq | Requested | Resolved | Reason |
 |---:|---|---|---|
 | 23484 | `deterministic` | `deterministic` | caller_supplied_change_set |
+| 23539 | `deterministic` | `deterministic` | caller_supplied_change_set |
 
 ## Failures / replans
 
@@ -48,7 +50,7 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `95`
-- Chain head: `b2e09af03c3d41db837e66780cea6befd0cca808e52227c990e062ba1a9e76b5`
+- Events checked: `143`
+- Chain head: `23f925b731354cbbf867af3413ffe07873664346bd67d3c2675b539b4de5a4b4`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

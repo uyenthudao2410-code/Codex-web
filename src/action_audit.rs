@@ -1,6 +1,7 @@
 use crate::action_audit_sessions::{
     record_action_event, request_action_session_id, ActionAuditEventInput,
 };
+use crate::auth::{AuthContext, AuthKind};
 use crate::get_db;
 use salvo::prelude::*;
 use serde_json::{json, Value};
@@ -8,6 +9,9 @@ use serde_json::{json, Value};
 pub struct ActionAudit {
     db: Option<std::sync::Arc<crate::Database>>,
     explicit_session_id: Option<String>,
+    principal_kind: Option<String>,
+    principal_user_id: Option<String>,
+    oauth_client_id: Option<String>,
     endpoint: &'static str,
     action_name: &'static str,
     started_at: i64,
@@ -20,9 +24,14 @@ impl ActionAudit {
         endpoint: &'static str,
         action_name: &'static str,
     ) -> Self {
+        let (principal_kind, principal_user_id, oauth_client_id) =
+            action_principal_attribution(depot.obtain::<AuthContext>().ok());
         Self {
             db: get_db(depot),
             explicit_session_id: request_action_session_id(req),
+            principal_kind,
+            principal_user_id,
+            oauth_client_id,
             endpoint,
             action_name,
             started_at: chrono::Utc::now().timestamp(),
@@ -43,6 +52,9 @@ impl ActionAudit {
                 action_name: self.action_name.to_string(),
                 operation: event.operation,
                 project: event.project,
+                principal_kind: self.principal_kind.clone(),
+                principal_user_id: self.principal_user_id.clone(),
+                oauth_client_id: self.oauth_client_id.clone(),
                 status: event.status,
                 http_status: Some(event.http_status.as_u16() as i64),
                 started_at: self.started_at,
@@ -58,6 +70,33 @@ impl ActionAudit {
             },
         );
     }
+}
+
+fn action_principal_attribution(
+    auth: Option<&AuthContext>,
+) -> (Option<String>, Option<String>, Option<String>) {
+    let Some(auth) = auth else {
+        return (None, None, None);
+    };
+    let principal_kind = match auth.kind {
+        AuthKind::ApiToken => auth.token_kind.as_deref().unwrap_or("api_token"),
+        AuthKind::AgentToken => "agent_token",
+        AuthKind::AccountCredential => "account_credential",
+        AuthKind::OAuth2Token => "oauth2",
+        AuthKind::Bootstrap => "bootstrap",
+        AuthKind::SharedKey => "shared-key",
+        AuthKind::ProjectCredential => "project-credential",
+        AuthKind::OpenAnonymous => "open",
+    };
+    let oauth_client_id = auth
+        .is_oauth_token()
+        .then(|| auth.allowed_client_id.clone())
+        .flatten();
+    (
+        Some(principal_kind.to_string()),
+        auth.user_id.clone(),
+        oauth_client_id,
+    )
 }
 
 pub struct ActionAuditRecord {
@@ -111,5 +150,38 @@ pub fn action_status(success: bool, http_status: StatusCode) -> String {
         "timeout".to_string()
     } else {
         "failed".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn agent_allowed_client_id_is_not_oauth_client_attribution() {
+        let mut auth = AuthContext::new(AuthKind::AgentToken);
+        auth.user_id = Some("user-1".to_string());
+        auth.allowed_client_id = Some("runner-1".to_string());
+
+        let (principal_kind, principal_user_id, oauth_client_id) =
+            action_principal_attribution(Some(&auth));
+
+        assert_eq!(principal_kind.as_deref(), Some("agent_token"));
+        assert_eq!(principal_user_id.as_deref(), Some("user-1"));
+        assert_eq!(oauth_client_id, None);
+    }
+
+    #[test]
+    fn oauth_allowed_client_id_is_snapshotted_as_oauth_client() {
+        let mut auth = AuthContext::new(AuthKind::OAuth2Token);
+        auth.user_id = Some("user-2".to_string());
+        auth.allowed_client_id = Some("oauth-client-1".to_string());
+
+        let (principal_kind, principal_user_id, oauth_client_id) =
+            action_principal_attribution(Some(&auth));
+
+        assert_eq!(principal_kind.as_deref(), Some("oauth2"));
+        assert_eq!(principal_user_id.as_deref(), Some("user-2"));
+        assert_eq!(oauth_client_id.as_deref(), Some("oauth-client-1"));
     }
 }

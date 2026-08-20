@@ -402,7 +402,7 @@ def render_summary(report: dict[str, Any], manifest: dict[str, Any]) -> str:
     artifacts = manifest.get("artifact_integrity") if isinstance(manifest.get("artifact_integrity"), dict) else {}
     for name in sorted(artifacts):
         item = artifacts[name] if isinstance(artifacts.get(name), dict) else {}
-        lines.append(f"- `{name}`: `{item.get('sha256')}` — `{item.get('path')}`")
+        lines.append(f"- `{name}`: `{item.get('sha256')}` | `{item.get('path')}`")
     lines.append("")
     return "\n".join(lines)
 

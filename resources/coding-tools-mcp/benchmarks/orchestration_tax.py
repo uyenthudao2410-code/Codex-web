@@ -38,7 +38,7 @@ def _provider_token_total(ledger: Any, run_id: str) -> tuple[int | None, str | N
         if str(item.get("actor") or "provider").strip().lower() != "controller"
     ]
     if not events:
-        return 0, None, 0
+        return None, "provider_token_usage_unobserved", 0
     total = 0
     for event in events:
         try:

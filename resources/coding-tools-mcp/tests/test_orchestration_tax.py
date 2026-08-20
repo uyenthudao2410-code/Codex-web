@@ -6,7 +6,13 @@ from benchmarks.orchestration_tax import orchestration_tax_report
 
 
 class _FakeLedger:
-    def __init__(self, *, candidate_output_tokens: int | None = 70) -> None:
+    def __init__(
+        self,
+        *,
+        candidate_output_tokens: int | None = 70,
+        provider_usage_observed: bool = True,
+    ) -> None:
+        self.provider_usage_observed = provider_usage_observed
         self.records = {
             "baseline": {
                 "run_id": "baseline",
@@ -47,7 +53,14 @@ class _FakeLedger:
 
     def list_usage_events(self, run_id: str, *, limit: int | None) -> list[dict[str, object]]:
         del run_id, limit
-        return []
+        if not self.provider_usage_observed:
+            return []
+        return [{
+            "actor": "provider",
+            "provider_id": "test-provider",
+            "model_id": "test-model",
+            "usage": {"input_tokens": 0, "output_tokens": 0},
+        }]
 
 
 class OrchestrationTaxTests(unittest.TestCase):
@@ -58,6 +71,10 @@ class OrchestrationTaxTests(unittest.TestCase):
         self.assertEqual(result["complete_usage_pairs"], 1)
         self.assertEqual(result["total_usage_multiplier"]["p50"], 1.5)
         self.assertEqual(result["root_work_amplification_delta"]["p50"], 0.0)
+        pair = result["pairs"][0]
+        self.assertEqual(pair["baseline_usage"]["provider_tokens"], 0)
+        self.assertEqual(pair["baseline_usage"]["provider_usage_events"], 1)
+        self.assertTrue(pair["baseline_usage"]["complete"])
         self.assertTrue(report["policy"]["canonical_pair_ids_are_authoritative_whitelist"])
         self.assertTrue(report["policy"]["unknown_is_not_zero"])
         self.assertFalse(report["automatic_activation"])
@@ -72,6 +89,23 @@ class OrchestrationTaxTests(unittest.TestCase):
         self.assertEqual(pair["reason"], "controller_token_usage_incomplete")
         self.assertIn("usage_coverage_incomplete", result["hold_reasons"])
         self.assertFalse(result["automatic_activation"])
+
+    def test_missing_provider_usage_is_unknown_not_zero_and_holds(self) -> None:
+        report = orchestration_tax_report(
+            _FakeLedger(provider_usage_observed=False),
+            min_pairs=1,
+            min_task_classes=1,
+        )
+        result = report["results"][0]
+        pair = result["pairs"][0]
+        self.assertEqual(result["status"], "hold")
+        self.assertEqual(result["complete_usage_pairs"], 0)
+        self.assertIsNone(pair["baseline_usage"]["provider_tokens"])
+        self.assertEqual(pair["baseline_usage"]["provider_usage_events"], 0)
+        self.assertFalse(pair["baseline_usage"]["complete"])
+        self.assertIsNone(pair["total_usage_multiplier"])
+        self.assertEqual(pair["reason"], "provider_token_usage_unobserved")
+        self.assertIn("usage_coverage_incomplete", result["hold_reasons"])
 
 
 if __name__ == "__main__":

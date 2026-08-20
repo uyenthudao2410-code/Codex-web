@@ -1,6 +1,6 @@
 use super::*;
 use crate::action_audit_sessions::{record_action_event, ActionAuditEventInput};
-use crate::test_support::{test_config, test_db};
+use crate::test_support::{seed_oauth_client_named, seed_user, test_config, test_db};
 use crate::Database;
 use salvo::prelude::{affix_state, Response, Router, StatusCode};
 use salvo::test::{ResponseExt, TestClient};
@@ -42,6 +42,9 @@ fn seed_event(
             action_name: action_name.to_string(),
             operation: Some("op".to_string()),
             project: Some("demo".to_string()),
+            principal_kind: None,
+            principal_user_id: None,
+            oauth_client_id: None,
             status: status.to_string(),
             http_status: Some(200),
             started_at: 1,
@@ -52,6 +55,41 @@ fn seed_event(
             changed_files: Vec::new(),
             ids: json!({}),
             summary,
+            request_bytes: None,
+            response_bytes: None,
+        },
+    );
+}
+
+fn seed_attributed_event(
+    db: &Arc<Database>,
+    session_id: &str,
+    principal_kind: Option<&str>,
+    principal_user_id: Option<&str>,
+    oauth_client_id: Option<&str>,
+) {
+    record_action_event(
+        db,
+        ActionAuditEventInput {
+            explicit_session_id: Some(session_id.to_string()),
+            session_title: None,
+            endpoint: "/api/runtime/status".to_string(),
+            action_name: "getRuntimeStatus".to_string(),
+            operation: Some("runtime_status".to_string()),
+            project: Some("demo".to_string()),
+            principal_kind: principal_kind.map(str::to_string),
+            principal_user_id: principal_user_id.map(str::to_string),
+            oauth_client_id: oauth_client_id.map(str::to_string),
+            status: "success".to_string(),
+            http_status: Some(200),
+            started_at: 1,
+            ended_at: 2,
+            duration_ms: 10,
+            error_summary: None,
+            warning_summary: None,
+            changed_files: Vec::new(),
+            ids: json!({}),
+            summary: json!({}),
             request_bytes: None,
             response_bytes: None,
         },
@@ -268,6 +306,9 @@ async fn http_audit_session_happy_path_returns_session_and_events() {
     assert_eq!(events.len(), 1);
     assert_eq!(events[0]["endpoint"], "/api/projects/apply_patch");
     assert_eq!(events[0]["summary"]["files_changed"], 1);
+    assert!(events[0].get("principal_kind").is_none());
+    assert!(events[0].get("principal_user_id").is_none());
+    assert!(events[0].get("oauth_client_id").is_none());
 }
 
 // =========================================================================
@@ -358,6 +399,98 @@ async fn http_audit_stats_global_over_recent_sessions() {
     assert_eq!(body["by_endpoint"]["/api/runtime/status"], 1);
     assert_eq!(body["git_count"], 1);
     assert_eq!(body["report_count"], 1);
+}
+
+#[tokio::test]
+async fn http_audit_stats_unknown_scoped_session_is_not_found() {
+    let config = test_config(Some("secret"));
+    let (_tmp, db) = test_db();
+    let service = Service::new(build_audit_router(config, db));
+
+    let resp = TestClient::post("http://localhost/api/audit/stats")
+        .bearer_auth("secret")
+        .json(&json!({ "session_id": "missing" }))
+        .send(&service)
+        .await;
+    assert_eq!(effective_status(&resp), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn http_audit_stats_reports_attribution_and_coverage_without_user_ids() {
+    let config = test_config(Some("secret"));
+    let (_tmp, db) = test_db();
+    let user = seed_user(&db, "audit-user");
+    let (client, _secret) = seed_oauth_client_named(&db, &user, "Audit App");
+    seed_attributed_event(
+        &db,
+        "stats-attribution",
+        Some("oauth2"),
+        Some(&user.id),
+        Some(&client.client_id),
+    );
+    seed_event(
+        &db,
+        "stats-attribution",
+        "/api/projects/list",
+        "listProjects",
+        "success",
+        json!({}),
+    );
+    let service = Service::new(build_audit_router(config, db));
+
+    let mut resp = TestClient::post("http://localhost/api/audit/stats")
+        .bearer_auth("secret")
+        .json(&json!({ "session_id": "stats-attribution" }))
+        .send(&service)
+        .await;
+    assert_eq!(effective_status(&resp), StatusCode::OK);
+    let body: Value = resp.take_json().await.unwrap();
+    assert_eq!(body["attribution"]["by_principal_kind"]["oauth2"], 1);
+    assert_eq!(body["attribution"]["attributed_count"], 1);
+    assert_eq!(body["attribution"]["unattributed_count"], 1);
+    assert_eq!(
+        body["attribution"]["by_oauth_client"][0]["client_id"],
+        client.client_id
+    );
+    assert_eq!(
+        body["attribution"]["by_oauth_client"][0]["name"],
+        "Audit App"
+    );
+    assert_eq!(body["attribution"]["by_oauth_client"][0]["count"], 1);
+    assert_eq!(body["events_scanned"], 2);
+    assert_eq!(body["events_available"], 2);
+    assert_eq!(body["sessions_scanned"], 1);
+    assert_eq!(body["truncated_sessions"], 0);
+    assert_eq!(body["partial"], false);
+    assert_eq!(body["truncated"], false);
+    let serialized = body.to_string();
+    assert!(!serialized.contains(&user.id));
+    assert!(!serialized.contains("principal_user_id"));
+}
+
+#[tokio::test]
+async fn http_audit_stats_fails_when_selected_event_rows_cannot_be_read() {
+    let config = test_config(Some("secret"));
+    let (_tmp, db) = test_db();
+    seed_event(
+        &db,
+        "broken-stats",
+        "/api/projects/list",
+        "listProjects",
+        "success",
+        json!({}),
+    );
+    db.conn_for_tests()
+        .execute("DROP TABLE action_events", [])
+        .unwrap();
+    let service = Service::new(build_audit_router(config, db));
+
+    let resp = TestClient::post("http://localhost/api/audit/stats")
+        .bearer_auth("secret")
+        .json(&json!({}))
+        .send(&service)
+        .await;
+    assert_eq!(effective_status(&resp), StatusCode::INTERNAL_SERVER_ERROR);
 }
 
 // =========================================================================

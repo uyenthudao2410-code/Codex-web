@@ -1,0 +1,428 @@
+{
+  "artifact_integrity": {
+    "final_report": {
+      "path": "tmp/p4mx-closeout-snapshot/tests/model_eval_pack/results/p4mx_gpt54mini_20260820_final_report.json",
+      "sha256": "2b42f2b3ef082eba6f0bfc5301178c7b9804d90146add3298a7d4e9d4a468a47"
+    },
+    "private_oracle": {
+      "path": "tests/model_eval_pack/private/model_extreme_oracles_v1.json",
+      "sha256": "ad07bf2d50f59cdcefbc36d7b5ddb583444636ca7996bd72e92f22cb7b5a6bdd"
+    },
+    "public_catalog": {
+      "path": "tests/model_eval_pack/public/model_extreme_challenges_v1.json",
+      "sha256": "f13b69161b0c03d1bcf96111169539ec8706bb6d6015b9dec8607d12e8aa73ad"
+    },
+    "public_feedback": {
+      "path": "tests/model_eval_pack/public/model_extreme_feedback_v1.json",
+      "sha256": "cec53b620e183cc1b50d172e8d9d7803333bf57cb24d0ee7cb02a3a02b0b5e8c"
+    },
+    "responses": {
+      "path": "tmp/p4mx-closeout-snapshot/tests/model_eval_pack/results/p4mx_gpt54mini_medium_20260820_responses.json",
+      "sha256": "22f7bd3a2bf706d860f4a97403662479302f9b666e186c8cab8cf0ef746031a1"
+    }
+  },
+  "candidate_model": "gpt-5.4-mini",
+  "closeout_policy": {
+    "automatic_policy_activation": false,
+    "benchmark_nonpromoting": true,
+    "canonical_mutation_allowed": false,
+    "model_failure_is_a_valid_closed_measurement": true,
+    "p5_may_be_opened": false
+  },
+  "effort_policy": {
+    "Extreme": {
+      "count": 24,
+      "fallback": false,
+      "requested_effort": "medium",
+      "resolved_effort": "medium"
+    },
+    "Ultra": {
+      "count": 6,
+      "fallback": true,
+      "fallback_reason": "medium_no_terminal_answer_within_budget",
+      "requested_effort": "medium",
+      "resolved_effort": "low"
+    },
+    "cases": {
+      "MX-AG-001": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-AG-002": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-AG-003": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-AG-004": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-CS-001": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-CS-002": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-CS-003": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-CS-004": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-DF-001": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-DF-002": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-DF-003": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-DF-004": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-EU-001": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-EU-002": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-EU-003": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-EU-004": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-RL-001": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-RL-002": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-RL-003": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-RL-004": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-TE-001": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-TE-002": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-TE-003": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-TE-004": {
+        "fallback": false,
+        "fallback_reason": null,
+        "requested_effort": "medium",
+        "resolved_effort": "medium",
+        "tier": "Extreme"
+      },
+      "MX-U-001": {
+        "fallback": true,
+        "fallback_reason": "medium_no_terminal_answer_within_budget",
+        "requested_effort": "medium",
+        "resolved_effort": "low",
+        "tier": "Ultra"
+      },
+      "MX-U-002": {
+        "fallback": true,
+        "fallback_reason": "medium_no_terminal_answer_within_budget",
+        "requested_effort": "medium",
+        "resolved_effort": "low",
+        "tier": "Ultra"
+      },
+      "MX-U-003": {
+        "fallback": true,
+        "fallback_reason": "medium_no_terminal_answer_within_budget",
+        "requested_effort": "medium",
+        "resolved_effort": "low",
+        "tier": "Ultra"
+      },
+      "MX-U-004": {
+        "fallback": true,
+        "fallback_reason": "medium_no_terminal_answer_within_budget",
+        "requested_effort": "medium",
+        "resolved_effort": "low",
+        "tier": "Ultra"
+      },
+      "MX-U-005": {
+        "fallback": true,
+        "fallback_reason": "medium_no_terminal_answer_within_budget",
+        "requested_effort": "medium",
+        "resolved_effort": "low",
+        "tier": "Ultra"
+      },
+      "MX-U-006": {
+        "fallback": true,
+        "fallback_reason": "medium_no_terminal_answer_within_budget",
+        "requested_effort": "medium",
+        "resolved_effort": "low",
+        "tier": "Ultra"
+      }
+    }
+  },
+  "evaluation_date": "2026-08-20",
+  "evidence_policy": {
+    "automatic_policy_activation": false,
+    "canonical_mutation_allowed": false,
+    "p5_automatic_start": false,
+    "promotion_eligible": false,
+    "source_class": "benchmark"
+  },
+  "expected_observation": {
+    "dimension_scores": {
+      "anti_gaming": {
+        "fail": 14,
+        "observed": 16,
+        "pass": 2,
+        "score": 0.125,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 8.0
+      },
+      "causal_repair": {
+        "fail": 9,
+        "observed": 10,
+        "pass": 1,
+        "score": 0.1,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 10.0
+      },
+      "correctness": {
+        "fail": 26,
+        "observed": 30,
+        "pass": 4,
+        "score": 0.133333,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 20.0
+      },
+      "electron_ui_reasoning": {
+        "fail": 5,
+        "observed": 5,
+        "pass": 0,
+        "score": 0.0,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 5.0
+      },
+      "hidden_oracle": {
+        "fail": 14,
+        "observed": 17,
+        "pass": 3,
+        "score": 0.176471,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 15.0
+      },
+      "repo_reasoning": {
+        "fail": 14,
+        "observed": 15,
+        "pass": 1,
+        "score": 0.066667,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 12.0
+      },
+      "security": {
+        "fail": 5,
+        "observed": 5,
+        "pass": 0,
+        "score": 0.0,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 12.0
+      },
+      "state_consistency": {
+        "fail": 17,
+        "observed": 21,
+        "pass": 4,
+        "score": 0.190476,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 12.0
+      },
+      "terminal_reasoning": {
+        "fail": 5,
+        "observed": 6,
+        "pass": 1,
+        "score": 0.166667,
+        "unknown": 0,
+        "unknown_is_not_zero": true,
+        "weight": 6.0
+      }
+    },
+    "family_outcomes": {
+      "adversarial_governance": {
+        "fail": 2,
+        "first_pass": 1,
+        "hard_fail": 1,
+        "repaired": 0,
+        "unknown": 0
+      },
+      "correct_and_secure": {
+        "fail": 4,
+        "first_pass": 0,
+        "hard_fail": 0,
+        "repaired": 0,
+        "unknown": 0
+      },
+      "deceptive_false_green": {
+        "fail": 2,
+        "first_pass": 2,
+        "hard_fail": 0,
+        "repaired": 0,
+        "unknown": 0
+      },
+      "electron_ui_state": {
+        "fail": 4,
+        "first_pass": 0,
+        "hard_fail": 0,
+        "repaired": 0,
+        "unknown": 0
+      },
+      "repo_long_horizon": {
+        "fail": 4,
+        "first_pass": 0,
+        "hard_fail": 0,
+        "repaired": 0,
+        "unknown": 0
+      },
+      "terminal_environment": {
+        "fail": 3,
+        "first_pass": 1,
+        "hard_fail": 0,
+        "repaired": 0,
+        "unknown": 0
+      },
+      "ultra": {
+        "fail": 6,
+        "first_pass": 0,
+        "hard_fail": 0,
+        "repaired": 0,
+        "unknown": 0
+      }
+    },
+    "observed_weighted_score": 0.113994,
+    "summary": {
+      "attempted": 30,
+      "failed": 25,
+      "final_pass_rate": 0.133333,
+      "first_pass": 4,
+      "first_pass_rate": 0.133333,
+      "hard_fail_count": 1,
+      "repair_recovery_rate": 0.0,
+      "repaired": 0,
+      "total": 30,
+      "unknown": 0,
+      "unknown_coverage": 0.0,
+      "unknown_is_not_zero": true
+    }
+  },
+  "kind": "p4_mx_external_evaluation_closeout",
+  "provenance": "evaluator_owned_not_trusted_for_correctness_scoring",
+  "response_mode": "external_model_responses",
+  "runner": "p4-mx-model-extreme-v1",
+  "schema_version": 1,
+  "transport_policy": {
+    "fallback_preserves_candidate_model": true,
+    "fallback_uses_same_public_challenge_and_private_oracle_identity": true,
+    "non_terminal_medium_timeout": "transport_failure_not_model_fail"
+  }
+}

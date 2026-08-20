@@ -107,6 +107,8 @@ class ModelExtremeCloseoutTests(unittest.TestCase):
             rendered = render_summary(json.loads(report_path.read_text(encoding="utf-8")), manifest)
             self.assertIn("1 Extreme at `medium` + 1 Ultra at `low`", rendered)
             self.assertIn("response filename containing `medium`", rendered)
+            self.assertTrue(rendered.isascii())
+            self.assertIn("` | `tests/model_eval_pack/public/model_extreme_challenges_v1.json`", rendered)
 
     def test_verifier_detects_dimension_drift_and_artifact_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
