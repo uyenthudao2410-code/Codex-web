@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "stress_runner": "p4-research-stress-suite-v1",
+  "source_run_id": "efa41e45025040f58bf237467d33d39e",
+  "source_wave_id": "5b792630d77846e2a3ce6c68073b4fef",
+  "expected_case_count": 35,
+  "expected_passed": 30,
+  "expected_failed": 5,
+  "expected_failed_case_ids": [
+    "G03_interleaved_source_epoch_proxy_rejected",
+    "G04_cross_source_stable_signal_recovers",
+    "M01_exact_duplicate_support_cannot_promote",
+    "S01_rare_positive_strong_signal_recovers",
+    "T02_recurrent_middle_drift_rejected"
+  ],
+  "canonical_blind_spot_case_ids": [
+    "G03_interleaved_source_epoch_proxy_rejected",
+    "M01_exact_duplicate_support_cannot_promote",
+    "T02_recurrent_middle_drift_rejected"
+  ],
+  "fixture_defect_case_ids": [
+    "G04_cross_source_stable_signal_recovers",
+    "S01_rare_positive_strong_signal_recovers"
+  ],
+  "expected_blind_spots": [
+    "exact_duplicate_rows_can_inflate_support_and_change_promotion_decision",
+    "single_latest_third_holdout_can_miss_recurrent_middle_drift",
+    "source_epoch_proxy_can_pass_without_cross_source_generalization"
+  ],
+  "policy": {
+    "exact_signature_required_for_default_regression_pass": true,
+    "signature_change_requires_review": true,
+    "strict_mode_fails_while_canonical_blind_spots_exist": true,
+    "fixture_defects_are_not_canonical_product_failures": true,
+    "stale_proof_reuse_forbidden": true
+  }
+}

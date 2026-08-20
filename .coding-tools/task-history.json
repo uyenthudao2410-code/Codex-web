@@ -1,1204 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "a63449e8e3f245d4ac768e5217f26766",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "waiting",
-    "steps": [],
-    "current_step": "Waiting for model",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "wgicckhptWfNf71-Met62QK0",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "passed",
-      "exit_code": 0,
-      "duration_ms": 1582,
-      "finished_at": "2026-08-19T06:12:07.032Z"
-    },
-    "completion_report": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-19T06:12:05.139Z",
-    "updated_at": "2026-08-19T06:12:16.314Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:12:05.139Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-19T06:12:05.415Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $c=Get-Content -Path $p; $s=(Select-String -Path $p -Pattern '^const ProjectCosts =').LineNumber; $e=(Select-String -Path $p -Pattern '^type DossierDetailSection').LineNumber; Write-Output ('START='+$s); Write-Output ('END='+$e); $c[($s-1)..($e-2)]\"",
-          "session_id": "wgicckhptWfNf71-Met62QK0"
-        }
-      },
-      {
-        "time": "2026-08-19T06:12:07.032Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $c=Get-Content -Path $p; $s=(Select-String -Path $p -Pattern '^const ProjectCosts =').LineNumber; $e=(Select-String -Path $p -Pattern '^type DossierDetailSection').LineNumber; Write-Output ('START='+$s); Write-Output ('END='+$e); $c[($s-1)..($e-2)]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:12:10.906Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "task_control",
-          "code": "SOLUTION_SHADOW_CONTEXT_MISMATCH"
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:12:27.619Z",
-    "archive_reason": "superseded"
-  },
-  {
-    "version": 2,
-    "task_id": "9e906655efb04e4d8f7c79d962a38b95",
-    "orchestration": {
-      "run_id": "a7f1d94a0254409fa556350f5a58dff1",
-      "wave_id": "13c1a28ae0584a75897f403e7e78f7d8",
-      "orchestration_state": "ABORTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "359a5f231e1950e8d97303e0d2b798984c145fe6",
-      "worktree_fp": "c2d6ee4bd926d126434929e7936f589ab41367adb39fa31250075e5a83ae33cd",
-      "contract_fp": ""
-    },
-    "objective": "Fix Codex-web realtime performance card with exact rolling 5-minute provider-measured TPM and exact rolling 5-minute command latency, explicit freshness/no-data states, no stale hourly/daily/all-history fallbacks, no backend/public-tool changes, and focused renderer tests only. Preserve unrelated work. No restart, commit, push, or deploy.",
-    "status": "waiting",
-    "steps": [],
-    "current_step": "Waiting for model",
-    "current_command": null,
-    "last_command_result": null,
-    "completion_report": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Enroll shadow and resume same run with focused patch",
-    "created_at": "2026-08-19T06:12:27.638Z",
-    "updated_at": "2026-08-19T06:13:31.132Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:12:27.638Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:12:37.732Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:12:37.738Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:12:38.513Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:12:38.516Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-19T06:13:31.132Z",
-        "event": "task_orchestration_aborted",
-        "details": {
-          "state": "ABORTED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:13:31.141Z",
-    "archive_reason": "cleared"
-  },
-  {
-    "version": 2,
-    "task_id": "fa152affe6ca42a59ed34dad504171e5",
-    "orchestration": {
-      "run_id": "61012793e69f4bec93c7d0be8d284b80",
-      "wave_id": "d1f341d46b964c1980dc7db4ef7a7f37",
-      "orchestration_state": "ABORTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "359a5f231e1950e8d97303e0d2b798984c145fe6",
-      "worktree_fp": "c2d6ee4bd926d126434929e7936f589ab41367adb39fa31250075e5a83ae33cd",
-      "contract_fp": ""
-    },
-    "objective": "Repair Coding Tools MCP P4 agent_workflow continuity so a representative feature/bugfix prepare run remains task-projected long enough to record a pre-first-write solution shadow and continue into mutation, and a SOLUTION_SHADOW_REQUIRED failure remains recoverable instead of clearing the only eligible run. Do not weaken P4 provenance/gates, do not increase smart-v3 tool count, preserve multi-root execution-context isolation and unrelated dirty work. Add focused regression tests. No restart, commit, push, or deploy.",
-    "status": "waiting",
-    "steps": [],
-    "current_step": "Waiting for model",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "paSiFDPJRRYCUNAPdTT_uTXR",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "passed",
-      "exit_code": 0,
-      "duration_ms": 1878,
-      "finished_at": "2026-08-19T06:14:53.765Z"
-    },
-    "completion_report": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Generate the result from the inspected content, then save it once.",
-    "created_at": "2026-08-19T06:14:01.776Z",
-    "updated_at": "2026-08-19T06:15:03.674Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:14:01.776Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:14:09.575Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:14:10.196Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:14:10.200Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-19T06:14:25.415Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-19T06:14:52.152Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'coding_tools_mcp/workflow_tools.py'; '---WORKFLOW 330-760---'; $w[329..759]; '---TASK_STATE 330-410---'; $t=Get-Content 'coding_tools_mcp/task_state.py'; $t[329..409]; '---SOLUTION TEST 500-630---'; $s=Get-Content 'tests/test_solution_economics.py'; $s[499..629]\"",
-          "session_id": "paSiFDPJRRYCUNAPdTT_uTXR"
-        }
-      },
-      {
-        "time": "2026-08-19T06:14:53.765Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'coding_tools_mcp/workflow_tools.py'; '---WORKFLOW 330-760---'; $w[329..759]; '---TASK_STATE 330-410---'; $t=Get-Content 'coding_tools_mcp/task_state.py'; $t[329..409]; '---SOLUTION TEST 500-630---'; $s=Get-Content 'tests/test_solution_economics.py'; $s[499..629]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:15:03.674Z",
-        "event": "task_orchestration_aborted",
-        "details": {
-          "state": "ABORTED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:15:03.684Z",
-    "archive_reason": "cleared"
-  },
-  {
-    "version": 2,
-    "task_id": "c86e1195061b48b796ebc7abf7104e1d",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "",
-      "kind": "command",
-      "status": "failed",
-      "result_status": "failed",
-      "exit_code": null,
-      "duration_ms": null,
-      "finished_at": "2026-08-19T06:15:10.694Z"
-    },
-    "completion_report": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-19T06:15:09.396Z",
-    "updated_at": "2026-08-19T06:15:21.077Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:15:09.396Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-19T06:15:09.723Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"^const ProjectCosts =|^type DossierDetailSection|transactionCode\\?:|sourcePaidAmount\" components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx components/project-finance/pfm/ui-preview/pfmVisualModel.ts components/project-finance/pfm/ui-preview/PfmVisualLiveAdapter.ts",
-          "session_id": "jLHT0EMqE-ndnwzNH1HqT0cD"
-        }
-      },
-      {
-        "time": "2026-08-19T06:15:10.078Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"^const ProjectCosts =|^type DossierDetailSection|transactionCode\\?:|sourcePaidAmount\" components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx components/project-finance/pfm/ui-preview/pfmVisualModel.ts components/project-finance/pfm/ui-preview/PfmVisualLiveAdapter.ts",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:15:10.694Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'coding_tools_mcp/workflow_tools.py'; '---CONTEXT 240-365---'; $w[239..364]; '---EXEC 750-930---'; $w[749..929]; '---PROJECTOR SEARCH---'; Select-String -Path 'coding_tools_mcp/workflow_tools.py','coding_tools_mcp/server.py','coding_tools_mcp/task_state.py' -Pattern '_project_orchestration|set_orchestration_projection|orchestration_context_ready|clear\\(|finish_run|finish_wave|SOLUTION_SHADOW_REQUIRED' -Context 2,4\"",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:15:10.694Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "EXECUTION_OWNER_INVALID"
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:16:00.094Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "17e838ff87d845159867990d79637f3c",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "hIi3xinNvwD7L-VQnuvUgv_w",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "failed",
-      "exit_code": 128,
-      "duration_ms": 278,
-      "finished_at": "2026-08-19T06:16:00.659Z"
-    },
-    "completion_report": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-19T06:16:00.117Z",
-    "updated_at": "2026-08-19T06:16:16.345Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:16:00.117Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-19T06:16:00.381Z",
-        "event": "command_started",
-        "details": {
-          "command": "git apply --whitespace=nowarn -",
-          "session_id": "hIi3xinNvwD7L-VQnuvUgv_w"
-        }
-      },
-      {
-        "time": "2026-08-19T06:16:00.659Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git apply --whitespace=nowarn -",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:16:03.208Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "task_control",
-          "code": "CONTROLLER_LEASE_REQUIRED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:16:32.338Z",
-    "archive_reason": "superseded"
-  },
-  {
-    "version": 2,
-    "task_id": "12682f6b7b2d407886f21339a9b31ccb",
-    "orchestration": {
-      "run_id": "87aff9eab4e04f43a1e4d5404cbfed1a",
-      "wave_id": "f9e42718386141aa80319078f0ca13e2",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "359a5f231e1950e8d97303e0d2b798984c145fe6",
-      "worktree_fp": "c2d6ee4bd926d126434929e7936f589ab41367adb39fa31250075e5a83ae33cd",
-      "contract_fp": ""
-    },
-    "objective": "Repair the frozen ChatGPT task_control solution-shadow compatibility path without weakening P4: when an explicit run_id/wave_id identifies the caller-controlled current PREFLIGHT/READY wave but legacy shared task projection drifted to another run/tab, allow pre-first-write shadow recording after semantic-controller authorization, then re-project that exact run so execute can continue it. Keep projection-matched behavior compatible, keep record_solution_shadow late-write and workflow eligibility gates, reject wrong/non-current waves, preserve multi-root isolation and smart-v3 8 tools. Add focused regression tests. No restart, commit, push, or deploy.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-19T06:21:57.253Z"
-      },
-      {
-        "id": "verify",
-        "text": "Run tests and build verification",
-        "status": "completed",
-        "updated_at": "2026-08-19T06:21:57.253Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-19T06:21:57.253Z"
-      }
-    ],
-    "current_step": "Completed - operator report required",
-    "current_command": {
-      "command": "cmd /d /c \"python -m unittest discover -v -s tests -p \\\"test_solution_economics.py\\\" && python -m unittest discover -v -s tests -p \\\"test_execution_hub_faults.py\\\"\"",
-      "kind": "command",
-      "session_id": "LxDZartqPko5V3D0mZL0cDtH",
-      "workdir": "resources/coding-tools-mcp",
-      "status": "running",
-      "started_at": "2026-08-19T06:21:56.208Z"
-    },
-    "last_command_result": {
-      "command_id": "AtK8V9DrwSsNPVh8N-yk6KaC",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "passed",
-      "exit_code": 0,
-      "duration_ms": 1482,
-      "finished_at": "2026-08-19T06:21:49.986Z"
-    },
-    "completion_report": {
-      "schema_version": 1,
-      "operator_visible_required": true,
-      "report_contract": [
-        "WHAT CHANGED",
-        "CURRENT STATE",
-        "SOURCE / RUN / WAVE ID",
-        "PROOF ACTUALLY RUN",
-        "ACCEPTED OR NOT",
-        "WHAT REMAINS",
-        "NEXT CRITICAL ACTION"
-      ],
-      "command_id": "aTwkuPzaurYztninu6M2Eqqc",
-      "what_changed": {
-        "files": [],
-        "source": "no_durable_file_receipts",
-        "raw_source_or_command_output_included": false
-      },
-      "current_state": {
-        "task_status": "waiting",
-        "command": {
-          "command_id": "aTwkuPzaurYztninu6M2Eqqc",
-          "kind": "command",
-          "status": "exited",
-          "result_status": "passed",
-          "exit_code": 0,
-          "duration_ms": 1461
-        },
-        "git": {
-          "head": "359a5f231e1950e8d97303e0d2b798984c145fe6",
-          "branch": "main",
-          "worktree_fp": "c2d6ee4bd926d126434929e7936f589ab41367adb39fa31250075e5a83ae33cd",
-          "dirty_paths": []
-        }
-      },
-      "source_run_wave": {
-        "task_id": "12682f6b7b2d407886f21339a9b31ccb",
-        "run_id": "",
-        "wave_id": "",
-        "orchestration_state": ""
-      },
-      "proof_actually_run": {
-        "count": 0,
-        "all_recorded_proofs_passed": false,
-        "proofs": []
-      },
-      "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
-      "blocker_or_failure": null,
-      "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
-      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
-    },
-    "test_results": [
-      {
-        "command": "cmd /d /c \"python -m unittest discover -v -s tests -p \\\"test_solution_economics.py\\\" && python -m unittest discover -v -s tests -p \\\"test_execution_hub_faults.py\\\"\"",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 1112,
-        "summary": "exit 0 | 0.7s | 11 lines | tail: 'OK'"
-      }
-    ],
-    "build_results": [],
-    "last_build_report": {
-      "project": {
-        "type": "python",
-        "name": "coding-tools-mcp",
-        "version": "0.4.1",
-        "package_manager": "pip",
-        "test_command": "python -m pytest",
-        "build_command": "python -m build",
-        "artifact_paths": [
-          "dist"
-        ]
-      },
-      "commands": {
-        "test": "cmd /d /c \"python -m unittest discover -v -s tests -p \\\"test_solution_economics.py\\\" && python -m unittest discover -v -s tests -p \\\"test_execution_hub_faults.py\\\"\"",
-        "build": "python -m build"
-      },
-      "test_result": {
-        "command": "cmd /d /c \"python -m unittest discover -v -s tests -p \\\"test_solution_economics.py\\\" && python -m unittest discover -v -s tests -p \\\"test_execution_hub_faults.py\\\"\"",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 1112,
-        "summary": "exit 0 | 0.7s | 11 lines | tail: 'OK'"
-      },
-      "build_result": null,
-      "artifacts": [],
-      "hash_algorithm": "sha256",
-      "overall_status": "passed",
-      "failure": null,
-      "report_generated_at": "2026-08-19T06:21:56.663Z"
-    },
-    "modified_files": [
-      {
-        "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
-        "operation": "update",
-        "updated_at": "2026-08-19T06:21:57.663Z"
-      },
-      {
-        "path": "resources/coding-tools-mcp/tests/test_solution_economics.py",
-        "operation": "update",
-        "updated_at": "2026-08-19T06:21:57.663Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
-    "created_at": "2026-08-19T06:16:32.360Z",
-    "updated_at": "2026-08-19T06:22:18.486Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:16:32.360Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:17:01.498Z",
-        "event": "command_started",
-        "details": {
-          "command": "git apply --recount --whitespace=nowarn -",
-          "session_id": "-4WcJppx_RhxPokl2ii5NNFc"
-        }
-      },
-      {
-        "time": "2026-08-19T06:17:01.793Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git apply --recount --whitespace=nowarn -",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:17:16.723Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$src='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $tmp='.pfm_cost_block.tmp'; $c=Get-Content -Path $src; $r=Get-Content -Path $tmp; if($c[444] -notmatch '^const ProjectCosts ='){Write-Error 'ProjectCosts start drifted'; exit 2}; if($c[470] -notmatch '^type DossierDetailSection'){Write-Error 'ProjectCosts end drifted'; exit 3}; $out=@($c[0..443]) + @($r) + @($c[470..($c.Length-1)]); [IO.File]::WriteAllLines($src,$out,(New-Object Text.UTF8",
-          "session_id": "lK213F2-eia1MiSlYrFHjVbp"
-        }
-      },
-      {
-        "time": "2026-08-19T06:17:18.258Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$src='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $tmp='.pfm_cost_block.tmp'; $c=Get-Content -Path $src; $r=Get-Content -Path $tmp; if($c[444] -notmatch '^const ProjectCosts ='){Write-Error 'ProjectCosts start drifted'; exit 2}; if($c[470] -notmatch '^type DossierDetailSection'){Write-Error 'ProjectCosts end drifted'; exit 3}; $out=@($c[0..443]) + @($r) + @($c[470..($c.Length-1)]); [IO.File]::WriteAllLines($src,$out,(New-Object Text.UTF8",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:15.607Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$c=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; '---SHADOW CONTROL---'; $m=Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py' -Pattern '_solution_shadow_control|action == \\\"solution_shadow\\\"|extension.*solution_shadow' | Select-Object -First 8; $m | ForEach-Object { $_.LineNumber }; $start=[Math]::Max(0,($m[0].LineNumber-35)); $end=[Math]::Min($c.Length-1,($m[-1].LineNumber+130)); $c[$start..$end]; '",
-          "session_id": "dGePu97ooDakj77eYbn6GUvM"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:17.164Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$c=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; '---SHADOW CONTROL---'; $m=Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py' -Pattern '_solution_shadow_control|action == \\\"solution_shadow\\\"|extension.*solution_shadow' | Select-Object -First 8; $m | ForEach-Object { $_.LineNumber }; $start=[Math]::Max(0,($m[0].LineNumber-35)); $end=[Math]::Min($c.Length-1,($m[-1].LineNumber+130)); $c[$start..$end]; '",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:25.606Z",
-        "event": "command_started",
-        "details": {
-          "command": "git apply --recount --whitespace=nowarn -",
-          "session_id": "hO8tBBSkZ9ObK83FdhsNNoyo"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:25.867Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git apply --recount --whitespace=nowarn -",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:31.679Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"'---COORD IDS / CONTROLLER---'; rg -n -C 12 'def _coordination_ids|def _require_hub_controller|def _claim_hub_controller_for_run|write_lease_acquired|SOLUTION_SHADOW_EVENT' resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py; '---LEDGER HELPERS---'; rg -n -C 8 'def .*write_lease|write_lease_acquired|def get_run|def get_wave|def list_event",
-          "session_id": "2zyx28Z20hoZ56yuPQJH3KQ3"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:33.002Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"'---COORD IDS / CONTROLLER---'; rg -n -C 12 'def _coordination_ids|def _require_hub_controller|def _claim_hub_controller_for_run|write_lease_acquired|SOLUTION_SHADOW_EVENT' resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py; '---LEDGER HELPERS---'; rg -n -C 8 'def .*write_lease|write_lease_acquired|def get_run|def get_wave|def list_event",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:37.606Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$css='components/project-finance/pfm/ui-preview/pfm-visual-preview.css'; $tmp='.pfm_cost_style.tmp'; $existing=[IO.File]::ReadAllText($css); if($existing.Contains('/* Cost control workspace V2 */')){Remove-Item -Force $tmp; Write-Output 'style already present'; exit 0}; $style=[IO.File]::ReadAllText($tmp); [IO.File]::WriteAllText($css,$existing+[Environment]::NewLine+$style,(New-Object Text.UTF8Encoding($false))); Remove-Item -Force $tmp; Write-Output 'Cost wo",
-          "session_id": "C24s-mhrVJK5CJQR4Dfyt4S-"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:39.249Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$css='components/project-finance/pfm/ui-preview/pfm-visual-preview.css'; $tmp='.pfm_cost_style.tmp'; $existing=[IO.File]::ReadAllText($css); if($existing.Contains('/* Cost control workspace V2 */')){Remove-Item -Force $tmp; Write-Output 'style already present'; exit 0}; $style=[IO.File]::ReadAllText($tmp); [IO.File]::WriteAllText($css,$existing+[Environment]::NewLine+$style,(New-Object Text.UTF8Encoding($false))); Remove-Item -Force $tmp; Write-Output 'Cost wo",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:43.694Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$c=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $m=Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py' -Pattern '^    def _coordination_ids|^    def _require_hub_controller|^    def _claim_hub_controller_for_run' ; foreach($x in $m){ '---'+$x.LineNumber+' '+$x.Line.Trim()+'---'; $a=[Math]::Max(0,$x.LineNumber-1); $b=[Math]::Min($c.Length-1,$x.LineNumber+65); $c[$a..$b] }; '---RUN/WAVE LEDGER API---'; ",
-          "session_id": "swSFgSkvWO2We-U6U8abkZSV"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:45.409Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$c=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $m=Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py' -Pattern '^    def _coordination_ids|^    def _require_hub_controller|^    def _claim_hub_controller_for_run' ; foreach($x in $m){ '---'+$x.LineNumber+' '+$x.Line.Trim()+'---'; $a=[Math]::Max(0,$x.LineNumber-1); $b=[Math]::Min($c.Length-1,$x.LineNumber+65); $c[$a..$b] }; '---RUN/WAVE LEDGER API---'; ",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:47.824Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -e \"data-pfm-cost-workspace\" -e \"DANH SÁCH CHI PHÍ\" -e \"CHI TIẾT THANH TOÁN NGUỒN\" -e \"Cost control workspace V2\" components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx components/project-finance/pfm/ui-preview/pfm-visual-preview.css && npm run typecheck:frontend:app",
-          "session_id": "4L2vcqay9NPOQqFx1stUMnGq"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:53.231Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"rg -n -C 18 'def _require_hub_controller|def _claim_hub_controller_for_run|def _current_hub_client' resources/coding-tools-mcp/coding_tools_mcp; $o=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; '---WAVE SHAPE---'; $o[4735..4768]\"",
-          "session_id": "7sUZn334I3L-CCUnETcSv-63"
-        }
-      },
-      {
-        "time": "2026-08-19T06:18:54.907Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"rg -n -C 18 'def _require_hub_controller|def _claim_hub_controller_for_run|def _current_hub_client' resources/coding-tools-mcp/coding_tools_mcp; $o=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; '---WAVE SHAPE---'; $o[4735..4768]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:19:12.818Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -e \"data-pfm-cost-workspace\" -e \"DANH SÁCH CHI PHÍ\" -e \"CHI TIẾT THANH TOÁN NGUỒN\" -e \"Cost control workspace V2\" components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx components/project-finance/pfm/ui-preview/pfm-visual-preview.css && npm run typecheck:frontend:app",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:19:23.278Z",
-        "event": "command_started",
-        "details": {
-          "command": "npx vitest run components/project-finance/pfm/ui-preview/PfmVisualWorkspace.test.tsx",
-          "session_id": "5YhVhsdzO_rUrRXg9M9_PxJ4"
-        }
-      },
-      {
-        "time": "2026-08-19T06:19:51.188Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $w[235..350]\"",
-          "session_id": "Hui4-8WGp5VcX2_4JpYIT6ee"
-        }
-      },
-      {
-        "time": "2026-08-19T06:19:52.576Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $w[235..350]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:19:59.455Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $w[180..245]\"",
-          "session_id": "UWdkzygJzItDABI8NDs4-GmM"
-        }
-      },
-      {
-        "time": "2026-08-19T06:20:00.867Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $w[180..245]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:20:14.990Z",
-        "event": "command_completion_report_required",
-        "details": {
-          "command_id": "UWdkzygJzItDABI8NDs4-GmM",
-          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:20:35.119Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"def .*active.*run|def list_runs|status='active'|status = \\\"active\\\"|FROM runs.*active\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
-          "session_id": "VKcwkBz7IM9SXvcql56uOg4L"
-        }
-      },
-      {
-        "time": "2026-08-19T06:20:35.378Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"def .*active.*run|def list_runs|status='active'|status = \\\"active\\\"|FROM runs.*active\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:20:43.414Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$o=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $o[3858..3888]\"",
-          "session_id": "CVan5B8K8pxWpAmdjocLALrB"
-        }
-      },
-      {
-        "time": "2026-08-19T06:20:44.694Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$o=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $o[3858..3888]\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:20:59.637Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $w[205..245]; '---ASSERT CALLS---'; rg -n -C 4 '_assert_orchestration_workspace_scope' resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/server.py\"",
-          "session_id": "aTwkuPzaurYztninu6M2Eqqc"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:01.067Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$w=Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $w[205..245]; '---ASSERT CALLS---'; rg -n -C 4 '_assert_orchestration_workspace_scope' resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/server.py\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:01.666Z",
-        "event": "command_completion_report_required",
-        "details": {
-          "command_id": "aTwkuPzaurYztninu6M2Eqqc",
-          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:33.230Z",
-        "event": "command_started",
-        "details": {
-          "command": "git diff --numstat -- components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx && git diff --stat -- components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx && powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $s=[IO.File]::ReadAllText($p,[Text.Encoding]::UTF8); @('Danh sÃ¡ch','Danh sách','Chi tiáº¿t','Chi tiết','DỮ LIỆU MINH HỌA') | ForEach-Object { $_ + '=' + ([regex]::Matches($s,[regex]::Escape($_))).Count }\"",
-          "session_id": "04vO9_i6uqlc8MOi02xtayw2"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:34.451Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git diff --numstat -- components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx && git diff --stat -- components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx && powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $s=[IO.File]::ReadAllText($p,[Text.Encoding]::UTF8); @('Danh sÃ¡ch','Danh sách','Chi tiáº¿t','Chi tiết','DỮ LIỆU MINH HỌA') | ForEach-Object { $_ + '=' + ([regex]::Matches($s,[regex]::Escape($_))).Count }\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:48.538Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $lines=[IO.File]::ReadAllLines($p,[Text.Encoding]::UTF8); foreach($pat in @('PFM','Danh s','Chi ti')){ $line=$lines | Where-Object { $_ -like ('*'+$pat+'*') } | Select-Object -First 1; Write-Output ('PAT='+$pat); if($line){ $hex=($line.ToCharArray() | ForEach-Object { 'U+'+([int][char]$_).ToString('X4') }) -join ' '; Write-Output $hex } }\"",
-          "session_id": "AtK8V9DrwSsNPVh8N-yk6KaC"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:49.986Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $lines=[IO.File]::ReadAllLines($p,[Text.Encoding]::UTF8); foreach($pat in @('PFM','Danh s','Chi ti')){ $line=$lines | Where-Object { $_ -like ('*'+$pat+'*') } | Select-Object -First 1; Write-Output ('PAT='+$pat); if($line){ $hex=($line.ToCharArray() | ForEach-Object { 'U+'+([int][char]$_).ToString('X4') }) -join ' '; Write-Output $hex } }\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:52.266Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:53.301Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:53.887Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:53.897Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:55.100Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:55.299Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:56.208Z",
-        "event": "command_started",
-        "details": {
-          "command": "cmd /d /c \"python -m unittest discover -v -s tests -p \\\"test_solution_economics.py\\\" && python -m unittest discover -v -s tests -p \\\"test_execution_hub_faults.py\\\"\"",
-          "session_id": "LxDZartqPko5V3D0mZL0cDtH"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:56.664Z",
-        "event": "build_verification_finished",
-        "details": {
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:57.251Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:57.253Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:57.438Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:57.448Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:57.663Z",
-        "event": "files_modified",
-        "details": {
-          "count": 2
-        }
-      },
-      {
-        "time": "2026-08-19T06:21:58.506Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:18.239Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:18.240Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:18.486Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:22:26.099Z",
-    "archive_reason": "cleared"
-  },
-  {
-    "version": 2,
-    "task_id": "57a28023afb04bafaa244a69e1a7b070",
-    "orchestration": {},
-    "objective": "Close Codex-web measurement-integrity gaps compactly. Repair the three orchestration lifecycle fixtures for runtime-default representative provenance; add historical_observational/evidence completeness projections without retroactive P4 promotion; add a fail-closed operator completion-report acknowledgement latch using the existing task_control update payload extension and no new public tool. Persist final/replan operator-visible reports, block new material agent_workflow/start/clear/resume until acknowledgement, preserve benchmark/synthetic semantics, unknown-not-zero cost semantics, workspace identity evidence, smart-v3 exactly 8 tools, and unrelated telemetry. No commit/push/restart.",
-    "status": "waiting",
-    "steps": [],
-    "current_step": "Waiting for model",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "ZScu0e_AVz6TlnKKCdwpzh59",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "passed",
-      "exit_code": 0,
-      "duration_ms": 1343,
-      "finished_at": "2026-08-19T06:22:35.265Z"
-    },
-    "completion_report": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-19T06:22:28.732Z",
-    "updated_at": "2026-08-19T06:22:46.948Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:22:28.732Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Close Codex-web measurement-integrity gaps compactly. Repair the three orchestration lifecycle fixtures for runtime-default representative provenance; add historical_observational/evidence completeness projections without retroactive P4 promotion; add a fail-closed operator completion-report acknowledgement latch using the existing task_control update payload extension and no new public tool. Persist final/replan operator-visible reports, block new material agent_workflow/start/clear/resume until acknowledgement, preserve benchmark/synthetic semantics, unknown-not-zero cost semantics, workspace identity evidence, smart-v3 exactly 8 tools, and unrelated telemetry. No commit/push/restart."
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:28.737Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "PATCH_CONTEXT_AMBIGUOUS"
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:33.855Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $s=[IO.File]::ReadAllText($p,[Text.Encoding]::UTF8); $cp=[Text.Encoding]::GetEncoding(1252); $fixed=[Text.Encoding]::UTF8.GetString($cp.GetBytes($s)); $checks=@('Danh sách dự án PFM minh họa','DỮ LIỆU MINH HỌA','Chi tiết','DANH SÁCH CHI PHÍ','Loại thanh toán','Người thanh toán','CHI TIẾT THANH TOÁN NGUỒN'); foreach($x in $checks){ $n=([regex]::Matches($fixed,[regex]::Escape($x))).Count; Wri",
-          "session_id": "ZScu0e_AVz6TlnKKCdwpzh59"
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:35.265Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $s=[IO.File]::ReadAllText($p,[Text.Encoding]::UTF8); $cp=[Text.Encoding]::GetEncoding(1252); $fixed=[Text.Encoding]::UTF8.GetString($cp.GetBytes($s)); $checks=@('Danh sách dự án PFM minh họa','DỮ LIỆU MINH HỌA','Chi tiết','DANH SÁCH CHI PHÍ','Loại thanh toán','Người thanh toán','CHI TIẾT THANH TOÁN NGUỒN'); foreach($x in $checks){ $n=([regex]::Matches($fixed,[regex]::Escape($x))).Count; Wri",
-          "status": "passed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:22:47.153Z",
-    "archive_reason": "superseded"
-  },
-  {
-    "version": 2,
-    "task_id": "58be2e43ed3d4af2b89dd551b9ac1d9f",
-    "orchestration": {
-      "run_id": "24bb8b7aa4ed419d8d1a9a5f1a2c4ca7",
-      "wave_id": "8756f1ee68134effb6305e66bef7ff0b",
-      "orchestration_state": "ABORTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "359a5f231e1950e8d97303e0d2b798984c145fe6",
-      "worktree_fp": "21410fc81ea0f8ca9cb8a2cab12eedccfc603e7bbdcace9836028bcc74a1c025",
-      "contract_fp": ""
-    },
-    "objective": "Fix Codex-web realtime performance card with exact rolling 5-minute provider-measured TPM and exact rolling 5-minute command latency, explicit freshness/no-data states, no stale hourly/daily/all-history fallbacks, no backend/public-tool changes, and focused renderer tests only. Preserve unrelated work. No restart, commit, push, or deploy.",
-    "status": "waiting",
-    "steps": [],
-    "current_step": "Waiting for model",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "8kRLQm10gWK2VrErBw2FbCQa",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "passed",
-      "exit_code": 0,
-      "duration_ms": 1321,
-      "finished_at": "2026-08-19T06:22:56.681Z"
-    },
-    "completion_report": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Patch context matched 2 locations in resources/coding-tools-mcp/tests/test_orchestration_workflow.py; add more context.",
-    "next_step": "Apply focused dashboard patch and verify",
-    "created_at": "2026-08-19T06:22:47.164Z",
-    "updated_at": "2026-08-19T06:23:14.185Z",
-    "events": [
-      {
-        "time": "2026-08-19T06:22:47.164Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:55.398Z",
-        "event": "command_started",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $s=[IO.File]::ReadAllText($p,[Text.Encoding]::UTF8); try { $strict=[Text.Encoding]::GetEncoding(1252,(New-Object Text.EncoderExceptionFallback),(New-Object Text.DecoderExceptionFallback)); $null=$strict.GetBytes($s); Write-Output 'CP1252_STRICT=PASS' } catch { Write-Output 'CP1252_STRICT=FAIL'; Write-Output $_.Exception.Message; exit 4 }\"",
-          "session_id": "8kRLQm10gWK2VrErBw2FbCQa"
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:56.681Z",
-        "event": "command_finished",
-        "details": {
-          "command": "powershell.exe -NoProfile -Command \"$p='components/project-finance/pfm/ui-preview/PfmVisualWorkspace.tsx'; $s=[IO.File]::ReadAllText($p,[Text.Encoding]::UTF8); try { $strict=[Text.Encoding]::GetEncoding(1252,(New-Object Text.EncoderExceptionFallback),(New-Object Text.DecoderExceptionFallback)); $null=$strict.GetBytes($s); Write-Output 'CP1252_STRICT=PASS' } catch { Write-Output 'CP1252_STRICT=FAIL'; Write-Output $_.Exception.Message; exit 4 }\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:59.046Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:59.783Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-19T06:22:59.788Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-19T06:23:07.857Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "PATCH_CONTEXT_AMBIGUOUS"
-        }
-      },
-      {
-        "time": "2026-08-19T06:23:14.185Z",
-        "event": "task_orchestration_aborted",
-        "details": {
-          "state": "ABORTED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-19T06:23:14.194Z",
-    "archive_reason": "cleared"
-  },
-  {
-    "version": 2,
     "task_id": "58b91630f45e438286b98484c8d741ca",
     "orchestration": {
       "run_id": "368742a0d55d49d58cf2344a3d87fe2e",
@@ -47518,5 +46320,2855 @@
     ],
     "archived_at": "2026-08-19T17:38:35.826Z",
     "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8f4ec14c56de473b853e5fa8a6262077",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-20T02:23:50.557Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-20T02:23:50.555Z",
+    "updated_at": "2026-08-20T02:23:50.558Z",
+    "events": [
+      {
+        "time": "2026-08-20T02:23:50.555Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-20T02:23:50.558Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"completion_report_acknowledged|completion_report_id|OPERATOR_REPORT_ACK_REQUIRED|MESSAGE_NOT_FOUND|action.?==.?['\\\"]ack|worktree_clean|source.*clean|p5_baseline_ready|\\.coding-tools\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/scripts/report_p4_readiness.py resources/coding-tools-mcp/tests/test_operator_report_isolation.py resources/coding-tools-mcp/tests/test_p4_readiness.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:23:50.558Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-20T02:24:05.388Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "828ef5d75b68406c9f90edac53f2d04b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "6AINLkK-29LVJrW0IvQVOZFp",
+      "kind": "test",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 1583,
+      "finished_at": "2026-08-20T02:24:47.365Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest resources/coding-tools-mcp/tests/test_operator_report_isolation.py resources/coding-tools-mcp/tests/test_p4_readiness.py -q",
+        "status": "failed",
+        "exit_code": 2,
+        "duration_ms": 1583,
+        "summary": "exit 2 | 1.6s | 28 lines | tail: '2 errors in 0.25s'",
+        "finished_at": "2026-08-20T02:24:47.365Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "6AINLkK-29LVJrW0IvQVOZFp"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 1783,
+          "command_id": "6AINLkK-29LVJrW0IvQVOZFp",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:6AINLkK-29LVJrW0IvQVOZFp:stdout",
+              "total_stream_bytes": 1783,
+              "total_retained_bytes": 1783,
+              "head_retained_bytes": 1783,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:6AINLkK-29LVJrW0IvQVOZFp:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-20T02:24:05.421Z",
+    "updated_at": "2026-08-20T02:24:47.365Z",
+    "events": [
+      {
+        "time": "2026-08-20T02:24:05.421Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:05.799Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 completion_report_acknowledged resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "j0kiLQ3dkjgArNRO_UVIemum"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:06.563Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 completion_report_acknowledged resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:12.598Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 \"ack_completion_report|MESSAGE_NOT_FOUND|action == \\\"ack\\\"|action == 'ack'\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "vArNvoesLY1YggKNpyMHka7d"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:12.907Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 \"ack_completion_report|MESSAGE_NOT_FOUND|action == \\\"ack\\\"|action == 'ack'\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:19.141Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 operator_report_ack_v1 resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "xLZbTsM8AeNGr-g2-VNZK--o"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:19.356Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 operator_report_ack_v1 resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:26.332Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 16 \"p5_baseline_ready|worktree_clean|source_clean|source_dirty|git_clean|coding-tools\" resources/coding-tools-mcp/scripts/report_p4_readiness.py resources/coding-tools-mcp/tests/test_p4_readiness.py",
+          "session_id": "WjpVmJTc9Ie9aCRYLGjCNxFx"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:26.591Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 16 \"p5_baseline_ready|worktree_clean|source_clean|source_dirty|git_clean|coding-tools\" resources/coding-tools-mcp/scripts/report_p4_readiness.py resources/coding-tools-mcp/tests/test_p4_readiness.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:35.907Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+          "session_id": "HoNBdcAKJOaMd9CvM55i6rgx"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:38.524Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:45.790Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest resources/coding-tools-mcp/tests/test_operator_report_isolation.py resources/coding-tools-mcp/tests/test_p4_readiness.py -q",
+          "session_id": "6AINLkK-29LVJrW0IvQVOZFp"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:47.365Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest resources/coding-tools-mcp/tests/test_operator_report_isolation.py resources/coding-tools-mcp/tests/test_p4_readiness.py -q",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-20T02:24:53.888Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "be7623cc834842d3b9011b02cc236880",
+    "orchestration": {
+      "run_id": "17162a184d6041179b3e0977df773b3b",
+      "wave_id": "06b1fe7993fc4fb6ba731f6471fa5c86",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+      "worktree_fp": "12065ffb817c9ea82510a2ad1eab08b16c23c74c6affc4e0f6741a2c8c4d3c40",
+      "contract_fp": ""
+    },
+    "objective": "Fix P5 baseline self-block by aligning report_p4_readiness Git cleanliness with the already-established runtime source identity: exclude only .coding-tools runtime evidence from source cleanliness, while preserving raw Git cleanliness visibility and failing closed for all real source/product/config dirtiness and upstream mismatch. Preserve all P4 predictive gates and automatic activation OFF. Do not delete/ignore .coding-tools. Do not commit/push/restart.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-20T02:28:47.018Z"
+      },
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-08-20T02:28:47.018Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-20T02:28:47.018Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": {
+      "command": "python -m pytest tests/test_p4_readiness.py tests/test_operator_report_isolation.py tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_orchestration_identity_ignores_runtime_state_but_detects_source_drift -q",
+      "kind": "test",
+      "session_id": "0dnLupoztJnGsTZEMiVfC66B",
+      "workdir": "resources/coding-tools-mcp",
+      "status": "running",
+      "started_at": "2026-08-20T02:28:40.099Z"
+    },
+    "last_command_result": {
+      "command_id": "uGN0_NOY_PJNsoDWnkE-i9Cq",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 573,
+      "finished_at": "2026-08-20T02:27:51.356Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/scripts/report_p4_readiness.py",
+            "state": "file",
+            "sha256": "13a7f309957475847074ae74ae9a9f44375788f7958ff40c5e458783df55643b"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_p4_readiness.py",
+            "state": "file",
+            "sha256": "0d3028bc330c57409e129e659b8e6134b7f797141d481f60abf6f16775b53555"
+          }
+        ],
+        "source": "accepted_checkpoint_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 29,
+          "head_hash": "c5d2fb754b3dedf69f1d88d2e34f84ab8409e02377518cdbc66392a23b0ad8e3"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-17162a184d6041179b3e0977df773b3b\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-17162a184d6041179b3e0977df773b3b\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "17162a184d6041179b3e0977df773b3b",
+        "wave_id": "06b1fe7993fc4fb6ba731f6471fa5c86",
+        "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+        "worktree_fp": "12065ffb817c9ea82510a2ad1eab08b16c23c74c6affc4e0f6741a2c8c4d3c40",
+        "contract_fp": ""
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "32f09207ee324e6ba24ca7e8f9161cb1",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 6952,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "74a2a9dbc3a70994c122c440eb37d9df322723dbb6c8f5977fde663f4a645b6b",
+    "completion_report_acknowledged_id": "74a2a9dbc3a70994c122c440eb37d9df322723dbb6c8f5977fde663f4a645b6b",
+    "completion_report_acknowledged_at": "2026-08-20T02:29:29.011Z",
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_operator_report_isolation.py tests/test_p4_readiness.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 5993,
+        "summary": "exit 0 | 6.0s | 3 lines | tail: '8 passed in 5.17s'",
+        "finished_at": "2026-08-20T02:25:00.149Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "Y6WDmV-8-wEuiC5Y11BUZYTI"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 100,
+          "command_id": "Y6WDmV-8-wEuiC5Y11BUZYTI",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:Y6WDmV-8-wEuiC5Y11BUZYTI:stdout",
+              "total_stream_bytes": 100,
+              "total_retained_bytes": 100,
+              "head_retained_bytes": 100,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:Y6WDmV-8-wEuiC5Y11BUZYTI:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest tests/test_p4_readiness.py tests/test_operator_report_isolation.py tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_orchestration_identity_ignores_runtime_state_but_detects_source_drift -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 6947,
+        "summary": "exit 0 | 6.6s | 3 lines | tail: '9 passed in 5.58s'"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "electron",
+        "name": "web-mcp-assistant",
+        "version": "0.3.4",
+        "package_manager": "npm",
+        "test_command": "npm run test",
+        "build_command": "npm run dist",
+        "artifact_paths": [
+          "dist",
+          "build"
+        ]
+      },
+      "commands": {
+        "test": "python -m pytest tests/test_p4_readiness.py tests/test_operator_report_isolation.py tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_orchestration_identity_ignores_runtime_state_but_detects_source_drift -q",
+        "build": "npm run dist"
+      },
+      "test_result": {
+        "command": "python -m pytest tests/test_p4_readiness.py tests/test_operator_report_isolation.py tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_orchestration_identity_ignores_runtime_state_but_detects_source_drift -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 6947,
+        "summary": "exit 0 | 6.6s | 3 lines | tail: '9 passed in 5.58s'"
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "passed",
+      "failure": null,
+      "report_generated_at": "2026-08-20T02:28:46.389Z"
+    },
+    "modified_files": [
+      {
+        "path": "resources/coding-tools-mcp/scripts/report_p4_readiness.py",
+        "operation": "update",
+        "updated_at": "2026-08-20T02:28:47.351Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_p4_readiness.py",
+        "operation": "update",
+        "updated_at": "2026-08-20T02:28:47.351Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-20T02:24:53.919Z",
+    "updated_at": "2026-08-20T02:30:19.007Z",
+    "events": [
+      {
+        "time": "2026-08-20T02:24:53.919Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-20T02:24:54.238Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_operator_report_isolation.py tests/test_p4_readiness.py -q",
+          "session_id": "Y6WDmV-8-wEuiC5Y11BUZYTI"
+        }
+      },
+      {
+        "time": "2026-08-20T02:25:00.149Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_operator_report_isolation.py tests/test_p4_readiness.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:26:10.764Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:26:26.271Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:26:26.271Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-20T02:26:40.217Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:26:40.638Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:26:40.642Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-20T02:27:22.304Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:27:23.029Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:27:23.029Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-20T02:27:32.652Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 55 -B 12 \"def _orchestration_workspace_identity\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "f8xBItd1XfS6UQI12b_MhMUP"
+        }
+      },
+      {
+        "time": "2026-08-20T02:27:33.038Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 55 -B 12 \"def _orchestration_workspace_identity\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:27:50.912Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"clean_upstream_matched_head_v1|p5_baseline_ready|raw_worktree_clean\" resources/coding-tools-mcp scripts tests docs -g \"*.py\" -g \"*.js\" -g \"*.md\"",
+          "session_id": "uGN0_NOY_PJNsoDWnkE-i9Cq"
+        }
+      },
+      {
+        "time": "2026-08-20T02:27:51.356Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"clean_upstream_matched_head_v1|p5_baseline_ready|raw_worktree_clean\" resources/coding-tools-mcp scripts tests docs -g \"*.py\" -g \"*.js\" -g \"*.md\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:37.194Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:37.892Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:38.418Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:38.419Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:39.107Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:39.257Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:40.099Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_p4_readiness.py tests/test_operator_report_isolation.py tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_orchestration_identity_ignores_runtime_state_but_detects_source_drift -q",
+          "session_id": "0dnLupoztJnGsTZEMiVfC66B"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:46.392Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:47.012Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:47.018Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:47.159Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:47.170Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:47.207Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "3e537ec3db683036d4e81dcff5e125fe938653a65af74d6fc20ccb47de2415c6"
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:47.351Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-20T02:28:59.040Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:29:00.615Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:29:00.615Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:29:00.657Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "74a2a9dbc3a70994c122c440eb37d9df322723dbb6c8f5977fde663f4a645b6b"
+        }
+      },
+      {
+        "time": "2026-08-20T02:29:21.722Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:29:29.011Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "74a2a9dbc3a70994c122c440eb37d9df322723dbb6c8f5977fde663f4a645b6b"
+        }
+      },
+      {
+        "time": "2026-08-20T02:30:19.007Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-20T02:30:19.278Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8bdf777e5a334683ad34925f86b4e2ca",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-20T02:31:50.649Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "up7rZnUlfE_qcrqlETevobKY",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "waiting",
+        "command": {
+          "command_id": "up7rZnUlfE_qcrqlETevobKY",
+          "kind": "command",
+          "status": "exited",
+          "result_status": "passed",
+          "exit_code": 0,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+          "branch": "main",
+          "worktree_fp": "a4708db0d34afefa997ceff3b062232a4c8f479de18e68449bfc4c213aa90cdf",
+          "dirty_paths": [
+            "resources/coding-tools-mcp/scripts/report_p4_readiness.py",
+            "resources/coding-tools-mcp/tests/test_p4_readiness.py"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "task_id": "8bdf777e5a334683ad34925f86b4e2ca",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+      "blocker_or_failure": null,
+      "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "643dda1b9ea789e07b0c4bdc70b4ffd58d9d0daaaa0fc47c9a9c2a976d9a7fc1",
+    "completion_report_acknowledged_id": "643dda1b9ea789e07b0c4bdc70b4ffd58d9d0daaaa0fc47c9a9c2a976d9a7fc1",
+    "completion_report_acknowledged_at": "2026-08-20T02:31:04.254Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "Present this completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-20T02:30:19.327Z",
+    "updated_at": "2026-08-20T02:31:50.649Z",
+    "events": [
+      {
+        "time": "2026-08-20T02:30:19.327Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-20T02:30:19.630Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+          "session_id": "NUZ5oTQchC0xClB1gY-1Oy-K"
+        }
+      },
+      {
+        "time": "2026-08-20T02:30:22.540Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:30:33.069Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$d = Join-Path $env:TEMP ('p4-eval-' + [guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Path $d | Out-Null; Copy-Item -Recurse -Force '.\\tests\\p4_eval_pack' (Join-Path $d 'p4_eval_pack'); $runner = Join-Path $d 'p4_eval_pack\\run_p4_eval_current_config.py'; & python $runner --repo-root 'E:\\DEV\\Codex-web' --require-reporter; $rc = $LASTEXITCODE; Remove-Item -Recurse -Force $d; exit $rc\"",
+          "session_id": "up7rZnUlfE_qcrqlETevobKY"
+        }
+      },
+      {
+        "time": "2026-08-20T02:30:49.577Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$d = Join-Path $env:TEMP ('p4-eval-' + [guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Path $d | Out-Null; Copy-Item -Recurse -Force '.\\tests\\p4_eval_pack' (Join-Path $d 'p4_eval_pack'); $runner = Join-Path $d 'p4_eval_pack\\run_p4_eval_current_config.py'; & python $runner --repo-root 'E:\\DEV\\Codex-web' --require-reporter; $rc = $LASTEXITCODE; Remove-Item -Recurse -Force $d; exit $rc\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:30:49.757Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "up7rZnUlfE_qcrqlETevobKY",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "643dda1b9ea789e07b0c4bdc70b4ffd58d9d0daaaa0fc47c9a9c2a976d9a7fc1"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:04.254Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "643dda1b9ea789e07b0c4bdc70b4ffd58d9d0daaaa0fc47c9a9c2a976d9a7fc1"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:10.190Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/scripts/report_p4_readiness.py resources/coding-tools-mcp/tests/test_p4_readiness.py && git diff --name-only && git status --short --untracked-files=all",
+          "session_id": "7Gu31FsHj4uAYdBW5ZIeTELK"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:10.624Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/scripts/report_p4_readiness.py resources/coding-tools-mcp/tests/test_p4_readiness.py && git diff --name-only && git status --short --untracked-files=all",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:40.891Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"NATIVE_LSP_BINDING_NOT_CONFIGURED|NATIVE_LSP|credential_file|semantic_localization\" resources/coding-tools-mcp electron src renderer -g \"*.py\" -g \"*.js\" -g \"*.json\" -g \"*.md\"",
+          "session_id": "whwuqh1rE-4JrOWM0pl9JJBk"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:41.200Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"NATIVE_LSP_BINDING_NOT_CONFIGURED|NATIVE_LSP|credential_file|semantic_localization\" resources/coding-tools-mcp electron src renderer -g \"*.py\" -g \"*.js\" -g \"*.json\" -g \"*.md\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:50.649Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"native-lsp-binding.json|workspace_sha256.*credential_file|write.*native.*lsp|NATIVE_LSP_MACHINE_BINDING_RELATIVE\" electron resources/coding-tools-mcp -g \"*.js\" -g \"*.py\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:50.649Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-20T02:31:56.469Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "b9dfcc942f6a4154b190e481cdfe75ac",
+    "orchestration": {
+      "run_id": "0a3f2018ace242e98ec7c61cdca943f9",
+      "wave_id": "f9e9e4ca4a8646cbbbaafc4b94702c1b",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+      "worktree_fp": "a4708db0d34afefa997ceff3b062232a4c8f479de18e68449bfc4c213aa90cdf",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "f-5yynoFzt5JnYz2dFf5LWY-",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 650,
+      "finished_at": "2026-08-20T02:36:13.150Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 7,
+          "head_hash": "3bec79d12ead3df559682cb9804b9f8b1e09ac2a9cfce7b4162b83aceaa1c688"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0a3f2018ace242e98ec7c61cdca943f9\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0a3f2018ace242e98ec7c61cdca943f9\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "0a3f2018ace242e98ec7c61cdca943f9",
+        "wave_id": "f9e9e4ca4a8646cbbbaafc4b94702c1b",
+        "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+        "worktree_fp": "a4708db0d34afefa997ceff3b062232a4c8f479de18e68449bfc4c213aa90cdf",
+        "contract_fp": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": null,
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "1887320ab54c425563d885af8c613e398d7787882f72d00e931d848d225f2915",
+    "completion_report_acknowledged_id": "1887320ab54c425563d885af8c613e398d7787882f72d00e931d848d225f2915",
+    "completion_report_acknowledged_at": "2026-08-20T02:38:40.120Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-08-20T02:31:56.509Z",
+    "updated_at": "2026-08-20T02:38:47.221Z",
+    "events": [
+      {
+        "time": "2026-08-20T02:31:56.509Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:56.774Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"native-lsp-binding.json\" electron resources/coding-tools-mcp",
+          "session_id": "pBPIZYkL0_FMsSy0uhIXRZUh"
+        }
+      },
+      {
+        "time": "2026-08-20T02:31:57.059Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"native-lsp-binding.json\" electron resources/coding-tools-mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:32:09.299Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p = Join-Path $env:APPDATA 'web-mcp-assistant\\native-lsp-binding.json'; $dir = Split-Path $p -Parent; $obj = [ordered]@{ binding_exists = (Test-Path -LiteralPath $p -PathType Leaf); binding_dir_exists = (Test-Path -LiteralPath $dir -PathType Container); env_origin_set = -not [string]::IsNullOrWhiteSpace($env:CODING_TOOLS_MCP_NATIVE_LSP_URL); env_credential_file_set = -not [string]::IsNullOrWhiteSpace($env:CODING_TOOLS_MCP_NATIVE_LSP_CREDEN",
+          "session_id": "01LYyex029vxeMaIT0RIAn-a"
+        }
+      },
+      {
+        "time": "2026-08-20T02:32:10.749Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p = Join-Path $env:APPDATA 'web-mcp-assistant\\native-lsp-binding.json'; $dir = Split-Path $p -Parent; $obj = [ordered]@{ binding_exists = (Test-Path -LiteralPath $p -PathType Leaf); binding_dir_exists = (Test-Path -LiteralPath $dir -PathType Container); env_origin_set = -not [string]::IsNullOrWhiteSpace($env:CODING_TOOLS_MCP_NATIVE_LSP_URL); env_credential_file_set = -not [string]::IsNullOrWhiteSpace($env:CODING_TOOLS_MCP_NATIVE_LSP_CREDEN",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:32:25.317Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"workspace_sha256|nativeLsp|native_lsp|semanticLocal|semantic_local\" electron renderer src resources/coding-tools-mcp/scripts -g \"*.js\" -g \"*.py\" -g \"*.json\"",
+          "session_id": "y3ehU_6a2vKb6-KdaX360tm-"
+        }
+      },
+      {
+        "time": "2026-08-20T02:32:25.776Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"workspace_sha256|nativeLsp|native_lsp|semanticLocal|semantic_local\" electron renderer src resources/coding-tools-mcp/scripts -g \"*.js\" -g \"*.py\" -g \"*.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:32:57.238Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$dir = Join-Path $env:APPDATA 'web-mcp-assistant'; $names = @('execution-hub-proxy.json','runtime-state.json','settings.json','accepted-code-activation.json'); foreach ($name in $names) { $p = Join-Path $dir $name; if (Test-Path -LiteralPath $p -PathType Leaf) { try { $j = Get-Content -LiteralPath $p -Raw | ConvertFrom-Json; $keys = @($j.PSObject.Properties.Name | Where-Object { $_ -match 'lsp|semantic|credential|origin|proxy|connector' });",
+          "session_id": "pp0BFDL46nqrdy1cx69bE3yf"
+        }
+      },
+      {
+        "time": "2026-08-20T02:32:58.763Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$dir = Join-Path $env:APPDATA 'web-mcp-assistant'; $names = @('execution-hub-proxy.json','runtime-state.json','settings.json','accepted-code-activation.json'); foreach ($name in $names) { $p = Join-Path $dir $name; if (Test-Path -LiteralPath $p -PathType Leaf) { try { $j = Get-Content -LiteralPath $p -Raw | ConvertFrom-Json; $keys = @($j.PSObject.Properties.Name | Where-Object { $_ -match 'lsp|semantic|credential|origin|proxy|connector' });",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:35:03.380Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:35:04.289Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:35:04.289Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-20T02:36:12.668Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 120 -B 50 \"test_predictive_validation|validated_signals|expected_repair_risk\" resources/coding-tools-mcp/tests/test_solution_economics.py",
+          "session_id": "f-5yynoFzt5JnYz2dFf5LWY-"
+        }
+      },
+      {
+        "time": "2026-08-20T02:36:13.150Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 120 -B 50 \"test_predictive_validation|validated_signals|expected_repair_risk\" resources/coding-tools-mcp/tests/test_solution_economics.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:37:10.341Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "1887320ab54c425563d885af8c613e398d7787882f72d00e931d848d225f2915"
+        }
+      },
+      {
+        "time": "2026-08-20T02:37:21.793Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:38:40.120Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "1887320ab54c425563d885af8c613e398d7787882f72d00e931d848d225f2915"
+        }
+      },
+      {
+        "time": "2026-08-20T02:38:47.221Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-20T02:38:47.348Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "e1a50e6981f546e99c1395729807b4d8",
+    "orchestration": {
+      "run_id": "8178d0a4d22446afbd8487dd1ba7c70c",
+      "wave_id": "7e64794936994d6c95d7f6f30530f224",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+      "worktree_fp": "14f5fcc25d44be326b7f31e2ac303eb4e22c847984f7a610b4a780956ba57231",
+      "contract_fp": ""
+    },
+    "objective": "Correct only the underpowered synthetic mild-overlap challenge fixture so it actually exercises the intended branch: positive pooled LOOCV Brier gain without Bonferroni-Wilson bucket separation. Do not alter canonical validator logic or core tests. Re-run the full deep challenge suite and diff hygiene. Preserve benchmark/synthetic non-promotion and canonical non-interference. Do not commit/push/restart/deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-20T02:44:08.869Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-20T02:44:08.869Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-20T02:44:08.869Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "yKXKK7JhTCcMGiALBHIcL2j5",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 657,
+      "finished_at": "2026-08-20T02:44:08.257Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py",
+            "state": "file",
+            "sha256": "30610983f7e1b643702af4c7e39328f154b91013180f75a901e9c5d987481c97"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_solution_economics.py",
+            "state": "file",
+            "sha256": "ba749cd1fea11be4e1a567c2115607a829b69d19f226b6e63c786a3cf6637eb2"
+          },
+          {
+            "path": "tests/p4_eval_pack/p4_evaluation_protocol_v1.md",
+            "state": "file",
+            "sha256": "3c716573e956a9dba6e8df15714a6fc19975612e5d8e12e04402538dd7912e96"
+          },
+          {
+            "path": "tests/p4_eval_pack/run_p4_deep_challenges.py",
+            "state": "file",
+            "sha256": "6d4a4b86c157021372626f2f01f8195e88274da00761d27428c70855e70260e9"
+          }
+        ],
+        "source": "accepted_checkpoint_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 89,
+          "head_hash": "853efbfc7b9bbd5544f4ceec4f4baf9a85e62710cc6dc31b01e6086518960bf6"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8178d0a4d22446afbd8487dd1ba7c70c\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8178d0a4d22446afbd8487dd1ba7c70c\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8178d0a4d22446afbd8487dd1ba7c70c\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8178d0a4d22446afbd8487dd1ba7c70c\\wave-003.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8178d0a4d22446afbd8487dd1ba7c70c\\wave-004.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "8178d0a4d22446afbd8487dd1ba7c70c",
+        "wave_id": "7e64794936994d6c95d7f6f30530f224",
+        "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+        "worktree_fp": "14f5fcc25d44be326b7f31e2ac303eb4e22c847984f7a610b4a780956ba57231",
+        "contract_fp": ""
+      },
+      "proof_actually_run": {
+        "count": 3,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "f69e3117c7e74c12bee8d95de980b4c0",
+            "stage_id": "check:9ff2fb150b11be16",
+            "status": "passed",
+            "duration_ms": 8195,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "5e36bae352e541aa8331bc991c0cf1c7",
+            "stage_id": "check:3e18c164d717ba7f",
+            "status": "passed",
+            "duration_ms": 1185,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "409ce9df2ee847bc9eb38c22b2c90dfb",
+            "stage_id": "check:c9f0de3acea4dffe",
+            "status": "passed",
+            "duration_ms": 1140,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "7b7a388d902594a5aa32cca2bb43efe4221f468f8a16c360ac61f8e63af9d80d",
+    "completion_report_acknowledged_id": "7b7a388d902594a5aa32cca2bb43efe4221f468f8a16c360ac61f8e63af9d80d",
+    "completion_report_acknowledged_at": "2026-08-20T02:44:43.209Z",
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_solution_economics.py tests/test_p4_readiness.py -q",
+        "status": "failed",
+        "exit_code": 4,
+        "duration_ms": null,
+        "summary": "exit 4 | 0.0s | 7 lines | tail: 'ERROR: file or directory not found: tests/test_solution_economics.py'",
+        "finished_at": "2026-08-20T02:40:59.906Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "a8xdRTWAQb4RfMGTsEi6KWik"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 97,
+          "command_id": "a8xdRTWAQb4RfMGTsEi6KWik",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:a8xdRTWAQb4RfMGTsEi6KWik:stdout",
+              "total_stream_bytes": 25,
+              "total_retained_bytes": 25,
+              "head_retained_bytes": 25,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:a8xdRTWAQb4RfMGTsEi6KWik:stderr",
+              "total_stream_bytes": 72,
+              "total_retained_bytes": 72,
+              "head_retained_bytes": 72,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest tests/test_solution_economics.py tests/test_p4_readiness.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '22 passed in 10.92s'",
+        "finished_at": "2026-08-20T02:42:18.743Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "CB1rr28wxQF2WbbH5kN1Cvbv"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 102,
+          "command_id": "CB1rr28wxQF2WbbH5kN1Cvbv",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:CB1rr28wxQF2WbbH5kN1Cvbv:stdout",
+              "total_stream_bytes": 102,
+              "total_retained_bytes": 102,
+              "head_retained_bytes": 102,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:CB1rr28wxQF2WbbH5kN1Cvbv:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m pytest resources\\coding-tools-mcp\\tests\\test_solution_economics.py resources\\coding-tools-mcp\\tests\\test_p4_readiness.py -q\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '22 passed in 13.26s'",
+        "finished_at": "2026-08-20T02:42:54.349Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "IVOCDrTawk6kd4RFi6r2_6ox"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 102,
+          "command_id": "IVOCDrTawk6kd4RFi6r2_6ox",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:IVOCDrTawk6kd4RFi6r2_6ox:stdout",
+              "total_stream_bytes": 102,
+              "total_retained_bytes": 102,
+              "head_retained_bytes": 102,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:IVOCDrTawk6kd4RFi6r2_6ox:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py",
+        "operation": "update",
+        "updated_at": "2026-08-20T02:41:00.975Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_solution_economics.py",
+        "operation": "update",
+        "updated_at": "2026-08-20T02:41:00.975Z"
+      },
+      {
+        "path": "tests/p4_eval_pack/p4_evaluation_protocol_v1.md",
+        "operation": "update",
+        "updated_at": "2026-08-20T02:41:00.975Z"
+      },
+      {
+        "path": "tests/p4_eval_pack/run_p4_deep_challenges.py",
+        "operation": "update",
+        "updated_at": "2026-08-20T02:44:09.375Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-20T02:38:47.404Z",
+    "updated_at": "2026-08-20T02:48:22.203Z",
+    "events": [
+      {
+        "time": "2026-08-20T02:38:47.404Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:38:55.097Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:38:55.852Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:38:55.863Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-20T02:40:55.791Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:40:56.466Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:40:57.019Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:40:57.020Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:40:57.866Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:40:58.023Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:40:58.924Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_solution_economics.py tests/test_p4_readiness.py -q",
+          "session_id": "a8xdRTWAQb4RfMGTsEi6KWik"
+        }
+      },
+      {
+        "time": "2026-08-20T02:40:59.906Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_solution_economics.py tests/test_p4_readiness.py -q",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:41:00.243Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:41:00.800Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-20T02:41:00.800Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:41:00.802Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-20T02:41:00.861Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "eefe44c52ee273039f7a7faf25ef2f51fc6842457dba96706129f7cd5f7e1b5f"
+        }
+      },
+      {
+        "time": "2026-08-20T02:41:00.975Z",
+        "event": "files_modified",
+        "details": {
+          "count": 4
+        }
+      },
+      {
+        "time": "2026-08-20T02:41:21.826Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:41:53.890Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "eefe44c52ee273039f7a7faf25ef2f51fc6842457dba96706129f7cd5f7e1b5f"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:02.773Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:03.997Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:04.672Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:05.294Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:05.297Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:05.969Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:06.128Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:07.014Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_solution_economics.py tests/test_p4_readiness.py -q",
+          "session_id": "CB1rr28wxQF2WbbH5kN1Cvbv"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:18.743Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_solution_economics.py tests/test_p4_readiness.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:19.641Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:19.642Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:19.733Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PERMISSION_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:21.826Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:36.138Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:38.006Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:38.576Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:38.578Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:39.126Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:39.279Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:40.163Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m pytest resources\\coding-tools-mcp\\tests\\test_solution_economics.py resources\\coding-tools-mcp\\tests\\test_p4_readiness.py -q\"",
+          "session_id": "IVOCDrTawk6kd4RFi6r2_6ox"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:54.349Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m pytest resources\\coding-tools-mcp\\tests\\test_solution_economics.py resources\\coding-tools-mcp\\tests\\test_p4_readiness.py -q\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:42:55.371Z",
+        "event": "command_started",
+        "details": {
+          "command": "python tests\\p4_eval_pack\\run_p4_deep_challenges.py --repo-root .",
+          "session_id": "i9mKl2HiMC2LgldNRL2s7qL5"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:01.539Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python tests\\p4_eval_pack\\run_p4_deep_challenges.py --repo-root .",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:01.825Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:02.338Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:02.338Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:02.354Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:02.413Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "3525a01c6cacfe344665d6d674844c6584b076dbea8832156da7428cfdc50b2a"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:02.589Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:11.380Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:11.606Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:38.563Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "3525a01c6cacfe344665d6d674844c6584b076dbea8832156da7428cfdc50b2a"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:52.856Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:53.917Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:54.576Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:55.128Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:55.130Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:56.253Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:56.426Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:43:57.188Z",
+        "event": "command_started",
+        "details": {
+          "command": "python tests\\p4_eval_pack\\run_p4_deep_challenges.py --repo-root .",
+          "session_id": "k_Z2kVqvZvwVXM1kv5UvIemA"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:04.769Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python tests\\p4_eval_pack\\run_p4_deep_challenges.py --repo-root .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:06.035Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m py_compile tests\\p4_eval_pack\\run_p4_deep_challenges.py",
+          "session_id": "te4-TMZ79kjELUjB3EdsGrvm"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:06.501Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m py_compile tests\\p4_eval_pack\\run_p4_deep_challenges.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:07.759Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/tests/test_solution_economics.py tests/p4_eval_pack/run_p4_deep_challenges.py tests/p4_eval_pack/p4_evaluation_protocol_v1.md",
+          "session_id": "yKXKK7JhTCcMGiALBHIcL2j5"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:08.257Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/tests/test_solution_economics.py tests/p4_eval_pack/run_p4_deep_challenges.py tests/p4_eval_pack/p4_evaluation_protocol_v1.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:08.867Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:08.869Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:09.055Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:09.058Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:09.138Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "4a9f0845dfaa5e94ebfde053cc11d6dbde936249e6f30d8f3b31646974e9e310"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:09.375Z",
+        "event": "files_modified",
+        "details": {
+          "count": 1
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:16.358Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:28.188Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:28.190Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:28.297Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "7b7a388d902594a5aa32cca2bb43efe4221f468f8a16c360ac61f8e63af9d80d"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:36.453Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:43.209Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "7b7a388d902594a5aa32cca2bb43efe4221f468f8a16c360ac61f8e63af9d80d"
+        }
+      },
+      {
+        "time": "2026-08-20T02:44:47.946Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-20T02:48:32.568Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "50b1215737904ad1b2c4fbf1a0b04b2f",
+    "orchestration": {
+      "run_id": "e3334d79f57645b58c35c7e277181dd8",
+      "wave_id": "e2927386569c4d4db16fa657e6b6cdd3",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+      "worktree_fp": "0c8e7cea80d52f9e623856d40152c4ad38f48481ffc9727be0a9b4023a554e04",
+      "contract_fp": ""
+    },
+    "objective": "Research-driven P4 hardening preflight. Inspect the current canonical P4 validation implementation and the existing p4_eval_pack/deep challenge runner after the accepted v4 wave. Identify exact extension points for a literature-derived multi-layer stress suite covering temporal order and delayed labels, label noise/censoring, class imbalance, prevalence shift, calibration, group/project/source-state robustness, leakage/duplicates, concept drift, spurious correlations, subgroup worst-case behavior, multiple comparisons, and uncertainty. Do not modify files. Do not start P5. Preserve automatic activation OFF and synthetic/benchmark non-promotion. Return the smallest coherent implementation surface and existing oracles.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Research preflight complete. Scientific source review and current P4 inspection identified a bounded v5 stress-hardening plan. No files were modified in this diagnose run. Stop this preflight so implementation and proof can proceed in a separate benchmark-provenance feature run without mixing research diagnosis with source mutation.",
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-08-20T02:48:32.620Z",
+    "updated_at": "2026-08-20T02:50:26.511Z",
+    "events": [
+      {
+        "time": "2026-08-20T02:48:32.620Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Research-driven P4 hardening preflight. Inspect the current canonical P4 validation implementation and the existing p4_eval_pack/deep challenge runner after the accepted v4 wave. Identify exact extension points for a literature-derived multi-layer stress suite covering temporal order and delayed labels, label noise/censoring, class imbalance, prevalence shift, calibration, group/project/source-state robustness, leakage/duplicates, concept drift, spurious correlations, subgroup worst-case behavior, multiple comparisons, and uncertainty. Do not modify files. Do not start P5. Preserve automatic activation OFF and synthetic/benchmark non-promotion. Return the smallest coherent implementation surface and existing oracles."
+        }
+      },
+      {
+        "time": "2026-08-20T02:48:33.376Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:48:34.301Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:48:34.310Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-20T02:49:59.681Z",
+        "event": "task_orchestration_aborted",
+        "details": {
+          "state": "ABORTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:49:59.681Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:50:21.897Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-20T02:50:39.593Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "b7be75d9f9a94194a0aed194875fdc74",
+    "orchestration": {
+      "run_id": "efa41e45025040f58bf237467d33d39e",
+      "wave_id": "5b792630d77846e2a3ce6c68073b4fef",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+      "worktree_fp": "0c8e7cea80d52f9e623856d40152c4ad38f48481ffc9727be0a9b4023a554e04",
+      "contract_fp": ""
+    },
+    "objective": "Implement the first research-driven P4 stress-suite wave exactly as prepared, without changing canonical validator logic. Add tests/p4_eval_pack/run_p4_research_stress_suite.py with deterministic benchmark-only in-memory scenarios and update tests/p4_eval_pack/p4_evaluation_protocol_v1.md with the literature-derived mapping and interpretation rules. The runner must cover at least 30 assertions/scenarios across integrity/censoring, temporal drift, imbalance/PR diagnostics, noisy labels, family/subgroup/source-state confounding, duplicate support inflation, row permutation, local calibration diagnostics, and canonical before/after non-interference. It should fail nonzero when a research-required robustness invariant is violated, because this wave is intended to expose concrete v4 blind spots before any canonical hardening. Preserve automatic/global activation OFF and P5 HOLD. No commit/push/restart/deploy.",
+    "status": "stopped",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-20T02:55:00.155Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "failed",
+        "updated_at": "2026-08-20T02:55:00.155Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-08-20T02:55:00.155Z"
+      }
+    ],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-20T03:04:36.072Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "tests/p4_eval_pack/run_p4_research_stress_suite.py",
+            "operation": "add"
+          },
+          {
+            "path": "tests/p4_eval_pack/p4_evaluation_protocol_v1.md",
+            "operation": "update"
+          }
+        ],
+        "source": "aligned_task_modified_files",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "stopped",
+        "integrity": {
+          "ok": true,
+          "checked": 28,
+          "head_hash": "583b4b8df31b4dbb59e73d415a858e4846fb0ccac94bad61ba5d0c2bf7cc2448"
+        },
+        "reports": {}
+      },
+      "source_run_wave": {
+        "run_id": "efa41e45025040f58bf237467d33d39e",
+        "wave_id": "5b792630d77846e2a3ce6c68073b4fef",
+        "base_head": "e2f5e71a985e93cbe9230580d2e5a407231de6c1",
+        "worktree_fp": "0c8e7cea80d52f9e623856d40152c4ad38f48481ffc9727be0a9b4023a554e04",
+        "contract_fp": ""
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": false,
+        "proofs": [
+          {
+            "proof_id": "05805c12334c4253bdc904c11fbb2e8a",
+            "stage_id": "check:3e50b68b16e3cb57",
+            "status": "passed",
+            "duration_ms": 1071,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "46e1591cce844466aa2e305ebfe81c82",
+            "stage_id": "check:eb406ab5621cb7e9",
+            "status": "failed",
+            "duration_ms": 28135,
+            "exit_code": 1,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": {
+        "failure_class": "CHECK_FAILED",
+        "reason": null,
+        "event_seq": 22190
+      },
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "b736be12f3d3695d502cf62fab3d75b119e7ec598f84f603318f0a084c36c969",
+    "completion_report_acknowledged_id": "b736be12f3d3695d502cf62fab3d75b119e7ec598f84f603318f0a084c36c969",
+    "completion_report_acknowledged_at": "2026-08-20T03:06:04.354Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "tests/p4_eval_pack/run_p4_research_stress_suite.py",
+        "operation": "add",
+        "updated_at": "2026-08-20T02:55:00.888Z"
+      },
+      {
+        "path": "tests/p4_eval_pack/p4_evaluation_protocol_v1.md",
+        "operation": "update",
+        "updated_at": "2026-08-20T02:55:00.888Z"
+      }
+    ],
+    "failure": "The research stress wave has produced the intended diagnostic evidence and is not accepted: 30/35 passed, with three demonstrated canonical blind spots and two fixture defects. Stop this REPLAN wave without accepting it; replacement implementation will preserve its evidence and harden only the demonstrated mechanisms.",
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-08-20T02:50:39.665Z",
+    "updated_at": "2026-08-20T03:06:11.912Z",
+    "events": [
+      {
+        "time": "2026-08-20T02:50:39.665Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:50:50.320Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:50:51.177Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:50:51.186Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:27.482Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:28.132Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:28.749Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:28.749Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:29.834Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:29.989Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:30.790Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m py_compile tests\\p4_eval_pack\\run_p4_research_stress_suite.py",
+          "session_id": "ahuZhUBPVtcmTdeD8Q8LAiC-"
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:31.258Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m py_compile tests\\p4_eval_pack\\run_p4_research_stress_suite.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:32.318Z",
+        "event": "command_started",
+        "details": {
+          "command": "python tests\\p4_eval_pack\\run_p4_research_stress_suite.py --repo-root .",
+          "session_id": "64puoyEHipEgQTWSKCvcIJE3"
+        }
+      },
+      {
+        "time": "2026-08-20T02:54:59.849Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python tests\\p4_eval_pack\\run_p4_research_stress_suite.py --repo-root .",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:00.155Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:00.677Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:00.679Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:00.683Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:00.777Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "97edc990e2a1a9ffefba42b1f753debab8670e96eba4bcc1e7a841db8944ba7c"
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:00.888Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:09.031Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:09.259Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-08-20T02:55:53.760Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "MESSAGE_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-20T02:56:19.904Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:56:30.491Z",
+        "event": "task_orchestration_aborted",
+        "details": {
+          "state": "ABORTED"
+        }
+      },
+      {
+        "time": "2026-08-20T02:56:30.491Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:56:38.100Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T02:57:35.654Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/tests/test_solution_economics.py resources/coding-tools-mcp/tests/test_p4_readiness.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:58:11.252Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-20T02:59:15.844Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "b736be12f3d3695d502cf62fab3d75b119e7ec598f84f603318f0a084c36c969"
+        }
+      },
+      {
+        "time": "2026-08-20T02:59:21.999Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T03:04:36.072Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"operator_completion_report_acknowledged|completion_report_acknowledged|OPERATOR_REPORT_ACK_REQUIRED\" resources/coding-tools-mcp -g \"*.py\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-20T03:04:54.289Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "b736be12f3d3695d502cf62fab3d75b119e7ec598f84f603318f0a084c36c969"
+        }
+      },
+      {
+        "time": "2026-08-20T03:05:02.568Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-20T03:06:04.354Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "b736be12f3d3695d502cf62fab3d75b119e7ec598f84f603318f0a084c36c969"
+        }
+      },
+      {
+        "time": "2026-08-20T03:06:11.912Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-20T03:06:12.045Z",
+    "archive_reason": "superseded"
   }
 ]

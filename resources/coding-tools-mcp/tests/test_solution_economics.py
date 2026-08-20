@@ -10,6 +10,7 @@ from coding_tools_mcp.evaluation_report import current_ledger_baseline_report, e
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.solution_economics import (
+    _predictive_validation,
     record_solution_shadow,
     record_solution_shadow_patch_surface,
     solution_shadow_population_report,
@@ -51,6 +52,36 @@ def record_repair_patch(
             "affected_files": [{"path": f"src/{label}.py", "operation": "update"}],
         },
     )
+
+
+def predictive_report(
+    index: int,
+    *,
+    task_class: str,
+    risk: str,
+    repaired: bool | None,
+) -> dict[str, object]:
+    day = 1 + index // 24
+    hour = index % 24
+    return {
+        "task_class": task_class,
+        "evidence_provenance": "representative",
+        "recommendation": {
+            "candidate_solution_scope": "localized_file",
+            "root_cause_confidence": "high",
+            "oracle_strength": "strong",
+            "expected_repair_risk": risk,
+            "smallest_causal_solution": {"scope": "localized_symbol"},
+            "event_time": f"2026-01-{day:02d}T{hour:02d}:00:00Z",
+        },
+        "outcome": {
+            "final": True,
+            "repair": {
+                "repaired": repaired,
+                "causal_solution_repair": repaired,
+            },
+        },
+    }
 
 
 class SolutionEconomicsShadowTests(unittest.TestCase):
@@ -470,15 +501,16 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertFalse(population["p4_gate"]["can_answer_which_signals_predict_repair"])
             self.assertEqual(population["predictive_validation"]["reason"], "representative_repair_outcome_variation_missing")
 
-    def test_predictive_gate_requires_out_of_sample_gain_and_familywise_separation(self) -> None:
+    def test_predictive_gate_requires_pooled_family_and_temporal_robustness(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))
-            for index in range(24):
-                repaired = index >= 12
+            for index in range(32):
+                task_class = "bugfix" if index % 2 == 0 else "feature"
+                repaired = (index // 2) % 2 == 1
                 risk = "high" if repaired else "low"
                 run_id = ledger.create_run(
-                    objective=f"feature-{index}",
-                    metadata={"workflow": "feature", "evaluation": {"provenance": "representative"}},
+                    objective=f"{task_class}-{index}",
+                    metadata={"workflow": task_class, "evaluation": {"provenance": "representative"}},
                 )
                 wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
                 record_solution_shadow(
@@ -512,10 +544,70 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertIn("expected_repair_risk", validation["validated_signals"])
             self.assertGreater(validation["signals"]["expected_repair_risk"]["leave_one_out_brier_gain"], 0)
             self.assertTrue(validation["signals"]["expected_repair_risk"]["separated_bucket_pairs"])
+            self.assertGreater(validation["signals"]["expected_repair_risk"]["task_family_holdout"]["brier_gain"], 0)
+            self.assertGreater(validation["signals"]["expected_repair_risk"]["temporal_holdout"]["brier_gain"], 0)
+            self.assertEqual(validation["signals"]["expected_repair_risk"]["validation_blockers"], [])
+            self.assertIn("family_temporal_holdout_v4", validation["method"])
             self.assertTrue(population["p4_gate"]["can_answer_which_signals_predict_repair"])
             self.assertEqual(population["p4_gate"]["status"], "predictive_signal_validation_available")
             self.assertFalse(population["p4_gate"]["automatic_policy_activation"])
             self.assertFalse(population["policy"]["p5_automatic_start"])
+
+    def test_predictive_gate_rejects_task_family_proxy_even_when_pooled_signal_is_perfect(self) -> None:
+        rows = []
+        for index in range(160):
+            task_class = "bugfix" if index % 2 == 0 else "feature"
+            repaired = task_class == "feature"
+            rows.append(predictive_report(
+                index,
+                task_class=task_class,
+                risk="high" if repaired else "low",
+                repaired=repaired,
+            ))
+        validation = _predictive_validation(rows)
+        signal = validation["signals"]["expected_repair_risk"]
+        self.assertTrue(signal["pooled_predictive_signal"])
+        self.assertFalse(signal["task_family_holdout"]["evaluable"])
+        self.assertIn("task_family_holdout_not_evaluable", signal["validation_blockers"])
+        self.assertFalse(signal["validated_predictive_signal"])
+        self.assertNotIn("expected_repair_risk", validation["validated_signals"])
+
+    def test_predictive_gate_rejects_late_temporal_direction_reversal(self) -> None:
+        rows = []
+        for index in range(360):
+            task_class = "bugfix" if index % 2 == 0 else "feature"
+            repaired = (index // 2) % 2 == 1
+            aligned_risk = "high" if repaired else "low"
+            risk = aligned_risk if index < 240 else "low" if repaired else "high"
+            rows.append(predictive_report(index, task_class=task_class, risk=risk, repaired=repaired))
+        validation = _predictive_validation(rows)
+        signal = validation["signals"]["expected_repair_risk"]
+        self.assertTrue(signal["pooled_predictive_signal"])
+        self.assertGreater(signal["task_family_holdout"]["brier_gain"], 0)
+        self.assertTrue(signal["temporal_holdout"]["evaluable"])
+        self.assertLess(signal["temporal_holdout"]["brier_gain"], 0)
+        self.assertIn("temporal_holdout_brier_gain_not_positive", signal["validation_blockers"])
+        self.assertFalse(signal["validated_predictive_signal"])
+
+    def test_predictive_gate_accepts_stable_signal_across_task_family_and_time(self) -> None:
+        rows = []
+        for index in range(160):
+            task_class = "bugfix" if index % 2 == 0 else "feature"
+            repaired = (index // 2) % 2 == 1
+            rows.append(predictive_report(
+                index,
+                task_class=task_class,
+                risk="high" if repaired else "low",
+                repaired=repaired,
+            ))
+        validation = _predictive_validation(rows)
+        signal = validation["signals"]["expected_repair_risk"]
+        self.assertTrue(signal["pooled_predictive_signal"])
+        self.assertGreater(signal["task_family_holdout"]["brier_gain"], 0)
+        self.assertGreater(signal["temporal_holdout"]["brier_gain"], 0)
+        self.assertEqual(signal["validation_blockers"], [])
+        self.assertTrue(signal["validated_predictive_signal"])
+        self.assertIn("expected_repair_risk", validation["validated_signals"])
 
     def test_missing_evaluation_provenance_is_unlabeled_not_representative(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

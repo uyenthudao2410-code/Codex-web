@@ -59,6 +59,27 @@ Recommended secondary diagnostics per candidate signal:
 - bootstrap confidence interval or repeated time-block sensitivity analysis when sample size permits;
 - calibration/reliability diagnostics only when the signal is interpreted probabilistically.
 
+### Canonical robustness gate v4
+
+Before P5 controlled treatment may open, a representative P4 signal must now pass all four canonical conditions:
+
+1. positive pooled leave-one-out Brier gain;
+2. at least one Bonferroni-familywise Wilson-separated signal bucket pair;
+3. positive leave-one-task-family-out Brier gain, with every observed task-family fold evaluable;
+4. positive Brier gain on the later one-third temporal holdout trained only on the earlier two-thirds, with repair outcome variation on both sides of the split.
+
+This makes pooled task-family proxies and late direction reversals fail closed instead of being promoted. It remains an association gate, not a causal claim. Source-state drift is still reported explicitly and no synthetic challenge may make a canonical signal promotion-eligible.
+
+The deep challenge runner is:
+
+```bash
+python tests/p4_eval_pack/run_p4_deep_challenges.py --repo-root .
+```
+
+It uses only in-memory synthetic challenge rows, runs the canonical reporter before and after, and requires semantic readiness to be unchanged. Its synthetic rows are always `promotion_eligible=false`.
+
+The exact controlled-P5 transition target remains fail-closed: `p4_gate.can_answer_which_signals_predict_repair=true`, at least one canonical `validated_signal`, `p4_empirically_complete=true`, a clean/upstream-matched P5 source baseline, and `p5_controlled_treatment_may_be_opened=true`. `p5_automatic_start` and global automatic policy activation remain false.
+
 ## Execution modes
 
 ### Mode A - unit/contract
@@ -84,3 +105,60 @@ Stop and fix the evaluation system before interpreting predictor quality if any 
 ## Canonical close decision
 
 A green battery means P4 measurement/readiness behavior is trustworthy under controlled challenge. It does **not** close P4/MS1. Closure remains fail-closed and requires the canonical reporter to become ready from organic representative evidence under the frozen measurement contract.
+
+## Research-driven stress suite v1
+
+P4 also has a literature-inspired adversarial suite that is intentionally broader than the 96-case engineering battery and the eight v4 deep challenges:
+
+```bash
+python tests/p4_eval_pack/run_p4_research_stress_suite.py --repo-root .
+```
+
+The suite translates published evaluation failure mechanisms into deterministic P4 counterexamples. The papers motivate the *failure mechanisms*; they do not prescribe this repository's gate. The mapping is therefore an engineering inference, and every row remains `source_class=synthetic_benchmark`, `promotion_eligible=false`, and forbidden from mutating canonical readiness.
+
+Research themes encoded by the runner include:
+
+- temporally consistent validation and future-information leakage (`temporally_consistent_validation_2025`);
+- delayed verification / immature labels in just-in-time defect prediction (`jit_sdp_verification_latency`);
+- precision-recall diagnostics under severe class imbalance (`saito_rehmsmeier_2015_pr_imbalance`);
+- robustness and reliability under noisy labels (`olmin_lindsten_2022_noisy_labels`);
+- local calibration failures hidden by global averages (`luo_et_al_2022_local_calibration`);
+- spurious features and worst-group behavior under distribution shift (`zhou_et_al_2021_spurious_shift`);
+- temporal distribution shift and rolling assessment (`han_huang_wang_2024_temporal_shift`);
+- multiple-comparison discipline (`demsar_2006_multiple_datasets`).
+
+The stress suite has six families of checks: data/label integrity, temporal drift, class imbalance/statistical power, subgroup/source-state robustness, metamorphic invariants, and out-of-sample empirical-bucket reliability diagnostics. Calibration checks use probabilities estimated from training bucket outcomes only; the ordinal `low/medium/high` risk labels are never treated as native probabilities.
+
+Unlike the canonical promotion gate, this suite is expected to fail when it discovers a structural blind spot. A failing counterexample starts a replan: first reproduce and classify the failure, then harden the smallest canonical mechanism that actually permits the false promotion, then rerun this suite plus the existing v4 deep runner and focused P4 tests. Threshold relaxation, synthetic promotion, fabricated representative outcomes, and automatic P5 activation remain forbidden.
+
+## Multilayer continuous challenge suite v1
+
+The project also carries an independent model-facing benchmark that converts repository, web-agent, security, testing, contamination, terminal, and project-scheduling research into deterministic challenge/oracle pairs:
+
+```bash
+npm run benchmark:multilayer
+```
+
+The public challenge catalog is `tests/p4_eval_pack/challenges/multilayer_challenges_v1.json`. Hidden grading rules and reference responses are stored separately in `multilayer_oracles_v1.json`; candidate context should receive the public catalog, not the hidden oracle file. `research_sources_v1.json` records the primary publication or original benchmark identifier behind each challenge family.
+
+The suite contains twelve layers: repository/cross-file reasoning; long-horizon engineering state; hidden-oracle traps; functional-plus-security correctness; web idempotency and optimistic concurrency; terminal/service causality; metamorphic relations; statistical robustness; contamination resistance; construction/project scheduling; adversarial agent-integrity traps; and continuous evaluation governance. Every public case is `source_class=synthetic_benchmark`, `promotion_eligible=false`, and forbidden from changing canonical readiness.
+
+Scoring is multidimensional. A passed deterministic answer contributes to its named dimensions, an actual failure contributes zero, and missing/unobservable evidence remains `UNKNOWN` with a null score contribution rather than being coerced to zero. This preserves the repository-wide unknown-is-not-zero measurement rule.
+
+The aggregate runner executes the existing research stress suite as a subordinate diagnostic and checks its exact reviewed signature from `known_diagnostics_v1.json`. The current baseline deliberately distinguishes three canonical blind spots from two fixture defects. In default regression mode those three blind spots are reported as `KNOWN_DIAGNOSTIC` and are not silently scored as passes or zeros; any signature drift, new failure, missing case, canonical before/after mutation, or promotion-policy violation fails the run and requires review.
+
+For closure work, use the strict gate:
+
+```bash
+npm run benchmark:multilayer:strict
+```
+
+Strict mode remains nonzero while a known canonical blind spot is still reproduced. A future fix must therefore make the underlying counterexample pass and then deliberately update the reviewed diagnostic baseline; simply deleting a test, weakening an oracle, changing expected counts, or promoting synthetic evidence is not a valid closure.
+
+To grade an external model or agent, save structured answers under a `responses` object and run:
+
+```bash
+python tests/p4_eval_pack/run_multilayer_challenge_suite.py --repo-root . --responses path/to/responses.json
+```
+
+Missing responses are `UNKNOWN` and make an external-response run `INCOMPLETE`; they are never treated as incorrect zero-valued observations. The default no-`--responses` mode grades hidden reference responses and therefore serves as a deterministic harness self-test plus continuous regression check.

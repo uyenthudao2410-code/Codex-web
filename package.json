@@ -23,6 +23,8 @@
     "check:p5-readiness": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-p5-ready",
     "benchmark:routing": "cd resources/coding-tools-mcp && python -m benchmarks.routing_economics",
     "benchmark:activation": "cd resources/coding-tools-mcp && python -m benchmarks.runtime_activation",
+    "benchmark:multilayer": "python tests/p4_eval_pack/run_multilayer_challenge_suite.py --repo-root .",
+    "benchmark:multilayer:strict": "python tests/p4_eval_pack/run_multilayer_challenge_suite.py --repo-root . --strict-known-diagnostics",
     "probe:execution-hub": "node scripts/execution-hub-activation-probe.js",
     "canary:opencode-flash:preflight": "electron scripts/execution-hub-provider-canary.js --preflight",
     "canary:opencode-flash": "electron scripts/execution-hub-provider-canary.js",

@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "source_policy": "primary_research_or_original_benchmark_source_only",
+  "sources": {
+    "swe_bench_2023": {
+      "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?",
+      "year": 2023,
+      "identifier": "arXiv:2310.06770",
+      "locator": "https://arxiv.org/abs/2310.06770",
+      "focus": "real repository issue resolution across functions, classes, files, long contexts, and execution environments"
+    },
+    "repobench_2023": {
+      "title": "RepoBench: Benchmarking Repository-Level Code Auto-Completion Systems",
+      "year": 2023,
+      "identifier": "arXiv:2306.03091",
+      "locator": "https://arxiv.org/abs/2306.03091",
+      "focus": "repository-level retrieval and cross-file code reasoning"
+    },
+    "swe_bench_pro_2025": {
+      "title": "SWE-Bench Pro: Can AI Agents Solve Long-Horizon Software Engineering Tasks?",
+      "year": 2025,
+      "identifier": "arXiv:2509.16941",
+      "locator": "https://arxiv.org/abs/2509.16941",
+      "focus": "long-horizon enterprise software-engineering tasks with multi-file changes and held-out repositories"
+    },
+    "utboost_2025": {
+      "title": "UTBoost: Rigorous Evaluation of Coding Agents on SWE-Bench",
+      "year": 2025,
+      "identifier": "arXiv:2506.09289",
+      "locator": "https://arxiv.org/abs/2506.09289",
+      "focus": "stronger test oracles that expose erroneous patches incorrectly accepted by insufficient tests"
+    },
+    "secureagentbench_2025": {
+      "title": "SecureAgentBench: Benchmarking Secure Code Generation under Realistic Vulnerability Scenarios",
+      "year": 2025,
+      "identifier": "arXiv:2509.22097",
+      "locator": "https://arxiv.org/abs/2509.22097",
+      "focus": "joint functional and security evaluation for realistic multi-file coding tasks"
+    },
+    "swe_smith_2025": {
+      "title": "SWE-smith: Scaling Data for Software Engineering Agents",
+      "year": 2025,
+      "identifier": "arXiv:2504.21798",
+      "locator": "https://arxiv.org/abs/2504.21798",
+      "focus": "systematic generation of executable software-engineering task instances from real codebases"
+    },
+    "webarena_2023": {
+      "title": "WebArena: A Realistic Web Environment for Building Autonomous Agents",
+      "year": 2023,
+      "identifier": "arXiv:2307.13854",
+      "locator": "https://arxiv.org/abs/2307.13854",
+      "focus": "reproducible long-horizon web tasks with execution-based functional evaluation"
+    },
+    "browsergym_2024": {
+      "title": "The BrowserGym Ecosystem for Web Agent Research",
+      "year": 2024,
+      "identifier": "arXiv:2412.05467",
+      "locator": "https://arxiv.org/abs/2412.05467",
+      "focus": "standardized observation/action spaces and reproducible multi-benchmark web-agent evaluation"
+    },
+    "terminal_bench_2026": {
+      "title": "Terminal-Bench: Benchmarking Agents on Hard, Realistic Tasks in Command Line Interfaces",
+      "year": 2026,
+      "identifier": "arXiv:2601.11868",
+      "locator": "https://arxiv.org/abs/2601.11868",
+      "focus": "hard realistic terminal workflows with unique environments and comprehensive executable tests"
+    },
+    "livecodebench_2024": {
+      "title": "LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code",
+      "year": 2024,
+      "identifier": "arXiv:2403.07974",
+      "locator": "https://arxiv.org/abs/2403.07974",
+      "focus": "time-evolving contamination-resistant code evaluation with objective ground truth"
+    },
+    "metamorphic_testing_2020": {
+      "title": "Metamorphic Testing: A New Approach for Generating Next Test Cases",
+      "year": 2020,
+      "identifier": "arXiv:2002.12543",
+      "locator": "https://arxiv.org/abs/2002.12543",
+      "focus": "test relations that reveal defects when a direct complete oracle is unavailable"
+    },
+    "psplib_1997": {
+      "title": "PSPLIB - A project scheduling problem library: OR Software - ORSEP Operations Research Software Exchange Program",
+      "year": 1997,
+      "identifier": "doi:10.1016/S0377-2217(96)00170-1",
+      "locator": "https://doi.org/10.1016/S0377-2217(96)00170-1",
+      "focus": "single- and multi-mode resource-constrained project-scheduling benchmark instances"
+    }
+  }
+}

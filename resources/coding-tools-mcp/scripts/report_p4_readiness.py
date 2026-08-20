@@ -34,28 +34,53 @@ def _git_baseline_status(root: Path) -> dict[str, object]:
         return {
             "is_repo": False,
             "worktree_clean": False,
+            "source_worktree_clean": False,
+            "raw_worktree_clean": False,
+            "runtime_evidence_dirty_only": False,
+            "cleanliness_scope": "source_excluding_runtime_evidence_v1",
             "upstream_configured": False,
             "head_matches_upstream": False,
             "p5_baseline_ready": False,
-            "requirement": "clean_upstream_matched_head_v1",
+            "requirement": "clean_source_upstream_matched_head_v2",
         }
     head_ok, head = _git_text(root, "rev-parse", "HEAD")
     upstream_ok, upstream = _git_text(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
     upstream_head_ok, upstream_head = _git_text(root, "rev-parse", "@{upstream}") if upstream_ok else (False, "")
-    status_ok, status = _git_text(root, "status", "--porcelain=v1", "--untracked-files=all")
-    worktree_clean = status_ok and not status
+    raw_status_ok, raw_status = _git_text(root, "status", "--porcelain=v1", "--untracked-files=all")
+    source_status_ok, source_status = _git_text(
+        root,
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all",
+        "--",
+        ".",
+        ":(exclude).coding-tools",
+        ":(exclude).coding-tools/**",
+    )
+    source_worktree_clean = source_status_ok and not source_status
+    raw_worktree_clean = raw_status_ok and not raw_status
+    runtime_evidence_dirty_only = bool(
+        raw_status_ok and source_status_ok and raw_status and not source_status
+    )
     head_matches_upstream = bool(head_ok and upstream_head_ok and head and head == upstream_head)
-    ready = bool(worktree_clean and upstream_ok and head_matches_upstream)
+    ready = bool(source_worktree_clean and upstream_ok and head_matches_upstream)
     return {
         "is_repo": True,
         "head": head if head_ok else None,
         "upstream": upstream if upstream_ok else None,
         "upstream_head": upstream_head if upstream_head_ok else None,
-        "worktree_clean": worktree_clean,
+        # Backward-compatible key: P5 has always consumed worktree_clean. Its
+        # intended meaning is source/product cleanliness, matching the runtime
+        # orchestration identity which excludes volatile .coding-tools evidence.
+        "worktree_clean": source_worktree_clean,
+        "source_worktree_clean": source_worktree_clean,
+        "raw_worktree_clean": raw_worktree_clean,
+        "runtime_evidence_dirty_only": runtime_evidence_dirty_only,
+        "cleanliness_scope": "source_excluding_runtime_evidence_v1",
         "upstream_configured": upstream_ok,
         "head_matches_upstream": head_matches_upstream,
         "p5_baseline_ready": ready,
-        "requirement": "clean_upstream_matched_head_v1",
+        "requirement": "clean_source_upstream_matched_head_v2",
     }
 
 
@@ -147,7 +172,7 @@ def main() -> int:
         action="store_true",
         help=(
             "Exit non-zero unless the P4 predictive gate is complete, at least one validated predictive signal "
-            "is present, and the Git baseline is clean and upstream-matched."
+            "is present, and the Git source baseline is clean and upstream-matched."
         ),
     )
     args = parser.parse_args()

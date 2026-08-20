@@ -770,6 +770,158 @@ def _loocv_brier(rows: list[dict[str, Any]], signal: str) -> tuple[float | None,
     return (round(baseline, 6), round(signal_score, 6), round(baseline - signal_score, 6))
 
 
+def _holdout_brier(
+    training: list[tuple[dict[str, Any], int]],
+    held_out: list[tuple[dict[str, Any], int]],
+    signal: str,
+) -> tuple[list[float], list[float]]:
+    if len(training) < 2 or not held_out or len({label for _, label in training}) < 2:
+        return ([], [])
+    baseline_probability = sum(label for _, label in training) / len(training)
+    bucket_outcomes: dict[str, list[int]] = {}
+    for item, label in training:
+        bucket_outcomes.setdefault(_signal_value(item, signal), []).append(label)
+    baseline_errors: list[float] = []
+    signal_errors: list[float] = []
+    for item, label in held_out:
+        bucket = bucket_outcomes.get(_signal_value(item, signal), [])
+        signal_probability = sum(bucket) / len(bucket) if bucket else baseline_probability
+        baseline_errors.append((baseline_probability - label) ** 2)
+        signal_errors.append((signal_probability - label) ** 2)
+    return (baseline_errors, signal_errors)
+
+
+def _leave_task_class_out_brier(rows: list[dict[str, Any]], signal: str) -> dict[str, Any]:
+    usable = [
+        (row, label)
+        for row in rows
+        for label in [_repair_label(row)]
+        if label is not None and _signal_value(row, signal) != "unknown" and str(row.get("task_class") or "").strip()
+    ]
+    task_classes = sorted({str(row.get("task_class") or "").strip() for row, _ in usable})
+    sample_counts = {
+        task_class: sum(1 for row, _ in usable if str(row.get("task_class") or "").strip() == task_class)
+        for task_class in task_classes
+    }
+    if len(task_classes) < 2:
+        return {
+            "evaluable": False,
+            "reason": "at_least_two_task_classes_required",
+            "task_class_count": len(task_classes),
+            "task_class_sample_counts": sample_counts,
+            "required_folds": len(task_classes),
+            "evaluated_folds": 0,
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+        }
+
+    baseline_errors: list[float] = []
+    signal_errors: list[float] = []
+    evaluated_folds = 0
+    fold_failures: list[str] = []
+    for task_class in task_classes:
+        training = [(row, label) for row, label in usable if str(row.get("task_class") or "").strip() != task_class]
+        held_out = [(row, label) for row, label in usable if str(row.get("task_class") or "").strip() == task_class]
+        fold_baseline, fold_signal = _holdout_brier(training, held_out, signal)
+        if not fold_baseline:
+            fold_failures.append(task_class)
+            continue
+        baseline_errors.extend(fold_baseline)
+        signal_errors.extend(fold_signal)
+        evaluated_folds += 1
+    evaluable = bool(baseline_errors and evaluated_folds == len(task_classes))
+    if not evaluable:
+        return {
+            "evaluable": False,
+            "reason": "every_task_class_fold_requires_training_outcome_variation",
+            "task_class_count": len(task_classes),
+            "task_class_sample_counts": sample_counts,
+            "required_folds": len(task_classes),
+            "evaluated_folds": evaluated_folds,
+            "unevaluable_task_classes": fold_failures,
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+        }
+    baseline = sum(baseline_errors) / len(baseline_errors)
+    signal_score = sum(signal_errors) / len(signal_errors)
+    return {
+        "evaluable": True,
+        "reason": "leave_one_task_class_out",
+        "task_class_count": len(task_classes),
+        "task_class_sample_counts": sample_counts,
+        "required_folds": len(task_classes),
+        "evaluated_folds": evaluated_folds,
+        "baseline_brier": round(baseline, 6),
+        "signal_brier": round(signal_score, 6),
+        "brier_gain": round(baseline - signal_score, 6),
+    }
+
+
+def _temporal_holdout_brier(rows: list[dict[str, Any]], signal: str) -> dict[str, Any]:
+    usable = [
+        (row, label, str((row.get("recommendation") or {}).get("event_time") or "").strip())
+        for row in rows
+        for label in [_repair_label(row)]
+        if label is not None
+        and _signal_value(row, signal) != "unknown"
+        and isinstance(row.get("recommendation"), dict)
+        and str((row.get("recommendation") or {}).get("event_time") or "").strip()
+    ]
+    usable.sort(key=lambda item: item[2])
+    if len(usable) < 4:
+        return {
+            "evaluable": False,
+            "reason": "ordered_training_and_holdout_support_required",
+            "ordered_samples": len(usable),
+            "training_samples": 0,
+            "holdout_samples": 0,
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+        }
+    split = max(2, (len(usable) * 2) // 3)
+    split = min(split, len(usable) - 2)
+    training = [(row, label) for row, label, _ in usable[:split]]
+    held_out = [(row, label) for row, label, _ in usable[split:]]
+    if len({label for _, label in training}) < 2 or len({label for _, label in held_out}) < 2:
+        return {
+            "evaluable": False,
+            "reason": "training_and_later_holdout_outcome_variation_required",
+            "ordered_samples": len(usable),
+            "training_samples": len(training),
+            "holdout_samples": len(held_out),
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+        }
+    baseline_errors, signal_errors = _holdout_brier(training, held_out, signal)
+    if not baseline_errors:
+        return {
+            "evaluable": False,
+            "reason": "temporal_training_support_insufficient",
+            "ordered_samples": len(usable),
+            "training_samples": len(training),
+            "holdout_samples": len(held_out),
+            "baseline_brier": None,
+            "signal_brier": None,
+            "brier_gain": None,
+        }
+    baseline = sum(baseline_errors) / len(baseline_errors)
+    signal_score = sum(signal_errors) / len(signal_errors)
+    return {
+        "evaluable": True,
+        "reason": "earliest_two_thirds_train_latest_third_holdout",
+        "ordered_samples": len(usable),
+        "training_samples": len(training),
+        "holdout_samples": len(held_out),
+        "baseline_brier": round(baseline, 6),
+        "signal_brier": round(signal_score, 6),
+        "brier_gain": round(baseline - signal_score, 6),
+    }
+
+
 def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
     labeled = [item for item in reports if _repair_label(item) is not None]
     outcome_variation = len({_repair_label(item) for item in labeled}) >= 2
@@ -802,7 +954,25 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
             for right in values[index + 1 :]:
                 if intervals[left][1] < intervals[right][0] or intervals[right][1] < intervals[left][0]:
                     separated_pairs.append([left, right])
-        signal_validated = bool(outcome_variation and brier_gain is not None and brier_gain > 0 and separated_pairs)
+        family_holdout = _leave_task_class_out_brier(labeled, signal)
+        temporal_holdout = _temporal_holdout_brier(labeled, signal)
+        pooled_validated = bool(outcome_variation and brier_gain is not None and brier_gain > 0 and separated_pairs)
+        blockers: list[str] = []
+        if not outcome_variation:
+            blockers.append("repair_outcome_variation_missing")
+        if brier_gain is None or brier_gain <= 0:
+            blockers.append("pooled_leave_one_out_brier_gain_not_positive")
+        if not separated_pairs:
+            blockers.append("familywise_wilson_separation_missing")
+        if family_holdout.get("evaluable") is not True:
+            blockers.append("task_family_holdout_not_evaluable")
+        elif not isinstance(family_holdout.get("brier_gain"), (int, float)) or family_holdout["brier_gain"] <= 0:
+            blockers.append("task_family_holdout_brier_gain_not_positive")
+        if temporal_holdout.get("evaluable") is not True:
+            blockers.append("temporal_holdout_not_evaluable")
+        elif not isinstance(temporal_holdout.get("brier_gain"), (int, float)) or temporal_holdout["brier_gain"] <= 0:
+            blockers.append("temporal_holdout_brier_gain_not_positive")
+        signal_validated = bool(pooled_validated and not blockers)
         if signal_validated:
             validated.append(signal)
         signals[signal] = {
@@ -814,11 +984,15 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
             "leave_one_out_brier_gain": brier_gain,
             "familywise_wilson_intervals": intervals,
             "separated_bucket_pairs": separated_pairs,
+            "pooled_predictive_signal": pooled_validated,
+            "task_family_holdout": family_holdout,
+            "temporal_holdout": temporal_holdout,
+            "validation_blockers": blockers,
             "validated_predictive_signal": signal_validated,
         }
     if validated:
         status = "predictive_signal_validation_available"
-        reason = "representative_out_of_sample_gain_with_familywise_interval_separation"
+        reason = "representative_pooled_family_temporal_robustness_established"
     elif not labeled:
         status = "collecting"
         reason = "no_representative_terminal_outcomes"
@@ -837,7 +1011,13 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
         "familywise_confidence": 0.95,
         "comparison_count": comparison_count,
         "per_comparison_alpha": round(per_comparison_alpha, 8) if per_comparison_alpha is not None else None,
-        "method": "leave_one_out_brier_plus_bonferroni_wilson_separation_v3_causal_solution_repair",
+        "method": "pooled_loocv_brier_plus_bonferroni_wilson_plus_family_temporal_holdout_v4_causal_solution_repair",
+        "robustness_requirements": {
+            "pooled_leave_one_out_brier_gain_positive": True,
+            "familywise_wilson_separation": True,
+            "leave_one_task_class_out_brier_gain_positive": True,
+            "latest_third_temporal_holdout_brier_gain_positive": True,
+        },
         "repair_label_method": "replan_diagnostics_plus_post_replan_patch_v1",
         "historical_repair_label_method": "post_replan_applied_patch_delta_v1",
         "validated_signals": validated,
@@ -1060,6 +1240,8 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "iid_assumption": False,
             "association_only": True,
             "time_or_source_state_confounding_eliminated": False,
+            "predictive_task_family_holdout_required": True,
+            "predictive_temporal_holdout_required": True,
         },
         "replan_diagnostics": replan_diagnostics,
         "by_signal": by_signal,
@@ -1086,6 +1268,8 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "predictive_promotion_requires_representative_provenance": True,
             "benchmark_synthetic_unlabeled_are_not_promotion_evidence": True,
             "predictive_validation_is_association_not_causality": True,
+            "predictive_validation_requires_task_family_holdout": True,
+            "predictive_validation_requires_temporal_holdout": True,
             "longitudinal_evolving_checkout_not_iid": True,
             "source_state_time_drift_reported": True,
             "semantic_localization_is_measurement_context_not_repair_label": True,
