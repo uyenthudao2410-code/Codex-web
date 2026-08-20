@@ -26,6 +26,8 @@ fn work_on_project_call(project: &str, instruction: &str, session_id: Option<&st
         path: None,
         instruction: instruction.to_string(),
         session_id: session_id.map(str::to_string),
+        include_project_instructions: true,
+        include_workflow_guidance: true,
     }
 }
 
@@ -41,6 +43,8 @@ fn path_work_on_project_call(
         path: Some(path.to_string()),
         instruction: instruction.to_string(),
         session_id: session_id.map(str::to_string),
+        include_project_instructions: true,
+        include_workflow_guidance: true,
     }
 }
 
@@ -263,10 +267,17 @@ fn valid_work_on_project_projection_input() -> serde_json::Value {
         },
         "instructions": {
             "status": "loaded",
-            "sources": [],
+            "sources": [{
+                "path": "AGENTS.md",
+                "fingerprint": "sha256:projection-fixture",
+                "truncated": false,
+                "headings": ["Repository rules"],
+                "content": "Preserve unrelated changes.",
+                "read_more": null
+            }],
             "content_included": true,
             "truncated": false,
-            "total_chars": 0,
+            "total_chars": 27,
         },
         "semantic_navigation": {
             "supported": false,

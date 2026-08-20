@@ -1061,6 +1061,8 @@ impl ToolCall {
                 path,
                 instruction,
                 session_id,
+                include_project_instructions,
+                include_workflow_guidance,
             } => serde_json::json!({
                 "project": project,
                 "client_id": client_id,
@@ -1068,6 +1070,8 @@ impl ToolCall {
                 "instruction_present": true,
                 "instruction_summary": crate::shell_client::command_preview(instruction),
                 "session_id": session_id,
+                "include_project_instructions": include_project_instructions,
+                "include_workflow_guidance": include_workflow_guidance,
             }),
             Self::UpdateSessionContext {
                 project,
