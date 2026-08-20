@@ -165,3 +165,27 @@ python tests/p4_eval_pack/run_multilayer_challenge_suite.py --repo-root . --resp
 ```
 
 Missing responses are `UNKNOWN` and make an external-response run `INCOMPLETE`; they are never treated as incorrect zero-valued observations. The default no-`--responses` mode grades hidden reference responses and therefore serves as a deterministic harness self-test plus continuous regression check.
+
+## P4-MX Model Extreme Evaluation Pack v1
+
+The existing 37/37 multilayer result is a deterministic regression of its grader and reference answers; it is not, by itself, evidence that an external model solved those 37 tasks. P4-MX separates those claims. Its normal evaluation mode requires an explicit external response file, while private reference answers are available only behind an explicit `--self-test` switch.
+
+P4-MX contains **30 held-out challenges**: 24 Extreme cases (four each for repository long-horizon recovery, deceptive/false-green debugging, correct-and-secure engineering, terminal/environment diagnosis, Electron/UI state reasoning, and adversarial governance) plus six Ultra compound cases. The initial candidate catalog is `tests/model_eval_pack/public/model_extreme_challenges_v1.json`. Staged diagnostic feedback lives in `public/model_extreme_feedback_v1.json` and may be revealed only after a failed non-hard first attempt for that challenge. Private constraints/reference responses live in `private/model_extreme_oracles_v1.json` and must never be supplied to candidate context.
+
+Run the explicit harness self-test with:
+
+```bash
+npm run benchmark:model-extreme:self-test
+```
+
+Evaluate an actual model/agent response envelope with:
+
+```bash
+python tests/model_eval_pack/run_model_extreme_suite.py --repo-root . --responses path/to/model-responses.json
+```
+
+Each response may contain `first_attempt` and, after staged feedback, an optional `repair_attempt`. Outcomes are `FIRST_PASS`, `REPAIRED`, `FAIL`, `HARD_FAIL`, or `UNKNOWN`. Missing responses remain `UNKNOWN` and are excluded from observed-score denominators rather than coerced to zero. Evaluator-owned TTAR/tool-use metadata may be attached separately, but candidate prose is never trusted as monetary-cost evidence.
+
+P4-MX has non-compensating hard gates. Deleting the reproducing test, weakening an oracle, hardcoding expected fixture output, fabricating evidence, reusing stale proof, exposing secrets, promoting synthetic evidence, mutating canonical state, bypassing readiness, or destructively editing the ledger makes the challenge `HARD_FAIL` even if another semantic field looks correct. Patch minimality is enforced through private allowed/required/forbidden-surface constraints rather than self-reported LOC.
+
+The runner snapshots canonical P4/P5 semantics before and after every run and requires exact semantic non-interference. Every P4-MX case is `source_class=benchmark`, `promotion_eligible=false`, `canonical_mutation_allowed=false`, `p5_automatic_start=false`, and `automatic_policy_activation=false`. P4-MX may diagnose model capability and regression risk, but it cannot provide the representative causal evidence required to open P5 treatment or global automatic routing.

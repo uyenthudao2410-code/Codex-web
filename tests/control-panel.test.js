@@ -82,9 +82,36 @@ test('MCP exposes an authorized orchestration snapshot endpoint', () => {
 
 test('control panel renders task plus multi-client authority and continuity controls', () => {
   const html = read('renderer/panel.html');
+  const tagById = (id) => {
+    const match = html.match(new RegExp(`<[^>]+id="${id}"[^>]*>`));
+    assert.ok(match, `panel.html thiếu opening tag ${id}`);
+    return match[0];
+  };
   for (const id of ['taskStatus', 'taskObjective', 'taskBar', 'runStatus', 'waveLine', 'eventList', 'eventCount', 'proofList', 'handoffButton', 'pauseTask', 'resumeTask', 'stopTask', 'refreshButton', 'closeButton', 'syncState', 'continuityStatus', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton', 'runtimeActivitySection', 'runtimeActivitySummary', 'runtimeActivityList']) {
     assert.match(html, new RegExp(`id="${id}"`), `panel.html thiếu id ${id}`);
   }
+  assert.doesNotMatch(tagById('mcpDot'), /\bready\b/);
+  assert.doesNotMatch(tagById('tunnelDot'), /\bready\b/);
+  assert.match(html, /id="taskStatus"[^>]*>Chưa đồng bộ</);
+  assert.match(html, /id="taskPercent"[^>]*>—</);
+  assert.match(html, /id="runStatus"[^>]*>Chưa đồng bộ</);
+  assert.match(html, /id="eventCount"[^>]*>—</);
+  assert.match(html, /id="routingEvidenceKpi"[^>]*>Chưa đồng bộ</);
+  assert.match(html, /id="continuityStatus"[^>]*>Chưa đồng bộ</);
+  assert.match(html, /id="hubStatus"[^>]*>Chưa đồng bộ</);
+  assert.match(html, /id="runtimeActivitySummary"[^>]*>Chưa đồng bộ</);
+  assert.match(html, /id="syncState"[^>]*>Chưa đồng bộ với control plane</);
+  assert.equal((html.match(/● CHƯA ĐỒNG BỘ/g) || []).length, 9, 'mọi router node phải bắt đầu ở trạng thái chưa đồng bộ');
+  assert.match(tagById('routerChatWeb'), /class="router-node waiting"/);
+  assert.match(tagById('routerDesktop'), /class="router-node waiting"/);
+  assert.match(tagById('routerOpenCode'), /class="router-node waiting"/);
+  assert.match(tagById('routerHub'), /class="router-node hub waiting"/);
+  assert.match(tagById('routerWriter'), /class="router-node writer-authority waiting"/);
+  for (const id of ['pauseTask', 'resumeTask', 'stopTask', 'handoffButton', 'toChatWebButton', 'toDesktopButton', 'copyCodexConfigButton']) {
+    assert.match(tagById(id), /\bdisabled\b/, `${id} phải fail-closed trước lần sync đầu tiên`);
+  }
+  assert.doesNotMatch(tagById('refreshButton'), /\bdisabled\b/);
+  assert.doesNotMatch(tagById('closeButton'), /\bdisabled\b/);
   assert.match(html, /Operator Control Panel/);
   assert.match(html, /Executive Summary/);
   assert.match(html, /class="dashboard-card executive-card hero-summary"/);
@@ -101,15 +128,40 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(js, /setInterval\(refreshOrchestration, 2000\)/);
   assert.match(js, /let orchestrationInFlight = null;/);
   assert.match(js, /let orchestrationError = '';/);
+  assert.match(js, /let controlPlaneState = 'unknown';/);
+  assert.match(js, /const CONTROL_PLANE_ACTION_IDS = \[/);
   assert.match(js, /function renderSyncState\(\)/);
-  assert.match(js, /if \(orchestrationError\)/);
+  assert.match(js, /if \(controlPlaneState === 'unavailable'\)/);
+  assert.match(js, /CONTROL PLANE UNAVAILABLE/);
+  assert.match(js, /Chưa đồng bộ với control plane/);
   assert.match(js, /if \(orchestrationInFlight\) return orchestrationInFlight;/);
   assert.match(js, /orchestrationError = error\?\.message \|\| String\(error\)/);
   assert.match(js, /finally \{[\s\S]*?orchestrationInFlight = null;/);
   assert.match(js, /if \(!orchestrationError && lastSyncAt && Date\.now\(\) - lastSyncAt > 8000\)/);
+  const unavailableBlock = js.slice(js.indexOf('function renderControlPlaneUnavailable(error)'), js.indexOf('function renderHealth(health)'));
+  assert.ok(unavailableBlock.length > 0, 'panel.js phải có fail-visible invalidation path');
+  assert.match(unavailableBlock, /controlPlaneState = 'unavailable';/);
+  assert.match(unavailableBlock, /lastOrchestration = null;/);
+  assert.match(unavailableBlock, /lastSyncAt = 0;/);
+  assert.match(unavailableBlock, /setControlPlaneActionsEnabled\(false\)/);
+  assert.match(unavailableBlock, /#eventList/);
+  assert.match(unavailableBlock, /#proofList/);
+  assert.match(unavailableBlock, /#runtimeActivityList/);
+  assert.match(unavailableBlock, /#delegationList/);
+  assert.match(unavailableBlock, /● CHƯA ĐỒNG BỘ/);
+  const refreshBlock = js.slice(js.indexOf('async function refreshOrchestration'), js.indexOf('async function refreshHealth'));
+  assert.match(refreshBlock, /controlPlaneState = 'available';/);
+  assert.match(refreshBlock, /lastSyncAt = Date\.now\(\);/);
+  assert.match(refreshBlock, /renderControlPlaneUnavailable\(error\);/);
+  assert.ok(refreshBlock.indexOf("controlPlaneState = 'available';") < refreshBlock.indexOf('renderTask(data?.task);'), 'authoritative state phải được đánh dấu trước khi render action controls');
   const renderHealthBlock = js.slice(js.indexOf('function renderHealth(health)'), js.indexOf('function renderTask(task)'));
   assert.match(renderHealthBlock, /renderSyncState\(\);/);
   assert.doesNotMatch(renderHealthBlock, /#syncState/);
+  const refreshHealthBlock = js.slice(js.indexOf('async function refreshHealth'), js.indexOf('async function taskAction'));
+  assert.match(refreshHealthBlock, /lastHealth = null;/);
+  assert.match(refreshHealthBlock, /classList\.remove\('ready'\)/);
+  assert.ok((js.match(/if \(controlPlaneState !== 'available'\) return;/g) || []).length >= 4, 'mọi action handler phải fail closed khi control plane chưa authoritative');
+  assert.match(js, /controllerOwner\.startsWith\('chatweb:'\)/);
   assert.match(js, /recordHandoff/);
   assert.match(js, /renderEvents/);
   assert.match(js, /renderProofs/);

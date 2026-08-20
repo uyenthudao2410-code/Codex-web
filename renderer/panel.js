@@ -7,6 +7,19 @@ let lastCommandStartedAt = 0;
 let lastSyncAt = 0;
 let orchestrationInFlight = null;
 let orchestrationError = '';
+let controlPlaneState = 'unknown';
+
+const CONTROL_PLANE_ACTION_IDS = [
+  'pauseTask',
+  'resumeTask',
+  'stopTask',
+  'handoffButton',
+  'toChatWebButton',
+  'toDesktopButton',
+  'copyCodexConfigButton'
+];
+const ROUTER_KEYS = ['ChatWeb', 'Desktop', 'OpenCode', 'Hub', 'Writer', 'Fast', 'DeepSeek', 'Terra', 'Sol'];
+const ROUTER_EDGE_KEYS = ['ChatWeb', 'Desktop', 'OpenCode', 'Writer', 'Fast', 'DeepSeek', 'Terra', 'Sol'];
 
 function unwrap(result) {
   if (!result?.ok) throw new Error(result?.error || 'Thao tác thất bại');
@@ -49,10 +62,17 @@ function taskProgress(task, status) {
 }
 
 function renderSyncState() {
-  if (orchestrationError) {
-    $('#syncState').textContent = `Điều phối lỗi: ${orchestrationError}`;
+  if (controlPlaneState === 'unavailable') {
+    $('#syncState').textContent = 'CONTROL PLANE UNAVAILABLE';
+    $('#syncState').title = orchestrationError;
     return;
   }
+  if (controlPlaneState !== 'available') {
+    $('#syncState').textContent = 'Chưa đồng bộ với control plane';
+    $('#syncState').title = '';
+    return;
+  }
+  $('#syncState').title = '';
   const health = lastHealth;
   if (!orchestrationError && lastSyncAt && Date.now() - lastSyncAt > 8000) {
     $('#syncState').textContent = 'Đang đồng bộ lại…';
@@ -65,6 +85,63 @@ function renderSyncState() {
       : health?.recoveryBlocked
         ? `Khôi phục bị chặn: ${health.lastStartFailure || ''}`
         : 'Dịch vụ chưa sẵn sàng';
+}
+
+function setControlPlaneActionsEnabled(enabled) {
+  CONTROL_PLANE_ACTION_IDS.forEach((id) => {
+    const button = $(`#${id}`);
+    if (button) button.disabled = !enabled;
+  });
+}
+
+function renderControlPlaneUnavailable(error) {
+  controlPlaneState = 'unavailable';
+  orchestrationError = error?.message || String(error);
+  lastOrchestration = null;
+  lastSyncAt = 0;
+  lastCommandStartedAt = 0;
+  setControlPlaneActionsEnabled(false);
+
+  const taskStatus = $('#taskStatus');
+  taskStatus.textContent = 'Chưa đồng bộ';
+  taskStatus.className = 'badge kpi-mini-badge status-waiting';
+  $('#taskObjective').textContent = 'Không thể đọc control plane.';
+  $('#taskPercent').textContent = '—';
+  $('#taskBar').style.width = '0%';
+  $('#taskStep').textContent = '—';
+  $('#taskCommand').hidden = true;
+
+  const runStatus = $('#runStatus');
+  runStatus.textContent = 'Chưa đồng bộ';
+  runStatus.className = 'badge kpi-mini-badge status-waiting';
+  $('#runObjective').textContent = 'Không thể đọc control plane.';
+  $('#waveLine').textContent = '—';
+  $('#orchCounts').textContent = '';
+  $('#capsuleLine').textContent = 'Không thể đọc control plane.';
+
+  $('#eventCount').textContent = '—';
+  $('#routingEvidenceKpi').textContent = 'Chưa đồng bộ';
+  const hubStatus = $('#hubStatus');
+  hubStatus.textContent = 'Chưa đồng bộ';
+  hubStatus.className = 'text-gray';
+  const continuity = $('#continuityStatus');
+  continuity.textContent = 'Chưa đồng bộ';
+  continuity.className = 'badge kpi-mini-badge status-hold';
+  $('#runtimeActivitySummary').textContent = 'Chưa đồng bộ';
+
+  ['#eventList', '#proofList', '#runtimeActivityList', '#delegationList'].forEach((selector) => {
+    const list = $(selector);
+    if (list) list.replaceChildren();
+  });
+  $('#delegationsSection').hidden = true;
+
+  ROUTER_KEYS.forEach((key) => {
+    setFabricState($(`#router${key}`), 'waiting');
+    const label = $(`#router${key} .router-state`);
+    if (label) label.textContent = '● CHƯA ĐỒNG BỘ';
+  });
+  ROUTER_EDGE_KEYS.forEach((key) => setFabricState($(`#routerEdge${key}`), 'waiting'));
+  renderSyncState();
 }
 
 function renderHealth(health) {
@@ -107,13 +184,18 @@ function renderTask(task) {
     lastCommandStartedAt = 0;
     $('#taskCommand').hidden = true;
   }
+  const authoritative = controlPlaneState === 'available';
+  $('#pauseTask').disabled = !authoritative || status !== 'active';
+  $('#resumeTask').disabled = !authoritative || status !== 'paused';
+  $('#stopTask').disabled = !authoritative || ['idle', 'completed', 'failed', 'stopped'].includes(status);
 }
 
 function renderRun(data) {
   const run = data?.run;
+  const runState = String(run?.status || 'idle');
   const runStatusMap = { idle: 'Đang rảnh', active: 'Hoạt động', running: 'Đang chạy', completed: 'Hoàn thành', failed: 'Lỗi' };
-  $('#runStatus').textContent = runStatusMap[run?.status] || run?.status || 'Hoạt động';
-  $('#runStatus').className = `badge kpi-mini-badge ${run?.status === 'idle' ? 'status-waiting' : 'status-active'}`;
+  $('#runStatus').textContent = runStatusMap[runState] || runState;
+  $('#runStatus').className = `badge kpi-mini-badge ${runState === 'idle' ? 'status-waiting' : 'status-active'}`;
   $('#runObjective').textContent = run?.objective || 'Chưa có run điều phối.';
 
   const waves = Array.isArray(data?.waves) ? data.waves : [];
@@ -132,6 +214,8 @@ function renderRun(data) {
   $('#capsuleLine').textContent = capsule
     ? `Capsule: ${shortTime(capsule.created_at)} · v${capsule.version} · ${capsule.status}`
     : 'Chưa có capsule handoff — ghi trước khi xoay chat mới.';
+  $('#handoffButton').disabled = controlPlaneState !== 'available' || !run?.run_id;
+  $('#copyCodexConfigButton').disabled = controlPlaneState !== 'available';
 }
 
 function clientFor(data, type, id) {
@@ -156,6 +240,8 @@ function renderHub(data) {
   const controller = data?.authority?.controller || {};
   const write = data?.authority?.write || {};
   const controllerOwner = controller.owner_client_id || 'chưa claim';
+  const authoritative = controlPlaneState === 'available';
+  const chatwebOwnsController = controllerOwner === 'chatweb' || controllerOwner.startsWith('chatweb:');
   const activities = [chatweb, desktop, opencode].map(clientActivity);
   const activeClientCount = activities.filter((item) => item.state === 'ACTIVE').length;
   const recentClientCount = activities.filter((item) => item.state === 'RECENT').length;
@@ -164,8 +250,9 @@ function renderHub(data) {
     : recentClientCount
       ? `${recentClientCount} gần đây`
       : 'Chưa có tín hiệu';
-  $('#toDesktopButton').disabled = !desktop?.online || controllerOwner === 'codex-desktop' || !data?.run?.run_id;
-  $('#toChatWebButton').disabled = !chatweb?.online || controllerOwner === 'chatweb' || !data?.run?.run_id;
+  $('#hubStatus').className = activeClientCount ? 'text-green' : recentClientCount ? 'text-orange' : 'text-gray';
+  $('#toDesktopButton').disabled = !authoritative || !desktop?.online || controllerOwner === 'codex-desktop' || !data?.run?.run_id;
+  $('#toChatWebButton').disabled = !authoritative || !chatweb?.online || chatwebOwnsController || !data?.run?.run_id;
   const continuity = data?.continuity || {};
   const safe = Boolean(continuity.safe_to_rotate_chatweb);
   $('#continuityStatus').textContent = safe ? 'SẴN SÀNG' : 'TẠM GIỮ';
@@ -357,6 +444,9 @@ async function refreshOrchestration(force = false) {
   orchestrationInFlight = (async () => {
     try {
       const data = unwrap(await api.orchestration());
+      controlPlaneState = 'available';
+      orchestrationError = '';
+      lastSyncAt = Date.now();
       lastOrchestration = data;
       renderTask(data?.task);
       renderRun(data);
@@ -366,12 +456,9 @@ async function refreshOrchestration(force = false) {
       renderEvents(data?.events);
       renderProofs(data?.proofs);
       renderDelegations(data?.delegations);
-      orchestrationError = '';
-      lastSyncAt = Date.now();
       renderSyncState();
     } catch (error) {
-      orchestrationError = error?.message || String(error);
-      renderSyncState();
+      renderControlPlaneUnavailable(error);
     } finally {
       orchestrationInFlight = null;
     }
@@ -382,21 +469,31 @@ async function refreshOrchestration(force = false) {
 async function refreshHealth(force = false) {
   if (document.hidden && !force) return;
   try { renderHealth(unwrap(await api.health())); }
-  catch { /* giữ trạng thái cũ */ }
+  catch {
+    lastHealth = null;
+    ['#mcpDot', '#tunnelDot'].forEach((selector) => {
+      const element = $(selector);
+      element.classList.remove('ready');
+      element.title = 'Không đọc được trạng thái dịch vụ';
+    });
+    renderSyncState();
+  }
 }
 
 async function taskAction(action) {
+  if (controlPlaneState !== 'available') return;
   try {
     if (action === 'pause') unwrap(await api.pauseTask());
     else if (action === 'resume') unwrap(await api.resumeTask());
     else if (action === 'stop') unwrap(await api.stopTask());
     await refreshOrchestration();
   } catch (error) {
-    $('#syncState').textContent = error.message;
+    renderControlPlaneUnavailable(error);
   }
 }
 
 async function recordHandoff() {
+  if (controlPlaneState !== 'available') return;
   const button = $('#handoffButton');
   button.disabled = true;
   try {
@@ -404,13 +501,15 @@ async function recordHandoff() {
     await refreshOrchestration();
     alert(`Đã ghi Capsule thành công (v${result.version}). Bạn có thể mở chat mới an toàn.`);
   } catch (error) {
+    renderControlPlaneUnavailable(error);
     alert(`Lỗi ghi capsule: ${error.message}`);
   } finally {
-    button.disabled = false;
+    button.disabled = controlPlaneState !== 'available' || !lastOrchestration?.run?.run_id;
   }
 }
 
 async function transferController(target) {
+  if (controlPlaneState !== 'available') return;
   const confirmMsg = target === 'codex-desktop'
     ? 'Chuyển quyền điều khiển chính sang Codex Desktop?'
     : 'Chuyển quyền điều khiển chính sang ChatWeb?';
@@ -419,11 +518,13 @@ async function transferController(target) {
     unwrap(await api.transferController(target));
     await refreshOrchestration();
   } catch (error) {
+    renderControlPlaneUnavailable(error);
     alert(`Lỗi chuyển quyền: ${error.message}`);
   }
 }
 
 async function copyCodexConfig() {
+  if (controlPlaneState !== 'available') return;
   try {
     const config = unwrap(await api.copyCodexConfig());
     await navigator.clipboard.writeText(JSON.stringify(config, null, 2));

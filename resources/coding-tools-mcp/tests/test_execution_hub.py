@@ -27,6 +27,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.port = int(self.server.server_address[1])
+        self.stateless_task_contexts = {}
         state = self.runtime.task_state.update({"objective": "Execution Hub integration test", "status": "active"})
         self.ctx = self.runtime.orchestration_control.begin(
             objective="Execution Hub integration test",
@@ -48,7 +49,8 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         else:
             os.environ["CODING_TOOLS_MCP_TOOL_MODE"] = self.previous_tool_mode
 
-    def post_stateless(self, *, action="get", client_id="", client_type="", after_seq=None):
+    def post_stateless(self, *, action="get", client_id="", client_type="", after_seq=None, run_id=None):
+        logical_client = client_id or "chatweb"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.TOKEN}",
@@ -61,8 +63,13 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         if client_type:
             headers["X-Coding-Tools-Client-Type"] = client_type
         arguments = {"action": action}
+        task_context_id = self.stateless_task_contexts.get(logical_client)
+        if task_context_id:
+            arguments["task_context_id"] = task_context_id
         if after_seq is not None:
             arguments["after_seq"] = after_seq
+        if run_id is not None:
+            arguments["run_id"] = run_id
         params = {
             "name": "task_control",
             "arguments": arguments,
@@ -78,9 +85,31 @@ class ExecutionHubHTTPTests(unittest.TestCase):
             connection.request("POST", "/mcp", body=body, headers=headers)
             response = connection.getresponse()
             raw = response.read()
-            return response.status, json.loads(raw.decode("utf-8")) if raw else {}
+            parsed = json.loads(raw.decode("utf-8")) if raw else {}
+            structured = parsed.get("result", {}).get("structuredContent", {}) if isinstance(parsed, dict) else {}
+            returned_context_id = structured.get("task_context_id") if isinstance(structured, dict) else None
+            if returned_context_id:
+                self.stateless_task_contexts[logical_client] = str(returned_context_id)
+            return response.status, parsed
         finally:
             connection.close()
+
+    def claim_chatweb_controller(self):
+        clients = [
+            item
+            for item in self.runtime.orchestration_ledger.list_hub_clients()
+            if str(item.get("client_id") or "").startswith("chatweb:")
+        ]
+        self.assertEqual(len(clients), 1, clients)
+        chatweb_id = str(clients[0]["client_id"])
+        claimed = self.runtime.orchestration_ledger.acquire_controller_lease(
+            run_id=self.ctx.run_id,
+            owner_client_id=chatweb_id,
+            lease_id=f"test:{chatweb_id}",
+            ttl_seconds=60,
+        )
+        self.assertTrue(claimed["acquired"], claimed)
+        return claimed
 
     def post_hub(self, payload, *, authorized=True):
         headers = {"Content-Type": "application/json"}
@@ -109,48 +138,75 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         return body["result"]["structuredContent"]
 
     def test_registers_clients_without_stealing_live_controller(self) -> None:
-        status, body = self.post_stateless(action="get")
+        status, body = self.post_stateless(action="get", client_id="chatweb", client_type="chatweb")
         self.assertEqual(status, 200, body)
         self.structured(body)
+        self.claim_chatweb_controller()
         controller = self.runtime.orchestration_ledger.get_controller_lease(self.ctx.run_id)
-        self.assertEqual(controller["owner_client_id"], "chatweb")
-        self.assertEqual(controller["fencing_token"], 1)
+        self.assertIsNotNone(controller)
+        chatweb_id = controller["owner_client_id"]
+        self.assertTrue(chatweb_id.startswith("chatweb:"), chatweb_id)
+        initial_fencing_token = int(controller["fencing_token"])
 
         status, body = self.post_stateless(action="get", client_id="codex-desktop", client_type="codex_desktop")
         self.assertEqual(status, 200, body)
         self.structured(body)
         controller_after = self.runtime.orchestration_ledger.get_controller_lease(self.ctx.run_id)
-        self.assertEqual(controller_after["owner_client_id"], "chatweb")
-        self.assertEqual(controller_after["fencing_token"], 1)
+        self.assertEqual(controller_after["owner_client_id"], chatweb_id)
+        self.assertEqual(controller_after["fencing_token"], initial_fencing_token)
 
         status, body = self.post_stateless(action="get", client_id="opencode", client_type="opencode")
         self.assertEqual(status, 200, body)
         self.structured(body)
         controller_after_opencode = self.runtime.orchestration_ledger.get_controller_lease(self.ctx.run_id)
-        self.assertEqual(controller_after_opencode["owner_client_id"], "chatweb")
-        self.assertEqual(controller_after_opencode["fencing_token"], 1)
+        self.assertEqual(controller_after_opencode["owner_client_id"], chatweb_id)
+        self.assertEqual(controller_after_opencode["fencing_token"], initial_fencing_token)
         clients = {item["client_id"]: item for item in self.runtime.orchestration_ledger.list_hub_clients()}
-        self.assertTrue(clients["chatweb"]["online"])
+        self.assertTrue(clients[chatweb_id]["online"])
         self.assertTrue(clients["codex-desktop"]["online"])
         self.assertTrue(clients["opencode"]["online"])
         self.assertEqual(clients["codex-desktop"]["role"], "worker")
         self.assertEqual(clients["opencode"]["role"], "worker")
 
     def test_event_cursors_advance_only_over_observed_events(self) -> None:
-        self.post_stateless(action="get")
+        self.post_stateless(action="get", client_id="chatweb", client_type="chatweb")
         self.runtime.orchestration_ledger.append_event(self.ctx.run_id, event_type="hub_probe", payload={"n": 1})
-        status, body = self.post_stateless(action="events", after_seq=0)
+        status, body = self.post_stateless(
+            action="events",
+            client_id="chatweb",
+            client_type="chatweb",
+            after_seq=0,
+            run_id=self.ctx.run_id,
+        )
         self.assertEqual(status, 200, body)
         structured = self.structured(body)
         observed_seq = structured["events"][-1]["seq"]
+        chatweb_id = structured["client_cursor"]["client_id"]
+        self.assertTrue(chatweb_id.startswith("chatweb:"), chatweb_id)
         self.assertEqual(structured["client_cursor"]["last_event_seq"], observed_seq)
 
-        self.post_stateless(action="events", after_seq=999999)
-        cursor = self.runtime.orchestration_ledger.get_hub_client_cursor(client_id="chatweb", run_id=self.ctx.run_id)
+        self.post_stateless(
+            action="events",
+            client_id="chatweb",
+            client_type="chatweb",
+            after_seq=999999,
+            run_id=self.ctx.run_id,
+        )
+        cursor = self.runtime.orchestration_ledger.get_hub_client_cursor(client_id=chatweb_id, run_id=self.ctx.run_id)
         self.assertEqual(cursor["last_event_seq"], observed_seq)
 
-        self.post_stateless(action="events", client_id="codex-desktop", client_type="codex_desktop", after_seq=0)
-        desktop = self.runtime.orchestration_ledger.get_hub_client_cursor(client_id="codex-desktop", run_id=self.ctx.run_id)
+        desktop_status, desktop_body = self.post_stateless(
+            action="events",
+            client_id="codex-desktop",
+            client_type="codex_desktop",
+            after_seq=0,
+            run_id=self.ctx.run_id,
+        )
+        self.assertEqual(desktop_status, 200, desktop_body)
+        desktop_structured = self.structured(desktop_body)
+        desktop_id = desktop_structured["client_cursor"]["client_id"]
+        self.assertEqual(desktop_id, "codex-desktop")
+        desktop = self.runtime.orchestration_ledger.get_hub_client_cursor(client_id=desktop_id, run_id=self.ctx.run_id)
         self.assertEqual(desktop["last_event_seq"], observed_seq)
 
     def test_opencode_provider_telemetry_is_exact_idempotent_and_fail_closed(self) -> None:
@@ -301,9 +357,19 @@ class ExecutionHubHTTPTests(unittest.TestCase):
 
         observe_status, observed = self.post_hub({"action": "provider_observe", "client_id": "electron-panel", "client_type": "electron", "dispatch_id": "dispatch-1"})
         self.assertEqual(observe_status, 200, observed)
+        usage_before_cancel = self.runtime.orchestration_ledger.list_usage_events(self.ctx.run_id)
+        self.assertEqual(len(usage_before_cancel), 1)
         cancel_status, cancelled = self.post_hub({"action": "provider_cancel", "client_id": "electron-panel", "client_type": "electron", "dispatch_id": "dispatch-1"})
-        self.assertEqual(cancel_status, 200, cancelled)
-        self.assertEqual(cancelled["dispatch"]["status"], "cancelled")
+        self.assertEqual(cancel_status, 400, cancelled)
+        self.assertEqual(cancelled["code"], "INVALID_HUB_REQUEST")
+        self.assertIn("usage_id already exists with different evidence", cancelled["error"])
+        usage_after_cancel = self.runtime.orchestration_ledger.list_usage_events(self.ctx.run_id)
+        self.assertEqual(usage_after_cancel, usage_before_cancel)
+        delegation_after_cancel = next(
+            item for item in self.runtime.orchestration_ledger.list_delegations(self.ctx.wave_id)
+            if item["delegation_id"] == "delegation-provider-1"
+        )
+        self.assertEqual(delegation_after_cancel["status"], "completed")
 
     def test_correlated_tool_call_message_is_intermediate_and_final_usage_aggregates_messages(self) -> None:
         control = self.runtime.orchestration_control
@@ -436,7 +502,11 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(denied["code"], "PROVIDER_DISPATCH_CLIENT_DENIED")
 
     def test_transfer_and_safe_rotation_projection(self) -> None:
-        self.post_stateless(action="get")
+        self.post_stateless(action="get", client_id="chatweb", client_type="chatweb")
+        self.claim_chatweb_controller()
+        initial_controller = self.runtime.orchestration_ledger.get_controller_lease(self.ctx.run_id)
+        self.assertIsNotNone(initial_controller)
+        initial_fencing_token = int(initial_controller["fencing_token"])
         pre_status, pre = self.get_snapshot()
         self.assertEqual(pre_status, 200)
         self.assertEqual(pre["schema_version"], 2)
@@ -457,9 +527,9 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         status, moved = self.post_hub({"action": "transfer_controller", "run_id": self.ctx.run_id, "target_client_id": "codex-desktop"})
         self.assertEqual(status, 200, moved)
         self.assertTrue(moved["transferred"])
-        self.assertEqual(moved["fencing_token"], 2)
+        self.assertEqual(moved["fencing_token"], initial_fencing_token + 1)
 
-        self.post_stateless(action="get")
+        self.post_stateless(action="get", client_id="chatweb", client_type="chatweb")
         post_status, post = self.get_snapshot()
         self.assertEqual(post_status, 200)
         self.assertEqual(post["authority"]["controller"]["owner_client_id"], "codex-desktop")

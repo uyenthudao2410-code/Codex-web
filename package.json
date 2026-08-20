@@ -27,6 +27,7 @@
     "benchmark:activation": "cd resources/coding-tools-mcp && python -m benchmarks.runtime_activation",
     "benchmark:multilayer": "python tests/p4_eval_pack/run_multilayer_challenge_suite.py --repo-root .",
     "benchmark:multilayer:strict": "python tests/p4_eval_pack/run_multilayer_challenge_suite.py --repo-root . --strict-known-diagnostics",
+    "benchmark:model-extreme:self-test": "python tests/model_eval_pack/run_model_extreme_suite.py --repo-root . --self-test",
     "probe:execution-hub": "node scripts/execution-hub-activation-probe.js",
     "canary:opencode-flash:preflight": "electron scripts/execution-hub-provider-canary.js --preflight",
     "canary:opencode-flash": "electron scripts/execution-hub-provider-canary.js",
