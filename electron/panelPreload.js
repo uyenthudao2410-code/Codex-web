@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('panelAssistant', {
   close: () => ipcRenderer.invoke('panel:toggle'),
-  orchestration: () => ipcRenderer.invoke('panel:orchestration'),
+  orchestration: () => ipcRenderer.invoke('panel:live-control'),
   health: () => ipcRenderer.invoke('app:lightweight-snapshot'),
   workspace: () => ipcRenderer.invoke('workspace:hub'),
   pauseTask: () => ipcRenderer.invoke('panel:task-control', 'pause'),

@@ -41,6 +41,7 @@ from .protocol import (
     validate_rpc_envelope,
 )
 from .controller_usage_ingress import active_controller_usage_context, controller_usage_request, decorate_controller_usage_status, record_controller_usage, tool_call_name
+from .live_control import control_presence_projection, live_control_snapshot
 from .operations_analytics import operations_analytics
 from .tool_schema import tool_annotations
 from .transport_http import (
@@ -264,6 +265,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "/__control/workspace",
             "/__control/roots",
             "/__control/orchestration",
+            "/__control/orchestration/live",
             "/.well-known/oauth-authorization-server",
             "/.well-known/oauth-protected-resource",
             "/oauth/authorize",
@@ -323,6 +325,15 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             result = self.runtime.activation_preflight()
             self.send_json(
                 {**result, "workspace": str(self.runtime.workspace.root)},
+                head_only=head_only,
+            )
+            return
+        if normalized == "/__control/orchestration/live":
+            if not self.is_authorized():
+                self.send_unauthorized(head_only=head_only)
+                return
+            self.send_json(
+                live_control_snapshot(self.runtime, client_online_seconds=HUB_CLIENT_ONLINE_SECONDS),
                 head_only=head_only,
             )
             return
@@ -403,74 +414,25 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         command = state.get("current_command")
         if isinstance(command, dict):
             command = {key: command.get(key) for key in ("kind", "command", "status", "started_at")}
-        clients = ledger.list_hub_clients(online_within_seconds=HUB_CLIENT_ONLINE_SECONDS)
-        cursors = ledger.list_hub_client_cursors(run_id=run_id) if run_id else []
-        cursor_by_client = {str(item.get("client_id") or ""): item for item in cursors}
-        client_view = []
-        for client in clients[:16]:
-            client_id = str(client.get("client_id") or "")
-            client_view.append({
-                "client_id": client_id,
-                "client_type": client.get("client_type"),
-                "role": client.get("role"),
-                "status": client.get("status"),
-                "online": bool(client.get("online")),
-                "activity_state": runtime.hub_client_activity_state(client.get("last_seen_at"), active_seconds=HUB_CLIENT_ONLINE_SECONDS),
-                "last_seen_at": client.get("last_seen_at"),
-                "runtime_instance_id": client.get("runtime_instance_id"),
-                "contract_sha": client.get("contract_sha"),
-                "cursor": cursor_by_client.get(client_id),
-            })
-        controller = ledger.get_controller_lease(run_id) if run_id else None
-        controller_view = {
-            "owner_client_id": (controller or {}).get("owner_client_id", ""),
-            "status": (controller or {}).get("status", "unclaimed"),
-            "fencing_token": (controller or {}).get("fencing_token", 0),
-            "expires_at": (controller or {}).get("expires_at", 0),
-            "updated_at": (controller or {}).get("updated_at", ""),
-        }
-        ctx = runtime.orchestration_control.snapshot(run_id) if run_id else None
-        write_lease = ctx.write_lease if ctx else None
-        write_view = {
-            "owner": write_lease.owner if write_lease else "",
-            "status": "active" if write_lease else "released",
-            "fencing_token": write_lease.fencing_token if write_lease else 0,
-            "expires_at": write_lease.expires_at if write_lease else 0,
-        }
         capsule = summary.get("latest_handoff_capsule")
         run = summary.get("run") or {}
-        run_active = bool(run_id and run.get("status") == "active")
-        desktop_online = any(client.get("client_type") == "codex_desktop" and client.get("online") for client in client_view)
-        reason_codes: list[str] = []
-        capsule_status = "missing"
-        if capsule:
-            capsule_status = "current"
-            capsule_created_at = str(capsule.get("created_at") or "")
-            control_only_events = {"controller_transferred", "write_lease_renewed"}
-            if any(
-                str(event.get("event_time") or "") > capsule_created_at
-                and str(event.get("event_type") or "") not in control_only_events
-                for event in events
-            ):
-                capsule_status = "stale"
-        if run_active:
-            if not (summary.get("integrity") or {}).get("ok", False):
-                reason_codes.append("LEDGER_INTEGRITY_FAILED")
-            if state.get("status") in {"paused", "stopped", "failed"}:
-                reason_codes.append("TASK_NOT_RUNNABLE")
-            if not desktop_online:
-                reason_codes.append("DESKTOP_OFFLINE")
-            if capsule_status == "missing":
-                reason_codes.append("CAPSULE_MISSING")
-            elif capsule_status == "stale":
-                reason_codes.append("CAPSULE_STALE")
-            if controller_view["status"] != "active" or controller_view["owner_client_id"] != "codex-desktop":
-                reason_codes.append("CONTROLLER_HANDOFF_REQUIRED")
-        safe_to_rotate = not run_active or not reason_codes
-        if not run_active:
-            reason_codes = ["NO_ACTIVE_EXECUTION"]
-        elif safe_to_rotate:
-            reason_codes = ["READY"]
+        presence = control_presence_projection(
+            runtime,
+            run_id=run_id,
+            state=state,
+            run=run,
+            events=events,
+            integrity=summary.get("integrity"),
+            capsule=capsule,
+            client_online_seconds=HUB_CLIENT_ONLINE_SECONDS,
+            include_cursors=True,
+        )
+        client_view = presence["clients"]
+        cursors = presence["cursors"]
+        controller_view = presence["controller"]
+        write_view = presence["write"]
+        write_lease = presence["write_lease"]
+        continuity = presence["continuity"]
         latest_event_seq = int(events[-1].get("seq") or 0) if events else 0
         flight_recorder = ledger.flight_recorder(run_id, limit=40) if run_id else {
             "run_id": "", "after_seq": 0, "events": [], "next_after_seq": 0, "has_more": False,
@@ -579,13 +541,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             "clients": client_view,
             "authority": {"controller": controller_view, "write": write_view},
             "cursors": cursors,
-            "continuity": {
-                "safe_to_rotate_chatweb": safe_to_rotate,
-                "reason_codes": reason_codes,
-                "capsule_status": capsule_status,
-                "desktop_online": desktop_online,
-                "context_pressure": {"status": "unknown", "source": "host_not_exposed"},
-            },
+            "continuity": continuity,
             "resume_packet": resume_packet,
         }
 

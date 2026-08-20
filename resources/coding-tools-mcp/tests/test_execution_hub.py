@@ -6,6 +6,7 @@ import threading
 import unittest
 from pathlib import Path
 
+import coding_tools_mcp.mcp_http_handler as mcp_http_handler_module
 from coding_tools_mcp.server import (
     MCPHandler,
     Runtime,
@@ -132,6 +133,53 @@ class ExecutionHubHTTPTests(unittest.TestCase):
             return response.status, json.loads(response.read().decode("utf-8"))
         finally:
             connection.close()
+
+    def get_live_snapshot(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("GET", "/__control/orchestration/live", headers={"Authorization": f"Bearer {self.TOKEN}"})
+            response = connection.getresponse()
+            return response.status, json.loads(response.read().decode("utf-8"))
+        finally:
+            connection.close()
+
+    def test_live_snapshot_skips_heavy_analytics_but_preserves_control_state(self) -> None:
+        def unexpected_heavy_call(*_args, **_kwargs):
+            raise AssertionError("live control snapshot must not execute heavyweight analytics")
+
+        ledger = self.runtime.orchestration_ledger
+        original_usage = ledger.usage_analytics
+        original_routing = ledger.routing_evidence
+        original_flight = ledger.flight_recorder
+        original_export = ledger.export_summary
+        original_operations = mcp_http_handler_module.operations_analytics
+        ledger.usage_analytics = unexpected_heavy_call
+        ledger.routing_evidence = unexpected_heavy_call
+        ledger.flight_recorder = unexpected_heavy_call
+        ledger.export_summary = unexpected_heavy_call
+        mcp_http_handler_module.operations_analytics = unexpected_heavy_call
+        try:
+            status, body = self.get_live_snapshot()
+        finally:
+            ledger.usage_analytics = original_usage
+            ledger.routing_evidence = original_routing
+            ledger.flight_recorder = original_flight
+            ledger.export_summary = original_export
+            mcp_http_handler_module.operations_analytics = original_operations
+
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body["snapshot_scope"], "live_control")
+        for key in ("task", "run", "waves", "events", "proofs", "delegations", "runtime_activity", "clients", "authority", "continuity", "provider_traffic"):
+            self.assertIn(key, body)
+        self.assertIn("automatic_routing", body["provider_traffic"])
+        for key in ("usage_events", "usage_analytics", "operations_analytics", "routing_evidence", "flight_recorder", "history", "lanes", "resume_packet"):
+            self.assertNotIn(key, body)
+
+        full_status, full = self.get_snapshot()
+        self.assertEqual(full_status, 200, full)
+        self.assertIn("usage_analytics", full)
+        self.assertIn("operations_analytics", full)
+        self.assertIn("routing_evidence", full)
 
     def structured(self, body):
         self.assertNotIn("error", body, body)

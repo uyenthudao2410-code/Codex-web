@@ -53,14 +53,18 @@ test('chat view can be inset by the control panel without changing the toolbar h
 test('main process exposes Execution Control Center IPC through MCP control plane', () => {
   const main = read('electron/main.js');
   assert.match(main, /secureHandle\('panel:toggle'/);
+  assert.match(main, /secureHandle\('panel:live-control'/);
   assert.match(main, /secureHandle\('panel:orchestration'/);
   assert.match(main, /secureHandle\('panel:handoff'/);
   assert.match(main, /secureHandle\('panel:task-control'/);
   assert.match(main, /secureHandle\('panel:transfer-controller'/);
   assert.match(main, /secureHandle\('panel:copy-codex-config'/);
-  assert.match(main, /__control\/orchestration/);
+  assert.match(main, /path: '\/__control\/orchestration\/live'/);
+  assert.match(main, /path: '\/__control\/orchestration'/);
   assert.match(main, /const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;/);
+  assert.match(main, /const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;/);
   assert.match(main, /timeout: PANEL_ORCHESTRATION_TIMEOUT_MS/);
+  assert.match(main, /timeout: PANEL_LIVE_CONTROL_TIMEOUT_MS/);
   assert.match(main, /__control\/hub/);
   assert.match(main, /handoff_action: 'record'/);
   assert.match(main, /X-Coding-Tools-Client-Id': 'electron-panel'/);
@@ -73,11 +77,17 @@ test('MCP exposes an authorized orchestration snapshot endpoint', () => {
   // keep the source assertion on the module that owns the endpoint.
   const httpHandler = read('resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py');
   assert.match(httpHandler, /__control\/orchestration/);
+  assert.match(httpHandler, /__control\/orchestration\/live/);
   assert.match(httpHandler, /def control_orchestration_snapshot/);
+  assert.match(httpHandler, /live_control_snapshot\(self\.runtime/);
   assert.match(httpHandler, /current_active_run/);
   assert.match(httpHandler, /latest_handoff_capsule/);
-  assert.match(httpHandler, /runtime_activity_snapshot/);
-  assert.match(httpHandler, /activity_state/);
+  const liveControl = read('resources/coding-tools-mcp/coding_tools_mcp/live_control.py');
+  assert.match(liveControl, /def live_control_snapshot/);
+  assert.match(liveControl, /"snapshot_scope": "live_control"/);
+  assert.match(liveControl, /runtime_activity_snapshot/);
+  assert.match(liveControl, /activity_state/);
+  assert.doesNotMatch(liveControl, /usage_analytics|operations_analytics|routing_evidence|flight_recorder|export_summary/);
 });
 
 test('control panel renders task plus multi-client authority and continuity controls', () => {
@@ -187,9 +197,14 @@ test('control panel renders task plus multi-client authority and continuity cont
   for (const method of ['orchestration', 'health', 'pauseTask', 'resumeTask', 'stopTask', 'handoff', 'transferController', 'copyCodexConfig', 'close']) {
     assert.match(preload, new RegExp(`${method}:`));
   }
+  assert.match(preload, /orchestration: \(\) => ipcRenderer\.invoke\('panel:live-control'\)/);
+  assert.doesNotMatch(preload, /panel:orchestration/);
   assert.match(preload, /panel:task-control/);
   assert.doesNotMatch(preload, /task-state:pause/);
   assert.doesNotMatch(preload, /task-state:stop/);
+  const managerPreload = read('electron/preload.js');
+  assert.match(managerPreload, /orchestration: \(\) => ipcRenderer\.invoke\('panel:orchestration'\)/);
+  assert.doesNotMatch(managerPreload, /panel:live-control/);
   const css = read('renderer/panel.css');
   assert.match(css, /\.client-grid/);
   assert.match(css, /\.continuity-callout\.safe/);

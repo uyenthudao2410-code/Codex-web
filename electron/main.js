@@ -40,6 +40,7 @@ let panelVisible = false;
 let lastRecoveryProgressTime = '';
 const TOOLBAR_HEIGHT = 112;
 const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
+const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;
 const recoveryHostMode = process.argv.includes('--recovery-host') || process.env.WEBCODEX_PROCESS_ROLE === 'recovery-host';
 const runtimePaths = createElectronRuntimePaths(app);
 runtimePathApi.configureRuntimePaths(runtimePaths);
@@ -600,6 +601,18 @@ function registerIpc() {
   secureHandle('chat:status', () => invokeSafely(async () => chatController?.getState() || null));
   secureHandle('panel:toggle', () => invokeSafely(async () => ({ visible: togglePanel() })));
   secureHandle('panel:visibility', () => invokeSafely(async () => ({ visible: panelVisible })));
+  secureHandle('panel:live-control', () => invokeSafely(async () => {
+    const current = settings.load();
+    const token = secrets.get('mcpAuthToken');
+    if (!token) throw new Error('MCP chưa sẵn sàng để đọc trạng thái điều tuyến trực tiếp.');
+    return httpRequestJson({
+      port: current.mcpPort,
+      path: '/__control/orchestration/live',
+      method: 'GET',
+      token,
+      timeout: PANEL_LIVE_CONTROL_TIMEOUT_MS
+    });
+  }));
   secureHandle('panel:orchestration', () => invokeSafely(async () => {
     const current = settings.load();
     const token = secrets.get('mcpAuthToken');
