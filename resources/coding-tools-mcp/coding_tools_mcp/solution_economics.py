@@ -7,7 +7,7 @@ from statistics import NormalDist
 from typing import Any
 
 from .orchestration_ledger import OrchestrationLedger
-from .rework_diagnosis import repair_cause_for_failure_class
+from .rework_diagnosis import high_confidence_replan_reason_category, repair_cause_for_failure_class
 
 
 SOLUTION_SHADOW_EVENT = "solution_shadow_recommended"
@@ -351,33 +351,6 @@ def _surface_comparison(estimated: Any, actual: dict[str, Any]) -> dict[str, Any
     return {"metrics": metrics, "all_metrics_comparable": all(item["delta"] is not None for item in metrics.values())}
 
 
-def _replan_reason_category(reason: Any) -> tuple[str | None, str | None]:
-    text = " ".join(str(reason or "").strip().lower().split())
-    if not text:
-        return (None, None)
-    if "rustfmt" in text and "formatting-only" in text:
-        return ("formatting_only_repair", "rustfmt_formatting_only")
-    if "oracle selection" in text and "cargo package" in text and "binary target name" in text:
-        return ("oracle_selection_repair", "cargo_binary_name_used_as_package")
-    baseline_markers = (
-        "19 unrelated",
-        "19 errors",
-        "compute_placement_policy",
-        "broken root lib-test harness",
-    )
-    if any(marker in text for marker in baseline_markers) and (
-        "unrelated" in text or "known" in text or "root lib-test" in text or "cfg(test)" in text
-    ):
-        return ("environment_or_baseline_repair", "known_unrelated_test_baseline")
-    if "wrong root cause" in text:
-        return ("causal_solution_repair", "explicit_wrong_root_cause")
-    if "missing requirement" in text:
-        return ("causal_solution_repair", "explicit_missing_requirement")
-    if "supervisor_not_ready" in text or "provider capacity" in text:
-        return ("orchestration_repair", "explicit_orchestration_failure")
-    return (None, None)
-
-
 def _structured_replan_diagnostics(events: list[dict[str, Any]]) -> dict[str, Any]:
     replan_events = sorted(
         [item for item in events if str(item.get("state_after") or "").upper() == "REPLAN"],
@@ -418,7 +391,7 @@ def _structured_replan_diagnostics(events: list[dict[str, Any]]) -> dict[str, An
             if index < len(reason_events) and isinstance(reason_events[index].get("payload"), dict)
             else {}
         )
-        reason_category, reason_rule = _replan_reason_category(reason_payload.get("reason"))
+        reason_category, reason_rule = high_confidence_replan_reason_category(reason_payload.get("reason"))
         if reason_category is not None and reason_rule is not None:
             categories[reason_category] += 1
             classification_sources["durable_wave_replanned_reason_high_confidence"] += 1

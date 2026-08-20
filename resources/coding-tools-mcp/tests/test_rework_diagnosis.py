@@ -115,6 +115,54 @@ class ReworkDiagnosisTests(unittest.TestCase):
             self.assertTrue(report['policy']['not_a_causal_treatment_effect_estimate'])
             self.assertTrue(report['policy']['zero_planned_cause_without_evidence_is_not_proof_of_absence'])
 
+    def test_durable_reason_classifies_ambiguous_build_failure_without_inventing_repair_cause(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective='formatting-only repaired', metadata={'workflow': 'bugfix'})
+            wave_id = ledger.create_wave(run_id, execution_mode='mcp_only')
+            ledger.append_event(
+                run_id,
+                wave_id=wave_id,
+                event_type='failure_observed',
+                state_before='PROVING',
+                state_after='REPLAN',
+                payload={'failure_class': 'BUILD_VERIFICATION_FAILED'},
+            )
+            ledger.finish_wave(wave_id, status='replanned')
+            repair_wave = ledger.create_wave(run_id, execution_mode='mcp_only')
+            ledger.append_event(
+                run_id,
+                wave_id=repair_wave,
+                event_type='wave_replanned',
+                state_after='PREFLIGHT',
+                payload={
+                    'reason': 'The intended patch was correct but rustfmt --check found one formatting-only delta.',
+                    'execution_mode': 'mcp_only',
+                },
+            )
+            ledger.finish_wave(repair_wave, status='accepted')
+            ledger.finish_run(run_id, status='accepted')
+
+            report = stratified_rework_diagnosis(ledger)
+            bugfix = next(item for item in report['workflow_strata'] if item['workflow'] == 'bugfix')
+            self.assertEqual(bugfix['repair_failure_classes'], {'BUILD_VERIFICATION_FAILED': 1})
+            self.assertEqual(bugfix['repair_causes']['unclassified_structured_failure_classes'], {})
+            self.assertEqual(
+                bugfix['repair_causes']['durable_reason_category_counts'],
+                {'formatting_only_repair': 1},
+            )
+            self.assertEqual(sum(bugfix['repair_causes']['event_counts'].values()), 0)
+            classification = report['causal_classification']
+            self.assertEqual(classification['total_failure_events'], 1)
+            self.assertEqual(classification['mapped_failure_events'], 1)
+            self.assertEqual(classification['unclassified_failure_events'], 0)
+            self.assertEqual(classification['mapped_event_coverage'], 1.0)
+            self.assertEqual(classification['durable_reason_fallback_events'], 1)
+            self.assertEqual(
+                classification['high_confidence_reason_rule_counts'],
+                {'rustfmt_formatting_only': 1},
+            )
+
 
 if __name__ == '__main__':
     unittest.main()

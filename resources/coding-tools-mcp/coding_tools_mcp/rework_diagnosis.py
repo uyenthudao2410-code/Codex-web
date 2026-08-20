@@ -66,6 +66,31 @@ def repair_cause_for_failure_class(failure_class: str) -> str | None:
     return None
 
 
+def high_confidence_replan_reason_category(reason: Any) -> tuple[str | None, str | None]:
+    """Classify only durable replan reasons covered by narrow evidence-backed rules."""
+    text = " ".join(str(reason or "").strip().lower().split())
+    if not text:
+        return (None, None)
+    if "rustfmt" in text and "formatting-only" in text:
+        return ("formatting_only_repair", "rustfmt_formatting_only")
+    if "oracle selection" in text and "cargo package" in text and "binary target name" in text:
+        return ("oracle_selection_repair", "cargo_binary_name_used_as_package")
+    baseline_markers = (
+        "19 unrelated", "19 errors", "compute_placement_policy", "broken root lib-test harness",
+    )
+    if any(marker in text for marker in baseline_markers) and (
+        "unrelated" in text or "known" in text or "root lib-test" in text or "cfg(test)" in text
+    ):
+        return ("environment_or_baseline_repair", "known_unrelated_test_baseline")
+    if "wrong root cause" in text:
+        return ("causal_solution_repair", "explicit_wrong_root_cause")
+    if "missing requirement" in text:
+        return ("causal_solution_repair", "explicit_missing_requirement")
+    if "supervisor_not_ready" in text or "provider capacity" in text:
+        return ("orchestration_repair", "explicit_orchestration_failure")
+    return (None, None)
+
+
 def _repair_cause(failure_class: str) -> str | None:
     return repair_cause_for_failure_class(failure_class)
 
@@ -185,6 +210,13 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
     overall_cause_events: Counter[str] = Counter({cause: 0 for cause in PLANNED_REPAIR_CAUSES})
     overall_cause_runs: dict[str, set[str]] = defaultdict(set)
     overall_unclassified: Counter[str] = Counter()
+    overall_reason_categories: Counter[str] = Counter()
+    overall_reason_rules: Counter[str] = Counter()
+    overall_classification_sources: Counter[str] = Counter()
+    overall_direct_structured_mapped = 0
+    overall_reason_fallback_structured = 0
+    overall_reason_fallback_events = 0
+    overall_unclassified_replan_events = 0
     explicit_model_route = 0
 
     def bucket(workflow: str) -> dict[str, Any]:
@@ -201,6 +233,9 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
                 "cause_events": Counter({cause: 0 for cause in PLANNED_REPAIR_CAUSES}),
                 "cause_runs": defaultdict(set),
                 "unclassified": Counter(),
+                "reason_categories": Counter(),
+                "reason_rules": Counter(),
+                "classification_sources": Counter(),
                 "scope_values": [],
                 "scope_observed": 0,
                 "scope_unknown": 0,
@@ -275,21 +310,51 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
         if not repaired:
             continue
         causes_for_run: set[str] = set()
-        for event in events:
-            if event.get("event_type") != "failure_observed":
-                continue
+        failure_events = sorted(
+            [event for event in events if event.get("event_type") == "failure_observed"],
+            key=lambda event: int(event.get("seq") or 0),
+        )
+        reason_events = sorted(
+            [event for event in events if str(event.get("event_type") or "") == "wave_replanned"],
+            key=lambda event: int(event.get("seq") or 0),
+        )
+        for index, event in enumerate(failure_events):
             payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
             failure_class = str(payload.get("failure_class") or "UNKNOWN").strip().upper() or "UNKNOWN"
             target["failure_classes"][failure_class] += 1
             overall_failure_classes[failure_class] += 1
             cause = _repair_cause(failure_class)
-            if cause is None:
-                target["unclassified"][failure_class] += 1
-                overall_unclassified[failure_class] += 1
+            if cause is not None:
+                target["cause_events"][cause] += 1
+                overall_cause_events[cause] += 1
+                causes_for_run.add(cause)
+                target["classification_sources"]["structured_failure_class"] += 1
+                overall_classification_sources["structured_failure_class"] += 1
+                overall_direct_structured_mapped += 1
                 continue
-            target["cause_events"][cause] += 1
-            overall_cause_events[cause] += 1
-            causes_for_run.add(cause)
+
+            reason_payload = (
+                reason_events[index].get("payload")
+                if index < len(reason_events) and isinstance(reason_events[index].get("payload"), dict)
+                else {}
+            )
+            category, rule = high_confidence_replan_reason_category(reason_payload.get("reason"))
+            if category is not None and rule is not None:
+                target["reason_categories"][category] += 1
+                target["reason_rules"][rule] += 1
+                target["classification_sources"]["durable_wave_replanned_reason_high_confidence"] += 1
+                overall_reason_categories[category] += 1
+                overall_reason_rules[rule] += 1
+                overall_classification_sources["durable_wave_replanned_reason_high_confidence"] += 1
+                overall_reason_fallback_structured += 1
+                overall_reason_fallback_events += 1
+                continue
+
+            target["unclassified"][failure_class] += 1
+            overall_unclassified[failure_class] += 1
+            target["classification_sources"]["unclassified"] += 1
+            overall_classification_sources["unclassified"] += 1
+            overall_unclassified_replan_events += 1
         for cause in causes_for_run:
             target["cause_runs"][cause].add(run_id)
             overall_cause_runs[cause].add(run_id)
@@ -322,6 +387,9 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
                 "event_counts": {cause: int(item["cause_events"].get(cause, 0)) for cause in PLANNED_REPAIR_CAUSES},
                 "affected_run_counts": {cause: len(item["cause_runs"].get(cause, set())) for cause in PLANNED_REPAIR_CAUSES},
                 "unclassified_structured_failure_classes": dict(sorted(item["unclassified"].items())),
+                "durable_reason_category_counts": dict(sorted(item["reason_categories"].items())),
+                "high_confidence_reason_rule_counts": dict(sorted(item["reason_rules"].items())),
+                "classification_source_counts": dict(sorted(item["classification_sources"].items())),
             },
             "scope_size": {
                 "measurement": "context_prepared.selected_paths_unique",
@@ -343,7 +411,7 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
     overall_events = {cause: int(overall_cause_events.get(cause, 0)) for cause in PLANNED_REPAIR_CAUSES}
     overall_runs = {cause: len(overall_cause_runs.get(cause, set())) for cause in PLANNED_REPAIR_CAUSES}
     included = sum(int(item["n"]) for item in buckets.values())
-    mapped_failure_events = sum(overall_events.values())
+    mapped_failure_events = overall_direct_structured_mapped + overall_reason_fallback_structured
     unclassified_failure_events = sum(int(count) for count in overall_unclassified.values())
     classified_failure_events = mapped_failure_events + unclassified_failure_events
     oracle_observed_runs = sum(int(item["oracle_observed"]) for item in buckets.values())
@@ -363,9 +431,12 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
             "event_counts": overall_events,
             "affected_run_counts": overall_runs,
             "unclassified_structured_failure_classes": dict(sorted(overall_unclassified.items())),
+            "durable_reason_category_counts": dict(sorted(overall_reason_categories.items())),
+            "high_confidence_reason_rule_counts": dict(sorted(overall_reason_rules.items())),
+            "classification_source_counts": dict(sorted(overall_classification_sources.items())),
         },
         "causal_classification": {
-            "basis": "failure_observed_events_on_repaired_accepted_runs",
+            "basis": "structured_failure_class_then_high_confidence_durable_replan_reason_on_repaired_accepted_runs",
             "total_failure_events": classified_failure_events,
             "mapped_failure_events": mapped_failure_events,
             "unclassified_failure_events": unclassified_failure_events,
@@ -377,6 +448,12 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
             "largest_unclassified_failure_class": (
                 overall_unclassified.most_common(1)[0][0] if overall_unclassified else None
             ),
+            "durable_reason_fallback_events": overall_reason_fallback_events,
+            "classified_replan_events": overall_direct_structured_mapped + overall_reason_fallback_events,
+            "unclassified_replan_events": overall_unclassified_replan_events,
+            "classification_source_counts": dict(sorted(overall_classification_sources.items())),
+            "high_confidence_reason_category_counts": dict(sorted(overall_reason_categories.items())),
+            "high_confidence_reason_rule_counts": dict(sorted(overall_reason_rules.items())),
             "unclassified_zero_means_absent": False,
         },
         "oracle_observation": {
