@@ -186,6 +186,8 @@ class OrchestrationControl:
             worktree_fp=worktree_fp,
             contract_fp=contract_fp,
             metadata=metadata,
+            objective=objective,
+            objective_source="run_initial_objective",
         )
         ctx = RunContext(
             run_id=run_id,
@@ -669,6 +671,7 @@ class OrchestrationControl:
         worktree_fp: str,
         contract_fp: str,
         reason: str,
+        objective: str | None = None,
     ) -> RunContext:
         if ctx.state != "REPLAN":
             raise OrchestrationControlError("REPLAN_REQUIRED", "A replacement wave requires REPLAN state.")
@@ -683,6 +686,8 @@ class OrchestrationControl:
             worktree_fp=worktree_fp,
             contract_fp=contract_fp,
             metadata={**run_metadata, "replan_reason": reason},
+            objective=objective,
+            objective_source="replan_request" if objective is not None else "previous_wave_inherited",
         )
         ctx.wave_id = wave_id
         ctx.state = "PREFLIGHT"

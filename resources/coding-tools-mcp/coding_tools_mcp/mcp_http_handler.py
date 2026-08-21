@@ -45,6 +45,7 @@ from .live_control import control_presence_projection, live_control_snapshot
 from .operations_analytics import operations_analytics
 from .tool_schema import tool_annotations
 from .trace_context import parse_trace_context
+from .truth_snapshot import build_truth_snapshot
 from .transport_http import (
     STATELESS_HTTP_2026_ENV,
     HTTPSessionManager,
@@ -484,6 +485,43 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             }
             for item in (ledger.list_agent_lanes() or [])[:12]
         ]
+        wave_id = str(projection.get("wave_id") or "").strip()
+        waves = summary.get("waves") or []
+        selected_wave = next(
+            (item for item in reversed(waves) if str(item.get("wave_id") or "") == wave_id),
+            waves[-1] if waves else {},
+        )
+        objective = (
+            ledger.wave_objective_provenance(run_id, wave=selected_wave)
+            if run_id and selected_wave
+            else {}
+        )
+        source_identity = runtime._orchestration_workspace_identity(".")
+        latest_proof = (summary.get("proofs") or [])[-1] if summary.get("proofs") else {}
+        latest_checkpoint = (summary.get("checkpoints") or [])[-1] if summary.get("checkpoints") else {}
+        truth_snapshot = build_truth_snapshot(
+            source=source_identity,
+            runtime_identity={
+                "runtime_version": __version__,
+                "process_instance_id": runtime.process_instance_id,
+                "server_instance_id": runtime.server_instance_id,
+                "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
+                "tool_contract": dict(runtime.tool_contract),
+            },
+            orchestration={
+                "run_id": run_id,
+                "wave_id": wave_id,
+                "state": projection.get("orchestration_state"),
+                "run_status": run.get("status"),
+                "wave_status": selected_wave.get("status") if isinstance(selected_wave, dict) else None,
+                "base_head": selected_wave.get("base_head") if isinstance(selected_wave, dict) else None,
+                "worktree_fp": selected_wave.get("worktree_fp") if isinstance(selected_wave, dict) else None,
+            },
+            objective=objective,
+            proof=latest_proof,
+            checkpoint=latest_checkpoint,
+            package=None,
+        )
         return {
             "schema_version": 2,
             "task": {
@@ -539,6 +577,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 "server_instance_id": runtime.server_instance_id,
                 "tool_contract": runtime.tool_contract,
             },
+            "truth_snapshot": truth_snapshot,
             "clients": client_view,
             "authority": {"controller": controller_view, "write": write_view},
             "cursors": cursors,

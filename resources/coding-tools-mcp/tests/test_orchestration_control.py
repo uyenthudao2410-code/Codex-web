@@ -65,10 +65,23 @@ class OrchestrationControlTests(unittest.TestCase):
                 worktree_fp="fp-2",
                 contract_fp="",
                 reason="split behavior packet",
+                objective="deep behavior narrowed",
             )
             self.assertEqual(ctx.state, "PREFLIGHT")
             self.assertNotEqual(ctx.wave_id, old_wave)
-            self.assertEqual(len(ledger.list_waves(ctx.run_id)), 2)
+            waves = ledger.list_waves(ctx.run_id)
+            self.assertEqual(len(waves), 2)
+            first = ledger.wave_objective_provenance(ctx.run_id, old_wave)
+            second = ledger.wave_objective_provenance(ctx.run_id, ctx.wave_id)
+            self.assertEqual(first["effective_objective"], "deep behavior")
+            self.assertEqual(first["objective_revision"], 1)
+            self.assertEqual(first["objective_source"], "run_initial_objective")
+            self.assertTrue(first["objective_hash_valid"])
+            self.assertEqual(second["effective_objective"], "deep behavior narrowed")
+            self.assertEqual(second["objective_revision"], 2)
+            self.assertEqual(second["objective_source"], "replan_request")
+            self.assertTrue(second["objective_changed_from_previous"])
+            self.assertTrue(second["objective_hash_valid"])
 
     def test_recovery_reconstructs_active_write_lease(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

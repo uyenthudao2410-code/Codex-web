@@ -61,7 +61,7 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
             result = runtime.agent_workflow({
                 "workflow": "feature",
                 "phase": "execute",
-                "objective": "change value",
+                "objective": "change value with deterministic writer",
                 "execution_mode": "mcp_only",
                 "replan_reason": "coordination adapter is unavailable; use one deterministic writer",
                 "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
@@ -69,9 +69,19 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
                 "include_diff": False,
             })
             self.assertEqual(result["orchestration"]["orchestration_state"], "ACCEPTING")
+            waves = runtime.orchestration_ledger.list_waves(result["orchestration"]["run_id"])
+            self.assertEqual(waves[0]["metadata"]["effective_objective"], "change value")
+            self.assertEqual(waves[0]["metadata"]["objective_revision"], 1)
+            self.assertEqual(waves[1]["metadata"]["effective_objective"], "change value with deterministic writer")
+            self.assertEqual(waves[1]["metadata"]["objective_revision"], 2)
             accepting_report = result["orchestration"]["completion_report"]
             self.assertTrue(accepting_report["operator_visible_required"])
             self.assertEqual(accepting_report["accepted_or_not"], "PENDING_FINAL_ACCEPTANCE")
+            self.assertEqual(
+                accepting_report["source_run_wave"]["objective_provenance"]["effective_objective"],
+                "change value with deterministic writer",
+            )
+            self.assertEqual(accepting_report["source_run_wave"]["objective_provenance"]["objective_revision"], 2)
             self.assertEqual(accepting_report["report_contract"], [
                 "WHAT CHANGED", "CURRENT STATE", "SOURCE / RUN / WAVE ID", "PROOF ACTUALLY RUN",
                 "ACCEPTED OR NOT", "WHAT REMAINS", "NEXT CRITICAL ACTION",

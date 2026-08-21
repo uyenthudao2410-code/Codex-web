@@ -266,6 +266,7 @@ class AgentWorkflowMixin:
                     worktree_fp=str(identity.get("worktree_fp") or ""),
                     contract_fp=contract_fp,
                     reason=replan_reason,
+                    objective=objective,
                 )
             elif current_ctx.state in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
                 current_ctx = None
@@ -299,6 +300,7 @@ class AgentWorkflowMixin:
                         worktree_fp=str(identity.get("worktree_fp") or ""),
                         contract_fp=contract_fp,
                         reason=replan_reason,
+                        objective=objective,
                     )
 
         if current_ctx is None:

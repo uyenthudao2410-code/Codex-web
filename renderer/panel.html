@@ -145,6 +145,30 @@
         </div>
       </section>
 
+      <!-- Operator Truth Console: read-only projection from canonical orchestration truth -->
+      <section class="dashboard-card" id="truthConsole" aria-labelledby="truthConsoleTitle">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">CURRENT TRUTH · READ ONLY</span>
+            <h2 id="truthConsoleTitle">Operator Truth Console</h2>
+            <p>Source, runtime, objective và evidence được chiếu từ cùng orchestration snapshot.</p>
+          </div>
+          <span class="badge status-waiting" id="truthOverallState" data-state="UNKNOWN">UNKNOWN</span>
+        </div>
+        <div class="hero-kpi-grid" aria-label="Truth identity summary">
+          <article class="summary-kpi-card"><div class="kpi-copy"><small>SOURCE</small><strong id="truthSourceState">UNKNOWN</strong><span id="truthSourceMeta">HEAD / worktree chưa có evidence</span></div></article>
+          <article class="summary-kpi-card"><div class="kpi-copy"><small>RUNTIME</small><strong id="truthRuntimeState">UNKNOWN</strong><span id="truthRuntimeMeta">Loaded revision / process chưa có evidence</span></div></article>
+          <article class="summary-kpi-card"><div class="kpi-copy"><small>OBJECTIVE</small><strong id="truthObjectiveState">UNKNOWN</strong><span id="truthObjectiveMeta">RUN / WAVE / revision chưa có evidence</span></div></article>
+          <article class="summary-kpi-card"><div class="kpi-copy"><small>EVIDENCE / PACKAGE</small><strong id="truthEvidenceState">UNKNOWN</strong><span id="truthEvidenceMeta">Proof / checkpoint / package chưa có evidence</span></div></article>
+        </div>
+        <div class="authority-strip" aria-label="Truth comparisons">
+          <span>Runtime ↔ Source <strong class="badge status-waiting" id="truthRuntimeMatch" data-state="UNKNOWN">UNKNOWN</strong></span>
+          <span>Wave base ↔ Source <strong class="badge status-waiting" id="truthWaveBaseMatch" data-state="UNKNOWN">UNKNOWN</strong></span>
+          <span>Wave worktree ↔ Source <strong class="badge status-waiting" id="truthWaveWorktreeMatch" data-state="UNKNOWN">UNKNOWN</strong></span>
+          <span>Package ↔ Source <strong class="badge status-waiting" id="truthPackageMatch" data-state="UNKNOWN">UNKNOWN</strong></span>
+        </div>
+      </section>
+
       <!-- 2. Execution Fabric / Live Routing (80% Prominent Expanded Module) -->
       <section class="dashboard-card hero-routing" aria-labelledby="liveRoutingTitle">
         <div class="section-heading hero-heading">

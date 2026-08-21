@@ -671,12 +671,49 @@ class OrchestrationLedger:
         worktree_fp: str = "",
         contract_fp: str = "",
         metadata: dict[str, Any] | None = None,
+        objective: str | None = None,
+        objective_source: str = "",
         wave_id: str | None = None,
     ) -> str:
         wave_id = wave_id or uuid.uuid4().hex
         now = utc_now()
         with self._lock, self._connect() as connection:
+            run_row = connection.execute("SELECT objective FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            if run_row is None:
+                raise ValueError("wave run was not found")
             ordinal = int(connection.execute("SELECT COALESCE(MAX(ordinal),0)+1 FROM waves WHERE run_id=?", (run_id,)).fetchone()[0])
+            previous_row = connection.execute(
+                "SELECT metadata_json FROM waves WHERE run_id=? ORDER BY ordinal DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+            run_objective = _bounded_text(run_row["objective"], 4000)
+            previous_metadata = json.loads(previous_row["metadata_json"] or "{}") if previous_row else {}
+            previous_objective = _bounded_text(previous_metadata.get("effective_objective") or run_objective, 4000)
+            effective_objective = _bounded_text(
+                objective if objective is not None else (previous_objective if previous_row else run_objective),
+                4000,
+            )
+            previous_revision_raw = previous_metadata.get("objective_revision", 1)
+            previous_revision = (
+                int(previous_revision_raw)
+                if isinstance(previous_revision_raw, int) and not isinstance(previous_revision_raw, bool) and previous_revision_raw >= 1
+                else 1
+            )
+            objective_changed = bool(previous_row and effective_objective != previous_objective)
+            objective_revision = previous_revision + 1 if objective_changed else previous_revision
+            source = _bounded_text(
+                objective_source
+                or ("previous_wave_inherited" if previous_row else "run_initial_objective"),
+                100,
+            )
+            wave_metadata = dict(metadata or {})
+            wave_metadata.update({
+                "effective_objective": effective_objective,
+                "objective_revision": objective_revision,
+                "objective_sha256": hashlib.sha256(effective_objective.encode("utf-8", errors="replace")).hexdigest(),
+                "objective_source": source,
+                "objective_changed_from_previous": objective_changed,
+            })
             connection.execute(
                 """INSERT INTO waves(
                     wave_id,run_id,ordinal,execution_mode,base_head,worktree_fp,contract_fp,status,started_at,metadata_json
@@ -691,10 +728,35 @@ class OrchestrationLedger:
                     _bounded_text(contract_fp, 128),
                     "active",
                     now,
-                    _json(_sanitize(metadata or {})),
+                    _json(_sanitize(wave_metadata)),
                 ),
             )
         return wave_id
+
+    def wave_objective_provenance(self, run_id: str, wave_id: str) -> dict[str, Any]:
+        run = self.get_run(run_id) or {}
+        wave = next((item for item in self.list_waves(run_id) if str(item.get("wave_id") or "") == wave_id), {})
+        metadata = wave.get("metadata") if isinstance(wave.get("metadata"), dict) else {}
+        run_objective = _bounded_text(run.get("objective") or "", 4000)
+        explicit = bool(str(metadata.get("effective_objective") or "").strip())
+        effective_objective = _bounded_text(metadata.get("effective_objective") or run_objective, 4000)
+        revision_raw = metadata.get("objective_revision")
+        revision = (
+            int(revision_raw)
+            if isinstance(revision_raw, int) and not isinstance(revision_raw, bool) and revision_raw >= 1
+            else 1
+        )
+        stored_sha = str(metadata.get("objective_sha256") or "").strip().lower()
+        calculated_sha = hashlib.sha256(effective_objective.encode("utf-8", errors="replace")).hexdigest()
+        return {
+            "effective_objective": effective_objective,
+            "objective_revision": revision,
+            "objective_sha256": stored_sha or calculated_sha,
+            "objective_source": str(metadata.get("objective_source") or "legacy_run_objective"),
+            "objective_changed_from_previous": bool(metadata.get("objective_changed_from_previous", False)),
+            "objective_hash_valid": stored_sha == calculated_sha if stored_sha else None,
+            "legacy_fallback": not explicit,
+        }
 
     def set_wave_execution_mode(self, wave_id: str, execution_mode: str) -> None:
         with self._lock, self._connect() as connection:

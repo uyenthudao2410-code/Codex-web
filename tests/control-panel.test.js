@@ -124,6 +124,9 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.doesNotMatch(tagById('closeButton'), /\bdisabled\b/);
   assert.match(html, /Operator Control Panel/);
   assert.match(html, /Executive Summary/);
+  assert.match(html, /id="truthConsole"/);
+  assert.match(html, /id="truthRuntimeMatch"[^>]*data-state="UNKNOWN"/);
+  assert.match(html, /id="truthWaveWorktreeMatch"[^>]*data-state="UNKNOWN"/);
   assert.match(html, /class="dashboard-card executive-card hero-summary"/);
   assert.match(html, /class="hero-kpi-grid"/);
   assert.equal((html.match(/class="summary-kpi-card /g) || []).length, 3, 'Executive Summary phải có đúng ba KPI hero cards');
@@ -177,6 +180,11 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(js, /renderProofs/);
   assert.match(js, /renderHub/);
   assert.match(js, /renderRuntimeActivity/);
+  assert.match(js, /renderTruthConsole\(data\?\.truth_snapshot \|\| \{\}\)/);
+  assert.match(js, /normalized === 'MATCHED'\) return 'badge status-active'/);
+  assert.match(js, /normalized === 'MISMATCHED'\) return 'badge status-hold'/);
+  assert.match(js, /normalized === 'NOT_APPLICABLE'\) return 'badge status-neutral'/);
+  assert.match(js, /return 'badge status-waiting'/);
   assert.match(js, /runtime_activity/);
   assert.match(js, /activity_state/);
   assert.match(js, /NO_SIGNAL/);

@@ -190,7 +190,97 @@ function renderTask(task) {
   $('#stopTask').disabled = !authoritative || ['idle', 'completed', 'failed', 'stopped'].includes(status);
 }
 
+function truthBadgeClass(state) {
+  const normalized = String(state || 'UNKNOWN').toUpperCase();
+  if (normalized === 'MATCHED') return 'badge status-active';
+  if (normalized === 'MISMATCHED') return 'badge status-hold';
+  if (normalized === 'NOT_APPLICABLE') return 'badge status-neutral';
+  return 'badge status-waiting';
+}
+
+function setTruthBadge(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return 'UNKNOWN';
+  const allowed = new Set(['MATCHED', 'MISMATCHED', 'UNKNOWN', 'NOT_APPLICABLE']);
+  const candidate = String(value || '').toUpperCase();
+  const state = allowed.has(candidate) ? candidate : 'UNKNOWN';
+  el.textContent = state;
+  el.className = truthBadgeClass(state);
+  el.dataset.state = state;
+  return state;
+}
+
+function truthShort(value, fallback = 'UNKNOWN') {
+  const text = String(value || '').trim();
+  return text ? text.slice(0, 12) : fallback;
+}
+
+function renderTruthConsole(truthSnapshot) {
+  const truth = truthSnapshot && typeof truthSnapshot === 'object' ? truthSnapshot : {};
+  const source = truth.source || {};
+  const runtime = truth.runtime || {};
+  const orchestration = truth.orchestration || {};
+  const evidence = truth.evidence || {};
+  const latestProof = evidence.latest_proof || {};
+  const latestCheckpoint = evidence.latest_checkpoint || {};
+  const packageTruth = truth.package || {};
+  const comparisons = truth.comparisons || {};
+
+  const sourceState = document.getElementById('truthSourceState');
+  const sourceMeta = document.getElementById('truthSourceMeta');
+  const runtimeState = document.getElementById('truthRuntimeState');
+  const runtimeMeta = document.getElementById('truthRuntimeMeta');
+  const objectiveState = document.getElementById('truthObjectiveState');
+  const objectiveMeta = document.getElementById('truthObjectiveMeta');
+  const evidenceState = document.getElementById('truthEvidenceState');
+  const evidenceMeta = document.getElementById('truthEvidenceMeta');
+
+  if (sourceState) sourceState.textContent = truthShort(source.git_head);
+  if (sourceMeta) sourceMeta.textContent = source.git_head
+    ? `${source.dirty ? 'DIRTY' : 'CLEAN'} · fp ${truthShort(source.worktree_fp)}`
+    : 'HEAD / worktree chưa có evidence';
+  if (runtimeState) runtimeState.textContent = truthShort(runtime.code_revision);
+  if (runtimeMeta) runtimeMeta.textContent = runtime.process_instance_id
+    ? `process ${truthShort(runtime.process_instance_id)} · server ${truthShort(runtime.server_instance_id)}`
+    : 'Loaded revision / process chưa có evidence';
+  if (objectiveState) objectiveState.textContent = orchestration.objective_revision
+    ? `REV ${orchestration.objective_revision}`
+    : 'UNKNOWN';
+  if (objectiveMeta) {
+    const objective = String(orchestration.effective_objective || '').trim();
+    objectiveMeta.textContent = objective
+      ? `${truthShort(orchestration.run_id)} / ${truthShort(orchestration.wave_id)} · ${objective}`
+      : 'RUN / WAVE / revision chưa có evidence';
+  }
+  if (evidenceState) evidenceState.textContent = latestProof.status
+    ? String(latestProof.status).toUpperCase()
+    : String(packageTruth.state || 'UNKNOWN').toUpperCase();
+  if (evidenceMeta) {
+    const proof = latestProof.proof_id ? `proof ${truthShort(latestProof.proof_id)}` : 'proof UNKNOWN';
+    const checkpoint = latestCheckpoint.checkpoint_id
+      ? `checkpoint ${truthShort(latestCheckpoint.checkpoint_id)}`
+      : 'checkpoint UNKNOWN';
+    evidenceMeta.textContent = `${proof} · ${checkpoint} · package ${packageTruth.state || 'UNKNOWN'}`;
+  }
+
+  const states = [
+    setTruthBadge('truthRuntimeMatch', comparisons.runtime_code_vs_source_head),
+    setTruthBadge('truthWaveBaseMatch', comparisons.wave_base_vs_source_head),
+    setTruthBadge('truthWaveWorktreeMatch', comparisons.wave_worktree_vs_source_worktree),
+    setTruthBadge('truthPackageMatch', comparisons.package_revision_vs_source_head),
+  ];
+  const overall = states.includes('MISMATCHED')
+    ? 'MISMATCHED'
+    : states.includes('UNKNOWN')
+      ? 'UNKNOWN'
+      : states.every((item) => item === 'NOT_APPLICABLE')
+        ? 'NOT_APPLICABLE'
+        : 'MATCHED';
+  setTruthBadge('truthOverallState', overall);
+}
+
 function renderRun(data) {
+  renderTruthConsole(data?.truth_snapshot || {});
   const run = data?.run;
   const runState = String(run?.status || 'idle');
   const runStatusMap = { idle: 'Đang rảnh', active: 'Hoạt động', running: 'Đang chạy', completed: 'Hoàn thành', failed: 'Lỗi' };

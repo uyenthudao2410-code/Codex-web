@@ -1,23 +1,92 @@
 {
   "version": 2,
-  "task_id": "aa97586e34e743e4ba96e10b0c370039",
+  "task_id": "36a294db855e4792bae210fa49ca503a",
   "orchestration": {},
   "objective": "Run a workspace command",
-  "status": "completed",
+  "status": "waiting",
   "steps": [],
-  "current_step": "Live validation completed",
+  "current_step": "Completed - operator report required",
   "current_command": null,
   "last_command_result": {
-    "command_id": "3FKpLk20n8mvr3AWfC6CuY2J",
+    "command_id": "BQ9zGdb_NtjCSMdaFHCQInVs",
     "kind": "command",
     "status": "exited",
     "result_status": "passed",
     "exit_code": 0,
-    "duration_ms": 8675,
-    "finished_at": "2026-08-21T05:24:04.391Z"
+    "duration_ms": null,
+    "finished_at": "2026-08-21T07:57:05.169Z"
   },
-  "completion_report": null,
-  "completion_report_id": "",
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "BQ9zGdb_NtjCSMdaFHCQInVs",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "BQ9zGdb_NtjCSMdaFHCQInVs",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "36ce22300aa4cb628d84d895942aeafd35b6bde6",
+        "branch": "main",
+        "worktree_fp": "e9aedac426560b37d629346e2e76e2d863691b4a4ef75f49a1b9860813abbef0",
+        "dirty_paths": [
+          "docs/research/260821_CODING_WEB_MASTER_ENGINEERING_STRATEGY_AND_HISTORY.md",
+          "renderer/panel.html",
+          "renderer/panel.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/operator_report.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_report.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "resources/coding-tools-mcp/tests/test_orchestration_control.py",
+          "resources/coding-tools-mcp/tests/test_orchestration_report.py",
+          "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "tests/control-panel.test.js",
+          "docs/research/260821_CODING_WEB_LEAN_CONTROL_RICH_EVIDENCE_ACCEPTED_RESULT_SYNTHESIS.md",
+          "docs/research/260821_TRUTH_RECONCILIATION_CHECKPOINT.md",
+          "resources/coding-tools-mcp/coding_tools_mcp/truth_snapshot.py",
+          "resources/coding-tools-mcp/tests/test_engineering_casebook.py",
+          "resources/coding-tools-mcp/tests/test_truth_snapshot.py"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "36a294db855e4792bae210fa49ca503a",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "e4b084a721c30d0e69369b74b25ae3ac2a1ef169175b19265f878c04807d578c",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [],
@@ -25,50 +94,48 @@
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "Refresh current H5/deviceId mapping for employees whose stored link history does not contain 21/08 records",
-  "created_at": "2026-08-21T05:23:55.430Z",
-  "updated_at": "2026-08-21T05:37:40.595Z",
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-21T07:56:14.785Z",
+  "updated_at": "2026-08-21T07:58:07.692Z",
   "events": [
     {
-      "time": "2026-08-21T05:23:55.430Z",
+      "time": "2026-08-21T07:56:14.785Z",
       "event": "task_auto_started",
       "details": {
         "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-21T05:23:55.804Z",
+      "time": "2026-08-21T07:56:15.338Z",
       "event": "command_started",
       "details": {
-        "command": "gh run watch 32450365148 -R uyenthudao2410-code/attendance-timesheet-crawler --exit-status",
-        "session_id": "3FKpLk20n8mvr3AWfC6CuY2J"
+        "command": "python -m unittest discover -v tests",
+        "session_id": "qx1vOutUuveZmBVQjlTMf_u4"
       }
     },
     {
-      "time": "2026-08-21T05:23:56.079Z",
-      "event": "tool_failed",
+      "time": "2026-08-21T07:56:42.454Z",
+      "event": "command_started",
       "details": {
-        "tool": "workspace_context",
-        "code": "NOT_A_DIRECTORY"
+        "command": "node --test tests/control-panel.test.js tests/hub-proxy-gateway.test.js tests/runtime-lifecycle.test.js tests/accepted-code-activation.test.js tests/execution-gateway.test.js tests/mcp-contract-source.test.js tests/stability-source.test.js",
+        "session_id": "BQ9zGdb_NtjCSMdaFHCQInVs"
       }
     },
     {
-      "time": "2026-08-21T05:24:04.391Z",
+      "time": "2026-08-21T07:57:05.169Z",
       "event": "command_finished",
       "details": {
-        "command": "gh run watch 32450365148 -R uyenthudao2410-code/attendance-timesheet-crawler --exit-status",
+        "command": "node --test tests/control-panel.test.js tests/hub-proxy-gateway.test.js tests/runtime-lifecycle.test.js tests/accepted-code-activation.test.js tests/execution-gateway.test.js tests/mcp-contract-source.test.js tests/stability-source.test.js",
         "status": "passed"
       }
     },
     {
-      "time": "2026-08-21T05:24:30.950Z",
-      "event": "task_updated",
+      "time": "2026-08-21T07:57:05.367Z",
+      "event": "command_completion_report_required",
       "details": {
-        "fields": [
-          "current_step",
-          "next_step",
-          "status"
-        ]
+        "command_id": "BQ9zGdb_NtjCSMdaFHCQInVs",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "e4b084a721c30d0e69369b74b25ae3ac2a1ef169175b19265f878c04807d578c"
       }
     }
   ]

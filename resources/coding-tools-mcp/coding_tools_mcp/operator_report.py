@@ -193,6 +193,7 @@ def build_operator_completion_report(
     failures = [item for item in events if str(item.get("event_type") or "") == "failure_observed"]
     latest_failure = failures[-1] if failures else {}
     failure_payload = latest_failure.get("payload") if isinstance(latest_failure.get("payload"), dict) else {}
+    objective_provenance = ledger.wave_objective_provenance(run_id, wave_id)
 
     task_projection = task_state.get("orchestration") if isinstance(task_state.get("orchestration"), dict) else {}
     aligned_task = task_state if str(task_projection.get("run_id") or "") == run_id else {}
@@ -262,6 +263,7 @@ def build_operator_completion_report(
             "base_head": str(getattr(ctx, "base_head", "") or ""),
             "worktree_fp": str(getattr(ctx, "worktree_fp", "") or ""),
             "contract_fp": str(getattr(ctx, "contract_fp", "") or ""),
+            "objective_provenance": objective_provenance,
         },
         "proof_actually_run": {
             "count": len(proof_rows),

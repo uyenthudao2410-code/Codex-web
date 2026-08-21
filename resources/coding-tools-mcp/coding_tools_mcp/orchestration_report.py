@@ -27,12 +27,16 @@ class OrchestrationReport:
         proofs = self.ledger.list_proofs(run_id, wave_id=wave_id)
         checkpoints = self.ledger.list_checkpoints(run_id, wave_id=wave_id)
         delegations = self.ledger.list_delegations(wave_id)
+        objective = self.ledger.wave_objective_provenance(run_id, wave_id)
         lines = [
             f"# Orchestration Wave {wave['ordinal']}",
             "",
             f"- Run: `{run_id}`",
             f"- Wave: `{wave_id}`",
-            f"- Objective: {run.get('objective', '')}",
+            f"- Objective: {objective['effective_objective']}",
+            f"- Objective revision: `{objective['objective_revision']}`",
+            f"- Objective SHA-256: `{objective['objective_sha256']}`",
+            f"- Objective source: `{objective['objective_source']}`",
             f"- Mode: `{wave['execution_mode']}`",
             f"- Base HEAD: `{wave['base_head']}`",
             f"- Worktree fingerprint: `{wave['worktree_fp']}`",
@@ -169,12 +173,13 @@ class OrchestrationReport:
             "",
             "## Waves",
             "",
-            "| # | Wave | Mode | Base | Status |",
-            "|---:|---|---|---|---|",
+            "| # | Wave | Objective rev | Objective source | Mode | Base | Status |",
+            "|---:|---|---:|---|---|---|---|",
         ]
         for wave in waves:
+            objective = self.ledger.wave_objective_provenance(run_id, str(wave["wave_id"]))
             lines.append(
-                f"| {wave['ordinal']} | `{wave['wave_id']}` | `{wave['execution_mode']}` | `{wave['base_head']}` | {wave['status']} |"
+                f"| {wave['ordinal']} | `{wave['wave_id']}` | {objective['objective_revision']} | `{objective['objective_source']}` | `{wave['execution_mode']}` | `{wave['base_head']}` | {wave['status']} |"
             )
         lines.extend([
             "",

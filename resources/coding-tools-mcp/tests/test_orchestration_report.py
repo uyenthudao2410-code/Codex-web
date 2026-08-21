@@ -65,6 +65,8 @@ class OrchestrationReportTests(unittest.TestCase):
             self.assertIn("proof-fp", run_text)
             self.assertIn("CODEX:mini", wave_text)
             self.assertIn("focused", wave_text)
+            self.assertIn("Objective revision: `1`", wave_text)
+            self.assertIn("Objective source: `run_initial_objective`", wave_text)
             self.assertIn("## Acceptance checkpoints", wave_text)
             self.assertIn("ChatWeb Sol", wave_text)
 
