@@ -14,6 +14,7 @@ from typing import Any
 
 from .artifact_refs import provider_result_artifact_ref
 from .processes import spawn_process, terminate_process_group
+from .runtime_config import is_core_command_env_name, is_filtered_env_var
 from .tool_contract import OPENCODE_SAFE_TOOLS
 from .usage_events import classify_provider_error
 
@@ -29,6 +30,10 @@ MAX_EVENT_LINE_BYTES = 256 * 1024
 MAX_RETAINED_DISPATCHES = 32
 SAFE_TOOLS = OPENCODE_SAFE_TOOLS
 LIFECYCLE_EVENT_TYPES = frozenset({"step_start", "step_finish", "tool_use", "text", "error"})
+PROVIDER_IDENTITY_ENV_NAMES = frozenset({
+    "HOME", "USER", "USERNAME", "TEMP", "TMP", "TMPDIR",
+    "LOCALAPPDATA", "APPDATA", "USERPROFILE",
+})
 
 
 class OpenCodeProviderError(RuntimeError):
@@ -80,13 +85,14 @@ def _opencode_argv() -> list[str]:
 
 
 def _child_env(*, dispatch_id: str, delegation_id: str) -> dict[str, str]:
-    env = dict(os.environ)
-    # Never propagate a server bearer through a provider process. Provider auth
-    # remains available through its own OpenCode credential store/environment.
-    for key in list(env):
+    env: dict[str, str] = {}
+    for key, value in os.environ.items():
         upper = key.upper()
-        if upper in {"CODING_TOOLS_MCP_AUTH_TOKEN", "MCP_AUTH_TOKEN"}:
-            env.pop(key, None)
+        if not (is_core_command_env_name(key) or upper in PROVIDER_IDENTITY_ENV_NAMES):
+            continue
+        if is_filtered_env_var(key, value):
+            continue
+        env[key] = value
     env["OPENCODE_CONFIG_CONTENT"] = json.dumps(read_only_opencode_config(), separators=(",", ":"))
     env["CODING_TOOLS_MCP_PROVIDER_DISPATCH_ID"] = dispatch_id
     env["CODING_TOOLS_MCP_PROVIDER_DELEGATION_ID"] = delegation_id

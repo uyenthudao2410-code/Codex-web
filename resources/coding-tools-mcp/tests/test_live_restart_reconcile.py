@@ -14,7 +14,7 @@ PACKAGE_PARENT = str(Path(__file__).resolve().parents[1])
 IS_WINDOWS = os.name == "nt"
 
 
-def _rpc(port: int, method: str, params: dict, *, session_header: str | None = None) -> tuple[int, dict]:
+def _rpc(port: int, method: str, params: dict, *, session_header: str | None = None) -> tuple[int, dict[str, str], dict]:
     body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode("utf-8")
     headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
     if session_header:
@@ -25,7 +25,8 @@ def _rpc(port: int, method: str, params: dict, *, session_header: str | None = N
         response = connection.getresponse()
         raw = response.read()
         decoded = json.loads(raw.decode("utf-8")) if raw else {}
-        return response.status, decoded
+        response_headers = {key.lower(): value for key, value in response.getheaders()}
+        return response.status, response_headers, decoded
     finally:
         connection.close()
 
@@ -73,14 +74,16 @@ class LiveRestartReconcileTests(unittest.TestCase):
             time.sleep(0.1)
         self.fail("MCP did not become healthy in time")
 
-    def _initialize(self, port: int) -> str | None:
-        status, body = _rpc(
+    def _initialize(self, port: int) -> str:
+        status, headers, _body = _rpc(
             port,
             "initialize",
             {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "live-e2e", "version": "1"}},
         )
         self.assertEqual(status, 200)
-        return None
+        session_id = headers.get("mcp-session-id")
+        self.assertTrue(session_id)
+        return str(session_id)
 
     def test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -101,7 +104,7 @@ class LiveRestartReconcileTests(unittest.TestCase):
             child_pid: int | None = None
             try:
                 self._wait_ready(port, process_a)
-                self._initialize(port)
+                session_id = self._initialize(port)
 
                 exec_args = {
                     "cmd": f'"{sys.executable}" sleep_probe.py',
@@ -110,7 +113,12 @@ class LiveRestartReconcileTests(unittest.TestCase):
                     "verbosity": "full",
                     "idempotency_key": "live-e2e-exec-1",
                 }
-                status, body = _rpc(port, "tools/call", {"name": "exec_command", "arguments": exec_args})
+                status, _headers, body = _rpc(
+                    port,
+                    "tools/call",
+                    {"name": "exec_command", "arguments": exec_args},
+                    session_header=session_id,
+                )
                 self.assertEqual(status, 200)
                 structured = body.get("result", {}).get("structuredContent", {})
                 self.assertEqual(structured.get("status"), "running")
@@ -136,23 +144,40 @@ class LiveRestartReconcileTests(unittest.TestCase):
 
                 process_b = self._spawn_mcp(root, port)
                 self._wait_ready(port, process_b)
-                self._initialize(port)
 
-                status, body = _rpc(port, "tools/call", {"name": "task_control", "arguments": {"action": "get"}})
+                status, headers, body = _rpc(
+                    port,
+                    "tools/call",
+                    {"name": "task_control", "arguments": {"action": "get"}},
+                    session_header=session_id,
+                )
                 self.assertEqual(status, 200)
+                rebound_session_id = headers.get("mcp-session-id")
+                self.assertTrue(rebound_session_id)
+                session_id = str(rebound_session_id)
                 state = body.get("result", {}).get("structuredContent", {}).get("state", {})
                 self.assertEqual(state.get("objective"), "Run a workspace command")
 
-                status, body = _rpc(port, "tools/call", {"name": "exec_command", "arguments": exec_args})
+                status, _headers, body = _rpc(
+                    port,
+                    "tools/call",
+                    {"name": "exec_command", "arguments": exec_args},
+                    session_header=session_id,
+                )
                 self.assertEqual(status, 200)
                 repeated = body.get("result", {}).get("structuredContent", {})
                 self.assertTrue(repeated.get("deduplicated"))
                 self.assertTrue(repeated.get("durable_idempotency"))
 
-                status, body = _rpc(port, "tools/call", {
-                    "name": "command_control",
-                    "arguments": {"action": "poll", "command_id": command_id, "yield_time_ms": 0},
-                })
+                status, _headers, body = _rpc(
+                    port,
+                    "tools/call",
+                    {
+                        "name": "command_control",
+                        "arguments": {"action": "poll", "command_id": command_id, "yield_time_ms": 0},
+                    },
+                    session_header=session_id,
+                )
                 self.assertEqual(status, 200)
                 polled = body.get("result", {}).get("structuredContent", {})
                 self.assertEqual(polled.get("ok"), False)

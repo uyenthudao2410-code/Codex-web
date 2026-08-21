@@ -14,24 +14,32 @@ STUB_PATH = str(Path(__file__).resolve().parent / "support" / "codex_app_server_
 
 
 class LiveCodexProviderRestartTests(unittest.TestCase):
-    def _bridge_env(self, state_file: Path, *, crash: bool = False) -> dict[str, str]:
+    def _bridge_env(self, state_file: Path, control_file: Path) -> dict[str, str]:
         env = dict(os.environ)
         # The bridge deliberately validates that a Codex binary exists before
         # consulting the test-only argv override. Use the current Python
         # executable as that portable probe so this live stub does not depend
         # on Codex Desktop/CLI being installed on the CI host.
         env["CODING_TOOLS_MCP_CODEX_BIN"] = sys.executable
-        env["CODING_TOOLS_MCP_CODEX_ARGV"] = json.dumps([sys.executable, STUB_PATH])
-        env["STUB_STATE_FILE"] = str(state_file)
-        env["STUB_TURN_COMPLETE_DELAY_S"] = "0.2"
-        env["STUB_CRASH_AFTER_TURN_START"] = "1" if crash else ""
+        env["CODING_TOOLS_MCP_CODEX_ARGV"] = json.dumps([
+            sys.executable,
+            STUB_PATH,
+            "--state-file",
+            str(state_file),
+            "--control-file",
+            str(control_file),
+            "--turn-complete-delay-s",
+            "0.2",
+        ])
         return env
 
     def test_provider_crash_mid_turn_and_restart_resumes_same_thread(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             state_file = root / "stub-state.json"
-            with patch.dict(os.environ, self._bridge_env(state_file, crash=True)):
+            control_file = root / "stub-control.json"
+            control_file.write_text(json.dumps({"crash_after_turn_start": True}), encoding="utf-8")
+            with patch.dict(os.environ, self._bridge_env(state_file, control_file)):
                 first = CodexAppServerBridge(lambda: root)
                 try:
                     outcome = None
@@ -58,8 +66,10 @@ class LiveCodexProviderRestartTests(unittest.TestCase):
             )
             if outcome and outcome.get("thread_id"):
                 self.assertEqual(outcome["thread_id"], thread_id)
+            control = json.loads(control_file.read_text(encoding="utf-8"))
+            self.assertFalse(control.get("crash_after_turn_start"), "crash injection must be one-shot")
 
-            with patch.dict(os.environ, self._bridge_env(state_file, crash=False)):
+            with patch.dict(os.environ, self._bridge_env(state_file, control_file)):
                 restored = CodexAppServerBridge(lambda: root)
                 try:
                     resumed = restored.resume_persistent_thread(

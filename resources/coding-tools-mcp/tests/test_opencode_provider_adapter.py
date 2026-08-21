@@ -14,10 +14,9 @@ from coding_tools_mcp.opencode_provider import OpenCodeProviderAdapter, OpenCode
 
 STUB = r'''import json, os, sys, time
 prompt = sys.stdin.read()
-capture = os.environ.get("OPENCODE_STUB_CAPTURE")
-if capture:
-    with open(capture, "w", encoding="utf-8") as handle:
-        json.dump({"argv": sys.argv[1:], "prompt": prompt, "config": json.loads(os.environ["OPENCODE_CONFIG_CONTENT"]), "dispatch_id": os.environ.get("CODING_TOOLS_MCP_PROVIDER_DISPATCH_ID"), "delegation_id": os.environ.get("CODING_TOOLS_MCP_PROVIDER_DELEGATION_ID")}, handle)
+capture = os.path.join(os.getcwd(), "capture.json")
+with open(capture, "w", encoding="utf-8") as handle:
+    json.dump({"argv": sys.argv[1:], "prompt": prompt, "config": json.loads(os.environ["OPENCODE_CONFIG_CONTENT"]), "dispatch_id": os.environ.get("CODING_TOOLS_MCP_PROVIDER_DISPATCH_ID"), "delegation_id": os.environ.get("CODING_TOOLS_MCP_PROVIDER_DELEGATION_ID"), "environment_keys": sorted(os.environ)}, handle)
 if "TOOLCALL_HANG" in prompt:
     print(json.dumps({"type":"step_start","timestamp":1,"sessionID":"ses-stub","part":{}}), flush=True)
     print(json.dumps({"type":"tool_use","timestamp":2,"sessionID":"ses-stub","part":{"type":"tool","tool":"read","state":{"status":"completed"}}}), flush=True)
@@ -40,7 +39,6 @@ class OpenCodeProviderAdapterTests(unittest.TestCase):
         self.capture = self.root / "capture.json"
         self.env = {
             "CODING_TOOLS_MCP_OPENCODE_ARGV": json.dumps([sys.executable, str(self.stub)]),
-            "OPENCODE_STUB_CAPTURE": str(self.capture),
         }
         self.adapter = OpenCodeProviderAdapter(lambda: self.root)
 
@@ -59,7 +57,13 @@ class OpenCodeProviderAdapterTests(unittest.TestCase):
 
     def test_prompt_uses_stdin_and_permissions_are_fail_closed(self) -> None:
         private_prompt = "PRIVATE PROMPT SHOULD NOT BE IN ARGV"
-        with patch.dict(os.environ, self.env, clear=False):
+        with patch.dict(os.environ, {
+            **self.env,
+            "UNRELATED_SECRET": "test-secret-that-must-not-leak",
+            "MCP_AUTH_TOKEN": "test-bearer-that-must-not-leak",
+            "CODING_TOOLS_MCP_SECRET_BROKER": "test-broker-envelope-that-must-not-leak",
+            "PYTHONPATH": "test-loader-path-that-must-not-leak",
+        }, clear=False):
             started = self.adapter.start(
                 run_id="run",
                 wave_id="wave",
@@ -88,6 +92,12 @@ class OpenCodeProviderAdapterTests(unittest.TestCase):
         self.assertIn(READ_ONLY_AGENT, captured["argv"])
         self.assertEqual(captured["dispatch_id"], started["dispatch_id"])
         self.assertEqual(captured["delegation_id"], started["delegation_id"])
+        child_env_keys = set(captured["environment_keys"])
+        for forbidden in (
+            "UNRELATED_SECRET", "MCP_AUTH_TOKEN", "CODING_TOOLS_MCP_SECRET_BROKER",
+            "CODING_TOOLS_MCP_AUTH_TOKEN", "PYTHONPATH",
+        ):
+            self.assertNotIn(forbidden, child_env_keys)
         permission = captured["config"]["permission"]
         self.assertEqual(permission["*"], "deny")
         for tool in ("read", "glob", "grep", "list", "lsp"):

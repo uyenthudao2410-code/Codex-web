@@ -628,12 +628,12 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 "run_id": {
                     **string,
                     "maxLength": 128,
-                    "description": "Optional explicit EOCL run owner. When omitted, the current task projection is used.",
+                    "description": "Optional explicit EOCL run owner. When omitted, only the caller's request-scoped task projection may be inherited; unscoped calls remain unowned.",
                 },
                 "wave_id": {
                     **string,
                     "maxLength": 128,
-                    "description": "Optional explicit EOCL wave owner. Must be paired with run_id and match the current task projection.",
+                    "description": "Optional explicit EOCL wave owner. Must be paired with run_id and match the caller's current scoped task projection when one exists.",
                 },
                 "resource_class": {
                     **string,

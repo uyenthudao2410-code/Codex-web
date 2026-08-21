@@ -298,7 +298,12 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
     }).filter((item) => item.role && isStructurallyVisible(item.roleNode, item.role));
     const createTurnIdentity = () => {
       const raw = globalThis.crypto?.randomUUID?.() || (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
-      return { turnId: 'chatweb-turn:' + raw, traceId: 'chatweb-trace:' + raw };
+      const bytes = new Uint8Array(16);
+      if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(bytes);
+      else for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+      let traceId = Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+      if (/^0{32}$/.test(traceId)) traceId = traceId.slice(0, -1) + '1';
+      return { turnId: 'chatweb-turn:' + raw, traceId };
     };
     const emitVisible = (item, at, identity) => {
       const observationId = epoch + ':' + item.role + ':' + (++state.sequence);

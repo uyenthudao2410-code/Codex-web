@@ -131,33 +131,24 @@ fn request_url_for_download(validated_url: reqwest::Url) -> reqwest::Url {
     validated_url
 }
 
-async fn read_bounded_download(
-    response: &mut reqwest::Response,
-    source_name: &str,
-) -> Result<Vec<u8>, String> {
-    if let Some(len) = response.content_length() {
-        if len > MAX_IMPORT_FILE_BYTES as u64 {
-            return Err(format!(
-                "download for '{}' exceeds {} bytes",
-                source_name, MAX_IMPORT_FILE_BYTES
-            ));
-        }
-    }
-    let mut bytes = Vec::new();
-    while let Some(chunk) = response
-        .chunk()
-        .await
-        .map_err(|e| format!("failed to read download for '{}': {}", source_name, e))?
-    {
-        if bytes.len().saturating_add(chunk.len()) > MAX_IMPORT_FILE_BYTES {
-            return Err(format!(
-                "download for '{}' exceeds {} bytes",
-                source_name, MAX_IMPORT_FILE_BYTES
-            ));
-        }
-        bytes.extend_from_slice(&chunk);
-    }
-    Ok(bytes)
+async fn abort_import_upload(
+    runtime: &std::sync::Arc<crate::tool_runtime::ToolRuntime>,
+    auth: Option<&crate::auth::AuthContext>,
+    project: &str,
+    path: &str,
+    upload_id: &str,
+) {
+    let _ = runtime
+        .dispatch_with_auth(
+            ToolCall::ArtifactUploadAbort {
+                project: project.to_string(),
+                path: path.to_string(),
+                upload_id: upload_id.to_string(),
+                session_id: None,
+            },
+            auth,
+        )
+        .await;
 }
 
 #[handler]
@@ -271,35 +262,179 @@ pub async fn import_conversation_files_to_project(
             ));
             return;
         }
-        let bytes = match read_bounded_download(&mut response, source_name).await {
-            Ok(bytes) => bytes,
-            Err(e) => {
+        let expected_bytes = match response.content_length() {
+            Some(len) if len > MAX_IMPORT_FILE_BYTES as u64 => {
                 res.status_code(StatusCode::BAD_REQUEST);
-                res.render(json_error(StatusCode::BAD_REQUEST, e));
+                res.render(json_error(
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "download for '{}' exceeds {} bytes",
+                        source_name, MAX_IMPORT_FILE_BYTES
+                    ),
+                ));
                 return;
             }
+            Some(len) => Some(len as usize),
+            None => None,
         };
-        let result = runtime
+        let begin_result = runtime
             .dispatch_with_auth(
-                ToolCall::SaveProjectArtifact {
+                ToolCall::ArtifactUploadBegin {
                     project: body.project.clone(),
                     path: path.clone(),
-                    content_base64: general_purpose::STANDARD.encode(&bytes),
                     session_id: None,
+                    expected_bytes,
+                    expected_sha256: None,
                     mime_type: Some(mime.to_string()),
                     overwrite: body.overwrite,
                 },
                 auth.as_ref(),
             )
             .await;
-        if !result.success {
+        if !begin_result.success {
             render_result(
                 res,
                 &audit,
                 "import_conversation_files",
                 Some(body.project.clone()),
-                result,
+                begin_result,
             );
+            return;
+        }
+        let Some(upload_id) = begin_result
+            .output
+            .get("upload_id")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|upload_id| !upload_id.is_empty())
+            .map(str::to_string)
+        else {
+            res.status_code(StatusCode::BAD_REQUEST);
+            res.render(json_error(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "artifact upload begin for '{}' did not return upload_id",
+                    source_name
+                ),
+            ));
+            return;
+        };
+        let mut uploaded_bytes = 0usize;
+        loop {
+            let chunk = match response.chunk().await {
+                Ok(Some(chunk)) => chunk,
+                Ok(None) => break,
+                Err(e) => {
+                    abort_import_upload(&runtime, auth.as_ref(), &body.project, &path, &upload_id)
+                        .await;
+                    res.status_code(StatusCode::BAD_REQUEST);
+                    res.render(json_error(
+                        StatusCode::BAD_REQUEST,
+                        format!("failed to read download for '{}': {}", source_name, e),
+                    ));
+                    return;
+                }
+            };
+            if uploaded_bytes.saturating_add(chunk.len()) > MAX_IMPORT_FILE_BYTES {
+                abort_import_upload(&runtime, auth.as_ref(), &body.project, &path, &upload_id)
+                    .await;
+                res.status_code(StatusCode::BAD_REQUEST);
+                res.render(json_error(
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "download for '{}' exceeds {} bytes",
+                        source_name, MAX_IMPORT_FILE_BYTES
+                    ),
+                ));
+                return;
+            }
+            for part in
+                chunk.chunks(crate::tool_runtime::files::MAX_PROJECT_ARTIFACT_UPLOAD_CHUNK_BYTES)
+            {
+                let next_offset = uploaded_bytes + part.len();
+                let chunk_result = runtime
+                    .dispatch_with_auth(
+                        ToolCall::ArtifactUploadChunk {
+                            project: body.project.clone(),
+                            path: path.clone(),
+                            upload_id: upload_id.clone(),
+                            offset: uploaded_bytes,
+                            content_base64: general_purpose::STANDARD.encode(part),
+                            session_id: None,
+                        },
+                        auth.as_ref(),
+                    )
+                    .await;
+                if !chunk_result.success {
+                    abort_import_upload(&runtime, auth.as_ref(), &body.project, &path, &upload_id)
+                        .await;
+                    render_result(
+                        res,
+                        &audit,
+                        "import_conversation_files",
+                        Some(body.project.clone()),
+                        chunk_result,
+                    );
+                    return;
+                }
+                if chunk_result
+                    .output
+                    .get("next_offset")
+                    .and_then(Value::as_u64)
+                    .is_some_and(|offset| offset != next_offset as u64)
+                {
+                    abort_import_upload(&runtime, auth.as_ref(), &body.project, &path, &upload_id)
+                        .await;
+                    res.status_code(StatusCode::BAD_REQUEST);
+                    res.render(json_error(
+                        StatusCode::BAD_REQUEST,
+                        format!(
+                            "artifact upload chunk for '{}' returned an inconsistent next_offset",
+                            source_name
+                        ),
+                    ));
+                    return;
+                }
+                uploaded_bytes = next_offset;
+            }
+        }
+        let finish_result = runtime
+            .dispatch_with_auth(
+                ToolCall::ArtifactUploadFinish {
+                    project: body.project.clone(),
+                    path: path.clone(),
+                    upload_id: upload_id.clone(),
+                    session_id: None,
+                },
+                auth.as_ref(),
+            )
+            .await;
+        if !finish_result.success {
+            abort_import_upload(&runtime, auth.as_ref(), &body.project, &path, &upload_id).await;
+            render_result(
+                res,
+                &audit,
+                "import_conversation_files",
+                Some(body.project.clone()),
+                finish_result,
+            );
+            return;
+        }
+        if finish_result
+            .output
+            .get("committed")
+            .and_then(Value::as_bool)
+            != Some(true)
+        {
+            abort_import_upload(&runtime, auth.as_ref(), &body.project, &path, &upload_id).await;
+            res.status_code(StatusCode::BAD_REQUEST);
+            res.render(json_error(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "artifact upload finish for '{}' was not committed",
+                    source_name
+                ),
+            ));
             return;
         }
         let mut obj = Map::new();
@@ -311,10 +446,14 @@ pub async fn import_conversation_files_to_project(
         obj.insert("path".to_string(), Value::String(path));
         obj.insert(
             "bytes_written".to_string(),
-            result.output["bytes_written"].clone(),
+            finish_result
+                .output
+                .get("bytes")
+                .cloned()
+                .unwrap_or_else(|| json!(uploaded_bytes)),
         );
         obj.insert("mime_type".to_string(), Value::String(mime.to_string()));
-        obj.insert("sha256".to_string(), result.output["sha256"].clone());
+        obj.insert("sha256".to_string(), finish_result.output["sha256"].clone());
         imported.push(Value::Object(obj));
     }
     let result =

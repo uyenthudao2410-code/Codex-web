@@ -14,6 +14,14 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .processes import managed_process_creationflags
+from .runtime_config import is_core_command_env_name, is_filtered_env_var
+from .secret_broker import OPENAI_API_KEY_HANDLE, SecretBroker
+
+
+_CODEX_IDENTITY_ENV_NAMES = frozenset({
+    "HOME", "USER", "USERNAME", "TEMP", "TMP", "TMPDIR",
+    "LOCALAPPDATA", "APPDATA", "USERPROFILE", "CODEX_HOME",
+})
 
 
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -231,12 +239,22 @@ def configured_mcp_server_names(codex_home: Path) -> list[str]:
     return sorted(str(name) for name in servers if str(name).strip())
 
 
-def sanitized_codex_env(source: dict[str, str] | None = None) -> dict[str, str]:
-    env = dict(os.environ if source is None else source)
-    for key in list(env):
+def sanitized_codex_env(
+    source: dict[str, str] | None = None,
+    *,
+    secret_broker: SecretBroker | None = None,
+) -> dict[str, str]:
+    source_env = os.environ if source is None else source
+    env: dict[str, str] = {}
+    for key, value in source_env.items():
         upper = key.upper()
-        if upper.startswith("CODING_TOOLS_MCP_") or upper.startswith("WEBCODEX_"):
-            env.pop(key, None)
+        if not (is_core_command_env_name(key) or upper in _CODEX_IDENTITY_ENV_NAMES):
+            continue
+        if is_filtered_env_var(key, value):
+            continue
+        env[key] = value
+    if secret_broker is not None:
+        env = secret_broker.inject_env(env, {"OPENAI_API_KEY": OPENAI_API_KEY_HANDLE})
     return env
 
 
@@ -360,9 +378,16 @@ class CodexAppServerBridge:
     approvalPolicy=never and a read-only, no-network sandbox.
     """
 
-    def __init__(self, workspace_provider: Callable[[], Path], *, resource_governor=None) -> None:
+    def __init__(
+        self,
+        workspace_provider: Callable[[], Path],
+        *,
+        resource_governor=None,
+        secret_broker: SecretBroker | None = None,
+    ) -> None:
         self._workspace_provider = workspace_provider
         self._resource_governor = resource_governor
+        self._secret_broker = secret_broker
         self._managed_job_id = ""
         self._process: subprocess.Popen[str] | None = None
         self._binary: Path | None = None
@@ -1087,7 +1112,7 @@ class CodexAppServerBridge:
             codex_home = _codex_home_hint()
             configured_servers = configured_mcp_server_names(codex_home)
             disable_args = _mcp_disable_args(configured_servers)
-            child_env = sanitized_codex_env()
+            child_env = sanitized_codex_env(secret_broker=self._secret_broker)
             argv_override = os.environ.get("CODING_TOOLS_MCP_CODEX_ARGV", "").strip()
             if argv_override:
                 try:

@@ -1,6 +1,6 @@
 # Production Closure & Orchestration Rollout Control Plan
 
-> Status date: 2026-08-17
+> Status date: 2026-08-21
 > Baseline HEAD at plan start: `3059b218989fda8ebf217d121cd6e8f74a71587d`
 > Current delivered HEAD before sparse-state remediation delivery: `d5d4bbb533b21937041c1b48a2005583f2652383`
 > Product: `web-mcp-assistant 0.3.4`
@@ -42,6 +42,12 @@ The goal is to finish the current product without adding unnecessary architectur
 
 | ID | Priority | Workstream | Status | Completion gate |
 |---|---|---|---|---|
+| W1 | Closure | Sparse model-facing results | **ACCEPTED / CHECKPOINTED** | focused proof `19b125e7316942c0b200d52063b031af` green and EOCL accepted |
+| W2A | Closure | Bounded artifact import / streaming | **ACCEPTED / CHECKPOINTED** | bounded import/upload contract, streaming proof, integrity/hash guards, accepted run/wave |
+| S2 | Closure | Artifact/resource closeout | **ACCEPTED / CHECKPOINTED** | typed provenance wired into real artifact/resource paths, bounded reads, native-image integrity, final focused proof matrix accepted |
+| S3 / W4 | Closure | Semantic health + Semantic Repository Graph MVP | **ACCEPTED / CHECKPOINTED (PROVIDER-DEGRADED)** | internal bounded read-only graph accepted with safe text fallback; native semantic provider remains `NATIVE_LSP_BINDING_NOT_CONFIGURED` and is not claimed live |
+| S4 / W5 | Closure | Context Compiler + paired efficacy gate | **ACCEPTED / CHECKPOINTED — KEEP_SHADOW / NO_PROMOTION** | deterministic internal compiler accepted; real-ledger evaluation has zero comparable representative treatment pairs, so auto-injection remains unavailable |
+| S5 / W6 | Closure | Single-Checkout Mutation Coordinator | **ACCEPTED / CHECKPOINTED — TERMINAL COMPLETED** | existing EOCL/SQLite write-fence authority hardened with session/source/dirty/path fences; focused 19/19 acceptance green; no duplicate coordinator/worktree authority introduced |
 | P0.1 | P0 | Repository/runtime-evidence hygiene | **COMPLETE / RETENTION POLICY UPDATED** | all `.coding-tools` paths visible to Git; repository guard present; no nested gitlink evidence substitute |
 | P0.2 | P0 | Installed Windows Recovery Supervisor acceptance | **CURRENT-SESSION COMPLETE / PERSISTENCE EXTERNAL** | exact installer + real Scheduled Task + `Action Once` + rollback proven; reboot/logon persistence explicitly remains external/unverified |
 | P0.3 | P0 | Production Recovery fault matrix | PENDING | controlled isolated/installed fault cases pass with no foreign adoption, duplicate owner/listener, orphan, or state corruption |
@@ -52,6 +58,202 @@ The goal is to finish the current product without adding unnecessary architectur
 | D1 | Delivery | Commit/push accepted waves | ACTIVE | each accepted source/docs wave pushed with ledger and all current evidence except the two named transient SQLite sidecars |
 
 ## 4. Current baseline evidence
+
+### 2026-08-21 sparse/artifact closure checkpoint
+
+#### W1 — Sparse model-facing results
+
+- Status: **ACCEPTED / CHECKPOINTED**.
+- Focused accepted proof: `19b125e7316942c0b200d52063b031af`.
+- No W1 reopening is authorized by later S2 work.
+
+#### W2A — Bounded artifact import / streaming
+
+- Status: **ACCEPTED / CHECKPOINTED**.
+- EOCL run: `214411ecb15d4d3a9f24f2be976d40a0`.
+- EOCL wave: `cff215da46404f6e82803c6a41b0a25d`.
+- Accepted focused proofs:
+  - `e5b0cd77cd8e44f89713370646f7b430` — formatting gate;
+  - `5f89619deb224728ad4af48791961ee4` — compile/check gate;
+  - `aca687b6553340acaf1b268173b72f9c` — chunked body rejected after size limit without `Content-Length`;
+  - `0b4f871481d84bb5ba1e67aa7473190e` — large-file import streamed in bounded chunks;
+  - `c934ecd75a47447c9967a3f03bfb0156` — source-name fallback when target is omitted.
+- Implemented contract includes `/api/artifacts/import` plus upload begin/chunk/finish/abort, approximately 10 MiB import/upload bounds, `expected_bytes`, `expected_sha256`, MIME validation, overwrite policy, and hash guard.
+- The final W2A acceptance wave changed only `src/runtime_http/tests/import_http_tests.rs` test-harness decoding; production import semantics were unchanged.
+
+#### S2 — Artifact/resource closeout
+
+- Status: **ACCEPTED / CHECKPOINTED**.
+- Existing provenance subsystem was retained rather than replaced. Typed refs in `resources/coding-tools-mcp/coding_tools_mcp/artifact_refs.py` cover `command_output`, `provider_result`, `orchestration_proof`, `handoff_capsule`, and `build_artifact`, with the applicable owner/durability/restart/content-address/hash/locator/retrieval metadata.
+- Real producer/resource wiring was confirmed through:
+  - `resources/coding-tools-mcp/coding_tools_mcp/opencode_provider.py` for `provider_result`;
+  - `resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py` for `orchestration_proof` and `handoff_capsule`;
+  - build verification/task-state paths for content-addressed `build_artifact`;
+  - `resources/coding-tools-mcp/coding_tools_mcp/task_state.py` plus `artifact_refs.py` for retained `command_output`;
+  - `src/tool_runtime/files.rs` and `crates/webcodex-runner/src/webcodex_runner/artifacts.rs` for bounded artifact reads and native-image resource retrieval.
+- One concrete S2 defect was found and fixed before closeout: EOCL-owned `command_output` refs lost `owner_run`/`owner_wave` after command admission. The minimal accepted patch persists non-empty command ownership, derives lineage from `payload.execution_owner` with persisted-command fallback, and passes owner lineage into `command_output_artifact_ref`; non-EOCL commands remain ownerless.
+- Command-output lineage patch acceptance:
+  - run `2166c986b3b54cab8804ec8fff87a93b`;
+  - wave `165330542f8d4d8f94bc09676600c112`;
+  - proof `024374317fe644308171a9c483e29ab8` — non-EOCL/baseline command-output artifact-ref behavior;
+  - proof `60d1647c5b124e3f9d293ce71c271f7d` — EOCL owner lineage survives running state and later `command_control` poll/handoff fallback;
+  - accepted files: `artifact_refs.py`, `task_state.py`, `test_task_state_and_build.py` only.
+- `read_project_artifact` normal response remains bounded by offset/length with 32 KiB default and 64 KiB maximum response length.
+- MCP native-image retrieval uses a separate full-image bound (`MAX_MCP_IMAGE_BYTES`), requires a complete read, validates supported reported MIME against magic-sniffed actual bytes, and verifies SHA-256 of decoded bytes against the reported hash before native MCP image framing.
+- Final S2 proof-only acceptance:
+  - run `3b978ca3ccb840c1aee84bc122b2a4a6`;
+  - wave `765f375570f842f28ae5403d1f643378`;
+  - `81b347b7a6dc476f902ff786d81a18da` — real `provider_result` snapshot wiring;
+  - `42df2ec52cb44dcc8bf113261faa3414` — bounded/content-free orchestration evidence with `orchestration_proof` + `handoff_capsule` refs;
+  - `14fa1e73aa9e43f59a3e81c01c59fd22` — content-addressed workspace `build_artifact` ref;
+  - `ae76088ca17f442c80946fb735f5dc3c` — bounded `read_project_artifact` routing;
+  - `b9d779057d4341f6a7fa098117ce23ba` — complete bounded MCP-image remote read;
+  - `72170b7a8ccd451cb32ae56d6cf60f42` — untrusted/spoofed remote MIME rejection;
+  - all six final focused proofs passed; final integrity check passed with `checked=99`, head hash `5390ad5c46e8f2b721c12ae13fcbd904760924da26af1508dba28683191b8c51`;
+  - no source or documentation files changed in the final proof-only wave.
+- The first final-proof invocation failed only because the command environment lacked `resources/coding-tools-mcp` on Python import path (`ModuleNotFoundError: coding_tools_mcp`). It was classified as an oracle-invocation/environment error and replanned from the package root; no product assertion had failed.
+- Earlier broad `npm run test` failures (`EPERM` temp cleanup and source-bundle detection of private runtime state) were outside S2 and were explicitly not used as S2 acceptance oracles.
+- **S3 gate:** no S3 source mutation occurred before S2 final acceptance. S3 became eligible only after run `3b978ca3ccb840c1aee84bc122b2a4a6` / wave `765f375570f842f28ae5403d1f643378` reached `CHECKPOINTED`.
+
+#### S3 / W4 — Semantic health + Semantic Repository Graph MVP
+
+- Status: **ACCEPTED / CHECKPOINTED (PROVIDER-DEGRADED)**.
+- Exact S3 scope and W4 acceptance contract were recovered from `docs/research/260820_CODING_WEB_TECHNICAL_EVALUATION_AND_IMPLEMENTATION_PLAN.md` before mutation. The phase explicitly requires semantic-provider health auditing without weakening origin/credential controls, plus a small read-only Semantic Repository Graph that remains useful under safe text fallback.
+- The existing native semantic binding was not modified or bypassed. Current truth remains `NATIVE_LSP_BINDING_NOT_CONFIGURED`, with missing binding origin and credential-file configuration; no native-provider live activation is claimed by this phase.
+- New internal graph implementation: `resources/coding-tools-mcp/coding_tools_mcp/semantic_graph.py`.
+- The graph adds **no new public tool, endpoint, database, credential path, provider binding, or authority**; smart-v3 remains an 8-tool public MCP surface.
+- V1 records are derived incrementally from the semantic/text localization results already produced by `prepare_coding_context` and carry the applicable file/symbol/definition/reference/import/test association, content/source identity, provider/provider-version, confidence, completeness, current/stale metadata.
+- Internal bounded APIs are:
+  - `resolve_symbols(query, budget)`;
+  - `references(symbol_id, budget)`;
+  - `related_tests(symbol_id, budget)`;
+  - `impact(seed_symbols, depth, budget)`.
+- Safety/boundedness properties:
+  - only safe project-relative paths are indexed;
+  - source identity is SHA-256 bound; small files can use a complete file identity while large files use a bounded prefix/suffix sample and are explicitly `partial` / currentness-uncertain rather than falsely complete;
+  - text fallback remains usable but is marked lower-confidence/partial;
+  - changed source is marked stale and is never reported current;
+  - incremental refresh replaces touched-path records and retains untouched records;
+  - each stored record remembers the **exact per-file read budget** used to derive its sampled identity, so stale refresh cannot falsely compare against a different sample window;
+  - the in-memory graph has a hard lifetime cap of `MAX_GRAPH_RECORD_BUDGET=200`; oldest derived records are evicted first, and eviction contributes to dropped/partial evidence rather than allowing unbounded accumulation.
+- `resources/coding-tools-mcp/coding_tools_mcp/context_tools.py` lazily owns the internal graph and projects only **content-free graph status** into `composite_read.execution.localization.semantic_graph`; existing focused proof confirms raw query/symbol text is not added to the model-facing composite execution metadata.
+- Acceptance review deliberately rejected the first two otherwise-green waves before final acceptance:
+  1. wave 1 exposed a false-stale bug where later large files could be refreshed with a larger hash sample budget than the one used at indexing time;
+  2. wave 2 exposed lifetime accumulation because the record cap initially bounded each update but not the whole in-memory graph.
+  Both defects were fixed with discriminating regressions before acceptance; no reset/rollback of the valid S3 work was used.
+- Final S3/W4 acceptance:
+  - run `c074433369cd42e1b60fb66c21454980`;
+  - wave `f02b50c4268b4ee19a0d0dfe794800bd`;
+  - proof fingerprint `f84267fcebd2da613d85038f4f7193fd81ed9b29d54c500f86ce8b8b85d15955`;
+  - proof `cd100e39667444a89a5a77cc8bcc1661` — semantic graph suite covering degraded fallback, references/tests/impact, stale detection, incremental reuse, bounded sampled hashes, exact reduced-remaining-budget refresh, and 240-record lifetime-cap regression;
+  - proof `438ecaec03df482c9e666eb434bdd9ca` — `prepare_coding_context` semantic + text-fallback graph integration and no-query-leakage invariant;
+  - proof `eb7f022e05524075a6d998ace55a2db2` — native binding remains defaults-off and fails closed for invalid/unconfigured binding;
+  - all three final focused proofs passed;
+  - final integrity check passed with `checked=93`, head hash `293e9a9d5ee098ecb501c1144b88e696d2ca8afa4170aa8e9841a0cdd9f7d92e`.
+- Accepted file receipts:
+  - `resources/coding-tools-mcp/coding_tools_mcp/semantic_graph.py` SHA-256 `2d9167999bd4a3eea808f6aa9ce8483bac497f7a63d8ad4440dde633ec22c0c4`;
+  - `resources/coding-tools-mcp/tests/test_semantic_graph.py` SHA-256 `0c01c4e5ba9ef15ed800566cd2617f414e87b76650bdf14a66a0dac499e84d1c`;
+  - `resources/coding-tools-mcp/coding_tools_mcp/context_tools.py` SHA-256 `627f2073e77f5abcdadfff6091afec4c565d57fa05c193ac626881345cc92c45`;
+  - `resources/coding-tools-mcp/tests/test_task_state_and_build.py` SHA-256 `9cbc910cd406a305cd58742866f35cfa6694371f6e595eb849a65b2810128b67`.
+- **Boundary:** S3/W4 acceptance proves the graph layer works safely in provider-degraded/text-fallback mode and preserves semantic binding security. It does **not** prove native LSP activation, and it does not start S4/W5 or any later phase.
+
+#### S4 / W5 — Context Compiler + paired efficacy gate
+
+- Status: **ACCEPTED / CHECKPOINTED — KEEP_SHADOW / NO_PROMOTION**.
+- Exact W5 contract was recovered from the maintained technical plan before mutation. The compiler contract is deterministic and receives only supplied evidence: `compile_context(task_intent, repo_revision, token_budget, current_evidence, already_seen, requested_scope)`.
+- New internal implementation: `resources/coding-tools-mcp/coding_tools_mcp/context_compiler.py`; focused coverage: `resources/coding-tools-mcp/tests/test_context_compiler.py`; shadow integration remains in `context_tools.py`.
+- The compiler adds no public tool/schema/endpoint and does not scan the repository itself. It compiles bounded sections for primary files/symbols, entry points, relations, relevant tests/config/rules, related dirty diff, uncertainty, omitted candidates/reasons, token estimate, completeness, and stable fingerprints.
+- Selection semantics are fail-closed: safe scope filtering, file/symbol dedupe, `already_seen` suppression, stale semantic omission, conservative token budgeting, and explicit omitted reasons.
+- Treatment gate is `CODING_TOOLS_MCP_CONTEXT_COMPILER` with only `off` and `shadow` accepted. Default is `off`; unsupported values such as `inject` or `auto` fail closed to `off`. There is no auto-injection path in the accepted source.
+- `prepare_coding_context` in shadow mode runs the compiler only over evidence already collected by the existing prepare flow, stores the full compiled packet on internal runtime state, and exposes only content-free fingerprint/count/status metadata. Focused proof confirms selected model-facing `files` and `selected_paths` are unchanged between `off` and `shadow`.
+- ChatWeb Sol rejected the first otherwise-green source wave because `input_sha256` initially bound only selected/included evidence. The accepted replan binds `input_sha256` to a canonical SHA-256 of the complete supplied `current_evidence`, so even evidence omitted by budget/scope remains audit-bound while `compiled_sha256` continues to describe the actual compiled output.
+- Source/MVP acceptance:
+  - run `9d1698e4267e4d118144fac810dbe4aa`;
+  - wave `1bb808f20b5741be8fd5cd91b0a76a85`;
+  - proof fingerprint `7049cefba006b9cc95ddecec466d0cce030fd3b1198c6e436f949f2af64c8381`;
+  - proof `a4b9c83e3adb473e9f8eb34c452f60bf` — compiler suite, including budget/dedupe/scope/already-seen, stale/uncertainty, rules/config/diff, stable fingerprints, treatment fail-closed, shadow non-injection, and complete-input fingerprint regression;
+  - proof `888c6774db834719a0d9dc7c07e7c2ab` — S3 semantic graph regression;
+  - proof `d26113ebdc7a49aca861a9bc94ef83ae` — existing prepare-context semantic/fallback integration regression;
+  - integrity after source acceptance: `checked=78`, head hash `9e2721ccdc23bb88355aae2f75e01460e06ff8859ffe2593ec1357f4f688173d`.
+- Accepted source file receipts:
+  - `resources/coding-tools-mcp/coding_tools_mcp/context_compiler.py` SHA-256 `46094edd29ca54c1268330428cf221cfde91bb07581cb4093d99a76bd3692499`;
+  - `resources/coding-tools-mcp/tests/test_context_compiler.py` SHA-256 `358080409230120d68c4bda034cf5c798dfa0061b1340cea226fbc711eca6110`;
+  - `resources/coding-tools-mcp/coding_tools_mcp/context_tools.py` SHA-256 `5b5e33a2b5b172c576013252980a4dac685f820555a7425b52d34f8384f170df`.
+- The required efficacy gate used the existing model-free ledger evaluator; no new evaluator and no synthetic/benchmark/replay work was created to manufacture evidence.
+- Real-ledger evaluation:
+  - run `b204662b3c8748bba2bfbe3f02de1ea6`;
+  - wave `2165d6ccafb94ef4b5ce05ee6984b18d`;
+  - baseline policy `chatweb_mcp` vs candidate `context_compiler_shadow`;
+  - thresholds: minimum 10 representative pairs and 4 task classes;
+  - real ledger runs observed: `794`;
+  - pair-tagged runs scanned: `0`;
+  - comparable pair count: `0`;
+  - accepted pair count: `0`;
+  - task-class count: `0`;
+  - evaluator status: `hold`;
+  - Pareto status: `indeterminate_no_pairs`;
+  - hold reasons: `insufficient_paired_results`, `insufficient_task_class_diversity`;
+  - routing-placement regret: `indeterminate_no_comparable_pairs` / `no_comparable_pairs`;
+  - total monetary cost: incomplete, reason `controller_cost_unobserved`;
+  - `automatic_activation=false`.
+- Evaluation proofs:
+  - `afbba58874f54b138040b087edc841ff` — real current-ledger evaluation;
+  - `545d02d13ba74b10807032585e8fa363` — zero-pair evaluation remains indeterminate/fail-closed;
+  - `acdd074415bb4b3395f298c583bd574d` — missing total controller cost remains unknown rather than zero and blocks promotion;
+  - proof fingerprint `6555d22e18322e78bfcf1b637ca6bece06b59cabbbceb274ef2124098d48c47b`;
+  - final evaluation integrity: `checked=28`, head hash `59c92edd2f339e4fda7505fdee040e04dd88cd1f5687ed01988eea133a72a402`;
+  - no files changed in the evaluation wave.
+- **Accepted decision:** `KEEP_SHADOW / NO_PROMOTION`. This is a successful fail-closed efficacy decision, not an incomplete implementation. Auto-injection remains unavailable until future representative comparable pairs independently satisfy the W5 efficacy gate.
+- **Boundary:** S4/W5 acceptance does not start S5/W6 or authorize mutation-coordinator changes.
+
+#### S5 / W6 — Single-Checkout Mutation Coordinator
+
+- Status: **ACCEPTED / CHECKPOINTED — TERMINAL `COMPLETED`**.
+- Exact W6 contract was recovered from `docs/research/260820_CODING_WEB_TECHNICAL_EVALUATION_AND_IMPLEMENTATION_PLAN.md` before S5 mutation. The accepted design deliberately **augments the existing EOCL + durable SQLite workspace write-fence authority** rather than creating a second coordinator, alternate checkout authority, worktree promotion system, or source-owner subsystem.
+- Existing authority retained: one global workspace write fence with fencing tokens, EOCL run/wave state, lease expiry/renewal/recovery, terminal revoke, candidate proposal-only profiles, and the smart-v3 public MCP surface.
+- Final S5 source/test surface:
+  - `resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py`;
+  - `resources/coding-tools-mcp/coding_tools_mcp/server.py`;
+  - `resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py`;
+  - `resources/coding-tools-mcp/coding_tools_mcp/context_tools.py`;
+  - `resources/coding-tools-mcp/tests/test_orchestration_control.py`;
+  - `resources/coding-tools-mcp/tests/test_efficiency_runtime.py`.
+- Final overall S5 source delta: **6 files changed, 379 insertions, 10 deletions**; scoped `git diff --check` passed.
+- Mutation lease now audit-binds `owner_session`, `source_fingerprint`, `runtime_worktree_fingerprint`, `protected_paths`, `existing_dirty_source_paths`, `started_at`, and lease `state`, while preserving the existing run/wave/base-head/fencing-token/allowed-path authority.
+- Pre-write admission is fail-closed before source mutation and checks:
+  - active EOCL/write-fence ownership and lease expiry;
+  - execution-context-bound owner session;
+  - base/source/runtime fingerprint drift;
+  - foreign dirty source paths relative to the lease snapshot;
+  - exact requested patch/move/directory paths against allowed scope;
+  - protected roots before mutation;
+  - candidate-proposed paths again at the MCP authority boundary.
+- Typed safety failures include `WRITE_SESSION_MISMATCH`, `FOREIGN_DIRTY_SOURCE`, `SOURCE_DRIFT`, `PROTECTED_PATH_WRITE`, existing `WRITE_SCOPE_VIOLATION`, and candidate-boundary `CANDIDATE_SCOPE_VIOLATION`; violations replan/fail closed rather than reset, restore, rebase, merge, or silently transfer authority.
+- Protected-root matching is case-insensitive via `casefold()`, preventing Windows variants such as `.GIT/config` from bypassing the protected-path fence.
+- `owner_session` is bound to the Execution Hub client record identity when present, including the execution-context dimension, so reconnect recovery cannot silently duplicate a logical writer session.
+- Persisted `write_lease_acquired` events contain the new lease metadata and recovery reconstructs it; terminalization records released state and leaves no active source fence.
+- Source identity continues to exclude `.coding-tools` runtime/evidence churn, so ledger/projection activity does not falsely contend with source ownership.
+- Candidate/reviewer authority remains proposal/read-only with `checkout_write=False`, `direct_tool_access=False`, `candidate_only=True`, and `authoritative_write=False`; exact patches are still applied only by the MCP-owned source-write path after admission.
+- Public surface remains **smart-v3 with exactly 8 tools**; S5 adds no ninth tool, endpoint, provider transport, or hidden mutation bypass.
+- Wave 1 was correctly **not accepted**:
+  - run `f2bda257239346f089ccf073f38d4790`;
+  - wave `485fabde2223430bb42408adcc48b406`;
+  - proof `2b4df408c0ea4b539a6098fccfa15c99`;
+  - broad focused suite result: **1 failed / 23 passed**;
+  - EOCL revoked the write lease and moved to `REPLAN` before further mutation.
+- Fresh-wave diagnosis isolated that one failure to an unrelated hard-coded tool-contract SHA assertion in `EfficiencyRuntimeTests::test_tool_contract_metadata_is_stamped_everywhere`: expected historical hash `bd5c6810890b5383da37c234e66c76256727b5b86b2a2b84cad1022939649a5c`, runtime current hash `e94245deec7c7988863275294174c14d2d0d4ec20c2a4eda1ab61e87f77d9114d`. S5 did not modify the public tool-schema/contract files, and this stale assertion was intentionally **not edited merely to manufacture a full-suite green**.
+- ChatWeb acceptance review then found and corrected two genuine S5 hardening details before closure: Windows case-folded protected-root matching and execution-context-bound `owner_session`, with a regression for uppercase protected-root bypass.
+- Final S5/W6 acceptance:
+  - run `f2bda257239346f089ccf073f38d4790`;
+  - fresh replan wave `779af9e5182a4fafbec31ac4dfee7521`;
+  - focused acceptance result: **19/19 PASS** across orchestration-control, source-identity, smart-surface, and Codex-bridge regressions;
+  - proof `657e21d54803457688e85f8d506f2a98`;
+  - proof fingerprint `65cfcaf39b87e63221ad873f4e0c1b1c676e531c13f31d42af7f0c7bf47fb2fc`;
+  - focused proof bound runtime source fingerprint `7b35c0050e8a9ea0d96748104dea6336376f18c00c88f799f37d9fb01f29ea48`;
+  - EOCL audit was clean, the write lease was released, no active workspace fence remained, and the accepted artifact was recorded;
+  - explicit ChatWeb accept terminalized the run/wave as `COMPLETED`.
+- **Known debt deliberately preserved:** the broad efficiency suite still contains the stale hard-coded tool-contract SHA assertion above. It is not counted as an S5 product regression and is not represented as green in this document.
+- **Boundary:** S5/W6 acceptance proves single-checkout mutation ownership/fencing and reconnect-safe source admission using the existing authority. It does not start S6, does not authorize a new trust boundary or provider, and does not imply release/tag/publish. No commit, push, release, tag, or publish was performed for this S5 wave.
 
 ### Already closed before this plan
 
@@ -65,8 +267,10 @@ The goal is to finish the current product without adding unnecessary architectur
 
 - Automatic non-deterministic routing: OFF / deterministic fail-closed.
 - Auto-handoff: OFF.
+- Context Compiler auto-injection: **OFF / unavailable**. Accepted modes are only `off` and `shadow`; S4/W5 result is `KEEP_SHADOW / NO_PROMOTION` because the real ledger has no comparable representative treatment pairs yet.
+- Single-checkout source mutation: **one EOCL/SQLite workspace write-fence authority only**. S5/W6 is accepted; session/source/dirty/allowed/protected-path violations fail closed and candidate/reviewer lanes remain no-write.
 - Paid OpenCode Flash terminal canary: not authorized by this plan.
-- Native semantic localization: currently unavailable with `NATIVE_LSP_BINDING_NOT_CONFIGURED`; runtime reports missing binding origin and credential-file configuration. Bounded text fallback remains functional.
+- Native semantic localization remains unavailable with `NATIVE_LSP_BINDING_NOT_CONFIGURED`; runtime reports missing binding origin and credential-file configuration. **S3/W4 graph is accepted in provider-degraded/text-fallback mode only** and is not evidence of native semantic-provider live activation.
 
 ## 5. P0.1 — Repository/runtime-evidence hygiene
 
@@ -430,6 +634,8 @@ Current runtime status: `NATIVE_LSP_BINDING_NOT_CONFIGURED`.
 
 Current binding report indicates missing origin and credential-file configuration. Do not invent credentials or expose secrets.
 
+The accepted S3/W4 graph layer does not change this boundary: it is intentionally useful with bounded text fallback and must not be treated as evidence that the native semantic provider is configured or live.
+
 Evaluate before implementing:
 
 1. identify the exact provider/binding configuration required by the current runtime;
@@ -440,6 +646,50 @@ Evaluate before implementing:
 6. if configured but benefit is not material, record `KEEP_TEXT_FALLBACK` and leave the correctness path unchanged.
 
 ## 12. Progress log
+
+### 2026-08-21 — S5 / W6 Single-Checkout Mutation Coordinator accepted
+
+- Exact W6 lease/admission contract was recovered before mutation. Existing EOCL + durable SQLite workspace write-fence authority was augmented rather than replaced; no worktree/promotion/second-coordinator subsystem was added.
+- Lease/recovery now bind source-writer session, source/runtime fingerprints, allowed/protected paths, preexisting dirty source paths, start time, and lease state. Pre-write admission fails closed on session/base/source drift, foreign dirty paths, scope/protected-path violations, expired/foreign fences, and candidate paths outside bounded scope.
+- Candidate/reviewer lanes remain proposal/read-only and cannot directly mutate the canonical checkout; MCP still owns source application after admission. `.coding-tools` evidence churn remains outside source identity contention and smart-v3 remains exactly 8 public tools.
+- Initial run/wave `f2bda257239346f089ccf073f38d4790` / `485fabde2223430bb42408adcc48b406` was **not accepted** after proof `2b4df408c0ea4b539a6098fccfa15c99` reported 1 failed / 23 passed. EOCL revoked the write lease and required REPLAN.
+- Fresh-wave diagnosis proved the lone broad-suite failure was a stale hard-coded expected tool-contract SHA (`bd5c...` expected vs current runtime `e942...`), unrelated to S5 public-surface behavior. The assertion was deliberately left unchanged rather than edited for false-green status.
+- Final acceptance review added two genuine hardening details—case-folded protected roots and Execution-Hub-record-bound `owner_session`—and a regression for uppercase `.GIT` bypass.
+- Fresh replan wave `779af9e5182a4fafbec31ac4dfee7521` passed focused acceptance **19/19** with proof `657e21d54803457688e85f8d506f2a98`, proof fingerprint `65cfcaf39b87e63221ad873f4e0c1b1c676e531c13f31d42af7f0c7bf47fb2fc`, and runtime source fingerprint `7b35c0050e8a9ea0d96748104dea6336376f18c00c88f799f37d9fb01f29ea48` bound into the proof summary.
+- Final source delta: 6 files, 379 insertions, 10 deletions; `git diff --check` clean. EOCL audit found no violation, released the write lease, recorded the accepted artifact, and explicit ChatWeb acceptance terminalized the run/wave as `COMPLETED`.
+- No commit, push, tag, release, or publish was performed. S6 remains blocked until its exact maintained contract is recovered.
+
+### 2026-08-21 — S4 / W5 Context Compiler accepted; efficacy gate keeps it shadow-only
+
+- Exact W5 compiler/evaluation contract was recovered before mutation; no S5/W6 behavior was inferred or started.
+- Implemented deterministic internal `compile_context(...)` with budget, dedupe, scope, already-seen suppression, stale omission, rules/config/diff selection, uncertainty, omitted-reason accounting, and stable fingerprints.
+- Treatment is deliberately `off|shadow` only; invalid/`inject`/`auto` values fail closed and model-facing selected context remains unchanged in shadow mode.
+- ChatWeb Sol rejected one green source wave because the input fingerprint did not bind evidence omitted from the compiled output. The accepted replan hashes the complete supplied `current_evidence` into `input_sha256`, with a regression proving omitted-evidence changes remain audit-visible.
+- Source acceptance: run `9d1698e4267e4d118144fac810dbe4aa`, wave `1bb808f20b5741be8fd5cd91b0a76a85`, proofs `a4b9c83e3adb473e9f8eb34c452f60bf`, `888c6774db834719a0d9dc7c07e7c2ab`, `d26113ebdc7a49aca861a9bc94ef83ae` -> `CHECKPOINTED`.
+- Real-ledger paired evaluation used baseline `chatweb_mcp` vs treatment `context_compiler_shadow`, thresholds 10 representative pairs / 4 task classes, and did not create synthetic/replay work. Across 794 ledger runs there were zero pair-tagged comparable treatment runs, so pair count and task-class count were both zero; cost was also incomplete because controller cost is unobserved.
+- Evaluation acceptance: run `b204662b3c8748bba2bfbe3f02de1ea6`, wave `2165d6ccafb94ef4b5ce05ee6984b18d`, proofs `afbba58874f54b138040b087edc841ff`, `545d02d13ba74b10807032585e8fa363`, `acdd074415bb4b3395f298c583bd574d` -> `CHECKPOINTED`.
+- Final S4/W5 decision: **KEEP_SHADOW / NO_PROMOTION**. Auto-injection remains unavailable until future representative comparable evidence clears the efficacy gate.
+
+### 2026-08-21 — S3 / W4 Semantic Repository Graph MVP accepted
+
+- Exact S3/W4 scope was recovered before mutation; no later-phase semantics were inferred from the S2 gate alone.
+- Implemented one internal read-only bounded `SemanticRepositoryGraph` derived from existing semantic/text localization results; no public ninth tool, endpoint, DB, provider authority, credential path, or origin bypass was introduced.
+- The graph supports bounded symbol resolution, references, related tests, and impact lookup; records are source-hash bound and carry provider/version/confidence/completeness plus explicit current/stale semantics.
+- Large-file identity remains bounded/partial, text fallback remains lower-confidence/partial, and model-facing integration exposes only content-free status.
+- ChatWeb Sol rejected two green-but-incomplete waves before final acceptance: first for false stale due mismatched refresh sample budget, then for lifetime record accumulation. Both received discriminating regressions and were fixed without widening scope.
+- Final acceptance: run `c074433369cd42e1b60fb66c21454980`, wave `f02b50c4268b4ee19a0d0dfe794800bd`, proofs `cd100e39667444a89a5a77cc8bcc1661`, `438ecaec03df482c9e666eb434bdd9ca`, `eb7f022e05524075a6d998ace55a2db2`, integrity `checked=93` -> `CHECKPOINTED`.
+- Native semantic provider remains `NATIVE_LSP_BINDING_NOT_CONFIGURED`; this phase is accepted in provider-degraded/text-fallback mode and does not claim native provider activation.
+- S4/W5 and later phases remained gated until their exact maintained contract was recovered.
+
+### 2026-08-21 — W1/W2A/S2 sparse/artifact closeout checkpoint
+
+- W1 remains **ACCEPTED / CHECKPOINTED** with focused proof `19b125e7316942c0b200d52063b031af`.
+- W2A is now explicitly **ACCEPTED / CHECKPOINTED** at run `214411ecb15d4d3a9f24f2be976d40a0`, wave `cff215da46404f6e82803c6a41b0a25d`; the accepted matrix covers compile/format plus over-limit rejection, bounded streaming, and target fallback.
+- S2 found one real provenance gap in EOCL-owned retained command output: `owner_run`/`owner_wave` were dropped after command admission. The minimal patch in `artifact_refs.py` + `task_state.py` with focused regression coverage was accepted at run `2166c986b3b54cab8804ec8fff87a93b`, wave `165330542f8d4d8f94bc09676600c112`.
+- Final S2 proof-only closeout passed 6/6 focused proofs and was **ACCEPTED / CHECKPOINTED** at run `3b978ca3ccb840c1aee84bc122b2a4a6`, wave `765f375570f842f28ae5403d1f643378`; no file changes occurred in that final wave.
+- S2 acceptance covers real producer/ledger/build refs, bounded project-artifact reads, complete bounded image reads, MIME spoof rejection, and source-inspected SHA-256 verification before MCP native-image framing.
+- Broad root-suite failures previously seen in Windows temp cleanup/source-bundle state were outside the S2 acceptance surface and were not used as S2 oracles.
+- S3 was never mutated before S2 acceptance. It opened only after the accepted S2 checkpoint, and its exact semantic-health/W4 graph scope was recovered from maintained project evidence before implementation.
 
 ### 2026-08-17 — Plan initialized
 
@@ -527,11 +777,166 @@ Evaluate before implementing:
 
 ## 13. Next action
 
-1. selectively deliver this accepted P0.2 evidence boundary while preserving unrelated concurrent source work, and include the **complete current `.coding-tools/**` deliverable tree** in the project-state commit/push; exclude only `ledger.sqlite3-shm` and `ledger.sqlite3-wal`, while retaining `ledger.sqlite3`, host-turn state, and runtime projections;
-2. execute P0.3 F1-F9, reusing exact existing deterministic/E2E coverage where sufficient and using an isolated packaged real-process harness for destructive cases that could sever the active Coding MCP control plane;
-3. update this file with per-case fault evidence, post-case ownership/listener/orphan invariants, and any minimal remediation required by a reproducible fault;
-4. freeze source and execute the exact-fingerprint RC gate, rebuilding the final NSIS artifact only after the source/test surface is frozen;
-5. evaluate representative routing evidence; if comparable accepted cohorts are insufficient or cost remains unknown, record `KEEP_DETERMINISTIC / NO_PROMOTION` rather than manufacture evidence;
-6. close semantic localization as `BLOCKED_CONFIG` unless the required external origin + credential-file binding exists, and benchmark it only if that binding is actually available;
-7. record the true reboot/logon persistence boundary as external/unverified unless it is independently executed and observed;
-8. make the final selective delivery commit/push including the complete `.coding-tools/**` history/evidence tree except the two named transient SQLite sidecars; do not create a release/tag/publish artifact without separate authorization.
+1. recover the exact maintained **S6 / next closure-phase** definition and acceptance contract from the canonical technical plan before any S6 source mutation; S5/W6 is accepted/terminal `COMPLETED` and must not be broadened implicitly into a new authority or trust boundary;
+2. preserve the accepted S5 one-writer design: reuse the existing EOCL/SQLite workspace write-fence authority, keep candidate/reviewer lanes no-write, and treat source/session/foreign-dirty/scope/protected-path drift as fail-closed REPLAN conditions;
+3. preserve Context Compiler as internal/default-off/shadow-only until future real representative paired evidence independently clears its efficacy gate; do not manufacture treatment pairs and do not add auto-injection merely because the source exists;
+4. selectively deliver the accepted closure evidence boundary while preserving unrelated concurrent source work, and include the **complete current `.coding-tools/**` deliverable tree** in any project-state commit/push; exclude only `ledger.sqlite3-shm` and `ledger.sqlite3-wal`, while retaining `ledger.sqlite3`, host-turn state, and runtime projections;
+5. execute P0.3 F1-F9 where independent of the next closure phase, reusing exact existing deterministic/E2E coverage where sufficient and using an isolated packaged real-process harness for destructive cases that could sever the active Coding MCP control plane;
+6. update this file with per-case fault evidence, post-case ownership/listener/orphan invariants, and any minimal remediation required by a reproducible fault;
+7. freeze source and execute the exact-fingerprint RC gate, rebuilding the final NSIS artifact only after the source/test surface is frozen;
+8. evaluate representative routing evidence; if comparable accepted cohorts are insufficient or cost remains unknown, record `KEEP_DETERMINISTIC / NO_PROMOTION` rather than manufacture evidence;
+9. close native semantic localization as `BLOCKED_CONFIG` unless the required external origin + credential-file binding exists, and benchmark it only if that binding is actually available;
+10. record the true reboot/logon persistence boundary as external/unverified unless it is independently executed and observed;
+11. make the final selective delivery commit/push including the complete `.coding-tools/**` history/evidence tree except the two named transient SQLite sidecars; do not create a release/tag/publish artifact without separate authorization.
+
+## 14. 2026-08-21 S6-S9 closure addendum — authoritative current closure state
+
+> **Authority note:** this addendum records the later S6-S9 work completed after Sections 3, 4, 12 and 13 were written. For the S6-S9 closure-phase status and the immediate next action, this section **supersedes older statements above that say S6 is not started, blocked pending contract recovery, or is the next phase**. Earlier sections remain intact as chronological evidence. This addendum does not supersede the independent P0.3/P1 release-candidate/persistence gates.
+
+### 14.1 Final S1-S9 closure matrix
+
+| Stage | Workstream | Final decision | Evidence / boundary |
+|---|---|---|---|
+| W1 | Sparse model-facing results | **ACCEPTED / CHECKPOINTED** | focused proof `19b125e7316942c0b200d52063b031af` |
+| W2A | Bounded artifact import/streaming | **ACCEPTED / CHECKPOINTED** | run `214411ecb15d4d3a9f24f2be976d40a0`, wave `cff215da46404f6e82803c6a41b0a25d` |
+| S2 | Artifact/resource closeout | **ACCEPTED / CHECKPOINTED** | final run `3b978ca3ccb840c1aee84bc122b2a4a6`, wave `765f375570f842f28ae5403d1f643378` |
+| S3 / W4 | Semantic health + repository graph | **ACCEPTED / CHECKPOINTED — PROVIDER-DEGRADED** | run `c074433369cd42e1b60fb66c21454980`, wave `f02b50c4268b4ee19a0d0dfe794800bd`; native provider remains unconfigured |
+| S4 / W5 | Context Compiler + efficacy gate | **ACCEPTED / CHECKPOINTED — KEEP_SHADOW / NO_PROMOTION** | source run `9d1698e4267e4d118144fac810dbe4aa`; efficacy run `b204662b3c8748bba2bfbe3f02de1ea6`; zero comparable representative pairs |
+| S5 / W6 | Single-checkout mutation coordination | **ACCEPTED / CHECKPOINTED — COMPLETED** | run `f2bda257239346f089ccf073f38d4790`, final wave `779af9e5182a4fafbec31ac4dfee7521`, 19/19 focused PASS |
+| S6 / W7 | Capability policy + Secret Broker + isolated-worker gate | **ACCEPTED / CHECKPOINTED — PRIVILEGED WORKER FAIL-CLOSED** | run `5e7915c474714154b7ac0f89a43f741d`, wave `1f74ab333f94410da7d263ddc101516b`, 6/6 focused proofs PASS; no verified full-isolation backend exists, so worker remains blocked |
+| S7 / W9/W10/W11/W13 | Content-address foundations + Trace Context + MCP-2026/task isolation + process lifecycle | **ACCEPTED / CHECKPOINTED** | run `57807dae8bf94b578d78ab96d7f3b135`, final wave `21a29a1b540d4d99a43676293ee6cf3f`; broad `npm run test` PASS |
+| S8 / W8 | Computer Use | **DEFERRED / GATE-CLOSED — ACCEPTED DECISION** | no first-class bounded Computer Use executor or concrete product consumer; no false privileged plane was created |
+| S8 / W12 | Reverse relay/device lease | **DEFERRED / GATE-CLOSED — ACCEPTED DECISION** | current device/tunnel ownership is fail-closed, but no project grant + expiring lease + reconnect epoch/token + explicit revocation contract exists; current scope remains current-device/local-registry |
+| S9 / W14 | Solution-shadow evaluation | **ACCEPTED / CHECKPOINTED — SHADOW-ONLY / NO PROMOTION** | final proof run `4fb70ab0823148af83ff006f6203cb57`, wave `528e57a47d6a4f348eb62b678a4ea474`, 21/21 solution-economics tests PASS |
+| S9 / W15 | External A2A interoperability | **DEFERRED / GATE-CLOSED — ACCEPTED DECISION** | exact source audit found no A2A/Agent Card/external A2A consumer; internal polling/websocket/QUIC runner protocols are not treated as A2A |
+
+**Closure interpretation:** the **S1-S9 implementation/control program is closed for the approved baseline**. “Closed” means every stage has either (a) accepted implementation evidence or (b) an accepted fail-closed/deferred gate decision where prerequisites/use case are absent. It does **not** mean deferred privileged capabilities are released, nor does it mean the independent exact-fingerprint RC, P0.3 fault matrix, true reboot/logon persistence, delivery commit/push, tag, publish, or production release has been executed.
+
+### 14.2 S6 / W7 — Capability Policy, Secret Broker, and isolated-worker gate
+
+- Status: **ACCEPTED / CHECKPOINTED**.
+- EOCL run: `5e7915c474714154b7ac0f89a43f741d`.
+- EOCL wave: `1f74ab333f94410da7d263ddc101516b`.
+- Focused acceptance: **6/6 PASS**.
+- The accepted security work adds/uses an internal capability-policy basis, a scoped Secret Broker, and bounded child-environment construction rather than passing broad host environment/secrets into sensitive child processes.
+- Secrets remain owned at rest by the existing Electron secret store; privileged launch paths resolve only the scoped secret material needed at the process boundary. Model-facing/tool-facing state does not gain raw-secret authority.
+- The public MCP surface remains exactly **8 smart-v3 tools**; S6 introduced no ninth privileged tool and no second authorization authority.
+- Existing process-tree/job-object lifecycle controls remain lifecycle evidence only; they are not falsely promoted to filesystem/network sandbox guarantees.
+- **Critical accepted boundary:** `code_mode_worker_isolation_status()` remains **blocked/fail-closed** because no verified backend currently proves all required guarantees simultaneously: no direct filesystem, no network, no inherited environment secrets, no unrestricted subprocess, and bounded framed host-binding-only IPC. Windows Job Object and Linux Landlock partial primitives are explicitly insufficient by themselves.
+- Therefore S6 acceptance means the security foundation and fail-closed worker gate are correct. It does **not** claim an isolated arbitrary Code Mode worker is live.
+
+### 14.3 S7 / W9, W10, W11, W13 — traceability/runtime robustness closeout
+
+- Status: **ACCEPTED / CHECKPOINTED**.
+- Final run: `57807dae8bf94b578d78ab96d7f3b135`.
+- Final remediation wave: `21a29a1b540d4d99a43676293ee6cf3f`.
+- Proof fingerprint: `244c225f63362fc1c97761d00da29ec8ce948faa733104544dcc8f106d833cb0`.
+- W10 adds W3C Trace Context validation/propagation through the existing MCP request/background/Hub Proxy path. Host-generated trace IDs are 128-bit W3C-valid. Raw `tracestate` is not persisted as ledger content.
+- W11 keeps MCP-2026/stateless request behavior and task-context isolation on the existing authority boundary; no duplicate public protocol authority was added.
+- W13 retains durable managed-process admission/restart/orphan reconciliation and process-tree cleanup; acceptance does not reinterpret process lifecycle as a security sandbox.
+- W9 reuses existing content-address/hash foundations where already sufficient; no speculative standalone CAS service/store was introduced merely to satisfy a label.
+- Focused accepted proofs:
+  - `e238660db66443369d398fcc98547d7c` — Trace Context + MCP-2026, **15 pytest + 10 subtests PASS**;
+  - `38a95d27175643a2a859a706c9889ea9` — Hub Proxy trace/header behavior PASS;
+  - `5d6cc484cc1841f4aa38d1e8fc0cb4d3` — Execution Hub, **9 PASS**;
+  - `9b792bbd174d4556873afb1db524fa40` — managed process/restart, **21 PASS**;
+  - `0c1c749b00bf46468029320cd5c2d4b8` — `git diff --check` PASS.
+- Broad root verification initially reported **246/247** due to pre-existing private runtime state under `resources/coding-tools-mcp/.coding-tools`, not a Trace Context assertion failure.
+- Investigation proved the nested source-package state contained a stale misplaced `orchestration/ledger.sqlite3` (262,144 bytes; last written 2026-08-20) while the canonical root ledger remained the active multi-megabyte evidence store. The misplaced ledger had no associated WAL/SHM/journal/report set.
+- Evidence was preserved before cleanup: the misplaced ledger was copied to `.coding-tools/orchestration/recovered/misplaced-ledger-20260820T101338Z.sqlite3`, and `fc /b` proved byte-for-byte identity before the wrong-location copy/directories were removed.
+- Recovery/remediation proof IDs:
+  - `2d307ce7b6ab41f2a40af2af4e987987` — recovery directory;
+  - `24035aff1d91419f8ba29b60ad14f70b` — lossless copy;
+  - `042f81ea54904dd6bd7040458c160d11` — byte comparison;
+  - `c32961ecbcc84b6daf1ac6dedd95453a` — removal of the verified misplaced copy;
+  - `a209dccdb25b4c0daa758968408aa71a` — source-bundle guard PASS;
+  - `43adaeba58e84f15b8ee1c0769aeb917` — W10 focused re-proof PASS.
+- After recovery, **full `npm run test` exited 0** and `git diff --check` passed. The source-bundle guard remains strict; no `.gitignore` weakening or history deletion was used.
+
+### 14.4 S8 / W8 + W12 — accepted privileged-capability gate decision
+
+- Status: **ACCEPTED GATE DECISION**.
+- EOCL run: `399d5420e538444eb618fc72eb65487f`.
+- EOCL wave: `89865d70f047498f85acc318637f32aa`.
+- Proof fingerprint: `1775d099bea4e58f3f2c171f385ba286fd49b766ee96e8c934e42c4a795efa2e`.
+
+**W8 Computer Use**
+
+- Decision: **DEFERRED / GATE-CLOSED**.
+- Current Electron window/clipboard primitives are not represented as a Computer Use executor.
+- The repository does not currently provide the bounded screenshot/snapshot, click, keyboard, scroll, display/window-selection, opt-in clipboard, and sensitive-action approval policy surface required by the maintained W8 contract.
+- Credential dialogs, destructive OS controls, payment/financial flows, and secret-bearing clipboard actions therefore remain outside any automated Computer Use authority.
+- No concrete product consumer was found that justifies opening a new privileged control plane now. No fake/stub Computer Use feature was created.
+
+**W12 reverse relay/device lease**
+
+- Decision: **DEFERRED / GATE-CLOSED**.
+- Existing foundations already provide device identity/instance binding, tunnel fingerprint, workspace/device health checks, foreign/unverified-owner fail-closed behavior, recovery candidate readiness/handoff, and an independent recovery tunnel.
+- A first-class W12 authority still requires a project grant, expiring connection lease, reconnect token/epoch, stale-authority invalidation, explicit revocation, and duplicate-job prevention across reconnect.
+- Current product scope remains `current_device_only` with a local registry. Adding a few JSON fields without the full authority contract would be false security and was explicitly rejected.
+- Accepted focused proofs:
+  - `24cd169399484ebd8eb648f566a479e8` — runtime/device ownership fail-closed behavior PASS;
+  - `0f0c9c1e85824fd88514961e75302779` — recovery/tunnel foreign-owner, candidate-handoff and invalid-config fail-closed behavior PASS;
+  - `0b757c1ad41749b08e1d966316f6af24` — diff hygiene PASS.
+
+### 14.5 S9 / W14 + W15 — shadow evaluation accepted; A2A gated
+
+- Status: **ACCEPTED / CHECKPOINTED** for W14 and **ACCEPTED DEFER/GATE-CLOSED DECISION** for W15.
+- Final proof run: `4fb70ab0823148af83ff006f6203cb57`.
+- Final wave: `528e57a47d6a4f348eb62b678a4ea474`.
+- Proof fingerprint: `86b03a6d5ac4689ad8fe760cc174a23f73d7511378dbdf1c166bec5f0c41f302`.
+- Final W14 proof: `7555fc12976b494c9c40eff47c17463d` — `tests/test_solution_economics.py`, **21/21 PASS**.
+
+**W14 solution-shadow evaluation**
+
+- Existing implementation was proven sufficient; no new source mutation was required for final S9 acceptance.
+- Shadow recommendation recording is limited to eligible feature/bugfix workflows and the active wave, and is rejected after the first `write_lease_acquired` event.
+- Recommendation IDs are idempotent for identical evidence and fail closed on conflicting reuse.
+- Stored recommendation/evaluation fields are bounded/content-free; patch/touched-surface evidence uses counts/identities rather than source content.
+- `solution_shadow_run_report` reconstructs the accepted outcome and explicitly compares recommendation-estimated surfaces against the actual touched surface while preserving source-state/proof lineage.
+- Policy fields remain `automatic_policy_activation=false`, `production_behavior_changed=false`, `shadow_only=true`, and `p5_automatic_start=false`.
+- Representative provenance remains required for predictive promotion evidence; benchmark/synthetic/unlabeled evidence cannot promote production behavior.
+- The accepted behavior is therefore **SHADOW-ONLY / NO PROMOTION**, consistent with the S4/W5 efficacy decision.
+
+**W15 external A2A interoperability**
+
+- Decision: **DEFERRED / GATE-CLOSED**.
+- Exact source search for A2A/Agent Card/`.well-known` A2A/media-type artifacts found no concrete external A2A consumer or first-class A2A integration.
+- Existing `polling-v1`, `websocket-v1`, and `quic-v1` agent/runner protocol versions are internal runner transport/versioning and are **not** claimed as W15 external A2A interoperability.
+- No speculative Agent Card, cross-runtime agent mesh, second authority, or compatibility layer was created solely to mark W15 complete.
+
+### 14.6 Current intentional gates after S9
+
+The following are deliberate, evidence-backed gates and must not be reinterpreted as missing unfinished coding work:
+
+1. **Context Compiler auto-injection:** OFF. S4/W5 remains `KEEP_SHADOW / NO_PROMOTION` until real comparable representative pairs clear the efficacy gate.
+2. **Automatic non-deterministic routing/policy promotion:** OFF unless representative accepted evidence satisfies the maintained promotion rules.
+3. **Native semantic provider:** `NATIVE_LSP_BINDING_NOT_CONFIGURED`; S3 graph remains valid in provider-degraded/text-fallback mode.
+4. **General isolated Code Mode worker:** BLOCKED/FAIL-CLOSED until one backend proves all W7 isolation guarantees; Job Object/Landlock partial guarantees are insufficient.
+5. **Computer Use:** W8 DEFERRED/GATE-CLOSED until there is a concrete consumer plus bounded action surface and sensitive-action policy.
+6. **First-class remote reverse-relay/device lease:** W12 DEFERRED/GATE-CLOSED until project-grant/expiry/reconnect/revocation semantics and a concrete remote-device use case exist.
+7. **External A2A:** W15 DEFERRED/GATE-CLOSED until a concrete external consumer exists.
+8. **True reboot/logon persistence:** still external/unverified; current-session Scheduled Task evidence must not be upgraded to reboot/logon proof.
+9. **P0.3 production Recovery fault matrix:** remains a separate release-hardening workstream; destructive cases must use the isolated packaged harness where the active control plane could be severed.
+10. **Exact-fingerprint RC/release:** not executed by S1-S9 closure. A new exact-HEAD final package/installer proof is required after source/docs freeze if release acceptance is requested.
+
+### 14.7 Delivery state for this closure session
+
+- The S6-S9 source/proof/control work above was completed without a release/tag/publish action.
+- **No commit or push was performed in the S6-S9 closure session described by this addendum.** This is intentional because no separate commit/push instruction was issued during this continuation.
+- Any later delivery must include the complete current `.coding-tools/**` evidence/history tree except exactly `.coding-tools/orchestration/ledger.sqlite3-shm` and `.coding-tools/orchestration/ledger.sqlite3-wal`.
+- The canonical `.coding-tools/orchestration/ledger.sqlite3` remains mandatory delivery evidence. The recovered misplaced ledger under `.coding-tools/orchestration/recovered/` is also historical evidence and must not be silently dropped.
+- Heavy local Excel/test artifacts remain local where they are test-only and are not part of code/history delivery.
+
+## 15. Authoritative next action after S9 closure
+
+The former Section 13 list is historical for the pre-S6 state. The current next-action policy is:
+
+1. **Do not reopen S1-S9 merely for architecture polishing.** The closure program is terminal for the approved baseline, with the explicit gates in Section 14.6.
+2. Continue collecting **real representative paired evidence** during normal engineering work for W5/routing economics; do not manufacture synthetic pairs for promotion.
+3. Reopen a gated capability only when its named prerequisite becomes real: verified full-isolation backend (W7 worker), concrete Computer Use consumer + policy (W8), concrete remote-device lease use case + full lease authority (W12), external A2A consumer (W15), or native semantic binding configuration (P2.1).
+4. If the immediate goal is **release hardening**, continue the independent P0.3 Recovery fault matrix and then freeze source for the exact-fingerprint P1.1 RC gate. Do not infer this work as already complete from S1-S9 acceptance.
+5. If the immediate goal is **delivery to GitHub**, run the delivery guard and commit/push the accepted source/docs/evidence boundary, including all required `.coding-tools/**` history except the two transient SQLite sidecars. Do not create a release/tag/publish artifact unless separately authorized.
+6. Keep true reboot/logon persistence explicitly external/unverified until it is independently executed and observed by a control topology capable of surviving that transition.
+
+**Terminal closure statement:** as of 2026-08-21, **S1-S9 are closed for the current approved baseline**. The remaining items are explicit evidence/configuration/use-case/release gates, not hidden unfinished S6-S9 implementation. No release, tag, publish, commit, push, runtime restart, or deployment is claimed by this statement.

@@ -514,7 +514,7 @@ class TaskStateStore:
                 return
             if not terminal_orchestration and projected_wave and str(owner_wave_id or "") != projected_wave:
                 return
-            state["current_command"] = {
+            current_command = {
                 "command": _text(command, 4000),
                 "kind": classify_command(command),
                 "session_id": session_id,
@@ -522,6 +522,11 @@ class TaskStateStore:
                 "status": "running",
                 "started_at": utc_now(),
             }
+            if owner_run_id:
+                current_command["owner_run"] = _text(owner_run_id, 256)
+            if owner_wave_id:
+                current_command["owner_wave"] = _text(owner_wave_id, 256)
+            state["current_command"] = current_command
             self._event(state, "command_started", {"command": _text(command, 500), "session_id": session_id})
             self._write(state)
 
@@ -600,7 +605,6 @@ class TaskStateStore:
     def _record_command_payload(self, state: dict[str, Any], command: str, payload: dict[str, Any]) -> None:
         status = str(payload.get("status", ""))
         session_id = str(payload.get("session_id", ""))
-        artifact_ref = command_output_artifact_ref(payload)
         current = state.get("current_command")
         if not isinstance(current, dict) or (session_id and current.get("session_id") != session_id):
             current = {
@@ -610,6 +614,18 @@ class TaskStateStore:
                 "status": status or "running",
                 "started_at": utc_now(),
             }
+        execution_owner = payload.get("execution_owner") if isinstance(payload.get("execution_owner"), dict) else {}
+        owner_run = _text(execution_owner.get("run_id") or current.get("owner_run"), 256)
+        owner_wave = _text(execution_owner.get("wave_id") or current.get("owner_wave"), 256)
+        artifact_ref = command_output_artifact_ref(
+            payload,
+            owner_run=owner_run,
+            owner_wave=owner_wave,
+        )
+        if owner_run:
+            current["owner_run"] = owner_run
+        if owner_wave:
+            current["owner_wave"] = owner_wave
         if artifact_ref is None and isinstance(current.get("artifact_ref"), dict):
             artifact_ref = copy.deepcopy(current["artifact_ref"])
         current["status"] = status or ("failed" if payload.get("ok") is False else "exited")

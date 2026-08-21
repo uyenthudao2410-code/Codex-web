@@ -44,6 +44,7 @@ from .controller_usage_ingress import active_controller_usage_context, controlle
 from .live_control import control_presence_projection, live_control_snapshot
 from .operations_analytics import operations_analytics
 from .tool_schema import tool_annotations
+from .trace_context import parse_trace_context
 from .transport_http import (
     STATELESS_HTTP_2026_ENV,
     HTTPSessionManager,
@@ -1013,6 +1014,12 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
     ) -> dict[str, Any] | None:
         runtime = self.runtime
         try:
+            trace_context = parse_trace_context(
+                self.headers.get("traceparent"),
+                self.headers.get("tracestate"),
+            )
+            if trace_context:
+                runtime.request_context.trace_context = trace_context
             dispatch_request = request
             task_context_id = ""
             execution_context_id = ""
@@ -1051,6 +1058,8 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         finally:
             if hasattr(runtime.request_context, "hub_client"):
                 delattr(runtime.request_context, "hub_client")
+            if hasattr(runtime.request_context, "trace_context"):
+                delattr(runtime.request_context, "trace_context")
 
     def _stateless_task_context(self, request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         """Return a request copy plus an isolated MCP-2026 application-state context."""
@@ -1512,7 +1521,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Methods", "GET, HEAD, POST, DELETE, OPTIONS")
             self.send_header(
                 "Access-Control-Allow-Headers",
-                "Accept, Authorization, Content-Type, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id",
+                "Accept, Authorization, Content-Type, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, traceparent, tracestate",
             )
 
     def send_json(

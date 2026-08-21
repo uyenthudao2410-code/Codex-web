@@ -83,7 +83,9 @@ test('gateway keeps real MCP bearer in the recovery host and tags Desktop reques
   const result = await post(descriptor.port, descriptor.token, payload, {
     'MCP-Protocol-Version': '2026-07-28',
     'Mcp-Method': 'tools/list',
-    'Mcp-Session-Id': 'desktop-session'
+    'Mcp-Session-Id': 'desktop-session',
+    traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+    tracestate: 'vendor=opaque'
   });
   assert.equal(result.status, 200);
   assert.equal(result.headers['mcp-session-id'], 'upstream-session');
@@ -92,6 +94,8 @@ test('gateway keeps real MCP bearer in the recovery host and tags Desktop reques
   assert.equal(observed[0].headers['x-coding-tools-client-id'], 'codex-desktop');
   assert.equal(observed[0].headers['x-coding-tools-client-type'], 'codex_desktop');
   assert.equal(observed[0].headers['mcp-session-id'], 'desktop-session');
+  assert.equal(observed[0].headers.traceparent, '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01');
+  assert.equal(observed[0].headers.tracestate, 'vendor=opaque');
   assert.equal(observed[0].headers['mcp-protocol-version'], '2026-07-28');
 
   const heartbeat = await post(descriptor.port, descriptor.token, {}, {}, '/__hub_proxy/heartbeat');

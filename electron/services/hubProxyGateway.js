@@ -291,7 +291,7 @@ class HubProxyGateway {
       if (!isHeartbeat) {
         forwardedHeaders['X-Coding-Tools-Client-Id'] = proxyIdentity.clientId;
         forwardedHeaders['X-Coding-Tools-Client-Type'] = proxyIdentity.clientType;
-        for (const name of ['mcp-protocol-version', 'mcp-method', 'mcp-name', 'mcp-session-id', 'accept']) {
+        for (const name of ['mcp-protocol-version', 'mcp-method', 'mcp-name', 'mcp-session-id', 'traceparent', 'tracestate', 'accept']) {
           if (request.headers[name]) forwardedHeaders[name] = request.headers[name];
         }
       }

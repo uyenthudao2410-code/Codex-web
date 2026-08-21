@@ -10,7 +10,12 @@ const {
   isAlive,
   runtimeFingerprint,
   currentRuntimeState,
-  resolveNativeLaunchContract
+  resolveNativeLaunchContract,
+  buildNativeMcpEnv,
+  SECRET_BROKER_ENV,
+  AUTH_HANDLE_ENV,
+  MCP_AUTH_HANDLE,
+  OPENAI_API_KEY_HANDLE
 } = require('../electron/services/nativeService');
 const { normalizeProxyValue } = require('../electron/services/proxyService');
 const runtimePaths = require('../electron/paths');
@@ -37,6 +42,42 @@ test('process liveness rejects missing and non-positive PIDs before OS probing',
   assert.equal(isAlive(0), false);
   assert.equal(isAlive(-1), false);
   assert.equal(isAlive(1.5), false);
+});
+
+test('native MCP launch env brokers secrets and excludes ambient loader or secret state', () => {
+  const launch = {
+    resourcesRoot: path.join(os.tmpdir(), 'bundle-root'),
+    moduleRoot: path.join(os.tmpdir(), 'module-root'),
+    vendoredPython: path.join(os.tmpdir(), 'module-root', 'python_vendor')
+  };
+  const env = buildNativeMcpEnv({
+    sourceEnv: {
+      PATH: 'safe-base-path',
+      USERPROFILE: 'C:\\Users\\Test',
+      PYTHONPATH: 'ambient-pythonpath-must-not-pass',
+      LD_PRELOAD: 'ambient-loader-must-not-pass',
+      UNRELATED_SECRET: 'ambient-secret-must-not-pass',
+      OPENAI_API_KEY: 'test-provider-secret'
+    },
+    launch,
+    settings: { authorizedRoots: [], progressReportSeconds: 90 },
+    token: 'test-mcp-bearer',
+    diskRevision: 'revision-test',
+    supervisorRequestFile: path.join(os.tmpdir(), 'supervisor-test.json')
+  });
+  assert.equal(env.CODING_TOOLS_MCP_AUTH_TOKEN, undefined);
+  assert.equal(env.UNRELATED_SECRET, undefined);
+  assert.equal(env.LD_PRELOAD, undefined);
+  assert.equal(env.OPENAI_API_KEY, undefined);
+  assert.equal(env[AUTH_HANDLE_ENV], MCP_AUTH_HANDLE);
+  const broker = JSON.parse(env[SECRET_BROKER_ENV]);
+  assert.equal(broker[MCP_AUTH_HANDLE], 'test-mcp-bearer');
+  assert.equal(broker[OPENAI_API_KEY_HANDLE], 'test-provider-secret');
+  assert.ok(env.PATH.includes(path.join(launch.resourcesRoot, 'tools')));
+  assert.ok(env.PATH.includes('safe-base-path'));
+  assert.ok(env.PYTHONPATH.includes(launch.moduleRoot));
+  assert.ok(env.PYTHONPATH.includes(launch.vendoredPython));
+  assert.equal(env.PYTHONPATH.includes('ambient-pythonpath-must-not-pass'), false);
 });
 
 test('Coding MCP health is trusted only when workspace and device_id both match', async (t) => {

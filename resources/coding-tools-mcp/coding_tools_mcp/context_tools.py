@@ -20,6 +20,8 @@ from .semantic_localization import (
     semantic_resource_cost,
     semantic_scope_mode,
 )
+from .semantic_graph import SemanticRepositoryGraph
+from .context_compiler import compile_context, context_compiler_treatment
 from .solution_economics import record_patch_surface
 from .tool_contract import tool_metadata_contract
 
@@ -356,6 +358,18 @@ class ContextToolsMixin:
                 composite_operations.append(operation)
         searches = [search_results_by_index[index] for index in range(len(queries)) if index in search_results_by_index]
         localization_ms = max(0, int((time.monotonic() - localization_started) * 1000))
+        semantic_graph = getattr(self, "_semantic_repository_graph", None)
+        if not isinstance(semantic_graph, SemanticRepositoryGraph):
+            semantic_graph = SemanticRepositoryGraph(self.workspace.root)
+            self._semantic_repository_graph = semantic_graph
+        graph_status = semantic_graph.update(
+            searches=searches,
+            provider_status=semantic_status,
+            max_records=min(200, max(1, len(queries) * max_matches)),
+            max_files=max_files,
+            max_total_bytes=min(256 * 1024, max(16 * 1024, max_total_bytes // 4)),
+            max_file_bytes=64 * 1024,
+        )
         for result in searches:
             for match in result.get("matches", []):
                 path = str(match.get("path", ""))
@@ -399,6 +413,60 @@ class ContextToolsMixin:
                 "truncated": bool(item.get("truncated", False)),
             })
         materialization_ms = max(0, int((time.monotonic() - materialization_started) * 1000))
+        context_compiler_status: dict[str, Any] | None = None
+        compiler_treatment = context_compiler_treatment()
+        if compiler_treatment["mode"] == "shadow":
+            semantic_records: list[dict[str, Any]] = []
+            seen_semantic_ids: set[str] = set()
+            for query in queries:
+                for record in semantic_graph.resolve_symbols(query, max_matches):
+                    record_id = str(record.get("symbol_id") or "")
+                    if record_id and record_id not in seen_semantic_ids:
+                        semantic_records.append(record)
+                        seen_semantic_ids.add(record_id)
+                    if len(semantic_records) >= 200:
+                        break
+                if len(semantic_records) >= 200:
+                    break
+            repo_revision = ""
+            git_projection = workspace.get("git") if isinstance(workspace.get("git"), dict) else {}
+            repo_revision = str(git_projection.get("head") or git_projection.get("revision") or "")
+            if not repo_revision:
+                revision_reader = getattr(self, "_git_rev_parse", None)
+                if callable(revision_reader):
+                    try:
+                        repo_revision = str(revision_reader(self.workspace.root, "HEAD") or "")
+                    except Exception:
+                        repo_revision = ""
+            compiled_context = compile_context(
+                objective,
+                repo_revision,
+                min(32_768, max(512, max_total_bytes // 4)),
+                {
+                    "files": files,
+                    "searches": searches,
+                    "semantic_records": semantic_records,
+                    "instructions": instructions,
+                    "dirty_diff": [],
+                    "semantic_graph": graph_status,
+                },
+                [],
+                requested_paths or ranked_paths,
+            )
+            self._last_context_compiler_shadow = compiled_context
+            context_compiler_status = {
+                "schema_version": compiled_context["schema_version"],
+                "mode": "shadow",
+                "auto_inject": False,
+                "input_sha256": compiled_context["fingerprints"]["input_sha256"],
+                "compiled_sha256": compiled_context["fingerprints"]["compiled_sha256"],
+                "estimated_tokens": compiled_context["estimated_tokens"],
+                "selected_file_count": len(compiled_context["primary_files"]),
+                "selected_symbol_count": len(compiled_context["primary_symbols"]),
+                "omitted_candidate_count": compiled_context["omitted_candidate_count"],
+                "uncertainty_count": len(compiled_context["uncertainty"]),
+                "completeness": compiled_context["completeness"],
+            }
         composite_total_ms = max(0, int((time.monotonic() - composite_started) * 1000))
         composite_read = {
             "schema_version": 1,
@@ -417,6 +485,8 @@ class ContextToolsMixin:
                     "semantic_handled": semantic_handled,
                     "text_fallback_queries": len(fallback_pairs),
                     "native_admission": semantic_admission,
+                    "semantic_graph": graph_status,
+                    **({"context_compiler": context_compiler_status} if context_compiler_status is not None else {}),
                 },
                 "parallelism": {
                     "search_parallel": bool(fallback_search_workers > 1),
@@ -483,6 +553,8 @@ class ContextToolsMixin:
         timeout_ms: int,
         *,
         budget_adjusted: bool = False,
+        owner_run_id: str = "",
+        owner_wave_id: str = "",
     ) -> dict[str, Any]:
         started = time.time()
 
@@ -523,14 +595,17 @@ class ContextToolsMixin:
         remaining_getter = getattr(self, "_background_operation_remaining_seconds", None)
         background_budget_active = callable(remaining_getter) and remaining_getter() is not None
         poll_ms = BACKGROUND_PROOF_POLL_MS if background_budget_active else 30_000
-        payload = self.exec_command({
+        exec_args: dict[str, Any] = {
             "cmd": command,
             "workdir": workdir,
             "timeout_ms": effective_timeout_ms,
             "yield_time_ms": poll_ms,
             "max_output_bytes": 131072,
             "verbosity": "summary",
-        })
+        }
+        if owner_run_id and owner_wave_id:
+            exec_args.update({"run_id": owner_run_id, "wave_id": owner_wave_id})
+        payload = self.exec_command(exec_args)
         terminal_tool = "exec_command"
         terminal_args: dict[str, Any] = {"cmd": command}
         while payload.get("status") == "running":
@@ -662,8 +737,12 @@ class ContextToolsMixin:
                 self.orchestration_control.assert_write_allowed(
                     ctx,
                     owner="MCP",
+                    owner_session=str(args.get("_write_owner_session") or "") or None,
+                    paths=list(args.get("_requested_write_paths") or []),
                     base_head=str(identity_before.get("base_head") or ""),
-                    worktree_fp=str(identity_before.get("worktree_fp") or ""),
+                    source_fingerprint=str(identity_before.get("source_fingerprint") or identity_before.get("worktree_fp") or ""),
+                    runtime_worktree_fingerprint=str(identity_before.get("runtime_worktree_fingerprint") or identity_before.get("worktree_fp") or ""),
+                    dirty_source_paths=list(identity_before.get("dirty_source_paths") or identity_before.get("dirty_paths") or []),
                 )
             except OrchestrationControlError as exc:
                 record_failure(exc.code, details=exc.details)
@@ -778,6 +857,8 @@ class ContextToolsMixin:
                     workdir,
                     command_timeout_ms,
                     budget_adjusted=True,
+                    owner_run_id="",
+                    owner_wave_id="",
                 )
             else:
                 command_hash = hashlib.sha256(command.encode("utf-8", errors="replace")).hexdigest()
@@ -808,6 +889,8 @@ class ContextToolsMixin:
                         workdir,
                         command_timeout_ms,
                         budget_adjusted=True,
+                        owner_run_id=ctx.run_id,
+                        owner_wave_id=ctx.wave_id,
                     ),
                 )
                 proof_ids.append(proof_id)
@@ -851,6 +934,8 @@ class ContextToolsMixin:
                 "hash_algorithm": args.get("hash_algorithm", "sha256"),
                 "timeout_seconds": min(max(int(args.get("timeout_seconds", 600)), 1), 600),
             }
+            if ctx is not None:
+                verify_args.update({"run_id": ctx.run_id, "wave_id": ctx.wave_id})
             if ctx is None:
                 build_report = self.verify_build(verify_args)
             else:
@@ -951,6 +1036,7 @@ class ContextToolsMixin:
                 **current_proof_summary(),
                 "proof_fingerprint": proof_fingerprint,
                 "worktree_fp": str(proof_identity.get("worktree_fp") or ""),
+                "source_fingerprint": str(proof_identity.get("source_fingerprint") or proof_identity.get("worktree_fp") or ""),
             },
             "next_step": final_next,
         }

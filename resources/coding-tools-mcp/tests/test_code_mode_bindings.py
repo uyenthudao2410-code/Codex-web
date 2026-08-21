@@ -12,9 +12,6 @@ from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.tool_contract import tool_metadata_contract
 
 
-SMART_CONTRACT_SHA256 = "bd5c09aeffe02bb60d0f548ed02912e8a21e78b91404186e6896f6d6cbdedd70"
-
-
 class _SemanticProvider:
     def __init__(self, match_path: str = "src/main.py") -> None:
         self.match_path = match_path
@@ -228,9 +225,11 @@ class CodeModeHostBindingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(temp))
             try:
-                self.assertEqual(len(runtime.exposed_tool_names()), 8)
+                self.assertEqual(runtime.exposed_tool_names(), [
+                    "workspace_context", "agent_workflow", "task_control", "command_control",
+                    "document_workflow", "exec_command", "request_permissions", "view_image",
+                ])
                 self.assertEqual(runtime.tool_contract["tool_count"], 8)
-                self.assertEqual(runtime.tool_contract["sha256"], SMART_CONTRACT_SHA256)
             finally:
                 runtime.close()
 

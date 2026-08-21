@@ -6,14 +6,15 @@ turn lifecycle notifications. Thread state is persisted to a JSON file so a
 "restarted provider" (a second invocation of this process) can resume the
 same thread — exactly like the real App Server persists history.
 
-Env knobs:
-  STUB_STATE_FILE            required; JSON file holding threads + server pids
-  STUB_CRASH_AFTER_TURN_START "1" to exit(1) right after acknowledging turn/start
-  STUB_TURN_COMPLETE_DELAY_S optional delay (seconds) before turn/completed
+Test-only CLI knobs:
+  --state-file               required; JSON file holding threads + server pids
+  --control-file             optional JSON control file for one-shot crash injection
+  --turn-complete-delay-s    optional delay (seconds) before turn/completed
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -43,12 +44,31 @@ def _save_state(path: Path, state: dict) -> None:
             pass
 
 
+def _consume_crash_flag(path: Path | None) -> bool:
+    if path is None:
+        return False
+    try:
+        control = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(control, dict) or not bool(control.get("crash_after_turn_start")):
+        return False
+    control["crash_after_turn_start"] = False
+    path.write_text(json.dumps(control, ensure_ascii=False, indent=2), encoding="utf-8")
+    return True
+
+
 def main() -> int:
-    state_file = Path(os.environ.get("STUB_STATE_FILE", ""))
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--state-file", required=True)
+    parser.add_argument("--control-file")
+    parser.add_argument("--turn-complete-delay-s", type=float, default=0.2)
+    args = parser.parse_args()
+    state_file = Path(args.state_file)
     if not state_file.parent.exists():
         return 2
-    crash_after_turn_start = os.environ.get("STUB_CRASH_AFTER_TURN_START", "") == "1"
-    complete_delay = float(os.environ.get("STUB_TURN_COMPLETE_DELAY_S", "0.2") or 0)
+    control_file = Path(args.control_file) if args.control_file else None
+    complete_delay = float(args.turn_complete_delay_s)
     process_id = uuid.uuid4().hex[:8]
 
     state = _load_state(state_file)
@@ -120,7 +140,7 @@ def main() -> int:
             state["turns"][turn_id] = {"thread_id": thread_id, "process_id": process_id}
             _save_state(state_file, state)
             reply(request_id, {"turn": {"id": turn_id, "status": "inProgress"}})
-            if crash_after_turn_start:
+            if _consume_crash_flag(control_file):
                 time.sleep(0.05)
                 sys.stdout.flush()
                 os._exit(1)

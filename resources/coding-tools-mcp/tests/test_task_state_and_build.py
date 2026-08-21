@@ -232,6 +232,8 @@ class TaskStateTests(unittest.TestCase):
             self.assertEqual(artifact["durability"], "process_runtime")
             self.assertFalse(artifact["restart_safe"])
             self.assertFalse(artifact["content_addressed"])
+            self.assertNotIn("owner_run", artifact)
+            self.assertNotIn("owner_wave", artifact)
             self.assertEqual(artifact["streams"]["stdout"]["output_ref"], "command:command-one:stdout")
             self.assertEqual(artifact["streams"]["stdout"]["total_stream_bytes"], 120000)
             self.assertEqual(artifact["streams"]["stdout"]["evicted_gap_bytes"], 54464)
@@ -241,8 +243,21 @@ class TaskStateTests(unittest.TestCase):
     def test_running_command_carries_artifact_ref_for_handoff(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             store = TaskStateStore(Path(temp))
-            store.update({"objective": "Long running proof"})
-            store.record_command_started("npm test", "command-running", ".")
+            store.update({
+                "objective": "Long running proof",
+                "orchestration": {
+                    "orchestration_state": "EXECUTING",
+                    "run_id": "run-proof",
+                    "wave_id": "wave-proof",
+                },
+            })
+            store.record_command_started(
+                "npm test",
+                "command-running",
+                ".",
+                owner_run_id="run-proof",
+                owner_wave_id="wave-proof",
+            )
             store.record_tool_result(
                 "exec_command",
                 {"cmd": "npm test"},
@@ -251,6 +266,7 @@ class TaskStateTests(unittest.TestCase):
                     "status": "running",
                     "command_id": "command-running",
                     "session_id": "command-running",
+                    "execution_owner": {"run_id": "run-proof", "wave_id": "wave-proof"},
                     "output_refs": {"stdout": "command:command-running:stdout"},
                     "output_retention": {"stdout": {"total_stream_bytes": 10, "total_retained_bytes": 10}},
                 },
@@ -258,9 +274,11 @@ class TaskStateTests(unittest.TestCase):
             current = TaskStateStore(Path(temp)).get()["current_command"]
             self.assertEqual(current["artifact_ref"]["streams"]["stdout"]["output_ref"], "command:command-running:stdout")
             self.assertFalse(current["artifact_ref"]["restart_safe"])
+            self.assertEqual(current["artifact_ref"]["owner_run"], "run-proof")
+            self.assertEqual(current["artifact_ref"]["owner_wave"], "wave-proof")
             store.record_tool_result(
-                "write_stdin",
-                {"session_id": "command-running", "chars": ""},
+                "command_control",
+                {"action": "poll", "command_id": "command-running"},
                 {
                     "ok": True,
                     "status": "exited",
@@ -269,6 +287,8 @@ class TaskStateTests(unittest.TestCase):
                     "exit_code": 0,
                     "elapsed_ms": 100,
                     "summary": "tests complete",
+                    "output_refs": {"stdout": "command:command-running:stdout"},
+                    "output_retention": {"stdout": {"total_stream_bytes": 20, "total_retained_bytes": 20}},
                 },
             )
             terminal = TaskStateStore(Path(temp)).get()
@@ -277,6 +297,8 @@ class TaskStateTests(unittest.TestCase):
                 terminal["test_results"][-1]["artifact_ref"]["streams"]["stdout"]["output_ref"],
                 "command:command-running:stdout",
             )
+            self.assertEqual(terminal["test_results"][-1]["artifact_ref"]["owner_run"], "run-proof")
+            self.assertEqual(terminal["test_results"][-1]["artifact_ref"]["owner_wave"], "wave-proof")
 
     def test_command_control_terminal_poll_terminalizes_current_command(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -801,6 +823,12 @@ class ToolModeTests(unittest.TestCase):
                 self.assertEqual(localization["semantic_handled"], 1)
                 self.assertEqual(localization["text_fallback_queries"], 1)
                 self.assertEqual(localization["provider"]["provider"], "native-lsp-test")
+                graph = localization["semantic_graph"]
+                self.assertEqual(graph["schema_version"], 1)
+                self.assertTrue(graph["read_only"])
+                self.assertEqual(graph["provider"], "native-lsp-test")
+                self.assertGreaterEqual(graph["indexed_records"], 2)
+                self.assertGreaterEqual(graph["fallback_records"], 1)
                 composite_text = json.dumps(result["composite_read"], ensure_ascii=False)
                 self.assertNotIn("target_symbol", composite_text)
                 self.assertNotIn("fallback_token", composite_text)

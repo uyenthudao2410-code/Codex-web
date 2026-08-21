@@ -350,7 +350,10 @@ test('live supervisor replaces only a dead owned Coding MCP and preserves the ex
     assert.ok(replacementHealth);
     assert.equal(replacementHealth.device_instance_id, deviceInstanceId);
   } finally {
-    if (processAlive(activeMcpPid)) await orchestrator.native.stop().catch(() => false);
+    if (processAlive(activeMcpPid)) {
+      await orchestrator.native.stop();
+      await waitForPidExit(activeMcpPid, 10000);
+    }
     if (processAlive(activeTunnelPid)) {
       try { process.kill(activeTunnelPid); } catch {}
       await waitForPidExit(activeTunnelPid).catch(() => {});

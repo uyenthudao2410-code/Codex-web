@@ -164,6 +164,19 @@ class AgentWorkflowMixin:
         return {"checked": True, "patch_count": len(patches), "operation_count": operation_count}
 
     @staticmethod
+    def _source_write_paths(patches: list[str]) -> list[str]:
+        paths: set[str] = set()
+        for patch_text in patches:
+            for operation in parse_patch(patch_text):
+                path = str(operation.path).strip().replace("\\", "/")
+                if path:
+                    paths.add(path)
+                move_to = str(operation.move_to or "").strip().replace("\\", "/")
+                if move_to:
+                    paths.add(move_to)
+        return sorted(paths)
+
+    @staticmethod
     def _new_files_patch(files: list[Any]) -> str:
         sections = ["*** Begin Patch"]
         added = 0
@@ -1023,20 +1036,61 @@ class AgentWorkflowMixin:
                 "task": self.task_state.get(),
             }
 
-        allowed_write_paths = list(candidate_result.get("allowed_paths") or []) if isinstance(candidate_result, dict) else []
+        source_write_paths = self._source_write_paths(patches)
+        requested_write_paths = sorted({
+            *source_write_paths,
+            *(str(item).strip().replace("\\", "/") for item in directories if str(item).strip()),
+        })
+        allowed_write_paths = list(candidate_result.get("allowed_paths") or []) if isinstance(candidate_result, dict) else list(requested_write_paths)
+        if isinstance(candidate_result, dict):
+            candidate_allowed = {str(item).strip().replace("\\", "/") for item in allowed_write_paths if str(item).strip()}
+            candidate_scope_violations = sorted(set(source_write_paths).difference(candidate_allowed))
+            if candidate_scope_violations:
+                self.orchestration_control.record_failure(
+                    ctx,
+                    "CANDIDATE_SCOPE_VIOLATION",
+                    payload={"paths": candidate_scope_violations, "allowed_paths": sorted(candidate_allowed)},
+                )
+                self._project_orchestration(ctx, event="candidate_scope_violation_before_write")
+                raise ToolFailure(
+                    "CANDIDATE_SCOPE_VIOLATION",
+                    "Candidate patch paths exceed the bounded candidate scope.",
+                    category="policy",
+                    retryable=False,
+                    details={"paths": candidate_scope_violations, "allowed_paths": sorted(candidate_allowed)},
+                )
+        hub_identity = self._current_hub_client() or {}
+        write_owner_session = (
+            self._hub_client_record_id(hub_identity)
+            if hub_identity
+            else self.server_instance_id
+        )
         self.orchestration_control.acquire_write_lease(
             ctx,
             owner="MCP",
             mode=resolved_mode,
             allowed_paths=allowed_write_paths,
             delegation_id=ctx.delegation_id,
+            owner_session=write_owner_session,
+            source_fingerprint=str(identity_before_write.get("source_fingerprint") or identity_before_write.get("worktree_fp") or ""),
+            runtime_worktree_fingerprint=str(identity_before_write.get("runtime_worktree_fingerprint") or identity_before_write.get("worktree_fp") or ""),
+            existing_dirty_source_paths=list(identity_before_write.get("dirty_source_paths") or identity_before_write.get("dirty_paths") or []),
         )
         self._project_orchestration(ctx, event="mcp_write_lease_active")
 
         directory_result = None
         try:
+            self.orchestration_control.assert_write_allowed(
+                ctx,
+                owner="MCP",
+                owner_session=write_owner_session,
+                paths=requested_write_paths,
+                base_head=str(identity_before_write.get("base_head") or ""),
+                source_fingerprint=str(identity_before_write.get("source_fingerprint") or identity_before_write.get("worktree_fp") or ""),
+                runtime_worktree_fingerprint=str(identity_before_write.get("runtime_worktree_fingerprint") or identity_before_write.get("worktree_fp") or ""),
+                dirty_source_paths=list(identity_before_write.get("dirty_source_paths") or identity_before_write.get("dirty_paths") or []),
+            )
             if directories:
-                self.orchestration_control.assert_write_allowed(ctx, owner="MCP")
                 directory_result = self.file_batch({
                     "operations": [{"action": "mkdir", "path": path, "parents": True, "exist_ok": True} for path in directories],
                     "dry_run": args.get("dry_run", False),
@@ -1058,6 +1112,8 @@ class AgentWorkflowMixin:
                 "max_diff_bytes": args.get("max_diff_bytes", 131072),
                 "dry_run": args.get("dry_run", False),
                 "_orchestration_context": ctx,
+                "_requested_write_paths": requested_write_paths,
+                "_write_owner_session": write_owner_session,
             })
         except (ToolFailure, OrchestrationControlError) as exc:
             code = getattr(exc, "code", type(exc).__name__)

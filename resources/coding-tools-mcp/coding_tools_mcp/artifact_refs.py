@@ -55,7 +55,12 @@ def build_artifact_ref(
     return result
 
 
-def command_output_artifact_ref(payload: dict[str, Any]) -> dict[str, Any] | None:
+def command_output_artifact_ref(
+    payload: dict[str, Any],
+    *,
+    owner_run: str = "",
+    owner_wave: str = "",
+) -> dict[str, Any] | None:
     command_id = _text(payload.get("command_id") or payload.get("session_id"), 256)
     raw_refs = payload.get("output_refs")
     refs = raw_refs if isinstance(raw_refs, dict) else {}
@@ -97,6 +102,8 @@ def command_output_artifact_ref(payload: dict[str, Any]) -> dict[str, Any] | Non
         durability="process_runtime",
         restart_safe=False,
         content_addressed=False,
+        owner_run=owner_run,
+        owner_wave=owner_wave,
         size_bytes=size_bytes,
         extra={"command_id": command_id, "streams": streams},
     )

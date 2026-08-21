@@ -467,7 +467,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "bd5c09aeffe02bb60d0f548ed02912e8a21e78b91404186e6896f6d6cbdedd70")
+                self.assertEqual(contract["sha256"], "abd0f63f1653afc356a31d6c2cf23b21ddd01abdaee9d014f4ffa8ad98814a14")
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)
                 self.assertEqual(
@@ -687,6 +687,8 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             runtime = Runtime(root, permission_mode="safe")
             try:
                 first = runtime._orchestration_workspace_identity(".")
+                self.assertEqual(first["source_fingerprint"], first["worktree_fp"])
+                self.assertEqual(first["runtime_worktree_fingerprint"], first["worktree_fp"])
                 runtime._invalidate_fast_cache()
                 runtime_identity = runtime.workspace_context({"detail": "full"})["runtime"]["source"]
                 self.assertTrue(runtime_identity["is_repo"])
@@ -698,11 +700,15 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 runtime_state.write_text('{"tick": 1}\n', encoding="utf-8")
                 second = runtime._orchestration_workspace_identity(".")
                 self.assertEqual(first["worktree_fp"], second["worktree_fp"])
+                self.assertEqual(first["source_fingerprint"], second["source_fingerprint"])
                 self.assertNotIn(".coding-tools/volatile.json", second["dirty_paths"])
+                self.assertNotIn(".coding-tools/volatile.json", second["dirty_source_paths"])
                 source.write_text("VALUE = 2\n", encoding="utf-8")
                 third = runtime._orchestration_workspace_identity(".")
                 self.assertNotEqual(second["worktree_fp"], third["worktree_fp"])
+                self.assertNotEqual(second["source_fingerprint"], third["source_fingerprint"])
                 self.assertIn("app.py", third["dirty_paths"])
+                self.assertIn("app.py", third["dirty_source_paths"])
             finally:
                 runtime.close()
 

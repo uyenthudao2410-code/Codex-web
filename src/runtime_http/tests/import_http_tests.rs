@@ -86,12 +86,32 @@ async fn import_test_service_with_local_runtime() -> Service {
     Service::new(super::build_projects_router(config, db, runtime))
 }
 
-async fn complete_one_save_artifact_request(
-    registry: Arc<crate::shell_client::ShellClientRegistry>,
+async fn register_streamed_import_agent(
+    root: &std::path::Path,
+) -> (
+    Arc<crate::tool_runtime::ToolRuntime>,
+    Arc<crate::shell_client::ShellClientRegistry>,
 ) {
+    let capabilities = crate::shell_protocol::ShellClientCapabilities {
+        file_write: true,
+        ..Default::default()
+    };
+    super::register_import_agent_with_capabilities(root, Some(capabilities)).await
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ImportUploadTerminal {
+    Finish,
+    Abort,
+}
+
+async fn complete_one_streamed_artifact_upload(
+    registry: &Arc<crate::shell_client::ShellClientRegistry>,
+    terminal: ImportUploadTerminal,
+) -> usize {
     use crate::shell_protocol::{ShellAgentPollRequest, ShellAgentResultRequest};
     use sha2::{Digest, Sha256};
-    let request = loop {
+    let begin = loop {
         if let Some(request) = registry
             .poll(ShellAgentPollRequest {
                 client_id: "importer".to_string(),
@@ -105,32 +125,183 @@ async fn complete_one_save_artifact_request(
         }
         tokio::time::sleep(Duration::from_millis(5)).await;
     };
-    let payload: Value = serde_json::from_str(request.stdin.as_deref().unwrap()).unwrap();
-    let path = payload["path"].as_str().unwrap().to_string();
-    let mime_type = payload["mime_type"].as_str().unwrap().to_string();
-    let bytes = general_purpose::STANDARD
-        .decode(payload["content_base64"].as_str().unwrap())
-        .unwrap();
-    let full_path = std::path::Path::new(request.cwd.as_deref().unwrap()).join(&path);
-    std::fs::create_dir_all(full_path.parent().unwrap()).unwrap();
-    std::fs::write(&full_path, &bytes).unwrap();
-    let sha256 = format!("{:x}", Sha256::digest(&bytes));
-    let stdout =
-        json!({"path":path,"bytes_written":bytes.len(),"sha256":sha256,"mime_type":mime_type})
-            .to_string();
+    assert_eq!(begin.kind, "file_artifact_upload_begin");
+    let begin_payload: Value = serde_json::from_str(begin.content.as_deref().unwrap()).unwrap();
+    let path = begin_payload["path"].as_str().unwrap().to_string();
+    let mime_type = begin_payload["mime_type"].clone();
+    let expected_bytes = begin_payload["expected_bytes"].clone();
+    let expected_sha256 = begin_payload["expected_sha256"].clone();
+    let project_root = begin.cwd.as_deref().unwrap().to_string();
+    let upload_id = format!("wc_upload_import_{}", begin.request_id.replace('-', "_"));
     registry
         .complete(ShellAgentResultRequest {
             client_id: "importer".to_string(),
             agent_instance_id: "inst-import".to_string(),
-            request_id: request.request_id,
+            request_id: begin.request_id,
             exit_code: Some(0),
-            stdout: Some(stdout),
+            stdout: Some(
+                json!({
+                    "path":path.clone(),
+                    "upload_id":upload_id.clone(),
+                    "received_bytes":0,
+                    "next_offset":0,
+                    "expected_bytes":expected_bytes.clone(),
+                    "expected_sha256":expected_sha256.clone(),
+                    "max_bytes":MAX_IMPORT_FILE_BYTES,
+                    "mime_type":mime_type.clone(),
+                    "committed":false
+                })
+                .to_string(),
+            ),
             stderr: None,
             duration_ms: Some(1),
             error: None,
         })
         .await
         .unwrap();
+    let mut bytes = Vec::new();
+    let mut chunk_count = 0usize;
+    loop {
+        let request = loop {
+            if let Some(request) = registry
+                .poll(ShellAgentPollRequest {
+                    client_id: "importer".to_string(),
+                    agent_instance_id: "inst-import".to_string(),
+                    projects: None,
+                })
+                .await
+                .unwrap()
+            {
+                break request;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        };
+        let payload: Value = serde_json::from_str(request.content.as_deref().unwrap()).unwrap();
+        match request.kind.as_str() {
+            "file_artifact_upload_chunk" => {
+                assert_eq!(payload["path"], path);
+                assert_eq!(payload["upload_id"], upload_id);
+                assert_eq!(payload["offset"].as_u64().unwrap() as usize, bytes.len());
+                let chunk = general_purpose::STANDARD
+                    .decode(payload["content_base64"].as_str().unwrap())
+                    .unwrap();
+                assert!(
+                    chunk.len()
+                        <= crate::tool_runtime::files::MAX_PROJECT_ARTIFACT_UPLOAD_CHUNK_BYTES
+                );
+                bytes.extend_from_slice(&chunk);
+                chunk_count += 1;
+                registry
+                    .complete(ShellAgentResultRequest {
+                        client_id: "importer".to_string(),
+                        agent_instance_id: "inst-import".to_string(),
+                        request_id: request.request_id,
+                        exit_code: Some(0),
+                        stdout: Some(
+                            json!({
+                                "path":path.clone(),
+                                "upload_id":upload_id.clone(),
+                                "received_bytes":bytes.len(),
+                                "next_offset":bytes.len(),
+                                "expected_bytes":expected_bytes.clone(),
+                                "expected_sha256":expected_sha256.clone(),
+                                "max_bytes":MAX_IMPORT_FILE_BYTES,
+                                "mime_type":mime_type.clone(),
+                                "committed":false
+                            })
+                            .to_string(),
+                        ),
+                        stderr: None,
+                        duration_ms: Some(1),
+                        error: None,
+                    })
+                    .await
+                    .unwrap();
+            }
+            "file_artifact_upload_finish" => {
+                assert_eq!(terminal, ImportUploadTerminal::Finish);
+                assert_eq!(payload["path"], path);
+                assert_eq!(payload["upload_id"], upload_id);
+                let full_path = std::path::Path::new(&project_root).join(&path);
+                std::fs::create_dir_all(full_path.parent().unwrap()).unwrap();
+                std::fs::write(&full_path, &bytes).unwrap();
+                let sha256 = format!("{:x}", Sha256::digest(&bytes));
+                registry
+                    .complete(ShellAgentResultRequest {
+                        client_id: "importer".to_string(),
+                        agent_instance_id: "inst-import".to_string(),
+                        request_id: request.request_id,
+                        exit_code: Some(0),
+                        stdout: Some(
+                            json!({
+                                "path":path.clone(),
+                                "upload_id":upload_id.clone(),
+                                "bytes":bytes.len(),
+                                "received_bytes":bytes.len(),
+                                "expected_bytes":expected_bytes.clone(),
+                                "expected_sha256":expected_sha256.clone(),
+                                "sha256":sha256,
+                                "mime_type":mime_type.clone(),
+                                "committed":true
+                            })
+                            .to_string(),
+                        ),
+                        stderr: None,
+                        duration_ms: Some(1),
+                        error: None,
+                    })
+                    .await
+                    .unwrap();
+                return chunk_count;
+            }
+            "file_artifact_upload_abort" => {
+                assert_eq!(terminal, ImportUploadTerminal::Abort);
+                assert_eq!(payload["path"], path);
+                assert_eq!(payload["upload_id"], upload_id);
+                registry
+                    .complete(ShellAgentResultRequest {
+                        client_id: "importer".to_string(),
+                        agent_instance_id: "inst-import".to_string(),
+                        request_id: request.request_id,
+                        exit_code: Some(0),
+                        stdout: Some(
+                            json!({
+                                "path":path.clone(),
+                                "upload_id":upload_id.clone(),
+                                "received_bytes":bytes.len(),
+                                "expected_bytes":expected_bytes.clone(),
+                                "expected_sha256":expected_sha256.clone(),
+                                "max_bytes":MAX_IMPORT_FILE_BYTES,
+                                "mime_type":mime_type.clone(),
+                                "committed":false,
+                                "aborted":true
+                            })
+                            .to_string(),
+                        ),
+                        stderr: None,
+                        duration_ms: Some(1),
+                        error: None,
+                    })
+                    .await
+                    .unwrap();
+                return chunk_count;
+            }
+            other => panic!("unexpected import artifact request kind: {other}"),
+        }
+    }
+}
+
+async fn complete_streamed_artifact_uploads(
+    registry: Arc<crate::shell_client::ShellClientRegistry>,
+    count: usize,
+) -> Vec<usize> {
+    let mut chunk_counts = Vec::with_capacity(count);
+    for _ in 0..count {
+        chunk_counts.push(
+            complete_one_streamed_artifact_upload(&registry, ImportUploadTerminal::Finish).await,
+        );
+    }
+    chunk_counts
 }
 
 #[tokio::test]
@@ -245,7 +416,14 @@ async fn import_http_rejects_chunked_body_after_limit_without_content_length() {
     let body = vec![b'x'; MAX_IMPORT_FILE_BYTES + 1];
     let server = start_mock_http_server(vec![http_response("200 OK", &[], &body)]).await;
     let _download_base = ImportDownloadBaseUrlGuard::set(server.base_url.clone());
-    let service = import_test_service_with_local_runtime().await;
+    let tmp = tempfile::tempdir().unwrap();
+    let (runtime, registry) = register_streamed_import_agent(tmp.path()).await;
+    let config = super::test_config(Some("secret"));
+    let (_db_tmp, db) = super::test_db();
+    let service = Service::new(super::build_projects_router(config, db, runtime));
+    let agent = tokio::spawn(async move {
+        complete_one_streamed_artifact_upload(&registry, ImportUploadTerminal::Abort).await
+    });
     let mut resp = TestClient::post("http://localhost/api/artifacts/import")
         .bearer_auth("secret")
         .json(&import_body(
@@ -255,12 +433,64 @@ async fn import_http_rejects_chunked_body_after_limit_without_content_length() {
         ))
         .send(&service)
         .await;
+    let chunk_count = tokio::time::timeout(Duration::from_secs(15), agent)
+        .await
+        .expect("oversize import agent must observe abort")
+        .unwrap();
+    assert!(chunk_count > 0);
     assert_eq!(
         super::effective_status(&resp),
         salvo::http::StatusCode::BAD_REQUEST
     );
     let body: Value = resp.take_json().await.unwrap();
     assert!(body["error"].as_str().unwrap().contains("exceeds"));
+    assert!(!tmp.path().join("docs/assets/a.png").exists());
+}
+
+#[tokio::test]
+#[ignore]
+async fn import_http_streams_large_file_in_bounded_chunks() {
+    let _guard = lock_import_http_test().await;
+    let bytes =
+        vec![b'x'; crate::tool_runtime::files::MAX_PROJECT_ARTIFACT_UPLOAD_CHUNK_BYTES * 2 + 17];
+    let server = start_mock_http_server(vec![http_response(
+        "200 OK",
+        &[("Content-Length", bytes.len().to_string())],
+        &bytes,
+    )])
+    .await;
+    let _download_base = ImportDownloadBaseUrlGuard::set(server.base_url.clone());
+    let tmp = tempfile::tempdir().unwrap();
+    let (runtime, registry) = register_streamed_import_agent(tmp.path()).await;
+    let config = super::test_config(Some("secret"));
+    let (_db_tmp, db) = super::test_db();
+    let service = Service::new(super::build_projects_router(config, db, runtime));
+    let agent = tokio::spawn(complete_streamed_artifact_uploads(registry, 1));
+    let mut resp = TestClient::post("http://localhost/api/artifacts/import")
+        .bearer_auth("secret")
+        .json(&import_body(
+            "https://files.oaiusercontent.com/large.txt",
+            "text/plain",
+            "large.txt",
+        ))
+        .send(&service)
+        .await;
+    let chunk_counts = tokio::time::timeout(Duration::from_secs(15), agent)
+        .await
+        .expect("large import agent must finish")
+        .unwrap();
+    assert!(chunk_counts[0] >= 3);
+    assert_eq!(super::effective_status(&resp), salvo::http::StatusCode::OK);
+    let body: Value = resp.take_json().await.unwrap();
+    let imported = &body["output"]["imported"][0];
+    assert_eq!(imported["path"], "docs/assets/large.txt");
+    assert_eq!(imported["bytes_written"], bytes.len());
+    assert_eq!(imported["mime_type"], "text/plain");
+    assert_eq!(imported["sha256"].as_str().unwrap().len(), 64);
+    assert_eq!(
+        std::fs::read(tmp.path().join("docs/assets/large.txt")).unwrap(),
+        bytes
+    );
 }
 
 #[tokio::test]
@@ -280,12 +510,11 @@ async fn import_http_success_uses_source_name_fallback_for_missing_target() {
     .await;
     let _download_base = ImportDownloadBaseUrlGuard::set(server.base_url.clone());
     let tmp = tempfile::tempdir().unwrap();
-    let (runtime, registry) = super::register_import_agent(tmp.path()).await;
+    let (runtime, registry) = register_streamed_import_agent(tmp.path()).await;
     let config = super::test_config(Some("secret"));
     let (_db_tmp, db) = super::test_db();
     let service = Service::new(super::build_projects_router(config, db, runtime));
-    let agent1 = tokio::spawn(complete_one_save_artifact_request(registry.clone()));
-    let agent2 = tokio::spawn(complete_one_save_artifact_request(registry));
+    let agent = tokio::spawn(complete_streamed_artifact_uploads(registry, 2));
     let mut resp = TestClient::post("http://localhost/api/artifacts/import")
         .bearer_auth("secret")
         .json(&json!({
@@ -299,8 +528,11 @@ async fn import_http_success_uses_source_name_fallback_for_missing_target() {
         }))
         .send(&service)
         .await;
-    agent1.await.unwrap();
-    agent2.await.unwrap();
+    let chunk_counts = tokio::time::timeout(Duration::from_secs(15), agent)
+        .await
+        .expect("import agent must finish both uploads")
+        .unwrap();
+    assert_eq!(chunk_counts.len(), 2);
     assert_eq!(super::effective_status(&resp), salvo::http::StatusCode::OK);
     let body: Value = resp.take_json().await.unwrap();
     let imported = body["output"]["imported"].as_array().unwrap();

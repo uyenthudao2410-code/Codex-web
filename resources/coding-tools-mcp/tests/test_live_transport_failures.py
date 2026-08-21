@@ -16,27 +16,38 @@ from pathlib import Path
 PACKAGE_PARENT = str(Path(__file__).resolve().parents[1])
 
 
-def _rpc(port: int, method: str, params: dict, *, timeout: float = 15.0) -> tuple[int, dict]:
+def _rpc(
+    port: int,
+    method: str,
+    params: dict,
+    *,
+    timeout: float = 15.0,
+    session_header: str | None = None,
+) -> tuple[int, dict[str, str], dict]:
     body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode("utf-8")
+    headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+    if session_header:
+        headers["Mcp-Session-Id"] = session_header
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=timeout)
     try:
-        connection.request(
-            "POST", "/mcp", body=body,
-            headers={"Content-Type": "application/json", "Accept": "application/json, text/event-stream"},
-        )
+        connection.request("POST", "/mcp", body=body, headers=headers)
         response = connection.getresponse()
         raw = response.read()
-        return response.status, json.loads(raw.decode("utf-8")) if raw else {}
+        response_headers = {key.lower(): value for key, value in response.getheaders()}
+        return response.status, response_headers, json.loads(raw.decode("utf-8")) if raw else {}
     finally:
         connection.close()
 
 
-def _initialize(port: int) -> None:
-    status, _body = _rpc(
+def _initialize(port: int) -> str:
+    status, headers, _body = _rpc(
         port, "initialize",
         {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "live-client", "version": "1"}},
     )
     assert status == 200
+    session_id = headers.get("mcp-session-id")
+    assert session_id
+    return session_id
 
 
 def _health(port: int) -> bool:
@@ -166,9 +177,9 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
             )
             try:
                 _wait_ready(port, process)
-                _initialize(port)
+                session_id = _initialize(port)
 
-                status, body = _rpc(port, "tools/call", {
+                status, _headers, body = _rpc(port, "tools/call", {
                     "name": "agent_workflow",
                     "arguments": {
                         "phase": "execute",
@@ -180,16 +191,16 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
                             'echo step-two >> step.txt',
                         ],
                     },
-                }, timeout=30.0)
+                }, timeout=30.0, session_header=session_id)
                 self.assertEqual(status, 200)
                 structured = body.get("result", {}).get("structuredContent", {})
                 background = structured.get("background_operation")
                 operation_id = background.get("operation_id") if isinstance(background, dict) else None
                 if operation_id:
-                    status, body = _rpc(port, "tools/call", {
+                    status, _headers, body = _rpc(port, "tools/call", {
                         "name": "task_control",
                         "arguments": {"action": "operation", "operation_id": operation_id, "wait_ms": 15000},
-                    }, timeout=20.0)
+                    }, timeout=20.0, session_header=session_id)
                     self.assertEqual(status, 200)
                     operation = body.get("result", {}).get("structuredContent", {})
                     snapshot = operation.get("background_operation") if isinstance(operation.get("background_operation"), dict) else {}
@@ -202,19 +213,19 @@ class LiveBrowserDisconnectReconnectTests(unittest.TestCase):
                     execution = structured.get("execution") or {}
                     self.assertTrue(execution.get("ok"), structured)
 
-                status, body = _rpc(port, "tools/call", {
+                status, _headers, body = _rpc(port, "tools/call", {
                     "name": "task_control",
                     "arguments": {"action": "events", "after_seq": 0, "limit": 20},
-                })
+                }, session_header=session_id)
                 self.assertEqual(status, 200)
                 events = body.get("result", {}).get("structuredContent", {})
                 event_rows = events.get("events", [])
                 self.assertTrue(any(item.get("event_type") == "run_started" for item in event_rows))
 
-                status, body = _rpc(port, "tools/call", {
+                status, _headers, body = _rpc(port, "tools/call", {
                     "name": "task_control",
                     "arguments": {"action": "get"},
-                })
+                }, session_header=session_id)
                 state = body.get("result", {}).get("structuredContent", {}).get("state", {})
                 self.assertEqual(state.get("objective"), "E2E durable workflow")
                 self.assertIn("step-one", (root / "step.txt").read_text(encoding="utf-8"))
@@ -240,9 +251,9 @@ class LiveTunnelFailureTests(unittest.TestCase):
                 proxy = _TcpProxy(port)
                 proxy_thread = threading.Thread(target=proxy.serve_forever, daemon=True)
                 proxy_thread.start()
-                _initialize(proxy.listen_port)
+                session_id = _initialize(proxy.listen_port)
 
-                status, body = _rpc(proxy.listen_port, "tools/call", {
+                status, _headers, body = _rpc(proxy.listen_port, "tools/call", {
                     "name": "exec_command",
                     "arguments": {
                         "cmd": f'"{sys.executable}" sleep_probe.py',
@@ -250,7 +261,7 @@ class LiveTunnelFailureTests(unittest.TestCase):
                         "max_output_bytes": 4096,
                         "verbosity": "full",
                     },
-                })
+                }, session_header=session_id)
                 self.assertEqual(status, 200)
                 structured = body.get("result", {}).get("structuredContent", {})
                 self.assertEqual(structured.get("status"), "running")
@@ -267,8 +278,7 @@ class LiveTunnelFailureTests(unittest.TestCase):
                 proxy_thread = threading.Thread(target=new_proxy.serve_forever, daemon=True)
                 proxy_thread.start()
                 try:
-                    _initialize(new_proxy.listen_port)
-                    status, body = _rpc(new_proxy.listen_port, "tools/call", {
+                    status, headers, body = _rpc(new_proxy.listen_port, "tools/call", {
                         "name": "command_control",
                         "arguments": {
                             "action": "poll",
@@ -277,8 +287,9 @@ class LiveTunnelFailureTests(unittest.TestCase):
                             "max_output_bytes": 4096,
                             "verbosity": "full",
                         },
-                    })
+                    }, session_header=session_id)
                     self.assertEqual(status, 200)
+                    self.assertTrue(headers.get("mcp-session-id"))
                     polled = body.get("result", {}).get("structuredContent", {})
                     self.assertIn(polled.get("status"), {"running", "exited"})
                 finally:

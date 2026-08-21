@@ -10,6 +10,55 @@ const { ComponentRevisionTracker } = require('./componentRevision');
 const { classifyStoredDeviceOwner } = require('./deviceIdentity');
 const { canonicalPath } = require('./runtimeIdentity');
 
+const SECRET_BROKER_ENV = 'CODING_TOOLS_MCP_SECRET_BROKER';
+const AUTH_HANDLE_ENV = 'CODING_TOOLS_MCP_AUTH_HANDLE';
+const MCP_AUTH_HANDLE = 'secret://mcp/auth';
+const OPENAI_API_KEY_HANDLE = 'secret://provider/openai/api-key';
+const CORE_NATIVE_ENV_NAMES = new Set([
+  'PATH', 'PATHEXT', 'COMSPEC', 'SYSTEMROOT', 'WINDIR', 'SYSTEMDRIVE',
+  'PROGRAMDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'PROGRAMW6432',
+  'COMMONPROGRAMFILES', 'COMMONPROGRAMFILES(X86)', 'COMMONPROGRAMW6432',
+  'ALLUSERSPROFILE', 'PUBLIC', 'LOCALAPPDATA', 'APPDATA', 'USERPROFILE',
+  'HOMEDRIVE', 'HOMEPATH', 'HOME', 'USER', 'USERNAME', 'TEMP', 'TMP',
+  'TMPDIR', 'LANG', 'LC_ALL', 'TERM'
+]);
+
+function coreNativeEnvironment(sourceEnv = process.env) {
+  const env = {};
+  for (const [key, value] of Object.entries(sourceEnv || {})) {
+    if (value === undefined || value === null) continue;
+    const upper = String(key).toUpperCase();
+    if (CORE_NATIVE_ENV_NAMES.has(upper) || upper.startsWith('LC_')) env[upper] = String(value);
+  }
+  return env;
+}
+
+function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, diskRevision, supervisorRequestFile, device = null }) {
+  const env = coreNativeEnvironment(sourceEnv);
+  const broker = { [MCP_AUTH_HANDLE]: String(token || '') };
+  if (String(sourceEnv.OPENAI_API_KEY || '')) broker[OPENAI_API_KEY_HANDLE] = String(sourceEnv.OPENAI_API_KEY);
+  Object.assign(env, {
+    CODING_TOOLS_MCP_AUTH_MODE: 'bearer',
+    [SECRET_BROKER_ENV]: JSON.stringify(broker),
+    [AUTH_HANDLE_ENV]: MCP_AUTH_HANDLE,
+    CODING_TOOLS_MCP_TELEMETRY: 'off',
+    CODING_TOOLS_MCP_TOOL_MODE: 'smart',
+    CODING_TOOLS_MCP_AUTHORIZED_ROOTS: JSON.stringify(settings.authorizedRoots || []),
+    CODING_TOOLS_MCP_LONG_TOOL_HANDOFF_SECONDS: String(settings.progressReportSeconds || 90),
+    CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: supervisorRequestFile,
+    CODING_TOOLS_MCP_CODE_REVISION: diskRevision
+  });
+  if (device) {
+    env.CODING_TOOLS_MCP_DEVICE_ID = device.deviceId;
+    env.CODING_TOOLS_MCP_DEVICE_INSTANCE_ID = device.deviceInstanceId;
+    env.CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME = device.displayName;
+  }
+  const bundledTools = path.join(launch.resourcesRoot, 'tools');
+  env.PATH = [bundledTools, env.PATH || ''].filter(Boolean).join(path.delimiter);
+  env.PYTHONPATH = [launch.moduleRoot, launch.vendoredPython].filter(Boolean).join(path.delimiter);
+  return env;
+}
+
 function isAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try { process.kill(pid, 0); return true; } catch { return false; }
@@ -164,25 +213,15 @@ class NativeService {
     ensureParent(this.paths.mcpLogFile());
     rotateLog(this.paths.mcpLogFile());
     const output = fs.openSync(this.paths.mcpLogFile(), 'a');
-    const env = {
-      ...process.env,
-      CODING_TOOLS_MCP_AUTH_MODE: 'bearer',
-      CODING_TOOLS_MCP_AUTH_TOKEN: token,
-      CODING_TOOLS_MCP_TELEMETRY: 'off',
-      CODING_TOOLS_MCP_TOOL_MODE: 'smart',
-      CODING_TOOLS_MCP_AUTHORIZED_ROOTS: JSON.stringify(settings.authorizedRoots || []),
-      CODING_TOOLS_MCP_LONG_TOOL_HANDOFF_SECONDS: String(settings.progressReportSeconds || 90),
-      CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: this.paths.supervisorRequestFile(),
-      CODING_TOOLS_MCP_CODE_REVISION: diskRevision
-    };
-    if (this.device) {
-      env.CODING_TOOLS_MCP_DEVICE_ID = this.device.deviceId;
-      env.CODING_TOOLS_MCP_DEVICE_INSTANCE_ID = this.device.deviceInstanceId;
-      env.CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME = this.device.displayName;
-    }
-    const bundledTools = path.join(launch.resourcesRoot, 'tools');
-    env.PATH = [bundledTools, process.env.PATH || ''].filter(Boolean).join(path.delimiter);
-    env.PYTHONPATH = [launch.moduleRoot, launch.vendoredPython, process.env.PYTHONPATH || ''].filter(Boolean).join(path.delimiter);
+    const env = buildNativeMcpEnv({
+      sourceEnv: process.env,
+      launch,
+      settings,
+      token,
+      diskRevision,
+      supervisorRequestFile: this.paths.supervisorRequestFile(),
+      device: this.device
+    });
     const args = [
       ...python.prefixArgs,
       '-m', 'coding_tools_mcp',
@@ -317,5 +356,10 @@ module.exports = {
   isAlive,
   runtimeFingerprint,
   currentRuntimeState,
-  resolveNativeLaunchContract
+  resolveNativeLaunchContract,
+  buildNativeMcpEnv,
+  SECRET_BROKER_ENV,
+  AUTH_HANDLE_ENV,
+  MCP_AUTH_HANDLE,
+  OPENAI_API_KEY_HANDLE
 };

@@ -84,6 +84,12 @@ from .protocol import (  # noqa: F401  # composition-root namespace
 from .project_context import ProjectContext, load_project_context  # noqa: F401  # composition-root namespace
 from .build_verify import verify_build as run_build_verification  # noqa: F401  # composition-root namespace
 from .artifact_refs import build_file_artifact_ref  # noqa: F401  # composition-root namespace
+from .secret_broker import (  # noqa: F401  # composition-root namespace
+    AUTH_HANDLE_ENV,
+    MCP_AUTH_HANDLE,
+    SecretBroker,
+    SecretBrokerError,
+)
 from .codex_bridge import CodexAppServerBridge, CodexBridgeError  # noqa: F401  # composition-root namespace
 from .code_mode import CodeModeHostBindingProxy  # noqa: F401  # composition-root namespace
 from .document_tools import create_docx, create_text_document, convert_document, extract_document  # noqa: F401  # composition-root namespace
@@ -104,6 +110,7 @@ from .proof_ledger import ProofLedger  # noqa: F401  # composition-root namespac
 from .telemetry import SessionTelemetry  # noqa: F401  # composition-root namespace
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head  # noqa: F401  # composition-root namespace
 from .tool_results import make_tool_result, model_visible_text_bytes  # noqa: F401  # composition-root namespace
+from .trace_context import trace_context_metadata  # noqa: F401  # composition-root namespace
 from .tool_contract import (  # noqa: F401  # composition-root namespace
     AGENT_EXECUTION_ROUTES,
     SMART_COMPAT_TOOL_NAMES,
@@ -482,6 +489,7 @@ class Runtime(
         fake_readonly_annotations: bool = False,
         transport: str = "stdio",
         semantic_localizer: Any | None = None,
+        secret_broker: SecretBroker | None = None,
     ) -> None:
         self.authorized_roots = configured_authorized_roots()
         self.workspace = Workspace(workspace, self.authorized_roots)
@@ -566,6 +574,7 @@ class Runtime(
             )
         self.allow_network = allow_network or self.capabilities.network
         self.auth_token = auth_token or None
+        self.secret_broker = secret_broker or SecretBroker()
         self.oauth_config = oauth_config
         self.server_instance_id = secrets.token_urlsafe(12)
         self.process_instance_id = PROCESS_INSTANCE_ID
@@ -670,6 +679,7 @@ class Runtime(
         self._codex_bridge = CodexAppServerBridge(
             lambda: self.workspace.root,
             resource_governor=self.execution_resource_governor,
+            secret_broker=self.secret_broker,
         )
         self._tool_handlers = {name: getattr(self, name) for name in TOOL_REGISTRY}
 
@@ -927,6 +937,7 @@ class Runtime(
             self._codex_bridge = CodexAppServerBridge(
                 lambda: self.workspace.root,
                 resource_governor=self.execution_resource_governor,
+                secret_broker=self.secret_broker,
             )
             with self.patch_lock:
                 self.patch_baselines.clear()
@@ -1870,6 +1881,8 @@ class Runtime(
             timeout_seconds = min(timeout_seconds, workflow_runtime_seconds)
         budget = BudgetDeadline(max_runtime_seconds=timeout_seconds)
         hub_identity = dict(self._current_hub_client() or {})
+        trace_context = dict(getattr(self.request_context, "trace_context", {}) or {})
+        trace_metadata = trace_context_metadata(trace_context)
         operation: dict[str, Any] = {
             "operation_id": operation_id,
             "tool": name,
@@ -1897,6 +1910,7 @@ class Runtime(
                 "phase": str(arguments.get("phase") or ""),
                 "objective": str(arguments.get("objective") or "")[:1_000],
                 "request_id": str(request_id or ""),
+                **trace_metadata,
             },
         )
 
@@ -1930,10 +1944,14 @@ class Runtime(
             previous_budget = getattr(self.request_context, "background_budget", None)
             had_hub_client = hasattr(self.request_context, "hub_client")
             previous_hub_client = getattr(self.request_context, "hub_client", None)
+            had_trace_context = hasattr(self.request_context, "trace_context")
+            previous_trace_context = getattr(self.request_context, "trace_context", None)
             self.request_context.background_cancel_event = cancel_event
             self.request_context.background_budget = budget
             if hub_identity:
                 self.request_context.hub_client = dict(hub_identity)
+            if trace_context:
+                self.request_context.trace_context = dict(trace_context)
             try:
                 operation["result"] = self._call_tool_sync(name, arguments, request_id=request_id)
             except Exception as exc:  # noqa: BLE001 - background errors must become inspectable state
@@ -1963,6 +1981,13 @@ class Runtime(
                 else:
                     try:
                         del self.request_context.hub_client
+                    except AttributeError:
+                        pass
+                if had_trace_context:
+                    self.request_context.trace_context = previous_trace_context
+                else:
+                    try:
+                        del self.request_context.trace_context
                     except AttributeError:
                         pass
                 try:
@@ -2596,7 +2621,10 @@ class Runtime(
             "base_head": head,
             "branch": str(status.get("branch") or ""),
             "worktree_fp": worktree_fp,
+            "source_fingerprint": worktree_fp,
+            "runtime_worktree_fingerprint": worktree_fp,
             "dirty_paths": dirty_paths,
+            "dirty_source_paths": list(dirty_paths),
             "workspace_identity": workspace_identity,
         }
 
@@ -3207,6 +3235,7 @@ def build_runtime(
     emit_warning: bool = True,
     project_context: ProjectContext | None = None,
     transport: str = "stdio",
+    secret_broker: SecretBroker | None = None,
 ) -> Runtime:
     workspace = Path(args.workspace or os.environ.get(f"{ENV_PREFIX}_WORKSPACE") or os.getcwd())
     runtime = Runtime(
@@ -3220,6 +3249,7 @@ def build_runtime(
         project_context=project_context,
         fake_readonly_annotations=runtime_policy.fake_readonly_annotations,
         transport=transport,
+        secret_broker=secret_broker,
     )
     if emit_warning and runtime.capabilities.skip_all_permissions:
         print(
@@ -3245,7 +3275,14 @@ def run_http(args: argparse.Namespace) -> int:
         supported = ", ".join(AUTH_MODE_CHOICES)
         print(f"ERROR: {ENV_PREFIX}_AUTH_MODE must be one of: {supported}.", file=sys.stderr)
         return 2
-    auth_token = args.auth_token or os.environ.get(f"{ENV_PREFIX}_AUTH_TOKEN") or None
+    try:
+        secret_broker = SecretBroker.from_environment()
+        auth_handle = str(os.environ.pop(AUTH_HANDLE_ENV, "") or MCP_AUTH_HANDLE).strip()
+        broker_auth_token = secret_broker.resolve(auth_handle) if auth_handle else None
+    except SecretBrokerError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    auth_token = args.auth_token or broker_auth_token or None
     try:
         runtime_policy = runtime_policy_from_args(args)
     except ValueError as exc:
@@ -3346,7 +3383,14 @@ def run_http(args: argparse.Namespace) -> int:
         )
         return 2
 
-    runtime = build_runtime(args, runtime_policy, auth_token=auth_token, oauth_config=oauth_config, transport="http")
+    runtime = build_runtime(
+        args,
+        runtime_policy,
+        auth_token=auth_token,
+        oauth_config=oauth_config,
+        transport="http",
+        secret_broker=secret_broker,
+    )
     runtime.preheat_workspace_async()
 
     def runtime_factory() -> Runtime:
@@ -3358,6 +3402,7 @@ def run_http(args: argparse.Namespace) -> int:
             emit_warning=False,
             project_context=runtime.project_context,
             transport="http",
+            secret_broker=secret_broker,
         )
 
     server = RuntimeHTTPServer((args.host, args.port), MCPHandler, runtime, runtime_factory)
@@ -3382,11 +3427,17 @@ def run_http(args: argparse.Namespace) -> int:
 
 def run_stdio(args: argparse.Namespace) -> int:
     try:
+        secret_broker = SecretBroker.from_environment()
+        os.environ.pop(AUTH_HANDLE_ENV, None)
+    except SecretBrokerError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    try:
         runtime_policy = runtime_policy_from_args(args)
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
-    runtime = build_runtime(args, runtime_policy)
+    runtime = build_runtime(args, runtime_policy, secret_broker=secret_broker)
     return serve_stdio(runtime)
 
 

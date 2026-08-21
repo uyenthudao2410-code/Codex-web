@@ -17,6 +17,7 @@ from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+TASK_CONTEXT_META_KEY = "io.coding-tools/taskContextId"
 
 
 def process_is_alive(process_id: int) -> bool:
@@ -122,14 +123,20 @@ class StatelessReconnectFaultInjectionTests(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertNotIn("mcp-session-id", headers)
                 self.assertFalse(started["result"]["isError"])
+                task_context_id = started["result"]["_meta"][TASK_CONTEXT_META_KEY]
+                self.assertTrue(task_context_id)
 
                 # The helper deliberately creates a fresh HTTP connection for every
-                # request. No initialize call or MCP transport-session header is used.
-                status, headers, restored = call_task_control({"action": "get"}, 2)
+                # request. No initialize call or MCP transport-session header is used;
+                # application task continuity is carried explicitly by task_context_id.
+                status, headers, restored = call_task_control(
+                    {"action": "get", "task_context_id": task_context_id}, 2
+                )
                 self.assertEqual(status, 200)
                 self.assertNotIn("mcp-session-id", headers)
                 self.assertFalse(restored["result"]["isError"])
                 structured = restored["result"].get("structuredContent") or {}
+                self.assertEqual(structured["task_context_id"], task_context_id)
                 self.assertEqual(structured["state"]["objective"], "survive stateless reconnect")
             finally:
                 server.shutdown()

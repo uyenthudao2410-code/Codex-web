@@ -14,6 +14,7 @@ from coding_tools_mcp.codex_bridge import (
     sanitized_codex_env,
     _usage_economics,
 )
+from coding_tools_mcp.secret_broker import OPENAI_API_KEY_HANDLE, SecretBroker
 
 
 class CodexBridgeTests(unittest.TestCase):
@@ -47,19 +48,31 @@ class CodexBridgeTests(unittest.TestCase):
             self.assertTrue(_is_within_workspace(child, workspace))
             self.assertFalse(_is_within_workspace(sibling, workspace))
 
-    def test_codex_child_env_drops_bridge_credentials_only(self) -> None:
-        cleaned = sanitized_codex_env({
+    def test_codex_child_env_uses_core_env_and_brokered_provider_secret_only(self) -> None:
+        source = {
             "PATH": "keep",
-            "OPENAI_API_KEY": "provider-auth",
+            "OPENAI_API_KEY": "ambient-provider-auth-must-not-pass",
+            "UNRELATED_SECRET": "ambient-secret-must-not-pass",
+            "PYTHONPATH": "ambient-loader-path-must-not-pass",
             "CODING_TOOLS_MCP_AUTH_TOKEN": "drop-me",
             "CODING_TOOLS_MCP_TOOL_MODE": "smart",
             "WEBCODEX_TOKEN": "drop-me-too",
-        })
+        }
+        without_broker = sanitized_codex_env(source)
+        self.assertEqual(without_broker["PATH"], "keep")
+        self.assertNotIn("OPENAI_API_KEY", without_broker)
+        self.assertNotIn("UNRELATED_SECRET", without_broker)
+        self.assertNotIn("PYTHONPATH", without_broker)
+
+        broker = SecretBroker({OPENAI_API_KEY_HANDLE: "brokered-provider-auth"})
+        cleaned = sanitized_codex_env(source, secret_broker=broker)
         self.assertEqual(cleaned["PATH"], "keep")
-        self.assertEqual(cleaned["OPENAI_API_KEY"], "provider-auth")
+        self.assertEqual(cleaned["OPENAI_API_KEY"], "brokered-provider-auth")
         self.assertNotIn("CODING_TOOLS_MCP_AUTH_TOKEN", cleaned)
         self.assertNotIn("CODING_TOOLS_MCP_TOOL_MODE", cleaned)
         self.assertNotIn("WEBCODEX_TOKEN", cleaned)
+        self.assertNotIn("UNRELATED_SECRET", cleaned)
+        self.assertNotIn("PYTHONPATH", cleaned)
 
     def test_configured_mcp_servers_are_discovered_and_disabled(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

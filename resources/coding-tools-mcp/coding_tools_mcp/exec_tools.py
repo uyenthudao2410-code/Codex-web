@@ -292,6 +292,12 @@ class ExecToolsMixin:
             projected_wave = str(projection.get("wave_id") or "").strip()
             requested_run = str(args.get("run_id") or "").strip()
             requested_wave = str(args.get("wave_id") or "").strip()
+            if bool(requested_run) != bool(requested_wave):
+                raise ToolFailure(
+                    "INVALID_ARGUMENT",
+                    "run_id and wave_id must be supplied together.",
+                    category="validation",
+                )
             if requested_run and projected_run and requested_run != projected_run:
                 raise ToolFailure(
                     "EXECUTION_OWNER_MISMATCH",
@@ -308,8 +314,17 @@ class ExecToolsMixin:
                     retryable=True,
                     details={"wave_id": requested_wave, "current_wave_id": projected_wave},
                 )
-            owner_run = requested_run or projected_run
-            owner_wave = requested_wave or projected_wave
+            scope_checker = getattr(self.task_state, "is_scoped", None)
+            scoped_projection = bool(scope_checker()) if callable(scope_checker) else False
+            if requested_run:
+                owner_run = requested_run
+                owner_wave = requested_wave
+            elif scoped_projection and projected_run and projected_wave:
+                owner_run = projected_run
+                owner_wave = projected_wave
+            else:
+                owner_run = ""
+                owner_wave = ""
             command_workspace_identity = self._workspace_scope_identity(workdir)
             if owner_run:
                 self._assert_orchestration_workspace_scope(command_workspace_identity, run_id=owner_run)
@@ -460,18 +475,29 @@ class ExecToolsMixin:
         command_root = self.resolve_existing(str(args.get("workdir", args.get("path", "."))))
         if not command_root.path.is_dir():
             raise ToolFailure("NOT_A_DIRECTORY", "Build verification workdir must be a directory.", category="validation")
+        owner_run = str(args.get("run_id") or "").strip()
+        owner_wave = str(args.get("wave_id") or "").strip()
+        if bool(owner_run) != bool(owner_wave):
+            raise ToolFailure(
+                "INVALID_ARGUMENT",
+                "run_id and wave_id must be supplied together.",
+                category="validation",
+            )
 
         def runner(command: str, workdir: Path, timeout_seconds: int) -> dict[str, Any]:
             relative = workdir.relative_to(self.workspace.root).as_posix() or "."
             started = time.time()
-            payload = self.exec_command({
+            exec_args: dict[str, Any] = {
                 "cmd": command,
                 "workdir": relative,
                 "timeout_ms": min(timeout_seconds * 1000, 600000),
                 "yield_time_ms": 30000,
                 "max_output_bytes": 131072,
                 "verbosity": "summary",
-            })
+            }
+            if owner_run and owner_wave:
+                exec_args.update({"run_id": owner_run, "wave_id": owner_wave})
+            payload = self.exec_command(exec_args)
             while payload.get("status") == "running":
                 payload = self.write_stdin({
                     "session_id": str(payload["session_id"]),
@@ -490,9 +516,6 @@ class ExecToolsMixin:
             return result
 
         report = run_build_verification(resolved.path, args, runner, command_root=command_root.path)
-        projection = self.task_state.get().get("orchestration", {})
-        owner_run = str(projection.get("run_id") or "") if isinstance(projection, dict) else ""
-        owner_wave = str(projection.get("wave_id") or "") if isinstance(projection, dict) else ""
         hash_algorithm = str(report.get("hash_algorithm") or "sha256")
         for artifact in report.get("artifacts", []) if isinstance(report.get("artifacts"), list) else []:
             if not isinstance(artifact, dict):

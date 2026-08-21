@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import threading
+import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,6 +15,20 @@ from .orchestration_ledger import OrchestrationLedger
 
 WRITE_LEASE_TTL_SECONDS = 60.0
 WRITE_FENCE_SCOPE = "workspace"
+DEFAULT_PROTECTED_SOURCE_PATHS = (".coding-tools", ".git")
+
+
+def _normalize_source_path(value: object) -> str:
+    path = str(value or "").strip().replace("\\", "/")
+    while path.startswith("./"):
+        path = path[2:]
+    return path.rstrip("/")
+
+
+def _path_within(path: str, root: str) -> bool:
+    path_key = path.casefold()
+    root_key = root.casefold()
+    return path_key == root_key or path_key.startswith(f"{root_key}/")
 
 
 STATES = frozenset({
@@ -72,6 +87,13 @@ class WriteLease:
     scope_key: str = WRITE_FENCE_SCOPE
     allowed_paths: tuple[str, ...] = ()
     delegation_id: str | None = None
+    owner_session: str = ""
+    source_fingerprint: str = ""
+    runtime_worktree_fingerprint: str = ""
+    protected_paths: tuple[str, ...] = DEFAULT_PROTECTED_SOURCE_PATHS
+    existing_dirty_source_paths: tuple[str, ...] = ()
+    started_at: float = 0.0
+    state: str = "active"
 
 
 @dataclass
@@ -345,6 +367,11 @@ class OrchestrationControl:
         mode: str,
         allowed_paths: list[str] | None = None,
         delegation_id: str | None = None,
+        owner_session: str | None = None,
+        source_fingerprint: str | None = None,
+        runtime_worktree_fingerprint: str | None = None,
+        protected_paths: list[str] | None = None,
+        existing_dirty_source_paths: list[str] | None = None,
         ttl_seconds: float = WRITE_LEASE_TTL_SECONDS,
     ) -> WriteLease:
         with self._lock:
@@ -375,8 +402,23 @@ class OrchestrationControl:
                 worktree_fp=ctx.worktree_fp,
                 fencing_token=int(fence["fencing_token"]),
                 expires_at=float(fence["expires_at"]),
-                allowed_paths=tuple(sorted({str(item).replace("\\", "/") for item in (allowed_paths or []) if str(item).strip()})),
+                allowed_paths=tuple(sorted({_normalize_source_path(item) for item in (allowed_paths or []) if _normalize_source_path(item)})),
                 delegation_id=delegation_id or ctx.delegation_id,
+                owner_session=str(owner_session or owner),
+                source_fingerprint=str(ctx.worktree_fp if source_fingerprint is None else source_fingerprint),
+                runtime_worktree_fingerprint=str(ctx.worktree_fp if runtime_worktree_fingerprint is None else runtime_worktree_fingerprint),
+                protected_paths=tuple(sorted({
+                    _normalize_source_path(item)
+                    for item in (DEFAULT_PROTECTED_SOURCE_PATHS if protected_paths is None else protected_paths)
+                    if _normalize_source_path(item)
+                })),
+                existing_dirty_source_paths=tuple(sorted({
+                    _normalize_source_path(item)
+                    for item in (existing_dirty_source_paths or [])
+                    if _normalize_source_path(item)
+                })),
+                started_at=time.time(),
+                state="active",
             )
             ctx.write_lease = lease
             self.ledger.append_event(
@@ -396,6 +438,13 @@ class OrchestrationControl:
                     "base_head": lease.base_head,
                     "worktree_fp": lease.worktree_fp,
                     "allowed_paths": list(lease.allowed_paths),
+                    "owner_session": lease.owner_session,
+                    "source_fingerprint": lease.source_fingerprint,
+                    "runtime_worktree_fingerprint": lease.runtime_worktree_fingerprint,
+                    "protected_paths": list(lease.protected_paths),
+                    "existing_dirty_source_paths": list(lease.existing_dirty_source_paths),
+                    "started_at": lease.started_at,
+                    "lease_state": lease.state,
                 },
             )
             self.transition(ctx, "EXECUTING", reason="write_authority_acquired")
@@ -409,6 +458,10 @@ class OrchestrationControl:
         paths: list[str] | None = None,
         base_head: str | None = None,
         worktree_fp: str | None = None,
+        owner_session: str | None = None,
+        source_fingerprint: str | None = None,
+        runtime_worktree_fingerprint: str | None = None,
+        dirty_source_paths: list[str] | None = None,
     ) -> None:
         lease = ctx.write_lease
         if ctx.state != "EXECUTING" or lease is None:
@@ -422,10 +475,14 @@ class OrchestrationControl:
                 "WRITE_OWNER_MISMATCH",
                 f"Write owner {owner!r} does not match active lease owner {lease.owner!r}.",
             )
+        if owner_session is not None and lease.owner_session and owner_session != lease.owner_session:
+            raise OrchestrationControlError(
+                "WRITE_SESSION_MISMATCH",
+                "The source-write session does not match the active mutation lease.",
+                details={"owner_session": owner_session, "lease_owner_session": lease.owner_session},
+            )
         if base_head is not None and lease.base_head and base_head != lease.base_head:
             raise OrchestrationControlError("BASE_DRIFT", "Base HEAD changed after the write lease was acquired.")
-        if worktree_fp is not None and lease.worktree_fp and worktree_fp != lease.worktree_fp:
-            raise OrchestrationControlError("BASE_DRIFT", "Worktree fingerprint changed before the authorized mutation.")
         fence = self.ledger.assert_write_fence(
             scope_key=lease.scope_key,
             lease_id=lease.lease_id,
@@ -440,10 +497,73 @@ class OrchestrationControl:
                 "The workspace write fence is no longer valid; the attempt must not mutate state.",
                 details={"reason": reason, "lease_id": lease.lease_id, "fencing_token": lease.fencing_token, "current": fence.get("current")},
             )
+        current_dirty = None
+        if dirty_source_paths is not None:
+            current_dirty = {
+                _normalize_source_path(item)
+                for item in dirty_source_paths
+                if _normalize_source_path(item)
+            }
+            foreign_dirty = sorted(current_dirty.difference(lease.existing_dirty_source_paths))
+            if foreign_dirty:
+                raise OrchestrationControlError(
+                    "FOREIGN_DIRTY_SOURCE",
+                    "Source paths became dirty after the mutation lease was acquired.",
+                    details={
+                        "foreign_dirty_source_paths": foreign_dirty,
+                        "existing_dirty_source_paths": list(lease.existing_dirty_source_paths),
+                    },
+                )
+        legacy_worktree_only = (
+            worktree_fp is not None
+            and source_fingerprint is None
+            and runtime_worktree_fingerprint is None
+            and dirty_source_paths is None
+        )
+        if legacy_worktree_only and lease.worktree_fp and worktree_fp != lease.worktree_fp:
+            raise OrchestrationControlError("BASE_DRIFT", "Worktree fingerprint changed before the authorized mutation.")
+        current_source_fingerprint = source_fingerprint
+        if current_source_fingerprint is None and not legacy_worktree_only:
+            current_source_fingerprint = runtime_worktree_fingerprint
+        if (
+            current_source_fingerprint is not None
+            and lease.source_fingerprint
+            and current_source_fingerprint != lease.source_fingerprint
+        ):
+            raise OrchestrationControlError(
+                "SOURCE_DRIFT",
+                "Source fingerprint changed after the mutation lease was acquired.",
+                details={
+                    "expected_source_fingerprint": lease.source_fingerprint,
+                    "current_source_fingerprint": current_source_fingerprint,
+                    "dirty_source_paths": sorted(current_dirty or ()),
+                },
+            )
+        if (
+            runtime_worktree_fingerprint is not None
+            and lease.runtime_worktree_fingerprint
+            and runtime_worktree_fingerprint != lease.runtime_worktree_fingerprint
+        ):
+            raise OrchestrationControlError(
+                "SOURCE_DRIFT",
+                "Runtime worktree fingerprint changed after the mutation lease was acquired.",
+                details={
+                    "expected_runtime_worktree_fingerprint": lease.runtime_worktree_fingerprint,
+                    "current_runtime_worktree_fingerprint": runtime_worktree_fingerprint,
+                },
+            )
+        requested_paths = [_normalize_source_path(raw) for raw in (paths or []) if _normalize_source_path(raw)]
+        for path in requested_paths:
+            for protected in lease.protected_paths:
+                if _path_within(path, protected):
+                    raise OrchestrationControlError(
+                        "PROTECTED_PATH_WRITE",
+                        f"Path {path!r} is protected from source mutation.",
+                        details={"protected_paths": list(lease.protected_paths)},
+                    )
         if lease.allowed_paths:
             allowed = set(lease.allowed_paths)
-            for raw in paths or []:
-                path = str(raw).replace("\\", "/")
+            for path in requested_paths:
                 if path not in allowed:
                     raise OrchestrationControlError(
                         "WRITE_SCOPE_VIOLATION",
@@ -494,6 +614,7 @@ class OrchestrationControl:
         lease = ctx.write_lease
         if lease is None:
             return
+        lease.state = "released"
         self.ledger.release_write_fence(
             scope_key=lease.scope_key,
             lease_id=lease.lease_id,
@@ -507,7 +628,7 @@ class OrchestrationControl:
             event_type="write_lease_revoked",
             state_before=ctx.state,
             state_after=ctx.state,
-            payload={"lease_id": lease.lease_id, "owner": lease.owner, "reason": reason},
+            payload={"lease_id": lease.lease_id, "owner": lease.owner, "reason": reason, "lease_state": lease.state},
         )
         ctx.write_lease = None
 
@@ -652,6 +773,13 @@ class OrchestrationControl:
                     scope_key=str(payload.get("scope_key") or WRITE_FENCE_SCOPE),
                     allowed_paths=tuple(payload.get("allowed_paths") or []),
                     delegation_id=event.get("delegation_id"),
+                    owner_session=str(payload.get("owner_session") or payload.get("owner") or ""),
+                    source_fingerprint=str(payload.get("source_fingerprint") or payload.get("worktree_fp") or ""),
+                    runtime_worktree_fingerprint=str(payload.get("runtime_worktree_fingerprint") or payload.get("worktree_fp") or ""),
+                    protected_paths=tuple(payload.get("protected_paths") or DEFAULT_PROTECTED_SOURCE_PATHS),
+                    existing_dirty_source_paths=tuple(payload.get("existing_dirty_source_paths") or []),
+                    started_at=float(payload.get("started_at") or 0),
+                    state=str(payload.get("lease_state") or "active"),
                 )
             elif event["event_type"] == "write_lease_revoked":
                 lease = None

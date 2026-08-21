@@ -867,6 +867,90 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
         finally:
             runtime.close()
 
+    def test_unscoped_exec_does_not_inherit_active_task_projection(self) -> None:
+        runtime_root = self.root / "unscoped-runtime"
+        runtime_root.mkdir()
+        runtime = Runtime(runtime_root, permission_mode="dangerous")
+        try:
+            runtime.task_state.ensure_started("owned task", current_step="test")
+            ctx = runtime.orchestration_control.begin(
+                objective="owned task",
+                task_id="unscoped-task",
+                execution_mode="mcp_only",
+                base_head="",
+                worktree_fp="",
+            )
+            runtime._project_orchestration(ctx)
+            self.assertFalse(runtime.task_state.is_scoped())
+
+            result = runtime.exec_command({
+                "cmd": f'"{sys.executable}" --version',
+                "resource_class": "LIGHT",
+                "yield_time_ms": 5000,
+            })
+
+            self.assertEqual(result["exit_code"], 0)
+            self.assertEqual(result["execution_owner"]["run_id"], "")
+            self.assertEqual(result["execution_owner"]["wave_id"], "")
+            self.assertIsNone(runtime.task_state.get()["current_command"])
+            row = next(
+                item
+                for item in runtime.execution_resource_governor._rows()
+                if item["command_id"] == result["session_id"]
+            )
+            self.assertEqual(row["run_id"], "")
+            self.assertEqual(row["wave_id"], "")
+        finally:
+            runtime.close()
+
+    def test_internal_continuous_check_explicitly_preserves_eocl_owner(self) -> None:
+        runtime_root = self.root / "owned-internal-runtime"
+        runtime_root.mkdir()
+        runtime = Runtime(runtime_root, permission_mode="dangerous")
+        try:
+            runtime.task_state.ensure_started("owned proof", current_step="test")
+            ctx = runtime.orchestration_control.begin(
+                objective="owned proof",
+                task_id="owned-proof-task",
+                execution_mode="mcp_only",
+                base_head="",
+                worktree_fp="",
+            )
+            runtime.orchestration_control.mark_ready(ctx)
+            runtime.orchestration_control.select_route(
+                ctx,
+                {"requested": "deterministic", "selected": "deterministic", "reason": "test"},
+            )
+            runtime.orchestration_control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only")
+            runtime._project_orchestration(ctx)
+            self.assertFalse(runtime.task_state.is_scoped())
+
+            result = runtime.apply_changes_and_verify({
+                "objective": "run one owned proof check",
+                "checks": [f'"{sys.executable}" --version'],
+                "path": ".",
+                "workdir": ".",
+                "verification": "none",
+                "include_diff": False,
+                "_orchestration_context": ctx,
+            })
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["check_results"][0]["status"], "passed")
+            session_id = str(result["check_results"][0]["session_id"])
+            row = next(
+                item
+                for item in runtime.execution_resource_governor._rows(
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                )
+                if item["command_id"] == session_id
+            )
+            self.assertEqual(row["run_id"], ctx.run_id)
+            self.assertEqual(row["wave_id"], ctx.wave_id)
+        finally:
+            runtime.close()
+
 
 if __name__ == "__main__":
     unittest.main()

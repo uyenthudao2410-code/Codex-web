@@ -84,7 +84,17 @@ class OrchestrationControlTests(unittest.TestCase):
             )
             control.mark_ready(ctx)
             control.select_route(ctx, {"requested": "auto", "selected": "deterministic"})
-            lease = control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only")
+            lease = control.acquire_write_lease(
+                ctx,
+                owner="MCP",
+                mode="mcp_only",
+                owner_session="session-a",
+                source_fingerprint="source-a",
+                runtime_worktree_fingerprint="runtime-a",
+                allowed_paths=["app.py"],
+                protected_paths=[".coding-tools", ".git"],
+                existing_dirty_source_paths=["known.py"],
+            )
 
             recovered = OrchestrationControl(root, OrchestrationLedger(root)).recover(ctx.run_id)
             self.assertIsNotNone(recovered)
@@ -92,6 +102,11 @@ class OrchestrationControlTests(unittest.TestCase):
             self.assertEqual(recovered.state, "EXECUTING")
             self.assertIsNotNone(recovered.write_lease)
             self.assertEqual(recovered.write_lease.lease_id, lease.lease_id)
+            self.assertEqual(recovered.write_lease.owner_session, "session-a")
+            self.assertEqual(recovered.write_lease.source_fingerprint, "source-a")
+            self.assertEqual(recovered.write_lease.runtime_worktree_fingerprint, "runtime-a")
+            self.assertEqual(recovered.write_lease.allowed_paths, ("app.py",))
+            self.assertEqual(recovered.write_lease.existing_dirty_source_paths, ("known.py",))
 
 
     def test_workspace_fence_blocks_concurrent_writer_and_increments_after_release(self) -> None:
@@ -139,6 +154,92 @@ class OrchestrationControlTests(unittest.TestCase):
             with self.assertRaises(OrchestrationControlError) as expired:
                 control.assert_write_allowed(ctx, owner="MCP")
             self.assertEqual(expired.exception.code, "WRITE_LEASE_EXPIRED")
+
+    def test_write_lease_enforces_session_source_dirty_and_protected_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            control = OrchestrationControl(root, ledger)
+            ctx = control.begin(objective="source fence", task_id="source-fence", execution_mode="mcp_only", base_head="base", worktree_fp="source-a")
+            control.mark_ready(ctx)
+            control.select_route(ctx, {"requested": "auto", "selected": "deterministic"})
+            control.acquire_write_lease(
+                ctx,
+                owner="MCP",
+                mode="mcp_only",
+                owner_session="session-a",
+                source_fingerprint="source-a",
+                runtime_worktree_fingerprint="source-a",
+                allowed_paths=["app.py"],
+                existing_dirty_source_paths=["known.py"],
+            )
+            control.assert_write_allowed(
+                ctx,
+                owner="MCP",
+                owner_session="session-a",
+                paths=["app.py"],
+                base_head="base",
+                source_fingerprint="source-a",
+                runtime_worktree_fingerprint="source-a",
+                dirty_source_paths=["known.py"],
+            )
+            with self.assertRaises(OrchestrationControlError) as wrong_session:
+                control.assert_write_allowed(ctx, owner="MCP", owner_session="session-b")
+            self.assertEqual(wrong_session.exception.code, "WRITE_SESSION_MISMATCH")
+            with self.assertRaises(OrchestrationControlError) as foreign_dirty:
+                control.assert_write_allowed(
+                    ctx,
+                    owner="MCP",
+                    owner_session="session-a",
+                    source_fingerprint="source-b",
+                    runtime_worktree_fingerprint="source-b",
+                    dirty_source_paths=["known.py", "foreign.py"],
+                )
+            self.assertEqual(foreign_dirty.exception.code, "FOREIGN_DIRTY_SOURCE")
+            self.assertEqual(foreign_dirty.exception.details["foreign_dirty_source_paths"], ["foreign.py"])
+            with self.assertRaises(OrchestrationControlError) as source_drift:
+                control.assert_write_allowed(
+                    ctx,
+                    owner="MCP",
+                    owner_session="session-a",
+                    source_fingerprint="source-b",
+                    runtime_worktree_fingerprint="source-b",
+                    dirty_source_paths=["known.py"],
+                )
+            self.assertEqual(source_drift.exception.code, "SOURCE_DRIFT")
+            with self.assertRaises(OrchestrationControlError) as protected:
+                control.assert_write_allowed(
+                    ctx,
+                    owner="MCP",
+                    owner_session="session-a",
+                    paths=[".coding-tools/state.json"],
+                    source_fingerprint="source-a",
+                    runtime_worktree_fingerprint="source-a",
+                    dirty_source_paths=["known.py"],
+                )
+            self.assertEqual(protected.exception.code, "PROTECTED_PATH_WRITE")
+            with self.assertRaises(OrchestrationControlError) as protected_casefold:
+                control.assert_write_allowed(
+                    ctx,
+                    owner="MCP",
+                    owner_session="session-a",
+                    paths=[".GIT/config"],
+                    source_fingerprint="source-a",
+                    runtime_worktree_fingerprint="source-a",
+                    dirty_source_paths=["known.py"],
+                )
+            self.assertEqual(protected_casefold.exception.code, "PROTECTED_PATH_WRITE")
+            with self.assertRaises(OrchestrationControlError) as scope:
+                control.assert_write_allowed(
+                    ctx,
+                    owner="MCP",
+                    owner_session="session-a",
+                    paths=["other.py"],
+                    source_fingerprint="source-a",
+                    runtime_worktree_fingerprint="source-a",
+                    dirty_source_paths=["known.py"],
+                )
+            self.assertEqual(scope.exception.code, "WRITE_SCOPE_VIOLATION")
 
 
 if __name__ == "__main__":
