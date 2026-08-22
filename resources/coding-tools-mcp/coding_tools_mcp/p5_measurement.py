@@ -36,9 +36,27 @@ def _car_snapshot(organic_rework: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _resource_snapshot(resource_economics: dict[str, Any] | None) -> dict[str, Any]:
+    value = resource_economics if isinstance(resource_economics, dict) else {}
+    vector = value.get("resource_vector") if isinstance(value.get("resource_vector"), dict) else {}
+    coverage = vector.get("monetary_and_token_coverage") if isinstance(vector.get("monetary_and_token_coverage"), dict) else {}
+    return {
+        "status": "observed" if value else "not_collected",
+        "all_accepted": dict(vector.get("all_accepted") or {}),
+        "first_pass": dict(vector.get("first_pass") or {}),
+        "repaired": dict(vector.get("repaired") or {}),
+        "monetary_and_token_coverage": dict(coverage),
+        "proof_economics": dict(value.get("proof_economics") or {}),
+        "current_source_dre": dict(value.get("current_source_dre") or {}),
+        "missing_measurements_remain_unknown": True,
+        "estimated_wait_is_not_provider_billing": True,
+    }
+
+
 def p5_baseline_snapshot(
     readiness: dict[str, Any],
     organic_rework: dict[str, Any],
+    resource_economics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     tta = organic_rework.get("tta_ms")
     if not isinstance(tta, dict):
@@ -85,6 +103,7 @@ def p5_baseline_snapshot(
                 ),
             },
             "car": _car_snapshot(organic_rework),
+            "resource_economics": _resource_snapshot(resource_economics),
         },
         "promotion_evaluation": {
             "status": "NOT_STARTED",
@@ -92,6 +111,7 @@ def p5_baseline_snapshot(
             "repair_or_replan_no_harm_evidence_status": "not_collected",
             "ttar_comparison_status": "not_collected",
             "car_comparison_status": "not_collected",
+            "resource_noninferiority_status": "not_collected",
             "materiality_threshold_status": "unspecified_requires_explicit_experiment_contract",
             "promotion_decision": None,
         },
@@ -101,6 +121,7 @@ def p5_baseline_snapshot(
             "baseline_snapshot_creates_assignments": False,
             "organic_baseline_joins_p5_itt": False,
             "missing_cost_is_zero": False,
+            "partial_resource_evidence_is_not_monetary_car": True,
             "synthetic_promotion_allowed": False,
         },
         "content_free": True,

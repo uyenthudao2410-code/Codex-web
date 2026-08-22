@@ -24,6 +24,7 @@
     "check:p5-readiness": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-p5-ready",
     "plan:p5-treatment": "python resources/coding-tools-mcp/scripts/plan_p5_controlled_treatment.py --workspace .",
     "report:p5-baseline": "python resources/coding-tools-mcp/scripts/report_p5_baseline.py --workspace .",
+    "report:accepted-result-economics": "python resources/coding-tools-mcp/scripts/report_accepted_result_economics.py --workspace .",
     "benchmark:routing": "cd resources/coding-tools-mcp && python -m benchmarks.routing_economics",
     "benchmark:orchestration-tax": "cd resources/coding-tools-mcp && python -m benchmarks.orchestration_tax",
     "benchmark:activation": "cd resources/coding-tools-mcp && python -m benchmarks.runtime_activation",

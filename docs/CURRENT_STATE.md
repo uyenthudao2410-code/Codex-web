@@ -107,6 +107,36 @@ Current measurement policy:
 - do not promote routing or placement from small or synthetic samples;
 - host-visible latency claims require an explicit host observation bound to the exact EOCL run/wave, not timestamp proximity.
 
+### Accepted-Result Economics measurement layer
+
+The current source adds a read-only Accepted-Result Economics layer on top of the existing canonical ledger and performance projection. Its operating North Star is:
+
+> **Minimize Accepted-Result Economic Loss under fixed quality, security, authority and correctness floors.**
+
+The decision order is deliberately lexicographic rather than a single blended score:
+
+```text
+quality floor
+  -> first-pass outcome
+  -> restricted TTAR p90
+  -> accepted-result resource cost
+  -> human/operator burden
+  -> simplicity
+```
+
+`npm run report:accepted-result-economics` is read-only. It reports accepted deterministic representative runs, bounded retained per-run resource telemetry, first-pass versus repaired resource distributions, top-tail workflow forensics, proof-cache economics, monetary/token coverage, and an exact-HEAD DRE window for `source_base_drift` and `acceptance_correction`.
+
+Evidence semantics are fail-closed:
+
+- missing money/tokens/resource observations remain **unknown**, never zero;
+- monetary CAR remains unavailable until accepted-result monetary-cost coverage is complete;
+- `estimated_wait_ms` is the capped gap between consecutive MCP tool calls and may include controller/model/network/operator time; it is **not** proven avoidable loss and is **not** provider billing;
+- bounded `performance.run_metrics` retention means an observed resource subset is descriptive and its coverage must be reported rather than silently extrapolated to every accepted run;
+- historical DRE counts identify mechanisms, but only natural accepted work on an exact clean current source revision may justify another current hardening wave;
+- a low proof-cache hit rate is measurement evidence, not by itself a reason to build a new cache architecture.
+
+P5 source now carries the same economics boundary. Promotion requires accepted-result resource economics and resource-overhead noninferiority; monetary-cost noninferiority is required when complete monetary coverage exists. No missing cost is converted to zero and no partial resource vector is relabeled as monetary CAR. P5 remains explicit, gated, arm-neutral before assignment, and non-automatic.
+
 The current host-observation path uses content-free identities (`turn_id`, `trace_id`, `span_id`) and explicit run binding; prompt/response text is not copied into the correlation record.
 
 ## 6. P0-P3 closure and evidence boundary

@@ -94,6 +94,16 @@ class P5MeasurementTests(unittest.TestCase):
         self.assertFalse(report["baseline_observed"])
         self.assertIsNone(report["observational_baseline"]["accepted_runs"])
 
+    def test_resource_vector_is_descriptive_and_adds_noninferiority_gate(self) -> None:
+        economics = {"resource_vector": {"all_accepted": {"estimated_wait_ms": {"samples": 3, "p50": 20}}, "first_pass": {"tool_calls": {"samples": 2, "p50": 3}}, "repaired": {"tool_calls": {"samples": 1, "p50": 7}}, "monetary_and_token_coverage": {"total_monetary_cost_coverage": 0.25}}, "proof_economics": {"eligible": 10, "hits": 1}, "current_source_dre": {"accepted_runs": 3}}
+        report = p5_baseline_snapshot(readiness(ready=False), rework(), economics)
+        resource = report["observational_baseline"]["resource_economics"]
+        self.assertEqual(resource["status"], "observed")
+        self.assertEqual(resource["proof_economics"]["hits"], 1)
+        self.assertTrue(resource["missing_measurements_remain_unknown"])
+        self.assertEqual(report["promotion_evaluation"]["resource_noninferiority_status"], "not_collected")
+        self.assertTrue(report["evidence_policy"]["partial_resource_evidence_is_not_monetary_car"])
+
 
 if __name__ == "__main__":
     unittest.main()

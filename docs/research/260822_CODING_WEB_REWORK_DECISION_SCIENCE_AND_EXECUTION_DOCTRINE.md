@@ -1619,4 +1619,114 @@ Không đảo ngược bốn tầng bằng chứng này.
 
 ---
 
-**END OF DECISION DOCTRINE — CW-RDS-20260822-v1**
+# 25. IMPLEMENTATION AMENDMENT — 2026-08-22/23 — ACCEPTED-RESULT ECONOMICS GATE
+
+Phần này là amendment vận hành mới hơn cho doctrine, không viết lại các snapshot lịch sử ở các mục trước. Các con số và kết luận lịch sử vẫn được giữ để forensic; khi có xung đột về quyết định hiện tại, amendment này cùng current source / `docs/CURRENT_STATE.md` / `docs/ROADMAP.md` có độ ưu tiên cao hơn các diễn giải snapshot cũ trong chính tài liệu này.
+
+## 25.1. North Star được mở rộng từ TTAR sang economic loss
+
+North Star vận hành hiện tại là:
+
+> **Minimize Accepted-Result Economic Loss under fixed quality, security, authority and correctness floors.**
+
+TTAR vẫn là biến primary nhưng không còn được hiểu là toàn bộ economics. Thứ tự quyết định chuẩn:
+
+```text
+quality floor
+  -> first-pass outcome
+  -> restricted TTAR p90
+  -> accepted-result resource cost
+  -> human/operator burden
+  -> simplicity
+```
+
+Resource/cost vector hiện bao gồm tối thiểu local execution, estimated inter-tool wait, tool calls, errors, request/response/model-visible bytes, proof economics và monetary/token coverage khi thực sự quan sát được. Missing measurement = `UNKNOWN`, không phải `0`.
+
+## 25.2. Reporter read-only đã được triển khai
+
+Source hiện có:
+
+```text
+npm run report:accepted-result-economics
+```
+
+Reporter đọc canonical ledger + `.coding-tools/performance.json`, không activate routing, không mở P5 epoch, không thay đổi production behavior. Nó tách first-pass/repaired resource distributions, top-tail forensic theo Feature/Bugfix/Diagnose, proof-cache opportunity, coverage của monetary/token measurements và current-source DRE window.
+
+`performance.run_metrics` có bounded retention. Vì vậy nếu chỉ một phần accepted cohort có per-run resource telemetry thì phải báo coverage và giữ diễn giải descriptive; không ngoại suy ngầm ra toàn cohort.
+
+`estimated_wait_ms` là khoảng cách bị cap giữa các MCP tool call liên tiếp. Nó có thể chứa controller/model/network/operator time. Do đó:
+
+```text
+estimated_wait != proven avoidable waste
+estimated_wait != provider billing
+```
+
+Monetary CAR chỉ available khi accepted-result cost coverage đầy đủ. Partial token/resource evidence không được đổi tên thành CAR.
+
+## 25.3. Điều chỉnh DRE: historical mechanism != current causal incidence
+
+Các snapshot trước ghi nhận `source_base_drift=66` và `acceptance_correction=56` historical events. Chúng vẫn hữu ích để biết mechanism từng tồn tại, nhưng **không đủ để tự động justify thêm hardening trên source hiện tại**.
+
+Quy tắc mới:
+
+```text
+historical count
+  -> mechanism hypothesis / forensic context
+
+natural accepted tasks on exact clean current source
+  -> current incidence
+
+current incidence + material economic impact
+  -> permission to open a smallest-causal DRE fix wave
+```
+
+Nếu exact current-source window chưa có volume thì kết luận đúng là `INSUFFICIENT_CURRENT_SOURCE_VOLUME`, không phải dùng cumulative history thay thế. STEP 0 snapshot cũ trong tài liệu này là historical baseline; sau source mutation phải re-prove trên code-bearing revision sạch mới.
+
+## 25.4. Tail interpretation được siết lại
+
+Các historical snapshot cho thấy repair tail lớn và Diagnose có anomaly rất nặng. Điều được phép nói ở hiện tại là:
+
+> **Tail remains a large cost center; Diagnose anomaly persists in the observed historical/current descriptive corpus.**
+
+Không dùng câu `tail continues worsening` nếu chưa có comparable current trend estimate trên cùng definition/window. Tail forensic vẫn ưu tiên vì expected value cao, nhưng intervention chỉ được mở sau khi timeline decomposition chỉ ra mechanism có thể tác động.
+
+## 25.5. Proof-cache: đo trước, không xây cache v2 theo phản xạ
+
+Reporter đưa proof-cache opportunity/hit economics vào cùng accepted-result resource evidence. Một hit rate thấp tự nó chỉ chứng minh reuse thấp; nó **không** chứng minh cache architecture mới sẽ giảm accepted-result loss. Chỉ mở cache workstream nếu prospective data cho thấy repeated proof là bottleneck vật chất, có reuse opportunity thực và expected saving vượt implementation/maintenance risk.
+
+## 25.6. P5 economics gate
+
+P5 implementation contract bổ sung các gate:
+
+```text
+accepted_result_resource_economics_required = true
+resource_overhead_noninferiority_required = true
+monetary_cost_noninferiority_when_complete = true
+missing_cost_is_zero = false
+```
+
+P5-A0 vẫn là natural shadow A/A và **không bật treatment**. A0 đo assignment/funnel/integrity và stability của measurement trên exact revision. Chỉ sau A0 healthy mới xem xét P5-A treatment canary với contract preregistered gồm quality floor, repair/replan no-harm, restricted TTAR, resource-overhead noninferiority và monetary-cost noninferiority khi coverage đầy đủ.
+
+P4 tiếp tục passive/shadow-only. P7/P8 chỉ được mở sau khi P5 có effect evidence phù hợp **và** cost/resource coverage đủ để optimizer không tối ưu proxy/noise. Automatic non-deterministic routing, auto-handoff, global server-first, P5 automatic start và automatic production promotion tiếp tục `OFF`.
+
+## 25.7. No-new-architecture freeze
+
+Chuỗi thực thi hiện tại được khóa thành:
+
+```text
+MEASURE CURRENT LOSS
+  -> FIX ONLY ACTIVE DETERMINISTIC LOSS
+  -> RUN REAL P5 A0 / CANARY UNDER EXPLICIT GATES
+  -> MEASURE COST + TTAR + QUALITY
+  -> THEN CONSIDER ROUTING OPTIMIZATION
+```
+
+Không build cache v2, P4 model mới, LSP expansion, routing optimizer, experiment service hay public tool mới nếu chưa có repeated observed need và causal path rõ tới accepted-result economics.
+
+## 25.8. Closure evidence policy
+
+Implementation wave của reporter/P5 economics gate chỉ được gọi CLOSED khi cùng exact source đã qua focused proof, affected/full component proof phù hợp, reporter smoke, diff/review, EOCL final acceptance và Git delivery. Sau commit phải chạy lại clean-source reporters để phân biệt **implementation closure** với **future natural-data evidence gates**. Thiếu natural current-source tasks hoặc monetary coverage sau đó là evidence gate, không phải lý do tiếp tục viết architecture.
+
+---
+
+**END OF DECISION DOCTRINE — CW-RDS-20260822-v1 + 2026-08-22/23 IMPLEMENTATION AMENDMENT**

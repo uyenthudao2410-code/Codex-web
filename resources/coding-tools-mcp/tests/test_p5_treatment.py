@@ -38,6 +38,10 @@ class P5TreatmentTests(unittest.TestCase):
         self.assertFalse(contract["automatic_production_promotion"])
         self.assertFalse(contract["shadow_recommendation_can_activate_treatment"])
         self.assertFalse(contract["cost_policy"]["missing_cost_is_zero"])
+        self.assertTrue(contract["promotion_requirements"]["accepted_result_resource_economics_required"])
+        self.assertTrue(contract["promotion_requirements"]["resource_overhead_noninferiority_required"])
+        self.assertTrue(contract["promotion_requirements"]["monetary_cost_noninferiority_when_complete"])
+        self.assertTrue(contract["cost_policy"]["partial_resource_vector_remains_descriptive"])
 
     def test_p4_c_legacy_signal_does_not_open_or_activate_experiment(self) -> None:
         contract = p5_implementation_contract(

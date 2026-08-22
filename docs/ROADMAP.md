@@ -44,6 +44,22 @@ P5 source now supplies a dormant, fail-closed experiment contract on the existin
 
 The next empirical step is **P5-A0 shadow A/A**, not treatment: an operator must explicitly open an exact manifest that matches the loaded runtime and clean/upstream-matched source if required by that manifest, has no active workspace write fence, and uses natural eligible `feature`/`bugfix` work with the registered quality oracle. Both A/A labels receive the control protocol; the analyzer evaluates assignment/funnel/integrity only and makes no efficacy claim. A P5-A treatment canary follows only after A/A instrumentation is healthy and a separate registered treatment manifest is approved. P4-C predictive completion is still required for any later targeted P5-C policy, but it is not a dependency for P5-A0 integrity validation. `npm run report:p5-baseline` and `npm run plan:p5-treatment` remain read-only planning/baseline aids; they cannot activate an epoch. Missing CAR is unknown rather than zero, and no materiality threshold is invented before the registered contract settles one.
 
+### Accepted-result economics gate before treatment
+
+The implementation sequence is now intentionally narrower than the historical architecture plans:
+
+1. close and deliver the read-only Accepted-Result Economics reporter on an exact revision;
+2. re-establish a clean-source baseline with `npm run report:accepted-result-economics`, `npm run report:p5-baseline`, P4 readiness, and P2 diagnosis;
+3. observe current-source DRE only from natural accepted work on that exact clean revision;
+4. run P5-A0 as shadow A/A instrumentation with treatment still off;
+5. open a separately registered P5-A treatment canary only after A0 integrity is healthy and quality, restricted TTAR, resource-overhead noninferiority, and available monetary-cost noninferiority criteria are preregistered.
+
+The optimization North Star is **Accepted-Result Economic Loss under fixed quality, security, authority and correctness floors**. The operating order is `quality floor -> first-pass outcome -> restricted TTAR p90 -> accepted-result resource cost -> human/operator burden -> simplicity`. `estimated_wait_ms` remains a descriptive inter-tool-gap measure, not provider billing or a claim of avoidable waste. Missing monetary/token measurements remain unknown, and monetary CAR is unavailable until coverage is complete.
+
+Historical source/base-drift or acceptance-correction counts do not independently reopen deterministic hardening. The gate is prospective current-source incidence plus material economic impact. Likewise, low proof-cache reuse does not justify a cache-v2 workstream without evidence that cache misses are an active accepted-result bottleneck. Tail latency remains a large cost center and the Diagnose anomaly remains a forensic priority; do not describe the tail as continuously worsening without a comparable current trend estimate.
+
+Until those gates are satisfied, P4 stays passive/shadow-only, P7/P8 stay deferred, and automatic non-deterministic routing, auto-handoff, automatic global server-first, P5 automatic start, and automatic production promotion remain **OFF**. No new orchestration/P4/P5 framework layer is authorized merely to increase architectural completeness.
+
 ## P6 — P3 server-first representative evidence — parallel collection only
 
 Continue the frozen P3 representative pilot naturally while P4/P5 progress. Keep global server-first OFF. This workstream supplies evidence; it does not reopen the accepted P3 control-plane architecture.
