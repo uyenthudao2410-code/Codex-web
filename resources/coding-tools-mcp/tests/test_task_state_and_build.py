@@ -1212,6 +1212,56 @@ class ToolModeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_agent_workflow_explicit_objective_does_not_reuse_foreign_preflight_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                foreign_task = runtime.task_state.update({
+                    "objective": "foreign diagnose objective",
+                    "status": "active",
+                    "new_task": True,
+                })
+                foreign_ctx = runtime.orchestration_control.begin(
+                    objective="foreign diagnose objective",
+                    task_id=str(foreign_task["task_id"]),
+                    execution_mode="mcp_only",
+                    base_head="test-head",
+                    worktree_fp="test-worktree",
+                )
+                runtime.task_state.set_orchestration_projection(
+                    foreign_ctx.projection(),
+                    event="test_foreign_projection",
+                )
+
+                result = runtime.agent_workflow({
+                    "workflow": "diagnose",
+                    "phase": "prepare",
+                    "objective": "explicit Wave A objective",
+                })
+
+                new_run_id = result["orchestration"]["run_id"]
+                new_wave_id = result["orchestration"]["wave_id"]
+                self.assertNotEqual(new_run_id, foreign_ctx.run_id)
+                self.assertEqual(
+                    runtime.orchestration_ledger.get_run(new_run_id)["objective"],
+                    "explicit Wave A objective",
+                )
+                provenance = runtime.orchestration_ledger.wave_objective_provenance(
+                    new_run_id,
+                    new_wave_id,
+                )
+                self.assertEqual(provenance["effective_objective"], "explicit Wave A objective")
+                self.assertEqual(provenance["objective_source"], "run_initial_objective")
+                self.assertEqual(
+                    runtime.orchestration_ledger.get_run(foreign_ctx.run_id)["status"],
+                    "active",
+                )
+                current = runtime.task_state.get()
+                self.assertEqual(current["objective"], "explicit Wave A objective")
+                self.assertNotEqual(current["task_id"], foreign_task["task_id"])
+            finally:
+                runtime.close()
+
     def test_apply_changes_and_verify_runs_continuous_workflow(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

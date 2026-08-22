@@ -1,28 +1,223 @@
 {
   "version": 2,
-  "task_id": "b8f89ad9d0074bc3a6956cc41e543728",
-  "orchestration": {},
-  "objective": "Create one consolidated 2026-08-22 research/implementation master plan that supersedes stale future-work status in the three 2026-08-21 truth/upstream strategy documents while preserving them as historical records. The new plan must incorporate current T0-T3-C1 closure, current P4/P5 gates, and a selective upstream adoption roadmap for WebCodex #90/#112/#113/#116/#117. Documentation-only; no source code, restart, package/release, commit, or push.",
-  "status": "completed",
-  "steps": [],
-  "current_step": "Consolidated next implementation master plan created",
-  "current_command": null,
-  "last_command_result": null,
-  "completion_report": null,
-  "completion_report_id": "",
-  "completion_report_acknowledged_id": "",
-  "completion_report_acknowledged_at": null,
-  "test_results": [],
+  "task_id": "06df49de4e1e44df8b13787ab9717659",
+  "orchestration": {
+    "run_id": "088f7fb2b94647088eaac26b32595372",
+    "wave_id": "9693127549264e698aa8366933d0be23",
+    "orchestration_state": "PROVING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "3538c761f174f8f609090b31ef368c064df0a5fc",
+    "worktree_fp": "13cec162671b68ab34323b12b3fdbfb3cc87fc983999ffb34e5c7b868abe2d21",
+    "contract_fp": ""
+  },
+  "objective": "Fix the observed cross-session agent_workflow task/run objective-binding regression. When agent_workflow is called with an explicit objective for a new material workflow/run, that caller objective must be the canonical run initial objective and wave effective objective. The current/global task projection may be updated to reflect it but must never override it with unrelated prior/concurrent task semantics. Reproduction: explicit Wave A feature objective produced run fd8fad90f9794b0fad39893b58c1a73e whose persisted objective was an unrelated Antigravity port-5260 diagnose task. Preserve task history, existing T1 objective revision/hash/source semantics, smart-v3=8, EOCL authority, and unrelated work. Add deterministic regression proving explicit workflow objective wins despite stale/foreign task projection. Do not implement Wave A in this run.",
+  "status": "active",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-22T10:12:14.067Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "in_progress",
+      "updated_at": "2026-08-22T10:12:14.067Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-22T10:12:14.067Z"
+    }
+  ],
+  "current_step": "Testing and building",
+  "current_command": {
+    "command": "python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+    "kind": "test",
+    "session_id": "3hzHG3t5y7HbJGKsi-8TLzrO",
+    "workdir": "resources/coding-tools-mcp",
+    "status": "running",
+    "started_at": "2026-08-22T10:12:15.138Z",
+    "owner_run": "088f7fb2b94647088eaac26b32595372",
+    "owner_wave": "9693127549264e698aa8366933d0be23"
+  },
+  "last_command_result": {
+    "command_id": "zD9eHUgwj3WGMEw0wNXjJhWI",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2999,
+    "finished_at": "2026-08-22T10:07:47.658Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 61,
+        "head_hash": "c57d751a0ab9c7cfbc35b2c82711dac77ab10c2d3e56f49ef0f0fad6d260cef4"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-088f7fb2b94647088eaac26b32595372\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-088f7fb2b94647088eaac26b32595372\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-088f7fb2b94647088eaac26b32595372\\wave-002.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-088f7fb2b94647088eaac26b32595372\\wave-003.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "088f7fb2b94647088eaac26b32595372",
+      "wave_id": "197361a2d641496d902736160230a0aa",
+      "base_head": "3538c761f174f8f609090b31ef368c064df0a5fc",
+      "worktree_fp": "f5c6e3a0a95f69553b5bb10e12d06fcccf6cd80f2cee6eec76ce84867626ec6a",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fix the observed cross-session agent_workflow task/run objective-binding regression. When agent_workflow is called with an explicit objective for a new material workflow/run, that caller objective must be the canonical run initial objective and wave effective objective. The current/global task projection may be updated to reflect it but must never override it with unrelated prior/concurrent task semantics. Reproduction: explicit Wave A feature objective produced run fd8fad90f9794b0fad39893b58c1a73e whose persisted objective was an unrelated Antigravity port-5260 diagnose task. Preserve task history, existing T1 objective revision/hash/source semantics, smart-v3=8, EOCL authority, and unrelated work. Add deterministic regression proving explicit workflow objective wins despite stale/foreign task projection. Do not implement Wave A in this run.",
+        "objective_revision": 1,
+        "objective_sha256": "93217106634d513b1787fbcc83d32e398f7e98726ae94ae6c4daed7d7d28964c",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "a7245f5a9afe4a31826915bc5ec39f9e",
+          "stage_id": "verify:tests",
+          "status": "failed",
+          "duration_ms": 33594,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "BUILD_VERIFICATION_FAILED",
+      "reason": null,
+      "event_seq": 27099
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "34de69d948e6a43cd2bd4b989b6dd093979282a6f03b046940ce5aaed1551d7d",
+  "completion_report_acknowledged_id": "34de69d948e6a43cd2bd4b989b6dd093979282a6f03b046940ce5aaed1551d7d",
+  "completion_report_acknowledged_at": "2026-08-22T10:11:49.365Z",
+  "test_results": [
+    {
+      "command": "python -m pytest -q tests/test_task_state_and_build.py -k \"explicit_objective or reconcile_does_not_adopt_active_run_from_different_task\"",
+      "status": "failed",
+      "exit_code": 4,
+      "duration_ms": 2239,
+      "summary": "exit 4 | 1.8s | 7 lines | tail: 'ERROR: file or directory not found: tests/test_task_state_and_build.py'"
+    },
+    {
+      "command": "python -m pytest -q tests/test_task_state_and_build.py -k \"explicit_objective or reconcile_does_not_adopt_active_run_from_different_task\"",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": 5076,
+      "summary": "exit 1 | 4.5s | 91 lines | tail: '1 failed, 1 passed, 66 deselected in 2.77s'"
+    },
+    {
+      "command": "python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": 33590,
+      "summary": "exit 1 | 0.0s | 50 lines | tail: '1 failed, 80 passed, 3 subtests passed in 31.54s'"
+    }
+  ],
   "build_results": [],
-  "last_build_report": null,
-  "modified_files": [],
+  "last_build_report": {
+    "project": {
+      "type": "electron",
+      "name": "web-mcp-assistant",
+      "version": "0.3.4",
+      "package_manager": "npm",
+      "test_command": "npm run test",
+      "build_command": "npm run dist",
+      "artifact_paths": [
+        "dist",
+        "build"
+      ]
+    },
+    "commands": {
+      "test": "python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+      "build": "npm run dist"
+    },
+    "test_result": {
+      "command": "python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": 33590,
+      "summary": "exit 1 | 0.0s | 50 lines | tail: '1 failed, 80 passed, 3 subtests passed in 31.54s'"
+    },
+    "build_result": null,
+    "artifacts": [],
+    "hash_algorithm": "sha256",
+    "overall_status": "failed",
+    "failure": "Tests failed.",
+    "report_generated_at": "2026-08-22T10:11:38.170Z"
+  },
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+      "operation": "update",
+      "updated_at": "2026-08-22T10:11:39.476Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+      "operation": "update",
+      "updated_at": "2026-08-22T10:09:38.659Z"
+    }
+  ],
   "failure": null,
-  "next_step": "Begin only Gate 0 + Wave A when implementation is explicitly continued; no source implementation was performed in this documentation task.",
-  "created_at": "2026-08-22T09:38:39.452Z",
-  "updated_at": "2026-08-22T09:43:41.249Z",
+  "next_step": "Run all requested checks and summarize the result.",
+  "created_at": "2026-08-22T10:06:47.958Z",
+  "updated_at": "2026-08-22T10:12:41.880Z",
   "events": [
     {
-      "time": "2026-08-22T09:38:39.452Z",
+      "time": "2026-08-22T10:06:47.958Z",
       "event": "task_started",
       "details": {
         "fields": [
@@ -37,21 +232,576 @@
       }
     },
     {
-      "time": "2026-08-22T09:41:26.279Z",
+      "time": "2026-08-22T10:06:58.439Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-22T10:07:00.435Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-22T10:07:00.443Z",
       "event": "files_modified",
       "details": {
         "count": 0
       }
     },
     {
-      "time": "2026-08-22T09:41:36.121Z",
-      "event": "task_updated",
+      "time": "2026-08-22T10:07:33.415Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /n /i \"agent_workflow orchestration_context replan objective\" resources\\coding-tools-mcp\\tests\\test_task_state_and_build.py",
+        "session_id": "-JY3dWd0YfjGolDRDK08eTDB"
+      }
+    },
+    {
+      "time": "2026-08-22T10:07:34.275Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /n /i \"agent_workflow orchestration_context replan objective\" resources\\coding-tools-mcp\\tests\\test_task_state_and_build.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T10:07:44.239Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/tests/test_task_state_and_build.py' | Select-Object -Skip 1160 -First 180\"",
+        "session_id": "zD9eHUgwj3WGMEw0wNXjJhWI"
+      }
+    },
+    {
+      "time": "2026-08-22T10:07:47.658Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/tests/test_task_state_and_build.py' | Select-Object -Skip 1160 -First 180\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:31.903Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:32.427Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:33.335Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:33.340Z",
+      "event": "continuous_workflow_started",
       "details": {
         "fields": [
           "current_step",
           "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:34.710Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:35.317Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:35.981Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_task_state_and_build.py -k \"explicit_objective or reconcile_does_not_adopt_active_run_from_different_task\"",
+        "session_id": "7kvAcnAVJLC-_jy3BBsW4Gjo"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:37.687Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:37.949Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:38.429Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:38.429Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
           "status"
         ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:38.439Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:38.532Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "7e53493b65f305d2667fa988c26dd2dd14d9c67fee545bf41f3ea5eb5ad88cc1"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:38.659Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:40.699Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:48.169Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "7e53493b65f305d2667fa988c26dd2dd14d9c67fee545bf41f3ea5eb5ad88cc1"
+      }
+    },
+    {
+      "time": "2026-08-22T10:09:58.449Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:00.016Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:00.560Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:01.747Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:01.754Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:03.897Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:04.797Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:05.526Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_task_state_and_build.py -k \"explicit_objective or reconcile_does_not_adopt_active_run_from_different_task\"",
+        "session_id": "EPhw2XIxj3FuvSZa8Pnc98fp"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:10.039Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:10.242Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:10.710Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:10.733Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:10.747Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:11.037Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "d3894ac7033d148fc1dfd46ffd8abfd18877f437dfabcf6c404def17affa0cdc"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:11.288Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:20.306Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:20.543Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "d3894ac7033d148fc1dfd46ffd8abfd18877f437dfabcf6c404def17affa0cdc"
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:29.598Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:10:29.898Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:00.560Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:01.444Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:02.464Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:02.469Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:03.697Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:04.377Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:05.341Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+        "session_id": "1I-gwbkYxyPz9svylYDDatWm"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:38.170Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:38.554Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:39.033Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:39.036Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:39.040Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:39.252Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "34de69d948e6a43cd2bd4b989b6dd093979282a6f03b046940ce5aaed1551d7d"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:39.476Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:40.733Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:49.365Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "34de69d948e6a43cd2bd4b989b6dd093979282a6f03b046940ce5aaed1551d7d"
+      }
+    },
+    {
+      "time": "2026-08-22T10:11:56.119Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:12:09.087Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-22T10:12:09.786Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-22T10:12:11.258Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-22T10:12:11.266Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:12:12.676Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-22T10:12:14.067Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:12:15.138Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+        "session_id": "3hzHG3t5y7HbJGKsi-8TLzrO"
       }
     }
   ]

@@ -227,6 +227,43 @@ class AgentWorkflowMixin:
         requested_mode = str(args.get("execution_mode", "auto")).strip().lower() or "auto"
         contract_fp = self.orchestration_control.stable_contract_fingerprint(args.get("contract_fingerprint", ""))
         replan_reason = str(args.get("replan_reason", "")).strip()
+        explicit_objective = str(args.get("objective") or "").strip()
+
+        # An explicit workflow objective is a request identity boundary. A stale/global
+        # task projection may point at another PREFLIGHT/READY run from a different
+        # ChatWeb turn. Reusing that run would persist the foreign objective even though
+        # the caller supplied a new one. Detach the compact task projection and start a
+        # new task/run instead; do not abort or rewrite the unrelated durable run.
+        if current_ctx is not None and explicit_objective and current_ctx.state in {"PREFLIGHT", "READY"}:
+            current_run = self.orchestration_ledger.get_run(current_ctx.run_id) or {}
+            provenance = self.orchestration_ledger.wave_objective_provenance(
+                current_ctx.run_id,
+                current_ctx.wave_id,
+            )
+            current_objective = str(
+                (provenance or {}).get("effective_objective")
+                or current_run.get("objective")
+                or ""
+            ).strip()
+            current_task_id = str(current_task.get("task_id") or "").strip()
+            run_task_id = str(current_run.get("task_id") or "").strip()
+            task_mismatch = bool(current_task_id and run_task_id and current_task_id != run_task_id)
+            objective_mismatch = bool(current_objective and current_objective != explicit_objective)
+            if task_mismatch or objective_mismatch:
+                current_task = self.task_state.update(
+                    {
+                        "objective": explicit_objective,
+                        "status": "active",
+                        "failure": None,
+                        "current_step": "Orchestration preflight",
+                        "next_step": "",
+                        "new_task": True,
+                    },
+                    event="task_started",
+                )
+                projection = {}
+                run_id = ""
+                current_ctx = None
 
         if current_ctx is not None:
             if current_ctx.state == "ACCEPTING":
