@@ -120,6 +120,7 @@ module.exports = {
   DEVICE_IDENTITY_VERSION,
   DEVICE_ID_PATTERN,
   MAX_DEVICE_FILE_BYTES,
+  readDeviceIdentity,
   loadOrCreateDeviceIdentity,
   normalizeDeviceIdentity,
   runtimeDeviceIdentity,

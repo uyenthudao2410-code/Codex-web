@@ -6,11 +6,12 @@ const { SecretStore } = require('../electron/services/secretStore');
 const { LogService } = require('../electron/services/logService');
 const { NativeService, isAlive } = require('../electron/services/nativeService');
 const { readJson } = require('../electron/services/jsonStore');
-const { stateFile } = require('../electron/paths');
+const { stateFile, deviceFile } = require('../electron/paths');
 const { run } = require('../electron/services/commandRunner');
 const { canConnect } = require('../electron/services/environmentService');
 const { probeMcp } = require('../electron/services/runtimeOrchestrator');
-const { controlledRestartGuard, samePath } = require('../electron/services/controlledRestartGuard');
+const { readDeviceIdentity, runtimeDeviceIdentity } = require('../electron/services/deviceIdentity');
+const { controlledRestartGuard, controlledRestartOwnerGuard, samePath } = require('../electron/services/controlledRestartGuard');
 
 function argValue(name) {
   const index = process.argv.indexOf(name);
@@ -79,6 +80,11 @@ async function main() {
   if (!probe.native_alive || !probe.native_pid) {
     throw new Error('Owned MCP process is not alive; refusing controlled restart.');
   }
+  const device = runtimeDeviceIdentity(readDeviceIdentity(deviceFile()), state.nativeDeviceInstanceId);
+  const ownerGuard = controlledRestartOwnerGuard({ state, device });
+  if (!ownerGuard.ok) {
+    throw Object.assign(new Error('Native MCP device ownership does not match the live product runtime.'), { code: ownerGuard.code });
+  }
   const token = new SecretStore().get('mcpAuthToken');
   if (!token) throw new Error('MCP auth token is unavailable in the matched Electron userData; refusing restart.');
   const oldPid = probe.native_pid;
@@ -86,11 +92,11 @@ async function main() {
   if (!(await waitForPort(settings.mcpPort, false))) {
     throw new Error(`MCP port ${settings.mcpPort} did not close after stopping owned PID ${oldPid}.`);
   }
-  const native = new NativeService(new LogService());
+  const native = new NativeService(new LogService(), undefined, null, device);
   const started = await native.start(settings, token, () => {});
   let ready = false;
   for (let index = 0; index < 40; index += 1) {
-    if (await probeMcp(settings.mcpPort, token, settings.workspace)) {
+    if (await probeMcp(settings.mcpPort, token, settings.workspace, device.deviceId)) {
       ready = true;
       break;
     }
@@ -114,7 +120,7 @@ async function main() {
 }
 
 app.whenReady().then(main).catch((error) => {
-  console.error(JSON.stringify({ ok: false, error: error.message, code: 'CONTROLLED_RESTART_FAILED' }));
+  console.error(JSON.stringify({ ok: false, error: error.message, code: error?.code || 'CONTROLLED_RESTART_FAILED' }));
   process.exitCode = 1;
 }).finally(() => {
   setTimeout(() => app.quit(), 50);

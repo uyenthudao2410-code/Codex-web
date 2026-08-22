@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { controlledRestartGuard } = require('../electron/services/controlledRestartGuard');
+const { controlledRestartGuard, controlledRestartOwnerGuard } = require('../electron/services/controlledRestartGuard');
 
 const expectedWorkspace = 'E:\\DEV\\Codex-web';
 const expectedUserData = 'C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant';
@@ -53,5 +53,23 @@ test('controlled restart guard rejects each identity mismatch and accepts exact 
       actualUserData: 'c:\\users\\admin\\appdata\\roaming\\WEB-MCP-ASSISTANT'
     }),
     { ok: true, code: 'MATCHED' }
+  );
+});
+
+test('controlled restart owner guard rejects unverified or changed native ownership', () => {
+  const state = {
+    nativePid: 1234,
+    nativeDeviceId: 'device-a',
+    nativeDeviceInstanceId: 'device-instance-0001'
+  };
+  const device = { deviceId: 'device-a', deviceInstanceId: 'device-instance-0001' };
+  assert.deepEqual(controlledRestartOwnerGuard({ state, device }), { ok: true, code: 'OWNED' });
+  assert.deepEqual(
+    controlledRestartOwnerGuard({ state: { ...state, nativeDeviceId: '' }, device }),
+    { ok: false, code: 'NATIVE_DEVICE_OWNERSHIP_MISSING' }
+  );
+  assert.deepEqual(
+    controlledRestartOwnerGuard({ state, device: { ...device, deviceInstanceId: 'different-instance' } }),
+    { ok: false, code: 'NATIVE_DEVICE_INSTANCE_MISMATCH' }
   );
 });

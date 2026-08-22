@@ -43,4 +43,29 @@ function controlledRestartGuard({
   return { ok: true, code: 'MATCHED' };
 }
 
-module.exports = { controlledRestartGuard, samePath };
+function controlledRestartOwnerGuard({ state, device } = {}) {
+  const nativePid = Number(state?.nativePid || 0);
+  const storedDeviceId = String(state?.nativeDeviceId || '').trim().toLowerCase();
+  const storedInstanceId = String(state?.nativeDeviceInstanceId || '').trim();
+  const deviceId = String(device?.deviceId || '').trim().toLowerCase();
+  const deviceInstanceId = String(device?.deviceInstanceId || '').trim();
+
+  if (!Number.isInteger(nativePid) || nativePid <= 0) {
+    return { ok: false, code: 'NATIVE_PID_MISSING' };
+  }
+  if (!storedDeviceId || !storedInstanceId) {
+    return { ok: false, code: 'NATIVE_DEVICE_OWNERSHIP_MISSING' };
+  }
+  if (!deviceId || !deviceInstanceId) {
+    return { ok: false, code: 'RUNTIME_DEVICE_IDENTITY_MISSING' };
+  }
+  if (storedDeviceId !== deviceId) {
+    return { ok: false, code: 'NATIVE_DEVICE_OWNERSHIP_MISMATCH' };
+  }
+  if (storedInstanceId !== deviceInstanceId) {
+    return { ok: false, code: 'NATIVE_DEVICE_INSTANCE_MISMATCH' };
+  }
+  return { ok: true, code: 'OWNED' };
+}
+
+module.exports = { controlledRestartGuard, controlledRestartOwnerGuard, samePath };
