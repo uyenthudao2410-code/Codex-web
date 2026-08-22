@@ -10,14 +10,11 @@ const { stateFile } = require('../electron/paths');
 const { run } = require('../electron/services/commandRunner');
 const { canConnect } = require('../electron/services/environmentService');
 const { probeMcp } = require('../electron/services/runtimeOrchestrator');
+const { controlledRestartGuard, samePath } = require('../electron/services/controlledRestartGuard');
 
 function argValue(name) {
   const index = process.argv.indexOf(name);
   return index >= 0 && index + 1 < process.argv.length ? process.argv[index + 1] : '';
-}
-
-function samePath(left, right) {
-  return path.resolve(String(left || '')).toLowerCase() === path.resolve(String(right || '')).toLowerCase();
 }
 
 function sleep(ms) {
@@ -42,25 +39,34 @@ function reportPath(workspace, label) {
 
 async function main() {
   const expectedWorkspace = argValue('--expect-workspace');
+  const expectedUserData = argValue('--expect-user-data');
   const restart = process.argv.includes('--restart');
   const settingsStore = new SettingsStore();
   const settings = settingsStore.load();
   const state = readJson(stateFile(), {});
+  const userData = app.getPath('userData');
+  const guard = controlledRestartGuard({
+    expectedWorkspace,
+    expectedUserData,
+    configuredWorkspace: settings.workspace,
+    actualUserData: userData
+  });
   const probe = {
     evidence_class: 'local_controlled_restart_probe',
     captured_at: new Date().toISOString(),
-    user_data: app.getPath('userData'),
+    user_data: userData,
     configured_workspace: settings.workspace || '',
-    expected_workspace_match: Boolean(expectedWorkspace && samePath(settings.workspace, expectedWorkspace)),
+    expected_workspace_match: Boolean(String(settings.workspace || '').trim() && String(expectedWorkspace || '').trim() && samePath(settings.workspace, expectedWorkspace)),
+    expected_user_data_match: Boolean(String(userData || '').trim() && String(expectedUserData || '').trim() && samePath(userData, expectedUserData)),
     native_pid: Number.isInteger(state.nativePid) ? state.nativePid : null,
     native_alive: isAlive(state.nativePid),
     native_port: Number(settings.mcpPort),
     tunnel_pid_present: Number.isInteger(state.tunnelPid),
     mode: restart ? 'restart' : 'probe'
   };
-  if (!expectedWorkspace || !probe.expected_workspace_match) {
+  if (!guard.ok) {
     probe.ok = false;
-    probe.error = 'USER_DATA_OR_WORKSPACE_MISMATCH';
+    probe.error = guard.code;
     console.log(JSON.stringify(probe, null, 2));
     process.exitCode = 2;
     return;
