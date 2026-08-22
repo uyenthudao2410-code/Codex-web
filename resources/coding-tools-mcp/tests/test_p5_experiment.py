@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -192,6 +193,31 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 self.assertTrue(status["p5_seed"]["content_free"])
                 self.assertFalse(status["automatic_activation"])
                 self.assertFalse(status["automatic_production_promotion"])
+            finally:
+                runtime.close()
+
+    def test_source_contract_ignores_an_evidence_only_git_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            root = Path(temp)
+            def git(*args: str) -> str:
+                return subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True, text=True).stdout.strip()
+            git("init")
+            git("config", "user.email", "p5-test@example.invalid")
+            git("config", "user.name", "P5 Test")
+            (root / "source.txt").write_text("source\n", encoding="utf-8")
+            git("add", "source.txt")
+            git("commit", "-m", "source")
+            source_commit = git("rev-parse", "HEAD")
+            (root / ".coding-tools").mkdir()
+            (root / ".coding-tools" / "evidence.json").write_text("{}\n", encoding="utf-8")
+            git("add", ".coding-tools/evidence.json")
+            git("commit", "-m", "evidence only")
+            runtime = Runtime(root, permission_mode="safe")
+            try:
+                observed = runtime._p5_source_contract()
+                self.assertEqual(observed["control_plane_source_head"], source_commit)
+                self.assertEqual(observed["source_identity_scope"], "code_excluding_runtime_evidence_v1")
+                self.assertTrue(observed["source_worktree_clean"])
             finally:
                 runtime.close()
 

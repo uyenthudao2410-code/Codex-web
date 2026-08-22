@@ -54,13 +54,17 @@ class P5ControlMixin:
         source_status = git_text(
             "status", "--porcelain=v1", "--untracked-files=all", "--", ".", ":(exclude).coding-tools", ":(exclude).coding-tools/**"
         )
-        head = git_text("rev-parse", "HEAD")
-        upstream = git_text("rev-parse", "@{upstream}")
+        # Runtime evidence is tracked history, but never source input.  A commit
+        # containing only .coding-tools must not invalidate a frozen P5 source
+        # contract; use the last code-bearing commit for each ref instead.
+        head = git_text("log", "-1", "--format=%H", "HEAD", "--", ".", ":(exclude).coding-tools", ":(exclude).coding-tools/**")
+        upstream = git_text("log", "-1", "--format=%H", "@{upstream}", "--", ".", ":(exclude).coding-tools", ":(exclude).coding-tools/**")
         return {
             "control_plane_source_head": head,
             "upstream_identity": upstream,
             "source_worktree_clean": not bool(source_status),
             "head_matches_upstream": bool(head and upstream and head == upstream),
+            "source_identity_scope": "code_excluding_runtime_evidence_v1",
             "worktree_fp": identity.get("worktree_fp"),
         }
 
