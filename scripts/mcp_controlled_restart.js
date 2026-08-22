@@ -6,12 +6,13 @@ const { SecretStore } = require('../electron/services/secretStore');
 const { LogService } = require('../electron/services/logService');
 const { NativeService, isAlive } = require('../electron/services/nativeService');
 const { readJson } = require('../electron/services/jsonStore');
-const { stateFile, deviceFile } = require('../electron/paths');
+const { configureRuntimePaths, stateFile, deviceFile } = require('../electron/paths');
+const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const { run } = require('../electron/services/commandRunner');
 const { canConnect } = require('../electron/services/environmentService');
 const { probeMcp } = require('../electron/services/runtimeOrchestrator');
 const { readDeviceIdentity, runtimeDeviceIdentity } = require('../electron/services/deviceIdentity');
-const { controlledRestartGuard, controlledRestartOwnerGuard, samePath } = require('../electron/services/controlledRestartGuard');
+const { controlledRestartGuard, controlledRestartAppRootGuard, controlledRestartOwnerGuard, samePath } = require('../electron/services/controlledRestartGuard');
 
 function argValue(name) {
   const index = process.argv.indexOf(name);
@@ -41,11 +42,35 @@ function reportPath(workspace, label) {
 async function main() {
   const expectedWorkspace = argValue('--expect-workspace');
   const expectedUserData = argValue('--expect-user-data');
+  const expectedAppRoot = argValue('--expect-app-root');
   const restart = process.argv.includes('--restart');
+  const appRoot = path.resolve(__dirname, '..');
+  const resourcesRoot = path.join(appRoot, 'resources');
+  const appRootGuard = controlledRestartAppRootGuard({ expectedAppRoot, actualAppRoot: appRoot, resourcesRoot });
+  if (!appRootGuard.ok) {
+    console.log(JSON.stringify({
+      evidence_class: 'local_controlled_restart_probe',
+      captured_at: new Date().toISOString(),
+      app_root: appRoot,
+      expected_app_root_match: false,
+      mode: restart ? 'restart' : 'probe',
+      ok: false,
+      error: appRootGuard.code
+    }, null, 2));
+    process.exitCode = 2;
+    return;
+  }
+  const userData = app.getPath('userData');
+  configureRuntimePaths(createRuntimePaths({
+    dataRoot: userData,
+    appRoot,
+    resourcesRoot,
+    runtimeMode: 'development',
+    executablePath: process.execPath
+  }));
   const settingsStore = new SettingsStore();
   const settings = settingsStore.load();
   const state = readJson(stateFile(), {});
-  const userData = app.getPath('userData');
   const guard = controlledRestartGuard({
     expectedWorkspace,
     expectedUserData,
@@ -56,9 +81,12 @@ async function main() {
     evidence_class: 'local_controlled_restart_probe',
     captured_at: new Date().toISOString(),
     user_data: userData,
+    app_root: appRoot,
+    resources_root: resourcesRoot,
     configured_workspace: settings.workspace || '',
     expected_workspace_match: Boolean(String(settings.workspace || '').trim() && String(expectedWorkspace || '').trim() && samePath(settings.workspace, expectedWorkspace)),
     expected_user_data_match: Boolean(String(userData || '').trim() && String(expectedUserData || '').trim() && samePath(userData, expectedUserData)),
+    expected_app_root_match: true,
     native_pid: Number.isInteger(state.nativePid) ? state.nativePid : null,
     native_alive: isAlive(state.nativePid),
     native_port: Number(settings.mcpPort),

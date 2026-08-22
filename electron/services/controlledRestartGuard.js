@@ -43,6 +43,28 @@ function controlledRestartGuard({
   return { ok: true, code: 'MATCHED' };
 }
 
+function controlledRestartAppRootGuard({ expectedAppRoot, actualAppRoot, resourcesRoot } = {}) {
+  const expectedAppRootText = String(expectedAppRoot || '').trim();
+  const actualAppRootText = String(actualAppRoot || '').trim();
+  const resourcesRootText = String(resourcesRoot || '').trim();
+  if (!expectedAppRootText) {
+    return { ok: false, code: 'EXPECTED_APP_ROOT_REQUIRED' };
+  }
+  if (!actualAppRootText) {
+    return { ok: false, code: 'ACTUAL_APP_ROOT_MISSING' };
+  }
+  if (!resourcesRootText) {
+    return { ok: false, code: 'RESOURCES_ROOT_MISSING' };
+  }
+  if (!samePath(expectedAppRootText, actualAppRootText)) {
+    return { ok: false, code: 'APP_ROOT_MISMATCH' };
+  }
+  if (!samePath(resourcesRootText, path.join(actualAppRootText, 'resources'))) {
+    return { ok: false, code: 'RESOURCES_ROOT_MISMATCH' };
+  }
+  return { ok: true, code: 'APP_ROOT_MATCHED' };
+}
+
 function controlledRestartOwnerGuard({ state, device } = {}) {
   const nativePid = Number(state?.nativePid || 0);
   const storedDeviceId = String(state?.nativeDeviceId || '').trim().toLowerCase();
@@ -68,4 +90,4 @@ function controlledRestartOwnerGuard({ state, device } = {}) {
   return { ok: true, code: 'OWNED' };
 }
 
-module.exports = { controlledRestartGuard, controlledRestartOwnerGuard, samePath };
+module.exports = { controlledRestartGuard, controlledRestartAppRootGuard, controlledRestartOwnerGuard, samePath };
