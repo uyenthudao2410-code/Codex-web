@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { NativeService, isAlive, runtimeFingerprint } = require('./nativeService');
+const { NativeService, isAlive, runtimeFingerprint, P5_A0_SEED_SECRET } = require('./nativeService');
 const { TunnelService } = require('./tunnelService');
 const { validateRuntimeSettings, mergeRecentWorkspaces, workspaceKey } = require('./config');
 const { canConnect } = require('./environmentService');
@@ -453,6 +453,10 @@ class RuntimeOrchestrator {
     return token;
   }
 
+  p5A0Seed() {
+    return String(this.secrets.get(P5_A0_SEED_SECRET) || '');
+  }
+
   async prepareCodeActivation({ operationId, expiresAtUnixMs, allowAcceptancePending = false }) {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
@@ -523,7 +527,8 @@ class RuntimeOrchestrator {
       const started = await this.native.start(settings, token, this.progress.bind(this), {
         expectedCodeRevision: expectedRevision,
         expiresAtUnixMs,
-        activationProcessMutated: true
+        activationProcessMutated: true,
+        p5Seed: this.p5A0Seed()
       });
       replacementStarted = true;
       let health = null;
@@ -763,7 +768,7 @@ class RuntimeOrchestrator {
         throw new Error(`Cổng cục bộ ${settings.healthPort} đang bị ứng dụng khác chiếm dụng. Trợ lý sẽ không cưỡng chế chấm dứt tiến trình không xác định, vui lòng thay đổi cổng bảng điều khiển Tunnel.`);
       }
 
-      await this.native.start(settings, token, this.progress.bind(this));
+      await this.native.start(settings, token, this.progress.bind(this), { p5Seed: this.p5A0Seed() });
 
       this.progress('mcp-health', 64, 'Đang xác minh Coding Tools MCP');
       let ready = false;
@@ -978,7 +983,7 @@ class RuntimeOrchestrator {
 
     let started = null;
     try {
-      started = await this.native.start(settings, token, this.progress.bind(this));
+      started = await this.native.start(settings, token, this.progress.bind(this), { p5Seed: this.p5A0Seed() });
       let health = null;
       let ownedPid = 0;
       for (let index = 0; index < 35; index += 1) {

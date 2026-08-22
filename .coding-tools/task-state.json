@@ -3,53 +3,44 @@
   "task_id": "5dea0c0a16d64a88ba2076ac36d35bfa",
   "orchestration": {
     "run_id": "aa0d0f75ae454d74aaea036438fa9b37",
-    "wave_id": "2d6b32ab0e6d46ac8ae58f2f5926aa1f",
-    "orchestration_state": "ACCEPTING",
+    "wave_id": "924aa6165bb148c19c1832673f29d7ad",
+    "orchestration_state": "REPLAN",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "12d84a32648d6b27d8b916a6aa47f718ffcff866",
-    "worktree_fp": "4074e79276601320df0459277b82474b7b3517012e25a5cde2e5d46701cd86b8",
+    "base_head": "d2ce747fd0a2c48c35fb194afee1377bc6c849fc",
+    "worktree_fp": "c08f6755945a69c08cdf4490b7d3acc64d2382b8dac07683a8d1d9f975850875",
     "contract_fp": ""
   },
-  "objective": "Fix the controlled runtime activation/restart preflight so a long-lived P5 experiment ledger anchor run (runs.metadata_json.p5_experiment=true) is not misclassified as an active EOCL execution run. Preserve current_active_run semantics globally. Add a narrowly named OrchestrationLedger current_active_execution_run method that returns the newest status='active' non-P5-experiment run. Change only activation_preflight to use that method. Update activation-preflight mocks and add regressions proving a P5-only active anchor does not block preflight while a genuine active run is still detected even if a newer P5 anchor exists. Do not change P5 lifecycle/routing/enrollment/treatment/stale reconciliation/public tool count. Do not commit, push, restart, or touch the live ledger outside ordinary tool telemetry.",
+  "objective": "Continue the same rejected/replanned run. Materialize only the two production-source changes for the approved P5-anchor restart-preflight fix in this step, while keeping test_activation_preflight.py in the declared scope for the immediately following focused test patch under the same wave. Preserve unrelated concurrent dirty files exactly. Do not accept, test, commit, push, restart, or mutate P5 experiment state in this call.",
   "status": "waiting",
   "steps": [
     {
-      "id": "verify",
-      "text": "Run tests and build verification",
+      "id": "apply",
+      "text": "Apply workspace changes",
       "status": "completed",
-      "updated_at": "2026-08-22T08:05:53.709Z"
+      "updated_at": "2026-08-22T08:15:32.126Z"
     },
     {
       "id": "finalize",
       "text": "Finalize verified result",
       "status": "completed",
-      "updated_at": "2026-08-22T08:05:53.709Z"
+      "updated_at": "2026-08-22T08:15:32.126Z"
     }
   ],
-  "current_step": "Awaiting acceptance",
-  "current_command": {
-    "command": "python -m pytest tests/test_activation_preflight.py tests/test_p5_experiment.py -q",
-    "kind": "test",
-    "session_id": "eKzSipB5EIvy7EsSdNXgYDXb",
-    "workdir": "resources/coding-tools-mcp",
-    "status": "running",
-    "started_at": "2026-08-22T08:05:44.761Z",
-    "owner_run": "aa0d0f75ae454d74aaea036438fa9b37",
-    "owner_wave": "2d6b32ab0e6d46ac8ae58f2f5926aa1f"
-  },
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
   "last_command_result": {
-    "command_id": "QjZWcR7y2URizmFvCAA_lJ6H",
+    "command_id": "mmDcBlV1OdSgqmLEqidK3L1M",
     "kind": "command",
     "status": "exited",
-    "result_status": "passed",
-    "exit_code": 0,
-    "duration_ms": 577,
-    "finished_at": "2026-08-22T08:05:02.783Z"
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 9648,
+    "finished_at": "2026-08-22T08:20:20.716Z"
   },
   "completion_report": {
     "schema_version": 1,
@@ -64,63 +55,68 @@
       "NEXT CRITICAL ACTION"
     ],
     "what_changed": {
-      "files": [],
-      "source": "no_durable_file_receipts",
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
+      "orchestration_state": "REPLAN",
       "run_status": "active",
       "wave_status": "active",
       "task_status": "waiting",
       "integrity": {
         "ok": true,
-        "checked": 16,
-        "head_hash": "bb8dc2b6c01d4cd9912cebf31d5e97fbb2f4fc3a0d08fb8ba745652f583d457d"
+        "checked": 37,
+        "head_hash": "2cef85ccc45d4c4bf71c8d8bd3cad38b80bb1b1447caff2b514fa553f0961f3f"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-aa0d0f75ae454d74aaea036438fa9b37\\run-summary.md",
         "wave_reports": [
-          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-aa0d0f75ae454d74aaea036438fa9b37\\wave-001.md"
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-aa0d0f75ae454d74aaea036438fa9b37\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-aa0d0f75ae454d74aaea036438fa9b37\\wave-002.md"
         ]
       }
     },
     "source_run_wave": {
       "run_id": "aa0d0f75ae454d74aaea036438fa9b37",
-      "wave_id": "2d6b32ab0e6d46ac8ae58f2f5926aa1f",
-      "base_head": "12d84a32648d6b27d8b916a6aa47f718ffcff866",
-      "worktree_fp": "4074e79276601320df0459277b82474b7b3517012e25a5cde2e5d46701cd86b8",
+      "wave_id": "924aa6165bb148c19c1832673f29d7ad",
+      "base_head": "d2ce747fd0a2c48c35fb194afee1377bc6c849fc",
+      "worktree_fp": "c08f6755945a69c08cdf4490b7d3acc64d2382b8dac07683a8d1d9f975850875",
       "contract_fp": "",
       "objective_provenance": {
-        "effective_objective": "Fix the controlled runtime activation/restart preflight so a long-lived P5 experiment ledger anchor run (runs.metadata_json.p5_experiment=true) is not misclassified as an active EOCL execution run. Preserve current_active_run semantics globally. Add a narrowly named OrchestrationLedger current_active_execution_run method that returns the newest status='active' non-P5-experiment run (optionally task-scoped if useful), fail-closed on malformed DB/JSON via existing SQLite behavior. Change only activation_preflight to use that method; do not change P5 epoch lifecycle, routing, enrollment, treatment, stale reconciliation, or public tool count. Update existing activation-preflight mocks to the new method and add regressions proving: (1) a P5-only active anchor does not block activation preflight, (2) if a genuine active run exists and a newer P5 anchor also exists, the genuine run is still detected and activation is refused. Modify only the smallest source/test surface, preferably orchestration_ledger.py, coordination.py, and test_activation_preflight.py. Run focused activation/P5 tests after patch; do not commit, push, restart runtime, or touch live ledger outside ordinary test/temp data in this wave.",
-        "objective_revision": 1,
-        "objective_sha256": "577b34528d0df0ab28eb88ee1985b4d461e14a01dc87f8b30ccba12fcf21f720",
-        "objective_source": "run_initial_objective",
-        "objective_changed_from_previous": false,
+        "effective_objective": "Continue the same rejected/replanned run. Materialize only the two production-source changes for the approved P5-anchor restart-preflight fix in this step, while keeping test_activation_preflight.py in the declared scope for the immediately following focused test patch under the same wave. Preserve unrelated concurrent dirty files exactly. Do not accept, test, commit, push, restart, or mutate P5 experiment state in this call.",
+        "objective_revision": 2,
+        "objective_sha256": "13fbe9332ff24bc95a16314109cea6fc5720871d729e5a0fded373dce9bc5cf5",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
         "objective_hash_valid": true,
         "legacy_fallback": false
       }
     },
     "proof_actually_run": {
-      "count": 1,
-      "all_recorded_proofs_passed": true,
-      "proofs": [
-        {
-          "proof_id": "1c5de544ebef452e8b5066577adceba1",
-          "stage_id": "verify:tests",
-          "status": "passed",
-          "duration_ms": 9078,
-          "exit_code": null,
-          "cache_hit": false
-        }
-      ]
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
-    "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "Focused oracle failed after the two source hunks materialized: test_activation_preflight still mocks current_active_run(), while activation_preflight now calls current_active_execution_run(). Two failures prove the test contract is incomplete. Reject wave 2 fail-closed; preserve the real source diff and replan the same run to migrate those mocks and add regression coverage for P5-only anchor allowed vs real active EOCL run blocked.",
+      "event_seq": 26951
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
   },
-  "completion_report_id": "10d7d7bd13762ea7ebb293009e1cc2e03b51700ca7c1ada69a850c87ce509be3",
+  "completion_report_id": "5c58c221f53556bd67cb50ed80938f0806bb432ccba6045f8f3baba9d76a8b01",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -10917,11 +10913,22 @@
     "failure": null,
     "report_generated_at": "2026-08-22T08:05:53.243Z"
   },
-  "modified_files": [],
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+      "operation": "update",
+      "updated_at": "2026-08-22T08:15:32.736Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+      "operation": "update",
+      "updated_at": "2026-08-22T08:15:32.736Z"
+    }
+  ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
   "created_at": "2026-08-22T08:04:55.088Z",
-  "updated_at": "2026-08-22T08:08:55.496Z",
+  "updated_at": "2026-08-22T08:27:25.203Z",
   "events": [
     {
       "time": "2026-08-22T08:04:55.088Z",
@@ -11113,6 +11120,350 @@
           "orchestration",
           "status"
         ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:10:11.186Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-22T08:10:11.239Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:10:11.437Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "578268e3f0ff9d9f2c9b53e7e06a3549666197f9ad38082d71b10e3b00dd2a48"
+      }
+    },
+    {
+      "time": "2026-08-22T08:10:39.034Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:11:00.379Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-22T08:11:06.047Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:11:25.827Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-22T08:13:04.046Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "578268e3f0ff9d9f2c9b53e7e06a3549666197f9ad38082d71b10e3b00dd2a48"
+      }
+    },
+    {
+      "time": "2026-08-22T08:13:09.086Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:14:18.909Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-22T08:14:44.954Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_NOT_FOUND"
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:07.007Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:27.942Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:28.599Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:29.448Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:29.478Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:30.890Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:32.098Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:32.126Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:32.347Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:32.367Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:32.566Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "64ee10a6e41648085882b28a3998551bae83bd1a911394f93249950aacc81c73"
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:32.736Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-08-22T08:15:39.094Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:19:39.875Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-22T08:19:48.607Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:20:11.230Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest -v tests.test_activation_preflight tests.test_p5_experiment",
+        "session_id": "mmDcBlV1OdSgqmLEqidK3L1M"
+      }
+    },
+    {
+      "time": "2026-08-22T08:20:20.716Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest -v tests.test_activation_preflight tests.test_p5_experiment",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-22T08:20:33.041Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:20:34.549Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-22T08:20:34.571Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:20:34.702Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "5c58c221f53556bd67cb50ed80938f0806bb432ccba6045f8f3baba9d76a8b01"
+      }
+    },
+    {
+      "time": "2026-08-22T08:20:39.209Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:21:12.108Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-22T08:21:20.693Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T08:27:25.203Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
       }
     }
   ]

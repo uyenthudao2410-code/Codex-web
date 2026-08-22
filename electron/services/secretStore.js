@@ -49,7 +49,8 @@ class SecretStore {
     const all = this._readAll();
     return {
       runtimeApiKey: Boolean(all.runtimeApiKey),
-      mcpAuthToken: Boolean(all.mcpAuthToken)
+      mcpAuthToken: Boolean(all.mcpAuthToken),
+      p5A0Seed: Boolean(all.p5A0Seed)
     };
   }
 }

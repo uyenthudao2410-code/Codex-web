@@ -17,6 +17,7 @@ const {
   MCP_AUTH_HANDLE,
   OPENAI_API_KEY_HANDLE,
   P5_A0_SEED_ENV,
+  P5_A0_SEED_SECRET,
   P5_A0_SEED_HANDLE
 } = require('../electron/services/nativeService');
 const { normalizeProxyValue } = require('../electron/services/proxyService');
@@ -60,11 +61,12 @@ test('native MCP launch env brokers secrets and excludes ambient loader or secre
       LD_PRELOAD: 'ambient-loader-must-not-pass',
       UNRELATED_SECRET: 'ambient-secret-must-not-pass',
        OPENAI_API_KEY: 'test-provider-secret',
-       [P5_A0_SEED_ENV]: 'test-p5-seed-material'
+       [P5_A0_SEED_ENV]: 'ambient-p5-seed-material-must-not-win'
     },
     launch,
     settings: { authorizedRoots: [], progressReportSeconds: 90 },
     token: 'test-mcp-bearer',
+    p5Seed: 'managed-p5-seed-material',
     diskRevision: 'revision-test',
     supervisorRequestFile: path.join(os.tmpdir(), 'supervisor-test.json')
   });
@@ -77,12 +79,44 @@ test('native MCP launch env brokers secrets and excludes ambient loader or secre
   const broker = JSON.parse(env[SECRET_BROKER_ENV]);
   assert.equal(broker[MCP_AUTH_HANDLE], 'test-mcp-bearer');
   assert.equal(broker[OPENAI_API_KEY_HANDLE], 'test-provider-secret');
-  assert.equal(broker[P5_A0_SEED_HANDLE], 'test-p5-seed-material');
+  assert.equal(broker[P5_A0_SEED_HANDLE], 'managed-p5-seed-material');
   assert.ok(env.PATH.includes(path.join(launch.resourcesRoot, 'tools')));
   assert.ok(env.PATH.includes('safe-base-path'));
   assert.ok(env.PYTHONPATH.includes(launch.moduleRoot));
   assert.ok(env.PYTHONPATH.includes(launch.vendoredPython));
   assert.equal(env.PYTHONPATH.includes('ambient-pythonpath-must-not-pass'), false);
+});
+
+test('native MCP launch ignores an ambient P5 seed when no managed SecretStore seed is supplied', () => {
+  const launch = {
+    resourcesRoot: path.join(os.tmpdir(), 'bundle-root'),
+    moduleRoot: path.join(os.tmpdir(), 'module-root'),
+    vendoredPython: path.join(os.tmpdir(), 'module-root', 'python_vendor')
+  };
+  const env = buildNativeMcpEnv({
+    sourceEnv: { PATH: 'safe-base-path', [P5_A0_SEED_ENV]: 'ambient-seed-must-not-be-used' },
+    launch,
+    settings: { authorizedRoots: [], progressReportSeconds: 90 },
+    token: 'test-mcp-bearer',
+    diskRevision: 'revision-test',
+    supervisorRequestFile: path.join(os.tmpdir(), 'supervisor-test.json')
+  });
+  const broker = JSON.parse(env[SECRET_BROKER_ENV]);
+  assert.equal(broker[P5_A0_SEED_HANDLE], undefined);
+  assert.equal(env[P5_A0_SEED_ENV], undefined);
+});
+
+test('orchestrator obtains the managed P5 seed only from the encrypted secret store', () => {
+  const calls = [];
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({}) },
+    secrets: { get: (name) => { calls.push(name); return name === P5_A0_SEED_SECRET ? 'managed-seed' : ''; } },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  assert.equal(orchestrator.p5A0Seed(), 'managed-seed');
+  assert.deepEqual(calls, [P5_A0_SEED_SECRET]);
 });
 
 test('Coding MCP health is trusted only when workspace and device_id both match', async (t) => {

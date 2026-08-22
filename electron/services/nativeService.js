@@ -15,6 +15,7 @@ const AUTH_HANDLE_ENV = 'CODING_TOOLS_MCP_AUTH_HANDLE';
 const MCP_AUTH_HANDLE = 'secret://mcp/auth';
 const OPENAI_API_KEY_HANDLE = 'secret://provider/openai/api-key';
 const P5_A0_SEED_ENV = 'CODING_TOOLS_P5_A0_SEED';
+const P5_A0_SEED_SECRET = 'p5A0Seed';
 const P5_A0_SEED_HANDLE = 'secret://experiment/p5/a';
 const CORE_NATIVE_ENV_NAMES = new Set([
   'PATH', 'PATHEXT', 'COMSPEC', 'SYSTEMROOT', 'WINDIR', 'SYSTEMDRIVE',
@@ -35,11 +36,17 @@ function coreNativeEnvironment(sourceEnv = process.env) {
   return env;
 }
 
-function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, diskRevision, supervisorRequestFile, device = null }) {
+function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, diskRevision, supervisorRequestFile, device = null, p5Seed = '' }) {
   const env = coreNativeEnvironment(sourceEnv);
   const broker = { [MCP_AUTH_HANDLE]: String(token || '') };
   if (String(sourceEnv.OPENAI_API_KEY || '')) broker[OPENAI_API_KEY_HANDLE] = String(sourceEnv.OPENAI_API_KEY);
-  if (String(sourceEnv[P5_A0_SEED_ENV] || '')) broker[P5_A0_SEED_HANDLE] = String(sourceEnv[P5_A0_SEED_ENV]);
+  // P5-A0 may only reach the child process through a seed explicitly read from
+  // the product SecretStore.  The one-shot environment input is consumed and
+  // encrypted by mcp_controlled_restart.js before NativeService is invoked;
+  // falling back to it here would make a recovery restart silently change the
+  // experiment identity.
+  const managedP5Seed = String(p5Seed || '');
+  if (managedP5Seed) broker[P5_A0_SEED_HANDLE] = managedP5Seed;
   Object.assign(env, {
     CODING_TOOLS_MCP_AUTH_MODE: 'bearer',
     [SECRET_BROKER_ENV]: JSON.stringify(broker),
@@ -223,6 +230,7 @@ class NativeService {
       token,
       diskRevision,
       supervisorRequestFile: this.paths.supervisorRequestFile(),
+      p5Seed: options.p5Seed,
       device: this.device
     });
     const args = [
@@ -366,5 +374,6 @@ module.exports = {
   MCP_AUTH_HANDLE,
   OPENAI_API_KEY_HANDLE,
   P5_A0_SEED_ENV,
+  P5_A0_SEED_SECRET,
   P5_A0_SEED_HANDLE
 };

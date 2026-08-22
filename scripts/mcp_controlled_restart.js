@@ -4,7 +4,7 @@ const { app } = require('electron');
 const { SettingsStore } = require('../electron/services/settingsStore');
 const { SecretStore } = require('../electron/services/secretStore');
 const { LogService } = require('../electron/services/logService');
-const { NativeService, isAlive } = require('../electron/services/nativeService');
+const { NativeService, isAlive, P5_A0_SEED_ENV, P5_A0_SEED_SECRET } = require('../electron/services/nativeService');
 const { readJson } = require('../electron/services/jsonStore');
 const { configureRuntimePaths, stateFile, deviceFile } = require('../electron/paths');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
@@ -113,15 +113,19 @@ async function main() {
   if (!ownerGuard.ok) {
     throw Object.assign(new Error('Native MCP device ownership does not match the live product runtime.'), { code: ownerGuard.code });
   }
-  const token = new SecretStore().get('mcpAuthToken');
+  const secretStore = new SecretStore();
+  const externallyProvisionedP5Seed = String(process.env[P5_A0_SEED_ENV] || '');
+  if (externallyProvisionedP5Seed) secretStore.set(P5_A0_SEED_SECRET, externallyProvisionedP5Seed);
+  const token = secretStore.get('mcpAuthToken');
   if (!token) throw new Error('MCP auth token is unavailable in the matched Electron userData; refusing restart.');
+  const p5Seed = secretStore.get(P5_A0_SEED_SECRET);
   const oldPid = probe.native_pid;
   await run('taskkill.exe', ['/PID', String(oldPid), '/F']);
   if (!(await waitForPort(settings.mcpPort, false))) {
     throw new Error(`MCP port ${settings.mcpPort} did not close after stopping owned PID ${oldPid}.`);
   }
   const native = new NativeService(new LogService(), undefined, null, device);
-  const started = await native.start(settings, token, () => {});
+  const started = await native.start(settings, token, () => {}, { p5Seed });
   let ready = false;
   for (let index = 0; index < 40; index += 1) {
     if (await probeMcp(settings.mcpPort, token, settings.workspace, device.deviceId)) {

@@ -9,10 +9,10 @@
 
 ## Outcome metrics
 
-- Waves: **1**
-- Route decisions: **1**
-- Failures observed: **0**
-- REPLAN transitions: **0**
+- Waves: **2**
+- Route decisions: **2**
+- Failures observed: **2**
+- REPLAN transitions: **2**
 - Proof stages: **1**
 - Proof cache hits: **0**
 - Acceptance checkpoints: **0**
@@ -21,7 +21,8 @@
 
 | # | Wave | Objective rev | Objective source | Mode | Base | Status |
 |---:|---|---:|---|---|---|---|
-| 1 | `2d6b32ab0e6d46ac8ae58f2f5926aa1f` | 1 | `run_initial_objective` | `mcp_only` | `12d84a32648d6b27d8b916a6aa47f718ffcff866` | active |
+| 1 | `2d6b32ab0e6d46ac8ae58f2f5926aa1f` | 1 | `run_initial_objective` | `mcp_only` | `12d84a32648d6b27d8b916a6aa47f718ffcff866` | replanned |
+| 2 | `924aa6165bb148c19c1832673f29d7ad` | 2 | `replan_request` | `mcp_only` | `d2ce747fd0a2c48c35fb194afee1377bc6c849fc` | active |
 
 ## Acceptance checkpoints
 
@@ -34,16 +35,19 @@
 | Seq | Requested | Resolved | Reason |
 |---:|---|---|---|
 | 26916 | `deterministic` | `deterministic` | explicit_request |
+| 26939 | `deterministic` | `deterministic` | caller_supplied_change_set |
 
 ## Failures / replans
 
 | Seq | Failure class | State | Evidence |
 |---:|---|---|---|
+| 26930 | `SOL_REJECTED` | `ACCEPTING` | Reject false-green/no-op acceptance: focused proof passed but the intended source fix did not materialize; activation_preflight still calls current_active_run(), current_active_execution_run is absent, and repository HEAD drifted from wave base 12d84a32648d6b27d8b916a6aa47f718ffcff866 to d2ce747fd0a2c48c35fb194afee1377bc6c849fc due concurrent accepted work. Replan same run on current HEAD; do not accept stale proof. |
+| 26951 | `SOL_REJECTED` | `ACCEPTING` | Focused oracle failed after the two source hunks materialized: test_activation_preflight still mocks current_active_run(), while activation_preflight now calls current_active_execution_run(). Two failures prove the test contract is incomplete. Reject wave 2 fail-closed; preserve the real source diff and replan the same run to migrate those mocks and add regression coverage for P5-only anchor allowed vs real active EOCL run blocked. |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `16`
-- Chain head: `bb8dc2b6c01d4cd9912cebf31d5e97fbb2f4fc3a0d08fb8ba745652f583d457d`
+- Events checked: `37`
+- Chain head: `2cef85ccc45d4c4bf71c8d8bd3cad38b80bb1b1447caff2b514fa553f0961f3f`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

@@ -1000,6 +1000,30 @@ class P5ExperimentLedgerMixin:
             ).fetchone()
         return self._p5_epoch_row(row) if row is not None else None
 
+    def current_active_execution_run(self, *, task_id: str = "") -> dict[str, Any] | None:
+        """Return the newest active EOCL execution run, excluding P5 experiment anchors.
+
+        A live P5 epoch has an audit-anchor run by design.  It is not a writer
+        and must not make the runtime's restart preflight report generic active
+        work when no actual execution run exists.
+        """
+        self.expire_controller_leases()
+        p5_filter = "COALESCE(json_extract(metadata_json, '$.p5_experiment'), 0) != 1"
+        with self._lock, self._connect() as connection:
+            if task_id:
+                row = connection.execute(
+                    f"SELECT * FROM runs WHERE task_id=? AND status='active' AND {p5_filter} "
+                    "ORDER BY started_at DESC LIMIT 1",
+                    (task_id,),
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    f"SELECT * FROM runs WHERE status='active' AND {p5_filter} ORDER BY started_at DESC LIMIT 1"
+                ).fetchone()
+        if not row:
+            return None
+        return self.get_run(str(row["run_id"]))
+
     def p5_analyze_epoch(self, activation_epoch_id: str) -> dict[str, Any]:
         snapshot = self.p5_epoch_snapshot(activation_epoch_id)
         epoch = dict(snapshot["epoch"])

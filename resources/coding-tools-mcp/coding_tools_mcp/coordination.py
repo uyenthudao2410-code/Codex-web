@@ -371,7 +371,7 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin):
                 return {"safe": False, "code": "RUNTIME_BUSY", "reason": "active_runtime_work", "counts": counts}
 
             try:
-                active_run = self.orchestration_ledger.current_active_run()
+                active_run = self.orchestration_ledger.current_active_execution_run()
             except (sqlite3.Error, OSError) as exc:
                 return {
                     "safe": False,

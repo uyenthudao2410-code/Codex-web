@@ -177,6 +177,23 @@ class P5ExperimentLedgerTests(unittest.TestCase):
             self.assertNotIn("fixture-seed", str(event))
             self.assertFalse(event["payload"]["automatic_activation"])
 
+    def test_live_p5_epoch_anchor_is_not_an_active_execution_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            _source, epoch = self.open_epoch(ledger)
+            self.assertEqual(
+                ledger.current_active_run()["run_id"],
+                epoch["ledger_run_id"],
+            )
+            self.assertIsNone(ledger.current_active_execution_run())
+
+            execution_run_id = ledger.create_run(objective="natural feature execution", task_id="natural-task")
+            self.assertEqual(ledger.current_active_execution_run()["run_id"], execution_run_id)
+            self.assertEqual(
+                ledger.current_active_execution_run(task_id="natural-task")["run_id"],
+                execution_run_id,
+            )
+
     def test_p5_uses_existing_task_control_surface_without_a_ninth_tool(self) -> None:
         schema = input_schemas()["task_control"]
         self.assertIn("p5", schema["properties"]["action"]["enum"])

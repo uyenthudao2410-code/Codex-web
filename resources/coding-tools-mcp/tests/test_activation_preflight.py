@@ -255,7 +255,7 @@ class ActivationPreflightTests(unittest.TestCase):
                 active_run = {"run_id": "run-accepting"}
                 accepting = SimpleNamespace(state="ACCEPTING")
                 with (
-                    patch.object(runtime.orchestration_ledger, "current_active_run", return_value=active_run),
+                    patch.object(runtime.orchestration_ledger, "current_active_execution_run", return_value=active_run),
                     patch.object(runtime.orchestration_control, "snapshot", return_value=accepting),
                     patch.object(runtime.orchestration_ledger, "verify_chain", return_value={"ok": True}),
                 ):
@@ -274,13 +274,13 @@ class ActivationPreflightTests(unittest.TestCase):
             try:
                 active_run = {"run_id": "run-active"}
                 with (
-                    patch.object(runtime.orchestration_ledger, "current_active_run", return_value=active_run),
+                    patch.object(runtime.orchestration_ledger, "current_active_execution_run", return_value=active_run),
                     patch.object(runtime.orchestration_control, "snapshot", return_value=SimpleNamespace(state="PROVING")),
                     patch.object(runtime.orchestration_ledger, "verify_chain", return_value={"ok": True}),
                 ):
                     self.assertEqual(runtime.activation_preflight()["code"], "RUNTIME_BUSY")
                 with (
-                    patch.object(runtime.orchestration_ledger, "current_active_run", return_value=active_run),
+                    patch.object(runtime.orchestration_ledger, "current_active_execution_run", return_value=active_run),
                     patch.object(runtime.orchestration_control, "snapshot", return_value=SimpleNamespace(state="ACCEPTING")),
                     patch.object(runtime.orchestration_ledger, "verify_chain", return_value={"ok": False}),
                 ):

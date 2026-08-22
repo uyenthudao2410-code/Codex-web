@@ -10,7 +10,7 @@
 - Base HEAD: `12d84a32648d6b27d8b916a6aa47f718ffcff866`
 - Worktree fingerprint: `4074e79276601320df0459277b82474b7b3517012e25a5cde2e5d46701cd86b8`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **replanned**
 
 ## Delegations
 
@@ -38,6 +38,9 @@
 | 26925 | 2026-08-22T08:05:52.523Z | managed_process_terminal |  |  | owner=default |
 | 26926 | 2026-08-22T08:05:53.461Z | proof_recorded |  |  | stage_id=verify:tests; status=passed; cache_hit=False; input_fingerprint=2ee733a81fdc6a73987c24e803cd16dc3b652fc66be6c12c90dad0bc7fe4d54e |
 | 26927 | 2026-08-22T08:05:53.718Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 26930 | 2026-08-22T08:10:10.753Z | failure_observed | ACCEPTING | ACCEPTING | reason=Reject false-green/no-op acceptance: focused proof passed but the intended source fix did not materialize; activation_preflight still calls current_active_run(), current_active_execution_run is absent, and repository HEAD drifted from wave base 12d84a32648d6b27d8b916a6aa47f718ffcff866 to d2ce747fd0a2c48c35fb194afee1377bc6c849fc due concurrent accepted work. Replan same run on current HEAD; do not accept stale proof.; failure_class=SOL_REJECTED |
+| 26931 | 2026-08-22T08:10:10.789Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
+| 26932 | 2026-08-22T08:10:10.971Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
 
 ## Proof
 
@@ -54,5 +57,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `16`
-- Chain head: `bb8dc2b6c01d4cd9912cebf31d5e97fbb2f4fc3a0d08fb8ba745652f583d457d`
+- Events checked: `37`
+- Chain head: `2cef85ccc45d4c4bf71c8d8bd3cad38b80bb1b1447caff2b514fa553f0961f3f`
