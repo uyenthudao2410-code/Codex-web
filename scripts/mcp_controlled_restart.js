@@ -34,7 +34,7 @@ async function waitForPort(port, shouldListen, attempts = 40) {
 
 function reportPath(workspace, label) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const directory = path.join(workspace, 'resources', 'coding-tools-mcp', 'benchmarks', 'reports');
+  const directory = path.join(workspace, '.coding-tools', 'orchestration', 'reports', 'runtime-restarts');
   fs.mkdirSync(directory, { recursive: true });
   return path.join(directory, `runtime-restart-${label}-${stamp}.json`);
 }

@@ -186,6 +186,10 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 status = runtime.task_control({"action": "p5", "p5_experiment": {"operation": "status"}})
                 self.assertIsNone(status["p5"])
                 self.assertEqual(runtime.tool_contract["tool_count"], 8)
+                self.assertEqual(status["p5_seed"]["seed_handle"], "secret://experiment/p5/a")
+                self.assertFalse(status["p5_seed"]["available"])
+                self.assertIsNone(status["p5_seed"]["seed_commitment_sha256"])
+                self.assertTrue(status["p5_seed"]["content_free"])
                 self.assertFalse(status["automatic_activation"])
                 self.assertFalse(status["automatic_production_promotion"])
             finally:
@@ -235,6 +239,10 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}),
             )
             try:
+                seed_status = runtime.task_control({"action": "p5", "p5_experiment": {"operation": "status"}})["p5_seed"]
+                self.assertTrue(seed_status["available"])
+                self.assertEqual(seed_status["seed_commitment_sha256"], hashlib.sha256(b"fixture-seed").hexdigest())
+                self.assertNotIn("fixture-seed", str(seed_status))
                 observed_runtime = runtime._p5_runtime_contract()
                 observed_source = {
                     "control_plane_source_head": "fixture-head",

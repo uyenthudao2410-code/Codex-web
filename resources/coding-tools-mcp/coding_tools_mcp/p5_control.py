@@ -13,6 +13,9 @@ from .errors import ToolFailure
 from .p5_experiment import P5ExperimentError, analyzer_source_fingerprint
 
 
+P5_A0_SEED_HANDLE = "secret://experiment/p5/a"
+
+
 class P5ControlMixin:
     """The parent supplies runtime identity, secret broker, workspace, and ledger."""
 
@@ -124,6 +127,17 @@ class P5ControlMixin:
             )
         return seed_handle, seed
 
+    def _p5_seed_status(self) -> dict[str, object]:
+        """Expose only whether the designated P5-A0 handle is resolvable."""
+        broker_status = self.secret_broker.status()
+        seed = self.secret_broker.resolve(P5_A0_SEED_HANDLE)
+        return {
+            "seed_handle": P5_A0_SEED_HANDLE,
+            "available": seed is not None,
+            "seed_commitment_sha256": hashlib.sha256(seed.encode("utf-8")).hexdigest() if seed else None,
+            "content_free": broker_status.get("content_free") is True,
+        }
+
     def _p5_control(self, args: dict[str, Any]) -> dict[str, Any]:
         request = args.get("p5_experiment")
         if not isinstance(request, dict):
@@ -141,6 +155,7 @@ class P5ControlMixin:
                     "p5": epoch,
                     "runtime_contract": self._p5_runtime_contract(),
                     "source_contract": self._p5_source_contract(),
+                    "p5_seed": self._p5_seed_status(),
                     "automatic_activation": False,
                     "automatic_production_promotion": False,
                 }
