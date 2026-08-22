@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 SCRIPT_ROOT = Path(__file__).resolve().parent
@@ -21,7 +22,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Plan arm-neutral P5 enrollment without mutating runtime, opening an epoch, or changing treatment behavior."
     )
-    parser.add_argument("--workspace", default=".")
+    parser.add_argument("--workspace", default=str(REPOSITORY_ROOT))
     parser.add_argument("--task-class", required=True, choices=("feature", "bugfix"))
     parser.add_argument("--stable-quality-oracle", action="store_true")
     parser.add_argument("--bounded-change-surface", action="store_true")

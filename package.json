@@ -19,6 +19,7 @@
     "test:all": "npm test && npm run test:mcp",
     "check:repository-secrets": "node scripts/check-sensitive-tracked.js",
     "check:coding-tools-history": "npm run check:repository-secrets && node scripts/check-coding-tools-history.js",
+    "stage:coding-tools-delivery": "python scripts/stage-coding-tools-delivery.py",
     "check:coding-tools-delivery": "npm run check:repository-secrets && node scripts/check-coding-tools-history.js --require-staged",
     "check:p5-readiness": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-p5-ready",
     "plan:p5-treatment": "python resources/coding-tools-mcp/scripts/plan_p5_controlled_treatment.py --workspace .",

@@ -3,6 +3,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const REQUIRE_STAGED = process.argv.includes('--require-staged');
+const CANONICAL_LEDGER = '.coding-tools/orchestration/ledger.sqlite3';
 const APPROVED_IGNORED_EVIDENCE = [
   '.coding-tools/orchestration/ledger.sqlite3-shm',
   '.coding-tools/orchestration/ledger.sqlite3-wal',
@@ -71,6 +72,15 @@ function nulList(value) {
 function fail(lines) {
   for (const line of lines) console.error(line);
   process.exit(1);
+}
+
+function verifyStagedCanonicalLedger(root) {
+  const script = path.join(root, 'scripts', 'stage-coding-tools-delivery.py');
+  return spawnSync('python', [script, '--verify-index'], {
+    cwd: root,
+    encoding: 'utf8',
+    windowsHide: true,
+  });
 }
 
 function main() {
@@ -154,18 +164,35 @@ function main() {
   if (REQUIRE_STAGED) {
     const unstaged = runGit(root, ['diff', '--name-only', '-z', '--', '.coding-tools']);
     const untracked = runGit(root, ['ls-files', '--others', '--exclude-standard', '-z', '--', '.coding-tools']);
-    if (unstaged.status !== 0 || untracked.status !== 0) {
+    const stagedLedger = runGit(root, ['diff', '--cached', '--name-only', '-z', '--', CANONICAL_LEDGER]);
+    if (unstaged.status !== 0 || untracked.status !== 0 || stagedLedger.status !== 0) {
       failures.push('coding-tools delivery check: unable to inspect staged state');
     } else {
+      const stagedLedgerPaths = new Set(nulList(stagedLedger.stdout).map(normalizedPortable));
+      const canonicalLedgerSnapshotStaged = stagedLedgerPaths.has(CANONICAL_LEDGER);
       const missingFromDelivery = [...new Set([...nulList(unstaged.stdout), ...nulList(untracked.stdout)])]
-        .filter((item) => !isApprovedIgnoredEvidence(item))
+        .filter((item) => {
+          const normalized = normalizedPortable(item);
+          if (isApprovedIgnoredEvidence(normalized)) return false;
+          if (normalized === CANONICAL_LEDGER && canonicalLedgerSnapshotStaged) return false;
+          return true;
+        })
         .sort();
       if (missingFromDelivery.length) {
         failures.push(
           'coding-tools delivery check: current evidence is not fully staged:',
           ...missingFromDelivery.map((item) => `  ${item}`),
-          'Run: git add -A -- .coding-tools'
+          'Run: npm run stage:coding-tools-delivery'
         );
+      }
+      if (canonicalLedgerSnapshotStaged) {
+        const verified = verifyStagedCanonicalLedger(root);
+        if (verified.status !== 0) {
+          failures.push(
+            'coding-tools delivery check: staged canonical ledger snapshot is invalid:',
+            `  ${String(verified.stderr || verified.stdout || '').trim() || `verification exit ${verified.status}`}`
+          );
+        }
       }
     }
   }

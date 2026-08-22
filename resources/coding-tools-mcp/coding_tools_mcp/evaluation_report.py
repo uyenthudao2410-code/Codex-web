@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .evidence_completeness import evidence_completeness_population_report, evidence_completeness_run_report
+from .ledger_access import open_existing_ledger
 from .orchestration_ledger import OrchestrationLedger
 from .rework_diagnosis import stratified_rework_diagnosis
 from .solution_economics import solution_shadow_population_report, solution_shadow_run_report
@@ -105,7 +106,7 @@ def host_visible_summary(workspace: Path) -> dict[str, Any]:
 
 def host_binding_summary(workspace: Path, *, ledger: OrchestrationLedger | None = None) -> dict[str, Any]:
     root = workspace.resolve()
-    ledger = ledger or OrchestrationLedger(root)
+    ledger = ledger or open_existing_ledger(root)
     events, target = _load_host_events(root)
     spans = [
         item for item in events
@@ -171,7 +172,7 @@ def host_binding_summary(workspace: Path, *, ledger: OrchestrationLedger | None 
 
 def current_ledger_baseline_report(workspace: Path) -> dict[str, Any]:
     root = workspace.resolve()
-    ledger = OrchestrationLedger(root)
+    ledger = open_existing_ledger(root)
     host_events, _ = _load_host_events(root)
     routing_regret = ledger.paired_policy_evaluation()
     performance_path = root / '.coding-tools' / 'performance.json'
@@ -263,7 +264,7 @@ def evaluation_plane_report(workspace: Path, *, run_id: str = '') -> dict[str, A
             'promotion_eligible': 'NO',
         }
     else:
-        ledger = OrchestrationLedger(root)
+        ledger = open_existing_ledger(root)
         if ledger.get_run(run_id) is None:
             raise ValueError('run_id was not found in orchestration ledger')
         causal = ledger.critical_path_analysis(run_id)

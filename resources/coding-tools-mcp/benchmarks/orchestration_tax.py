@@ -5,8 +5,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
+from coding_tools_mcp.ledger_access import open_existing_ledger
 from coding_tools_mcp.usage_ledger import canonical_usage_payload
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _nonnegative_int(value: Any) -> int | None:
@@ -248,14 +251,14 @@ def orchestration_tax_report(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Report Solo Fast orchestration tax from canonical representative paired evidence.")
-    parser.add_argument("--workspace", default=".")
+    parser.add_argument("--workspace", default=str(REPOSITORY_ROOT))
     parser.add_argument("--baseline-policy", default="chatweb_mcp")
     parser.add_argument("--candidate-policy", action="append", dest="candidate_policies")
     parser.add_argument("--limit", type=int, default=500)
     parser.add_argument("--min-pairs", type=int, default=10)
     parser.add_argument("--min-task-classes", type=int, default=3)
     args = parser.parse_args()
-    ledger = OrchestrationLedger(Path(args.workspace))
+    ledger = open_existing_ledger(Path(args.workspace))
     report = orchestration_tax_report(
         ledger,
         baseline_policy=args.baseline_policy,

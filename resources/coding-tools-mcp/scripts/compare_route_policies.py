@@ -6,17 +6,18 @@ import sys
 from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
+from coding_tools_mcp.ledger_access import open_existing_ledger
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Compare representative paired route policies by accepted-result quality, time and observed economics."
     )
-    parser.add_argument("--workspace", default=".", help="Workspace containing .coding-tools/orchestration/ledger.sqlite3")
+    parser.add_argument("--workspace", default=str(REPOSITORY_ROOT), help="Workspace containing .coding-tools/orchestration/ledger.sqlite3")
     parser.add_argument("--baseline-policy", default="chatweb_mcp")
     parser.add_argument(
         "--candidate-policy",
@@ -30,7 +31,7 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=500)
     args = parser.parse_args()
 
-    ledger = OrchestrationLedger(Path(args.workspace))
+    ledger = open_existing_ledger(Path(args.workspace))
     result = ledger.paired_policy_evaluation(
         baseline_policy=args.baseline_policy,
         candidate_policies=tuple(args.candidate_policies or ("mini", "luna")),

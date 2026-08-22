@@ -17,6 +17,20 @@ from coding_tools_mcp.server import Runtime
 
 
 class EvaluationReportTests(unittest.TestCase):
+    def test_ledger_backed_reports_fail_closed_without_creating_project_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plane = evaluation_plane_report(root)
+            self.assertEqual(plane['causal_run']['status'], 'not_requested')
+            self.assertFalse((root / '.coding-tools').exists())
+            with self.assertRaises(FileNotFoundError):
+                current_ledger_baseline_report(root)
+            with self.assertRaises(FileNotFoundError):
+                evaluation_plane_report(root, run_id='missing-run')
+            with self.assertRaises(FileNotFoundError):
+                host_binding_summary(root)
+            self.assertFalse((root / '.coding-tools').exists())
+
     def test_current_ledger_baseline_reports_population_coverage_and_exact_host_binding(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

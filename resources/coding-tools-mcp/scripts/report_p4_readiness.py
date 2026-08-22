@@ -7,10 +7,11 @@ import sys
 from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
+from coding_tools_mcp.ledger_access import open_existing_ledger
 from coding_tools_mcp.p5_treatment import p5_implementation_contract
 from coding_tools_mcp.solution_economics import solution_shadow_population_report
 
@@ -100,7 +101,7 @@ def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, objec
             "reason": "canonical_orchestration_ledger_missing",
         }
 
-    ledger = OrchestrationLedger(root)
+    ledger = open_existing_ledger(root)
     population = solution_shadow_population_report(ledger, limit=limit)
     cohort = population.get("cohort") if isinstance(population.get("cohort"), dict) else {}
     gate = population.get("p4_gate") if isinstance(population.get("p4_gate"), dict) else {}
@@ -200,7 +201,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Report the P4 Solution Economics Shadow readiness gate from the canonical orchestration ledger."
     )
-    parser.add_argument("--workspace", default=".")
+    parser.add_argument("--workspace", default=str(REPOSITORY_ROOT))
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument(
         "--require-ready",
