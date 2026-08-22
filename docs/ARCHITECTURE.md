@@ -214,6 +214,11 @@ retain only output-tail and encoding state; they never wait for a protocol,
 model, or log observer. Terminal handling terminates and reaps the managed
 process tree before waiting for pipe EOF, so a descendant that inherited a pipe
 cannot hold command completion open after its direct parent exits.
+`apply_text_edits` remains an exact, hash-guarded transactional mutation. For
+one unambiguous LF or CRLF file it canonicalizes only line endings during match
+resolution and restores the original convention for the write; mixed endings,
+bare carriage returns, and every non-line-ending mismatch are rejected before
+any file in the batch changes.
 The Connector Task ledger and Workflow Session ledger remain separate internal
 models; neither is copied into the other.
 
