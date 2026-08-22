@@ -9,11 +9,15 @@ import sqlite3
 import threading
 import time
 import uuid
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
 from .artifact_refs import handoff_capsule_artifact_ref, proof_artifact_ref
+from .ledger_event_chain import append_hash_chained_event
+from .p5_experiment_store import P5ExperimentLedgerMixin
+from .quality_outcomes import QualityOutcomeLedgerMixin
 from .usage_ledger import (
     CANONICAL_USAGE_KEYS,
     canonical_usage_payload,
@@ -24,8 +28,10 @@ from .usage_ledger import (
 )
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 _MAX_TEXT = 16_000
+_PROOF_METADATA_COMPRESSION_PREFIX = b"WCPM1\0"
+_PROOF_METADATA_COMPRESSION_MIN_BYTES = 4_096
 HANDOFF_CAPSULE_MAX_BYTES = 8_192
 _SECRET_KEY_RE = re.compile(r"(authorization|credential|password|passwd|secret|token|api[_-]?key|private[_-]?key)", re.I)
 _SAFE_NUMERIC_USAGE_KEYS = {
@@ -73,6 +79,30 @@ def resource_claim_owner_hash(owner_type: str, owner_id: str) -> str:
 
 def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _encode_proof_metadata(value: dict[str, Any]) -> str | bytes:
+    text = _json(_sanitize(value))
+    raw = text.encode("utf-8")
+    if len(raw) < _PROOF_METADATA_COMPRESSION_MIN_BYTES:
+        return text
+    encoded = _PROOF_METADATA_COMPRESSION_PREFIX + zlib.compress(raw)
+    return encoded if len(encoded) < len(raw) else text
+
+
+def _decode_proof_metadata(value: Any) -> dict[str, Any]:
+    if value is None or value == "":
+        return {}
+    if isinstance(value, str):
+        decoded = json.loads(value)
+    else:
+        raw = bytes(value)
+        if raw.startswith(_PROOF_METADATA_COMPRESSION_PREFIX):
+            raw = zlib.decompress(raw[len(_PROOF_METADATA_COMPRESSION_PREFIX):])
+        decoded = json.loads(raw.decode("utf-8"))
+    if not isinstance(decoded, dict):
+        raise ValueError("proof metadata must decode to a JSON object")
+    return decoded
 
 
 def _bounded_text(value: Any, limit: int = _MAX_TEXT) -> str:
@@ -303,7 +333,7 @@ def fingerprint_paths(root: Path, paths: Iterable[str], *, extra: dict[str, Any]
     return digest.hexdigest()
 
 
-class OrchestrationLedger:
+class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
     """Durable append-only orchestration audit source for one workspace.
 
     The ledger stores structured control/evidence identity, not raw prompts, patches,
@@ -606,6 +636,7 @@ class OrchestrationLedger:
                     WHERE resource_class='HEAVY' AND lifecycle_state='active';
                 """
             )
+            self._p5_ensure_schema(connection)
             now = utc_now()
             active_jobs = connection.execute(
                 """SELECT job_id,checkout_id FROM managed_process_jobs
@@ -998,50 +1029,23 @@ class OrchestrationLedger:
         payload: dict[str, Any] | None = None,
         event_time: str | None = None,
     ) -> dict[str, Any]:
-        event_id = uuid.uuid4().hex
-        event_time = event_time or utc_now()
-        safe_payload = _sanitize(payload or {})
         with self._lock, self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            previous = connection.execute(
-                "SELECT event_hash FROM events WHERE run_id=? ORDER BY seq DESC LIMIT 1", (run_id,)
-            ).fetchone()
-            prev_hash = str(previous[0]) if previous else ""
-            core = {
-                "event_id": event_id,
-                "run_id": run_id,
-                "wave_id": wave_id or "",
-                "delegation_id": delegation_id or "",
-                "event_type": event_type,
-                "state_before": state_before,
-                "state_after": state_after,
-                "event_time": event_time,
-                "payload": safe_payload,
-                "prev_hash": prev_hash,
-            }
-            event_hash = hashlib.sha256(_json(core).encode("utf-8")).hexdigest()
-            cursor = connection.execute(
-                """INSERT INTO events(
-                    event_id,run_id,wave_id,delegation_id,event_type,state_before,state_after,event_time,payload_json,prev_hash,event_hash
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    event_id,
-                    run_id,
-                    wave_id,
-                    delegation_id,
-                    _bounded_text(event_type, 100),
-                    _bounded_text(state_before, 64),
-                    _bounded_text(state_after, 64),
-                    event_time,
-                    _json(safe_payload),
-                    prev_hash,
-                    event_hash,
-                ),
+            event = append_hash_chained_event(
+                connection,
+                run_id=run_id,
+                event_type=event_type,
+                wave_id=wave_id,
+                delegation_id=delegation_id,
+                state_before=state_before,
+                state_after=state_after,
+                payload=payload,
+                event_time=event_time or utc_now(),
+                sanitize=_sanitize,
+                serialize=_json,
+                bounded_text=_bounded_text,
             )
-            seq = int(cursor.lastrowid)
-            connection.commit()
-        return {**core, "seq": seq, "event_hash": event_hash}
-
+        return event
     def list_events(self, run_id: str, *, wave_id: str | None = None) -> list[dict[str, Any]]:
         query = "SELECT * FROM events WHERE run_id=?"
         params: list[Any] = [run_id]
@@ -1061,7 +1065,6 @@ class OrchestrationLedger:
         delegation_id: str,
         usage_event: dict[str, Any],
     ) -> dict[str, Any]:
-        """Persist one sanitized canonical provider/controller usage fact."""
         return _record_usage_event(
             self,
             run_id=run_id,
@@ -1074,53 +1077,12 @@ class OrchestrationLedger:
         return _list_usage_events(self, run_id, limit=limit)
 
     def recent_usage_events(self, *, limit: int = 8) -> list[dict[str, Any]]:
-        """Debug/monitoring projection only; never use this bounded view for analytics."""
         return _recent_usage_events(self, limit=limit)
 
     def usage_analytics(self, *, days: int = 7, now: str | None = None) -> dict[str, Any]:
         return _usage_analytics(self, days=days, now=now)
 
-    def record_quality_outcome(self, *, run_id: str, outcome: dict[str, Any], wave_id: str = "") -> dict[str, Any]:
-        """Append one bounded immediate/delayed quality observation."""
-        if self.get_run(run_id) is None:
-            raise ValueError("quality outcome run was not found")
-        if wave_id and not any(str(item.get("wave_id") or "") == wave_id for item in self.list_waves(run_id)):
-            raise ValueError("quality outcome wave does not belong to the run")
-        source = _bounded_text(outcome.get("source") or "", 128).strip()
-        if not source:
-            raise ValueError("quality outcome source is required")
-        payload: dict[str, Any] = {"source": source}
-        for key in ("oracle_pass", "regression_escape", "rollback_required", "manual_fix_required", "reviewer_blinded"):
-            value = outcome.get(key)
-            if isinstance(value, bool):
-                payload[key] = value
-        for key in ("critical_defect_count", "noncritical_defect_count"):
-            value = outcome.get(key)
-            if value is None:
-                continue
-            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-                raise ValueError(f"{key} must be a non-negative integer")
-            payload[key] = value
-        maintainability = _bounded_text(outcome.get("maintainability_gate") or "", 32).strip().lower()
-        if maintainability:
-            if maintainability not in {"pass", "fail", "not_applicable", "unknown"}:
-                raise ValueError("maintainability_gate is invalid")
-            payload["maintainability_gate"] = maintainability
-        observation_window_end = _bounded_text(outcome.get("observation_window_end") or "", 128).strip()
-        if observation_window_end:
-            payload["observation_window_end"] = observation_window_end
-        event = self.append_event(run_id, wave_id=wave_id or None, event_type="quality_outcome_recorded", payload=payload)
-        return {**payload, "seq": event["seq"], "event_time": event["event_time"]}
-
-    def latest_quality_outcome(self, run_id: str) -> dict[str, Any] | None:
-        for event in reversed(self.list_events(run_id)):
-            if str(event.get("event_type") or "") == "quality_outcome_recorded":
-                payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
-                return {**payload, "seq": event["seq"], "event_time": event["event_time"]}
-        return None
-
     def record_observation_span(self, *, run_id: str, span: dict[str, Any], wave_id: str = "") -> dict[str, Any]:
-        """Append one content-free timing span supplied by a trusted observation plane."""
         if self.get_run(run_id) is None:
             raise ValueError("observation span run was not found")
         if wave_id and not any(str(item.get("wave_id") or "") == wave_id for item in self.list_waves(run_id)):
@@ -1192,7 +1154,6 @@ class OrchestrationLedger:
         ]
 
     def critical_path_analysis(self, run_id: str) -> dict[str, Any]:
-        """Reconstruct the longest explicit dependency path without summing parallel lanes."""
         spans = self.list_observation_spans(run_id, limit=1000)
         if not spans:
             return {
@@ -2589,7 +2550,7 @@ class OrchestrationLedger:
                     exit_code,
                     1 if cache_hit else 0,
                     _json(_sanitize(upstream_proof_ids or [])),
-                    _json(_sanitize(metadata or {})),
+                    _encode_proof_metadata(metadata or {}),
                 ),
             )
         return proof_id
@@ -2677,7 +2638,7 @@ class OrchestrationLedger:
             "exit_code": row["exit_code"],
             "cache_hit": bool(row["cache_hit"]),
             "upstream_proof_ids": json.loads(row["upstream_json"] or "[]"),
-            "metadata": json.loads(row["metadata_json"] or "{}"),
+            "metadata": _decode_proof_metadata(row["metadata_json"]),
         }
 
     def record_checkpoint(
@@ -4867,9 +4828,6 @@ class OrchestrationLedger:
                 "SELECT state_after FROM events WHERE run_id=? ORDER BY seq DESC LIMIT 1",
                 (run_id,),
             ).fetchone()
-            # ACCEPTING is intentionally resumable: proof is already complete
-            # and the next controller may still accept/reject it after a
-            # reconnect.  It must not be mistaken for an abandoned execution.
             if latest_event and str(latest_event["state_after"] or "").upper() == "ACCEPTING":
                 continue
             if connection.execute(

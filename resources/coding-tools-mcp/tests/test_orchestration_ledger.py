@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
@@ -742,6 +743,76 @@ class OrchestrationLedgerTests(unittest.TestCase):
             integrity = restored.verify_chain(run_id)
             self.assertTrue(integrity["ok"])
             self.assertEqual(integrity["checked"], 2)
+
+    def test_large_proof_metadata_is_compressed_and_round_trips_after_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = ledger.create_run(objective="compressed proof metadata")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            metadata = {"payload": "repeated-proof-metadata-" * 400, "nested": {"value": 7}}
+            proof_id = ledger.record_proof(
+                run_id=run_id,
+                wave_id=wave_id,
+                stage_id="large-metadata",
+                stage_version="1",
+                input_fingerprint="large-metadata-fp",
+                status="passed",
+                metadata=metadata,
+            )
+            with ledger._lock, ledger._connect() as connection:
+                raw = connection.execute(
+                    "SELECT metadata_json FROM proofs WHERE proof_id=?",
+                    (proof_id,),
+                ).fetchone()[0]
+            self.assertIsInstance(raw, bytes)
+            self.assertTrue(raw.startswith(b"WCPM1\0"))
+            restored = OrchestrationLedger(root)
+            self.assertEqual(restored.list_proofs(run_id)[0]["metadata"], metadata)
+            self.assertTrue(restored.verify_chain(run_id)["ok"])
+
+    def test_legacy_text_proof_metadata_remains_readable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="legacy proof metadata")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            proof_id = ledger.record_proof(
+                run_id=run_id,
+                wave_id=wave_id,
+                stage_id="legacy-metadata",
+                stage_version="1",
+                input_fingerprint="legacy-metadata-fp",
+                status="passed",
+                metadata={"small": "value"},
+            )
+            with ledger._lock, ledger._connect() as connection:
+                raw = connection.execute(
+                    "SELECT metadata_json FROM proofs WHERE proof_id=?",
+                    (proof_id,),
+                ).fetchone()[0]
+            self.assertIsInstance(raw, str)
+            self.assertEqual(ledger.list_proofs(run_id)[0]["metadata"], {"small": "value"})
+
+    def test_corrupt_compressed_proof_metadata_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective="corrupt proof metadata")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            proof_id = ledger.record_proof(
+                run_id=run_id,
+                wave_id=wave_id,
+                stage_id="corrupt-metadata",
+                stage_version="1",
+                input_fingerprint="corrupt-metadata-fp",
+                status="passed",
+            )
+            with ledger._lock, ledger._connect() as connection:
+                connection.execute(
+                    "UPDATE proofs SET metadata_json=? WHERE proof_id=?",
+                    (b"WCPM1\0not-zlib", proof_id),
+                )
+            with self.assertRaises(zlib.error):
+                ledger.list_proofs(run_id)
 
     def test_observation_spans_reconstruct_explicit_critical_path_without_parallel_double_count(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

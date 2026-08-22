@@ -118,10 +118,22 @@ def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, objec
     empirically_complete = gate_predictive_ready and validated_predictive_signal_ready
     git_baseline = _git_baseline_status(root)
     p5_baseline_ready = git_baseline.get("p5_baseline_ready") is True
-    p5_treatment_ready = empirically_complete and validated_predictive_signal_ready and p5_baseline_ready
+    # P4-C is an optional later targeting/heterogeneity gate.  It cannot block
+    # P5-A instrumentation/feasibility engineering, and it never activates an
+    # epoch by itself.  The old coupled flag stays as an explicit deprecated
+    # compatibility projection for callers that still consume it.
+    legacy_predictive_treatment_ready = empirically_complete and p5_baseline_ready
+    latest_epoch = ledger.p5_latest_epoch()
+    epoch_lifecycle = str((latest_epoch or {}).get("lifecycle") or "NOT_READY")
+    p5_engineering_ready = p5_baseline_ready
+    p5_experiment_start_ready = bool(
+        latest_epoch is not None and epoch_lifecycle in {"EPOCH_ACTIVE", "EPOCH_PAUSED"}
+    )
     p5_implementation = p5_implementation_contract(
-        treatment_readiness=p5_treatment_ready,
+        experiment_start_ready=p5_experiment_start_ready,
+        epoch_lifecycle=epoch_lifecycle,
         validated_signals=validated_signals,
+        treatment_readiness=legacy_predictive_treatment_ready,
     )
     shadow_tasks = int(cohort.get("shadow_tasks") or 0)
     if empirically_complete and p5_baseline_ready:
@@ -148,12 +160,34 @@ def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, objec
         "p4_empirically_complete": empirically_complete,
         "git_baseline": git_baseline,
         "p5_baseline_ready": p5_baseline_ready,
+        "p4_c_predictive_targeting_ready": empirically_complete,
+        "p4_e_descriptive_ready": False,
+        "p4_e_advisory_only": True,
+        "p4_e_assignment_input_allowed": False,
+        "p5_experiment_engineering_ready": p5_engineering_ready,
+        "p5_experiment_start_ready": p5_experiment_start_ready,
+        "p5_experiment_epoch_lifecycle": epoch_lifecycle,
+        "p5_latest_epoch": (
+            {
+                "activation_epoch_id": latest_epoch.get("activation_epoch_id"),
+                "experiment_id": latest_epoch.get("experiment_id"),
+                "manifest_sha256": latest_epoch.get("manifest_sha256"),
+                "lifecycle": latest_epoch.get("lifecycle"),
+            }
+            if latest_epoch is not None
+            else None
+        ),
+        "p5_causal_efficacy_ready": False,
+        "p5_universal_policy_promotion_ready": False,
+        "p5_targeted_policy_ready": False,
         "p5_readiness_requirements": {
-            "p4_gate_can_answer_which_signals_predict_repair": gate_predictive_ready,
-            "validated_predictive_signal_present": validated_predictive_signal_ready,
             "clean_upstream_matched_baseline": p5_baseline_ready,
+            "source_experiment_engineering_available": True,
+            "explicit_manifest_and_runtime_activation_required": False,
         },
-        "p5_controlled_treatment_may_be_opened": p5_treatment_ready,
+        "p5_legacy_predictive_treatment_readiness": legacy_predictive_treatment_ready,
+        "p5_controlled_treatment_may_be_opened": legacy_predictive_treatment_ready,
+        "p5_controlled_treatment_may_be_opened_deprecated": True,
         "p5_implementation": p5_implementation,
         "automatic_policy_activation": False,
         "p5_automatic_start": False,
@@ -177,9 +211,14 @@ def main() -> int:
         "--require-p5-ready",
         action="store_true",
         help=(
-            "Exit non-zero unless the P4 predictive gate is complete, at least one validated predictive signal "
-            "is present, and the Git source baseline is clean and upstream-matched."
+            "Deprecated compatibility gate: exit non-zero unless the old P4-C predictive coupling and clean "
+            "source baseline hold. This does not authorize opening a P5 epoch."
         ),
+    )
+    parser.add_argument(
+        "--require-p5-experiment-active",
+        action="store_true",
+        help="Exit non-zero unless an explicitly opened P5 epoch is active or paused under its exact manifest.",
     )
     args = parser.parse_args()
     result = p4_readiness_report(Path(args.workspace), limit=args.limit)
@@ -190,6 +229,8 @@ def main() -> int:
         return 2
     if args.require_p5_ready and result["p5_controlled_treatment_may_be_opened"] is not True:
         return 4
+    if args.require_p5_experiment_active and result["p5_experiment_start_ready"] is not True:
+        return 5
     return 0
 
 

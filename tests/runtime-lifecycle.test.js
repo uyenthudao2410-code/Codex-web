@@ -15,7 +15,9 @@ const {
   SECRET_BROKER_ENV,
   AUTH_HANDLE_ENV,
   MCP_AUTH_HANDLE,
-  OPENAI_API_KEY_HANDLE
+  OPENAI_API_KEY_HANDLE,
+  P5_A0_SEED_ENV,
+  P5_A0_SEED_HANDLE
 } = require('../electron/services/nativeService');
 const { normalizeProxyValue } = require('../electron/services/proxyService');
 const runtimePaths = require('../electron/paths');
@@ -57,7 +59,8 @@ test('native MCP launch env brokers secrets and excludes ambient loader or secre
       PYTHONPATH: 'ambient-pythonpath-must-not-pass',
       LD_PRELOAD: 'ambient-loader-must-not-pass',
       UNRELATED_SECRET: 'ambient-secret-must-not-pass',
-      OPENAI_API_KEY: 'test-provider-secret'
+       OPENAI_API_KEY: 'test-provider-secret',
+       [P5_A0_SEED_ENV]: 'test-p5-seed-material'
     },
     launch,
     settings: { authorizedRoots: [], progressReportSeconds: 90 },
@@ -69,10 +72,12 @@ test('native MCP launch env brokers secrets and excludes ambient loader or secre
   assert.equal(env.UNRELATED_SECRET, undefined);
   assert.equal(env.LD_PRELOAD, undefined);
   assert.equal(env.OPENAI_API_KEY, undefined);
+  assert.equal(env[P5_A0_SEED_ENV], undefined);
   assert.equal(env[AUTH_HANDLE_ENV], MCP_AUTH_HANDLE);
   const broker = JSON.parse(env[SECRET_BROKER_ENV]);
   assert.equal(broker[MCP_AUTH_HANDLE], 'test-mcp-bearer');
   assert.equal(broker[OPENAI_API_KEY_HANDLE], 'test-provider-secret');
+  assert.equal(broker[P5_A0_SEED_HANDLE], 'test-p5-seed-material');
   assert.ok(env.PATH.includes(path.join(launch.resourcesRoot, 'tools')));
   assert.ok(env.PATH.includes('safe-base-path'));
   assert.ok(env.PYTHONPATH.includes(launch.moduleRoot));

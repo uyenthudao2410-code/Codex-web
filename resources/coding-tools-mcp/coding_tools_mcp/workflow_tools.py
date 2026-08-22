@@ -13,6 +13,7 @@ from .errors import ToolFailure
 from .git_utils import DIFF_CONTINUATION_OPERATION
 from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
+from .p5_experiment import P5ExperimentError
 from .solution_economics import ELIGIBLE_WORKFLOWS, SOLUTION_SHADOW_EVENT, record_solution_shadow
 from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
@@ -669,6 +670,19 @@ class AgentWorkflowMixin:
             raise ToolFailure("INVALID_ARGUMENT", f"Unknown workflow: {workflow}", category="validation")
         if phase not in {"prepare", "execute", "run", "resume"}:
             raise ToolFailure("INVALID_ARGUMENT", f"Unknown workflow phase: {phase}", category="validation")
+        p5_assignment_id = str(args.get("p5_assignment_id") or "").strip()
+        if p5_assignment_id and phase not in {"execute", "run"}:
+            raise ToolFailure(
+                "P5_ASSIGNMENT_PHASE_INVALID",
+                "p5_assignment_id is only valid for a write-capable agent_workflow execute or run phase.",
+                category="validation",
+            )
+        if p5_assignment_id and workflow not in {"feature", "bugfix"}:
+            raise ToolFailure(
+                "P5_ASSIGNMENT_WORKFLOW_INVALID",
+                "p5_assignment_id only permits the immutable feature or bugfix workflow class.",
+                category="validation",
+            )
 
         continuation = str(args.get("continuation", "") or "").strip()
         if continuation:
@@ -1081,7 +1095,25 @@ class AgentWorkflowMixin:
         self._project_orchestration(ctx, event="mcp_write_lease_active")
 
         directory_result = None
+        p5_workflow_binding = None
         try:
+            if p5_assignment_id:
+                try:
+                    p5_workflow_binding = self.orchestration_ledger.p5_bind_workflow_prewrite(
+                        assignment_id=p5_assignment_id,
+                        workflow=workflow,
+                        run_id=ctx.run_id,
+                        wave_id=ctx.wave_id,
+                        write_lease_id=ctx.write_lease.lease_id if ctx.write_lease is not None else "",
+                        authority=str((self._current_hub_client() or {}).get("client_id") or "runtime"),
+                    )
+                except P5ExperimentError as exc:
+                    raise ToolFailure(
+                        "P5_WORKFLOW_BINDING_REJECTED",
+                        str(exc),
+                        category="validation",
+                        retryable=False,
+                    ) from exc
             self.orchestration_control.assert_write_allowed(
                 ctx,
                 owner="MCP",
@@ -1138,6 +1170,7 @@ class AgentWorkflowMixin:
                 "execution_route": execution_route,
                 "execution": execution,
                 "solution_shadow_enrollment": solution_shadow_enrollment,
+                "p5_workflow_binding": p5_workflow_binding,
                 "external_review": {"plane": "none", "status": "skipped", "reason": "execution_not_accepted"},
                 "orchestration": self._orchestration_result(ctx),
                 "task": self.task_state.get(),
@@ -1177,6 +1210,7 @@ class AgentWorkflowMixin:
             "execution_route": execution_route,
             "execution": execution,
             "solution_shadow_enrollment": solution_shadow_enrollment,
+            "p5_workflow_binding": p5_workflow_binding,
             "external_review": external_review,
             "orchestration": self._orchestration_result(ctx),
             "task": self.task_state.get(),

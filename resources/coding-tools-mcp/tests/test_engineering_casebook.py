@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.orchestration_control import OrchestrationControl
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
+from coding_tools_mcp.server import MCPHandler, Runtime
 from coding_tools_mcp.truth_snapshot import build_truth_snapshot, match_state
 
 
@@ -96,6 +100,138 @@ class ExecutableEngineeringCasebookTests(unittest.TestCase):
         self.assertEqual(match_state("observed", "expected", applicable=False), "NOT_APPLICABLE")
         self.assertNotEqual(match_state(None, "expected"), "MATCHED")
         self.assertNotEqual(match_state("observed", "expected", applicable=False), "MATCHED")
+
+    def test_case_04_active_run_from_another_task_is_never_adopted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                first = runtime.task_state.update({"objective": "Owned run", "status": "active"})
+                ctx = runtime.orchestration_control.begin(
+                    objective="Owned run",
+                    task_id=str(first["task_id"]),
+                    execution_mode="mcp_only",
+                    base_head="test-head",
+                    worktree_fp="test-worktree",
+                )
+                second = runtime.task_state.update({
+                    "objective": "Different task",
+                    "status": "active",
+                    "new_task": True,
+                })
+
+                self.assertNotEqual(second["task_id"], first["task_id"])
+                self.assertFalse(second.get("orchestration"))
+                self.assertEqual(runtime.orchestration_ledger.current_active_run()["run_id"], ctx.run_id)
+                self.assertIsNone(runtime.orchestration_ledger.current_active_run(task_id=str(second["task_id"])))
+                self.assertFalse(runtime._reconcile_task_orchestration_projection())
+                current = runtime.task_state.get()
+                self.assertEqual(current["task_id"], second["task_id"])
+                self.assertFalse(current.get("orchestration"))
+            finally:
+                runtime.close()
+
+    def test_case_05_stale_run_reconciliation_preserves_live_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            now = time.time()
+            stale_run = ledger.create_run(objective="abandoned")
+            stale_wave = ledger.create_wave(stale_run, execution_mode="mcp_only")
+            live_run = ledger.create_run(objective="still running")
+            ledger.create_wave(live_run, execution_mode="mcp_only")
+            ledger.start_background_operation(
+                operation_id="casebook-live-operation",
+                server_instance_id="casebook-server",
+                tool="agent_workflow",
+                run_id=live_run,
+                summary={},
+            )
+
+            candidates = ledger.stale_run_candidates(stale_after_seconds=3600, now=now + 7200)
+            self.assertIn(stale_run, candidates)
+            self.assertNotIn(live_run, candidates)
+            self.assertEqual(ledger.reconcile_stale_runs(stale_after_seconds=3600, now=now + 7200), [stale_run])
+            self.assertEqual(ledger.get_run(stale_run)["status"], "stale")
+            self.assertEqual(ledger.get_run(live_run)["status"], "active")
+            stale_wave_row = next(item for item in ledger.list_waves(stale_run) if item["wave_id"] == stale_wave)
+            self.assertEqual(stale_wave_row["status"], "aborted")
+            self.assertEqual(ledger.list_events(stale_run)[-1]["event_type"], "run_stale_reconciled")
+
+    def test_case_06_final_acceptance_is_fail_closed_and_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "casebook acceptance fixture",
+                    "evaluation": {"provenance": "benchmark"},
+                    "execution_mode": "mcp_only",
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "include_diff": False,
+                })
+                run_id = result["orchestration"]["run_id"]
+                wave_id = result["orchestration"]["wave_id"]
+                report = result["orchestration"]["completion_report"]
+                self.assertEqual(result["orchestration"]["orchestration_state"], "ACCEPTING")
+                self.assertEqual(report["accepted_or_not"], "PENDING_FINAL_ACCEPTANCE")
+                self.assertTrue(report["operator_visible_required"])
+
+                with self.assertRaises(ToolFailure) as wrong_wave:
+                    runtime.task_control({
+                        "action": "accept",
+                        "run_id": run_id,
+                        "wave_id": "not-the-current-wave",
+                        "reason": "must fail closed",
+                    })
+                self.assertEqual(wrong_wave.exception.code, "ORCHESTRATION_WAVE_MISMATCH")
+
+                accepted = runtime.task_control({
+                    "action": "accept",
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                    "reason": "casebook accepts the exact proven wave",
+                })
+                self.assertTrue(accepted["accepted"])
+                self.assertEqual(accepted["orchestration"]["orchestration_state"], "CHECKPOINTED")
+                self.assertEqual(accepted["completion_report"]["accepted_or_not"], "ACCEPTED")
+                self.assertTrue(accepted["completion_report"]["operator_visible_required"])
+            finally:
+                runtime.close()
+
+    def test_case_07_operator_projection_consumes_read_only_truth_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+        ):
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                task = runtime.task_state.ensure_started("casebook operator truth")
+                ctx = runtime.orchestration_control.begin(
+                    objective="casebook operator truth",
+                    task_id=str(task["task_id"]),
+                    execution_mode="mcp_only",
+                    base_head="abc",
+                    worktree_fp="fp",
+                )
+                runtime.task_state.set_orchestration_projection(ctx.projection(), event="casebook_truth_linked")
+                handler = object.__new__(MCPHandler)
+                handler._runtime = runtime
+                projection = handler.control_orchestration_snapshot()
+                truth = projection["truth_snapshot"]
+
+                self.assertTrue(truth["read_only"])
+                self.assertEqual(truth["runtime"]["process_instance_id"], runtime.process_instance_id)
+                self.assertEqual(truth["runtime"]["server_instance_id"], runtime.server_instance_id)
+                self.assertEqual(truth["runtime"]["tool_contract"]["profile"], "smart-v3")
+                self.assertEqual(truth["runtime"]["tool_contract"]["tool_count"], 8)
+                self.assertEqual(truth["orchestration"]["run_id"], ctx.run_id)
+                self.assertEqual(truth["orchestration"]["wave_id"], ctx.wave_id)
+                self.assertEqual(truth["orchestration"]["effective_objective"], "casebook operator truth")
+                self.assertNotIn("auth_token", str(truth).lower())
+            finally:
+                runtime.close()
 
 
 if __name__ == "__main__":

@@ -15,8 +15,8 @@ from .codex_bridge import CodexBridgeError
 from .errors import ToolFailure
 from .fs_utils import is_relative_to
 from .orchestration_control import OrchestrationControlError
-from .solution_economics import record_solution_shadow, solution_shadow_run_report
-
+from .p5_control import P5ControlMixin
+from .solution_shadow_control import SolutionShadowControlMixin
 
 SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
 SUPERVISOR_RESTART_RESPONSE_GRACE_MS = 2_000
@@ -24,7 +24,6 @@ BACKGROUND_OPERATION_WAIT_MAX_MS = 60_000
 MAX_ACCEPTED_FILE_RECEIPTS = 256
 MAX_ACCEPTED_RECEIPT_FILE_BYTES = 16 * 1024 * 1024
 MAX_ACCEPTED_RECEIPT_TOTAL_BYTES = 64 * 1024 * 1024
-
 
 def _accepted_file_receipts(
     workspace: Path,
@@ -262,8 +261,7 @@ COORDINATION_LANE_OUTPUT_SCHEMA = {
     ],
 }
 
-
-class CoordinationMixin:
+class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin):
     def _activation_owned_codex_sidecar_rows(self, managed: dict[str, Any]) -> list[dict[str, Any]]:
         bridge_job_id = str(getattr(self._codex_bridge, "_managed_job_id", "") or "")
         if not bridge_job_id:
@@ -1081,75 +1079,13 @@ class CoordinationMixin:
         self._project_orchestration(ctx, event="task_orchestration_aborted")
         return ctx.projection()
 
-    def _solution_shadow_control(
-        self,
-        args: dict[str, Any],
-        recommendation: Any,
-        *,
-        transport: str,
-    ) -> dict[str, Any]:
-        _state, projection, run_id, wave_id = self._coordination_ids(args)
-        if not run_id:
-            raise ToolFailure("ORCHESTRATION_RUN_NOT_FOUND", "No orchestration run is available for solution shadow evidence.", category="not_found")
-        recording = None
-        context_recovered = False
-        if recommendation is not None:
-            if not isinstance(recommendation, dict):
-                raise ToolFailure("SOLUTION_SHADOW_INVALID", "solution shadow recommendation must be an object.", category="validation")
-            projected_run = str(projection.get("run_id") or "").strip()
-            projected_wave = str(projection.get("wave_id") or "").strip()
-            if run_id != projected_run or not wave_id or wave_id != projected_wave:
-                explicit_run = str(args.get("run_id") or "").strip()
-                explicit_wave = str(args.get("wave_id") or "").strip()
-                ctx = self.orchestration_control.snapshot(run_id) if explicit_run and explicit_wave else None
-                if (
-                    ctx is None
-                    or ctx.run_id != explicit_run
-                    or ctx.wave_id != explicit_wave
-                    or ctx.state not in {"PREFLIGHT", "READY"}
-                ):
-                    raise ToolFailure(
-                        "SOLUTION_SHADOW_CONTEXT_MISMATCH",
-                        "Solution shadow recording requires the current task-projected run/wave or an explicit current PREFLIGHT/READY run/wave.",
-                        category="runtime",
-                        retryable=True,
-                        details={
-                            "run_id": run_id,
-                            "wave_id": wave_id,
-                            "projected_run_id": projected_run,
-                            "projected_wave_id": projected_wave,
-                            "explicit_context_recovery": bool(explicit_run and explicit_wave),
-                        },
-                    )
-                self._require_hub_controller(run_id)
-                context_recovered = True
-            else:
-                ctx = self.orchestration_control.snapshot(run_id)
-                self._require_hub_controller(run_id)
-            try:
-                recording = record_solution_shadow(
-                    self.orchestration_ledger,
-                    run_id=run_id,
-                    wave_id=wave_id,
-                    recommendation=recommendation,
-                )
-            except ValueError as exc:
-                raise ToolFailure("SOLUTION_SHADOW_INVALID", str(exc), category="validation", retryable=False) from exc
-            if context_recovered and ctx is not None:
-                self._project_orchestration(ctx, event="solution_shadow_context_recovered")
-        return {
-            "recording": recording,
-            "solution_shadow": solution_shadow_run_report(self.orchestration_ledger, run_id),
-            "transport": transport,
-            "context_recovered": context_recovered,
-            "production_behavior_changed": False,
-        }
-
     def task_control(self, args: dict[str, Any]) -> dict[str, Any]:
         action = str(args.get("action", "get")).lower()
         if action == "restart_runtime":
             return self._enqueue_runtime_restart(args)
         self._reconcile_task_orchestration_projection()
+        if action == "p5":
+            return self._p5_control(args)
         if action == "get":
             # The stream is not the source of truth after reconnect.  Repair
             # the compact view from the SQLite ledger before returning status.

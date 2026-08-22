@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "template_only": true,
+  "experiment_id": "p5-lean-causal-fix-p5-a0-v1",
+  "phase": "P5-A0",
+  "study_type": "shadow_aa",
+  "automatic_activation": false,
+  "automatic_production_promotion": false,
+  "control_policy": { "id": "eocl-current-control-v1" },
+  "treatment_policy": {
+    "id": "lean-causal-fix-gate-v1",
+    "implementation_fingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
+    "vary_only": "prewrite_causal_fix_protocol"
+  },
+  "source_contract": {
+    "control_plane_source_head": "REPLACE_WITH_EXACT_HEAD",
+    "upstream_identity": "REPLACE_WITH_EXACT_UPSTREAM_HEAD",
+    "source_worktree_clean_required": true,
+    "no_conflicting_writer_required": true
+  },
+  "runtime_contract": {
+    "runtime_version": "REPLACE_WITH_LOADED_RUNTIME_VERSION",
+    "runtime_policy_fp": "0000000000000000000000000000000000000000000000000000000000000000",
+    "tool_contract_fp": "0000000000000000000000000000000000000000000000000000000000000000",
+    "evaluation_schema_fp": "0000000000000000000000000000000000000000000000000000000000000000",
+    "public_tool_count": 8
+  },
+  "environment_contract": {
+    "environment_fp": "0000000000000000000000000000000000000000000000000000000000000000",
+    "method_version": "p5-environment-v1"
+  },
+  "common_execution_contract": {
+    "policy_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "eligibility_contract": {
+    "version": "p5-eligibility-v2",
+    "reason_vocabulary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "high_risk_exclusion_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "enrollment_contract": {
+    "version": "p5-enrollment-v1",
+    "policy_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "assignment": {
+    "randomization_unit": "stable_task_assignment",
+    "unit_canonicalization_version": "p5-assignment-unit-v1",
+    "algorithm": "stratified_permuted_block_v1",
+    "strata": ["feature", "bugfix"],
+    "block_size": 4,
+    "allocation": { "control": 0.5, "treatment": 0.5 },
+    "seed_commitment_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "restart_safe_seed_contract_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "never_reseed_within_epoch": true,
+    "assignment_before_first_arm_action": true,
+    "assignment_before_first_write": true
+  },
+  "outcome_contract": {
+    "horizon_seconds": 14400,
+    "horizon_anchor": "assignment_at",
+    "immediate_oracle_required": true,
+    "intercurrent_event_matrix_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "followup_interference_policy_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "analysis": {
+    "analyzer_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "intention_to_treat": true,
+    "survivor_filter": false,
+    "target_population_weights_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "missing_data": {
+    "missing_is_unknown_not_zero": true,
+    "missing_quality_is_not_pass": true,
+    "missing_cost_is_not_zero": true
+  },
+  "stop_rule": {
+    "stop_on_assignment_conflict": true,
+    "stop_on_late_assignment": true,
+    "stop_on_manifest_epoch_drift": true,
+    "stop_on_authority_or_write_lease_violation": true,
+    "stop_on_source_identity_violation": true,
+    "stop_on_critical_security_or_data_loss_defect": true
+  }
+}

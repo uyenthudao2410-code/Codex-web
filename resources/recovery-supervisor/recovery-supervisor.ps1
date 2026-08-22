@@ -26,7 +26,23 @@ function Get-InstallRoot { Join-Path ([Environment]::GetFolderPath('LocalApplica
 function Get-InstalledScript { Join-Path (Get-InstallRoot) 'recovery-supervisor.ps1' }
 function Get-InstalledManifest { Join-Path (Get-InstallRoot) 'manifest.json' }
 function Get-StopRequest { Join-Path (Get-InstallRoot) 'stop.request' }
-function Get-Sha256File([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Get-Sha256File([string]$Path) {
+  $sha = [Security.Cryptography.SHA256]::Create()
+  $stream = $null
+  try {
+    $stream = [IO.File]::Open(
+      $Path,
+      [IO.FileMode]::Open,
+      [IO.FileAccess]::Read,
+      [IO.FileShare]::Read
+    )
+    ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant()
+  }
+  finally {
+    if ($null -ne $stream) { $stream.Dispose() }
+    $sha.Dispose()
+  }
+}
 function Get-Sha256Text([string]$Text) {
   $sha = [Security.Cryptography.SHA256]::Create()
   try { ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Text)))).Replace('-','').ToLowerInvariant() }

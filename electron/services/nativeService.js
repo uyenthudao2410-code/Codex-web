@@ -14,6 +14,8 @@ const SECRET_BROKER_ENV = 'CODING_TOOLS_MCP_SECRET_BROKER';
 const AUTH_HANDLE_ENV = 'CODING_TOOLS_MCP_AUTH_HANDLE';
 const MCP_AUTH_HANDLE = 'secret://mcp/auth';
 const OPENAI_API_KEY_HANDLE = 'secret://provider/openai/api-key';
+const P5_A0_SEED_ENV = 'CODING_TOOLS_P5_A0_SEED';
+const P5_A0_SEED_HANDLE = 'secret://experiment/p5/a';
 const CORE_NATIVE_ENV_NAMES = new Set([
   'PATH', 'PATHEXT', 'COMSPEC', 'SYSTEMROOT', 'WINDIR', 'SYSTEMDRIVE',
   'PROGRAMDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'PROGRAMW6432',
@@ -37,6 +39,7 @@ function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, d
   const env = coreNativeEnvironment(sourceEnv);
   const broker = { [MCP_AUTH_HANDLE]: String(token || '') };
   if (String(sourceEnv.OPENAI_API_KEY || '')) broker[OPENAI_API_KEY_HANDLE] = String(sourceEnv.OPENAI_API_KEY);
+  if (String(sourceEnv[P5_A0_SEED_ENV] || '')) broker[P5_A0_SEED_HANDLE] = String(sourceEnv[P5_A0_SEED_ENV]);
   Object.assign(env, {
     CODING_TOOLS_MCP_AUTH_MODE: 'bearer',
     [SECRET_BROKER_ENV]: JSON.stringify(broker),
@@ -361,5 +364,7 @@ module.exports = {
   SECRET_BROKER_ENV,
   AUTH_HANDLE_ENV,
   MCP_AUTH_HANDLE,
-  OPENAI_API_KEY_HANDLE
+  OPENAI_API_KEY_HANDLE,
+  P5_A0_SEED_ENV,
+  P5_A0_SEED_HANDLE
 };

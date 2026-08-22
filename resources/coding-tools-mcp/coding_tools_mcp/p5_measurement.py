@@ -48,12 +48,15 @@ def p5_baseline_snapshot(
         implementation = {}
     accepted_runs = _metric(organic_rework.get("accepted_runs"))
     return {
-        "schema_version": 1,
-        "mode": "controlled_rework_reduction_ab_v1",
-        "implementation_status": str(implementation.get("implementation_status") or "OPEN_DORMANT"),
+        "schema_version": 2,
+        "mode": "prospective_rework_experiment_v2",
+        "implementation_status": str(implementation.get("implementation_status") or "IMPLEMENTED_GATED"),
         "baseline_kind": "organic_rework_observational_v1",
         "baseline_observed": bool(isinstance(accepted_runs, (int, float)) and accepted_runs > 0),
-        "canonical_readiness_passed": readiness.get("p5_controlled_treatment_may_be_opened") is True,
+        "p5_experiment_start_ready": readiness.get("p5_experiment_start_ready") is True,
+        "p5_experiment_epoch_lifecycle": str(readiness.get("p5_experiment_epoch_lifecycle") or "NOT_READY"),
+        "legacy_predictive_treatment_readiness": readiness.get("p5_legacy_predictive_treatment_readiness") is True,
+        "canonical_readiness_passed": readiness.get("p5_experiment_start_ready") is True,
         "treatment_started": False,
         "samples_created": False,
         "control_observations_created": 0,
@@ -95,6 +98,8 @@ def p5_baseline_snapshot(
         "evidence_policy": {
             "observational_baseline_is_treatment_evidence": False,
             "baseline_snapshot_creates_samples": False,
+            "baseline_snapshot_creates_assignments": False,
+            "organic_baseline_joins_p5_itt": False,
             "missing_cost_is_zero": False,
             "synthetic_promotion_allowed": False,
         },

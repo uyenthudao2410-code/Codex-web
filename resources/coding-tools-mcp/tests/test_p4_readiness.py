@@ -108,15 +108,15 @@ class P4ReadinessTests(unittest.TestCase):
             self.assertTrue(report["p4_empirically_complete"])
             self.assertFalse(report["p5_baseline_ready"])
             self.assertFalse(report["p5_controlled_treatment_may_be_opened"])
-            self.assertEqual(report["p5_implementation"]["implementation_status"], "OPEN_DORMANT")
+            self.assertEqual(report["p5_implementation"]["implementation_status"], "IMPLEMENTED_GATED")
             self.assertEqual(report["p5_implementation"]["treatment_status"], "GATED_OFF")
             self.assertFalse(report["p5_implementation"]["treatment_active"])
             self.assertEqual(
                 report["p5_readiness_requirements"],
                 {
-                    "p4_gate_can_answer_which_signals_predict_repair": True,
-                    "validated_predictive_signal_present": True,
                     "clean_upstream_matched_baseline": False,
+                    "source_experiment_engineering_available": True,
+                    "explicit_manifest_and_runtime_activation_required": False,
                 },
             )
             self.assertEqual(report["state"], "EMPIRICALLY_COMPLETE_BASELINE_NOT_READY")
@@ -131,11 +131,16 @@ class P4ReadinessTests(unittest.TestCase):
             ):
                 ready = P4.p4_readiness_report(root)
             self.assertTrue(ready["p5_controlled_treatment_may_be_opened"])
-            self.assertEqual(ready["p5_implementation"]["treatment_status"], "READY_FOR_EXPLICIT_ENROLLMENT")
+            self.assertTrue(ready["p5_legacy_predictive_treatment_readiness"])
+            self.assertTrue(ready["p5_experiment_engineering_ready"])
+            self.assertFalse(ready["p5_experiment_start_ready"])
+            self.assertEqual(ready["p5_implementation"]["treatment_status"], "GATED_OFF")
             self.assertFalse(ready["p5_implementation"]["treatment_active"])
             self.assertFalse(ready["p5_implementation"]["automatic_start"])
             self.assertEqual(ready["state"], "EMPIRICALLY_COMPLETE")
-            self.assertTrue(all(ready["p5_readiness_requirements"].values()))
+            self.assertTrue(ready["p5_readiness_requirements"]["clean_upstream_matched_baseline"])
+            self.assertTrue(ready["p5_readiness_requirements"]["source_experiment_engineering_available"])
+            self.assertFalse(ready["p5_readiness_requirements"]["explicit_manifest_and_runtime_activation_required"])
 
     def test_p5_requires_a_validated_predictive_signal_even_if_gate_flag_is_true(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -163,9 +168,9 @@ class P4ReadinessTests(unittest.TestCase):
             self.assertEqual(
                 report["p5_readiness_requirements"],
                 {
-                    "p4_gate_can_answer_which_signals_predict_repair": True,
-                    "validated_predictive_signal_present": False,
                     "clean_upstream_matched_baseline": True,
+                    "source_experiment_engineering_available": True,
+                    "explicit_manifest_and_runtime_activation_required": False,
                 },
             )
 
@@ -195,9 +200,9 @@ class P4ReadinessTests(unittest.TestCase):
             self.assertEqual(
                 report["p5_readiness_requirements"],
                 {
-                    "p4_gate_can_answer_which_signals_predict_repair": False,
-                    "validated_predictive_signal_present": True,
                     "clean_upstream_matched_baseline": True,
+                    "source_experiment_engineering_available": True,
+                    "explicit_manifest_and_runtime_activation_required": False,
                 },
             )
 

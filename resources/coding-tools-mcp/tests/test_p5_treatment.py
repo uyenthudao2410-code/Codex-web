@@ -5,100 +5,93 @@ import unittest
 from coding_tools_mcp.p5_treatment import p5_controlled_treatment_plan, p5_implementation_contract
 
 
-def readiness(*, ready: bool, signals: list[str] | None = None) -> dict[str, object]:
+def readiness(*, start_ready: bool, lifecycle: str = "NOT_READY", legacy: bool = False) -> dict[str, object]:
     return {
-        "p5_controlled_treatment_may_be_opened": ready,
-        "p5_automatic_start": False,
-        "automatic_policy_activation": False,
-        "predictive_validation": {"validated_signals": signals or []},
+        "p5_experiment_start_ready": start_ready,
+        "p5_experiment_epoch_lifecycle": lifecycle,
+        "p5_legacy_predictive_treatment_readiness": legacy,
+        "predictive_validation": {"validated_signals": []},
+    }
+
+
+def eligible_kwargs() -> dict[str, bool]:
+    return {
+        "stable_quality_oracle": True,
+        "bounded_change_surface": True,
+        "exact_source_identity_available": True,
+        "no_conflicting_writer_or_lease": True,
+        "no_stale_or_recovery_state": True,
+        "representative_natural_task": True,
+        "not_high_risk": True,
+        "common_execution_contract_available": True,
     }
 
 
 class P5TreatmentTests(unittest.TestCase):
-    def test_implementation_contract_is_always_dormant_and_nonautomatic(self) -> None:
-        gated = p5_implementation_contract(treatment_readiness=False, validated_signals=[])
-        ready = p5_implementation_contract(
+    def test_implementation_contract_is_gated_and_never_automatic(self) -> None:
+        contract = p5_implementation_contract(experiment_start_ready=False, validated_signals=[])
+        self.assertEqual(contract["implementation_status"], "IMPLEMENTED_GATED")
+        self.assertEqual(contract["treatment_status"], "GATED_OFF")
+        self.assertFalse(contract["epoch_active"])
+        self.assertFalse(contract["treatment_active"])
+        self.assertFalse(contract["automatic_start"])
+        self.assertFalse(contract["automatic_production_promotion"])
+        self.assertFalse(contract["shadow_recommendation_can_activate_treatment"])
+        self.assertFalse(contract["cost_policy"]["missing_cost_is_zero"])
+
+    def test_p4_c_legacy_signal_does_not_open_or_activate_experiment(self) -> None:
+        contract = p5_implementation_contract(
+            experiment_start_ready=False,
             treatment_readiness=True,
             validated_signals=["expected_repair_risk"],
         )
-        self.assertEqual(gated["implementation_status"], "OPEN_DORMANT")
-        self.assertEqual(gated["treatment_status"], "GATED_OFF")
-        self.assertEqual(ready["treatment_status"], "READY_FOR_EXPLICIT_ENROLLMENT")
-        self.assertFalse(gated["treatment_active"])
-        self.assertFalse(ready["treatment_active"])
-        self.assertFalse(ready["automatic_start"])
-        self.assertFalse(ready["shadow_recommendation_can_activate_treatment"])
-        self.assertFalse(ready["cost_policy"]["missing_cost_is_zero"])
-        self.assertEqual(ready["cost_policy"]["incomplete_car_status"], "unavailable")
+        self.assertTrue(contract["legacy_predictive_treatment_readiness"])
+        self.assertFalse(contract["experiment_start_ready"])
+        self.assertFalse(contract["epoch_active"])
+        self.assertEqual(contract["treatment_status"], "GATED_OFF")
 
-    def test_live_readiness_gate_cannot_be_bypassed_by_task_controls(self) -> None:
+    def test_ready_eligible_task_waits_for_explicit_enrollment_and_epoch(self) -> None:
         plan = p5_controlled_treatment_plan(
-            readiness(ready=False, signals=[]),
-            task_class="feature",
-            stable_quality_oracle=True,
-            causal_fix_gate_passed=True,
-            oracle_settled_before_mutation=True,
-            bounded_change_surface=True,
-            explicit_enrollment_requested=True,
+            readiness(start_ready=True), task_class="bugfix", **eligible_kwargs()
         )
-        self.assertEqual(plan["decision"], "HOLD_CANONICAL_READINESS")
+        self.assertEqual(plan["decision"], "ELIGIBLE_AWAITING_EXPLICIT_ENROLLMENT")
+        self.assertTrue(plan["task_eligible_before_arm_reveal"])
         self.assertFalse(plan["explicit_enrollment_may_proceed"])
-        self.assertFalse(plan["treatment_active"])
-
-    def test_ready_task_still_waits_for_explicit_enrollment(self) -> None:
-        plan = p5_controlled_treatment_plan(
-            readiness(ready=True, signals=["expected_repair_risk"]),
+        self.assertFalse(plan["immutable_assignment_may_proceed"])
+        requested = p5_controlled_treatment_plan(
+            readiness(start_ready=True),
             task_class="bugfix",
-            stable_quality_oracle=True,
-            causal_fix_gate_passed=True,
-            oracle_settled_before_mutation=True,
-            bounded_change_surface=True,
+            explicit_enrollment_requested=True,
+            **eligible_kwargs(),
         )
-        self.assertEqual(plan["decision"], "READY_AWAITING_EXPLICIT_ENROLLMENT")
-        self.assertTrue(plan["task_contract_passed"])
-        self.assertFalse(plan["explicit_enrollment_may_proceed"])
-        self.assertFalse(plan["treatment_active"])
+        self.assertEqual(requested["decision"], "ELIGIBLE_AWAITING_EXPLICIT_EPOCH_OPEN")
+        self.assertFalse(requested["explicit_enrollment_may_proceed"])
+        self.assertFalse(requested["immutable_assignment_may_proceed"])
 
-    def test_explicit_ready_task_is_only_eligible_not_activated(self) -> None:
+    def test_active_epoch_allows_assignment_without_p4_c_or_preassignment_treatment_bundle(self) -> None:
         plan = p5_controlled_treatment_plan(
-            readiness(ready=True, signals=["expected_repair_risk"]),
+            readiness(start_ready=True, lifecycle="EPOCH_ACTIVE", legacy=False),
             task_class="feature",
-            stable_quality_oracle=True,
-            causal_fix_gate_passed=True,
-            oracle_settled_before_mutation=True,
-            bounded_change_surface=True,
             explicit_enrollment_requested=True,
-        )
-        self.assertEqual(plan["decision"], "ELIGIBLE_FOR_EXPLICIT_CONTROLLED_ENROLLMENT")
-        self.assertTrue(plan["explicit_enrollment_may_proceed"])
-        self.assertFalse(plan["treatment_active"])
-        self.assertFalse(plan["production_behavior_changed"])
-
-    def test_missing_control_or_ineligible_workflow_fails_closed(self) -> None:
-        missing_control = p5_controlled_treatment_plan(
-            readiness(ready=True, signals=["expected_repair_risk"]),
-            task_class="feature",
-            stable_quality_oracle=True,
             causal_fix_gate_passed=False,
-            oracle_settled_before_mutation=True,
-            bounded_change_surface=True,
-            explicit_enrollment_requested=True,
+            oracle_settled_before_mutation=False,
+            **eligible_kwargs(),
         )
-        ineligible = p5_controlled_treatment_plan(
-            readiness(ready=True, signals=["expected_repair_risk"]),
+        self.assertEqual(plan["decision"], "ELIGIBLE_FOR_IMMUTABLE_ASSIGNMENT")
+        self.assertTrue(plan["immutable_assignment_may_proceed"])
+        self.assertTrue(plan["deprecated_task_treatment_inputs_ignored"]["causal_fix_gate_passed"])
+        self.assertFalse(plan["treatment_active"])
+
+    def test_ineligible_workflow_fails_closed_before_arm_reveal(self) -> None:
+        plan = p5_controlled_treatment_plan(
+            readiness(start_ready=True, lifecycle="EPOCH_ACTIVE"),
             task_class="diagnose",
-            stable_quality_oracle=True,
-            causal_fix_gate_passed=True,
-            oracle_settled_before_mutation=True,
-            bounded_change_surface=True,
             explicit_enrollment_requested=True,
+            **eligible_kwargs(),
         )
-        self.assertEqual(missing_control["decision"], "HOLD_TASK_CONTRACT")
-        self.assertIn("causal_fix_gate_passed", missing_control["hold_reasons"])
-        self.assertFalse(missing_control["explicit_enrollment_may_proceed"])
-        self.assertEqual(ineligible["decision"], "HOLD_TASK_CONTRACT")
-        self.assertIn("eligible_feature_or_bugfix", ineligible["hold_reasons"])
-        self.assertFalse(ineligible["explicit_enrollment_may_proceed"])
+        self.assertEqual(plan["decision"], "HOLD_ARM_NEUTRAL_ELIGIBILITY")
+        self.assertIn("eligible_feature_or_bugfix", plan["hold_reasons"])
+        self.assertFalse(plan["immutable_assignment_may_proceed"])
 
 
 if __name__ == "__main__":

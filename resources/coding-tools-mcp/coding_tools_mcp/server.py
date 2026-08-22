@@ -13,7 +13,6 @@ import hmac  # noqa: F401  # composition-root namespace
 import http.server  # noqa: F401  # composition-root namespace
 import json  # noqa: F401  # composition-root namespace
 import marshal  # noqa: F401  # composition-root namespace
-import math  # noqa: F401  # composition-root namespace
 import mimetypes  # noqa: F401  # composition-root namespace
 import os  # noqa: F401  # composition-root namespace
 import posixpath  # noqa: F401  # composition-root namespace
@@ -124,6 +123,7 @@ from .tool_contract import (  # noqa: F401  # composition-root namespace
 )
 from .usage_events import usage_event_from_provider_delegation  # noqa: F401  # composition-root namespace
 from .provider_traffic import ProviderTrafficGovernor  # noqa: F401  # composition-root namespace
+from .provider_telemetry import HUB_PROVIDER_TELEMETRY_STATUSES, normalize_provider_telemetry  # noqa: F401  # compatibility re-export
 from .runtime_activity import RuntimeActivityMixin  # noqa: F401  # composition-root namespace
 
 from .transport_stdio import serve_stdio  # noqa: F401  # composition-root namespace
@@ -158,7 +158,6 @@ from .transport_http import STATELESS_HTTP_2026_ENV, _decode_mcp_name_header, _f
 
 PROCESS_INSTANCE_ID = secrets.token_urlsafe(12)
 HUB_PROVIDER_TELEMETRY_STATES = frozenset({"ROUTED", "EXECUTING", "PROVING", "ACCEPTING"})
-HUB_PROVIDER_TELEMETRY_STATUSES = frozenset({"active", "completed", "failed"})
 HOST_CORRELATION_SCHEMA_VERSION = 1
 HOST_CORRELATION_PENDING_TTL_MS = 120_000
 HOST_CORRELATION_PENDING_RELATIVE = Path('.coding-tools') / 'evaluation' / 'chatweb-host-turn-pending.json'
@@ -202,71 +201,6 @@ PROCESS_BACKGROUND_OPERATIONS_LOCK = threading.RLock()
 
 
 
-
-
-def normalize_provider_telemetry(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError("telemetry must be an object")
-    allowed = {
-        "schema_version", "event_type", "session_id", "message_id", "provider_id", "model_id",
-        "status", "started_at_ms", "completed_at_ms", "duration_ms", "finish", "error_name",
-        "provider_cost", "input_tokens", "output_tokens", "reasoning_output_tokens",
-        "cache_read_tokens", "cache_write_tokens", "provider_dispatch_id", "provider_delegation_id",
-    }
-    unexpected = sorted(set(value) - allowed)
-    if unexpected:
-        raise ValueError("unsupported provider telemetry fields: " + ", ".join(unexpected[:5]))
-    if value.get("schema_version") != 1 or value.get("event_type") != "message.updated":
-        raise ValueError("unsupported provider telemetry schema")
-
-    def text(name: str, limit: int, *, required: bool = False) -> str:
-        result = str(value.get(name) or "").strip()
-        if required and not result:
-            raise ValueError(f"{name} is required")
-        if len(result) > limit or any(ord(ch) < 32 for ch in result):
-            raise ValueError(f"invalid {name}")
-        return result
-
-    def number(name: str, *, integer: bool = False, required: bool = False) -> int | float | None:
-        raw = value.get(name)
-        if raw is None:
-            if required:
-                raise ValueError(f"{name} is required")
-            return None
-        if isinstance(raw, bool) or not isinstance(raw, (int, float)) or not math.isfinite(float(raw)) or raw < 0:
-            raise ValueError(f"invalid {name}")
-        if integer and int(raw) != raw:
-            raise ValueError(f"invalid {name}")
-        return int(raw) if integer else raw
-
-    status = text("status", 32, required=True).lower()
-    if status not in HUB_PROVIDER_TELEMETRY_STATUSES:
-        raise ValueError("invalid provider telemetry status")
-    result: dict[str, Any] = {
-        "schema_version": 1,
-        "event_type": "message.updated",
-        "session_id": text("session_id", 256, required=True),
-        "message_id": text("message_id", 256, required=True),
-        "provider_id": text("provider_id", 160, required=True),
-        "model_id": text("model_id", 200, required=True),
-        "status": status,
-        "started_at_ms": number("started_at_ms", required=True),
-        "provider_cost": number("provider_cost", required=True),
-        "input_tokens": number("input_tokens", integer=True, required=True),
-        "output_tokens": number("output_tokens", integer=True, required=True),
-        "reasoning_output_tokens": number("reasoning_output_tokens", integer=True, required=True),
-        "cache_read_tokens": number("cache_read_tokens", integer=True, required=True),
-        "cache_write_tokens": number("cache_write_tokens", integer=True, required=True),
-    }
-    for name in ("completed_at_ms", "duration_ms"):
-        measured = number(name)
-        if measured is not None:
-            result[name] = measured
-    for name, limit in (("provider_dispatch_id", 256), ("provider_delegation_id", 256), ("finish", 100), ("error_name", 120)):
-        measured = text(name, limit)
-        if measured:
-            result[name] = measured
-    return result
 
 
 _FAST_TOOL_CACHE: dict[str, tuple[float, int, dict[str, Any]]] = {}
@@ -2413,7 +2347,14 @@ class Runtime(
                         self.request_sessions.pop(request_id, None)
                 self.request_context.request_id = None
             payload.setdefault("ok", True)
-            task_read_only = name == "task_control" and str(args.get("action", "get")).lower() in {"get", "history", "operation"}
+            task_read_only = name == "task_control" and (
+                str(args.get("action", "get")).lower() in {"get", "history", "operation"}
+                or (
+                    str(args.get("action", "")).lower() == "p5"
+                    and isinstance(args.get("p5_experiment"), dict)
+                    and str(args["p5_experiment"].get("operation") or "status").lower() == "status"
+                )
+            )
             if spec.read_only is not True and name not in {"agent_workflow", "document_workflow"} and not task_read_only and not payload.get("deduplicated"):
                 self._invalidate_fast_cache()
             self._record_task_tool_result(name, args, payload)

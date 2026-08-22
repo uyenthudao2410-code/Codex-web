@@ -12,13 +12,13 @@ import re
 import secrets
 import sys
 import time
-import urllib.parse
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from . import __version__
 from .envutils import ENV_PREFIX, truthy_env
 from .errors import JsonRpcError, ToolFailure
+from .http_origin import _configured_allowed_origins, is_allowed_origin  # noqa: F401  # compatibility re-export
 from .oauth import (
     MAX_PENDING_CODES,
     OAUTH_CODE_TTL_SECONDS,
@@ -85,37 +85,6 @@ OAUTH_TOKEN_AUTH_METHODS = ("client_secret_basic", "client_secret_post", "none")
 def json_response_payload(payload: Any) -> bytes:
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
-
-
-def _configured_allowed_origins(raw: str) -> frozenset[str]:
-    return frozenset(item.strip().rstrip("/") for item in raw.split(",") if item.strip())
-
-
-
-def is_allowed_origin(origin: str) -> bool:
-    # Authentication does not replace browser Origin validation.
-    try:
-        parsed = urllib.parse.urlparse(origin)
-    except ValueError:
-        return False
-    if (
-        parsed.scheme not in {"http", "https"}
-        or not parsed.hostname
-        or parsed.username is not None
-        or parsed.password is not None
-        or parsed.path not in {"", "/"}
-        or parsed.params
-        or parsed.query
-        or parsed.fragment
-    ):
-        return False
-    try:
-        _ = parsed.port
-    except ValueError:
-        return False
-    normalized = origin.rstrip("/")
-    configured = _configured_allowed_origins(os.environ.get(f"{ENV_PREFIX}_ALLOWED_ORIGINS", ""))
-    return parsed.hostname in {"localhost", "127.0.0.1", "::1"} or normalized in configured
 
 
 def is_loopback_bind_host(host: str) -> bool:

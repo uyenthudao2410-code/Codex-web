@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-19
+> **Status date:** 2026-08-22
 > **Desktop package:** `web-mcp-assistant 0.3.4`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
@@ -143,15 +143,19 @@ Repository operators can evaluate the canonical committed ledger with:
 ```text
 python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .
 python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-ready
-python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-p5-ready
+python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . --require-p5-experiment-active
 npm run check:p5-readiness
 ```
 
-The manual-only GitHub workflow `.github/workflows/p4-readiness.yml` exposes the same gate without enabling ordinary push/PR Actions consumption. `--require-ready` succeeds only when `p4_gate.can_answer_which_signals_predict_repair=true`; missing or insufficient evidence cannot be converted into a green P4 closure claim.
+The manual-only GitHub workflow `.github/workflows/p4-readiness.yml` exposes the P4 gate without enabling ordinary push/PR Actions consumption. `--require-ready` succeeds only when `p4_gate.can_answer_which_signals_predict_repair=true`; missing or insufficient evidence cannot be converted into a green P4 closure claim. `--require-p5-experiment-active` is an observation assertion for an already explicit P5 epoch, not an activation command. `npm run check:p5-readiness` and the deprecated `--require-p5-ready` retain the legacy P4-predictive treatment readiness meaning and must not be used to claim P5-A0 integrity readiness.
 
 **Live collection health remains a separate boundary, and the currently connected process has now passed it.** On 2026-08-19 the live ChatWeb/Coding-VP plane exposes `task_control.solution_shadow`, reports exactly 8 `smart-v3` public tools with contract SHA `bd5c09aeffe02bb60d0f548ed02912e8a21e78b91404186e6896f6d6cbdedd70`, and reports zero stale orchestration runs, unresolved stale runs, orphaned background operations, and orphaned idempotency records. Live P4 collection is therefore active on this runtime instance. Future runtime-affecting changes still require their own activation check; historical raw `ExceptionGroup` incidents remain historical evidence rather than current runtime status.
 
-The P4 empirical gate remains **COLLECTING unless the canonical ledger reporter says `EMPIRICALLY_COMPLETE`**. The current 2026-08-19 snapshot has 9 representative terminal shadow tasks, 0 representative causal-solution repairs, and `validated_signals=[]`, so predictive validity is not established yet. P5 controlled treatment stays closed until all three fail-closed readiness conditions are simultaneously true: the P4 gate can answer which signals predict repair, at least one validated predictive signal is present, and the Git baseline is clean with `HEAD` matching its configured upstream. `npm run check:p5-readiness` is the operator-facing transition check. `automatic_policy_activation=false` and `p5_automatic_start=false` remain invariants.
+The P4 empirical gate remains **COLLECTING unless the canonical ledger reporter says `EMPIRICALLY_COMPLETE`**. The 2026-08-19 snapshot (9 representative terminal shadow tasks, 0 representative causal-solution repairs, and `validated_signals=[]`) remains historical evidence that predictive validity was not established; it must not be reused as an activation proof for later source. P4-C therefore remains strict/shadow-only and P4-E remains coverage-first/advisory-only.
+
+P5 has a separately gated **source implementation**: manifest v2, secret-handle seed commitment, pre-assignment arm-neutral eligibility/enrollment, restart-safe block randomization, immutable all-assigned ITT outcome rows, analyzer/source-identity checks, and pause/close/hard-stop controls are exposed as `task_control(action="p5")` inside the unchanged eight-tool `smart-v3` surface. A write-capable `agent_workflow` can carry `p5_assignment_id` only for the immutable `feature`/`bugfix` task class; after the ordinary workspace fence is acquired and before any mkdir/patch call, the runtime records an immutable P5 pre-write binding to the exact run, wave, and lease. Caller-supplied first-write time is rejected. It does not loosen P4-C or require P4 predictive readiness before a P5-A0 instrumentation epoch. An operator must still explicitly open a frozen, source/runtime-matching manifest, with a clean upstream-matched control-plane source when the manifest requires it and with no active workspace write fence. `p5_automatic_start=false`, `automatic_policy_activation=false`, and automatic production promotion remain invariants. No source proof substitutes for a live P5-A0 A/A epoch, a P5-A treatment canary, an efficacy conclusion, or promotion.
+
+For a development Electron runtime, the trusted parent process may receive `CODING_TOOLS_P5_A0_SEED` only from an external secret-delivery channel. The native launcher maps it to the opaque `secret://experiment/p5/a` broker handle and deliberately omits the raw environment name from the child MCP environment. Do not place the raw value in the repository, tracked `.coding-tools` evidence, manifest, chat, or ordinary application settings; restart-safe live provisioning remains an operator/runtime operation, not source evidence.
 
 ### P0 live activation incident — CLOSED / ACCEPTED
 
@@ -266,7 +270,7 @@ The following are deliberate evidence/authority gates, not documentation bugs:
 - P4 source/gate engineering: **ACCEPTED**; development launch authority is pinned to the current checkout and `solution_shadow` schema publication has been observed;
 - P4 live tool-call health: **LIVE ACTIVE / VERIFIED** on the current 2026-08-19 ChatWeb/Coding-VP runtime contract; future runtime-affecting changes still require their own activation proof;
 - P4 predictive validity: **COLLECTING unless `report_p4_readiness.py` reports `EMPIRICALLY_COMPLETE`**; benchmark, synthetic, and unlabeled shadow rows are not promotion evidence;
-- P5 controlled rework-reduction treatment: **CLOSED / NOT STARTED** until `npm run check:p5-readiness` passes, which requires P4 predictive completion, a non-empty validated-signal set, and a clean upstream-matched baseline; explicit semantic-controller opening remains separate from automatic activation;
+- P5 experiment integrity source: **IMPLEMENTED / FAIL-CLOSED; no live epoch proven.** `task_control(action="p5")` validates a frozen manifest, source/runtime identity, secret-backed seed commitment, assignment/enrollment order, and the absence of an active workspace writer before opening. P5-A0 may be explicitly opened for instrumentation before P4 predictive completion; P5-A treatment remains separately gated by its own registered manifest, natural eligible task/oracle funnel, and explicit operator authority. Neither starts automatically, and neither is a production-promotion signal;
 - auto-handoff: **OFF** pending more real A/B evidence;
 - paid Flash terminal reproduction: **requires explicit external-cost authorization**;
 - provider/model write authority over the primary checkout: **not granted by telemetry or routing alone**;

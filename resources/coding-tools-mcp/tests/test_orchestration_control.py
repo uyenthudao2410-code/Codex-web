@@ -159,11 +159,11 @@ class OrchestrationControlTests(unittest.TestCase):
             ctx = control.begin(objective="ttl", task_id="ttl", execution_mode="mcp_only", base_head="a", worktree_fp="w")
             control.mark_ready(ctx)
             control.select_route(ctx, {"requested": "auto", "selected": "deterministic"})
-            lease = control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only", ttl_seconds=0.08)
+            lease = control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only", ttl_seconds=1.0)
             before = lease.expires_at
-            renewed = control.renew_write_lease(ctx, owner="MCP", ttl_seconds=0.15)
+            renewed = control.renew_write_lease(ctx, owner="MCP", ttl_seconds=2.0)
             self.assertGreater(renewed.expires_at, before)
-            time.sleep(0.18)
+            time.sleep(2.1)
             with self.assertRaises(OrchestrationControlError) as expired:
                 control.assert_write_allowed(ctx, owner="MCP")
             self.assertEqual(expired.exception.code, "WRITE_LEASE_EXPIRED")
