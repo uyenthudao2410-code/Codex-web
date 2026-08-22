@@ -12,6 +12,7 @@ from . import __version__
 from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH
+from .rework_diagnosis import p2_build_verification_failure_detail, p2_check_failure_detail
 from .task_state import command_payload_succeeded
 from .semantic_localization import (
     run_semantic_localization,
@@ -904,7 +905,12 @@ class ContextToolsMixin:
                 failure_code = "PROOF_TIMEOUT" if proof_timed_out else "CHECK_FAILED"
                 failure = f"Proof timed out: {command}" if proof_timed_out else f"Check failed: {command}"
                 set_stage("checks", "Requested check failed", failed=True)
-                record_failure(failure_code, command_hash=hashlib.sha256(command.encode("utf-8")).hexdigest())
+                failure_details: dict[str, Any] = {
+                    "command_hash": hashlib.sha256(command.encode("utf-8")).hexdigest(),
+                }
+                if failure_code == "CHECK_FAILED":
+                    failure_details["p2_failure_detail"] = p2_check_failure_detail(command)
+                record_failure(failure_code, **failure_details)
                 self.task_state.update({"status": "waiting", "failure": failure, "current_step": "Replan required", "next_step": "Replan from the failed check; do not retry unchanged."})
                 return {
                     "ok": False,
@@ -969,7 +975,11 @@ class ContextToolsMixin:
             if build_report.get("ok") is False:
                 set_stage("verify", "Verification failed", failed=True)
                 error = build_report.get("error") if isinstance(build_report.get("error"), dict) else {}
-                record_failure(error.get("code") or "VERIFICATION_FAILED", verification=verification)
+                failure_code = str(error.get("code") or "VERIFICATION_FAILED")
+                failure_details: dict[str, Any] = {"verification": verification}
+                if failure_code == "BUILD_VERIFICATION_FAILED":
+                    failure_details["p2_failure_detail"] = p2_build_verification_failure_detail(build_report, verification)
+                record_failure(failure_code, **failure_details)
                 self.task_state.update({
                     "status": "waiting",
                     "failure": str(error.get("message") or "Verification failed"),

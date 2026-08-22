@@ -5,7 +5,12 @@ import unittest
 from pathlib import Path
 
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
-from coding_tools_mcp.rework_diagnosis import stratified_rework_diagnosis
+from coding_tools_mcp.rework_diagnosis import (
+    P2_FAILURE_OBSERVATION_SCHEMA,
+    p2_build_verification_failure_detail,
+    p2_check_failure_detail,
+    stratified_rework_diagnosis,
+)
 
 
 class ReworkDiagnosisTests(unittest.TestCase):
@@ -98,6 +103,11 @@ class ReworkDiagnosisTests(unittest.TestCase):
             self.assertEqual(report['causal_classification']['unclassified_failure_events'], 1)
             self.assertEqual(report['causal_classification']['mapped_event_coverage'], 0.5)
             self.assertEqual(report['causal_classification']['largest_unclassified_failure_class'], 'CHECK_FAILED')
+            prospective = report['overall_repair_causes']['prospective_failure_detail']
+            self.assertEqual(prospective['schema'], P2_FAILURE_OBSERVATION_SCHEMA)
+            self.assertEqual(prospective['detail_counts'], {})
+            self.assertEqual(prospective['legacy_generic_detail_unavailable'], {'CHECK_FAILED': 1})
+            self.assertFalse(prospective['historical_backfill'])
             self.assertEqual(report['oracle_observation']['eligible_runs'], 3)
             self.assertEqual(report['oracle_observation']['observed_runs'], 2)
             self.assertEqual(report['oracle_observation']['strong_runs'], 1)
@@ -162,6 +172,67 @@ class ReworkDiagnosisTests(unittest.TestCase):
                 classification['high_confidence_reason_rule_counts'],
                 {'rustfmt_formatting_only': 1},
             )
+
+    def test_prospective_generic_failure_details_are_distinct_from_legacy_and_causal_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(objective='prospective taxonomy', metadata={'workflow': 'bugfix'})
+            first_wave = ledger.create_wave(run_id, execution_mode='mcp_only')
+            ledger.append_event(
+                run_id,
+                wave_id=first_wave,
+                event_type='failure_observed',
+                state_before='EXECUTING',
+                state_after='REPLAN',
+                payload={
+                    'failure_class': 'CHECK_FAILED',
+                    'p2_failure_detail': p2_check_failure_detail('npm test -- --runInBand'),
+                },
+            )
+            ledger.finish_wave(first_wave, status='replanned')
+            second_wave = ledger.create_wave(run_id, execution_mode='mcp_only')
+            ledger.append_event(
+                run_id,
+                wave_id=second_wave,
+                event_type='failure_observed',
+                state_before='PROVING',
+                state_after='REPLAN',
+                payload={
+                    'failure_class': 'BUILD_VERIFICATION_FAILED',
+                    'p2_failure_detail': p2_build_verification_failure_detail(
+                        {
+                            'test_result': {'status': 'passed'},
+                            'build_result': {'status': 'passed'},
+                            'commands': {'test': 'npm test', 'build': 'npm run build'},
+                            'artifacts': [],
+                        },
+                        'all',
+                    ),
+                },
+            )
+            ledger.finish_wave(second_wave, status='replanned')
+            terminal_wave = ledger.create_wave(run_id, execution_mode='mcp_only')
+            ledger.finish_wave(terminal_wave, status='accepted')
+            ledger.finish_run(run_id, status='accepted')
+
+            report = stratified_rework_diagnosis(ledger)
+            prospective = report['overall_repair_causes']['prospective_failure_detail']
+            self.assertEqual(prospective['schema'], P2_FAILURE_OBSERVATION_SCHEMA)
+            self.assertEqual(
+                prospective['detail_counts'],
+                {
+                    'BUILD_VERIFICATION_FAILED:artifact_missing': 1,
+                    'CHECK_FAILED:node_test': 1,
+                },
+            )
+            self.assertEqual(prospective['legacy_generic_detail_unavailable'], {})
+            self.assertFalse(prospective['historical_backfill'])
+            self.assertEqual(
+                report['overall_repair_causes']['unclassified_structured_failure_classes'],
+                {'BUILD_VERIFICATION_FAILED': 1, 'CHECK_FAILED': 1},
+            )
+            self.assertTrue(report['policy']['generic_failure_details_are_prospective_only'])
+            self.assertTrue(report['policy']['generic_failure_detail_is_not_a_causal_repair_label'])
 
 
 if __name__ == '__main__':

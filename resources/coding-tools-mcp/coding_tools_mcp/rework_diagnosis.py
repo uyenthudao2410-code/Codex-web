@@ -8,6 +8,28 @@ from .orchestration_ledger import OrchestrationLedger
 
 
 WORKFLOW_ORDER = ("feature", "diagnose", "bugfix", "test_failure", "build_release", "custom", "refactor")
+P2_FAILURE_OBSERVATION_SCHEMA = "p2_failure_observation_v3"
+P2_GENERIC_FAILURE_CLASSES = frozenset({"CHECK_FAILED", "BUILD_VERIFICATION_FAILED"})
+P2_CHECK_COMMAND_FAMILIES = frozenset({
+    "cargo_test",
+    "go_test",
+    "node_test",
+    "pytest",
+    "python_unittest",
+    "java_test",
+    "dotnet_test",
+    "lint",
+    "format",
+    "typecheck",
+    "other",
+})
+P2_BUILD_VERIFICATION_STAGES = frozenset({
+    "test_command_failed",
+    "build_command_failed",
+    "build_command_missing",
+    "artifact_missing",
+    "verification_unspecified",
+})
 REPAIR_CAUSE_CODES = {
     "patch_context_ambiguity": {
         "PATCH_AMBIGUOUS",
@@ -42,6 +64,100 @@ PLANNED_REPAIR_CAUSES = (
     "proof_timeout",
     "acceptance_correction",
 )
+
+
+def _normalized_text(value: object) -> str:
+    return " ".join(str(value or "").lower().split())
+
+
+def p2_check_failure_detail(command: object) -> dict[str, str]:
+    """Return bounded, content-free prospective detail for a failed explicit check.
+
+    This is a measurement label, not a root-cause or repair label.  In
+    particular, it never persists the command, output, path, or a free-text
+    failure message.
+    """
+    text = _normalized_text(command)
+    if "pytest" in text:
+        family = "pytest"
+    elif "unittest" in text:
+        family = "python_unittest"
+    elif "cargo test" in text:
+        family = "cargo_test"
+    elif "go test" in text:
+        family = "go_test"
+    elif "dotnet test" in text:
+        family = "dotnet_test"
+    elif "mvn test" in text or "gradle test" in text:
+        family = "java_test"
+    elif any(marker in text for marker in ("eslint", "clippy", "lint")):
+        family = "lint"
+    elif any(marker in text for marker in ("rustfmt", "prettier", "black --check", "gofmt")):
+        family = "format"
+    elif any(marker in text for marker in ("tsc", "mypy", "pyright", "typecheck")):
+        family = "typecheck"
+    elif any(marker in text for marker in ("npm test", "pnpm test", "yarn test", "vitest", "jest")):
+        family = "node_test"
+    else:
+        family = "other"
+    return {
+        "schema": P2_FAILURE_OBSERVATION_SCHEMA,
+        "stage": "checks",
+        "command_family": family,
+        "causal_attribution": "unattributed",
+    }
+
+
+def p2_build_verification_failure_detail(report: object, verification: object) -> dict[str, str]:
+    """Return bounded, content-free prospective detail for failed verification."""
+    value = report if isinstance(report, dict) else {}
+    test_result = value.get("test_result") if isinstance(value.get("test_result"), dict) else {}
+    build_result = value.get("build_result") if isinstance(value.get("build_result"), dict) else {}
+    commands = value.get("commands") if isinstance(value.get("commands"), dict) else {}
+    artifacts = value.get("artifacts") if isinstance(value.get("artifacts"), list) else []
+    test_status = _normalized_text(test_result.get("status"))
+    build_status = _normalized_text(build_result.get("status"))
+    if test_status == "failed":
+        failure_stage = "test_command_failed"
+    elif build_status == "failed":
+        failure_stage = "build_command_failed"
+    elif not _normalized_text(commands.get("build")):
+        failure_stage = "build_command_missing"
+    elif build_status == "passed" and not artifacts:
+        failure_stage = "artifact_missing"
+    else:
+        failure_stage = "verification_unspecified"
+    mode = _normalized_text(verification)
+    return {
+        "schema": P2_FAILURE_OBSERVATION_SCHEMA,
+        "stage": "verification",
+        "verification_mode": mode if mode in {"tests", "build", "all"} else "unknown",
+        "verification_failure_stage": failure_stage,
+        "causal_attribution": "unattributed",
+    }
+
+
+def p2_failure_detail_bucket(failure_class: object, detail: object) -> str | None:
+    """Validate and render a prospective generic-failure detail bucket.
+
+    Historical rows that predate the v3 schema intentionally return ``None``;
+    callers must report them as unavailable rather than infer a detail later.
+    """
+    failure = str(failure_class or "").strip().upper()
+    value = detail if isinstance(detail, dict) else {}
+    if value.get("schema") != P2_FAILURE_OBSERVATION_SCHEMA:
+        return None
+    if value.get("causal_attribution") != "unattributed":
+        return None
+    if failure == "CHECK_FAILED" and value.get("stage") == "checks":
+        family = str(value.get("command_family") or "")
+        if family in P2_CHECK_COMMAND_FAMILIES:
+            return f"{failure}:{family}"
+    if failure == "BUILD_VERIFICATION_FAILED" and value.get("stage") == "verification":
+        stage = str(value.get("verification_failure_stage") or "")
+        if stage in P2_BUILD_VERIFICATION_STAGES:
+            return f"{failure}:{stage}"
+    return None
 
 
 def _percentile(values: list[int], percentile: int) -> int | None:
@@ -210,6 +326,8 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
     overall_cause_events: Counter[str] = Counter({cause: 0 for cause in PLANNED_REPAIR_CAUSES})
     overall_cause_runs: dict[str, set[str]] = defaultdict(set)
     overall_unclassified: Counter[str] = Counter()
+    overall_prospective_failure_details: Counter[str] = Counter()
+    overall_legacy_generic_detail_unavailable: Counter[str] = Counter()
     overall_reason_categories: Counter[str] = Counter()
     overall_reason_rules: Counter[str] = Counter()
     overall_classification_sources: Counter[str] = Counter()
@@ -233,6 +351,8 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
                 "cause_events": Counter({cause: 0 for cause in PLANNED_REPAIR_CAUSES}),
                 "cause_runs": defaultdict(set),
                 "unclassified": Counter(),
+                "prospective_failure_details": Counter(),
+                "legacy_generic_detail_unavailable": Counter(),
                 "reason_categories": Counter(),
                 "reason_rules": Counter(),
                 "classification_sources": Counter(),
@@ -323,6 +443,14 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
             failure_class = str(payload.get("failure_class") or "UNKNOWN").strip().upper() or "UNKNOWN"
             target["failure_classes"][failure_class] += 1
             overall_failure_classes[failure_class] += 1
+            if failure_class in P2_GENERIC_FAILURE_CLASSES:
+                detail_bucket = p2_failure_detail_bucket(failure_class, payload.get("p2_failure_detail"))
+                if detail_bucket is None:
+                    target["legacy_generic_detail_unavailable"][failure_class] += 1
+                    overall_legacy_generic_detail_unavailable[failure_class] += 1
+                else:
+                    target["prospective_failure_details"][detail_bucket] += 1
+                    overall_prospective_failure_details[detail_bucket] += 1
             cause = _repair_cause(failure_class)
             if cause is not None:
                 target["cause_events"][cause] += 1
@@ -387,6 +515,12 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
                 "event_counts": {cause: int(item["cause_events"].get(cause, 0)) for cause in PLANNED_REPAIR_CAUSES},
                 "affected_run_counts": {cause: len(item["cause_runs"].get(cause, set())) for cause in PLANNED_REPAIR_CAUSES},
                 "unclassified_structured_failure_classes": dict(sorted(item["unclassified"].items())),
+                "prospective_failure_detail": {
+                    "schema": P2_FAILURE_OBSERVATION_SCHEMA,
+                    "detail_counts": dict(sorted(item["prospective_failure_details"].items())),
+                    "legacy_generic_detail_unavailable": dict(sorted(item["legacy_generic_detail_unavailable"].items())),
+                    "historical_backfill": False,
+                },
                 "durable_reason_category_counts": dict(sorted(item["reason_categories"].items())),
                 "high_confidence_reason_rule_counts": dict(sorted(item["reason_rules"].items())),
                 "classification_source_counts": dict(sorted(item["classification_sources"].items())),
@@ -431,6 +565,12 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
             "event_counts": overall_events,
             "affected_run_counts": overall_runs,
             "unclassified_structured_failure_classes": dict(sorted(overall_unclassified.items())),
+            "prospective_failure_detail": {
+                "schema": P2_FAILURE_OBSERVATION_SCHEMA,
+                "detail_counts": dict(sorted(overall_prospective_failure_details.items())),
+                "legacy_generic_detail_unavailable": dict(sorted(overall_legacy_generic_detail_unavailable.items())),
+                "historical_backfill": False,
+            },
             "durable_reason_category_counts": dict(sorted(overall_reason_categories.items())),
             "high_confidence_reason_rule_counts": dict(sorted(overall_reason_rules.items())),
             "classification_source_counts": dict(sorted(overall_classification_sources.items())),
@@ -455,6 +595,8 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
             "high_confidence_reason_category_counts": dict(sorted(overall_reason_categories.items())),
             "high_confidence_reason_rule_counts": dict(sorted(overall_reason_rules.items())),
             "unclassified_zero_means_absent": False,
+            "prospective_failure_detail_schema": P2_FAILURE_OBSERVATION_SCHEMA,
+            "legacy_generic_detail_not_inferred": True,
         },
         "oracle_observation": {
             "measurement": "oracle_preflight.strong_oracle",
@@ -481,6 +623,8 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
             "repair_cause_requires_structured_failure_evidence": True,
             "unknown_scope_or_oracle_not_imputed": True,
             "unmatched_structured_failures_remain_unclassified": True,
+            "generic_failure_details_are_prospective_only": True,
+            "generic_failure_detail_is_not_a_causal_repair_label": True,
             "zero_planned_cause_without_evidence_is_not_proof_of_absence": True,
             "countermeasure_effect_requires_comparable_pre_post_or_paired_evidence": True,
             "scope_path_cap_censored_runs_excluded_from_scope_percentiles": True,

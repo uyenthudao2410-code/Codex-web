@@ -23,7 +23,7 @@ P0-P3 engineering/control work is not to be expanded merely to fill representati
 
 - **P0 engineering/source: CLOSED.** Protocol ExceptionGroup normalization and semantic tool-plane self-recovery are implemented. **P0 live activation is ACCEPTED** on the current post-fix Windows process and real connector path.
 - **P1 measurement integrity: CLOSED.** Controlled measurement plumbing is sufficient for experiments. Economics remains an evidence program; missing usage/cost is unknown, never zero.
-- **P2 diagnostic phase: CLOSED.** Incomplete historical causal/oracle coverage is a measurement limitation for subsequent intervention studies, not a reason to keep extending P2 architecture.
+- **P2 diagnostic phase: CLOSED.** Prospective, content-free detail now distinguishes generic check and build-verification observations without attributing historic rows to a causal repair cause. Incomplete historical causal/oracle coverage is a measurement limitation for subsequent intervention studies, not a reason to keep extending P2 architecture.
 - **P3 engineering/control plane: CLOSED / ACCEPTED.** Representative efficacy remains deferred; global server-first remains OFF.
 
 The prior P0 live-activation blocker is cleared. The accepted live checks covered current process/source identity, `workspace_context`, `agent_workflow` prepare, `task_control` audit, exactly 8 `smart-v3` public tools, no raw ExceptionGroup leakage on the acceptance calls, and no stale/orphan/conflicting write authority. A new engineering phase is therefore governed by its own task-specific acceptance gates rather than by unfinished P0-P3 architecture.

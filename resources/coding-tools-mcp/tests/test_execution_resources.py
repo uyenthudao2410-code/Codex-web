@@ -951,6 +951,53 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
         finally:
             runtime.close()
 
+    def test_failed_continuous_check_records_content_free_p2_detail(self) -> None:
+        runtime_root = self.root / "failed-owned-check-runtime"
+        runtime_root.mkdir()
+        runtime = Runtime(runtime_root, permission_mode="dangerous")
+        try:
+            runtime.task_state.ensure_started("owned failed proof", current_step="test")
+            ctx = runtime.orchestration_control.begin(
+                objective="owned failed proof",
+                task_id="failed-owned-proof-task",
+                execution_mode="mcp_only",
+                base_head="",
+                worktree_fp="",
+            )
+            runtime.orchestration_control.mark_ready(ctx)
+            runtime.orchestration_control.select_route(
+                ctx,
+                {"requested": "deterministic", "selected": "deterministic", "reason": "test"},
+            )
+            runtime.orchestration_control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only")
+            runtime._project_orchestration(ctx)
+
+            result = runtime.apply_changes_and_verify({
+                "objective": "run one failed owned proof check",
+                "checks": [f'"{sys.executable}" -c "import sys; sys.exit(3)"'],
+                "path": ".",
+                "workdir": ".",
+                "verification": "none",
+                "include_diff": False,
+                "_orchestration_context": ctx,
+            })
+
+            self.assertFalse(result["ok"])
+            failure = next(
+                event
+                for event in runtime.orchestration_ledger.list_events(ctx.run_id)
+                if event.get("event_type") == "failure_observed"
+            )
+            detail = failure["payload"]["p2_failure_detail"]
+            self.assertEqual(failure["payload"]["failure_class"], "CHECK_FAILED")
+            self.assertEqual(detail["schema"], "p2_failure_observation_v3")
+            self.assertEqual(detail["stage"], "checks")
+            self.assertEqual(detail["command_family"], "other")
+            self.assertNotIn("command", detail)
+            self.assertNotIn("output", detail)
+        finally:
+            runtime.close()
+
 
 if __name__ == "__main__":
     unittest.main()
