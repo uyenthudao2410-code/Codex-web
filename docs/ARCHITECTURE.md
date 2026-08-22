@@ -208,6 +208,12 @@ Dedicated control framing separates completion from bounded stdout/stderr;
 timeout synchronization failure poisons and kills the shell. Shell records do
 not imply restart recovery, and SSH resources, PTYs, or terminal streams are
 not part of this model.
+Direct structured process and script execution transfers both child pipe handles
+to independent bounded drain readers immediately after spawn. These readers
+retain only output-tail and encoding state; they never wait for a protocol,
+model, or log observer. Terminal handling terminates and reaps the managed
+process tree before waiting for pipe EOF, so a descendant that inherited a pipe
+cannot hold command completion open after its direct parent exits.
 The Connector Task ledger and Workflow Session ledger remain separate internal
 models; neither is copied into the other.
 

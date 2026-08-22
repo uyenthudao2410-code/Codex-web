@@ -1357,51 +1357,91 @@ fn terminate_child_without_output(mut child: ManagedChild) -> Result<(), String>
     result
 }
 
-fn terminate_and_read_pipes(
-    mut child: ManagedChild,
-    max_output_bytes: usize,
-) -> Result<(std::process::ExitStatus, BoundedPipeTail, BoundedPipeTail), String> {
-    let deadline = Instant::now() + Duration::from_secs(1);
-    let cleanup = terminate_child_process_tree_until(&mut child, deadline).err();
-    let output = read_pipes_until(child, max_output_bytes, deadline);
-    match (cleanup, output) {
-        (None, Ok(output)) => Ok(output),
-        (Some(cleanup), Ok(_)) => Err(format!(
-            "failed to terminate command process tree: {cleanup}"
-        )),
-        (None, Err(error)) => Err(error),
-        (Some(cleanup), Err(error)) => Err(format!(
-            "failed to terminate command process tree: {cleanup}; failed to collect output: {error}"
-        )),
+struct ContinuousPipeDrain {
+    stdout_rx: mpsc::Receiver<Result<BoundedPipeTail, String>>,
+    stderr_rx: mpsc::Receiver<Result<BoundedPipeTail, String>>,
+    stdout_handle: std::thread::JoinHandle<()>,
+    stderr_handle: std::thread::JoinHandle<()>,
+}
+
+impl ContinuousPipeDrain {
+    /// Take both child pipes and start independent bounded readers immediately.
+    ///
+    /// The readers own the OS pipe handles for the full child lifetime. They do
+    /// not forward per-chunk data through another bounded queue, so Server/model
+    /// observation cannot backpressure either stream. Each reader retains only
+    /// the existing bounded tail plus UTF-8/BOM validation state.
+    fn start(child: &mut ManagedChild, max_output_bytes: usize) -> Result<Self, String> {
+        let stdout = child
+            .child_mut()
+            .stdout
+            .take()
+            .ok_or_else(|| "stdout pipe missing".to_string())?;
+        let stderr = match child.child_mut().stderr.take() {
+            Some(stderr) => stderr,
+            None => {
+                drop(stdout);
+                return Err("stderr pipe missing".to_string());
+            }
+        };
+        let (stdout_tx, stdout_rx) = mpsc::sync_channel(1);
+        let stdout_handle = std::thread::spawn(move || {
+            let _ = stdout_tx.send(read_bounded_pipe_tail(stdout, max_output_bytes, "stdout"));
+        });
+        let (stderr_tx, stderr_rx) = mpsc::sync_channel(1);
+        let stderr_handle = std::thread::spawn(move || {
+            let _ = stderr_tx.send(read_bounded_pipe_tail(stderr, max_output_bytes, "stderr"));
+        });
+        Ok(Self {
+            stdout_rx,
+            stderr_rx,
+            stdout_handle,
+            stderr_handle,
+        })
+    }
+
+    fn finish_until(self, deadline: Instant) -> Result<(BoundedPipeTail, BoundedPipeTail), String> {
+        let Self {
+            stdout_rx,
+            stderr_rx,
+            stdout_handle,
+            stderr_handle,
+        } = self;
+        let receive = |rx: mpsc::Receiver<Result<BoundedPipeTail, String>>,
+                       stream_name: &'static str|
+         -> Result<BoundedPipeTail, String> {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            rx.recv_timeout(remaining).map_err(|_| {
+                format!("{stream_name} reader did not finish before cleanup deadline")
+            })?
+        };
+        // Always give both already-running readers the shared cleanup deadline.
+        // A read error on one stream must not short-circuit collection of the
+        // other stream and turn an otherwise bounded reader into a detached one.
+        let stdout = receive(stdout_rx, "stdout");
+        let stderr = receive(stderr_rx, "stderr");
+        if stdout_handle.is_finished() {
+            let _ = stdout_handle.join();
+        }
+        if stderr_handle.is_finished() {
+            let _ = stderr_handle.join();
+        }
+        match (stdout, stderr) {
+            (Ok(stdout), Ok(stderr)) => Ok((stdout, stderr)),
+            (Err(stdout), Ok(_)) => Err(stdout),
+            (Ok(_), Err(stderr)) => Err(stderr),
+            (Err(stdout), Err(stderr)) => Err(format!("{stdout}; {stderr}")),
+        }
     }
 }
 
-fn read_pipes_until(
-    mut child: ManagedChild,
-    max_output_bytes: usize,
+fn wait_child_until(
+    child: &mut ManagedChild,
     deadline: Instant,
-) -> Result<(std::process::ExitStatus, BoundedPipeTail, BoundedPipeTail), String> {
-    let stdout = child
-        .child_mut()
-        .stdout
-        .take()
-        .ok_or_else(|| "stdout pipe missing".to_string())?;
-    let stderr = child
-        .child_mut()
-        .stderr
-        .take()
-        .ok_or_else(|| "stderr pipe missing".to_string())?;
-    let (stdout_tx, stdout_rx) = mpsc::sync_channel(1);
-    let stdout_handle = std::thread::spawn(move || {
-        let _ = stdout_tx.send(read_bounded_pipe_tail(stdout, max_output_bytes, "stdout"));
-    });
-    let (stderr_tx, stderr_rx) = mpsc::sync_channel(1);
-    let stderr_handle = std::thread::spawn(move || {
-        let _ = stderr_tx.send(read_bounded_pipe_tail(stderr, max_output_bytes, "stderr"));
-    });
-    let status = loop {
+) -> Result<std::process::ExitStatus, String> {
+    loop {
         match child.try_wait() {
-            Ok(Some(status)) => break status,
+            Ok(Some(status)) => return Ok(status),
             Ok(None) => {
                 let remaining = deadline.saturating_duration_since(Instant::now());
                 if remaining.is_zero() {
@@ -1411,22 +1451,67 @@ fn read_pipes_until(
             }
             Err(error) => return Err(format!("failed to wait command: {error}")),
         }
+    }
+}
+
+/// Finish one command whose stdout/stderr readers have already been draining
+/// continuously since immediately after spawn. Tree termination still happens
+/// before waiting for reader EOF so a descendant that inherited a pipe cannot
+/// keep the readers alive after direct-child exit, stop, or timeout.
+fn terminate_and_collect_pipes(
+    mut child: ManagedChild,
+    drains: ContinuousPipeDrain,
+) -> Result<(std::process::ExitStatus, BoundedPipeTail, BoundedPipeTail), String> {
+    let deadline = Instant::now() + Duration::from_secs(1);
+    let cleanup = terminate_child_process_tree_until(&mut child, deadline).err();
+    let status = wait_child_until(&mut child, deadline);
+    let output = drains.finish_until(deadline);
+    let mut errors = Vec::new();
+    if let Some(cleanup) = cleanup {
+        errors.push(format!(
+            "failed to terminate command process tree: {cleanup}"
+        ));
+    }
+    let status = match status {
+        Ok(status) => Some(status),
+        Err(error) => {
+            errors.push(error);
+            None
+        }
     };
-    let remaining = deadline.saturating_duration_since(Instant::now());
-    let stdout = stdout_rx
-        .recv_timeout(remaining)
-        .map_err(|_| "stdout reader did not finish before cleanup deadline".to_string())??;
-    let remaining = deadline.saturating_duration_since(Instant::now());
-    let stderr = stderr_rx
-        .recv_timeout(remaining)
-        .map_err(|_| "stderr reader did not finish before cleanup deadline".to_string())??;
-    if stdout_handle.is_finished() {
-        let _ = stdout_handle.join();
+    let output = match output {
+        Ok(output) => Some(output),
+        Err(error) => {
+            errors.push(format!("failed to collect output: {error}"));
+            None
+        }
+    };
+    if !errors.is_empty() {
+        return Err(errors.join("; "));
     }
-    if stderr_handle.is_finished() {
-        let _ = stderr_handle.join();
-    }
-    Ok((status, stdout, stderr))
+    let (stdout, stderr) = output.expect("output exists when no collection error was recorded");
+    Ok((
+        status.expect("status exists when no wait error was recorded"),
+        stdout,
+        stderr,
+    ))
+}
+
+/// Test/error-path convenience wrapper. Production structured execution starts
+/// the drain immediately after spawn rather than waiting until termination.
+#[cfg(test)]
+fn terminate_and_read_pipes(
+    mut child: ManagedChild,
+    max_output_bytes: usize,
+) -> Result<(std::process::ExitStatus, BoundedPipeTail, BoundedPipeTail), String> {
+    let drains = match ContinuousPipeDrain::start(&mut child, max_output_bytes) {
+        Ok(drains) => drains,
+        Err(error) => {
+            let cleanup = terminate_child_process_tree(&mut child).err();
+            return Err(with_cleanup_error(error, cleanup));
+        }
+    };
+    terminate_and_collect_pipes(child, drains)
 }
 
 fn read_bounded_pipe_tail(
@@ -2217,6 +2302,23 @@ fn execute_configured_command(
             });
         }
     };
+    // Structured execution must drain both OS pipes for the entire child
+    // lifetime. Starting independent bounded readers before any lifecycle wait
+    // prevents either stdout or stderr pipe capacity from throttling the child,
+    // even when no caller observes Job logs until terminal completion.
+    let drains = match ContinuousPipeDrain::start(&mut child, policy.max_output_bytes) {
+        Ok(drains) => drains,
+        Err(error) => {
+            let cleanup = terminate_child_process_tree(&mut child).err();
+            return ShellCommandResult::outcome_unknown(CommandResult {
+                exit_code: None,
+                stdout: None,
+                stderr: None,
+                duration_ms: Some(start.elapsed().as_millis() as u64),
+                error: Some(with_cleanup_error(error, cleanup)),
+            });
+        }
+    };
     if let Some(on_started) = on_started {
         on_started();
     }
@@ -2231,7 +2333,7 @@ fn execute_configured_command(
                 Some(rx)
             }
             None => {
-                let cleanup = terminate_child_without_output(child).err();
+                let cleanup = terminate_and_collect_pipes(child, drains).err();
                 return ShellCommandResult::outcome_unknown(CommandResult {
                     exit_code: None,
                     stdout: None,
@@ -2245,7 +2347,7 @@ fn execute_configured_command(
     };
     loop {
         if let Err(error) = poll_stdin_writer(&mut stdin_writer) {
-            let cleanup = terminate_child_without_output(child).err();
+            let cleanup = terminate_and_collect_pipes(child, drains).err();
             return ShellCommandResult::outcome_unknown(CommandResult {
                 exit_code: None,
                 stdout: None,
@@ -2262,7 +2364,7 @@ fn execute_configured_command(
             .unwrap_or(false)
         {
             let duration_ms = start.elapsed().as_millis() as u64;
-            return match terminate_and_read_pipes(child, policy.max_output_bytes) {
+            return match terminate_and_collect_pipes(child, drains) {
                 Ok((_status, stdout, stderr)) => {
                     let mut stderr = stderr.normalize(policy.max_output_bytes);
                     append_bounded_text(
@@ -2292,7 +2394,7 @@ fn execute_configured_command(
             Ok(None) => {
                 if start.elapsed() >= Duration::from_secs(timeout_secs) {
                     let duration_ms = start.elapsed().as_millis() as u64;
-                    return match terminate_and_read_pipes(child, policy.max_output_bytes) {
+                    return match terminate_and_collect_pipes(child, drains) {
                         Ok((_status, stdout, stderr)) => {
                             let mut stderr = stderr.normalize(policy.max_output_bytes);
                             append_bounded_text(
@@ -2323,7 +2425,7 @@ fn execute_configured_command(
                 std::thread::sleep(Duration::from_millis(50));
             }
             Err(e) => {
-                let cleanup = terminate_child_without_output(child).err();
+                let cleanup = terminate_and_collect_pipes(child, drains).err();
                 return ShellCommandResult::outcome_unknown(CommandResult {
                     exit_code: None,
                     stdout: None,
@@ -2338,7 +2440,7 @@ fn execute_configured_command(
         }
     }
     if let Err(error) = finish_stdin_writer(stdin_writer) {
-        let cleanup = terminate_child_without_output(child).err();
+        let cleanup = terminate_and_collect_pipes(child, drains).err();
         return ShellCommandResult::outcome_unknown(CommandResult {
             exit_code: None,
             stdout: None,
@@ -2350,7 +2452,7 @@ fn execute_configured_command(
             )),
         });
     }
-    match terminate_and_read_pipes(child, policy.max_output_bytes) {
+    match terminate_and_collect_pipes(child, drains) {
         Ok((status, stdout, stderr)) => ShellCommandResult::completed(CommandResult {
             exit_code: Some(status.code().unwrap_or(-1)),
             stdout: Some(stdout.normalize(policy.max_output_bytes)),
@@ -2903,6 +3005,160 @@ mod runner_lifecycle_tests {
         let stdout = result.result.stdout.unwrap();
         assert!(stdout.starts_with("4500:"));
         assert!(stdout.contains("\n4500:"));
+    }
+
+    #[test]
+    fn structured_process_continuously_drains_large_stdout_and_stderr() {
+        let cwd = tempfile::tempdir().unwrap();
+        let projects_dir = tempfile::tempdir().unwrap();
+        let mut policy = unrestricted_policy();
+        policy.max_output_bytes = 16 * 1024;
+        let result = run_process_with_profiles_in_sandbox_and_execution_state(
+            1,
+            &policy,
+            &ShellConfig::default(),
+            projects_dir.path(),
+            &PreparedShellProfileCache::default(),
+            Some(cwd.path().to_string_lossy().as_ref()),
+            &process_argv_helper().to_string_lossy(),
+            &["chatty".to_string(), "512".to_string()],
+            None,
+            10,
+            None,
+            None,
+        );
+
+        assert_eq!(
+            result.execution_state,
+            ShellCommandExecutionState::Completed,
+            "{:?}",
+            result.result
+        );
+        assert_eq!(result.result.exit_code, Some(0));
+        for (name, output, tail_byte) in [
+            ("stdout", result.result.stdout.as_deref().unwrap(), b'x'),
+            ("stderr", result.result.stderr.as_deref().unwrap(), b'y'),
+        ] {
+            assert!(
+                output.len() <= policy.max_output_bytes,
+                "{name} was unbounded"
+            );
+            assert!(
+                output.starts_with("[output truncated]\n"),
+                "{name}: {output:?}"
+            );
+            assert_eq!(output.as_bytes().last().copied(), Some(b'\n'));
+            assert!(
+                output.as_bytes().iter().any(|byte| *byte == tail_byte),
+                "{name} lost its retained tail"
+            );
+            assert!(std::str::from_utf8(output.as_bytes()).is_ok());
+        }
+    }
+
+    #[test]
+    fn structured_script_continuously_drains_large_stdout_and_stderr() {
+        let cwd = tempfile::tempdir().unwrap();
+        let projects_dir = tempfile::tempdir().unwrap();
+        let mut policy = unrestricted_policy();
+        policy.max_output_bytes = 16 * 1024;
+        let stdout_payload = "x".repeat(4096);
+        let stderr_payload = "y".repeat(4096);
+        #[cfg(windows)]
+        let (language, script) = (
+            ShellScriptLanguage::Powershell,
+            format!(
+                "$out = '{stdout_payload}'\n$err = '{stderr_payload}'\nfor ($i = 0; $i -lt 512; $i++) {{ [Console]::Out.Write($out); [Console]::Error.Write($err) }}\n"
+            ),
+        );
+        #[cfg(not(windows))]
+        let (language, script) = (
+            ShellScriptLanguage::Sh,
+            format!(
+                "out='{stdout_payload}'\nerr='{stderr_payload}'\ni=0\nwhile [ \"$i\" -lt 512 ]; do\n  printf '%s' \"$out\"\n  printf '%s' \"$err\" >&2\n  i=$((i + 1))\ndone\n"
+            ),
+        );
+        let result = run_script_with_profiles_in_sandbox_and_execution_state(
+            1,
+            &policy,
+            &ShellConfig::default(),
+            projects_dir.path(),
+            &PreparedShellProfileCache::default(),
+            Some(cwd.path().to_string_lossy().as_ref()),
+            &ShellScriptPayload {
+                language,
+                script,
+                args: Vec::new(),
+            },
+            None,
+            30,
+            None,
+            None,
+        );
+
+        assert_eq!(
+            result.execution_state,
+            ShellCommandExecutionState::Completed,
+            "{:?}",
+            result.result
+        );
+        assert_eq!(result.result.exit_code, Some(0));
+        for (name, output, tail_byte) in [
+            ("stdout", result.result.stdout.as_deref().unwrap(), b'x'),
+            ("stderr", result.result.stderr.as_deref().unwrap(), b'y'),
+        ] {
+            assert!(
+                output.len() <= policy.max_output_bytes,
+                "{name} was unbounded"
+            );
+            assert!(
+                output.starts_with("[output truncated]\n"),
+                "{name}: {output:?}"
+            );
+            assert!(
+                output.as_bytes().iter().any(|byte| *byte == tail_byte),
+                "{name} lost its retained tail"
+            );
+            assert!(std::str::from_utf8(output.as_bytes()).is_ok());
+        }
+    }
+
+    #[test]
+    fn structured_process_parent_exit_closes_descendant_held_pipes_via_tree_cleanup() {
+        let cwd = tempfile::tempdir().unwrap();
+        let marker = cwd.path().join("pipe-descendant-started");
+        let result = run_direct_process(
+            cwd.path(),
+            &process_argv_helper(),
+            &[
+                "spawn-pipe-descendant".to_string(),
+                marker.to_string_lossy().into_owned(),
+                "60000".to_string(),
+            ],
+            None,
+            10,
+        );
+
+        assert_eq!(
+            result.execution_state,
+            ShellCommandExecutionState::Completed,
+            "{:?}",
+            result.result
+        );
+        assert_eq!(result.result.exit_code, Some(0));
+        assert!(
+            result
+                .result
+                .stdout
+                .as_deref()
+                .unwrap_or_default()
+                .contains("DESCENDANT_PID="),
+            "the parent did not prove that a pipe-inheriting descendant was spawned"
+        );
+        // The descendant inherits the parent's stdout/stderr handles and sleeps for
+        // 60 seconds. Returning terminal here proves direct-child exit still drives
+        // whole-tree cleanup before the continuously draining readers wait for EOF.
+        assert!(result.result.duration_ms.unwrap_or_default() < 10_000);
     }
 
     #[test]
@@ -3544,7 +3800,7 @@ done
                 "10000".to_string(),
             ],
             None,
-            1,
+            5,
         );
         assert_eq!(result.execution_state, ShellCommandExecutionState::TimedOut);
         assert_eq!(result.result.exit_code, Some(-1));

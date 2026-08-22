@@ -121,6 +121,25 @@ fn active_oem_sample() -> (String, Vec<u8>) {
     panic!("active OEM code page has no representable non-ASCII test sample");
 }
 
+fn write_chatty(chunks: usize) {
+    use std::io::Write;
+
+    let stdout_payload = vec![b'x'; 8 * 1024];
+    let stderr_payload = vec![b'y'; 8 * 1024];
+    let stdout = std::io::stdout();
+    let stderr = std::io::stderr();
+    let mut stdout = stdout.lock();
+    let mut stderr = stderr.lock();
+    for _ in 0..chunks {
+        stdout.write_all(&stdout_payload).unwrap();
+        stdout.write_all(b"\n").unwrap();
+        stderr.write_all(&stderr_payload).unwrap();
+        stderr.write_all(b"\n").unwrap();
+    }
+    stdout.flush().unwrap();
+    stderr.flush().unwrap();
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     match args.next().as_deref() {
@@ -140,6 +159,27 @@ fn main() {
         }
         Some("sleep") => {
             let millis = args.next().unwrap().parse::<u64>().unwrap();
+            std::thread::sleep(Duration::from_millis(millis));
+        }
+        Some("chatty") => {
+            let chunks = args.next().unwrap().parse::<usize>().unwrap();
+            write_chatty(chunks);
+        }
+        Some("spawn-pipe-descendant") => {
+            let marker = args.next().unwrap();
+            let millis = args.next().unwrap().parse::<u64>().unwrap();
+            let child = std::process::Command::new(std::env::current_exe().unwrap())
+                .arg("pipe-descendant")
+                .arg(marker)
+                .arg(millis.to_string())
+                .spawn()
+                .unwrap();
+            println!("DESCENDANT_PID={}", child.id());
+        }
+        Some("pipe-descendant") => {
+            let marker = args.next().unwrap();
+            let millis = args.next().unwrap().parse::<u64>().unwrap();
+            std::fs::write(marker, std::process::id().to_string()).unwrap();
             std::thread::sleep(Duration::from_millis(millis));
         }
         Some("mark-sleep") => {
