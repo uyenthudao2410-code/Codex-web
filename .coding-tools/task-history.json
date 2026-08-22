@@ -1,1566 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "da555e9089624e438225d40dc438c954",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "",
-      "kind": "command",
-      "status": "failed",
-      "result_status": "failed",
-      "exit_code": null,
-      "duration_ms": null,
-      "finished_at": "2026-08-21T00:16:05.555Z"
-    },
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
-    "next_step": "",
-    "created_at": "2026-08-21T00:15:47.947Z",
-    "updated_at": "2026-08-21T00:16:05.555Z",
-    "events": [
-      {
-        "time": "2026-08-21T00:15:47.947Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-21T00:15:48.335Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A 60 -B 10 -e \"def main\" -e \"argparse\" -e \"__main__\" resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py resources/coding-tools-mcp/scripts",
-          "session_id": "0kJ2Amx2zj77OdZ2ya8jbiuX"
-        }
-      },
-      {
-        "time": "2026-08-21T00:15:48.600Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A 60 -B 10 -e \"def main\" -e \"argparse\" -e \"__main__\" resources/coding-tools-mcp/coding_tools_mcp/evaluation_replay.py resources/coding-tools-mcp/scripts",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:15:57.000Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A 25 -B 5 \"class OrchestrationLedger|def __init__\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
-          "session_id": "SQ3TwZaYBLxo8KOYRHF_1p0Z"
-        }
-      },
-      {
-        "time": "2026-08-21T00:15:57.264Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A 25 -B 5 \"class OrchestrationLedger|def __init__\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:05.555Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python -c \"from pathlib import Path; import json; from coding_tools_mcp.orchestration_ledger import OrchestrationLedger; ledger=OrchestrationLedger(Path(r'E:\\DEV\\Codex-web')); result=ledger.paired_policy_evaluation(baseline_policy='context_baseline', candidate_policies=('context_compiler_shadow',), limit=500, min_pairs=10, min_task_classes=3); print(json.dumps(result, sort_keys=True))\"",
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:05.555Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "exec_command",
-          "code": "PERMISSION_REQUIRED"
-        }
-      }
-    ],
-    "archived_at": "2026-08-21T00:16:15.322Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "4cefad2d893b4dbc8fcaf5263328452a",
-    "orchestration": {
-      "run_id": "b204662b3c8748bba2bfbe3f02de1ea6",
-      "wave_id": "2165d6ccafb94ef4b5ce05ee6984b18d",
-      "orchestration_state": "CHECKPOINTED",
-      "execution_mode": "mcp_only",
-      "route_requested": "deterministic",
-      "route_resolved": "deterministic",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "640ad37e3e571a0a56af376e9d3bda2b89bf0669",
-      "worktree_fp": "57f858926cd17c4b91af585daef9d87caf2e539294a3f976e3565aeaec435c81",
-      "contract_fp": ""
-    },
-    "objective": "S4/W5 paired-evaluation gate, proof-only and no source/docs mutation. Use the repository's existing compare_route_policies.py CLI against the real current .coding-tools/orchestration/ledger.sqlite3. Baseline policy is chatweb_mcp (current preparation flow); candidate policy is context_compiler_shadow (new compiler treatment). Require min_pairs=10 and min_task_classes=4 to match the maintained W5 representative strata. Do not create synthetic/benchmark/replay tasks and do not mutate the ledger to manufacture pairs. Also prove the evaluator's zero-pair and missing-total-cost fail-closed behavior with existing focused tests. If the real ledger lacks complete comparable representative pairs, the accepted stage decision must be KEEP_SHADOW / NO_PROMOTION and auto-injection remains unavailable. No S5.",
-    "status": "completed",
-    "steps": [
-      {
-        "id": "checks",
-        "text": "Run requested checks",
-        "status": "completed",
-        "updated_at": "2026-08-21T00:16:53.415Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "completed",
-        "updated_at": "2026-08-21T00:16:53.415Z"
-      }
-    ],
-    "current_step": "Completed - operator report required",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "4EZ8HwK_LM6yf5-e5HgEkEK_",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "passed",
-      "exit_code": 0,
-      "duration_ms": 794,
-      "finished_at": "2026-08-21T00:16:52.996Z"
-    },
-    "completion_report": {
-      "schema_version": 1,
-      "operator_visible_required": true,
-      "report_contract": [
-        "WHAT CHANGED",
-        "CURRENT STATE",
-        "SOURCE / RUN / WAVE ID",
-        "PROOF ACTUALLY RUN",
-        "ACCEPTED OR NOT",
-        "WHAT REMAINS",
-        "NEXT CRITICAL ACTION"
-      ],
-      "what_changed": {
-        "files": [],
-        "source": "no_durable_file_receipts",
-        "raw_source_or_command_output_included": false
-      },
-      "current_state": {
-        "orchestration_state": "CHECKPOINTED",
-        "run_status": "accepted",
-        "wave_status": "accepted",
-        "task_status": "completed",
-        "integrity": {
-          "ok": true,
-          "checked": 28,
-          "head_hash": "59c92edd2f339e4fda7505fdee040e04dd88cd1f5687ed01988eea133a72a402"
-        },
-        "reports": {
-          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b204662b3c8748bba2bfbe3f02de1ea6\\run-summary.md",
-          "wave_reports": [
-            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b204662b3c8748bba2bfbe3f02de1ea6\\wave-001.md"
-          ]
-        }
-      },
-      "source_run_wave": {
-        "run_id": "b204662b3c8748bba2bfbe3f02de1ea6",
-        "wave_id": "2165d6ccafb94ef4b5ce05ee6984b18d",
-        "base_head": "640ad37e3e571a0a56af376e9d3bda2b89bf0669",
-        "worktree_fp": "57f858926cd17c4b91af585daef9d87caf2e539294a3f976e3565aeaec435c81",
-        "contract_fp": ""
-      },
-      "proof_actually_run": {
-        "count": 3,
-        "all_recorded_proofs_passed": true,
-        "proofs": [
-          {
-            "proof_id": "afbba58874f54b138040b087edc841ff",
-            "stage_id": "check:4c19dfaa495126c1",
-            "status": "passed",
-            "duration_ms": 1103,
-            "exit_code": 0,
-            "cache_hit": false
-          },
-          {
-            "proof_id": "545d02d13ba74b10807032585e8fa363",
-            "stage_id": "check:3a31543d42c8c52d",
-            "status": "passed",
-            "duration_ms": 887,
-            "exit_code": 0,
-            "cache_hit": false
-          },
-          {
-            "proof_id": "acdd074415bb4b3395f298c583bd574d",
-            "stage_id": "check:c427efed6cc6a4a6",
-            "status": "passed",
-            "duration_ms": 1233,
-            "exit_code": 0,
-            "cache_hit": false
-          }
-        ]
-      },
-      "accepted_or_not": "ACCEPTED",
-      "blocker_or_failure": null,
-      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
-      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
-    },
-    "completion_report_id": "86e7d8d62fb81379e923d6d0a66f6a8c90079de6f6c4dc83832c32914ffe977b",
-    "completion_report_acknowledged_id": "86e7d8d62fb81379e923d6d0a66f6a8c90079de6f6c4dc83832c32914ffe977b",
-    "completion_report_acknowledged_at": "2026-08-21T00:18:20.612Z",
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
-    "created_at": "2026-08-21T00:16:15.425Z",
-    "updated_at": "2026-08-21T00:18:20.652Z",
-    "events": [
-      {
-        "time": "2026-08-21T00:16:15.425Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:15.764Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -S \"paired_policy_evaluation|routing_promotion_readiness\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp | rg -n \"scripts|def main|print\"",
-          "session_id": "FgDtv3hR8RKPdpPj_9MMiKOa"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:15.986Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -S \"paired_policy_evaluation|routing_promotion_readiness\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp | rg -n \"scripts|def main|print\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:22.013Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -A 80 -B 5 \"def main|ArgumentParser|add_argument\" resources/coding-tools-mcp/scripts/compare_route_policies.py",
-          "session_id": "on5OndoRZ3uUXL6UA_2KNaTK"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:22.220Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -A 80 -B 5 \"def main|ArgumentParser|add_argument\" resources/coding-tools-mcp/scripts/compare_route_policies.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:31.492Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"def test_.*paired.*policy|paired_policy_evaluation\\(\" resources/coding-tools-mcp/tests",
-          "session_id": "DKNIXTEn-Y4rZq8yQOUt0LFX"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:31.730Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"def test_.*paired.*policy|paired_policy_evaluation\\(\" resources/coding-tools-mcp/tests",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:45.993Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:46.846Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:46.850Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:47.447Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:47.447Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:48.052Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:48.213Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:48.896Z",
-        "event": "command_started",
-        "details": {
-          "command": "python scripts/compare_route_policies.py --workspace ..\\.. --baseline-policy chatweb_mcp --candidate-policy context_compiler_shadow --min-pairs 10 --min-task-classes 4 --limit 500",
-          "session_id": "mkzzGRhezpDq_u6g65kZyY8x"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:49.503Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python scripts/compare_route_policies.py --workspace ..\\.. --baseline-policy chatweb_mcp --candidate-policy context_compiler_shadow --min-pairs 10 --min-task-classes 4 --limit 500",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:50.814Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -m unittest discover -s tests -p test_orchestration_ledger.py -k paired_policy_evaluation_zero_pairs_is_indeterminate",
-          "session_id": "WaXK6Pvk1KrNCa20yJy-trvQ"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:51.000Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python -m unittest discover -s tests -p test_orchestration_ledger.py -k paired_policy_evaluation_zero_pairs_is_indeterminate",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:52.563Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -m unittest discover -s tests -p test_orchestration_ledger.py -k paired_policy_evaluation_is_fail_closed_without_total_controller_cost",
-          "session_id": "4EZ8HwK_LM6yf5-e5HgEkEK_"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:52.996Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python -m unittest discover -s tests -p test_orchestration_ledger.py -k paired_policy_evaluation_is_fail_closed_without_total_controller_cost",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:53.413Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:53.415Z",
-        "event": "continuous_workflow_completed",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:53.641Z",
-        "event": "awaiting_final_acceptance",
-        "details": {
-          "state": "ACCEPTING"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:53.646Z",
-        "event": "final_acceptance_required",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:53.714Z",
-        "event": "command_completion_report_required",
-        "details": {
-          "command_id": "",
-          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
-          "report_id": "576c42ebeb5f12e4918763f831dca6fefbc3c555e5536636d14153b034d05036"
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:53.886Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-21T00:16:54.650Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:17:59.162Z",
-        "event": "final_acceptance_recorded",
-        "details": {
-          "state": "CHECKPOINTED"
-        }
-      },
-      {
-        "time": "2026-08-21T00:17:59.162Z",
-        "event": "task_accepted",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:17:59.169Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:17:59.246Z",
-        "event": "command_completion_report_required",
-        "details": {
-          "command_id": "",
-          "accepted_or_not": "ACCEPTED",
-          "report_id": "86e7d8d62fb81379e923d6d0a66f6a8c90079de6f6c4dc83832c32914ffe977b"
-        }
-      },
-      {
-        "time": "2026-08-21T00:18:00.649Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:18:20.612Z",
-        "event": "operator_completion_report_acknowledged",
-        "details": {
-          "report_id": "86e7d8d62fb81379e923d6d0a66f6a8c90079de6f6c4dc83832c32914ffe977b"
-        }
-      },
-      {
-        "time": "2026-08-21T00:18:20.652Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      }
-    ],
-    "archived_at": "2026-08-21T00:18:25.110Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "339f982f5603430d82421ef8f7d0b76d",
-    "orchestration": {},
-    "objective": "Complete a workspace task",
-    "status": "completed",
-    "steps": [],
-    "current_step": "Completed",
-    "current_command": null,
-    "last_command_result": null,
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [
-      {
-        "path": "docs/PRODUCTION_CLOSURE_ROLLOUT.md",
-        "operation": "create",
-        "updated_at": "2026-08-21T00:20:09.367Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Review or use the generated document.",
-    "created_at": "2026-08-21T00:18:25.210Z",
-    "updated_at": "2026-08-21T00:21:37.043Z",
-    "events": [
-      {
-        "time": "2026-08-21T00:18:25.210Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Complete a workspace task"
-        }
-      },
-      {
-        "time": "2026-08-21T00:18:25.219Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-21T00:20:09.367Z",
-        "event": "files_modified",
-        "details": {
-          "count": 1
-        }
-      }
-    ],
-    "archived_at": "2026-08-21T00:21:54.904Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "4e1eced89fa741648ef7dc4e65b8b577",
-    "orchestration": {
-      "run_id": "f2bda257239346f089ccf073f38d4790",
-      "wave_id": "485fabde2223430bb42408adcc48b406",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "640ad37e3e571a0a56af376e9d3bda2b89bf0669",
-      "worktree_fp": "81e0501ecbee152ffaeba9595f6cb5fe8d70d4b16c270bb6c3f3a999d611e753",
-      "contract_fp": "fd94c668e4c15925fb0e94c9cc5c359b4848ac1e675534c0a83f2484bf64efb7"
-    },
-    "objective": "Complete a workspace task",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "Nx-SosfkKIf8EkItJFh9En00",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "failed",
-      "exit_code": 1,
-      "duration_ms": 666,
-      "finished_at": "2026-08-21T00:26:46.096Z"
-    },
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [
-      {
-        "command": "python -m pytest -q tests/test_orchestration_control.py",
-        "status": "passed",
-        "exit_code": 0,
-        "duration_ms": 3026,
-        "summary": "exit 0 | 3.0s | 3 lines | tail: '5 passed in 1.59s'",
-        "finished_at": "2026-08-21T00:24:11.285Z",
-        "artifact_ref": {
-          "schema_version": 1,
-          "kind": "command_output",
-          "scope": "runtime_retained",
-          "source": "command",
-          "locator": {
-            "command_id": "STwKAb0IpVlpC6q7ZIMspVxm"
-          },
-          "durability": "process_runtime",
-          "restart_safe": false,
-          "content_addressed": false,
-          "retrieval": {
-            "tool": "command_control",
-            "action": "read"
-          },
-          "size_bytes": 100,
-          "command_id": "STwKAb0IpVlpC6q7ZIMspVxm",
-          "streams": {
-            "stdout": {
-              "output_ref": "command:STwKAb0IpVlpC6q7ZIMspVxm:stdout",
-              "total_stream_bytes": 100,
-              "total_retained_bytes": 100,
-              "head_retained_bytes": 100,
-              "tail_retained_bytes": 0,
-              "evicted_gap_bytes": 0,
-              "evicted_bytes_total": 0
-            },
-            "stderr": {
-              "output_ref": "command:STwKAb0IpVlpC6q7ZIMspVxm:stderr",
-              "total_stream_bytes": 0,
-              "total_retained_bytes": 0,
-              "head_retained_bytes": 0,
-              "tail_retained_bytes": 0,
-              "evicted_gap_bytes": 0,
-              "evicted_bytes_total": 0
-            }
-          }
-        }
-      }
-    ],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Generate the result from the inspected content, then save it once.",
-    "created_at": "2026-08-21T00:21:55.005Z",
-    "updated_at": "2026-08-21T00:26:46.096Z",
-    "events": [
-      {
-        "time": "2026-08-21T00:21:55.005Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Complete a workspace task"
-        }
-      },
-      {
-        "time": "2026-08-21T00:21:55.005Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-21T00:22:13.813Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-21T00:22:14.489Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-21T00:22:14.489Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-21T00:22:28.086Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"acquire_write_lease|assert_write_allowed|write_lease|WRITE_LEASE|_orchestration_workspace_identity|worktree_fp|source_fingerprint|foreign_dirty|dirty_source|protected_paths|bounded_candidate\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
-          "session_id": "u63lwRkWr-csCg9KJnpjWsMm"
-        }
-      },
-      {
-        "time": "2026-08-21T00:22:28.570Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"acquire_write_lease|assert_write_allowed|write_lease|WRITE_LEASE|_orchestration_workspace_identity|worktree_fp|source_fingerprint|foreign_dirty|dirty_source|protected_paths|bounded_candidate\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:22:39.594Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 45 \"def _orchestration_workspace_identity|identity_before_write|def test_recovery_reconstructs_active_write_lease|def test_global_write_fence|def test_write_lease_expiry\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_orchestration_control.py",
-          "session_id": "5E6Atp2Dxn_XqUqQQIB1wwEj"
-        }
-      },
-      {
-        "time": "2026-08-21T00:22:40.087Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 45 \"def _orchestration_workspace_identity|identity_before_write|def test_recovery_reconstructs_active_write_lease|def test_global_write_fence|def test_write_lease_expiry\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_orchestration_control.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:23:53.260Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 55 \"assert_write_allowed\\(|def apply_changes_and_verify|candidate_result|bounded_candidate|_run_candidate|candidate\" resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-          "session_id": "KZxkBSjJV0kFDDWqZxUF2uq7"
-        }
-      },
-      {
-        "time": "2026-08-21T00:23:53.423Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 55 \"assert_write_allowed\\(|def apply_changes_and_verify|candidate_result|bounded_candidate|_run_candidate|candidate\" resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:00.661Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 28 \"class WriteLease|class RunContext|def acquire_write_lease|def assert_write_allowed|def renew_write_lease|def _revoke_write_lease_locked|write_lease_acquired\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
-          "session_id": "uqI0LYWnwq8iuE76lZRDBwKM"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:00.833Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 28 \"class WriteLease|class RunContext|def acquire_write_lease|def assert_write_allowed|def renew_write_lease|def _revoke_write_lease_locked|write_lease_acquired\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:08.506Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -m pytest -q tests/test_orchestration_control.py",
-          "session_id": "STwKAb0IpVlpC6q7ZIMspVxm"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:11.285Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python -m pytest -q tests/test_orchestration_control.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:21.551Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"affected_files|parse.*patch|patch.*path|allowed_paths|protected_paths|normalize.*path|CANDIDATE_SCOPE_VIOLATION\" resources/coding-tools-mcp/coding_tools_mcp | rg -v \"artifact|semantic|context_compiler\"",
-          "session_id": "NtYaxbDZizX-d4t-mFHn6rVR"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:21.965Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"affected_files|parse.*patch|patch.*path|allowed_paths|protected_paths|normalize.*path|CANDIDATE_SCOPE_VIOLATION\" resources/coding-tools-mcp/coding_tools_mcp | rg -v \"artifact|semantic|context_compiler\"",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:35.944Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 45 cross_patch_path_dependency resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-          "session_id": "-5nx71TNyNwxAlrDGqm0QGV0"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:36.382Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 45 cross_patch_path_dependency resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:48.916Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 25 _preflight_patch_sequence resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-          "session_id": "_Cp5cPrrV0P4vW7avrFmt9pB"
-        }
-      },
-      {
-        "time": "2026-08-21T00:24:49.083Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 25 _preflight_patch_sequence resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:25:01.016Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 24 proof_identity resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-          "session_id": "yewf1y37d0CsfP-CyfzAl3tf"
-        }
-      },
-      {
-        "time": "2026-08-21T00:25:01.216Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 24 proof_identity resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:25:29.970Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 35 \"smart-v3|tool_mode|apply_changes_and_verify|agent_workflow|file_batch|apply_patch\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
-          "session_id": "js9mlyLB_ORIklHM6WT06WT0"
-        }
-      },
-      {
-        "time": "2026-08-21T00:25:30.452Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 35 \"smart-v3|tool_mode|apply_changes_and_verify|agent_workflow|file_batch|apply_patch\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:25:45.231Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 30 exposed_tool_names resources/coding-tools-mcp/coding_tools_mcp/server.py",
-          "session_id": "7LQJ0KsCyOmp1I7AeAHSarQc"
-        }
-      },
-      {
-        "time": "2026-08-21T00:25:45.401Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 30 exposed_tool_names resources/coding-tools-mcp/coding_tools_mcp/server.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:25:52.987Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 45 \"TOOL_MODE_ALLOWLISTS|SMART_TOOL_PROFILE|smart\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
-          "session_id": "HLolJ1b208EFqaqFre6cDihg"
-        }
-      },
-      {
-        "time": "2026-08-21T00:25:53.166Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 45 \"TOOL_MODE_ALLOWLISTS|SMART_TOOL_PROFILE|smart\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:26.951Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 40 orchestration_workspace_identity resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
-          "session_id": "iDahL7797HabapcM-3GVA3DN"
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:27.147Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 40 orchestration_workspace_identity resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:35.313Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 30 \"candidate_only|checkout_write|CAPABILITY_PROFILES|candidate_patch_proposal\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
-          "session_id": "oKbdSyEAEa2ecp5s113RPxrP"
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:35.772Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 30 \"candidate_only|checkout_write|CAPABILITY_PROFILES|candidate_patch_proposal\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:45.662Z",
-        "event": "command_started",
-        "details": {
-          "command": "sed -n '1,120p' resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py && sed -n '1,40p' resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py && sed -n '1,35p' resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-          "session_id": "Nx-SosfkKIf8EkItJFh9En00"
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:46.096Z",
-        "event": "command_finished",
-        "details": {
-          "command": "sed -n '1,120p' resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py && sed -n '1,40p' resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py && sed -n '1,35p' resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-21T00:26:54.365Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "c531c7b32c8a42b58a5c648003b53ed2",
-    "orchestration": {
-      "run_id": "f2bda257239346f089ccf073f38d4790",
-      "wave_id": "485fabde2223430bb42408adcc48b406",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "640ad37e3e571a0a56af376e9d3bda2b89bf0669",
-      "worktree_fp": "81e0501ecbee152ffaeba9595f6cb5fe8d70d4b16c270bb6c3f3a999d611e753",
-      "contract_fp": "fd94c668e4c15925fb0e94c9cc5c359b4848ac1e675534c0a83f2484bf64efb7"
-    },
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "vclPgmBt7oBDvquAyIrtzGx2",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "failed",
-      "exit_code": 1,
-      "duration_ms": 793,
-      "finished_at": "2026-08-21T00:26:55.446Z"
-    },
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-21T00:26:54.480Z",
-    "updated_at": "2026-08-21T00:26:55.446Z",
-    "events": [
-      {
-        "time": "2026-08-21T00:26:54.480Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:54.980Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:55.271Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"^import time$|^from .* import .*time\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-          "session_id": "vclPgmBt7oBDvquAyIrtzGx2"
-        }
-      },
-      {
-        "time": "2026-08-21T00:26:55.446Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"^import time$|^from .* import .*time\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-21T00:27:03.981Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
-    "task_id": "645b14aeaafb40879b8ac7a383d78f10",
-    "orchestration": {
-      "run_id": "f2bda257239346f089ccf073f38d4790",
-      "wave_id": "779af9e5182a4fafbec31ac4dfee7521",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "640ad37e3e571a0a56af376e9d3bda2b89bf0669",
-      "worktree_fp": "3c33485049b69cb4db615525443201a3aaf4f412a00e6dcbad1b5a3791fac893",
-      "contract_fp": "fd94c668e4c15925fb0e94c9cc5c359b4848ac1e675534c0a83f2484bf64efb7"
-    },
-    "objective": "S5/W6 Single-Checkout Mutation Coordinator: harden the existing EOCL/write-lease authority with source/session ownership metadata, exact pre-write source fingerprint and foreign-dirty fences, protected/requested path admission, reconnect-safe recovery metadata, and explicit proof source fingerprint. Preserve one canonical checkout, existing SQLite write fence, candidate proposal-only semantics, smart-v3 8-tool public surface, and fail-closed REPLAN behavior; do not add a coordinator/worktree/promotion subsystem.",
-    "status": "failed",
-    "steps": [
-      {
-        "id": "apply",
-        "text": "Apply workspace changes",
-        "status": "completed",
-        "updated_at": "2026-08-21T00:30:59.901Z"
-      },
-      {
-        "id": "verify",
-        "text": "Run tests and build verification",
-        "status": "failed",
-        "updated_at": "2026-08-21T00:30:59.901Z"
-      },
-      {
-        "id": "finalize",
-        "text": "Finalize verified result",
-        "status": "pending",
-        "updated_at": "2026-08-21T00:30:59.901Z"
-      }
-    ],
-    "current_step": "Command failed",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "3yIHfapqVyhhN6RZAnierV5C",
-      "kind": "test",
-      "status": "exited",
-      "result_status": "failed",
-      "exit_code": 1,
-      "duration_ms": 6521,
-      "finished_at": "2026-08-21T00:31:58.454Z"
-    },
-    "completion_report": {
-      "schema_version": 1,
-      "operator_visible_required": true,
-      "report_contract": [
-        "WHAT CHANGED",
-        "CURRENT STATE",
-        "SOURCE / RUN / WAVE ID",
-        "PROOF ACTUALLY RUN",
-        "ACCEPTED OR NOT",
-        "WHAT REMAINS",
-        "NEXT CRITICAL ACTION"
-      ],
-      "what_changed": {
-        "files": [],
-        "source": "no_durable_file_receipts",
-        "raw_source_or_command_output_included": false
-      },
-      "current_state": {
-        "orchestration_state": "REPLAN",
-        "run_status": "active",
-        "wave_status": "active",
-        "task_status": "waiting",
-        "integrity": {
-          "ok": true,
-          "checked": 77,
-          "head_hash": "0723c6f4a91adcfde45f7aebd244b2c6d6a63d1484f199ace568985ed3a1ea92"
-        },
-        "reports": {
-          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f2bda257239346f089ccf073f38d4790\\run-summary.md",
-          "wave_reports": [
-            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f2bda257239346f089ccf073f38d4790\\wave-001.md"
-          ]
-        }
-      },
-      "source_run_wave": {
-        "run_id": "f2bda257239346f089ccf073f38d4790",
-        "wave_id": "485fabde2223430bb42408adcc48b406",
-        "base_head": "640ad37e3e571a0a56af376e9d3bda2b89bf0669",
-        "worktree_fp": "81e0501ecbee152ffaeba9595f6cb5fe8d70d4b16c270bb6c3f3a999d611e753",
-        "contract_fp": "fd94c668e4c15925fb0e94c9cc5c359b4848ac1e675534c0a83f2484bf64efb7"
-      },
-      "proof_actually_run": {
-        "count": 1,
-        "all_recorded_proofs_passed": false,
-        "proofs": [
-          {
-            "proof_id": "2b4df408c0ea4b539a6098fccfa15c99",
-            "stage_id": "verify:tests",
-            "status": "failed",
-            "duration_ms": 6702,
-            "exit_code": null,
-            "cache_hit": false
-          }
-        ]
-      },
-      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
-      "blocker_or_failure": {
-        "failure_class": "BUILD_VERIFICATION_FAILED",
-        "reason": null,
-        "event_seq": 24911
-      },
-      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
-      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
-    },
-    "completion_report_id": "05a8fa9d3ed5d8ed8da0bdda24fb089494c354720470d6425a514208893bdf33",
-    "completion_report_acknowledged_id": "05a8fa9d3ed5d8ed8da0bdda24fb089494c354720470d6425a514208893bdf33",
-    "completion_report_acknowledged_at": "2026-08-21T00:31:11.105Z",
-    "test_results": [
-      {
-        "command": "python -m pytest -q tests/test_orchestration_control.py tests/test_efficiency_runtime.py",
-        "status": "failed",
-        "exit_code": 1,
-        "duration_ms": 6701,
-        "summary": "exit 1 | 6.3s | 42 lines | tail: '1 failed, 23 passed in 5.11s'"
-      },
-      {
-        "command": "python -m pytest tests/test_orchestration_control.py tests/test_efficiency_runtime.py -x -vv",
-        "status": "failed",
-        "exit_code": 1,
-        "duration_ms": 6521,
-        "summary": "exit 1 | 6.5s | 77 lines | tail: '======================== 1 failed, 23 passed in 5.50s ========================='",
-        "finished_at": "2026-08-21T00:31:58.454Z",
-        "artifact_ref": {
-          "schema_version": 1,
-          "kind": "command_output",
-          "scope": "runtime_retained",
-          "source": "command",
-          "locator": {
-            "command_id": "3yIHfapqVyhhN6RZAnierV5C"
-          },
-          "durability": "process_runtime",
-          "restart_safe": false,
-          "content_addressed": false,
-          "retrieval": {
-            "tool": "command_control",
-            "action": "read"
-          },
-          "size_bytes": 6979,
-          "command_id": "3yIHfapqVyhhN6RZAnierV5C",
-          "streams": {
-            "stdout": {
-              "output_ref": "command:3yIHfapqVyhhN6RZAnierV5C:stdout",
-              "total_stream_bytes": 6979,
-              "total_retained_bytes": 6979,
-              "head_retained_bytes": 6979,
-              "tail_retained_bytes": 0,
-              "evicted_gap_bytes": 0,
-              "evicted_bytes_total": 0
-            },
-            "stderr": {
-              "output_ref": "command:3yIHfapqVyhhN6RZAnierV5C:stderr",
-              "total_stream_bytes": 0,
-              "total_retained_bytes": 0,
-              "head_retained_bytes": 0,
-              "tail_retained_bytes": 0,
-              "evicted_gap_bytes": 0,
-              "evicted_bytes_total": 0
-            }
-          }
-        }
-      }
-    ],
-    "build_results": [],
-    "last_build_report": {
-      "project": {
-        "type": "electron",
-        "name": "web-mcp-assistant",
-        "version": "0.3.4",
-        "package_manager": "npm",
-        "test_command": "npm run test",
-        "build_command": "npm run dist",
-        "artifact_paths": [
-          "dist",
-          "build"
-        ]
-      },
-      "commands": {
-        "test": "python -m pytest -q tests/test_orchestration_control.py tests/test_efficiency_runtime.py",
-        "build": "npm run dist"
-      },
-      "test_result": {
-        "command": "python -m pytest -q tests/test_orchestration_control.py tests/test_efficiency_runtime.py",
-        "status": "failed",
-        "exit_code": 1,
-        "duration_ms": 6701,
-        "summary": "exit 1 | 6.3s | 42 lines | tail: '1 failed, 23 passed in 5.11s'"
-      },
-      "build_result": null,
-      "artifacts": [],
-      "hash_algorithm": "sha256",
-      "overall_status": "failed",
-      "failure": "Tests failed.",
-      "report_generated_at": "2026-08-21T00:30:59.522Z"
-    },
-    "modified_files": [
-      {
-        "path": "resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
-        "operation": "update",
-        "updated_at": "2026-08-21T00:31:00.614Z"
-      },
-      {
-        "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
-        "operation": "update",
-        "updated_at": "2026-08-21T00:31:00.614Z"
-      },
-      {
-        "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-        "operation": "update",
-        "updated_at": "2026-08-21T00:31:00.614Z"
-      },
-      {
-        "path": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-        "operation": "update",
-        "updated_at": "2026-08-21T00:31:00.614Z"
-      },
-      {
-        "path": "resources/coding-tools-mcp/tests/test_orchestration_control.py",
-        "operation": "update",
-        "updated_at": "2026-08-21T00:31:00.614Z"
-      },
-      {
-        "path": "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
-        "operation": "update",
-        "updated_at": "2026-08-21T00:31:00.614Z"
-      }
-    ],
-    "failure": null,
-    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
-    "created_at": "2026-08-21T00:27:04.096Z",
-    "updated_at": "2026-08-21T00:31:58.454Z",
-    "events": [
-      {
-        "time": "2026-08-21T00:27:04.096Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-21T00:27:04.929Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n \"from __future__|^import |^from \" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-          "session_id": "i2aFue-C2Rc45om7nuGd3Pqn"
-        }
-      },
-      {
-        "time": "2026-08-21T00:27:04.935Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:27:05.101Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n \"from __future__|^import |^from \" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:27:37.851Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 12 \"WRITE_FENCE_SCOPE|WRITE_LEASE_TTL_SECONDS\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
-          "session_id": "8ot8RcPThG98EN5I7TyUA5Os"
-        }
-      },
-      {
-        "time": "2026-08-21T00:27:38.301Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 12 \"WRITE_FENCE_SCOPE|WRITE_LEASE_TTL_SECONDS\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:27:45.573Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 18 \"def test_\" resources/coding-tools-mcp/tests/test_orchestration_control.py",
-          "session_id": "RBRQZL1GrduvuMAGQicGeGEA"
-        }
-      },
-      {
-        "time": "2026-08-21T00:27:45.978Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 18 \"def test_\" resources/coding-tools-mcp/tests/test_orchestration_control.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:29:58.128Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-21T00:29:58.251Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "agent_workflow",
-          "code": "SOLUTION_SHADOW_REQUIRED"
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:49.973Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:50.622Z",
-        "event": "orchestration_routed",
-        "details": {
-          "state": "ROUTED"
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:51.322Z",
-        "event": "mcp_write_lease_active",
-        "details": {
-          "state": "EXECUTING"
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:51.337Z",
-        "event": "continuous_workflow_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:52.410Z",
-        "event": "orchestration_proving",
-        "details": {
-          "state": "PROVING"
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:52.587Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:53.623Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -m pytest -q tests/test_orchestration_control.py tests/test_efficiency_runtime.py",
-          "session_id": "ayQlJE9VFjAgxd06J04tkBi7"
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:59.522Z",
-        "event": "build_verification_finished",
-        "details": {
-          "status": "failed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:30:59.901Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:00.442Z",
-        "event": "orchestration_failure_projected",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:00.447Z",
-        "event": "task_updated",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:00.449Z",
-        "event": "execution_failed",
-        "details": {
-          "state": "REPLAN"
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:00.494Z",
-        "event": "command_completion_report_required",
-        "details": {
-          "command_id": "",
-          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
-          "report_id": "05a8fa9d3ed5d8ed8da0bdda24fb089494c354720470d6425a514208893bdf33"
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:00.614Z",
-        "event": "files_modified",
-        "details": {
-          "count": 6
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:00.774Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:11.105Z",
-        "event": "operator_completion_report_acknowledged",
-        "details": {
-          "report_id": "05a8fa9d3ed5d8ed8da0bdda24fb089494c354720470d6425a514208893bdf33"
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:12.638Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "next_step",
-            "orchestration",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:18.314Z",
-        "event": "tool_failed",
-        "details": {
-          "tool": "command_control",
-          "code": "INVALID_ARGUMENT"
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:43.354Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:43.960Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:43.964Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:52.172Z",
-        "event": "command_started",
-        "details": {
-          "command": "python -m pytest tests/test_orchestration_control.py tests/test_efficiency_runtime.py -x -vv",
-          "session_id": "3yIHfapqVyhhN6RZAnierV5C"
-        }
-      },
-      {
-        "time": "2026-08-21T00:31:58.454Z",
-        "event": "command_finished",
-        "details": {
-          "command": "python -m pytest tests/test_orchestration_control.py tests/test_efficiency_runtime.py -x -vv",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-21T00:32:29.824Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "2507b149ab1147f0b8a67c130bd941b0",
     "orchestration": {
       "run_id": "f2bda257239346f089ccf073f38d4790",
@@ -167066,6 +165506,522 @@
       }
     ],
     "archived_at": "2026-08-22T07:53:12.472Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "6babbb9c71644c6eac38ba06df218cb4",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "gB3I9DdiWSqbRweJeMxjPC1G",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 4,
+      "duration_ms": 9403,
+      "finished_at": "2026-08-22T08:00:40.124Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-22T07:53:12.637Z",
+    "updated_at": "2026-08-22T08:00:40.124Z",
+    "events": [
+      {
+        "time": "2026-08-22T07:53:12.637Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-22T07:53:12.966Z",
+        "event": "command_started",
+        "details": {
+          "command": "git merge-base --is-ancestor HEAD origin/main && git merge-base --is-ancestor origin/main HEAD && git add -A -- .coding-tools && git reset -q -- .coding-tools\\orchestration\\ledger.sqlite3-shm .coding-tools\\orchestration\\ledger.sqlite3-wal && echo ===STAGED=== && git diff --cached --name-only && echo ===DELIVERY_GUARD=== && npm run check:coding-tools-delivery && echo ===WHITESPACE=== && git diff --cached --check && git -c user.name=\"uyenthudao2410-code\" -c user.email=\"uyenthu.dao2410@gmail.com\" c",
+          "session_id": "WiCCEQ562nZ_I9bO4V7OuHib"
+        }
+      },
+      {
+        "time": "2026-08-22T07:53:27.730Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git merge-base --is-ancestor HEAD origin/main && git merge-base --is-ancestor origin/main HEAD && git add -A -- .coding-tools && git reset -q -- .coding-tools\\orchestration\\ledger.sqlite3-shm .coding-tools\\orchestration\\ledger.sqlite3-wal && echo ===STAGED=== && git diff --cached --name-only && echo ===DELIVERY_GUARD=== && npm run check:coding-tools-delivery && echo ===WHITESPACE=== && git diff --cached --check && git -c user.name=\"uyenthudao2410-code\" -c user.email=\"uyenthu.dao2410@gmail.com\" c",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:00:30.727Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run check:p5-readiness && npm run report:p5-baseline",
+          "session_id": "gB3I9DdiWSqbRweJeMxjPC1G"
+        }
+      },
+      {
+        "time": "2026-08-22T08:00:40.124Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run check:p5-readiness && npm run report:p5-baseline",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-22T08:00:48.103Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "06f6fc971d7742078a3b7f59535b45aa",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-22T08:02:58.673Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-22T08:00:48.289Z",
+    "updated_at": "2026-08-22T08:02:58.673Z",
+    "events": [
+      {
+        "time": "2026-08-22T08:00:48.289Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-22T08:00:48.557Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"p5-lean-causal-fix-p5-a0-v1|P5-A0|P5-A1|prospective_rework_experiment_v2|explicit_enrollment_only|assignment_before_arm_action_or_write_required\" docs resources/coding-tools-mcp scripts tests",
+          "session_id": "Jk2Uu3Sd_kvmd1IMIoX10r4M"
+        }
+      },
+      {
+        "time": "2026-08-22T08:00:48.895Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"p5-lean-causal-fix-p5-a0-v1|P5-A0|P5-A1|prospective_rework_experiment_v2|explicit_enrollment_only|assignment_before_arm_action_or_write_required\" docs resources/coding-tools-mcp scripts tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:00:58.393Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run report:p5-baseline & rg -n \"p5.*analy|analy.*p5|casebook|report_p5|p5_\" resources/coding-tools-mcp/scripts package.json",
+          "session_id": "wuR2obV2R3w1j2VGsm-WyE2G"
+        }
+      },
+      {
+        "time": "2026-08-22T08:01:34.777Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-22T08:02:00.458Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run report:p5-baseline",
+          "session_id": "h6UHF9cKEuFtlNLf9QW6QCD3"
+        }
+      },
+      {
+        "time": "2026-08-22T08:02:42.084Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"def main|p5_analy|analyze|assignment|enrollment|outcome\" resources/coding-tools-mcp/scripts/report_p5_baseline.py resources/coding-tools-mcp/scripts",
+          "session_id": "kxrSSPKOkjzVhT6y3uG2uzZt"
+        }
+      },
+      {
+        "time": "2026-08-22T08:02:42.382Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def main|p5_analy|analyze|assignment|enrollment|outcome\" resources/coding-tools-mcp/scripts/report_p5_baseline.py resources/coding-tools-mcp/scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:02:53.366Z",
+        "event": "command_started",
+        "details": {
+          "command": "type resources\\coding-tools-mcp\\scripts\\report_p5_baseline.py",
+          "session_id": "VB7M-zuXD1fvY1vB9bykt7ie"
+        }
+      },
+      {
+        "time": "2026-08-22T08:02:53.581Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type resources\\coding-tools-mcp\\scripts\\report_p5_baseline.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:02:58.673Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"def _p5_control|request.get\\(\\\"action\\\"|p5_record_enrollment|p5_assign|p5_analy\" resources/coding-tools-mcp/coding_tools_mcp/p5_control.py resources/coding-tools-mcp/coding_tools_mcp/p5_experiment_store.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:02:58.673Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-22T08:03:08.840Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "91873339dc1e430a9d3ae2b3af56125e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "2Rz4Z9YHYY3VvoL9N4Q1jkIp",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 400,
+      "finished_at": "2026-08-22T08:03:09.656Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-22T08:03:09.009Z",
+    "updated_at": "2026-08-22T08:03:09.656Z",
+    "events": [
+      {
+        "time": "2026-08-22T08:03:09.009Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:09.406Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n '\"p5\"' resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "2Rz4Z9YHYY3VvoL9N4Q1jkIp"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:09.656Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n '\"p5\"' resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-22T08:03:14.322Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "cbc740d50dd14a39990239171461a03b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "-UdGw6Umqb6a0cyYo2WgyMrY",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 207,
+      "finished_at": "2026-08-22T08:03:25.226Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-22T08:03:14.499Z",
+    "updated_at": "2026-08-22T08:03:25.226Z",
+    "events": [
+      {
+        "time": "2026-08-22T08:03:14.499Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:14.778Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"p5_experiment\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/p5_control.py",
+          "session_id": "M-qRMBaX81nBZP4ZpfyzrffM"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:14.998Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"p5_experiment\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/p5_control.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:20.248Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 \"p5_experiment\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "mDHn-t2ByhFZUcWsXVevinV6"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:20.472Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"p5_experiment\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:25.001Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 '\"action\"' resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "-UdGw6Umqb6a0cyYo2WgyMrY"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:25.226Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 '\"action\"' resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-22T08:03:31.298Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "cb6bf894809d40429b5d7f917c1b75d7",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-22T08:04:43.507Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-22T08:03:31.460Z",
+    "updated_at": "2026-08-22T08:04:43.507Z",
+    "events": [
+      {
+        "time": "2026-08-22T08:03:31.460Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:31.722Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /n /c:\"restart_runtime\" resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py",
+          "session_id": "S3fucE8KSdprGmKroa15PtId"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:31.939Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /n /c:\"restart_runtime\" resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:43.791Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"current_active_run|active_run_missing_context|p5_open_epoch|p5_epoch_opened|create_run\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/p5_experiment_store.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/tests/test_p5_experiment.py",
+          "session_id": "atzCfD-Uzsfdsw2h6e0kLRF8"
+        }
+      },
+      {
+        "time": "2026-08-22T08:03:44.018Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"current_active_run|active_run_missing_context|p5_open_epoch|p5_epoch_opened|create_run\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/p5_experiment_store.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/tests/test_p5_experiment.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:04:30.874Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"current_active_run\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests && rg -n -C 24 \"restart_runtime|active_run_missing_context|runtime_activation_preflight|ACTIVATION\" resources/coding-tools-mcp/tests",
+          "session_id": "TL3NUdX9kP7EWX8AddAPSbOl"
+        }
+      },
+      {
+        "time": "2026-08-22T08:04:31.156Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"current_active_run\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests && rg -n -C 24 \"restart_runtime|active_run_missing_context|runtime_activation_preflight|ACTIVATION\" resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:04:43.507Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"def test_.*activation|activation_preflight\\(\" resources/coding-tools-mcp/tests/test_activation_preflight.py && rg -n -C 20 \"def current_active_run\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-22T08:04:43.507Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-22T08:04:48.292Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "71bcca7e19c2414e9edc2cfaf04ef014",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "sjZa3D1toZjLYZUQeuJvcTbQ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 463,
+      "finished_at": "2026-08-22T08:04:49.230Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-22T08:04:48.470Z",
+    "updated_at": "2026-08-22T08:04:49.230Z",
+    "events": [
+      {
+        "time": "2026-08-22T08:04:48.470Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-22T08:04:48.937Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"activation_preflight(\" resources/coding-tools-mcp/tests/test_activation_preflight.py",
+          "session_id": "sjZa3D1toZjLYZUQeuJvcTbQ"
+        }
+      },
+      {
+        "time": "2026-08-22T08:04:49.230Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"activation_preflight(\" resources/coding-tools-mcp/tests/test_activation_preflight.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-22T08:04:54.903Z",
     "archive_reason": "finished"
   }
 ]
