@@ -8221,8 +8221,10 @@ fn register_project_rejects_dangerous_subpaths_without_explicit_root() {
 
 #[test]
 fn load_config_defaults_empty_allowed_roots_to_home() {
-    let _guard = agent_init::TEST_ENV_LOCK.lock().unwrap();
-    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let _guard = agent_init::TEST_ENV_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let home = agent_init::home_allowed_root();
     if let Some(home) = home {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("agent.toml");
@@ -8235,7 +8237,7 @@ fn load_config_defaults_empty_allowed_roots_to_home() {
         assert_eq!(
             cfg.policy.allowed_roots,
             vec![home],
-            "empty allowed_roots must default to HOME"
+            "empty allowed_roots must default to the platform user home"
         );
     }
 }
@@ -8294,7 +8296,9 @@ fn default_policy_denies_paths_outside_allowed_roots() {
 
 #[test]
 fn load_config_explicit_allowed_roots_override_home_default() {
-    let _guard = agent_init::TEST_ENV_LOCK.lock().unwrap();
+    let _guard = agent_init::TEST_ENV_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let tmp = tempfile::tempdir().unwrap();
     let path = tmp.path().join("agent.toml");
     std::fs::write(
@@ -8312,7 +8316,9 @@ fn load_config_explicit_allowed_roots_override_home_default() {
 
 #[test]
 fn load_config_empty_roots_without_home_and_no_cwd_anywhere_errors() {
-    let _guard = agent_init::TEST_ENV_LOCK.lock().unwrap();
+    let _guard = agent_init::TEST_ENV_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     // Windows derives the allowed-root default from USERPROFILE, so both
     // home sources must be absent to exercise the fail-closed branch.
     let _env = EnvGuard::new()
