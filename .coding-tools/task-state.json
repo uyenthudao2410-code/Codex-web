@@ -1,21 +1,13 @@
 {
   "version": 2,
-  "task_id": "967a96139c55434caf95ae58b80f7297",
+  "task_id": "b8f89ad9d0074bc3a6956cc41e543728",
   "orchestration": {},
-  "objective": "Run a workspace command",
-  "status": "waiting",
+  "objective": "Create one consolidated 2026-08-22 research/implementation master plan that supersedes stale future-work status in the three 2026-08-21 truth/upstream strategy documents while preserving them as historical records. The new plan must incorporate current T0-T3-C1 closure, current P4/P5 gates, and a selective upstream adoption roadmap for WebCodex #90/#112/#113/#116/#117. Documentation-only; no source code, restart, package/release, commit, or push.",
+  "status": "completed",
   "steps": [],
-  "current_step": "Waiting for model",
+  "current_step": "Consolidated next implementation master plan created",
   "current_command": null,
-  "last_command_result": {
-    "command_id": "Efdt4cgRzRdBUPUpe4LyOjyj",
-    "kind": "command",
-    "status": "exited",
-    "result_status": "passed",
-    "exit_code": 0,
-    "duration_ms": 8790,
-    "finished_at": "2026-08-22T09:29:43.562Z"
-  },
+  "last_command_result": null,
   "completion_report": null,
   "completion_report_id": "",
   "completion_report_acknowledged_id": "",
@@ -25,111 +17,41 @@
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "",
-  "created_at": "2026-08-22T09:28:17.613Z",
-  "updated_at": "2026-08-22T09:29:43.562Z",
+  "next_step": "Begin only Gate 0 + Wave A when implementation is explicitly continued; no source implementation was performed in this documentation task.",
+  "created_at": "2026-08-22T09:38:39.452Z",
+  "updated_at": "2026-08-22T09:43:41.249Z",
   "events": [
     {
-      "time": "2026-08-22T09:28:17.613Z",
-      "event": "task_auto_started",
+      "time": "2026-08-22T09:38:39.452Z",
+      "event": "task_started",
       "details": {
-        "objective": "Run a workspace command"
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
       }
     },
     {
-      "time": "2026-08-22T09:28:17.902Z",
-      "event": "command_started",
+      "time": "2026-08-22T09:41:26.279Z",
+      "event": "files_modified",
       "details": {
-        "command": "git grep -n -E \"WebCodex|upstream (repo|repository)|original (repo|repository)|github.com/.*/.*\" -- README.md AGENTS.md docs/research/260821_CODING_WEB_MASTER_ENGINEERING_STRATEGY_AND_HISTORY.md docs/research/260821_CODING_WEB_LEAN_CONTROL_RICH_EVIDENCE_ACCEPTED_RESULT_SYNTHESIS.md",
-        "session_id": "US1FJ_nzTtKrdw2qnrvx9egH"
+        "count": 0
       }
     },
     {
-      "time": "2026-08-22T09:28:18.133Z",
-      "event": "command_finished",
+      "time": "2026-08-22T09:41:36.121Z",
+      "event": "task_updated",
       "details": {
-        "command": "git grep -n -E \"WebCodex|upstream (repo|repository)|original (repo|repository)|github.com/.*/.*\" -- README.md AGENTS.md docs/research/260821_CODING_WEB_MASTER_ENGINEERING_STRATEGY_AND_HISTORY.md docs/research/260821_CODING_WEB_LEAN_CONTROL_RICH_EVIDENCE_ACCEPTED_RESULT_SYNTHESIS.md",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-22T09:28:54.587Z",
-      "event": "command_started",
-      "details": {
-        "command": "git log --oneline --decorate --all --regexp-ignore-case --grep=\"truthsnapshot\\|truth snapshot\\|objective provenance\\|operator truth\\|casebook\\|truth console\\|effective objective\\|provenance\" -80 && git grep -n -E \"TruthSnapshot|truth_snapshot|source_to_runtime|package_to_runtime|effective_objective|objective_revision|objective_sha256|objective_source|objective_changed_from_previous|Engineering Casebook|casebook\" -- resources electron renderer tests",
-        "session_id": "Mt0FfzKcUSo2zXpGYlhGB6R2"
-      }
-    },
-    {
-      "time": "2026-08-22T09:28:55.986Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git log --oneline --decorate --all --regexp-ignore-case --grep=\"truthsnapshot\\|truth snapshot\\|objective provenance\\|operator truth\\|casebook\\|truth console\\|effective objective\\|provenance\" -80 && git grep -n -E \"TruthSnapshot|truth_snapshot|source_to_runtime|package_to_runtime|effective_objective|objective_revision|objective_sha256|objective_source|objective_changed_from_previous|Engineering Casebook|casebook\" -- resources electron renderer tests",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-22T09:29:05.220Z",
-      "event": "command_started",
-      "details": {
-        "command": "git log --oneline --decorate --all -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/truth_snapshot.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py renderer/panel.js resources/coding-tools-mcp/tests/test_truth_snapshot.py resources/coding-tools-mcp/tests/test_engineering_casebook.py tests/control-panel.test.js",
-        "session_id": "k3wBxpkL7a7-yaG7lTDQ0xea"
-      }
-    },
-    {
-      "time": "2026-08-22T09:29:08.003Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git log --oneline --decorate --all -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/truth_snapshot.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py renderer/panel.js resources/coding-tools-mcp/tests/test_truth_snapshot.py resources/coding-tools-mcp/tests/test_engineering_casebook.py tests/control-panel.test.js",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-22T09:29:15.079Z",
-      "event": "command_started",
-      "details": {
-        "command": "git log --diff-filter=A --format=\"%H %s\" -- resources/coding-tools-mcp/coding_tools_mcp/truth_snapshot.py && git log --diff-filter=A --format=\"%H %s\" -- resources/coding-tools-mcp/tests/test_engineering_casebook.py && git log --diff-filter=A --format=\"%H %s\" -- resources/coding-tools-mcp/tests/test_truth_snapshot.py",
-        "session_id": "-dq-hO4W1d4s6Vy-ZxuVSCru"
-      }
-    },
-    {
-      "time": "2026-08-22T09:29:15.839Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git log --diff-filter=A --format=\"%H %s\" -- resources/coding-tools-mcp/coding_tools_mcp/truth_snapshot.py && git log --diff-filter=A --format=\"%H %s\" -- resources/coding-tools-mcp/tests/test_engineering_casebook.py && git log --diff-filter=A --format=\"%H %s\" -- resources/coding-tools-mcp/tests/test_truth_snapshot.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-22T09:29:22.879Z",
-      "event": "command_started",
-      "details": {
-        "command": "git show --stat --oneline --decorate 9eb05072e54ffca9576e23c2d4a4f4e14034bddc && git show --format=fuller --no-patch 9eb05072e54ffca9576e23c2d4a4f4e14034bddc",
-        "session_id": "1ISnn7xTnVjSVF2g08vYUSsm"
-      }
-    },
-    {
-      "time": "2026-08-22T09:29:24.953Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git show --stat --oneline --decorate 9eb05072e54ffca9576e23c2d4a4f4e14034bddc && git show --format=fuller --no-patch 9eb05072e54ffca9576e23c2d4a4f4e14034bddc",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-08-22T09:29:34.772Z",
-      "event": "command_started",
-      "details": {
-        "command": "git grep -n -i -E \"TruthSnapshot|Operator Truth Console|Engineering Casebook|Wave Objective Provenance|truth snapshot|operator truth|casebook\" -- .coding-tools/orchestration/reports",
-        "session_id": "Efdt4cgRzRdBUPUpe4LyOjyj"
-      }
-    },
-    {
-      "time": "2026-08-22T09:29:43.562Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git grep -n -i -E \"TruthSnapshot|Operator Truth Console|Engineering Casebook|Wave Objective Provenance|truth snapshot|operator truth|casebook\" -- .coding-tools/orchestration/reports",
-        "status": "passed"
+        "fields": [
+          "current_step",
+          "next_step",
+          "status"
+        ]
       }
     }
   ]
