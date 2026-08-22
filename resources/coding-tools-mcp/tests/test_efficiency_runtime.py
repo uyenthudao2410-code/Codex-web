@@ -467,7 +467,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "069f4c8783dddd9109aa897741f3333840e5c08911081fa10f356d00c1197fa6")
+                self.assertEqual(contract["sha256"], "ab122032f504f960a0f3dc33af6d8d0996f6aca927f2b849be389e51c2820e36")
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)
                 self.assertEqual(
@@ -665,6 +665,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                     "stale_reconciliation",
                     "routing_policy",
                     "external_review_policy",
+                    "committed_review",
                 },
             )
             self.assertEqual(ledger.reconcile_stale_runs(stale_after_seconds=3600, now=future), [run_id])

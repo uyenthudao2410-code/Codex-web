@@ -746,6 +746,33 @@ class AgentWorkflowMixin:
                 ),
             }
 
+        committed_review_args = args.get("committed_review")
+        if committed_review_args is not None:
+            if phase != "prepare":
+                raise ToolFailure(
+                    "COMMITTED_REVIEW_PHASE_INVALID",
+                    "committed_review is a read-only agent_workflow prepare capability and cannot be combined with mutation or resume phases.",
+                    category="validation",
+                )
+            if not isinstance(committed_review_args, dict):
+                raise ToolFailure(
+                    "COMMITTED_REVIEW_INVALID",
+                    "committed_review must be an object.",
+                    category="validation",
+                )
+            review = self.committed_review(committed_review_args)
+            return {
+                "workflow": workflow,
+                "phase": "prepare",
+                "committed_review": review,
+                "task": self.task_state.get(),
+                "recommended_next_action": (
+                    "Use only the returned bounded committed evidence for a selected review decision; continue with the signed token if more evidence is required."
+                    if review["result_tail"]["truncated"]
+                    else "Use the deterministic committed evidence only for the selected review decision; do not treat it as execution acceptance."
+                ),
+            }
+
         objective = str(args.get("objective", "")).strip() or str(self.task_state.get().get("objective", "")).strip()
         if workflow == "resume" or phase == "resume":
             state = self.task_state.get()

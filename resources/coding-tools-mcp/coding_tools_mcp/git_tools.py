@@ -5,6 +5,8 @@ import difflib
 import hashlib
 import hmac
 import json
+import os
+import re
 from typing import Any
 
 from .errors import ToolFailure
@@ -24,6 +26,20 @@ from .git_utils import (
 )
 from .textutils import DEFAULT_MAX_LINES, truncate_text_head
 from .tool_schema import DIFF_CONTINUATION_TOKEN_MAX_CHARS
+
+
+COMMITTED_REVIEW_SCHEMA_VERSION = 1
+COMMITTED_REVIEW_OPERATION = "committed_review"
+COMMITTED_REVIEW_MAX_FILES = 100
+COMMITTED_REVIEW_MAX_BYTES = 262_144
+COMMITTED_REVIEW_MAX_LINES = 2_000
+_COMMIT_SHA_RE = re.compile(r"[0-9a-f]{40}")
+_SENSITIVE_ASSIGNMENT_RE = re.compile(
+    r"(?i)\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|secret|password)\b\s*[:=]"
+)
+_AUTHORIZATION_RE = re.compile(r"(?i)\bauthorization\s*:\s*(?:bearer|token)\b")
+_PRIVATE_KEY_BEGIN_RE = re.compile(r"(?i)-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")
+_PRIVATE_KEY_END_RE = re.compile(r"(?i)-----END (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")
 
 
 def parse_diff_files(diff_text: str) -> list[dict[str, Any]]:
@@ -46,6 +62,330 @@ def parse_diff_files(diff_text: str) -> list[dict[str, Any]]:
 
 
 class GitToolsMixin:
+    @staticmethod
+    def _committed_review_paths(value: object) -> list[str]:
+        if value is None:
+            return []
+        if not isinstance(value, list) or len(value) > 20:
+            raise ToolFailure(
+                "COMMITTED_REVIEW_PATHS_INVALID",
+                "Committed review paths must be a list containing at most 20 repository-relative paths.",
+                category="validation",
+            )
+        paths: set[str] = set()
+        for item in value:
+            path = str(item or "").strip().replace("\\", "/")
+            if not path or path.startswith("/") or ":" in path or any(part in {"", ".", ".."} for part in path.split("/")):
+                raise ToolFailure(
+                    "COMMITTED_REVIEW_PATHS_INVALID",
+                    "Committed review paths must be normalized repository-relative paths.",
+                    category="validation",
+                )
+            paths.add(path)
+        return sorted(paths)
+
+    @staticmethod
+    def _committed_review_integer(value: object, *, name: str, default: int, minimum: int, maximum: int) -> int:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            raise ToolFailure("COMMITTED_REVIEW_OPTIONS_INVALID", f"{name} must be an integer.", category="validation")
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ToolFailure("COMMITTED_REVIEW_OPTIONS_INVALID", f"{name} must be an integer.", category="validation") from exc
+        if not minimum <= parsed <= maximum:
+            raise ToolFailure(
+                "COMMITTED_REVIEW_OPTIONS_INVALID",
+                f"{name} must be between {minimum} and {maximum}.",
+                category="validation",
+            )
+        return parsed
+
+    def _committed_review_options(self, args: dict[str, Any]) -> dict[str, Any]:
+        base_commit = str(args.get("base_commit") or "").strip().lower()
+        head_commit = str(args.get("head_commit") or "").strip().lower()
+        if not _COMMIT_SHA_RE.fullmatch(base_commit) or not _COMMIT_SHA_RE.fullmatch(head_commit):
+            raise ToolFailure(
+                "COMMITTED_REVIEW_COMMIT_INVALID",
+                "base_commit and head_commit must each be an exact lowercase-or-uppercase 40-character Git object id.",
+                category="validation",
+            )
+        return {
+            "base_commit": base_commit,
+            "head_commit": head_commit,
+            "paths": self._committed_review_paths(args.get("paths")),
+            "max_bytes": self._committed_review_integer(
+                args.get("max_bytes"), name="max_bytes", default=65_536, minimum=1_024, maximum=COMMITTED_REVIEW_MAX_BYTES
+            ),
+            "max_lines": self._committed_review_integer(
+                args.get("max_lines"), name="max_lines", default=1_000, minimum=10, maximum=COMMITTED_REVIEW_MAX_LINES
+            ),
+        }
+
+    @staticmethod
+    def _redact_committed_review_text(value: str) -> tuple[str, int]:
+        redactions = 0
+        in_private_key = False
+        redacted_lines: list[str] = []
+        for line in value.splitlines(keepends=True):
+            newline = "\n" if line.endswith("\n") else ""
+            if in_private_key:
+                redactions += 1
+                redacted_lines.append("<redacted-private-key-material>" + newline)
+                if _PRIVATE_KEY_END_RE.search(line):
+                    in_private_key = False
+                continue
+            if _PRIVATE_KEY_BEGIN_RE.search(line):
+                redactions += 1
+                redacted_lines.append("<redacted-private-key-material>" + newline)
+                in_private_key = not bool(_PRIVATE_KEY_END_RE.search(line))
+                continue
+            assignment = _SENSITIVE_ASSIGNMENT_RE.search(line)
+            authorization = _AUTHORIZATION_RE.search(line)
+            marker = assignment or authorization
+            if marker is None:
+                redacted_lines.append(line)
+                continue
+            redactions += 1
+            redacted_lines.append(line[:marker.end()] + " <redacted>" + newline)
+        return "".join(redacted_lines), redactions
+
+    def _encode_committed_review_continuation(self, payload: dict[str, Any]) -> str:
+        raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        signature = hmac.new(PROCESS_DIFF_CONTINUATION_SECRET, raw, hashlib.sha256).digest()
+        body = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+        proof = base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=")
+        return f"{body}.{proof}"
+
+    def _decode_committed_review_continuation(self, token: object) -> dict[str, Any]:
+        text = str(token or "").strip()
+        if not text or len(text) > DIFF_CONTINUATION_TOKEN_MAX_CHARS or text.count(".") != 1:
+            raise ToolFailure("INVALID_COMMITTED_REVIEW_CONTINUATION", "Invalid committed review continuation.", category="validation")
+        body, proof = text.split(".", 1)
+        try:
+            raw = base64.urlsafe_b64decode(body + "=" * (-len(body) % 4))
+            signature = base64.urlsafe_b64decode(proof + "=" * (-len(proof) % 4))
+            if base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != body or base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=") != proof:
+                raise ValueError("non-canonical base64url encoding")
+            expected = hmac.new(PROCESS_DIFF_CONTINUATION_SECRET, raw, hashlib.sha256).digest()
+            payload = json.loads(raw.decode("utf-8"))
+            if not hmac.compare_digest(signature, expected):
+                raise ValueError("signature mismatch")
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ToolFailure("INVALID_COMMITTED_REVIEW_CONTINUATION", "Invalid committed review continuation.", category="validation") from exc
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema_version") != COMMITTED_REVIEW_SCHEMA_VERSION
+            or payload.get("operation_kind") != COMMITTED_REVIEW_OPERATION
+            or not isinstance(payload.get("options"), dict)
+            or not isinstance(payload.get("source_sha256"), str)
+        ):
+            raise ToolFailure("INVALID_COMMITTED_REVIEW_CONTINUATION", "Unsupported committed review continuation.", category="validation")
+        try:
+            payload["position"] = int(payload.get("position", -1))
+        except (TypeError, ValueError) as exc:
+            raise ToolFailure("INVALID_COMMITTED_REVIEW_CONTINUATION", "Invalid committed review continuation position.", category="validation") from exc
+        if payload["position"] < 0:
+            raise ToolFailure("INVALID_COMMITTED_REVIEW_CONTINUATION", "Invalid committed review continuation position.", category="validation")
+        return payload
+
+    @staticmethod
+    def _committed_review_file_metadata(files: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+        rendered: list[dict[str, Any]] = []
+        subsystems: set[str] = set()
+        risks: set[str] = set()
+        for item in files[:COMMITTED_REVIEW_MAX_FILES]:
+            path = str(item.get("path") or "")
+            lowered = path.casefold()
+            subsystem = "/".join(path.split("/")[:2]) or "root"
+            file_risks: list[str] = []
+            if any(marker in lowered for marker in ("auth", "oauth", "permission", "credential", "secret", "token")):
+                file_risks.append("security_boundary")
+            if any(marker in lowered for marker in ("workflow", "orchestration", "ledger", "runtime", "process")):
+                file_risks.append("execution_lifecycle")
+            if any(marker in lowered for marker in ("package", "cargo", "pyproject", "npm", "build", "ci", "workflow")):
+                file_risks.append("build_or_delivery")
+            if any(marker in lowered for marker in ("git", "patch", "source", "worktree", "base")):
+                file_risks.append("source_identity")
+            subsystems.add(subsystem)
+            risks.update(file_risks)
+            rendered.append({
+                "path": path,
+                "status": str(item.get("status") or "modified"),
+                "binary": bool(item.get("binary")),
+                "subsystem": subsystem,
+                "risk_labels": file_risks,
+            })
+        return rendered, sorted(subsystems)[:16], sorted(risks)
+
+    def committed_review(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Produce bounded, deterministic evidence for an immutable local commit range.
+
+        This is intentionally an internal ``agent_workflow`` capability rather
+        than another public MCP tool.  It never resolves refs lazily, fetches,
+        or consults the mutable worktree diff.
+        """
+        if not self._is_git_repo(self.workspace.root, env=self._git_env()):
+            raise ToolFailure("COMMITTED_REVIEW_NOT_GIT", "Committed review requires a Git workspace.", category="runtime")
+        options = self._committed_review_options(args)
+        continuation = args.get("continuation")
+        continuation_payload = self._decode_committed_review_continuation(continuation) if continuation else None
+        if continuation_payload is not None and continuation_payload.get("options") != options:
+            raise ToolFailure(
+                "COMMITTED_REVIEW_CONTINUATION_MISMATCH",
+                "Committed review continuation cannot change commit, scope, or output bounds.",
+                category="validation",
+            )
+
+        git = require_git()
+        git_env = {**self._git_env(), "GIT_ATTR_NOSYSTEM": "1"}
+        for commit in (options["base_commit"], options["head_commit"]):
+            object_check = self._run_git_bytes(
+                [git, "-C", str(self.workspace.root), "cat-file", "-e", f"{commit}^{{commit}}"], timeout=10, env=git_env
+            )
+            if object_check.returncode != 0:
+                raise ToolFailure(
+                    "COMMITTED_REVIEW_COMMIT_MISSING",
+                    "Committed review requires both exact commit objects to be available locally; it never fetches missing history.",
+                    category="runtime",
+                    details={"commit": commit},
+                )
+        merge_base = self._run_git_bytes(
+            [git, "-C", str(self.workspace.root), "merge-base", options["base_commit"], options["head_commit"]], timeout=10, env=git_env
+        )
+        if merge_base.returncode != 0 or not _COMMIT_SHA_RE.fullmatch(merge_base.stdout.decode("ascii", errors="ignore").strip()):
+            raise ToolFailure(
+                "COMMITTED_REVIEW_MERGE_BASE_MISSING",
+                "Committed review requires a deterministic local merge base; it never infers a range from mutable branch state.",
+                category="runtime",
+            )
+        effective_base = merge_base.stdout.decode("ascii").strip()
+        diff_cmd = [
+            git, "-C", str(self.workspace.root), "-c", f"core.attributesfile={os.devnull}", "diff",
+            "--no-ext-diff", "--no-textconv", "--unified=3", effective_base, options["head_commit"],
+        ]
+        if options["paths"]:
+            diff_cmd.extend(["--", *options["paths"]])
+        diff_result = self._run_git_bytes(diff_cmd, timeout=20, env=git_env)
+        if diff_result.returncode not in {0, 1}:
+            raise ToolFailure("COMMITTED_REVIEW_GIT_ERROR", "Git could not render the committed review range.", category="runtime")
+        source_text = diff_result.stdout.decode("utf-8", errors="replace")
+        rendered_text, redaction_count = self._redact_committed_review_text(source_text)
+        source_sha256 = hashlib.sha256(source_text.encode("utf-8")).hexdigest()
+        if continuation_payload is not None and continuation_payload.get("source_sha256") != source_sha256:
+            raise ToolFailure(
+                "COMMITTED_REVIEW_SOURCE_DRIFT",
+                "Committed review source did not match its signed continuation; restart from the first page.",
+                category="runtime",
+            )
+
+        numstat_cmd = [
+            git, "-C", str(self.workspace.root), "-c", f"core.attributesfile={os.devnull}", "diff",
+            "--no-ext-diff", "--no-textconv", "--numstat", "-z", effective_base, options["head_commit"],
+        ]
+        if options["paths"]:
+            numstat_cmd.extend(["--", *options["paths"]])
+        numstat_result = self._run_git_bytes(numstat_cmd, timeout=10, env=git_env)
+        if numstat_result.returncode not in {0, 1}:
+            raise ToolFailure("COMMITTED_REVIEW_GIT_ERROR", "Git could not summarize the committed review range.", category="runtime")
+        insertions = 0
+        deletions = 0
+        binary_numstat_files = 0
+        for record in numstat_result.stdout.split(b"\0"):
+            fields = record.split(b"\t", 2)
+            if len(fields) < 2:
+                continue
+            if fields[0] == b"-" or fields[1] == b"-":
+                binary_numstat_files += 1
+                continue
+            try:
+                insertions += int(fields[0])
+                deletions += int(fields[1])
+            except ValueError:
+                continue
+        parsed_files = parse_diff_files(source_text)
+        files, subsystems, risk_labels = self._committed_review_file_metadata(parsed_files)
+        commit_result = self._run_git_bytes(
+            [git, "-C", str(self.workspace.root), "rev-list", "--reverse", "--max-count=33", f"{effective_base}..{options['head_commit']}"],
+            timeout=10,
+            env=git_env,
+        )
+        if commit_result.returncode != 0:
+            raise ToolFailure("COMMITTED_REVIEW_GIT_ERROR", "Git could not enumerate the committed review range.", category="runtime")
+        commits = [line for line in commit_result.stdout.decode("ascii", errors="ignore").splitlines() if _COMMIT_SHA_RE.fullmatch(line)]
+        commits_truncated = len(commits) > 32
+        total_bytes = len(rendered_text.encode("utf-8"))
+        position = int(continuation_payload.get("position", 0)) if continuation_payload is not None else 0
+        if position > total_bytes:
+            raise ToolFailure("INVALID_COMMITTED_REVIEW_CONTINUATION", "Committed review continuation is past the bounded source.", category="validation")
+        remaining = rendered_text.encode("utf-8")[position:]
+        page = truncate_text_head(remaining.decode("utf-8", errors="replace"), max_lines=options["max_lines"], max_bytes=options["max_bytes"])
+        page_bytes = page.content.encode("utf-8")
+        next_position = position + len(page_bytes)
+        has_more = next_position < total_bytes
+        token = ""
+        if has_more:
+            token = self._encode_committed_review_continuation({
+                "schema_version": COMMITTED_REVIEW_SCHEMA_VERSION,
+                "operation_kind": COMMITTED_REVIEW_OPERATION,
+                "options": options,
+                "source_sha256": source_sha256,
+                "position": next_position,
+            })
+        binary_count = sum(1 for item in parsed_files if bool(item.get("binary")))
+        warnings: list[str] = []
+        if has_more:
+            warnings.append("committed diff truncated")
+        if commits_truncated:
+            warnings.append("commit list truncated")
+        if len(parsed_files) > COMMITTED_REVIEW_MAX_FILES:
+            warnings.append("file list truncated")
+        if redaction_count:
+            warnings.append("sensitive values redacted from diff output")
+        return {
+            "schema_version": COMMITTED_REVIEW_SCHEMA_VERSION,
+            "deterministic": True,
+            "llm_summary": False,
+            "range": {
+                "base_commit": options["base_commit"],
+                "head_commit": options["head_commit"],
+                "effective_base_commit": effective_base,
+                "paths": options["paths"],
+            },
+            "commits": commits[:32],
+            "files": files,
+            "summary": {
+                "commit_count": len(commits),
+                "commit_count_truncated": commits_truncated,
+                "file_count": len(parsed_files),
+                "binary_file_count": binary_count,
+                "binary_numstat_file_count": binary_numstat_files,
+                "insertions": insertions,
+                "deletions": deletions,
+                "hunk_count": source_text.count("\n@@"),
+                "subsystems": subsystems,
+                "risk_labels": risk_labels,
+            },
+            "integrity": {
+                "source_diff_sha256": source_sha256,
+                "presented_diff_sha256": hashlib.sha256(rendered_text.encode("utf-8")).hexdigest(),
+                "redaction_count": redaction_count,
+                "attributes": "system_and_global_attributes_disabled; external_diff_and_textconv_disabled",
+            },
+            "diff": page.content,
+            "continuation": token or None,
+            "result_tail": {
+                "source_total_bytes": total_bytes,
+                "page_output_bytes": len(page_bytes),
+                "remaining_bytes": max(0, total_bytes - next_position),
+                "truncated": has_more,
+                "continuation_offered": bool(token),
+                "continuation_read": bool(continuation_payload),
+            },
+            "warnings": warnings,
+        }
+
     def git_status(self, args: dict[str, Any]) -> dict[str, Any]:
         resolved = self.resolve_existing(str(args.get("path", ".")))
         max_entries = int(args.get("max_entries", 1000))

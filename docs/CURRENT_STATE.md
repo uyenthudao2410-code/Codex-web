@@ -64,6 +64,8 @@ Low-level/legacy tools may still exist in compatibility or non-smart modes, but 
 
 `agent_workflow` is the primary end-to-end coding path. Mutation/proof workflows are governed by the EOCL state machine and durable orchestration ledger. A successful command or green test does not by itself equal final acceptance; an `ACCEPTING` wave still requires the authorized semantic controller to accept or reject it.
 
+For a selected read-only review, `agent_workflow(phase="prepare")` also accepts an optional `committed_review` object. It requires exact local 40-hex base/head commits, computes an explicit local merge-base range, disables external diff/textconv and system/global attributes, bounds and redacts returned evidence, and signs any continuation to the immutable range. It adds no ninth MCP tool, cannot run in a mutation/resume phase, does not fetch history, and does not itself establish execution or acceptance evidence.
+
 Current authority rules:
 
 - ChatWeb/Sol remains the normal semantic controller and final-acceptance authority for coordinated work.

@@ -2616,6 +2616,7 @@ class Runtime(
             "stale_reconciliation": OrchestrationLedger.reconcile_stale_runs,
             "routing_policy": Runtime._select_agent_execution_route,
             "external_review_policy": Runtime._maybe_agent_workflow_external_review,
+            "committed_review": Runtime.committed_review,
         }
         components = {
             name: hashlib.sha256(marshal.dumps(target.__code__)).hexdigest()
