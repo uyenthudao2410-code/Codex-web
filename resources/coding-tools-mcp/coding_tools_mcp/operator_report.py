@@ -44,10 +44,11 @@ def build_orchestration_runtime_result(
             reports=reports,
         )
         result["completion_report"] = completion_report
-        try:
-            runtime.task_state.set_completion_report(completion_report)
-        except (OSError, ValueError, RuntimeError):
-            pass
+        if write_reports:
+            try:
+                runtime.task_state.set_completion_report(completion_report)
+            except (OSError, ValueError, RuntimeError):
+                pass
     return result
 
 
@@ -156,8 +157,17 @@ def _changed_files(task_state: dict[str, Any], checkpoint: dict[str, Any]) -> tu
                 "path": str(item.get("path") or ""),
                 "state": str(item.get("state") or ""),
                 "sha256": str(item.get("sha256") or "") or None,
+                "size_bytes": item.get("size_bytes"),
+                "receipt_kind": str(item.get("receipt_kind") or "") or None,
+                "run_id": str(item.get("run_id") or "") or None,
+                "wave_id": str(item.get("wave_id") or "") or None,
             })
-        return rows, "accepted_checkpoint_file_receipts"
+        source = str(accepted_files.get("source") or "")
+        return rows, (
+            "accepted_checkpoint_file_attestations"
+            if source == "explicit_acceptance_attestations"
+            else "accepted_checkpoint_file_receipts"
+        )
 
     modified_files = task_state.get("modified_files") if isinstance(task_state.get("modified_files"), list) else []
     rows = []

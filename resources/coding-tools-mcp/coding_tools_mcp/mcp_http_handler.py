@@ -492,7 +492,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             waves[-1] if waves else {},
         )
         objective = (
-            ledger.wave_objective_provenance(run_id, wave=selected_wave)
+            ledger.wave_objective_provenance(run_id, wave_id=str(selected_wave.get("wave_id") or wave_id))
             if run_id and selected_wave
             else {}
         )

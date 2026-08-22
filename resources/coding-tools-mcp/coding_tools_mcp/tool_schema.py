@@ -347,6 +347,20 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "events", "messages", "ack", "handoff", "quality", "observation", "solution_shadow", "restart_runtime"], "default": "get"},
             "run_id": {**string, "description": "Optional orchestration run id; defaults to the current task projection."},
             "wave_id": {**string, "description": "Optional orchestration wave id; defaults to the current task projection."},
+            "acceptance_files": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "path": {**string, "minLength": 1, "maxLength": 2000},
+                        "sha256": {**string, "minLength": 64, "maxLength": 64},
+                    },
+                    "required": ["path", "sha256"],
+                },
+                "description": "Optional exact-byte source-file attestations for action=accept. The runtime hashes current workspace bytes, fails closed on mismatch, and does not classify attested unchanged files as mutations.",
+            },
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
             "after_seq": {**integer, "minimum": 0, "default": 0, "description": "Durable orchestration event sequence cursor for action=events."},
             "wait_ms": {**integer, "minimum": 0, "maximum": 60000, "default": 0, "description": "Wait up to this many milliseconds for a background operation before returning control."},

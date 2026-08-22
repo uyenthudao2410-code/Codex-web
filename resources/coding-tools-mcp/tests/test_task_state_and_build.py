@@ -1183,6 +1183,35 @@ class ToolModeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_reconcile_does_not_adopt_active_run_from_different_task(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                first = runtime.task_state.update({"objective": "Owned run", "status": "active"})
+                ctx = runtime.orchestration_control.begin(
+                    objective="Owned run",
+                    task_id=str(first["task_id"]),
+                    execution_mode="mcp_only",
+                    base_head="test-head",
+                    worktree_fp="test-worktree",
+                )
+                second = runtime.task_state.update({
+                    "objective": "Different task",
+                    "status": "active",
+                    "new_task": True,
+                })
+                self.assertNotEqual(second["task_id"], first["task_id"])
+                self.assertFalse(second.get("orchestration"))
+                self.assertEqual(runtime.orchestration_ledger.current_active_run()["run_id"], ctx.run_id)
+                self.assertIsNone(runtime.orchestration_ledger.current_active_run(task_id=str(second["task_id"])))
+
+                self.assertFalse(runtime._reconcile_task_orchestration_projection())
+                current = runtime.task_state.get()
+                self.assertEqual(current["task_id"], second["task_id"])
+                self.assertFalse(current.get("orchestration"))
+            finally:
+                runtime.close()
+
     def test_apply_changes_and_verify_runs_continuous_workflow(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

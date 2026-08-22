@@ -711,7 +711,9 @@ class Runtime(
         if not run_id and task_id:
             active = self.orchestration_ledger.current_active_run(task_id=task_id)
             run_id = str(active.get("run_id") or "") if active else ""
-        if not run_id and not self.task_state.is_scoped():
+        # Workspace-global recovery is legacy-only: a task with an identity
+        # must never inherit a run owned by a different task.
+        if not run_id and not task_id and not self.task_state.is_scoped():
             active = self.orchestration_ledger.current_active_run()
             run_id = str(active.get("run_id") or "") if active else ""
         if not run_id:

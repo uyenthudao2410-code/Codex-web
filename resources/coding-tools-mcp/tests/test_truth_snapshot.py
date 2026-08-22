@@ -42,6 +42,15 @@ class TruthSnapshotTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(temp), permission_mode="safe")
             try:
+                task = runtime.task_state.ensure_started("truth snapshot active wave")
+                ctx = runtime.orchestration_control.begin(
+                    objective="truth snapshot active wave",
+                    task_id=str(task["task_id"]),
+                    execution_mode="mcp_only",
+                    base_head="abc",
+                    worktree_fp="fp",
+                )
+                runtime.task_state.set_orchestration_projection(ctx.projection(), event="truth_snapshot_test_linked")
                 handler = object.__new__(MCPHandler)
                 handler._runtime = runtime
                 projection = handler.control_orchestration_snapshot()
@@ -52,6 +61,8 @@ class TruthSnapshotTests(unittest.TestCase):
                 self.assertEqual(truth["runtime"]["server_instance_id"], runtime.server_instance_id)
                 self.assertEqual(truth["runtime"]["tool_contract"]["tool_count"], 8)
                 self.assertEqual(truth["state_vocabulary"], list(TRUTH_MATCH_STATES))
+                self.assertEqual(truth["orchestration"]["wave_id"], ctx.wave_id)
+                self.assertEqual(truth["orchestration"]["effective_objective"], "truth snapshot active wave")
                 self.assertNotIn("auth_token", str(truth).lower())
             finally:
                 runtime.close()

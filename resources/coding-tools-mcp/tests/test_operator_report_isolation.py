@@ -16,6 +16,45 @@ from coding_tools_mcp.task_state import TaskStateStore
 
 
 class OperatorReportIsolationTests(unittest.TestCase):
+    def test_read_only_audit_preserves_acknowledged_terminal_report_latch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "accepted audit latch fixture",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "include_diff": False,
+                })
+                run_id = result["orchestration"]["run_id"]
+                accepted = runtime.task_control({
+                    "action": "accept",
+                    "run_id": run_id,
+                    "reason": "fixture accepts proven terminal wave",
+                })
+                self.assertTrue(accepted["accepted"])
+                pending = runtime.task_state.pending_completion_report()
+                self.assertIsNotNone(pending)
+                report_id = str(pending["report_id"])
+
+                acknowledged = runtime.task_control({"action": "ack", "message_id": report_id})
+                self.assertTrue(acknowledged["acknowledged"])
+                self.assertIsNone(runtime.task_state.pending_completion_report())
+
+                audit = runtime.task_control({"action": "audit", "run_id": run_id, "limit": 20})
+                self.assertEqual(audit["completion_report"]["accepted_or_not"], "ACCEPTED")
+                after = runtime.task_state.get()
+                self.assertEqual(after["completion_report_id"], report_id)
+                self.assertEqual(after["completion_report_acknowledged_id"], report_id)
+                self.assertIsNone(runtime.task_state.pending_completion_report())
+            finally:
+                runtime.close()
+
     def test_historical_audit_cannot_replace_current_operator_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
