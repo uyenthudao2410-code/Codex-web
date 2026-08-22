@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "088f7fb2b94647088eaac26b32595372",
     "wave_id": "9693127549264e698aa8366933d0be23",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Fix the observed cross-session agent_workflow task/run objective-binding regression. When agent_workflow is called with an explicit objective for a new material workflow/run, that caller objective must be the canonical run initial objective and wave effective objective. The current/global task projection may be updated to reflect it but must never override it with unrelated prior/concurrent task semantics. Reproduction: explicit Wave A feature objective produced run fd8fad90f9794b0fad39893b58c1a73e whose persisted objective was an unrelated Antigravity port-5260 diagnose task. Preserve task history, existing T1 objective revision/hash/source semantics, smart-v3=8, EOCL authority, and unrelated work. Add deterministic regression proving explicit workflow objective wins despite stale/foreign task projection. Do not implement Wave A in this run.",
-  "status": "waiting",
+  "status": "completed",
   "steps": [
     {
       "id": "apply",
@@ -37,25 +37,16 @@
       "updated_at": "2026-08-22T10:13:14.461Z"
     }
   ],
-  "current_step": "Awaiting acceptance",
-  "current_command": {
-    "command": "python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
-    "kind": "test",
-    "session_id": "3hzHG3t5y7HbJGKsi-8TLzrO",
-    "workdir": "resources/coding-tools-mcp",
-    "status": "running",
-    "started_at": "2026-08-22T10:12:15.138Z",
-    "owner_run": "088f7fb2b94647088eaac26b32595372",
-    "owner_wave": "9693127549264e698aa8366933d0be23"
-  },
+  "current_step": "Completed - operator report required",
+  "current_command": null,
   "last_command_result": {
-    "command_id": "zD9eHUgwj3WGMEw0wNXjJhWI",
+    "command_id": "",
     "kind": "command",
-    "status": "exited",
-    "result_status": "passed",
-    "exit_code": 0,
-    "duration_ms": 2999,
-    "finished_at": "2026-08-22T10:07:47.658Z"
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-08-22T11:04:27.090Z"
   },
   "completion_report": {
     "schema_version": 1,
@@ -73,25 +64,35 @@
       "files": [
         {
           "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-          "operation": "update"
+          "state": "file",
+          "sha256": "444a28b6c072da518940ebcd8abff76ea6113fc0696ec22f36b898eea9847f9c",
+          "size_bytes": 68024,
+          "receipt_kind": null,
+          "run_id": null,
+          "wave_id": null
         },
         {
           "path": "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
-          "operation": "update"
+          "state": "file",
+          "sha256": "473c643710f289da8af0f1039d43aa1a60943cb4b3cee656458b0afe4f1039e3",
+          "size_bytes": 108670,
+          "receipt_kind": null,
+          "run_id": null,
+          "wave_id": null
         }
       ],
-      "source": "aligned_task_modified_files",
+      "source": "accepted_checkpoint_file_receipts",
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
-      "run_status": "active",
-      "wave_status": "active",
-      "task_status": "waiting",
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
       "integrity": {
         "ok": true,
-        "checked": 77,
-        "head_hash": "bf6f86e90148d3c4189c5911a443285009b40bc8474dbd4ae8cff3d7cf0567ef"
+        "checked": 83,
+        "head_hash": "4feb8b12b0de83f252e3a54bb8d25f9bb1eae1aa247cb2a5c88eceebbc569e38"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-088f7fb2b94647088eaac26b32595372\\run-summary.md",
@@ -133,12 +134,12 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "accepted_or_not": "ACCEPTED",
     "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
   },
-  "completion_report_id": "89e9f9e70cd5276360183aef0241ae640cdf5787071afccb955ac2723bab753c",
+  "completion_report_id": "0e914b323ddd88aebdad28274bc6fd221416cb6ac05c2e0fd0b45aca6bef335c",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -169,6 +170,54 @@
       "exit_code": 0,
       "duration_ms": 45461,
       "summary": "exit 0 | 0.0s | 4 lines | tail: '81 passed, 3 subtests passed in 43.00s'"
+    },
+    {
+      "command": "git diff --exit-code b8a8e1e..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_task_state_and_build.py && python -m pytest -q tests/test_task_state_and_build.py -k \"explicit_objective or reconcile_does_not_adopt_active_run_from_different_task\" && python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 6 lines | tail: '81 passed, 3 subtests passed in 26.87s'",
+      "finished_at": "2026-08-22T11:03:28.495Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "deuGCc0cxSVF-9mAFCzHtmH3"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "088f7fb2b94647088eaac26b32595372",
+        "owner_wave": "9693127549264e698aa8366933d0be23",
+        "size_bytes": 314,
+        "command_id": "deuGCc0cxSVF-9mAFCzHtmH3",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:deuGCc0cxSVF-9mAFCzHtmH3:stdout",
+            "total_stream_bytes": 314,
+            "total_retained_bytes": 314,
+            "head_retained_bytes": 314,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:deuGCc0cxSVF-9mAFCzHtmH3:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
     }
   ],
   "build_results": [],
@@ -10969,9 +11018,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
   "created_at": "2026-08-22T10:06:47.958Z",
-  "updated_at": "2026-08-22T10:50:55.038Z",
+  "updated_at": "2026-08-22T11:25:29.141Z",
   "events": [
     {
       "time": "2026-08-22T10:06:47.958Z",
@@ -11687,6 +11736,126 @@
           "orchestration",
           "status"
         ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:53:24.330Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-22T10:53:31.003Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T10:54:28.671Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ORCHESTRATION_RUN_NOT_FOUND"
+      }
+    },
+    {
+      "time": "2026-08-22T10:54:33.986Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T11:02:53.661Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --exit-code b8a8e1e..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_task_state_and_build.py && python -m pytest -q tests/test_task_state_and_build.py -k \"explicit_objective or reconcile_does_not_adopt_active_run_from_different_task\" && python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+        "session_id": "deuGCc0cxSVF-9mAFCzHtmH3"
+      }
+    },
+    {
+      "time": "2026-08-22T11:03:28.495Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --exit-code b8a8e1e..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_task_state_and_build.py && python -m pytest -q tests/test_task_state_and_build.py -k \"explicit_objective or reconcile_does_not_adopt_active_run_from_different_task\" && python -m pytest -q tests/test_task_state_and_build.py tests/test_orchestration_control.py tests/test_engineering_casebook.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T11:03:39.940Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T11:03:42.265Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-22T11:03:42.310Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T11:03:42.536Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "0e914b323ddd88aebdad28274bc6fd221416cb6ac05c2e0fd0b45aca6bef335c"
+      }
+    },
+    {
+      "time": "2026-08-22T11:04:26.724Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-22T11:04:27.090Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git show --format=\"%H %P %s\" --no-patch 5515030 && git show --format=\"%H %P %s\" --no-patch b8b1c73 && git show --format=\"%H %P %s\" --no-patch c1d52d2 && git show --format=\"%H %P %s\" --no-patch c0f7346 && git diff --stat c1d52d2 c0f7346 -- resources/coding-tools-mcp/coding_tools_mcp/git_tools.py resources/coding-tools-mcp/tests/test_git_tools.py && git diff --check ea4dc6b..5515030 -- resources/coding-tools-mcp/coding_tools_mcp/processes.py resources/coding-tools-mcp/tests/test_continuous_pipe_dr",
+        "status": "failed"
       }
     }
   ]

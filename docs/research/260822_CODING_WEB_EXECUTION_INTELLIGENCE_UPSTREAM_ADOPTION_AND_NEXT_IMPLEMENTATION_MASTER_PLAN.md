@@ -2204,3 +2204,288 @@ Không đảo ngược hai tầng này.
 ---
 
 **HẾT — BẢN KẾ HOẠCH TỔNG THỂ DIỄN GIẢI CHI TIẾT BẰNG TIẾNG VIỆT**
+
+---
+
+# 43. PHỤ LỤC THỰC THI VÀ ĐIỀU CHỈNH ƯU TIÊN — 2026-08-22
+
+> Phụ lục này là snapshot vận hành sau kế hoạch, không viết lại chronology hay
+> thay đổi ý nghĩa của các evidence snapshot ở phần 1–42. Mọi số liệu dưới đây
+> được đọc lại từ canonical ledger và source/runtime đang vận hành tại thời
+> điểm chụp. Một báo cáo tư vấn được tham khảo đã mô tả một HEAD upstream-matched
+> và P5 epoch active; hai trạng thái đó **không còn đúng** trong checkout hiện
+> tại, nên không được dùng để mở P5 hay làm bằng chứng promotion.
+
+## 43.1. Quyết định điều hành đã điều chỉnh
+
+```text
+Không xây thêm P5 framework/table/tool trong wave kế tiếp.
+Không dùng P4 predictive PASS làm điều kiện chặn P5-A0.
+Không backfill hoặc suy diễn nguyên nhân cho historical failure.
+
+Ưu tiên:
+  A. hoàn tất integration/source identity có kiểm soát;
+  B. để P2 taxonomy v3 thu prospective data trên event tự nhiên;
+  C. chỉ mở một P5-A0 A/A mới khi toàn bộ gate runtime + source + operator
+     + natural task đã đồng thời thỏa;
+  D. theo dõi TTAR tail theo feature/bugfix, không chỉ repaired rate.
+```
+
+Lý do là nút thắt đã chuyển từ thiếu primitive sang thiếu observation có chất
+lượng. Tạo synthetic workload, tự tạo assignment, hoặc mở epoch khi chưa có
+natural feature/bugfix sẽ làm đẹp funnel nhưng không tạo evidence causal.
+
+## 43.2. Những phần source đã được triển khai và kiểm chứng
+
+Các candidate được tích hợp theo từng causal wave vào `main` tại:
+
+```text
+b8d8716ee22eadb1e3a1e6a53f9da1e6dc72c7f0
+```
+
+Chuỗi commit implementation:
+
+```text
+ec52f8c  continuously drain structured command pipes
+278ceeb  preserve guarded text-edit line endings
+a90a02e  add prospective P2 failure taxonomy
+b8d8716  add deterministic committed review evidence
+```
+
+Nội dung có hiệu lực:
+
+1. Runner đọc pipe liên tục, có bounded reader và cleanup process tree để
+   command output lớn không block lifecycle.
+2. Guarded `apply_text_edits` giữ CRLF/LF, từ chối mixed/bare CR nguy hiểm và
+   vẫn atomic khi text canonical tương đương.
+3. P2 v3 tạo detail **prospective, content-free, unattributed** cho
+   `CHECK_FAILED` (command family) và `BUILD_VERIFICATION_FAILED`
+   (verification stage). Cơ chế này không biến detail thành repair label và
+   không suy diễn dữ liệu lịch sử.
+4. `agent_workflow(phase=prepare)` nhận committed review xác định bằng local
+   SHA/merge-base/HMAC continuation; không thêm tool thứ chín, không cho alias,
+   fetch, external diff hay textconv làm thay đổi authority surface.
+
+Focused source proof đã đạt trên exact source tree này:
+
+```text
+rustfmt (affected Rust files)                                  PASS
+webcodex-runner runner_lifecycle_tests                         28/28 PASS
+webcodex-runner file_apply_text_edits                          15/15 PASS
+webcodex apply_text_edits --lib                                20/20 PASS
+cargo check webcodex-runner --all-targets                      PASS
+cargo check webcodex --all-targets                             PASS
+selected Coding Tools MCP pytest                               129 passed
+module-size guard + git diff --check                           PASS
+coding-tools delivery guard on integration candidate           PASS
+```
+
+Đây là source/focused-test proof. Nó không tự chứng minh package, remote
+release, hay hiệu quả causal ở production.
+
+## 43.3. Runtime và authority đã được reconciliation
+
+Controlled activation đã đưa Coding Tools MCP và Recovery Host về revision
+source hiện hành; sau supervised restart, connector đã thực hiện discovery lại
+và acknowledgement thành công. Runtime hiện vẫn giữ đúng public smart-v3
+surface gồm tám tool:
+
+```text
+workspace_context, agent_workflow, task_control, document_workflow,
+exec_command, command_control, request_permissions, view_image
+```
+
+Contract discovery SHA-256 hiện được runtime báo là:
+
+```text
+ab122032f504f960a0f3dc33af6d8d0996f6aca927f2b849be389e51c2820e36
+```
+
+Run EOCL objective-binding `088f7fb2b94647088eaac26b32595372` đã terminal
+`accepted` bởi ChatWeb, checkpoint
+`73e22b0976a84d4eb778830035b4474b`, với event-chain verification pass.
+Không còn active execution run trong canonical ledger tại snapshot này.
+
+Đây là live-contract/runtime proof; không phải là nghiệm thu release hay bằng
+chứng P5 treatment.
+
+## 43.4. Baseline economics: bài toán rework là có thật, nhưng là observational
+
+Canonical `chatweb_mcp`, model-free accepted cohort hiện có:
+
+| Metric | Giá trị hiện tại |
+| --- | ---: |
+| Accepted eligible | 455 |
+| First-pass accepted | 267 (58,68%) |
+| Repaired accepted | 188 (41,32%) |
+| Replan | 359 |
+| First-pass TTAR p50 / p90 | 66,458 s / 445,815 s |
+| Repaired TTAR p50 / p90 | 302,914 s / 3.011,437 s |
+| Repaired : first-pass p50 / p90 | 4,56x / 6,75x |
+
+Vì thế objective lâu dài phải được đo theo:
+
+```text
+first-pass success
++ repair/replan incidence
++ accepted-result time (TTAR)
++ TTAR tail
++ quality floor
+```
+
+Không được biến các số observational này thành treatment effect hoặc ROI
+causal. `preflight_avoided=151` chỉ có nghĩa là 151 known no-write patch
+failure bị chặn trước run creation; nó không phải counterfactual “151 task
+được cứu”.
+
+### Stratum P5 phù hợp
+
+`feature` và `bugfix` vẫn là cohort P5 hợp lý, nhưng phải randomized/analysed
+theo stratum, không pooled-only:
+
+| Workflow | n | Repaired | Repaired rate | First-pass p90 | Repaired p90 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| feature | 129 | 70 | 54,26% | 580,301 s | 2.648,443 s |
+| bugfix | 98 | 39 | 39,80% | 259,577 s | 3.039,746 s |
+
+Feature có repair incidence cao hơn; bugfix có tail repair penalty lớn hơn.
+`diagnose` (28 repaired / 88; repaired p90 19.348,140 s) là một long-tail
+problem đáng điều tra sau này, nhưng không nên trộn vào A0 hiện tại vì đổi
+population và làm nhiễu causal estimand.
+
+## 43.5. P2 taxonomy là leverage point số một, với ranh giới đúng
+
+Snapshot P2 hiện có 365 failure event: 177 mapped/classified và 188
+unclassified, tương đương mapped coverage 48,49%. Trong phần historical
+generic detail không thể suy diễn lại có:
+
+```text
+CHECK_FAILED              114
+BUILD_VERIFICATION_FAILED  56
+-----------------------------
+total                     170
+```
+
+Hai class này chiếm 90,43% `legacy_generic_detail_unavailable` (170/188), nên
+đầu tư đúng vào boundary event creation có lợi suất cao hơn thiết kế P4 v6 lúc
+này. Tuy nhiên phải giữ các ranh giới sau:
+
+```text
+historical unknown     -> vẫn unknown
+P2 v3 detail           -> prospective only
+detail bucket          -> measurement context, không phải root cause
+failure taxonomy       -> không tự biến thành causal repair label
+```
+
+Từ đây không mở thêm “taxonomy framework”. Việc cần làm là để event tự nhiên
+đi qua hai điểm instrumentation đã có, theo dõi coverage/detail bucket mới, rồi
+đánh giá sau khi số mẫu mới đủ lớn. Nếu schema v3 không tạo variation thực tế,
+thay đổi sau đó phải là patch nhỏ vào đúng point ghi event, kèm test; không
+backfill ledger.
+
+## 43.6. P4 tiếp tục collect, nhưng không là critical path của P5-A0
+
+P4 có 70 representative terminal shadow task, trong đó causal-solution
+outcome known là 2 repair / 50 nonrepair, 18 unknown. Predictive gate vẫn là:
+
+```text
+representative_descriptive_comparison_available_but_unvalidated
+```
+
+Rolling temporal holdout mới evaluable 1/8 window; family và source-state
+holdout chưa đủ outcome variation. `oracle_strength` luôn `strong` và
+`root_cause_confidence` luôn `high`, nên cả hai là low-variance metadata và
+Brier gain hiện bằng 0. `expected_repair_risk`, scope fields còn variation,
+nhưng chưa có validated signal.
+
+Quy tắc vận hành:
+
+1. Không sửa P4 v5 giữa lúc đang collect prospectively.
+2. Không tự tạo shadow label/task chỉ để tăng variation.
+3. Ghi nhận low-variance fields là candidate cần reconsider **sau** khi P4 v5
+   đủ observational evidence; chưa loại bỏ hoặc dùng làm policy input.
+4. P4 không được bật automatic routing/treatment và không chặn P5-A0 A/A.
+
+## 43.7. P5: engineering có mặt, empirical funnel vẫn bằng không
+
+Canonical P5 ledger chứa bốn epoch lịch sử, và cả bốn đang `EPOCH_CLOSED`.
+Không có active P5 epoch, active execution run, enrollment decision,
+randomized assignment, arm-protocol start, workflow binding hay outcome:
+
+| P5 funnel | Count |
+| --- | ---: |
+| epochs recorded | 4 |
+| live epochs | 0 |
+| enrollment decisions | 0 |
+| assignments | 0 |
+| protocol starts | 0 |
+| workflow bindings | 0 |
+| outcomes | 0 |
+
+Seed runtime đã được provision qua opaque handle
+`secret://experiment/p5/a`; raw seed không được và sẽ không được ghi vào
+ledger, source, log, report hay chat. Điều này chỉ chứng minh secret delivery
+path, không chứng minh P5 evidence.
+
+P5-A0 hiện **HOLD**, không phải FAIL của code và cũng không phải `EPOCH_ACTIVE`:
+
+```text
+source worktree clean excluding runtime evidence = true
+HEAD == origin/main                              = false
+automatic start / policy activation              = false
+active epoch                                     = false
+natural eligible task + stable oracle            = absent
+```
+
+Do đó không tạo manifest mới, không mở epoch, không gán arm, và không thực
+hiện P5-A treatment ở wave này. Đây là fail-closed đúng thiết kế.
+
+## 43.8. Trình tự ngắn nhất để P5-A0 thực sự bắt đầu
+
+```text
+1. Chủ sở hữu explicit-authorize destination để publish integration source.
+2. Commit/push theo policy, fetch lại và xác nhận HEAD == named upstream;
+   worktree source sạch (runtime evidence được đánh giá theo scope riêng).
+3. Tạo manifest A0 từ template v2, với identity/runtime contract hiện hành,
+   opaque secret handle, seed commitment và tất cả guard frozen.
+4. Xác nhận không có writer lease và operator authority cho đúng epoch.
+5. Chờ một natural feature hoặc bugfix có stable quality oracle; enrollment
+   arm-neutral xảy ra trước assignment và trước write.
+6. Chạy A/A control protocol; ghi assignment, binding và outcome theo ITT.
+7. Kiểm tra funnel integrity: missingness, crossover, adherence, quality floor,
+   replan/no-harm và TTAR theo feature/bugfix.
+8. Chỉ khi A0 có evidence mạnh, operator review riêng mới được cân nhắc P5-A
+   treatment canary. Không automatic promotion.
+```
+
+Mỗi epoch cần một immutable manifest mới khi source/runtime identity đổi; không
+tái sử dụng chứng cứ A0 cũ sau fingerprint drift. Giữ nguyên nguyên tắc một
+writer, một authority và một epoch live per experiment.
+
+## 43.9. Trạng thái delivery hiện tại và điều kiện ngoài repository
+
+`main` đang ở `b8d8716…`, trong khi `origin/main` ở `ea4dc6b…`; các source
+commit integration chưa được push. Ngoài các runtime-evidence artifacts dưới
+`.coding-tools/`, phụ lục này tạo một documentation change chưa commit. Không
+có push, package, release, deploy hoặc external production change nào được
+thực hiện bởi wave này.
+
+Vì vậy, P5 không thể hợp lệ chuyển từ HOLD sang start-ready cho đến khi có hai
+authority/external input cụ thể:
+
+```text
+A. explicit authorization cho target publish, ví dụ: git push origin main
+B. natural feature/bugfix đầu tiên cùng stable quality oracle để quan sát
+```
+
+Khi A và B xuất hiện, controller phải re-run Gate 0 trên đúng checkout/runtime
+thời điểm đó trước khi mở P5-A0; không tái sử dụng kết luận readiness ở phụ
+lục này.
+
+---
+
+**KẾT LUẬN PHỤ LỤC:** hướng ngắn nhất không phải thêm hạ tầng. Source hardening
+và P2 prospective instrumentation đã có; việc có giá trị tiếp theo là đóng
+source identity đúng policy, thu natural A/A observation sạch, đồng thời để P2
+taxonomy v3 giảm vùng unknown một cách prospective. P4 tiếp tục đo nhưng không
+được trở thành cổng giả cho causal learning.

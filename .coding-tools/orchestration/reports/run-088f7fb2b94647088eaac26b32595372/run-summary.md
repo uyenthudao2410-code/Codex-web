@@ -3,9 +3,9 @@
 - Run: `088f7fb2b94647088eaac26b32595372`
 - Task: `06df49de4e1e44df8b13787ab9717659`
 - Objective: Fix the observed cross-session agent_workflow task/run objective-binding regression. When agent_workflow is called with an explicit objective for a new material workflow/run, that caller objective must be the canonical run initial objective and wave effective objective. The current/global task projection may be updated to reflect it but must never override it with unrelated prior/concurrent task semantics. Reproduction: explicit Wave A feature objective produced run fd8fad90f9794b0fad39893b58c1a73e whose persisted objective was an unrelated Antigravity port-5260 diagnose task. Preserve task history, existing T1 objective revision/hash/source semantics, smart-v3=8, EOCL authority, and unrelated work. Add deterministic regression proving explicit workflow objective wins despite stale/foreign task projection. Do not implement Wave A in this run.
-- Status: **active**
+- Status: **accepted**
 - Started: `2026-08-22T10:06:57.977Z`
-- Finished: `None`
+- Finished: `2026-08-22T11:03:41.828Z`
 
 ## Outcome metrics
 
@@ -15,7 +15,7 @@
 - REPLAN transitions: **3**
 - Proof stages: **4**
 - Proof cache hits: **0**
-- Acceptance checkpoints: **0**
+- Acceptance checkpoints: **1**
 
 ## Waves
 
@@ -24,13 +24,13 @@
 | 1 | `e36e8c8856754657b446f84291f39e3f` | 1 | `run_initial_objective` | `mcp_only` | `3538c761f174f8f609090b31ef368c064df0a5fc` | replanned |
 | 2 | `ec295c12b24f4d2691762345659b36b4` | 1 | `replan_request` | `mcp_only` | `3538c761f174f8f609090b31ef368c064df0a5fc` | replanned |
 | 3 | `197361a2d641496d902736160230a0aa` | 1 | `replan_request` | `mcp_only` | `3538c761f174f8f609090b31ef368c064df0a5fc` | replanned |
-| 4 | `9693127549264e698aa8366933d0be23` | 1 | `replan_request` | `mcp_only` | `3538c761f174f8f609090b31ef368c064df0a5fc` | active |
+| 4 | `9693127549264e698aa8366933d0be23` | 1 | `replan_request` | `mcp_only` | `3538c761f174f8f609090b31ef368c064df0a5fc` | accepted |
 
 ## Acceptance checkpoints
 
 | Checkpoint | Wave | Status | Git HEAD | Proof fingerprint | Accepted by |
 |---|---|---|---|---|---|
-| - | - | - | - | - | - |
+| 73e22b0976a84d4eb778830035b4474b | 9693127549264e698aa8366933d0be23 | accepted | ea4dc6be729dfc5147ba186ac1b87b41c581520f | 3f624fb56f6709f3add32385e77c8b2d653ad175241396b4970009e5b2cb333e | chatweb |
 
 ## Route decisions
 
@@ -52,7 +52,7 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `77`
-- Chain head: `bf6f86e90148d3c4189c5911a443285009b40bc8474dbd4ae8cff3d7cf0567ef`
+- Events checked: `83`
+- Chain head: `4feb8b12b0de83f252e3a54bb8d25f9bb1eae1aa247cb2a5c88eceebbc569e38`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

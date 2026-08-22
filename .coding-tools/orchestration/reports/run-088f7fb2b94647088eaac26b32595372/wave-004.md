@@ -10,7 +10,7 @@
 - Base HEAD: `3538c761f174f8f609090b31ef368c064df0a5fc`
 - Worktree fingerprint: `13cec162671b68ab34323b12b3fdbfb3cc87fc983999ffb34e5c7b868abe2d21`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **accepted**
 
 ## Delegations
 
@@ -38,6 +38,12 @@
 | 27115 | 2026-08-22T10:12:59.550Z | managed_process_terminal |  |  | owner=default |
 | 27116 | 2026-08-22T10:13:13.457Z | proof_recorded |  |  | stage_id=verify:tests; status=passed; cache_hit=False; input_fingerprint=958d8dcf5fba256cecfda1d23d433787292d319ecc4b675fba806b76c4656af1 |
 | 27117 | 2026-08-22T10:13:14.484Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 27119 | 2026-08-22T11:02:53.330Z | managed_process_admitted |  |  | owner=chatweb |
+| 27120 | 2026-08-22T11:02:53.547Z | managed_process_started |  |  | owner=chatweb |
+| 27121 | 2026-08-22T11:03:28.242Z | managed_process_terminal |  |  | owner=chatweb |
+| 27122 | 2026-08-22T11:03:41.388Z | quality_outcome_recorded |  |  |  |
+| 27123 | 2026-08-22T11:03:41.566Z | state_transition | ACCEPTING | CHECKPOINTED | reason=controller_acceptance |
+| 27124 | 2026-08-22T11:03:41.943Z | wave_processes_quiesced |  |  | reason=orchestration_state:checkpointed |
 
 ## Proof
 
@@ -49,10 +55,10 @@
 
 | Checkpoint | Status | Git HEAD | Proof fingerprint | Accepted by |
 |---|---|---|---|---|
-| - | - | - | - | - |
+| 73e22b0976a84d4eb778830035b4474b | accepted | ea4dc6be729dfc5147ba186ac1b87b41c581520f | 3f624fb56f6709f3add32385e77c8b2d653ad175241396b4970009e5b2cb333e | chatweb |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `77`
-- Chain head: `bf6f86e90148d3c4189c5911a443285009b40bc8474dbd4ae8cff3d7cf0567ef`
+- Events checked: `83`
+- Chain head: `4feb8b12b0de83f252e3a54bb8d25f9bb1eae1aa247cb2a5c88eceebbc569e38`
