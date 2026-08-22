@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sqlite3
 import subprocess
 import tempfile
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 CANONICAL_LEDGER = ".coding-tools/orchestration/ledger.sqlite3"
+DELIVERY_RECEIPT = ".coding-tools/delivery-snapshot.json"
 
 
 def run_git(root: Path, args: list[str], *, text: bool = True) -> subprocess.CompletedProcess:
@@ -43,6 +47,19 @@ def index_entry(root: Path) -> tuple[str, str]:
     return mode, blob
 
 
+def staged_receipt(root: Path) -> dict:
+    result = run_git(root, ["show", f":{DELIVERY_RECEIPT}"])
+    try:
+        receipt = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("staged delivery snapshot receipt is not valid JSON") from exc
+    if receipt.get("schema_version") != 1:
+        raise RuntimeError("staged delivery snapshot receipt schema is unsupported")
+    if receipt.get("canonical_ledger") != CANONICAL_LEDGER:
+        raise RuntimeError("staged delivery snapshot receipt targets the wrong ledger")
+    return receipt
+
+
 def sqlite_integrity(path: Path) -> tuple[int, int]:
     connection = sqlite3.connect(path, timeout=10.0)
     try:
@@ -70,11 +87,33 @@ def materialize_index_blob(root: Path, blob: str, target: Path) -> None:
 
 def verify_index(root: Path) -> tuple[str, int, int]:
     _mode, blob = index_entry(root)
+    receipt = staged_receipt(root)
+    if receipt.get("ledger_blob") != blob:
+        raise RuntimeError("staged delivery snapshot receipt does not match the staged ledger blob")
     with tempfile.TemporaryDirectory(prefix="coding-tools-ledger-index-") as temp_dir:
         snapshot = Path(temp_dir) / "ledger.sqlite3"
         materialize_index_blob(root, blob, snapshot)
         size_bytes, user_version = sqlite_integrity(snapshot)
+    if int(receipt.get("size_bytes", -1)) != size_bytes:
+        raise RuntimeError("staged delivery snapshot receipt size does not match the staged ledger")
+    if int(receipt.get("user_version", -1)) != user_version:
+        raise RuntimeError("staged delivery snapshot receipt user_version does not match the staged ledger")
     return blob, size_bytes, user_version
+
+
+def write_receipt(root: Path, blob: str, size_bytes: int, user_version: int) -> None:
+    receipt_path = root / DELIVERY_RECEIPT
+    receipt = {
+        "schema_version": 1,
+        "snapshot_id": str(time.time_ns()),
+        "captured_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "canonical_ledger": CANONICAL_LEDGER,
+        "ledger_blob": blob,
+        "size_bytes": size_bytes,
+        "user_version": user_version,
+    }
+    receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    run_git(root, ["add", "--", DELIVERY_RECEIPT])
 
 
 def snapshot_live_ledger(source: Path, target: Path) -> None:
@@ -112,6 +151,7 @@ def stage_delivery(root: Path) -> tuple[str, int, int]:
     with tempfile.TemporaryDirectory(prefix="coding-tools-ledger-stage-") as temp_dir:
         snapshot = Path(temp_dir) / "ledger.sqlite3"
         snapshot_live_ledger(ledger, snapshot)
+        size_bytes, user_version = sqlite_integrity(snapshot)
         blob = run_git(root, ["hash-object", "-w", "--", str(snapshot)]).stdout.strip()
         if len(blob) != 40:
             raise RuntimeError("git hash-object did not return a SHA-1 object id")
@@ -119,6 +159,8 @@ def stage_delivery(root: Path) -> tuple[str, int, int]:
             root,
             ["update-index", "--add", "--cacheinfo", f"{mode},{blob},{CANONICAL_LEDGER}"],
         )
+
+    write_receipt(root, blob, size_bytes, user_version)
 
     verified_blob, size_bytes, user_version = verify_index(root)
     if verified_blob != blob:

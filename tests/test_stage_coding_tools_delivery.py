@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_STAGE_SCRIPT = REPO_ROOT / "scripts" / "stage-coding-tools-delivery.py"
 SOURCE_GUARD_SCRIPT = REPO_ROOT / "scripts" / "check-coding-tools-history.js"
 LEDGER_REL = ".coding-tools/orchestration/ledger.sqlite3"
+RECEIPT_REL = ".coding-tools/delivery-snapshot.json"
 
 
 class CodingToolsDeliveryStageTests(unittest.TestCase):
@@ -100,6 +101,27 @@ class CodingToolsDeliveryStageTests(unittest.TestCase):
         finally:
             writer.close()
 
+    def test_fresh_receipt_allows_live_drift_when_ledger_snapshot_matches_head(self) -> None:
+        writer = self.open_writer()
+        try:
+            first = self.run_cmd("python", "scripts/stage-coding-tools-delivery.py")
+            self.assertIn("delivery stage: PASS", first.stdout)
+            self.run_cmd("git", "commit", "-qm", "snapshot baseline")
+
+            result = self.run_cmd("python", "scripts/stage-coding-tools-delivery.py")
+            self.assertIn("delivery stage: PASS", result.stdout)
+            staged_ledger = self.run_cmd("git", "diff", "--cached", "--name-only", "--", LEDGER_REL).stdout
+            self.assertEqual(staged_ledger, "")
+            staged_receipt = self.run_cmd("git", "diff", "--cached", "--name-only", "--", RECEIPT_REL).stdout
+            self.assertEqual(staged_receipt.strip(), RECEIPT_REL)
+
+            writer.execute("INSERT INTO events(value) VALUES('after-equal-snapshot')")
+            writer.commit()
+            guard = self.run_cmd("node", "scripts/check-coding-tools-history.js", "--require-staged")
+            self.assertIn("coding-tools delivery check: PASS", guard.stdout)
+        finally:
+            writer.close()
+
     def test_guard_still_rejects_other_unstaged_evidence(self) -> None:
         self.run_cmd("python", "scripts/stage-coding-tools-delivery.py")
         extra = self.root / ".coding-tools" / "unstaged.json"
@@ -109,6 +131,7 @@ class CodingToolsDeliveryStageTests(unittest.TestCase):
         self.assertIn(".coding-tools/unstaged.json", guard.stderr)
 
     def test_verify_index_rejects_corrupt_staged_ledger(self) -> None:
+        self.run_cmd("python", "scripts/stage-coding-tools-delivery.py")
         bad = self.root / "bad-ledger.bin"
         bad.write_bytes(b"not-a-sqlite-database")
         blob = self.run_cmd("git", "hash-object", "-w", "--", str(bad)).stdout.strip()

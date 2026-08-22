@@ -9,11 +9,11 @@
 
 ## Outcome metrics
 
-- Waves: **1**
-- Route decisions: **1**
-- Failures observed: **1**
-- REPLAN transitions: **1**
-- Proof stages: **1**
+- Waves: **2**
+- Route decisions: **2**
+- Failures observed: **2**
+- REPLAN transitions: **2**
+- Proof stages: **2**
 - Proof cache hits: **0**
 - Acceptance checkpoints: **0**
 
@@ -21,7 +21,8 @@
 
 | # | Wave | Objective rev | Objective source | Mode | Base | Status |
 |---:|---|---:|---|---|---|---|
-| 1 | `c1cbc51f3a4840caafbd5cb429db288a` | 1 | `run_initial_objective` | `mcp_only` | `6d45e5bb00451f6d4418ed0b4e7c1dad185b0ac0` | active |
+| 1 | `c1cbc51f3a4840caafbd5cb429db288a` | 1 | `run_initial_objective` | `mcp_only` | `6d45e5bb00451f6d4418ed0b4e7c1dad185b0ac0` | replanned |
+| 2 | `b18739a6e2b74fcb81fb6b4d910658a9` | 2 | `replan_request` | `mcp_only` | `6d45e5bb00451f6d4418ed0b4e7c1dad185b0ac0` | active |
 
 ## Acceptance checkpoints
 
@@ -34,17 +35,19 @@
 | Seq | Requested | Resolved | Reason |
 |---:|---|---|---|
 | 27501 | `deterministic` | `deterministic` | explicit_request |
+| 27518 | `deterministic` | `deterministic` | explicit_request |
 
 ## Failures / replans
 
 | Seq | Failure class | State | Evidence |
 |---:|---|---|---|
 | 27512 | `CHECK_FAILED` | `PROVING` |  |
+| 27529 | `CHECK_FAILED` | `PROVING` |  |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `17`
-- Chain head: `56a12b8659f23c01ae20d4ded620029057154ff169af42c6fbb2ca37d3774eb7`
+- Events checked: `34`
+- Chain head: `e744535afac5fee3c206258c023d3414120c06278719db68c7b671c03024ccf7`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

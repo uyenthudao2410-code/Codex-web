@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "task_id": "5899f563538f40cbbedf279eae7d57b1",
+  "task_id": "d73a8dbb0faa49098cba3675c6c287ca",
   "orchestration": {
-    "run_id": "db0044df05c948b5a40c63fc52d2ad16",
-    "wave_id": "b18739a6e2b74fcb81fb6b4d910658a9",
+    "run_id": "8bc74bd8bfd5453f84e7c2a639711530",
+    "wave_id": "7a7f60e702a843a3bef844b2ebd98fcf",
     "orchestration_state": "PROVING",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
@@ -11,161 +11,81 @@
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "6d45e5bb00451f6d4418ed0b4e7c1dad185b0ac0",
-    "worktree_fp": "cfc367d119e389ae7095689961ef8f7e030f2ad57d68c95ee48a219c9ac2ab0d",
+    "base_head": "3e317d8cc91693ae6d2014fc9797d38fb6c62ef6",
+    "worktree_fp": "a07982576d2c1289a7f4a39765241968947e27f9778ff5c3971f912339d75a52",
     "contract_fp": ""
   },
-  "objective": "Continue the same commit/push run after the first delivery attempt failed before commit because exactly .coding-tools/performance.json and .coding-tools/task-state.json drifted after the WAL-safe helper snapshot but before the delivery guard. No commit or push occurred. Changed strategy: keep the accepted guard unchanged; after each WAL-safe evidence staging call, immediately restage exactly those two observed live projection files, then run the mandatory delivery guard. If any other evidence drifts, fail closed. On success commit the source+evidence fix, repeat the same push-time staging/guard sequence, create a final evidence checkpoint commit (allow-empty permitted), push origin/main without force, and print local and remote SHAs. Do not restart runtime.",
+  "objective": "Finish GitHub delivery after accepted delivery-snapshot receipt fix. Preserve local commit 3e317d8 unchanged. Stage the accepted receipt source/test changes plus updated AGENTS.md, then stage canonical .coding-tools via the WAL-safe helper; immediately restage only the two empirically observed live projection files performance.json and task-state.json; require mandatory delivery guard and cached whitespace PASS; commit an additive follow-up 'fix: bind coding-tools delivery snapshots'. Then perform a final push-time WAL-safe evidence snapshot, restage those same two live projections, require delivery guard and cached whitespace PASS again, create a final evidence checkpoint commit, push origin/main without force, and print local HEAD plus remote refs/heads/main SHA. Fail closed on any other unstaged evidence or any guard failure. Do not restart runtime.",
   "status": "active",
   "steps": [
     {
       "id": "checks",
       "text": "Run requested checks",
       "status": "in_progress",
-      "updated_at": "2026-08-22T14:27:42.895Z"
+      "updated_at": "2026-08-22T14:33:49.258Z"
     },
     {
       "id": "finalize",
       "text": "Finalize verified result",
       "status": "pending",
-      "updated_at": "2026-08-22T14:27:42.895Z"
+      "updated_at": "2026-08-22T14:33:49.258Z"
     }
   ],
   "current_step": "Running requested checks",
   "current_command": {
-    "command": "git add -A -- AGENTS.md package.json scripts\\check-coding-tools-history.js scripts\\stage-coding-tools-delivery.py tests\\test_stage_coding_tools_delivery.py resources\\coding-tools-mcp && npm run stage:coding-tools-delivery && git add -A -- .coding-tools\\performance.json .coding-tools\\task-state.json && npm run check:coding-tools-delivery && git diff --cached --check && git commit -m \"fix: stabilize coding-tools ledger delivery\" && npm run stage:coding-tools-delivery && git add -A -- .coding-tools\\performance.json .coding-tools\\task-state.json && npm run check:coding-tools-delivery && git diff --cached --check && git commit --allow-empty -m \"chore: capture delivery evidence\" && git push origin main && echo LOCAL_HEAD && git rev-parse HEAD && echo REMOTE_MAIN && git ls-remote origin refs/heads/main",
+    "command": "git add -A -- AGENTS.md scripts\\stage-coding-tools-delivery.py scripts\\check-coding-tools-history.js tests\\test_stage_coding_tools_delivery.py && npm run stage:coding-tools-delivery && git add -A -- .coding-tools\\performance.json .coding-tools\\task-state.json && npm run check:coding-tools-delivery && git diff --cached --check && git commit -m \"fix: bind coding-tools delivery snapshots\" && npm run stage:coding-tools-delivery && git add -A -- .coding-tools\\performance.json .coding-tools\\task-state.json && npm run check:coding-tools-delivery && git diff --cached --check && git commit --allow-empty -m \"chore: capture delivery evidence\" && git push origin main && echo LOCAL_HEAD && git rev-parse HEAD && echo REMOTE_MAIN && git ls-remote origin refs/heads/main",
     "kind": "command",
-    "session_id": "yFWao9hcyQP6e7iY0gcDd7FT",
+    "session_id": "T4Dgy7iXIn4ppOeNWYHwIfWf",
     "workdir": ".",
     "status": "running",
-    "started_at": "2026-08-22T14:27:43.878Z",
-    "owner_run": "db0044df05c948b5a40c63fc52d2ad16",
-    "owner_wave": "b18739a6e2b74fcb81fb6b4d910658a9"
+    "started_at": "2026-08-22T14:33:50.370Z",
+    "owner_run": "8bc74bd8bfd5453f84e7c2a639711530",
+    "owner_wave": "7a7f60e702a843a3bef844b2ebd98fcf"
   },
-  "last_command_result": {
-    "command_id": "IkHhASo95LwfGrCnFiyZzEU-",
-    "kind": "command",
-    "status": "exited",
-    "result_status": "failed",
-    "exit_code": 1,
-    "duration_ms": null,
-    "finished_at": "2026-08-22T14:26:35.215Z"
-  },
-  "completion_report": {
-    "schema_version": 1,
-    "operator_visible_required": true,
-    "report_contract": [
-      "WHAT CHANGED",
-      "CURRENT STATE",
-      "SOURCE / RUN / WAVE ID",
-      "PROOF ACTUALLY RUN",
-      "ACCEPTED OR NOT",
-      "WHAT REMAINS",
-      "NEXT CRITICAL ACTION"
-    ],
-    "what_changed": {
-      "files": [],
-      "source": "no_durable_file_receipts",
-      "raw_source_or_command_output_included": false
-    },
-    "current_state": {
-      "orchestration_state": "REPLAN",
-      "run_status": "active",
-      "wave_status": "active",
-      "task_status": "waiting",
-      "integrity": {
-        "ok": true,
-        "checked": 17,
-        "head_hash": "56a12b8659f23c01ae20d4ded620029057154ff169af42c6fbb2ca37d3774eb7"
-      },
-      "reports": {
-        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-db0044df05c948b5a40c63fc52d2ad16\\run-summary.md",
-        "wave_reports": [
-          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-db0044df05c948b5a40c63fc52d2ad16\\wave-001.md"
-        ]
-      }
-    },
-    "source_run_wave": {
-      "run_id": "db0044df05c948b5a40c63fc52d2ad16",
-      "wave_id": "c1cbc51f3a4840caafbd5cb429db288a",
-      "base_head": "6d45e5bb00451f6d4418ed0b4e7c1dad185b0ac0",
-      "worktree_fp": "cfc367d119e389ae7095689961ef8f7e030f2ad57d68c95ee48a219c9ac2ab0d",
-      "contract_fp": "",
-      "objective_provenance": {
-        "effective_objective": "Commit and push the fully accepted canonical-ledger path safety and WAL-safe delivery fixes to origin/main. Preserve all canonical .coding-tools evidence, excluding only the two approved ledger.sqlite3-shm and ledger.sqlite3-wal sidecars. In a single delivery command so no controller event can land between final staging and push: restage the exact source/doc change set; run WAL-safe evidence staging; run mandatory delivery guard and cached whitespace check; create the main fix commit; run WAL-safe evidence staging and guard once more for push-time evidence; create a final evidence checkpoint commit (allow-empty is acceptable if no post-commit evidence delta); push main without force; print local HEAD and remote main SHA. Do not restart runtime in this wave.",
-        "objective_revision": 1,
-        "objective_sha256": "9fcf873187775e5b9666c8e4579c06f7f399f89dcc5f71ec593c1c517b42e79d",
-        "objective_source": "run_initial_objective",
-        "objective_changed_from_previous": false,
-        "objective_hash_valid": true,
-        "legacy_fallback": false
-      }
-    },
-    "proof_actually_run": {
-      "count": 1,
-      "all_recorded_proofs_passed": false,
-      "proofs": [
-        {
-          "proof_id": "a438fc7595304811969a778cd20f1726",
-          "stage_id": "check:185d69fcd7259b55",
-          "status": "failed",
-          "duration_ms": 5878,
-          "exit_code": 1,
-          "cache_hit": false
-        }
-      ]
-    },
-    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
-    "blocker_or_failure": {
-      "failure_class": "CHECK_FAILED",
-      "reason": null,
-      "event_seq": 27512
-    },
-    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
-    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
-  },
-  "completion_report_id": "3fc39213a63685a188d1bc35ce8b02b8a52bf33c415c1d5f34d9dca12785f008",
-  "completion_report_acknowledged_id": "3fc39213a63685a188d1bc35ce8b02b8a52bf33c415c1d5f34d9dca12785f008",
-  "completion_report_acknowledged_at": "2026-08-22T14:26:47.405Z",
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
   "next_step": "Run all requested checks and summarize the result.",
-  "created_at": "2026-08-22T14:26:24.695Z",
-  "updated_at": "2026-08-22T14:27:43.878Z",
+  "created_at": "2026-08-22T14:33:44.156Z",
+  "updated_at": "2026-08-22T14:33:50.370Z",
   "events": [
     {
-      "time": "2026-08-22T14:26:24.695Z",
+      "time": "2026-08-22T14:33:44.156Z",
       "event": "task_auto_started",
       "details": {
-        "objective": "Commit and push the fully accepted canonical-ledger path safety and WAL-safe delivery fixes to origin/main. Preserve all canonical .coding-tools evidence, excluding only the two approved ledger.sqlite3-shm and ledger.sqlite3-wal sidecars. In a single delivery command so no controller event can land between final staging and push: restage the exact source/doc change set; run WAL-safe evidence staging; run mandatory delivery guard and cached whitespace check; create the main fix commit; run WAL-safe evidence staging and guard once more for push-time evidence; create a final evidence checkpoint commit (allow-empty is acceptable if no post-commit evidence delta); push main without force; print local HEAD and remote main SHA. Do not restart runtime in this wave."
+        "objective": "Finish GitHub delivery after accepted delivery-snapshot receipt fix. Preserve local commit 3e317d8 unchanged. Stage the accepted receipt source/test changes plus updated AGENTS.md, then stage canonical .coding-tools via the WAL-safe helper; immediately restage only the two empirically observed live projection files performance.json and task-state.json; require mandatory delivery guard and cached whitespace PASS; commit an additive follow-up 'fix: bind coding-tools delivery snapshots'. Then perform a final push-time WAL-safe evidence snapshot, restage those same two live projections, require delivery guard and cached whitespace PASS again, create a final evidence checkpoint commit, push origin/main without force, and print local HEAD plus remote refs/heads/main SHA. Fail closed on any other unstaged evidence or any guard failure. Do not restart runtime."
       }
     },
     {
-      "time": "2026-08-22T14:26:25.980Z",
+      "time": "2026-08-22T14:33:45.272Z",
       "event": "orchestration_context_ready",
       "details": {
         "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-08-22T14:26:26.680Z",
+      "time": "2026-08-22T14:33:46.913Z",
       "event": "orchestration_routed",
       "details": {
         "state": "ROUTED"
       }
     },
     {
-      "time": "2026-08-22T14:26:27.581Z",
+      "time": "2026-08-22T14:33:47.771Z",
       "event": "mcp_write_lease_active",
       "details": {
         "state": "EXECUTING"
       }
     },
     {
-      "time": "2026-08-22T14:26:27.584Z",
+      "time": "2026-08-22T14:33:47.775Z",
       "event": "continuous_workflow_started",
       "details": {
         "fields": [
@@ -178,14 +98,14 @@
       }
     },
     {
-      "time": "2026-08-22T14:26:28.584Z",
+      "time": "2026-08-22T14:33:48.764Z",
       "event": "orchestration_proving",
       "details": {
         "state": "PROVING"
       }
     },
     {
-      "time": "2026-08-22T14:26:29.100Z",
+      "time": "2026-08-22T14:33:49.258Z",
       "event": "task_updated",
       "details": {
         "fields": [
@@ -195,163 +115,11 @@
       }
     },
     {
-      "time": "2026-08-22T14:26:30.083Z",
+      "time": "2026-08-22T14:33:50.370Z",
       "event": "command_started",
       "details": {
-        "command": "git add -A -- AGENTS.md package.json scripts\\check-coding-tools-history.js scripts\\stage-coding-tools-delivery.py tests\\test_stage_coding_tools_delivery.py resources\\coding-tools-mcp && npm run stage:coding-tools-delivery && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git diff --cached --stat && git commit -m \"fix: stabilize coding-tools ledger delivery\" && npm run stage:coding-tools-delivery && npm run check:coding-tools-delivery && git diff --cache",
-        "session_id": "IkHhASo95LwfGrCnFiyZzEU-"
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:35.215Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git add -A -- AGENTS.md package.json scripts\\check-coding-tools-history.js scripts\\stage-coding-tools-delivery.py tests\\test_stage_coding_tools_delivery.py resources\\coding-tools-mcp && npm run stage:coding-tools-delivery && npm run check:coding-tools-delivery && git diff --cached --check && git status --short && git diff --cached --stat && git commit -m \"fix: stabilize coding-tools ledger delivery\" && npm run stage:coding-tools-delivery && npm run check:coding-tools-delivery && git diff --cache",
-        "status": "failed"
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:35.504Z",
-      "event": "task_updated",
-      "details": {
-        "fields": [
-          "current_step",
-          "steps"
-        ]
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:35.929Z",
-      "event": "orchestration_failure_projected",
-      "details": {
-        "state": "REPLAN"
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:35.933Z",
-      "event": "task_updated",
-      "details": {
-        "fields": [
-          "current_step",
-          "failure",
-          "next_step",
-          "status"
-        ]
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:35.933Z",
-      "event": "execution_failed",
-      "details": {
-        "state": "REPLAN"
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:35.996Z",
-      "event": "command_completion_report_required",
-      "details": {
-        "command_id": "",
-        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
-        "report_id": "3fc39213a63685a188d1bc35ce8b02b8a52bf33c415c1d5f34d9dca12785f008"
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:36.162Z",
-      "event": "files_modified",
-      "details": {
-        "count": 0
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:47.180Z",
-      "event": "orchestration_projection_reconciled",
-      "details": {
-        "fields": [
-          "current_step",
-          "failure",
-          "next_step",
-          "orchestration",
-          "status"
-        ]
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:47.405Z",
-      "event": "operator_completion_report_acknowledged",
-      "details": {
-        "report_id": "3fc39213a63685a188d1bc35ce8b02b8a52bf33c415c1d5f34d9dca12785f008"
-      }
-    },
-    {
-      "time": "2026-08-22T14:26:54.673Z",
-      "event": "orchestration_projection_reconciled",
-      "details": {
-        "fields": [
-          "current_step",
-          "failure",
-          "next_step",
-          "orchestration",
-          "status"
-        ]
-      }
-    },
-    {
-      "time": "2026-08-22T14:27:39.908Z",
-      "event": "orchestration_context_ready",
-      "details": {
-        "state": "PREFLIGHT"
-      }
-    },
-    {
-      "time": "2026-08-22T14:27:40.544Z",
-      "event": "orchestration_routed",
-      "details": {
-        "state": "ROUTED"
-      }
-    },
-    {
-      "time": "2026-08-22T14:27:41.464Z",
-      "event": "mcp_write_lease_active",
-      "details": {
-        "state": "EXECUTING"
-      }
-    },
-    {
-      "time": "2026-08-22T14:27:41.466Z",
-      "event": "continuous_workflow_started",
-      "details": {
-        "fields": [
-          "current_step",
-          "next_step",
-          "objective",
-          "status",
-          "steps"
-        ]
-      }
-    },
-    {
-      "time": "2026-08-22T14:27:42.403Z",
-      "event": "orchestration_proving",
-      "details": {
-        "state": "PROVING"
-      }
-    },
-    {
-      "time": "2026-08-22T14:27:42.895Z",
-      "event": "task_updated",
-      "details": {
-        "fields": [
-          "current_step",
-          "steps"
-        ]
-      }
-    },
-    {
-      "time": "2026-08-22T14:27:43.878Z",
-      "event": "command_started",
-      "details": {
-        "command": "git add -A -- AGENTS.md package.json scripts\\check-coding-tools-history.js scripts\\stage-coding-tools-delivery.py tests\\test_stage_coding_tools_delivery.py resources\\coding-tools-mcp && npm run stage:coding-tools-delivery && git add -A -- .coding-tools\\performance.json .coding-tools\\task-state.json && npm run check:coding-tools-delivery && git diff --cached --check && git commit -m \"fix: stabilize coding-tools ledger delivery\" && npm run stage:coding-tools-delivery && git add -A -- .coding-tools",
-        "session_id": "yFWao9hcyQP6e7iY0gcDd7FT"
+        "command": "git add -A -- AGENTS.md scripts\\stage-coding-tools-delivery.py scripts\\check-coding-tools-history.js tests\\test_stage_coding_tools_delivery.py && npm run stage:coding-tools-delivery && git add -A -- .coding-tools\\performance.json .coding-tools\\task-state.json && npm run check:coding-tools-delivery && git diff --cached --check && git commit -m \"fix: bind coding-tools delivery snapshots\" && npm run stage:coding-tools-delivery && git add -A -- .coding-tools\\performance.json .coding-tools\\task-state",
+        "session_id": "T4Dgy7iXIn4ppOeNWYHwIfWf"
       }
     }
   ]

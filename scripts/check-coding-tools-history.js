@@ -4,6 +4,7 @@ const { spawnSync } = require('node:child_process');
 
 const REQUIRE_STAGED = process.argv.includes('--require-staged');
 const CANONICAL_LEDGER = '.coding-tools/orchestration/ledger.sqlite3';
+const DELIVERY_RECEIPT = '.coding-tools/delivery-snapshot.json';
 const APPROVED_IGNORED_EVIDENCE = [
   '.coding-tools/orchestration/ledger.sqlite3-shm',
   '.coding-tools/orchestration/ledger.sqlite3-wal',
@@ -164,20 +165,27 @@ function main() {
   if (REQUIRE_STAGED) {
     const unstaged = runGit(root, ['diff', '--name-only', '-z', '--', '.coding-tools']);
     const untracked = runGit(root, ['ls-files', '--others', '--exclude-standard', '-z', '--', '.coding-tools']);
-    const stagedLedger = runGit(root, ['diff', '--cached', '--name-only', '-z', '--', CANONICAL_LEDGER]);
-    if (unstaged.status !== 0 || untracked.status !== 0 || stagedLedger.status !== 0) {
+    const stagedReceipt = runGit(root, ['diff', '--cached', '--name-only', '-z', '--', DELIVERY_RECEIPT]);
+    if (unstaged.status !== 0 || untracked.status !== 0 || stagedReceipt.status !== 0) {
       failures.push('coding-tools delivery check: unable to inspect staged state');
     } else {
-      const stagedLedgerPaths = new Set(nulList(stagedLedger.stdout).map(normalizedPortable));
-      const canonicalLedgerSnapshotStaged = stagedLedgerPaths.has(CANONICAL_LEDGER);
+      const stagedReceiptPaths = new Set(nulList(stagedReceipt.stdout).map(normalizedPortable));
+      const freshDeliverySnapshotStaged = stagedReceiptPaths.has(DELIVERY_RECEIPT);
       const missingFromDelivery = [...new Set([...nulList(unstaged.stdout), ...nulList(untracked.stdout)])]
         .filter((item) => {
           const normalized = normalizedPortable(item);
           if (isApprovedIgnoredEvidence(normalized)) return false;
-          if (normalized === CANONICAL_LEDGER && canonicalLedgerSnapshotStaged) return false;
+          if (normalized === CANONICAL_LEDGER && freshDeliverySnapshotStaged) return false;
           return true;
         })
         .sort();
+      if (!freshDeliverySnapshotStaged) {
+        failures.push(
+          'coding-tools delivery check: a fresh staged delivery snapshot receipt is required:',
+          `  ${DELIVERY_RECEIPT}`,
+          'Run: npm run stage:coding-tools-delivery'
+        );
+      }
       if (missingFromDelivery.length) {
         failures.push(
           'coding-tools delivery check: current evidence is not fully staged:',
@@ -185,7 +193,7 @@ function main() {
           'Run: npm run stage:coding-tools-delivery'
         );
       }
-      if (canonicalLedgerSnapshotStaged) {
+      if (freshDeliverySnapshotStaged) {
         const verified = verifyStagedCanonicalLedger(root);
         if (verified.status !== 0) {
           failures.push(
