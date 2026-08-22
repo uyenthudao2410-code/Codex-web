@@ -17,6 +17,7 @@ from coding_tools_mcp.p5_experiment import (
     P5_EPOCH_HARD_STOPPED,
     P5ExperimentError,
     analyzer_source_fingerprint,
+    canary_analyzer,
 )
 from coding_tools_mcp.secret_broker import SecretBroker
 from coding_tools_mcp.server import Runtime
@@ -443,6 +444,13 @@ class P5ExperimentLedgerTests(unittest.TestCase):
             slots = {(item["block_id"], item["block_slot"]) for item in assignments}
             self.assertEqual(slots, {(0, 0), (0, 1), (0, 2), (0, 3)})
             self.assertEqual(sorted(item["assigned_arm"] for item in assignments), ["control", "control", "treatment", "treatment"])
+            report = ledger.p5_analyze_epoch(str(epoch["activation_epoch_id"]))
+            schedule = report["integrity"]["funnel_integrity"]["structural_block_schedule"]
+            self.assertEqual(schedule["completed_block_count"], 1)
+            self.assertTrue(schedule["completed_blocks_balanced"])
+            self.assertEqual(report["funnel"]["protocol_started"], 0)
+            self.assertEqual(report["integrity"]["funnel_integrity"]["losses"]["assignment_to_protocol_start"]["missing_count"], 4)
+            self.assertFalse(report["integrity"]["hard_stop_required"])
             self.assertEqual(ledger.verify_chain(str(epoch["ledger_run_id"]))["ok"], True)
 
     def test_aa_receives_control_and_outcome_stays_in_itt(self) -> None:
@@ -494,6 +502,67 @@ class P5ExperimentLedgerTests(unittest.TestCase):
             self.assertEqual(report["assignment"]["assigned_rows"][0]["received_arm"], "control")
             self.assertTrue(report["assignment"]["assigned_rows"][0]["in_intention_to_treat"])
             self.assertEqual(report["funnel"]["assigned"], 1)
+            self.assertEqual(report["funnel"]["protocol_started"], 1)
+            self.assertEqual(report["funnel"]["prewrite_bound"], 1)
+            self.assertEqual(report["funnel"]["first_write_recorded"], 1)
+            self.assertEqual(report["funnel"]["terminal_finalized"], 1)
+            self.assertEqual(report["funnel"]["immediate_quality_complete"], 1)
+            self.assertEqual(report["funnel_by_assigned_arm"][str(assignment["assigned_arm"])]["first_write_recorded"], 1)
+            self.assertEqual(report["integrity"]["funnel_integrity"]["losses"]["assignment_to_terminal_outcome"]["missing_count"], 0)
+            self.assertFalse(report["integrity"]["hard_stop_required"])
+
+    def test_canary_analyzer_hard_stops_on_a_completed_block_schedule_mismatch(self) -> None:
+        source = manifest(phase="P5-A")
+        assignments = [
+            {
+                "assignment_id": f"assignment-{index}",
+                "enrollment_id": f"enrollment-{index}",
+                "task_class": "feature",
+                "block_id": 0,
+                "block_slot": index,
+                "assigned_arm": "control" if index < 3 else "treatment",
+                "created_at": "2026-08-22T00:00:00Z",
+            }
+            for index in range(4)
+        ]
+        report = canary_analyzer(
+            manifest=source,
+            epoch={"activation_epoch_id": "fixture-epoch", "lifecycle": P5_EPOCH_ACTIVE},
+            assignments=assignments,
+            outcomes_by_assignment={},
+            enrollment_rows=[
+                {"enrollment_id": f"enrollment-{index}", "eligible": True, "enrolled": True}
+                for index in range(4)
+            ],
+            integrity_events=[],
+        )
+        self.assertTrue(report["integrity"]["hard_stop_required"])
+        self.assertEqual(
+            report["integrity"]["hard_stop_reason_codes"],
+            ["completed_block_schedule_mismatch"],
+        )
+        self.assertFalse(report["integrity"]["funnel_integrity"]["structural_block_schedule"]["completed_blocks_balanced"])
+
+    def test_live_analyzer_terminalizes_a_corrupted_completed_block(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            source, epoch = self.open_epoch(ledger, phase="P5-A")
+            assignments = [self.enroll_assign(ledger, epoch, source, index) for index in range(4)]
+            treatment = next(item for item in assignments if item["assigned_arm"] == "treatment")
+            # A storage-level corruption is not reachable through the normal
+            # API.  The temporary fixture models the exact condition the live
+            # analyzer must fail closed rather than merely report.
+            with ledger._lock, ledger._connect() as connection:
+                connection.execute(
+                    "UPDATE experiment_assignments SET assigned_arm='control' WHERE assignment_id=?",
+                    (str(treatment["assignment_id"]),),
+                )
+            report = ledger.p5_analyze_epoch(str(epoch["activation_epoch_id"]))
+            self.assertTrue(report["integrity"]["hard_stop_required"])
+            self.assertTrue(report["integrity"]["epoch_hard_stopped"])
+            self.assertIn("completed_block_schedule_mismatch", report["integrity"]["hard_stop_reason_codes"])
+            snapshot = ledger.p5_epoch_snapshot(str(epoch["activation_epoch_id"]))
+            self.assertEqual(snapshot["epoch"]["lifecycle"], P5_EPOCH_HARD_STOPPED)
 
     def test_protocol_cannot_claim_a_first_write_without_a_bound_workflow_lease(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -372,6 +372,202 @@ def project_assignment_outcome(assignment: Mapping[str, Any], outcome: Mapping[s
     return base
 
 
+_FUNNEL_STAGES = (
+    "assigned",
+    "protocol_started",
+    "prewrite_bound",
+    "first_write_recorded",
+    "terminal_finalized",
+    "immediate_quality_complete",
+    "delayed_followup_complete",
+    "delayed_followup_interfered",
+)
+
+
+def _funnel_stage_counts() -> dict[str, int]:
+    return {stage: 0 for stage in _FUNNEL_STAGES}
+
+
+def _expected_assignment_arms(phase: str) -> tuple[str, ...]:
+    if phase == "P5-A0":
+        return ("control_a", "control_b")
+    return ("control", "treatment")
+
+
+def _delayed_followup_complete(outcome: Mapping[str, Any] | None) -> bool:
+    if not outcome:
+        return False
+    status = str(outcome.get("delayed_followup_status") or "").strip().lower()
+    return status not in {"", "unknown", "pending", "pending_or_unknown"}
+
+
+def _funnel_integrity(
+    *,
+    phase: str,
+    assignments: list[Mapping[str, Any]],
+    enrollment_rows: list[Mapping[str, Any]],
+    outcomes_by_assignment: Mapping[str, Mapping[str, Any]],
+    protocol_starts_by_assignment: Mapping[str, Mapping[str, Any]],
+    workflow_bindings_by_assignment: Mapping[str, Mapping[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
+    """Build the preregistered structural funnel without inferential SRM.
+
+    A canary is too small for a sample-ratio p-value to establish randomizer
+    correctness.  Instead, replay the durable 2/2 block shape, reconcile every
+    table join, and expose stage losses by immutable assigned arm and stratum.
+    Incomplete live blocks are expected and reported, not treated as imbalance.
+    """
+
+    expected_arms = _expected_assignment_arms(phase)
+    by_arm = {arm: _funnel_stage_counts() for arm in expected_arms}
+    by_stratum = {stratum: _funnel_stage_counts() for stratum in sorted(P5_ELIGIBLE_WORKFLOWS)}
+    blocks: dict[tuple[str, int], list[Mapping[str, Any]]] = {}
+    enrollment_ids = {str(row.get("enrollment_id") or "") for row in enrollment_rows if row.get("enrolled") is True}
+    assigned_enrollment_ids = {str(row.get("enrollment_id") or "") for row in assignments}
+    assigned_ids = {str(row.get("assignment_id") or "") for row in assignments}
+    violations: set[str] = set()
+    received_arm_crossover_ids: list[str] = []
+    binding_mismatch_ids: list[str] = []
+    protocol_mismatch_ids: list[str] = []
+
+    for assignment in assignments:
+        assignment_id = str(assignment.get("assignment_id") or "")
+        assigned_arm = str(assignment.get("assigned_arm") or "")
+        task_class = str(assignment.get("task_class") or "")
+        if assigned_arm not in by_arm:
+            violations.add("invalid_assigned_arm")
+            by_arm.setdefault(assigned_arm or "invalid", _funnel_stage_counts())
+        if task_class not in by_stratum:
+            violations.add("invalid_assignment_stratum")
+            by_stratum.setdefault(task_class or "invalid", _funnel_stage_counts())
+        block_id = assignment.get("block_id")
+        block_slot = assignment.get("block_slot")
+        if isinstance(block_id, bool) or not isinstance(block_id, int) or isinstance(block_slot, bool) or not isinstance(block_slot, int):
+            violations.add("invalid_block_identity")
+        else:
+            blocks.setdefault((task_class, block_id), []).append(assignment)
+
+        protocol = protocol_starts_by_assignment.get(assignment_id)
+        binding = workflow_bindings_by_assignment.get(assignment_id)
+        outcome = outcomes_by_assignment.get(assignment_id)
+        try:
+            expected_received = received_arm(phase=phase, assigned_arm=assigned_arm)
+        except P5ExperimentError:
+            expected_received = ""
+            violations.add("invalid_assigned_arm")
+        observed_received = str((protocol or outcome or {}).get("received_arm") or "")
+        if protocol and observed_received != expected_received:
+            protocol_mismatch_ids.append(assignment_id)
+            violations.add("protocol_received_arm_mismatch")
+        if outcome and str(outcome.get("received_arm") or "") != expected_received:
+            received_arm_crossover_ids.append(assignment_id)
+            violations.add("received_arm_crossover")
+        if binding and (not protocol or not str((protocol or {}).get("first_write_at") or "")):
+            binding_mismatch_ids.append(assignment_id)
+            violations.add("prewrite_binding_without_runtime_first_write")
+
+        stages = {
+            "assigned": True,
+            "protocol_started": protocol is not None,
+            "prewrite_bound": binding is not None,
+            "first_write_recorded": bool(protocol and str(protocol.get("first_write_at") or "")),
+            "terminal_finalized": outcome is not None and str(outcome.get("terminal_status") or "").lower() in P5_TERMINAL_STATUSES,
+            "immediate_quality_complete": outcome is not None and str(outcome.get("immediate_quality_status") or "") in {"pass", "fail", "not_applicable"},
+            "delayed_followup_complete": _delayed_followup_complete(outcome),
+            "delayed_followup_interfered": outcome is not None and str(outcome.get("quality_followup_interference") or "") != "none",
+        }
+        for stage, reached in stages.items():
+            if reached:
+                by_arm[assigned_arm][stage] += 1
+                by_stratum[task_class][stage] += 1
+
+    completed_blocks: list[dict[str, Any]] = []
+    partial_blocks: list[dict[str, Any]] = []
+    expected_counts = {arm: 2 for arm in expected_arms}
+    for (task_class, block_id), rows in sorted(blocks.items()):
+        slots = [row.get("block_slot") for row in rows]
+        arms = [str(row.get("assigned_arm") or "") for row in rows]
+        slot_set = {slot for slot in slots if isinstance(slot, int) and not isinstance(slot, bool)}
+        slots_valid = len(slots) == len(slot_set) and slot_set.issubset({0, 1, 2, 3})
+        arm_counts = {arm: arms.count(arm) for arm in expected_arms}
+        descriptor = {
+            "task_class": task_class,
+            "block_id": block_id,
+            "assigned_slots": sorted(slot_set),
+            "missing_slots": sorted({0, 1, 2, 3} - slot_set),
+            "arm_counts": arm_counts,
+        }
+        if len(rows) == 4 and slot_set == {0, 1, 2, 3}:
+            descriptor["balanced"] = bool(slots_valid and arm_counts == expected_counts)
+            completed_blocks.append(descriptor)
+            if not descriptor["balanced"]:
+                violations.add("completed_block_schedule_mismatch")
+        else:
+            descriptor["balanced"] = None
+            partial_blocks.append(descriptor)
+            if not slots_valid:
+                violations.add("invalid_partial_block_slots")
+
+    unknown_protocol_ids = sorted(set(protocol_starts_by_assignment) - assigned_ids)
+    unknown_binding_ids = sorted(set(workflow_bindings_by_assignment) - assigned_ids)
+    unknown_outcome_ids = sorted(set(outcomes_by_assignment) - assigned_ids)
+    if unknown_protocol_ids:
+        violations.add("protocol_without_assignment")
+    if unknown_binding_ids:
+        violations.add("prewrite_binding_without_assignment")
+    if unknown_outcome_ids:
+        violations.add("outcome_without_assignment")
+    unenrolled_assignment_ids = sorted(
+        str(row.get("assignment_id") or "")
+        for row in assignments
+        if str(row.get("enrollment_id") or "") not in enrollment_ids
+    )
+    if unenrolled_assignment_ids:
+        violations.add("assignment_without_enrollment")
+
+    total = _funnel_stage_counts()
+    for counts in by_arm.values():
+        for stage in _FUNNEL_STAGES:
+            total[stage] += counts[stage]
+    structural = {
+        "method": "completed_block_shape_and_exact_event_accounting_v1",
+        "inferential_srm_p_value": None,
+        "inferential_srm_not_applicable_reason": "structural_2x2_block_replay_is_primary_integrity_evidence",
+        "completed_block_count": len(completed_blocks),
+        "partial_block_count": len(partial_blocks),
+        "completed_blocks": completed_blocks,
+        "partial_blocks": partial_blocks,
+        "completed_blocks_balanced": all(item["balanced"] is True for item in completed_blocks),
+    }
+    integrity = {
+        "structural_block_schedule": structural,
+        "losses": {
+            "enrollment_to_assignment": {
+                "enrolled_without_assignment_count": len(enrollment_ids - assigned_enrollment_ids),
+                "assignment_without_enrollment_ids": unenrolled_assignment_ids,
+            },
+            "assignment_to_protocol_start": {"missing_count": total["assigned"] - total["protocol_started"]},
+            "protocol_start_to_prewrite_binding": {"missing_count": total["protocol_started"] - total["prewrite_bound"]},
+            "prewrite_binding_to_first_write_record": {"missing_count": total["prewrite_bound"] - total["first_write_recorded"]},
+            "assignment_to_terminal_outcome": {"missing_count": total["assigned"] - total["terminal_finalized"]},
+            "terminal_to_immediate_quality": {"missing_count": total["terminal_finalized"] - total["immediate_quality_complete"]},
+            "terminal_to_delayed_followup": {"missing_count": total["terminal_finalized"] - total["delayed_followup_complete"]},
+        },
+        "received_arm": {
+            "protocol_received_arm_mismatch_ids": sorted(protocol_mismatch_ids),
+            "outcome_crossover_ids": sorted(received_arm_crossover_ids),
+            "binding_first_write_mismatch_ids": sorted(binding_mismatch_ids),
+        },
+        "orphan_rows": {
+            "protocol_assignment_ids": unknown_protocol_ids,
+            "workflow_binding_assignment_ids": unknown_binding_ids,
+            "outcome_assignment_ids": unknown_outcome_ids,
+        },
+        "hard_stop_reason_codes": sorted(violations),
+    }
+    return total, {"by_assigned_arm": by_arm, "by_stratum": by_stratum, "integrity": integrity}, sorted(violations)
+
+
 def canary_analyzer(
     *,
     manifest: Mapping[str, Any],
@@ -380,18 +576,46 @@ def canary_analyzer(
     outcomes_by_assignment: Mapping[str, Mapping[str, Any]],
     enrollment_rows: list[Mapping[str, Any]],
     integrity_events: list[Mapping[str, Any]],
+    protocol_starts: list[Mapping[str, Any]] | None = None,
+    workflow_bindings: list[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Deterministic feasibility/integrity analyzer; it never estimates efficacy."""
 
     normalized = validate_manifest(manifest)
     horizon = int(_required_mapping(normalized["outcome_contract"], "outcome_contract")["horizon_seconds"])
+    protocol_starts_by_assignment = {
+        str(item.get("assignment_id") or ""): item
+        for item in (protocol_starts or [])
+        if str(item.get("assignment_id") or "")
+    }
+    workflow_bindings_by_assignment = {
+        str(item.get("assignment_id") or ""): item
+        for item in (workflow_bindings or [])
+        if str(item.get("assignment_id") or "")
+    }
     projection = [
         project_assignment_outcome(item, outcomes_by_assignment.get(str(item.get("assignment_id") or "")), horizon_seconds=horizon)
         for item in assignments
     ]
-    assigned = len(projection)
-    terminal = sum(1 for item in projection if item["terminal_status"] in P5_TERMINAL_STATUSES)
-    immediate_complete = sum(1 for item in projection if item["immediate_quality_status"] in {"pass", "fail", "not_applicable"})
+    for item in projection:
+        assignment_id = str(item["assignment_id"])
+        protocol = protocol_starts_by_assignment.get(assignment_id)
+        if protocol and item["received_arm"] is None:
+            item["received_arm"] = protocol.get("received_arm") or None
+        item["protocol_started"] = protocol is not None
+        item["prewrite_bound"] = assignment_id in workflow_bindings_by_assignment
+        item["first_write_recorded"] = bool(protocol and str(protocol.get("first_write_at") or ""))
+    total_funnel, funnel_detail, funnel_violations = _funnel_integrity(
+        phase=str(normalized["phase"]),
+        assignments=assignments,
+        enrollment_rows=enrollment_rows,
+        outcomes_by_assignment=outcomes_by_assignment,
+        protocol_starts_by_assignment=protocol_starts_by_assignment,
+        workflow_bindings_by_assignment=workflow_bindings_by_assignment,
+    )
+    assigned = total_funnel["assigned"]
+    terminal = total_funnel["terminal_finalized"]
+    immediate_complete = total_funnel["immediate_quality_complete"]
     unresolved = [item["assignment_id"] for item in projection if item["terminal_status"] == "unknown_not_finalized"]
     critical_integrity_types = {
         "p5_assignment_conflict",
@@ -405,7 +629,7 @@ def canary_analyzer(
         str(item.get("event_type") or "") for item in integrity_events
         if str(item.get("event_type") or "") in critical_integrity_types
     ]
-    hard_stop_required = bool(stop_events)
+    hard_stop_required = bool(stop_events or funnel_violations)
     missing_outcome_pause_required = bool(
         str(epoch.get("lifecycle") or "") in P5_EPOCH_TERMINAL and unresolved
     )
@@ -433,9 +657,14 @@ def canary_analyzer(
             "eligible_but_not_enrolled": max(0, eligible - enrolled),
             "enrolled": enrolled,
             "assigned": assigned,
+            "protocol_started": total_funnel["protocol_started"],
+            "prewrite_bound": total_funnel["prewrite_bound"],
+            "first_write_recorded": total_funnel["first_write_recorded"],
             "terminal_finalized": terminal,
             "assigned_without_finalized_outcome": unresolved,
             "immediate_quality_complete": immediate_complete,
+            "delayed_followup_complete": total_funnel["delayed_followup_complete"],
+            "delayed_followup_interfered": total_funnel["delayed_followup_interfered"],
         },
         "assignment": {
             "by_arm": by_arm,
@@ -443,12 +672,16 @@ def canary_analyzer(
             "all_assigned_retained_in_itt": len(projection) == assigned,
             "assigned_rows": projection,
         },
+        "funnel_by_assigned_arm": funnel_detail["by_assigned_arm"],
+        "funnel_by_stratum": funnel_detail["by_stratum"],
         "integrity": {
             "hard_stop_required": hard_stop_required,
             "hard_stop_event_types": sorted(set(stop_events)),
+            "hard_stop_reason_codes": sorted(set(funnel_violations)),
             "pause_required": missing_outcome_pause_required,
             "pause_reason": "closed_epoch_has_unfinalized_itt_rows" if missing_outcome_pause_required else None,
             "analyzer_hash": _required_mapping(normalized["analysis"], "analysis")["analyzer_sha256"],
+            "funnel_integrity": funnel_detail["integrity"],
         },
         "phase_claim_boundary": (
             "A/A instrumentation only; both assigned arms must receive control behavior."

@@ -966,6 +966,20 @@ class P5ExperimentLedgerMixin:
             outcomes = [self._p5_outcome_row(row) for row in connection.execute(
                 "SELECT * FROM p5_assignment_outcomes WHERE activation_epoch_id=? ORDER BY recorded_at, assignment_id", (epoch["activation_epoch_id"],)
             ).fetchall()]
+            protocol_starts = [
+                {
+                    "assignment_id": row["assignment_id"],
+                    "received_arm": row["received_arm"],
+                    "protocol_id": row["protocol_id"],
+                    "protocol_event_seq": int(row["protocol_event_seq"]),
+                    "started_at": row["started_at"],
+                    "first_write_at": row["first_write_at"],
+                }
+                for row in connection.execute(
+                    "SELECT * FROM p5_arm_protocol_starts WHERE activation_epoch_id=? ORDER BY started_at, assignment_id",
+                    (epoch["activation_epoch_id"],),
+                ).fetchall()
+            ]
             workflow_bindings = [
                 {
                     "assignment_id": row["assignment_id"],
@@ -988,6 +1002,7 @@ class P5ExperimentLedgerMixin:
             "epoch": epoch,
             "enrollment": enrollment,
             "assignments": assignments,
+            "protocol_starts": protocol_starts,
             "workflow_bindings": workflow_bindings,
             "outcomes": outcomes,
             "events": events,
@@ -1040,11 +1055,27 @@ class P5ExperimentLedgerMixin:
                 )
             raise P5ExperimentError("P5 analyzer source fingerprint drifted; epoch has been hard-stopped")
         outcomes = {str(item["assignment_id"]): item for item in snapshot["outcomes"]}
-        return p5_canary_analyzer(
+        analysis = p5_canary_analyzer(
             manifest=manifest,
             epoch=epoch,
             assignments=list(snapshot["assignments"]),
             outcomes_by_assignment=outcomes,
             enrollment_rows=list(snapshot["enrollment"]),
             integrity_events=list(snapshot["events"]),
+            protocol_starts=list(snapshot["protocol_starts"]),
+            workflow_bindings=list(snapshot["workflow_bindings"]),
         )
+        if analysis["integrity"]["hard_stop_required"] and epoch["lifecycle"] not in P5_EPOCH_TERMINAL:
+            reasons = list(analysis["integrity"].get("hard_stop_event_types") or []) + list(
+                analysis["integrity"].get("hard_stop_reason_codes") or []
+            )
+            transition = self.p5_transition_epoch(
+                activation_epoch_id=activation_epoch_id,
+                transition="hard_stop",
+                reason="p5_analyzer_integrity:" + ",".join(sorted(set(reasons))),
+                authority="p5_analyzer",
+            )
+            analysis["integrity"]["epoch_hard_stopped"] = transition["changed"] is True
+        else:
+            analysis["integrity"]["epoch_hard_stopped"] = False
+        return analysis

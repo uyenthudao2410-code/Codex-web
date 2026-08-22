@@ -1856,7 +1856,20 @@ It passed **124 tests in 32.00 seconds** at the original source checkpoint. The 
 ## 28.4 Explicit non-claims and next operator action
 
 - No P5 epoch was opened in the repository's canonical runtime ledger; temporary test epochs existed only in temporary test directories.
+
 - No P5-A0 A/A task, P5-A treatment task, causal effect, safety conclusion, CAR, TTAR improvement, confirmatory Nmax decision, or production promotion was measured.
 - The local reporter may prepare the ledger schema when it opens the canonical database, but schema preparation is not experiment activation and creates no enrollment or assignment.
 - Before P5-A0, create a real manifest from the template with fresh source/runtime/environment identities and the externally managed `secret://experiment/p5/a` handle; run Gate 0 again on a clean, upstream-matched checkout; verify no active writer; obtain explicit operator authority and natural representative tasks; then open exactly one epoch and retain its ledger evidence. An Electron development launch may receive its opaque handle only by externally injecting `CODING_TOOLS_P5_A0_SEED` into the trusted parent process; it must never be persisted in project files or ordinary settings.
 - P5-A treatment remains conditional on a terminal P5-A0 integrity/feasibility review. P5-C remains locked until P4-C and randomized treatment-benefit heterogeneity/policy value are separately proven.
+
+## 29. Continuation checkpoint — Wave 3 funnel completion and rebaseline
+
+This section records a later implementation boundary; it does not rewrite the earlier checkpoint above.
+
+- An explicit P5-A0 epoch (`e91c6b09…85073`) was opened only after its frozen manifest, upstream-matched code-bearing source, no active writer, and opaque seed handle were verified. Its analyzer reported zero assessed/enrolled/assigned rows and no integrity event.
+- Before any enrollment, the epoch was deliberately closed with the durable reason `zero_enrollment_rebaseline_for_wave3_funnel_integrity_completion`. There was no assignment, arm action, write binding, outcome, treatment exposure, or efficacy claim to discard. Closing it avoids carrying incomplete instrumentation into a live natural cohort.
+- Wave 3 now projects the complete durable funnel by immutable assignment arm and workflow stratum: protocol start, pre-write binding, runtime-owned first-write record, terminal outcome, immediate quality, delayed follow-up, and interference. It also reports stage losses, received-arm crossover, orphan rows, and the enrolled-to-assigned reconciliation.
+- The SRM control is structural rather than an underpowered p-value: every completed feature/bugfix block must contain slots `0..3` and the frozen 2/2 arm allocation. A partial live block is explicitly pending; an invalid completed block, orphan row, arm mismatch/crossover, or pre-write binding without a runtime first-write record is a hard-stop reason. The ledger analyzer terminalizes a live epoch on such a hard-stop result.
+- New focused golden/state-machine coverage proves a valid concurrent 2/2 block, complete funnel projection through an A/A control receipt, and hard-stop on a malformed completed block. This remains source proof only until a newly activated runtime reports the same analyzer fingerprint and a fresh A/A epoch is explicitly opened.
+
+The next action is therefore operational, not another source claim: commit/push this bounded Wave 3 change with the required `.coding-tools` evidence, controlled-restart the owned MCP so it loads the new source, verify the encrypted secret-handle commitment without exposing its value, and open a new P5-A0 manifest. Only a natural feature/bugfix first created after that opening can enter the A/A cohort.
