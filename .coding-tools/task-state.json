@@ -1,23 +1,73 @@
 {
   "version": 2,
-  "task_id": "c43dda7261d34762adb82abb221a2587",
+  "task_id": "a6d7b9877e6e41718fa2e66db3cbf0d5",
   "orchestration": {},
-  "objective": "Complete a workspace task",
-  "status": "waiting",
+  "objective": "Run a workspace command",
+  "status": "failed",
   "steps": [],
-  "current_step": "Waiting for model",
+  "current_step": "Command failed",
   "current_command": null,
   "last_command_result": {
-    "command_id": "py_LMAHjsd6RKQsJIoB64qmq",
+    "command_id": "",
     "kind": "command",
-    "status": "exited",
-    "result_status": "passed",
-    "exit_code": 0,
-    "duration_ms": 208,
-    "finished_at": "2026-08-22T09:06:22.523Z"
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-08-22T09:14:14.475Z"
   },
-  "completion_report": null,
-  "completion_report_id": "",
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "QUeX8Zd_A1spf9yCNYMPaGph",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "QUeX8Zd_A1spf9yCNYMPaGph",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": 352
+      },
+      "git": {
+        "head": "a1e60ef6434ac274234e694f01cc3a35ac738415",
+        "branch": "main",
+        "worktree_fp": "a6b6f1173df33ea21348f56bf8553733a907a0c39d0562ce4dac333f62d5a324",
+        "dirty_paths": []
+      }
+    },
+    "source_run_wave": {
+      "task_id": "a6d7b9877e6e41718fa2e66db3cbf0d5",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "2c5389743a9c5de41c4378b997ba3a0daf6db3ec97d76761fef534032eafac1b",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [],
@@ -25,31 +75,168 @@
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "",
-  "created_at": "2026-08-22T09:06:15.022Z",
-  "updated_at": "2026-08-22T09:07:40.658Z",
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-22T09:11:35.490Z",
+  "updated_at": "2026-08-22T09:15:11.014Z",
   "events": [
     {
-      "time": "2026-08-22T09:06:15.022Z",
+      "time": "2026-08-22T09:11:35.490Z",
       "event": "task_auto_started",
       "details": {
-        "objective": "Complete a workspace task"
+        "objective": "Run a workspace command"
       }
     },
     {
-      "time": "2026-08-22T09:06:22.169Z",
+      "time": "2026-08-22T09:11:35.725Z",
       "event": "command_started",
       "details": {
-        "command": "type package.json",
-        "session_id": "py_LMAHjsd6RKQsJIoB64qmq"
+        "command": "git ls-files \"resources/coding-tools-mcp/scripts/*p5*\"",
+        "session_id": "QUeX8Zd_A1spf9yCNYMPaGph"
       }
     },
     {
-      "time": "2026-08-22T09:06:22.523Z",
+      "time": "2026-08-22T09:11:36.174Z",
       "event": "command_finished",
       "details": {
-        "command": "type package.json",
+        "command": "git ls-files \"resources/coding-tools-mcp/scripts/*p5*\"",
         "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T09:11:45.712Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "QUeX8Zd_A1spf9yCNYMPaGph",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "2c5389743a9c5de41c4378b997ba3a0daf6db3ec97d76761fef534032eafac1b"
+      }
+    },
+    {
+      "time": "2026-08-22T09:12:06.692Z",
+      "event": "command_started",
+      "details": {
+        "command": "git ls-files \"resources/coding-tools-mcp/scripts/*p2*\" \"resources/coding-tools-mcp/scripts/*rework*\" \"resources/coding-tools-mcp/scripts/*efficiency*\"",
+        "session_id": "se3kzdqqdoi15MlbUBQ7mlqG"
+      }
+    },
+    {
+      "time": "2026-08-22T09:12:06.986Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git ls-files \"resources/coding-tools-mcp/scripts/*p2*\" \"resources/coding-tools-mcp/scripts/*rework*\" \"resources/coding-tools-mcp/scripts/*efficiency*\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T09:12:13.538Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe resources\\coding-tools-mcp\\scripts\\report_p2_rework_diagnosis.py --workspace . --limit 1000",
+        "session_id": "FaLWryF1G3jgWRxSZmTDFBg-"
+      }
+    },
+    {
+      "time": "2026-08-22T09:12:52.458Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe resources\\coding-tools-mcp\\scripts\\plan_p5_controlled_treatment.py --help",
+        "session_id": "-Nsgc12Nlp1rJc9yJ6cEhpN7"
+      }
+    },
+    {
+      "time": "2026-08-22T09:12:53.003Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\native-python\\python.exe resources\\coding-tools-mcp\\scripts\\plan_p5_controlled_treatment.py --help",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T09:13:27.070Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe -c \"import sqlite3,json; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); names=['p5_experiment_epochs','p5_enrollment_decisions','experiment_assignments','p5_arm_protocol_starts','p5_assignment_outcomes','p5_assignment_workflow_bindings']; print(json.dumps({n:c.execute('select count(*) from '+n).fetchone()[0] for n in names},indent=2)); print(json.dumps([dict(zip([x[0] for x in c.execute('pragma table_info(p5_experiment_epochs)').fetchall()],[",
+        "session_id": "LSF_Fhe0p5pWcs3dRwBhdrKf"
+      }
+    },
+    {
+      "time": "2026-08-22T09:13:27.534Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\native-python\\python.exe -c \"import sqlite3,json; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); names=['p5_experiment_epochs','p5_enrollment_decisions','experiment_assignments','p5_arm_protocol_starts','p5_assignment_outcomes','p5_assignment_workflow_bindings']; print(json.dumps({n:c.execute('select count(*) from '+n).fetchone()[0] for n in names},indent=2)); print(json.dumps([dict(zip([x[0] for x in c.execute('pragma table_info(p5_experiment_epochs)').fetchall()],[",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T09:13:35.893Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"current_active_execution_run\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+        "session_id": "kJBw-af9lvJECmLicCCGMiYi"
+      }
+    },
+    {
+      "time": "2026-08-22T09:13:36.217Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"current_active_execution_run\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T09:13:48.755Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe -c \"import sqlite3,json; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); print(json.dumps({'runs_by_status':dict(c.execute('select status,count(*) from runs group by status').fetchall()),'waves_by_status':dict(c.execute('select status,count(*) from waves group by status').fetchall()),'active_runs':[{'run_id':r[0],'task_id':r[1],'started_at':r[2],'objective':r[3][:160]} for r in c.execute(\\\"select run_id,task_id,started_at,objective from runs w",
+        "session_id": "T47UTiK9xATT0wE8sH-a5sTd"
+      }
+    },
+    {
+      "time": "2026-08-22T09:13:53.080Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\native-python\\python.exe -c \"import sqlite3,json; c=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); print(json.dumps({'runs_by_status':dict(c.execute('select status,count(*) from runs group by status').fetchall()),'waves_by_status':dict(c.execute('select status,count(*) from waves group by status').fetchall()),'active_runs':[{'run_id':r[0],'task_id':r[1],'started_at':r[2],'objective':r[3][:160]} for r in c.execute(\\\"select run_id,task_id,started_at,objective from runs w",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-22T09:14:07.703Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"funnel\\|enrollment_decisions\\|explicit_enrollment\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | head -120",
+        "session_id": "JbYvFakKGnk_HHnuMcEcMCgL"
+      }
+    },
+    {
+      "time": "2026-08-22T09:14:08.242Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"funnel\\|enrollment_decisions\\|explicit_enrollment\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | head -120",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-22T09:14:14.475Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"explicit_enrollment_only\\|p5_enrollment_decisions\\|funnel\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-22T09:14:14.475Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-08-22T09:15:03.342Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INTERNAL_ERROR"
       }
     }
   ]

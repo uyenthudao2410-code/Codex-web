@@ -1,102 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "f57ae30e66204db0a1dc3d2d5036ea69",
-    "orchestration": {
-      "run_id": "d7335c60f2644b25b3924b53f61d660c",
-      "wave_id": "265fad9b86e04449bf5e92845fdd4473",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "640ad37e3e571a0a56af376e9d3bda2b89bf0669",
-      "worktree_fp": "10950dae692852cf9476c3885d9b1b239d9dcde0bdbebc8db409217f47c8da5f",
-      "contract_fp": "41fee5b32011994f122b98ca27e3691172bf3f724f02ee89ad4ab1d652829d25"
-    },
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "5m3-DGErd0peuDgo1gfUGwCk",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "failed",
-      "exit_code": 1,
-      "duration_ms": 604,
-      "finished_at": "2026-08-21T00:44:44.012Z"
-    },
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-21T00:44:36.787Z",
-    "updated_at": "2026-08-21T00:44:44.012Z",
-    "events": [
-      {
-        "time": "2026-08-21T00:44:36.787Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-21T00:44:36.816Z",
-        "event": "orchestration_projection_reconciled",
-        "details": {
-          "fields": [
-            "orchestration"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-21T00:44:37.503Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 40 \"class ManagedProcessAdmission\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
-          "session_id": "qTffZFsp59bmjvojKH3egTxu"
-        }
-      },
-      {
-        "time": "2026-08-21T00:44:37.674Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 40 \"class ManagedProcessAdmission\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
-          "status": "passed"
-        }
-      },
-      {
-        "time": "2026-08-21T00:44:43.552Z",
-        "event": "command_started",
-        "details": {
-          "command": "rg -n -C 44 \"def admit_managed_process\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
-          "session_id": "5m3-DGErd0peuDgo1gfUGwCk"
-        }
-      },
-      {
-        "time": "2026-08-21T00:44:44.012Z",
-        "event": "command_finished",
-        "details": {
-          "command": "rg -n -C 44 \"def admit_managed_process\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-21T00:44:50.603Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "89af546831a7467da9292d0bd587c5a8",
     "orchestration": {
       "run_id": "d7335c60f2644b25b3924b53f61d660c",
@@ -167009,6 +166913,120 @@
       }
     ],
     "archived_at": "2026-08-22T09:06:14.793Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c43dda7261d34762adb82abb221a2587",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "pCfW-iO6h0Xyf1E0bdIIzG6S",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 285,
+      "finished_at": "2026-08-22T09:11:21.042Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "operation_id is required when action=operation.",
+    "next_step": "",
+    "created_at": "2026-08-22T09:06:15.022Z",
+    "updated_at": "2026-08-22T09:11:27.869Z",
+    "events": [
+      {
+        "time": "2026-08-22T09:06:15.022Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-22T09:06:22.169Z",
+        "event": "command_started",
+        "details": {
+          "command": "type package.json",
+          "session_id": "py_LMAHjsd6RKQsJIoB64qmq"
+        }
+      },
+      {
+        "time": "2026-08-22T09:06:22.523Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T09:10:40.347Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --oneline --decorate -12",
+          "session_id": "0xuYDjQ0Lj2az0r05ByGTQlV"
+        }
+      },
+      {
+        "time": "2026-08-22T09:10:40.651Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline --decorate -12",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-22T09:10:46.312Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\native-python\\python.exe resources\\coding-tools-mcp\\scripts\\report_p4_readiness.py --workspace . --limit 200",
+          "session_id": "8gtZAQzcwKu-1badFNnTh6Zl"
+        }
+      },
+      {
+        "time": "2026-08-22T09:11:03.656Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\native-python\\python.exe resources\\coding-tools-mcp\\scripts\\report_p5_baseline.py --workspace .",
+          "session_id": "c-UJZ7D2Hg9ePLrmzjSarGIt"
+        }
+      },
+      {
+        "time": "2026-08-22T09:11:20.634Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\native-python\\python.exe resources\\coding-tools-mcp\\scripts\\report_p5_instrumentation.py --workspace .",
+          "session_id": "pCfW-iO6h0Xyf1E0bdIIzG6S"
+        }
+      },
+      {
+        "time": "2026-08-22T09:11:21.042Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\native-python\\python.exe resources\\coding-tools-mcp\\scripts\\report_p5_instrumentation.py --workspace .",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-22T09:11:27.869Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-22T09:11:35.096Z",
     "archive_reason": "finished"
   }
 ]
