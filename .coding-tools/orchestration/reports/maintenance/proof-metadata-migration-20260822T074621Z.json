@@ -1,0 +1,100 @@
+{
+  "backup": "C:\\Users\\Admin\\AppData\\Local\\Temp\\coding-tools-mcp\\b170d09bfa7bee20\\iQx6C-rdAX3qOmzc\\tmp\\Codex-web-ledger-backups\\ledger-pre-proof-metadata-20260822T074621Z.sqlite3",
+  "backup_sha256": "fe8e886991745c460ae3603d08607f780d4d74b53f12f97e90e33f1251547e60",
+  "backup_size_bytes": 85704704,
+  "database": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\ledger.sqlite3",
+  "database_size_bytes_after": 85704704,
+  "finished_at": "2026-08-22T07:46:28.056297+00:00",
+  "invariants": {
+    "events_payload_unchanged": true,
+    "idempotency_summary_unchanged": true,
+    "post_quick_check_ok": true,
+    "proof_logical_unchanged": true,
+    "table_counts_unchanged": true
+  },
+  "migrated_rows": 0,
+  "migration_candidates": [],
+  "post": {
+    "events_payload_sha256": "00605a9e656417c84c8f8f8f0ebc9b05cb9e30dbf9dcd257953e26a7fa3124d3",
+    "freelist_count": 7132,
+    "idempotency_summary_sha256": "5bc40d5d90939897daf2848cc1ab3512f28efa403de895bf30759e66744d7688",
+    "proof_logical_sha256": "881c78ba70df82eb4a12a09166a610cfeaceebe9805fd15ba0f61ad8e1ed502b",
+    "proof_storage_types": {
+      "blob": 120,
+      "text": 1482
+    },
+    "quick_check": "ok",
+    "table_counts": {
+      "agent_lanes": 35,
+      "background_operations": 1299,
+      "checkout_resource_claims": 397,
+      "checkpoints": 486,
+      "controller_leases": 744,
+      "coordination_messages": 207,
+      "delegations": 62,
+      "events": 26911,
+      "experiment_assignments": 0,
+      "handoff_capsules": 8,
+      "hub_client_cursors": 40,
+      "hub_clients": 22,
+      "idempotency_records": 4374,
+      "managed_process_jobs": 4226,
+      "p5_arm_protocol_starts": 0,
+      "p5_assignment_outcomes": 0,
+      "p5_assignment_workflow_bindings": 0,
+      "p5_enrollment_decisions": 0,
+      "p5_experiment_epochs": 1,
+      "proofs": 1602,
+      "runs": 836,
+      "waves": 1306,
+      "write_fences": 1
+    }
+  },
+  "pre": {
+    "events_payload_sha256": "00605a9e656417c84c8f8f8f0ebc9b05cb9e30dbf9dcd257953e26a7fa3124d3",
+    "freelist_count": 7132,
+    "idempotency_summary_sha256": "5bc40d5d90939897daf2848cc1ab3512f28efa403de895bf30759e66744d7688",
+    "journal_mode": "wal",
+    "page_count": 20924,
+    "proof_logical_sha256": "881c78ba70df82eb4a12a09166a610cfeaceebe9805fd15ba0f61ad8e1ed502b",
+    "proof_storage_types": {
+      "blob": 120,
+      "text": 1482
+    },
+    "quick_check": "ok",
+    "table_counts": {
+      "agent_lanes": 35,
+      "background_operations": 1299,
+      "checkout_resource_claims": 397,
+      "checkpoints": 486,
+      "controller_leases": 744,
+      "coordination_messages": 207,
+      "delegations": 62,
+      "events": 26911,
+      "experiment_assignments": 0,
+      "handoff_capsules": 8,
+      "hub_client_cursors": 40,
+      "hub_clients": 22,
+      "idempotency_records": 4374,
+      "managed_process_jobs": 4226,
+      "p5_arm_protocol_starts": 0,
+      "p5_assignment_outcomes": 0,
+      "p5_assignment_workflow_bindings": 0,
+      "p5_enrollment_decisions": 0,
+      "p5_experiment_epochs": 1,
+      "proofs": 1602,
+      "runs": 836,
+      "waves": 1306,
+      "write_fences": 1
+    }
+  },
+  "report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\maintenance\\proof-metadata-migration-20260822T074621Z.json",
+  "schema_version": 1,
+  "started_at": "2026-08-22T07:46:21.885766+00:00",
+  "status": "PASS",
+  "vacuum": {
+    "eligible": true,
+    "error": null,
+    "performed": true
+  }
+}
