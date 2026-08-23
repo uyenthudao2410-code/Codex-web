@@ -1,0 +1,23 @@
+{
+  "evidence_class": "local_controlled_restart_probe",
+  "captured_at": "2026-08-23T10:55:55.662Z",
+  "user_data": "C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant",
+  "app_root": "E:\\DEV\\Codex-web",
+  "resources_root": "E:\\DEV\\Codex-web\\resources",
+  "configured_workspace": "E:\\DEV\\Codex-web",
+  "expected_workspace_match": true,
+  "expected_user_data_match": true,
+  "expected_app_root_match": true,
+  "native_pid": 22028,
+  "native_alive": true,
+  "native_port": 18766,
+  "tunnel_pid_present": true,
+  "mode": "restart",
+  "ok": true,
+  "old_native_pid": 22028,
+  "new_native_pid": 23396,
+  "pid_changed": true,
+  "mcp_ready": true,
+  "tunnel_pid_preserved": true,
+  "completed_at": "2026-08-23T10:55:57.102Z"
+}
