@@ -37,6 +37,8 @@ Do not kill the active MCP process from inside the request it is serving. `task_
 
 Never commit or expose MCP/tunnel/recovery/loopback tokens, OAuth/account credentials, private keys, secret-store exports, `.env` values, Authorization headers, or raw sensitive provider/workspace content. Provider usage/cost telemetry should persist measured numeric facts and correlation identifiers rather than prompt/response content.
 
+Run `npm run check:repository-secrets` before delivery. It rejects the established credential/local-account paths and high-signal raw HTTP credential captures without printing any matched value. A clean current tip does not prove a previously committed credential is harmless: rotate or revoke it through the owning service, then assess any Git-history rewrite as a separate, explicitly authorized destructive operation.
+
 ## Durable orchestration evidence
 
 `.coding-tools/orchestration/ledger.sqlite3` is the canonical local causal audit source for runs, waves, authority, delegations, proof lineage, observations and acceptance. Host-turn correlation should remain content-free (`turn_id`, `trace_id`, `span_id`) rather than persisting full ChatGPT prompts/responses.

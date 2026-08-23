@@ -4905,6 +4905,8 @@ async fn job_log_wait_epoch_mismatch_refreshes_immediately() {
         job.job_id.clone(),
         "ffffffffffffffffffffffffffffffff",
         parsed.revision,
+        1,
+        1,
     )
     .unwrap()
     .encode();
@@ -5234,6 +5236,11 @@ async fn job_log_wait_legacy_update_between_calls_and_noop_replacement() {
     let token1 = info.observation_token.unwrap();
     registry.update_job(update()).await.unwrap();
     let current = registry.get_job(&job.job_id).await.unwrap();
-    assert_eq!(current.observation_token.as_deref(), Some(token1.as_str()));
+    let lifecycle_token = crate::job_observation::JobObservationToken::parse(
+        current.observation_token.as_deref().unwrap(),
+    )
+    .unwrap();
+    assert!(lifecycle_token.is_legacy());
+    assert_ne!(current.observation_token.as_deref(), Some(token1.as_str()));
     assert_eq!(current.last_update_seq, Some(0));
 }

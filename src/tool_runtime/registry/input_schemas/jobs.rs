@@ -393,7 +393,7 @@ pub(crate) fn job_log_input_schema() -> Value {
         (
             "after_observation_token",
             "string",
-            "Opaque observation token returned by run_job, job_status, job_log, or job_tail. Return it unchanged. The token is bound to one Job; a server epoch change causes an immediate refresh.",
+            "Opaque Job-bound lifecycle/log-delta token returned by a Job snapshot. Return it unchanged. Without explicit offset pagination it advances stdout/stderr independently and returns only newly observable output; legacy or stale-epoch tokens safely reset to a bounded recovery tail.",
             false,
         ),
         (
@@ -431,7 +431,7 @@ pub(crate) fn observe_jobs_input_schema() -> Value {
                         "after_observation_token": {
                             "type": "string",
                             "maxLength": 192,
-                            "description": "Optional opaque Job-bound token from the latest snapshot. Return it unchanged. A stale server epoch is immediately actionable."
+                            "description": "Optional opaque Job-bound lifecycle/log-delta token from the latest snapshot. Return it unchanged. Cursor-aware tokens request only newly observable output; legacy or stale-epoch tokens safely reset to a bounded recovery tail."
                         }
                     },
                     "required": ["job_id"]

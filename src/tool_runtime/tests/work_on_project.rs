@@ -474,11 +474,12 @@ fn work_on_project_tool_call_requires_project_and_instruction() {
         ToolCall::from_tool_name("work_on_project", json!({"project": SAMPLE_PROJECT})).is_err(),
         "instruction is required"
     );
+    let absolute_path = std::env::temp_dir().join("webcodex-work-on-project-schema");
     let path_call = ToolCall::from_tool_name(
         "work_on_project",
         json!({
             "client_id": "special",
-            "path": "/root/git/example",
+            "path": absolute_path,
             "instruction": "do it"
         }),
     )
@@ -1474,14 +1475,24 @@ fn seed_coding_repository(root: &std::path::Path, agents_body: &str) {
     std::fs::write(root.join(".env"), b"SECRET=do-not-leak").unwrap();
     std::fs::create_dir_all(root.join("target/debug")).unwrap();
     std::fs::write(root.join("target/debug/output"), b"binary").unwrap();
-    for cmd in [
-        "git add -A",
-        "git commit -m 'seed fixture'",
-        "git config status.showUntrackedFiles all",
+    for args in [
+        ["add", "-A"].as_slice(),
+        ["commit", "-m", "seed fixture"].as_slice(),
+        ["config", "status.showUntrackedFiles", "all"].as_slice(),
     ] {
-        let (exit_code, stdout, stderr, _) =
-            crate::tool_runtime::helpers::run_command_sync(cmd, root, 30);
-        assert_eq!(exit_code, 0, "{cmd}\n{stdout}{stderr}");
+        let output = std::process::Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .output()
+            .expect("spawn fixture git command");
+        assert_eq!(
+            output.status.code().unwrap_or(-1),
+            0,
+            "git {}\n{}{}",
+            args.join(" "),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
     }
 }
 
@@ -1660,7 +1671,8 @@ async fn work_on_project_exact_resume_reuses_rules_and_detects_changes() {
     assert!(first.success, "{:?}", first.error);
     let session_id = first.output["session_id"].as_str().unwrap().to_string();
 
-    // Exact resume with unchanged rules: status=reused, no repeated content.
+    // The canonical model-facing entry repeats unchanged rules by default:
+    // context retention is caller-owned, never inferred from session identity.
     let reused = dispatch_start_coding_task_in_window(
         &runtime,
         "wop-reuse",
@@ -1674,16 +1686,42 @@ async fn work_on_project_exact_resume_reuses_rules_and_detects_changes() {
     assert_eq!(reused.output["continuation"], "resumed_explicitly");
     let reused_instructions = &reused.output["instructions"];
     assert_eq!(reused_instructions["status"], "reused");
-    assert_eq!(reused_instructions["content_included"], false);
+    assert_eq!(reused_instructions["content_included"], true);
     assert!(reused_instructions["changed_sources"]
         .as_array()
         .map(|sources| sources.is_empty())
         .unwrap_or(false));
     for source in reused_instructions["sources"].as_array().unwrap() {
         if source["path"] == "AGENTS.md" {
-            assert_eq!(source["content"], serde_json::Value::Null);
+            assert!(source["content"].is_string());
             assert!(source["fingerprint"].is_string());
         }
+    }
+
+    let suppressed = dispatch_start_coding_task_in_window(
+        &runtime,
+        "wop-reuse",
+        ToolCall::WorkOnProject {
+            project: project.clone(),
+            client_id: None,
+            path: None,
+            instruction: "caller retained rules".to_string(),
+            session_id: Some(session_id.clone()),
+            include_project_instructions: false,
+            include_workflow_guidance: true,
+        },
+        Some(&auth),
+        "wop-reuse-window",
+    )
+    .await;
+    assert!(suppressed.success, "{:?}", suppressed.error);
+    assert_eq!(suppressed.output["instructions"]["status"], "reused");
+    assert_eq!(suppressed.output["instructions"]["content_included"], false);
+    for source in suppressed.output["instructions"]["sources"]
+        .as_array()
+        .unwrap()
+    {
+        assert_eq!(source["content"], serde_json::Value::Null);
     }
 
     // Change the rule then resume: status=changed, changed_sources includes it.
@@ -1761,7 +1799,7 @@ async fn work_on_project_sizes_and_runner_request_reduction_are_stable() {
     .await;
     assert!(reused.success, "{:?}", reused.error);
     assert_eq!(reused.output["instructions"]["status"], "reused");
-    assert_eq!(reused.output["instructions"]["content_included"], false);
+    assert_eq!(reused.output["instructions"]["content_included"], true);
 
     let (standard, standard_requests) = dispatch_recording_startup_requests(
         &runtime,

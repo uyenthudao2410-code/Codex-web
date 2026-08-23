@@ -3,7 +3,7 @@ use crate::tool_runtime::git::{
     collect_show_changes_untracked_previews_for_root, git_log_command, parse_porcelain_summary,
     parse_show_changes_output, show_changes_command, split_show_changes_stdout,
 };
-use crate::tool_runtime::helpers::{run_command_sync, shell_escape_simple};
+use crate::tool_runtime::helpers::run_command_sync;
 use crate::tool_runtime::{
     ApplyFileChangeInput, ApplyFileChangeKind, ApplyTextEditInput, ApplyTextEditKind, ToolRuntime,
 };
@@ -11,18 +11,27 @@ use crate::tool_runtime::{LocalJobKiller, TerminateOutcome};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Arc;
 
 pub(in crate::tool_runtime::tests) fn init_git_repo(root: &Path) {
-    for cmd in [
-        "git init",
-        "git config user.email webcodex-test@example.com",
-        "git config user.name 'WebCodex Test'",
+    for args in [
+        ["init"].as_slice(),
+        ["config", "user.email", "webcodex-test@example.com"].as_slice(),
+        ["config", "user.name", "WebCodex Test"].as_slice(),
     ] {
-        let (exit_code, stdout, stderr, _) = run_command_sync(cmd, root, 30);
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .output()
+            .expect("spawn git setup command");
         assert_eq!(
-            exit_code, 0,
-            "git setup command failed: {cmd}\nstdout:\n{stdout}\nstderr:\n{stderr}"
+            output.status.code().unwrap_or(-1),
+            0,
+            "git setup command failed: git {}\nstdout:\n{}\nstderr:\n{}",
+            args.join(" "),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
         );
     }
 }
@@ -34,14 +43,22 @@ pub(in crate::tool_runtime::tests) fn commit_file(
     subject: &str,
 ) {
     fs::write(root.join(path), content).unwrap();
-    for cmd in [
-        format!("git add -- {}", shell_escape_simple(path)),
-        format!("git commit -m {}", shell_escape_simple(subject)),
+    for args in [
+        vec!["add".to_string(), "--".to_string(), path.to_string()],
+        vec!["commit".to_string(), "-m".to_string(), subject.to_string()],
     ] {
-        let (exit_code, stdout, stderr, _) = run_command_sync(&cmd, root, 30);
+        let output = Command::new("git")
+            .args(&args)
+            .current_dir(root)
+            .output()
+            .expect("spawn git commit helper command");
         assert_eq!(
-            exit_code, 0,
-            "git commit helper command failed: {cmd}\nstdout:\n{stdout}\nstderr:\n{stderr}"
+            output.status.code().unwrap_or(-1),
+            0,
+            "git commit helper command failed: git {}\nstdout:\n{}\nstderr:\n{}",
+            args.join(" "),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
         );
     }
 }

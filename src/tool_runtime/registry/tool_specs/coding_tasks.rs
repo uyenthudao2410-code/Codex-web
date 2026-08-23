@@ -4,16 +4,22 @@ use super::super::input_schemas::{
 use super::tool_spec;
 use crate::tool_runtime::tool_spec::ToolSpec;
 
+/// Non-model-facing contract retained for direct/API compatibility. This is
+/// intentionally not returned by `tool_specs()` or ordinary MCP discovery.
+#[allow(dead_code)]
+pub(super) fn start_coding_task_compatibility_spec() -> ToolSpec {
+    tool_spec(
+        "start_coding_task",
+        "Advanced coding-session bootstrap for direct/API compatibility. Prefer work_on_project for ordinary model coding/review; use this entry for managed temporary projects, mode/guards, execution context, startup detail, exact resume_session_id, current binding, or new-session controls.",
+        start_coding_task_input_schema(),
+    )
+}
+
 pub(super) fn tool_specs() -> Vec<ToolSpec> {
     vec![
         tool_spec(
-            "start_coding_task",
-            "Start or continue coding from an existing project, a Runner-owned absolute path, or a managed temporary project. Paths are policy-checked and reused or permanently registered before exact Session handling. Stable windows reuse; resume_session_id recovers exactly; new_session=true isolates.",
-            start_coding_task_input_schema(),
-        ),
-        tool_spec(
             "work_on_project",
-            "Start normal coding from an existing project or Runner-owned absolute path, or continue exactly by session_id. Unregistered paths are permanently registered before Session handling. Returns compact context; optional projection controls can hide instruction prose or workflow guidance without changing durable startup observation. Use start_coding_task for advanced modes, guards, temporary projects, or binding.",
+            "Canonical model entry for ordinary coding/review via an existing project or Runner path; Git not required. Supports exact Session continuation and returns compact workflow plus project instructions.",
             work_on_project_input_schema(),
         ),
         tool_spec(

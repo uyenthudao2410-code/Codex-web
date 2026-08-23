@@ -423,6 +423,20 @@ terminal state feeds the summary; do not re-run the command to find the answer.
 Handoff/cancel races are safe: a cancelled handoff never orphans a process, and
 `stop_job(confirm=true)` stops a promoted job.
 
+### Cursor-aware Job observation
+
+`job_log`, `job_tail`, and `observe_jobs` return an opaque
+`observation_token`. Pass that token unchanged on the next automatic
+observation (that is, without an explicit `offset`) to receive only the newly
+observable stdout and stderr. The returned cursor tracks the streams
+independently. A final unterminated line can be replayed conservatively until it
+is completed; this avoids silently dropping bytes. `log_delta_status` reports
+`baseline`, `delta`, `unchanged`, or `reset`, while the two `*_delta_reset`
+flags identify a retention/continuity reset per stream. Legacy tokens, a Server
+epoch change, or a retention gap never pretend to be a delta: they return a
+bounded reset-recovery tail instead. Explicit `offset` pagination remains a
+baseline page and does not grant an automatic delta cursor.
+
 Compatibility with an older Runner is intentionally bounded. If the Runner has
 basic shell execution but lacks both async validation Jobs and structured
 validation argv, an omitted `timeout_secs` uses one legacy synchronous execution

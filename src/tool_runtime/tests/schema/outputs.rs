@@ -800,6 +800,9 @@ fn key_tool_output_schemas_include_expected_fields() {
         "stderr_lines",
         "stdout_truncated",
         "stderr_truncated",
+        "log_delta_status",
+        "stdout_delta_reset",
+        "stderr_delta_reset",
         "cursor",
         "status",
         "executor",
@@ -875,6 +878,9 @@ fn key_tool_output_schemas_include_expected_fields() {
         "stderr_lines",
         "stdout_truncated",
         "stderr_truncated",
+        "log_delta_status",
+        "stdout_delta_reset",
+        "stderr_delta_reset",
         "cursor",
         "status",
         "executor",
@@ -903,6 +909,14 @@ fn key_tool_output_schemas_include_expected_fields() {
             "job_log {field} description must describe bounded tail text: {description}"
         );
     }
+    assert_eq!(
+        output_schema_property(&specs, "job_log", "log_delta_status")["enum"],
+        serde_json::json!(["baseline", "delta", "unchanged", "reset"])
+    );
+    assert_eq!(
+        output_schema_property(&specs, "job_log", "observation_token")["maxLength"],
+        crate::job_observation::MAX_JOB_OBSERVATION_TOKEN_LEN
+    );
     let cursor_description = output_schema_property(&specs, "job_log", "cursor")["description"]
         .as_str()
         .expect("job_log cursor description")

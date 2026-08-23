@@ -519,32 +519,31 @@ async fn mcp_tools_list_default_retains_output_schema() {
 }
 
 #[test]
-fn explicit_resume_mcp_schema_and_metadata_are_exposed() {
+fn start_coding_task_is_hidden_from_mcp_discovery() {
     let _guard = crate::admin_cli::TEST_ENV_LOCK.lock().unwrap();
     let _full = full_operator_mcp_env_locked();
     std::env::remove_var("WEBCODEX_MCP_COMPACT_SCHEMAS");
     let payload = mcp_tools_list_payload(ModelSurface::FullOperatorRuntime);
-    let tool = payload["tools"]
+    let names = payload["tools"]
         .as_array()
         .unwrap()
         .iter()
-        .find(|tool| tool["name"] == "start_coding_task")
-        .expect("start_coding_task MCP metadata");
-    let property = &tool["inputSchema"]["properties"]["resume_session_id"];
-    assert_eq!(property["type"], "string");
-    assert_eq!(property["pattern"], "^wc_sess_[A-Za-z0-9_]+$");
-    let description = property["description"].as_str().unwrap();
-    assert!(description.contains("failure never falls back"));
-    assert!(description.contains("no current binding"));
-    assert!(description.contains("recording_session_id"));
-    assert_eq!(
-        tool["inputSchema"]["not"]["required"],
-        json!(["resume_session_id", "new_session"])
+        .map(|tool| tool["name"].as_str().unwrap())
+        .collect::<Vec<_>>();
+    assert!(
+        !names.contains(&"start_coding_task"),
+        "ordinary model MCP discovery must not advertise the advanced compatibility entry: {names:?}"
     );
-    assert!(tool["description"]
-        .as_str()
-        .unwrap()
-        .contains("resume_session_id"));
+
+    let call = crate::tool_runtime::ToolCall::from_tool_name(
+        "start_coding_task",
+        json!({ "project": "agent:compat:demo", "resume_session_id": "wc_sess_compat" }),
+    )
+    .expect("direct/API compatibility entry must keep its accepted schema");
+    assert!(matches!(
+        call,
+        crate::tool_runtime::ToolCall::StartCodingTask { .. }
+    ));
 }
 
 #[tokio::test]
@@ -642,11 +641,12 @@ async fn session_tools_exposed_in_registry_and_mcp() {
     assert!(registry_names.contains(&"validation_summary"));
     assert!(registry_names.contains(&"current_session"));
     assert!(registry_names.contains(&"unbind_current_session"));
-    // `start_session` and `bind_current_session` are ModelHidden: the
-    // model coding line is covered by `start_coding_task` (resume_session_id
-    // + bind_current), and `current_session` is the query-only view. They
-    // keep no public ToolSpec, so they must be absent from both the
-    // registry and the MCP tools/list surface.
+    // `start_coding_task`, `start_session`, and `bind_current_session` are
+    // ModelHidden. `work_on_project` is the model-facing coding entry and
+    // `current_session` remains the query-only view. The advanced API
+    // compatibility entry therefore has no public ToolSpec and is absent from
+    // ordinary MCP discovery.
+    assert!(!registry_names.contains(&"start_coding_task"));
     assert!(!registry_names.contains(&"start_session"));
     assert!(!registry_names.contains(&"bind_current_session"));
 
@@ -2948,23 +2948,10 @@ async fn mcp_tools_list_exposes_coding_task_and_runtime_status_ux_flags() {
         "include_workspace must not be required in MCP schema"
     );
 
-    let start_props = tool("start_coding_task")["inputSchema"]["properties"]
-        .as_object()
-        .expect("start_coding_task inputSchema properties");
-    assert_eq!(start_props["detail"]["type"], "string");
-    assert_eq!(
-        start_props["detail"]["enum"],
-        json!(["minimal", "standard", "full"])
+    assert!(
+        tools.iter().all(|tool| tool["name"] != "start_coding_task"),
+        "advanced direct/API compatibility entry must not appear in model MCP discovery"
     );
-    assert_eq!(
-        start_props["execution_context"]["properties"]["default_shell"]["enum"],
-        json!(["sh", "bash"])
-    );
-    assert_eq!(
-        start_props["execution_context"]["additionalProperties"],
-        false
-    );
-    assert!(!start_props.contains_key("tool_manifest_intent"));
 
     let update = tool("update_session_context");
     assert_eq!(

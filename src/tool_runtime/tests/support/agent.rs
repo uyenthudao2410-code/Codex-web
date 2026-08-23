@@ -10,7 +10,28 @@ use crate::tool_runtime::{RuntimeInfo, ToolCall, ToolResult, ToolRuntime};
 use crate::workspace_checkpoint::{create_workspace_checkpoint, restore_workspace_checkpoint};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Arc;
+
+#[cfg(windows)]
+fn local_test_shell() -> PathBuf {
+    let git_exec_path = Command::new("git")
+        .arg("--exec-path")
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| PathBuf::from(String::from_utf8_lossy(&output.stdout).trim()))
+        .and_then(|path| path.ancestors().nth(3).map(Path::to_path_buf));
+    git_exec_path
+        .map(|root| root.join("bin").join("sh.exe"))
+        .filter(|shell| shell.is_file())
+        .unwrap_or_else(|| PathBuf::from("sh"))
+}
+
+#[cfg(not(windows))]
+fn local_test_shell() -> PathBuf {
+    PathBuf::from("sh")
+}
 
 pub(in crate::tool_runtime::tests) async fn register_agent_project_at_path(
     runtime: &ToolRuntime,
@@ -95,7 +116,7 @@ pub(in crate::tool_runtime::tests) fn run_agent_shell_request_locally(
     if req.kind == "file_project_overview" {
         return run_agent_project_overview_request_locally(req);
     }
-    let mut command = std::process::Command::new("sh");
+    let mut command = Command::new(local_test_shell());
     command.arg("-c").arg(&req.command);
     if let Some(cwd) = req.cwd.as_deref() {
         command.current_dir(cwd);
