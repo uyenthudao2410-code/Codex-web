@@ -9,7 +9,7 @@ use crate::shell_protocol::{
 use crate::tool_runtime::sessions::{
     TOOL_CALL_EXPECTATION_METADATA_FIELDS, TOOL_CALL_RECORDING_SESSION_ID_FIELD,
 };
-use crate::tool_runtime::{ALLOW_CROSS_PROJECT_SESSION_FIELD, TOOL_CALL_WRAPPER_FIELDS};
+use crate::tool_runtime::ALLOW_CROSS_PROJECT_SESSION_FIELD;
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
 use std::fs;
@@ -1168,23 +1168,9 @@ async fn tool_manifest_reports_accepted_flattened_args_without_schemas() {
             );
         }
     }
-    for field in [
-        "project",
-        "client_id",
-        "path",
-        "temporary_project_name",
-        "title",
-        "mode",
-        "deny_write_tools",
-        "deny_shell_tools",
-        "detail",
-        "bind_current",
-        "new_session",
-        "session_id",
-        TOOL_CALL_RECORDING_SESSION_ID_FIELD,
-    ] {
-        assert!(accepted("start_coding_task").contains(&field.to_string()));
-    }
+    // `start_coding_task` is a direct/API compatibility entry that is
+    // deliberately ModelHidden. Compact tool_manifest describes only the
+    // model-visible ToolSpec surface, so it must not be required here.
     for field in [
         "project",
         "client_id",
@@ -1290,8 +1276,6 @@ async fn tool_manifest_flattened_args_are_declared_in_action_schema() {
     let tools = result.output["tools"]
         .as_array()
         .expect("tool_manifest tools");
-    let mut accepted_fields = BTreeSet::new();
-
     for tool in tools {
         let tool_name = tool["name"].as_str().expect("tool name");
         let accepted = tool["accepted_flattened_args"]
@@ -1301,7 +1285,6 @@ async fn tool_manifest_flattened_args_are_declared_in_action_schema() {
             let field = field
                 .as_str()
                 .unwrap_or_else(|| panic!("{tool_name} accepted field"));
-            accepted_fields.insert(field.to_string());
             assert!(
                 properties.contains_key(field),
                 "{tool_name} advertises flattened arg {field}, but ToolCallRequest.properties does not declare it"
@@ -1309,15 +1292,9 @@ async fn tool_manifest_flattened_args_are_declared_in_action_schema() {
         }
     }
 
-    for field in properties.keys() {
-        if TOOL_CALL_WRAPPER_FIELDS.contains(&field.as_str()) {
-            continue;
-        }
-        assert!(
-            accepted_fields.contains(field),
-            "ToolCallRequest.properties declares flattened field {field}, but no tool_manifest entry accepts it"
-        );
-    }
+    // The reverse implication is intentionally not an invariant: the OpenAPI
+    // request keeps flattened compatibility fields for ModelHidden direct/API
+    // entries, while tool_manifest exposes only model-visible tools.
 }
 
 #[tokio::test]

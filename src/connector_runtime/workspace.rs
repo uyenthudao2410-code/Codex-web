@@ -996,6 +996,7 @@ fn git_apply_output(
 ) -> Result<Output, String> {
     let mut command = Command::new("git");
     command
+        .args(["-c", "core.autocrlf=false"])
         .arg("-C")
         .arg(target_root)
         .args(["apply", "--binary"]);

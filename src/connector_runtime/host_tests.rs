@@ -158,6 +158,7 @@ fn assert_decision_error(
 
 fn git(root: &Path, args: &[&str]) {
     assert!(Command::new("git")
+        .args(["-c", "core.autocrlf=false"])
         .arg("-C")
         .arg(root)
         .args(args)
