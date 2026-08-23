@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from .ledger_analysis import LedgerReadSession
 from .orchestration_ledger import OrchestrationLedger
 from .rework_diagnosis import repair_cause_for_failure_class
 
@@ -65,31 +65,28 @@ def _is_deterministic_run(ledger: OrchestrationLedger, run_id: str) -> bool:
 
 def _accepted_runs(ledger: OrchestrationLedger, *, limit: int) -> list[dict[str, Any]]:
     bounded_limit = max(1, min(int(limit), 5000))
-    connection = sqlite3.connect(ledger.path, timeout=5.0)
-    connection.row_factory = sqlite3.Row
-    try:
-        rows = connection.execute(
-            """
-            SELECT run_id
-            FROM runs
-            WHERE status='accepted'
-              AND (json_extract(metadata_json, '$.evaluation.provenance') IS NULL
-                   OR lower(json_extract(metadata_json, '$.evaluation.provenance'))='representative')
-              AND (json_extract(metadata_json, '$.evaluation.policy') IS NULL
-                   OR lower(json_extract(metadata_json, '$.evaluation.policy'))='chatweb_mcp')
-            ORDER BY started_at, run_id
-            LIMIT ?
-            """,
-            (bounded_limit,),
-        ).fetchall()
-    finally:
-        connection.close()
+    candidate = getattr(ledger, "accepted_representative_runs", None)
+    if callable(candidate):
+        rows = candidate(limit=bounded_limit)
+    else:
+        with LedgerReadSession(ledger.path) as reader:
+            rows = [{
+                "run_id": row["run_id"], "task_id": row["task_id"], "objective": row["objective"],
+                "status": row["status"], "started_at": row["started_at"], "finished_at": row["finished_at"],
+                "metadata": json.loads(row["metadata_json"] or "{}"),
+            } for row in reader.rows("SELECT * FROM runs WHERE status='accepted' ORDER BY started_at, run_id LIMIT ?", (bounded_limit,))]
+    rows = sorted(rows, key=lambda item: (str(item.get("started_at") or ""), str(item.get("run_id") or "")))
     result: list[dict[str, Any]] = []
     for row in rows:
+        metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+        evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+        provenance = str(evaluation.get("provenance") or "").lower()
+        policy = str(evaluation.get("policy") or "").lower()
         run_id = str(row["run_id"])
-        run = ledger.get_run(run_id)
-        if run is not None and _is_deterministic_run(ledger, run_id):
-            result.append(run)
+        if provenance in {"", "representative"} and policy in {"", "chatweb_mcp"} and _is_deterministic_run(ledger, run_id):
+            result.append(row)
+            if len(result) >= bounded_limit:
+                break
     return result
 
 
@@ -124,6 +121,30 @@ def _cost_coverage(evaluations: list[dict[str, Any]]) -> dict[str, Any]:
         if total_cost.get("complete") is True and isinstance(total_cost.get("value"), (int, float)):
             total_cost_complete += 1
     return {"accepted_runs": total, "total_monetary_cost_complete_runs": total_cost_complete, "total_monetary_cost_coverage": _ratio(total_cost_complete, total), "controller_cost_observed_runs": controller_cost_observed, "controller_cost_coverage": _ratio(controller_cost_observed, total), "controller_token_any_observed_runs": controller_token_any, "controller_token_any_coverage": _ratio(controller_token_any, total), "provider_usage_observed_runs": provider_usage_observed, "provider_cost_complete_runs": provider_cost_complete, "missing_monetary_cost_is_zero": False, "car_available": bool(total and total_cost_complete == total), "policy": "monetary CAR requires complete accepted-result cost coverage; partial resource evidence remains descriptive"}
+
+
+def _cost_evaluation(run: dict[str, Any], economics: dict[str, Any]) -> dict[str, Any]:
+    """Project only fields consumed by this aggregate; avoid a duplicate full evaluation."""
+    metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
+    evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+    controller = evaluation.get("controller") if isinstance(evaluation.get("controller"), dict) else {}
+    controller_cost = controller.get("monetary_cost")
+    controller_cost_value = float(controller_cost) if isinstance(controller_cost, (int, float)) and not isinstance(controller_cost, bool) and controller_cost >= 0 else None
+    controller_usage = {key: int(value) if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None for key, value in ((key, controller.get(key)) for key in ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens"))}
+    provider = economics.get("provider_economics") if isinstance(economics.get("provider_economics"), dict) else {}
+    provider_cost = provider.get("provider_cost")
+    provider_usage_count = int(provider.get("usage_event_count") or 0)
+    provider_cost_value = float(provider_cost) if provider.get("cost_complete") is True and provider.get("attribution_complete") is True and isinstance(provider_cost, (int, float)) else None
+    complete = controller_cost_value is not None and (provider_cost_value is not None or provider_usage_count == 0)
+    if controller_cost_value is None:
+        reason = "controller_cost_unobserved"
+    elif provider_usage_count and provider.get("attribution_complete") is not True:
+        reason = "provider_cost_attribution_incomplete"
+    elif provider_usage_count and provider.get("cost_complete") is not True:
+        reason = "provider_cost_measurement_incomplete"
+    else:
+        reason = None
+    return {"controller": {"monetary_cost": controller_cost_value, "usage": controller_usage}, "external": {"provider_economics": provider}, "total_monetary_cost": {"value": round(controller_cost_value + (provider_cost_value or 0.0), 12) if complete else None, "complete": complete, "reason": reason}}
 
 
 def _current_source_dre(ledger: OrchestrationLedger, runs: list[dict[str, Any]], *, source_head: str, source_worktree_clean: bool | None) -> dict[str, Any]:
@@ -164,8 +185,7 @@ def accepted_result_economics_report(workspace: Path, ledger: OrchestrationLedge
     for run in runs:
         run_id = str(run["run_id"])
         economics = ledger.accepted_result_economics(run_id)
-        evaluation = ledger.accepted_result_evaluation(run_id)
-        evaluations.append(evaluation)
+        evaluations.append(_cost_evaluation(run, economics))
         metric = run_metrics.get(run_id) if isinstance(run_metrics.get(run_id), dict) else None
         replans = int((economics.get("repair") or {}).get("replan_count") or 0)
         if metric is not None:
@@ -175,8 +195,8 @@ def accepted_result_economics_report(workspace: Path, ledger: OrchestrationLedge
         ttar = economics.get("tta_ms")
         if workflow in tail_by_workflow and isinstance(ttar, int) and not isinstance(ttar, bool) and ttar >= 0:
             phase = economics.get("phase_timing") if isinstance(economics.get("phase_timing"), dict) else {}
-            mcp = evaluation.get("mcp") if isinstance(evaluation.get("mcp"), dict) else {}
-            tail_by_workflow[workflow].append({"run_id": run_id, "ttar_ms": int(ttar), "replan_count": replans, "first_pass_accepted": replans == 0, "phase_timing_complete": phase.get("complete") is True, "phase_by_state_ms": dict(phase.get("by_state_ms") or {}), "proof_duration_ms": mcp.get("proof_duration_ms"), "performance": {key: metric.get(key) if metric is not None else None for key in ("tool_calls", "errors", "local_execution_ms", "estimated_wait_ms", "response_bytes", "model_visible_bytes")}})
+            proof_duration_ms = sum(max(0, int(item.get("duration_ms") or 0)) for item in ledger.list_proofs(run_id))
+            tail_by_workflow[workflow].append({"run_id": run_id, "ttar_ms": int(ttar), "replan_count": replans, "first_pass_accepted": replans == 0, "phase_timing_complete": phase.get("complete") is True, "phase_by_state_ms": dict(phase.get("by_state_ms") or {}), "proof_duration_ms": proof_duration_ms, "performance": {key: metric.get(key) if metric is not None else None for key in ("tool_calls", "errors", "local_execution_ms", "estimated_wait_ms", "response_bytes", "model_visible_bytes")}})
     bounded_tail_n = max(1, min(int(tail_n), 50))
     for workflow in tail_by_workflow:
         tail_by_workflow[workflow] = sorted(tail_by_workflow[workflow], key=lambda item: (-int(item["ttar_ms"]), str(item["run_id"])))[:bounded_tail_n]

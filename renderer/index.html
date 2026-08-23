@@ -776,6 +776,12 @@
               <article class="panel"><div class="panel-title"><h3>Báo cáo build gần đây</h3></div><div class="task-build" id="taskBuild"></div></article>
             </div>
           </div>
+          <article class="panel" id="p5A0Card">
+            <div class="panel-title"><div><span class="section-kicker">P5-A0 SHADOW A/A</span><h3>Kiểm chứng đường đo rework</h3><p>Chỉ kiểm chứng assignment/funnel/integrity. Hai nhãn A/A đều nhận control; không có treatment hoặc auto-promotion.</p></div><span class="soft-badge neutral" id="p5A0Status">Chưa đồng bộ</span></div>
+            <div class="device-kv-grid"><div><span>Source</span><code id="p5A0Source">—</code></div><div><span>Environment</span><code id="p5A0Environment">—</code></div><div><span>Seed commitment</span><code id="p5A0Seed">—</code></div><div><span>Manifest / Epoch</span><code id="p5A0Manifest">—</code></div></div>
+            <div class="inline-actions task-controls"><button class="secondary-button" id="p5A0Refresh">Trạng thái</button><button class="secondary-button" id="p5A0Prepare">Prepare A0</button><button class="primary-button" id="p5A0Open">Mở A0</button><button class="secondary-button" id="p5A0Analyze">Analyze</button><button class="secondary-button" id="p5A0Pause">Pause</button><button class="secondary-button" id="p5A0Resume">Resume</button><button class="secondary-button" id="p5A0Close">Close</button><button class="danger-button" id="p5A0HardStop">Hard stop</button></div>
+            <div class="task-command" id="p5A0Detail">Chưa đọc P5-A0 live state.</div>
+          </article>
           <article class="panel task-history-panel"><div class="panel-title"><h3>Lịch sử nhiệm vụ</h3><button class="secondary-button" id="refreshTaskHistory">Làm mới lịch sử</button></div><div class="task-history" id="taskHistory"><span class="task-muted">Chưa có lịch sử nhiệm vụ</span></div></article>
           <article class="panel performance-panel"><div class="panel-title"><div><h3>Phân tích hiệu năng</h3><span class="task-muted">Phân biệt thời gian thực thi trên máy và thời gian chờ mô hình / Tunnel</span></div><div class="inline-actions"><button class="secondary-button" id="refreshPerformance">Làm mới</button><button class="danger-button" id="clearPerformance">Xóa sạch</button></div></div><div class="performance-metrics" id="performanceMetrics"><span class="task-muted">Chưa có bản ghi hiệu năng</span></div><div class="performance-timeline" id="performanceTimeline"></div></article>
         </section>
@@ -811,6 +817,7 @@
   <div class="toast-stack" id="toastStack"></div>
   <div class="busy-overlay" id="busyOverlay"><div class="loader"></div><b>Đang xử lý</b><span>Vui lòng không nhấp liên tục vào nút thao tác</span></div>
   <script src="app.js"></script>
+  <script src="p5-a0.js"></script>
   <script src="control-center.js"></script>
   <script src="dashboard.js"></script>
 </body>

@@ -28,6 +28,10 @@ P5_EPOCH_HARD_STOPPED = "EPOCH_HARD_STOPPED"
 P5_EPOCH_TERMINAL = frozenset({P5_EPOCH_CLOSED, P5_EPOCH_HARD_STOPPED})
 P5_TERMINAL_STATUSES = frozenset({"accepted", "rejected", "failed", "blocked", "aborted", "timeout"})
 P5_INTERFERENCE_STATUSES = frozenset({"none", "nonoverlapping_mutation", "overlapping_mutation", "attribution_unknown"})
+P5_A0_HORIZON_SECONDS = 4 * 60 * 60
+P5_CONTROL_POLICY_ID = "eocl-current-control-v1"
+P5_TREATMENT_POLICY_ID = "lean-causal-fix-gate-v1"
+P5_ENVIRONMENT_METHOD_VERSION = "p5-environment-v1"
 
 
 class P5ExperimentError(ValueError):
@@ -50,6 +54,90 @@ def analyzer_source_fingerprint() -> str:
     """Exact source identity for the deterministic feasibility analyzer."""
 
     return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
+def build_p5_a0_manifest(
+    *,
+    source_contract: Mapping[str, Any],
+    runtime_contract: Mapping[str, Any],
+    environment_fp: str,
+    seed_commitment_sha256: str,
+) -> dict[str, Any]:
+    """Build the production P5-A0 manifest from live content-free identities."""
+
+    source = _required_mapping(source_contract, "source_contract")
+    runtime = _required_mapping(runtime_contract, "runtime_contract")
+    manifest = {
+        "schema_version": P5_EXPERIMENT_SCHEMA_VERSION,
+        "experiment_id": "p5-lean-causal-fix-p5-a0-v1",
+        "phase": "P5-A0",
+        "study_type": "shadow_aa",
+        "automatic_activation": False,
+        "automatic_production_promotion": False,
+        "control_policy": {"id": P5_CONTROL_POLICY_ID},
+        "treatment_policy": {
+            "id": P5_TREATMENT_POLICY_ID,
+            "implementation_fingerprint": sha256_text(P5_TREATMENT_POLICY_ID),
+            "vary_only": "prewrite_causal_fix_protocol",
+        },
+        "source_contract": {
+            "control_plane_source_head": source.get("control_plane_source_head"),
+            "upstream_identity": source.get("upstream_identity"),
+            "source_worktree_clean_required": True,
+            "no_conflicting_writer_required": True,
+        },
+        "runtime_contract": {
+            "runtime_version": runtime.get("runtime_version"),
+            "runtime_policy_fp": runtime.get("runtime_policy_fp"),
+            "tool_contract_fp": runtime.get("tool_contract_fp"),
+            "evaluation_schema_fp": runtime.get("evaluation_schema_fp"),
+            "public_tool_count": runtime.get("public_tool_count"),
+        },
+        "environment_contract": {"environment_fp": environment_fp, "method_version": P5_ENVIRONMENT_METHOD_VERSION},
+        "common_execution_contract": {"policy_sha256": sha256_text("p5-common-execution-contract-v1")},
+        "eligibility_contract": {
+            "version": "p5-eligibility-v2",
+            "reason_vocabulary_sha256": sha256_text("p5-eligibility-reason-vocabulary-v2"),
+            "high_risk_exclusion_sha256": sha256_text("p5-high-risk-exclusion-v1"),
+        },
+        "enrollment_contract": {"version": "p5-enrollment-v1", "policy_sha256": sha256_text("p5-enrollment-policy-v1")},
+        "assignment": {
+            "randomization_unit": "stable_task_assignment",
+            "unit_canonicalization_version": P5_ASSIGNMENT_UNIT_VERSION,
+            "algorithm": P5_ASSIGNMENT_ALGORITHM,
+            "strata": ["feature", "bugfix"],
+            "block_size": 4,
+            "allocation": {"control": 0.5, "treatment": 0.5},
+            "seed_commitment_sha256": seed_commitment_sha256,
+            "restart_safe_seed_contract_sha256": sha256_text("p5-secret-handle-contract-v1"),
+            "never_reseed_within_epoch": True,
+            "assignment_before_first_arm_action": True,
+            "assignment_before_first_write": True,
+        },
+        "outcome_contract": {
+            "horizon_seconds": P5_A0_HORIZON_SECONDS,
+            "horizon_anchor": "assignment_at",
+            "immediate_oracle_required": True,
+            "intercurrent_event_matrix_sha256": sha256_text("p5-intercurrent-event-matrix-v1"),
+            "followup_interference_policy_sha256": sha256_text("p5-followup-interference-policy-v1"),
+        },
+        "analysis": {
+            "analyzer_sha256": analyzer_source_fingerprint(),
+            "intention_to_treat": True,
+            "survivor_filter": False,
+            "target_population_weights_sha256": sha256_text("p5-target-population-weights-v1"),
+        },
+        "missing_data": {"missing_is_unknown_not_zero": True, "missing_quality_is_not_pass": True, "missing_cost_is_not_zero": True},
+        "stop_rule": {
+            "stop_on_assignment_conflict": True,
+            "stop_on_late_assignment": True,
+            "stop_on_manifest_epoch_drift": True,
+            "stop_on_authority_or_write_lease_violation": True,
+            "stop_on_source_identity_violation": True,
+            "stop_on_critical_security_or_data_loss_defect": True,
+        },
+    }
+    return validate_manifest(manifest)
 
 
 def _required_mapping(value: Any, name: str) -> dict[str, Any]:

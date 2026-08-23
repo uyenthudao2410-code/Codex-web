@@ -467,7 +467,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "ab122032f504f960a0f3dc33af6d8d0996f6aca927f2b849be389e51c2820e36")
+                self.assertEqual(contract["sha256"], "8108adc92029cc2aea47e7d4832c88bf329784649de7e84f556b36ea655c1c41")
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)
                 self.assertEqual(

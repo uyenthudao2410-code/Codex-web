@@ -55,6 +55,9 @@ const uiStartedAtUnixMs = Date.now();
 const uiRunningRevision = recoveryHostMode ? null : uiRevisionTracker.captureRunning('electron_ui');
 let uiRestartScheduled = false;
 let uiExitInFlight = false;
+let preparedP5A0Manifest = null;
+let latestP5A0EpochId = '';
+const P5_A0_SEED_HANDLE = 'secret://experiment/p5/a';
 
 function codeActivationRequest(component, allowAcceptancePending = false) {
   const allowed = new Set(['coding_mcp', 'electron_ui', 'recovery_host']);
@@ -252,6 +255,89 @@ async function panelTaskControl(action) {
     throw new Error(String(message).slice(0, 400));
   }
   return (response && response.result) || null;
+}
+
+function structuredMcpResult(result) {
+  return result?.structuredContent || result || null;
+}
+
+async function callP5TaskControl(p5Experiment, requestIdPrefix) {
+  const current = settings.load();
+  const token = secrets.get('mcpAuthToken');
+  if (!token) throw new Error('MCP is not ready for P5-A0 control.');
+  const request = {
+    jsonrpc: '2.0',
+    id: requestIdPrefix + '-' + Date.now(),
+    method: 'tools/call',
+    params: {
+      name: 'task_control',
+      arguments: { action: 'p5', p5_experiment: p5Experiment },
+      _meta: {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+        'io.modelcontextprotocol/clientInfo': { name: 'web-mcp-assistant-panel', version: app.getVersion() }
+      }
+    }
+  };
+  const response = await httpRequestJson({
+    port: current.mcpPort,
+    path: '/mcp',
+    method: 'POST',
+    token,
+    body: request,
+    headers: {
+      'MCP-Protocol-Version': '2026-07-28',
+      'Mcp-Method': 'tools/call',
+      'Mcp-Name': 'task_control',
+      'X-Coding-Tools-Client-Id': 'electron-panel',
+      'X-Coding-Tools-Client-Type': 'electron'
+    },
+    timeout: 10000
+  });
+  if (response?.error) throw new Error(response.error.message || 'P5-A0 MCP call failed.');
+  if (response?.result?.isError) {
+    const message = response.result?.structuredContent?.error?.message || response.result?.content?.[0]?.text || 'P5-A0 MCP call was rejected.';
+    throw new Error(String(message).slice(0, 400));
+  }
+  return structuredMcpResult(response?.result);
+}
+
+function p5EpochIdFromResult(result) {
+  return String(result?.p5?.epoch?.activation_epoch_id || result?.p5?.activation_epoch_id || result?.p5?.epoch?.epoch?.activation_epoch_id || '').trim();
+}
+
+async function panelP5A0Control(action) {
+  const allowed = new Set(['status', 'prepare', 'open', 'analyze', 'pause', 'resume', 'close', 'hard_stop']);
+  if (!allowed.has(action)) throw new Error('Invalid P5-A0 control action.');
+  if (action === 'status') {
+    const result = await callP5TaskControl({ operation: 'status' }, 'panel-p5-status');
+    latestP5A0EpochId = p5EpochIdFromResult(result) || latestP5A0EpochId;
+    return result;
+  }
+  if (action === 'prepare') {
+    const result = await callP5TaskControl({ operation: 'prepare_a0' }, 'panel-p5-prepare');
+    const manifest = result?.p5?.manifest;
+    if (!manifest || result?.p5?.phase !== 'P5-A0' || result?.p5?.study_type !== 'shadow_aa') throw new Error('MCP did not return a valid P5-A0 manifest.');
+    preparedP5A0Manifest = JSON.parse(JSON.stringify(manifest));
+    return result;
+  }
+  if (action === 'open') {
+    if (!preparedP5A0Manifest) throw new Error('Prepare P5-A0 on the current runtime before opening an epoch.');
+    const result = await callP5TaskControl({ operation: 'open', manifest: preparedP5A0Manifest, seed_handle: P5_A0_SEED_HANDLE }, 'panel-p5-open');
+    preparedP5A0Manifest = null;
+    latestP5A0EpochId = p5EpochIdFromResult(result) || latestP5A0EpochId;
+    return result;
+  }
+  if (!latestP5A0EpochId) latestP5A0EpochId = p5EpochIdFromResult(await panelP5A0Control('status'));
+  if (!latestP5A0EpochId) throw new Error('No P5-A0 epoch is available for this action.');
+  const result = await callP5TaskControl({
+    operation: action,
+    activation_epoch_id: latestP5A0EpochId,
+    ...(action === 'hard_stop' ? { reason: 'operator_hard_stop_from_electron_manager' } : {}),
+    ...(action === 'close' ? { reason: 'operator_close_from_electron_manager' } : {})
+  }, 'panel-p5-' + action);
+  latestP5A0EpochId = p5EpochIdFromResult(result) || latestP5A0EpochId;
+  return result;
 }
 
 async function recordHostObservationSpan(event) {
@@ -626,6 +712,7 @@ function registerIpc() {
     });
   }));
   secureHandle('panel:task-control', (_event, action) => invokeSafely(() => panelTaskControl(String(action || ''))));
+  secureHandle('p5-a0:control', (_event, action) => invokeSafely(() => panelP5A0Control(String(action || ''))));
   secureHandle('panel:transfer-controller', (_event, payload) => invokeSafely(async () => {
     const current = settings.load();
     const token = secrets.get('mcpAuthToken');

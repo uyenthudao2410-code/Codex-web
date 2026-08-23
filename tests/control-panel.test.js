@@ -57,6 +57,11 @@ test('main process exposes Execution Control Center IPC through MCP control plan
   assert.match(main, /secureHandle\('panel:orchestration'/);
   assert.match(main, /secureHandle\('panel:handoff'/);
   assert.match(main, /secureHandle\('panel:task-control'/);
+  assert.match(main, /secureHandle\('p5-a0:control'/);
+  assert.match(main, /async function panelP5A0Control\(action\)/);
+  assert.match(main, /new Set\(\['status', 'prepare', 'open', 'analyze', 'pause', 'resume', 'close', 'hard_stop'\]\)/);
+  assert.match(main, /operation: 'prepare_a0'/);
+  assert.match(main, /secret:\/\/experiment\/p5\/a/);
   assert.match(main, /secureHandle\('panel:transfer-controller'/);
   assert.match(main, /secureHandle\('panel:copy-codex-config'/);
   assert.match(main, /path: '\/__control\/orchestration\/live'/);
@@ -212,7 +217,16 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.doesNotMatch(preload, /task-state:stop/);
   const managerPreload = read('electron/preload.js');
   assert.match(managerPreload, /orchestration: \(\) => ipcRenderer\.invoke\('panel:orchestration'\)/);
+  assert.match(managerPreload, /p5A0: \(action\) => ipcRenderer\.invoke\('p5-a0:control', action\)/);
   assert.doesNotMatch(managerPreload, /panel:live-control/);
+  const managerHtml = read('renderer/index.html');
+  for (const id of ['p5A0Card', 'p5A0Status', 'p5A0Source', 'p5A0Environment', 'p5A0Seed', 'p5A0Manifest', 'p5A0Refresh', 'p5A0Prepare', 'p5A0Open', 'p5A0Analyze', 'p5A0Pause', 'p5A0Resume', 'p5A0Close', 'p5A0HardStop', 'p5A0Detail']) assert.match(managerHtml, new RegExp(`id=\"${id}\"`), `manager UI thiếu ${id}`);
+  assert.match(managerHtml, /<script src=\"p5-a0\.js\"><\/script>/);
+  assert.doesNotMatch(managerHtml, /P5-A treatment|Mở treatment|Activate treatment/i);
+  const p5Ui = read('renderer/p5-a0.js');
+  assert.match(p5Ui, /api\.p5A0\(action\)/);
+  assert.match(p5Ui, /invoke\('prepare'\)/);
+  assert.match(p5Ui, /invoke\('hard_stop'\)/);
   const css = read('renderer/panel.css');
   assert.match(css, /\.client-grid/);
   assert.match(css, /\.continuity-callout\.safe/);

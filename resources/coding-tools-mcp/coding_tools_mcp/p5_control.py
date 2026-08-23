@@ -4,13 +4,22 @@ from __future__ import annotations
 
 import hashlib
 import json
+import platform
 import subprocess
+import sys
 import time
 from typing import Any
 
 from . import __version__
 from .errors import ToolFailure
-from .p5_experiment import P5ExperimentError, analyzer_source_fingerprint
+from .p5_experiment import (
+    P5_ENVIRONMENT_METHOD_VERSION,
+    P5ExperimentError,
+    activation_epoch_id,
+    analyzer_source_fingerprint,
+    build_p5_a0_manifest,
+    manifest_sha256,
+)
 
 
 P5_A0_SEED_HANDLE = "secret://experiment/p5/a"
@@ -68,12 +77,51 @@ class P5ControlMixin:
             "worktree_fp": identity.get("worktree_fp"),
         }
 
+    def _p5_environment_contract(self) -> dict[str, Any]:
+        """Fingerprint only material, content-free P5 runtime dimensions."""
+        root = self.workspace.root
+
+        def lockfile_fingerprint(name: str) -> str | None:
+            path = root / name
+            try:
+                return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+            except OSError:
+                return None
+
+        try:
+            node = subprocess.run(["node", "--version"], check=False, capture_output=True, text=True, timeout=5)
+            node_runtime = node.stdout.strip() if node.returncode == 0 else "unavailable"
+        except (OSError, subprocess.SubprocessError):
+            node_runtime = "unavailable"
+        material = {
+            "os_family_and_build_class": {"system": platform.system() or "unknown", "release": platform.release() or "unknown"},
+            "python_runtime": {
+                "implementation": platform.python_implementation(),
+                "version": platform.python_version(),
+                "major_minor": f"{sys.version_info.major}.{sys.version_info.minor}",
+            },
+            "node_runtime": node_runtime,
+            "relevant_lockfile_fingerprints": {
+                "package-lock.json": lockfile_fingerprint("package-lock.json"),
+                "Cargo.lock": lockfile_fingerprint("Cargo.lock"),
+            },
+            "required_runtime_configuration_class": {
+                "tool_mode": self.tool_mode,
+                "permission_mode": self.permission_mode,
+                "transport": str(getattr(getattr(self, "telemetry", None), "transport", "unknown")),
+            },
+        }
+        environment_fp = hashlib.sha256(json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        return {"environment_fp": environment_fp, "method_version": P5_ENVIRONMENT_METHOD_VERSION, "content_free": True}
+
     def _p5_assert_open_contract(self, manifest: dict[str, Any]) -> dict[str, Any]:
         runtime = manifest.get("runtime_contract") if isinstance(manifest.get("runtime_contract"), dict) else {}
         source = manifest.get("source_contract") if isinstance(manifest.get("source_contract"), dict) else {}
+        environment = manifest.get("environment_contract") if isinstance(manifest.get("environment_contract"), dict) else {}
         analysis = manifest.get("analysis") if isinstance(manifest.get("analysis"), dict) else {}
         observed_runtime = self._p5_runtime_contract()
         observed_source = self._p5_source_contract()
+        observed_environment = self._p5_environment_contract()
         workspace_fence = self.orchestration_ledger.get_write_fence("workspace")
         conflicting_writer = bool(
             workspace_fence
@@ -87,6 +135,10 @@ class P5ControlMixin:
         ]
         if analysis.get("analyzer_sha256") != observed_runtime["analyzer_sha256"]:
             mismatches.append("analysis.analyzer_sha256")
+        if environment.get("environment_fp") != observed_environment["environment_fp"]:
+            mismatches.append("environment_contract.environment_fp")
+        if environment.get("method_version") != observed_environment["method_version"]:
+            mismatches.append("environment_contract.method_version")
         if source.get("control_plane_source_head") != observed_source["control_plane_source_head"]:
             mismatches.append("source_contract.control_plane_source_head")
         if source.get("upstream_identity") != observed_source["upstream_identity"]:
@@ -107,11 +159,12 @@ class P5ControlMixin:
                     "observed": {
                         "runtime": observed_runtime,
                         "source": observed_source,
+                        "environment": observed_environment,
                         "active_workspace_write_fence": conflicting_writer,
                     },
                 },
             )
-        return {"runtime": observed_runtime, "source": observed_source}
+        return {"runtime": observed_runtime, "source": observed_source, "environment": observed_environment}
 
     def _p5_secret(self, handle: object) -> tuple[str, str]:
         seed_handle = str(handle or "").strip()
@@ -159,7 +212,42 @@ class P5ControlMixin:
                     "p5": epoch,
                     "runtime_contract": self._p5_runtime_contract(),
                     "source_contract": self._p5_source_contract(),
+                    "environment_contract": self._p5_environment_contract(),
                     "p5_seed": self._p5_seed_status(),
+                    "automatic_activation": False,
+                    "automatic_production_promotion": False,
+                }
+            if operation == "prepare_a0":
+                seed_status = self._p5_seed_status()
+                if seed_status.get("available") is not True or not seed_status.get("seed_commitment_sha256"):
+                    raise ToolFailure(
+                        "P5_SEED_UNAVAILABLE",
+                        "The designated P5-A0 seed is not available in the process secret broker.",
+                        category="runtime",
+                        retryable=True,
+                        details={"seed_handle": P5_A0_SEED_HANDLE},
+                    )
+                runtime_contract = self._p5_runtime_contract()
+                source_contract = self._p5_source_contract()
+                environment_contract = self._p5_environment_contract()
+                manifest = build_p5_a0_manifest(
+                    source_contract=source_contract,
+                    runtime_contract=runtime_contract,
+                    environment_fp=str(environment_contract["environment_fp"]),
+                    seed_commitment_sha256=str(seed_status["seed_commitment_sha256"]),
+                )
+                verified = self._p5_assert_open_contract(manifest)
+                return {
+                    "p5": {
+                        "prepared": True,
+                        "manifest": manifest,
+                        "manifest_sha256": manifest_sha256(manifest),
+                        "activation_epoch_id": activation_epoch_id(manifest),
+                        "phase": "P5-A0",
+                        "study_type": "shadow_aa",
+                    },
+                    "p5_seed": seed_status,
+                    "verified_contract": verified,
                     "automatic_activation": False,
                     "automatic_production_promotion": False,
                 }

@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .artifact_refs import handoff_capsule_artifact_ref, proof_artifact_ref
+from .idempotency_codec import decode_summary as _decode_idempotency_summary, encode_summary as _encode_idempotency_summary
+from .ledger_file_gate import ledger_access_gate
 from .ledger_event_chain import append_hash_chained_event
 from .p5_experiment_store import P5ExperimentLedgerMixin
 from .quality_outcomes import QualityOutcomeLedgerMixin
@@ -27,8 +29,7 @@ from .usage_ledger import (
     usage_analytics as _usage_analytics,
 )
 
-
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 _MAX_TEXT = 16_000
 _PROOF_METADATA_COMPRESSION_PREFIX = b"WCPM1\0"
 _PROOF_METADATA_COMPRESSION_MIN_BYTES = 4_096
@@ -66,21 +67,13 @@ _SENSITIVE_PAYLOAD_KEYS = {
     "stderr",
     "agent_text",
 }
-
-
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-
-
 def resource_claim_owner_hash(owner_type: str, owner_id: str) -> str:
     material = f"webcodex-resource-claim-v1\0{str(owner_type).upper()}\0{owner_id}"
     return hashlib.sha256(material.encode("utf-8", errors="replace")).hexdigest()
-
-
 def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
-
-
 def _encode_proof_metadata(value: dict[str, Any]) -> str | bytes:
     text = _json(_sanitize(value))
     raw = text.encode("utf-8")
@@ -88,7 +81,6 @@ def _encode_proof_metadata(value: dict[str, Any]) -> str | bytes:
         return text
     encoded = _PROOF_METADATA_COMPRESSION_PREFIX + zlib.compress(raw)
     return encoded if len(encoded) < len(raw) else text
-
 
 def _decode_proof_metadata(value: Any) -> dict[str, Any]:
     if value is None or value == "":
@@ -104,11 +96,9 @@ def _decode_proof_metadata(value: Any) -> dict[str, Any]:
         raise ValueError("proof metadata must decode to a JSON object")
     return decoded
 
-
 def _bounded_text(value: Any, limit: int = _MAX_TEXT) -> str:
     text = str(value or "")
     return text if len(text) <= limit else text[:limit] + "..."
-
 
 def _sanitize(value: Any, *, key: str = "") -> Any:
     normalized_key = key.lower()
@@ -134,7 +124,6 @@ def _sanitize(value: Any, *, key: str = "") -> Any:
     if isinstance(value, (list, tuple, set)):
         return [_sanitize(item) for item in list(value)[:500]]
     return _bounded_text(value)
-
 
 def _proof_cache_opportunity_summary(
     connection: sqlite3.Connection,
@@ -202,7 +191,6 @@ def _proof_cache_opportunity_summary(
     misses = int(overall[2] or 0)
     known_saved_hits = int(overall[3] or 0)
     known_saved_ms = int(overall[4] or 0)
-
     miss_rows = connection.execute(
         opportunity_cte
         + """
@@ -214,7 +202,6 @@ def _proof_cache_opportunity_summary(
         """
     ).fetchall()
     miss_reasons = {str(row[0]): int(row[1]) for row in miss_rows if int(row[1] or 0) > 0}
-
     stage_rows = connection.execute(
         opportunity_cte
         + """
@@ -260,7 +247,6 @@ def _proof_cache_opportunity_summary(
             "accepted_checkpoint_opportunities": int(row[9] or 0),
             "accepted_checkpoint_hits": int(row[10] or 0),
         })
-
     saved_complete = known_saved_hits == hits
     accepted_run_opportunities = int(overall[8] or 0)
     accepted_checkpoint_opportunities = int(overall[10] or 0)
@@ -306,7 +292,6 @@ def _proof_cache_opportunity_summary(
         "raw_input_fingerprints_included": False,
     }
 
-
 def fingerprint_paths(root: Path, paths: Iterable[str], *, extra: dict[str, Any] | None = None) -> str:
     """Content fingerprint for the selected workspace paths plus stable metadata."""
     digest = hashlib.sha256()
@@ -332,43 +317,39 @@ def fingerprint_paths(root: Path, paths: Iterable[str], *, extra: dict[str, Any]
         digest.update(_json(_sanitize(extra)).encode("utf-8"))
     return digest.hexdigest()
 
-
 class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
     """Durable append-only orchestration audit source for one workspace.
-
     The ledger stores structured control/evidence identity, not raw prompts, patches,
     file contents, stdout, or stderr. Events are hash-chained per run so accidental
     truncation/reordering can be detected during postmortem or report generation.
     """
-
     def __init__(self, workspace: Path) -> None:
         self.workspace = workspace.resolve(strict=False)
         self.state_dir = self.workspace / ".coding-tools" / "orchestration"
         self.path = self.state_dir / "ledger.sqlite3"
         self._lock = threading.RLock()
         self._ensure_schema()
-
     @contextmanager
     def _connect(self):
         self.state_dir.mkdir(parents=True, exist_ok=True)
-        connection = sqlite3.connect(self.path, timeout=5.0)
-        connection.row_factory = sqlite3.Row
-        try:
-            connection.execute("PRAGMA foreign_keys=ON")
-            connection.execute("PRAGMA busy_timeout=5000")
+        with ledger_access_gate(self.path):
+            connection = sqlite3.connect(self.path, timeout=5.0)
+            connection.row_factory = sqlite3.Row
             try:
-                connection.execute("PRAGMA journal_mode=WAL")
-            except sqlite3.DatabaseError:
-                pass
-            connection.execute("PRAGMA synchronous=NORMAL")
-            yield connection
-            connection.commit()
-        except Exception:
-            connection.rollback()
-            raise
-        finally:
-            connection.close()
-
+                connection.execute("PRAGMA foreign_keys=ON")
+                connection.execute("PRAGMA busy_timeout=5000")
+                try:
+                    connection.execute("PRAGMA journal_mode=WAL")
+                except sqlite3.DatabaseError:
+                    pass
+                connection.execute("PRAGMA synchronous=NORMAL")
+                yield connection
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
     def _ensure_schema(self) -> None:
         with self._lock, self._connect() as connection:
             connection.executescript(
@@ -382,6 +363,7 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
                     finished_at TEXT,
                     metadata_json TEXT NOT NULL DEFAULT '{}'
                 );
+                CREATE INDEX IF NOT EXISTS idx_runs_status_started_run ON runs(status, started_at, run_id);
                 CREATE TABLE IF NOT EXISTS waves (
                     wave_id TEXT PRIMARY KEY,
                     run_id TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
@@ -411,6 +393,7 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
                     finished_at TEXT,
                     metadata_json TEXT NOT NULL DEFAULT '{}'
                 );
+                CREATE INDEX IF NOT EXISTS idx_delegations_wave_started ON delegations(wave_id, started_at);
                 CREATE TABLE IF NOT EXISTS events (
                     seq INTEGER PRIMARY KEY AUTOINCREMENT,
                     event_id TEXT NOT NULL UNIQUE,
@@ -448,6 +431,7 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
                 CREATE INDEX IF NOT EXISTS idx_proofs_lookup
                     ON proofs(stage_id, stage_version, input_fingerprint, status, finished_at);
                 CREATE INDEX IF NOT EXISTS idx_proofs_wave ON proofs(wave_id, finished_at);
+                CREATE INDEX IF NOT EXISTS idx_proofs_run_finished ON proofs(run_id, finished_at, proof_id);
                 CREATE TABLE IF NOT EXISTS checkpoints (
                     checkpoint_id TEXT PRIMARY KEY,
                     run_id TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
@@ -458,6 +442,7 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
                     created_at TEXT NOT NULL,
                     metadata_json TEXT NOT NULL DEFAULT '{}'
                 );
+                CREATE INDEX IF NOT EXISTS idx_checkpoints_run_created ON checkpoints(run_id, created_at, checkpoint_id);
                 CREATE TABLE IF NOT EXISTS agent_lanes (
                     lane_id TEXT PRIMARY KEY,
                     run_id TEXT NOT NULL DEFAULT '',
@@ -532,6 +517,7 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
                 );
                 CREATE INDEX IF NOT EXISTS idx_background_operations_status
                     ON background_operations(status, updated_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_background_operations_run_status_updated ON background_operations(run_id, status, updated_at DESC);
                 CREATE TABLE IF NOT EXISTS write_fences (
                     scope_key TEXT PRIMARY KEY,
                     fencing_token INTEGER NOT NULL DEFAULT 0,
@@ -556,7 +542,11 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
                     started_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     finished_at TEXT,
-                    summary_json TEXT NOT NULL DEFAULT '{}'
+                    summary_json TEXT NOT NULL DEFAULT '{}',
+                    error_code TEXT NOT NULL DEFAULT '',
+                    workflow_patch_preflight INTEGER NOT NULL DEFAULT 0,
+                    summary_codec TEXT NOT NULL DEFAULT 'plain_json',
+                    summary_blob BLOB
                 );
                 CREATE INDEX IF NOT EXISTS idx_idempotency_records_status
                     ON idempotency_records(status, updated_at DESC);
@@ -637,6 +627,12 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
                 """
             )
             self._p5_ensure_schema(connection)
+            for column in ("error_code TEXT NOT NULL DEFAULT ''", "workflow_patch_preflight INTEGER NOT NULL DEFAULT 0", "summary_codec TEXT NOT NULL DEFAULT 'plain_json'", "summary_blob BLOB"):
+                try:
+                    connection.execute(f"ALTER TABLE idempotency_records ADD COLUMN {column}")
+                except sqlite3.OperationalError as exc:
+                    if "duplicate column name" not in str(exc).lower():
+                        raise
             now = utc_now()
             active_jobs = connection.execute(
                 """SELECT job_id,checkout_id FROM managed_process_jobs
@@ -3714,7 +3710,7 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
             "started_at": row["started_at"],
             "updated_at": row["updated_at"],
             "finished_at": row["finished_at"],
-            "summary": json.loads(row["summary_json"] or "{}"),
+            "summary": _decode_idempotency_summary(row),
         }
 
     def claim_idempotency(
@@ -3796,11 +3792,12 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
             ).fetchone()
             if not row or str(row["request_hash"]) != request_hash:
                 return None
+            summary_json, summary_codec, summary_blob, error_code, workflow_patch_preflight = _encode_idempotency_summary(summary or {}, sanitize=_sanitize)
             connection.execute(
                 """UPDATE idempotency_records
                 SET status=?, run_id=CASE WHEN ?<>'' THEN ? ELSE run_id END,
                     wave_id=CASE WHEN ?<>'' THEN ? ELSE wave_id END,
-                    updated_at=?, finished_at=?, summary_json=?
+                    updated_at=?, finished_at=?, summary_json=?, error_code=?, workflow_patch_preflight=?, summary_codec=?, summary_blob=?
                 WHERE idempotency_key=? AND request_hash=?""",
                 (
                     _bounded_text(status, 64),
@@ -3808,7 +3805,11 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
                     wave_id, _bounded_text(wave_id, 256),
                     now,
                     now,
-                    _json(_sanitize(summary or {})),
+                    summary_json,
+                    error_code,
+                    workflow_patch_preflight,
+                    summary_codec,
+                    summary_blob,
                     key,
                     request_hash,
                 ),
@@ -3830,18 +3831,19 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
         now = utc_now()
         with self._lock, self._connect() as connection:
             rows = connection.execute(
-                """SELECT idempotency_key,summary_json FROM idempotency_records
+                """SELECT * FROM idempotency_records
                 WHERE status='in_progress' AND process_instance_id<>?""",
                 (current_process_instance_id,),
             ).fetchall()
             for row in rows:
-                summary = json.loads(row["summary_json"] or "{}")
+                summary = _decode_idempotency_summary(row)
                 summary["outcome_unknown_reason"] = "mcp_process_restarted"
+                summary_json, summary_codec, summary_blob, error_code, workflow_patch_preflight = _encode_idempotency_summary(summary, sanitize=_sanitize)
                 connection.execute(
                     """UPDATE idempotency_records
-                    SET status='unknown', updated_at=?, finished_at=?, summary_json=?
+                    SET status='unknown', updated_at=?, finished_at=?, summary_json=?, error_code=?, workflow_patch_preflight=?, summary_codec=?, summary_blob=?
                     WHERE idempotency_key=?""",
-                    (now, now, _json(_sanitize(summary)), row["idempotency_key"]),
+                    (now, now, summary_json, error_code, workflow_patch_preflight, summary_codec, summary_blob, row["idempotency_key"]),
                 )
         return len(rows)
 
@@ -4252,7 +4254,7 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
         preflight_clauses = [
             "operation='agent_workflow'",
             "status='failed'",
-            "json_extract(summary_json, '$.workflow_patch_preflight')=1",
+            "(workflow_patch_preflight=1 OR (summary_codec='plain_json' AND json_extract(summary_json, '$.workflow_patch_preflight')=1))",
         ]
         preflight_params: list[Any] = []
         if since_value:
@@ -4263,7 +4265,7 @@ class OrchestrationLedger(P5ExperimentLedgerMixin, QualityOutcomeLedgerMixin):
             preflight_params.append(until_value)
         with self._lock, self._connect() as connection:
             preflight_rows = connection.execute(
-                f"""SELECT COALESCE(json_extract(summary_json, '$.error_code'), 'unknown') AS error_code,
+                f"""SELECT COALESCE(NULLIF(error_code, ''), json_extract(summary_json, '$.error_code'), 'unknown') AS error_code,
                             COUNT(*) AS count
                     FROM idempotency_records
                     WHERE {' AND '.join(preflight_clauses)}

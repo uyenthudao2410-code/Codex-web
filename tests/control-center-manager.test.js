@@ -150,3 +150,28 @@ test('Control Center renders provider admission, bounded flight recorder, histor
   assert.match(js, /does not expose conversation context pressure; UI does not estimate a percentage/);
   assert.doesNotMatch(js, /contextPercent|context_percentage|estimatedContextPressure/);
 });
+
+
+test('Tasks & Proof exposes only the authenticated P5-A0 shadow operator path without treatment controls or raw seed material', () => {
+  const html = read('renderer/index.html');
+  const preload = read('electron/preload.js');
+  const main = read('electron/main.js');
+  const p5 = read('renderer/p5-a0.js');
+
+  for (const id of ['p5A0Card', 'p5A0Refresh', 'p5A0Prepare', 'p5A0Open', 'p5A0Analyze', 'p5A0Pause', 'p5A0Resume', 'p5A0Close', 'p5A0HardStop']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'missing P5-A0 operator control ' + id);
+  }
+  assert.match(html, /p5-a0\.js/);
+  assert.match(html, /P5-A0 SHADOW A\/A/);
+  assert.match(html, /không có treatment hoặc auto-promotion/i);
+  assert.match(preload, /p5A0:\s*\(action\)\s*=>\s*ipcRenderer\.invoke\('p5-a0:control', action\)/);
+  assert.match(main, /secureHandle\('p5-a0:control'/);
+  assert.match(main, /arguments:\s*\{\s*action:\s*'p5',\s*p5_experiment:\s*p5Experiment\s*\}/);
+  assert.match(main, /operation:\s*'prepare_a0'/);
+  assert.ok(main.includes("const P5_A0_SEED_HANDLE = 'secret://experiment/p5/a';"));
+  assert.match(main, /new Set\(\['status', 'prepare', 'open', 'analyze', 'pause', 'resume', 'close', 'hard_stop'\]\)/);
+  assert.doesNotMatch(main, /panelP5A0Control\([^)]*treatment|allowed[^\n]*treatment/i);
+  assert.match(p5, /api\?\.p5A0/);
+  assert.doesNotMatch(p5, /fixture-seed|raw[_ -]?seed|seed_material/i);
+  assert.doesNotMatch(html, /id="[^"]*P5[^"]*Treatment|>\s*P5-A Treatment\s*</i);
+});

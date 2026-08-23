@@ -1260,6 +1260,9 @@ def _predictive_validation(reports: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _latest_solution_shadow_run_ids(ledger: OrchestrationLedger, *, limit: int) -> list[str]:
     """Return the newest enrolled shadow runs without letting unrelated run churn evict evidence."""
+    bulk_reader = getattr(ledger, "latest_solution_shadow_run_ids", None)
+    if callable(bulk_reader):
+        return bulk_reader(limit=limit)
     with ledger._lock, ledger._connect() as connection:
         rows = connection.execute(
             """

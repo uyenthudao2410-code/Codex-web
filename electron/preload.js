@@ -110,6 +110,7 @@ function subscribeWithHeartbeatWatchdog(listener) {
 contextBridge.exposeInMainWorld('mcpAssistant', {
   snapshot: (options) => ipcRenderer.invoke('app:snapshot', options),
   orchestration: () => ipcRenderer.invoke('panel:orchestration').then(sanitizeOrchestrationResult),
+  p5A0: (action) => ipcRenderer.invoke('p5-a0:control', action),
   chooseWorkspace: () => ipcRenderer.invoke('dialog:workspace'),
   switchWorkspace: (workspace) => ipcRenderer.invoke('workspace:switch', workspace),
   updateAuthorizedRoots: (roots) => ipcRenderer.invoke('workspace:authorized-roots', roots),

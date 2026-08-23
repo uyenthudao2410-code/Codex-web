@@ -13,11 +13,15 @@ from unittest.mock import patch
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.p5_experiment import (
+    P5_A0_HORIZON_SECONDS,
     P5_EPOCH_ACTIVE,
     P5_EPOCH_HARD_STOPPED,
     P5ExperimentError,
+    activation_epoch_id,
     analyzer_source_fingerprint,
+    build_p5_a0_manifest,
     canary_analyzer,
+    manifest_sha256,
 )
 from coding_tools_mcp.secret_broker import SecretBroker
 from coding_tools_mcp.server import Runtime
@@ -131,6 +135,29 @@ def candidate(index: int, *, task_class: str = "feature") -> dict[str, object]:
 
 
 class P5ExperimentLedgerTests(unittest.TestCase):
+    def test_production_a0_builder_is_shadow_only_four_hours_and_content_free(self) -> None:
+        built = build_p5_a0_manifest(
+            source_contract={"control_plane_source_head": "fixture-head", "upstream_identity": "fixture-upstream"},
+            runtime_contract={
+                "runtime_version": "fixture-runtime",
+                "runtime_policy_fp": digest("runtime-policy"),
+                "tool_contract_fp": digest("tool-contract"),
+                "evaluation_schema_fp": digest("evaluation-schema"),
+                "public_tool_count": 8,
+            },
+            environment_fp=digest("environment"),
+            seed_commitment_sha256=digest("fixture-seed"),
+        )
+        self.assertEqual(built["phase"], "P5-A0")
+        self.assertEqual(built["study_type"], "shadow_aa")
+        self.assertEqual(built["outcome_contract"]["horizon_seconds"], P5_A0_HORIZON_SECONDS)
+        self.assertFalse(built["automatic_activation"])
+        self.assertFalse(built["automatic_production_promotion"])
+        self.assertNotIn("template_only", built)
+        self.assertNotIn("fixture-seed", str(built))
+        self.assertEqual(len(manifest_sha256(built)), 64)
+        self.assertEqual(len(activation_epoch_id(built)), 64)
+
     def open_epoch(self, ledger: OrchestrationLedger, *, phase: str = "P5-A0") -> tuple[dict[str, object], dict[str, object]]:
         source = manifest(phase=phase)
         opened = ledger.p5_open_epoch(
@@ -199,6 +226,7 @@ class P5ExperimentLedgerTests(unittest.TestCase):
         schema = input_schemas()["task_control"]
         self.assertIn("p5", schema["properties"]["action"]["enum"])
         self.assertIn("p5_experiment", schema["properties"])
+        self.assertIn("prepare_a0", schema["properties"]["p5_experiment"]["properties"]["operation"]["enum"])
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(temp), permission_mode="safe")
             try:
@@ -211,6 +239,54 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 self.assertTrue(status["p5_seed"]["content_free"])
                 self.assertFalse(status["automatic_activation"])
                 self.assertFalse(status["automatic_production_promotion"])
+            finally:
+                runtime.close()
+
+    def test_prepare_a0_requires_seed_and_never_opens_an_epoch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                with self.assertRaises(ToolFailure) as denied:
+                    runtime.task_control({"action": "p5", "p5_experiment": {"operation": "prepare_a0"}})
+                self.assertEqual(denied.exception.code, "P5_SEED_UNAVAILABLE")
+                self.assertIsNone(runtime.orchestration_ledger.p5_latest_epoch())
+            finally:
+                runtime.close()
+
+    def test_prepare_a0_builds_exact_live_manifest_without_exposing_seed_and_open_accepts_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(temp), permission_mode="safe", secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}))
+            observed_source = {"control_plane_source_head": "fixture-head", "upstream_identity": "fixture-upstream", "source_worktree_clean": True, "head_matches_upstream": True, "worktree_fp": "fixture-worktree"}
+            observed_environment = {"environment_fp": digest("environment"), "method_version": "p5-environment-v1", "content_free": True}
+            try:
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source), patch.object(runtime, "_p5_environment_contract", return_value=observed_environment):
+                    prepared = runtime.task_control({"action": "p5", "p5_experiment": {"operation": "prepare_a0"}})
+                    self.assertTrue(prepared["p5"]["prepared"])
+                    self.assertEqual(prepared["p5"]["manifest"]["outcome_contract"]["horizon_seconds"], 14400)
+                    self.assertIsNone(runtime.orchestration_ledger.p5_latest_epoch())
+                    self.assertNotIn("fixture-seed", str(prepared))
+                    opened = runtime.task_control({"action": "p5", "p5_experiment": {"operation": "open", "manifest": prepared["p5"]["manifest"], "seed_handle": "secret://experiment/p5/a"}})
+                self.assertTrue(opened["p5"]["opened"])
+                self.assertEqual(opened["p5"]["epoch"]["lifecycle"], P5_EPOCH_ACTIVE)
+                self.assertNotIn("fixture-seed", str(opened))
+            finally:
+                runtime.close()
+
+    def test_open_rejects_environment_drift_from_prepared_a0_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(temp), permission_mode="safe", secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}))
+            observed_source = {"control_plane_source_head": "fixture-head", "upstream_identity": "fixture-upstream", "source_worktree_clean": True, "head_matches_upstream": True, "worktree_fp": "fixture-worktree"}
+            prepared_environment = {"environment_fp": digest("environment-a"), "method_version": "p5-environment-v1", "content_free": True}
+            drifted_environment = {**prepared_environment, "environment_fp": digest("environment-b")}
+            try:
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source), patch.object(runtime, "_p5_environment_contract", return_value=prepared_environment):
+                    prepared = runtime.task_control({"action": "p5", "p5_experiment": {"operation": "prepare_a0"}})
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source), patch.object(runtime, "_p5_environment_contract", return_value=drifted_environment):
+                    with self.assertRaises(ToolFailure) as denied:
+                        runtime.task_control({"action": "p5", "p5_experiment": {"operation": "open", "manifest": prepared["p5"]["manifest"], "seed_handle": "secret://experiment/p5/a"}})
+                self.assertEqual(denied.exception.code, "P5_MANIFEST_RUNTIME_DRIFT")
+                self.assertIn("environment_contract.environment_fp", denied.exception.details["mismatches"])
+                self.assertIsNone(runtime.orchestration_ledger.p5_latest_epoch())
             finally:
                 runtime.close()
 
@@ -256,6 +332,7 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 frozen["analysis"]["analyzer_sha256"] = observed_runtime["analyzer_sha256"]
                 frozen["source_contract"]["control_plane_source_head"] = observed_source["control_plane_source_head"]
                 frozen["source_contract"]["upstream_identity"] = observed_source["upstream_identity"]
+                frozen["environment_contract"] = runtime._p5_environment_contract()
                 acquired = runtime.orchestration_ledger.acquire_write_fence(
                     scope_key="workspace",
                     lease_id="fixture-lease",
@@ -300,6 +377,7 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 frozen["analysis"]["analyzer_sha256"] = observed_runtime["analyzer_sha256"]
                 frozen["source_contract"]["control_plane_source_head"] = observed_source["control_plane_source_head"]
                 frozen["source_contract"]["upstream_identity"] = observed_source["upstream_identity"]
+                frozen["environment_contract"] = runtime._p5_environment_contract()
                 with patch.object(runtime, "_p5_source_contract", return_value=observed_source):
                     opened = runtime.task_control({
                         "action": "p5",
@@ -332,6 +410,7 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 frozen["analysis"]["analyzer_sha256"] = observed_runtime["analyzer_sha256"]
                 frozen["source_contract"]["control_plane_source_head"] = observed_source["control_plane_source_head"]
                 frozen["source_contract"]["upstream_identity"] = observed_source["upstream_identity"]
+                frozen["environment_contract"] = runtime._p5_environment_contract()
                 with patch.object(runtime, "_p5_source_contract", return_value=observed_source):
                     epoch = runtime.task_control({
                         "action": "p5",

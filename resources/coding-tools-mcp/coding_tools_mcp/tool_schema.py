@@ -461,7 +461,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
-                    "operation": {**string, "enum": ["status", "open", "pause", "resume", "close", "hard_stop", "enroll", "assign", "protocol_start", "outcome", "analyze"], "default": "status"},
+                    "operation": {**string, "enum": ["status", "prepare_a0", "open", "pause", "resume", "close", "hard_stop", "enroll", "assign", "protocol_start", "outcome", "analyze"], "default": "status"},
                     "activation_epoch_id": {**string, "maxLength": 128},
                     "manifest": {"type": "object", "additionalProperties": True, "description": "Exact P5 manifest. The runtime validates the normative v2 field set before opening an epoch."},
                     "manifest_sha256": {**string, "minLength": 64, "maxLength": 64},

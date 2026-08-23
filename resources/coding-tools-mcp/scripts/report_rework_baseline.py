@@ -10,7 +10,8 @@ REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from coding_tools_mcp.ledger_access import open_existing_ledger
+from coding_tools_mcp.ledger_access import open_existing_ledger_analysis
+from coding_tools_mcp.ledger_analysis import organic_rework_summary
 
 
 def main() -> int:
@@ -23,8 +24,8 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=500)
     args = parser.parse_args()
 
-    ledger = open_existing_ledger(Path(args.workspace))
-    result = ledger.organic_rework_summary(since=args.since, until=args.until, limit=args.limit)
+    with open_existing_ledger_analysis(Path(args.workspace)) as snapshot:
+        result = organic_rework_summary(snapshot.ledger, since=args.since, until=args.until, limit=args.limit)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

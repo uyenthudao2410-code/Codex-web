@@ -12,7 +12,7 @@ if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
 from coding_tools_mcp.accepted_result_economics_report import accepted_result_economics_report
-from coding_tools_mcp.ledger_access import open_existing_ledger
+from coding_tools_mcp.ledger_access import open_existing_ledger_analysis
 
 
 def _git(workspace: Path, *args: str) -> str:
@@ -39,7 +39,8 @@ def _source_worktree_clean(workspace: Path) -> bool | None:
 
 def report(workspace: Path, *, limit: int = 5000, tail_n: int = 10) -> dict[str, object]:
     root = workspace.resolve()
-    return accepted_result_economics_report(root, open_existing_ledger(root), source_head=_git(root, "rev-parse", "HEAD").strip().lower(), source_worktree_clean=_source_worktree_clean(root), limit=limit, tail_n=tail_n)
+    with open_existing_ledger_analysis(root) as snapshot:
+        return accepted_result_economics_report(root, snapshot.ledger, source_head=_git(root, "rev-parse", "HEAD").strip().lower(), source_worktree_clean=_source_worktree_clean(root), limit=limit, tail_n=tail_n)
 
 
 def main() -> int:

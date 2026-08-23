@@ -11,7 +11,7 @@ REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from coding_tools_mcp.ledger_access import open_existing_ledger
+from coding_tools_mcp.ledger_access import open_existing_ledger_analysis
 from coding_tools_mcp.p5_treatment import p5_implementation_contract
 from coding_tools_mcp.solution_economics import solution_shadow_population_report
 
@@ -86,7 +86,7 @@ def _git_baseline_status(root: Path) -> dict[str, object]:
     }
 
 
-def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, object]:
+def p4_readiness_report(workspace: Path, *, limit: int = 100, ledger: object | None = None) -> dict[str, object]:
     root = workspace.resolve()
     ledger_path = root / ".coding-tools" / "orchestration" / "ledger.sqlite3"
     if not ledger_path.is_file():
@@ -101,7 +101,9 @@ def p4_readiness_report(workspace: Path, *, limit: int = 100) -> dict[str, objec
             "reason": "canonical_orchestration_ledger_missing",
         }
 
-    ledger = open_existing_ledger(root)
+    if ledger is None:
+        with open_existing_ledger_analysis(root) as snapshot:
+            return p4_readiness_report(root, limit=limit, ledger=snapshot.ledger)
     population = solution_shadow_population_report(ledger, limit=limit)
     cohort = population.get("cohort") if isinstance(population.get("cohort"), dict) else {}
     gate = population.get("p4_gate") if isinstance(population.get("p4_gate"), dict) else {}
