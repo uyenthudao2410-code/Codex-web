@@ -1,64 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "792462c0946e4363a0e4bd3ea2f845c9",
-    "orchestration": {},
-    "objective": "Run a workspace command",
-    "status": "failed",
-    "steps": [],
-    "current_step": "Command failed",
-    "current_command": null,
-    "last_command_result": {
-      "command_id": "Gi_SulabVsHhodO8MJrSZ_Sb",
-      "kind": "command",
-      "status": "exited",
-      "result_status": "failed",
-      "exit_code": 1,
-      "duration_ms": 1256,
-      "finished_at": "2026-08-22T09:03:06.913Z"
-    },
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-22T09:03:05.434Z",
-    "updated_at": "2026-08-22T09:03:06.913Z",
-    "events": [
-      {
-        "time": "2026-08-22T09:03:05.434Z",
-        "event": "task_auto_started",
-        "details": {
-          "objective": "Run a workspace command"
-        }
-      },
-      {
-        "time": "2026-08-22T09:03:05.681Z",
-        "event": "command_started",
-        "details": {
-          "command": "git rev-parse 9da0b10 && git show --stat --oneline 9da0b10 && findstr /n /c:\"current_active_execution_run\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py && findstr /n /c:\"test_p5_experiment_anchor_does_not_block_activation_preflight\" /c:\"test_real_active_run_is_detected_when_newer_p5_anchor_exists\" resources\\coding-tools-mcp\\tests\\test_activation_preflight.py",
-          "session_id": "Gi_SulabVsHhodO8MJrSZ_Sb"
-        }
-      },
-      {
-        "time": "2026-08-22T09:03:06.913Z",
-        "event": "command_finished",
-        "details": {
-          "command": "git rev-parse 9da0b10 && git show --stat --oneline 9da0b10 && findstr /n /c:\"current_active_execution_run\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py && findstr /n /c:\"test_p5_experiment_anchor_does_not_block_activation_preflight\" /c:\"test_real_active_run_is_detected_when_newer_p5_anchor_exists\" resources\\coding-tools-mcp\\tests\\test_activation_preflight.py",
-          "status": "failed"
-        }
-      }
-    ],
-    "archived_at": "2026-08-22T09:03:19.683Z",
-    "archive_reason": "finished"
-  },
-  {
-    "version": 2,
     "task_id": "42baa64593d448c89499db7a57dcac0f",
     "orchestration": {},
     "objective": "Run a workspace command",
@@ -99735,6 +99677,270 @@
       }
     ],
     "archived_at": "2026-08-23T03:09:42.306Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "686f9ccf2dbc4e64aaa6a5bd1aa60438",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Operator report acknowledged",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "3EvHdGNjZHc_idUUpEDVhIX4",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": null,
+      "finished_at": "2026-08-23T03:35:58.124Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "3EvHdGNjZHc_idUUpEDVhIX4",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "failed",
+        "command": {
+          "command_id": "3EvHdGNjZHc_idUUpEDVhIX4",
+          "kind": "command",
+          "status": "exited",
+          "result_status": "failed",
+          "exit_code": 1,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "d264b2e6f2b22556bb8751513454ccbcd111214d",
+          "branch": "main",
+          "worktree_fp": "e617587a238da46606afc2916a54b5908aa6614d9cdbaeb7e082501f87bca5e6",
+          "dirty_paths": []
+        }
+      },
+      "source_run_wave": {
+        "task_id": "686f9ccf2dbc4e64aaa6a5bd1aa60438",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_FAILED",
+      "blocker_or_failure": {
+        "failure_class": "EXECUTION_COMMAND_FAILED",
+        "reason": "The command reached a terminal non-success state.",
+        "exit_code": 1
+      },
+      "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+    },
+    "completion_report_id": "f0a6928d9d29216c1568cdb0dd0a8f77e788735dca5e1e2ad9e88abe1d26c0c7",
+    "completion_report_acknowledged_id": "f0a6928d9d29216c1568cdb0dd0a8f77e788735dca5e1e2ad9e88abe1d26c0c7",
+    "completion_report_acknowledged_at": "2026-08-23T03:36:12.561Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+    "created_at": "2026-08-23T03:09:42.453Z",
+    "updated_at": "2026-08-23T03:36:14.903Z",
+    "events": [
+      {
+        "time": "2026-08-23T03:09:42.453Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-23T03:09:42.741Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$idx='E:/DEV/Codex-web/.git/index.ledger-delivery-20260823'; if(Test-Path $idx){ Remove-Item $idx -Force }; git read-tree HEAD; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; git add -- resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py resources/coding-tools-mcp/coding_tools_mcp/ledger_access.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resourc",
+          "session_id": "WULzWnnVK56wgT4AYC3YLQij"
+        }
+      },
+      {
+        "time": "2026-08-23T03:09:43.978Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$idx='E:/DEV/Codex-web/.git/index.ledger-delivery-20260823'; if(Test-Path $idx){ Remove-Item $idx -Force }; git read-tree HEAD; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; git add -- resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py resources/coding-tools-mcp/coding_tools_mcp/ledger_access.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resourc",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T03:29:10.555Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "COMMAND_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-23T03:29:28.708Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest -q tests",
+          "session_id": "ArFGvvVaZggklOLDK0RtPbob"
+        }
+      },
+      {
+        "time": "2026-08-23T03:29:36.964Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-ChildItem .git -Force | Where-Object { $_.Name -like '*index*' } | Select-Object Name,Length,LastWriteTimeUtc | Format-Table -AutoSize\"",
+          "session_id": "ZdbUG2ox32i5WL1HIlx9ftzp"
+        }
+      },
+      {
+        "time": "2026-08-23T03:29:37.500Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-ChildItem .git -Force | Where-Object { $_.Name -like '*index*' } | Select-Object Name,Length,LastWriteTimeUtc | Format-Table -AutoSize\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T03:32:59.312Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "ZdbUG2ox32i5WL1HIlx9ftzp",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "fffa84709bcc5dffa97b0e48fac9dccd623f8c5654527262dfa918a08681c4af"
+        }
+      },
+      {
+        "time": "2026-08-23T03:33:25.944Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "fffa84709bcc5dffa97b0e48fac9dccd623f8c5654527262dfa918a08681c4af"
+        }
+      },
+      {
+        "time": "2026-08-23T03:33:34.819Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Write-Output '--- LOG ---'; git log --oneline --decorate -4; Write-Output '--- 5e0910 STAT ---'; git show --stat --oneline --summary 5e0910bd8b5cae8131faf1d900ecfec00ef6a73f; Write-Output '--- 5e0910 FILES ---'; git diff-tree --no-commit-id --name-status -r 5e0910bd8b5cae8131faf1d900ecfec00ef6a73f; Write-Output '--- HASHES NOW ---'; Get-FileHash resources/coding-tools-mcp/coding_tools_mcp/ledger_file_gate.py,resources/coding-tools-mcp/coding_tools_mcp/ledger_maint",
+          "session_id": "UVXnL3PFZPZcOBcmHWcfo_2p"
+        }
+      },
+      {
+        "time": "2026-08-23T03:33:42.811Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Write-Output '--- LOG ---'; git log --oneline --decorate -4; Write-Output '--- 5e0910 STAT ---'; git show --stat --oneline --summary 5e0910bd8b5cae8131faf1d900ecfec00ef6a73f; Write-Output '--- 5e0910 FILES ---'; git diff-tree --no-commit-id --name-status -r 5e0910bd8b5cae8131faf1d900ecfec00ef6a73f; Write-Output '--- HASHES NOW ---'; Get-FileHash resources/coding-tools-mcp/coding_tools_mcp/ledger_file_gate.py,resources/coding-tools-mcp/coding_tools_mcp/ledger_maint",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T03:33:43.301Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "UVXnL3PFZPZcOBcmHWcfo_2p",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "e2cbf96e541a4f146e37010ec3bd9efca1eb07053a926f6cd771c8f53310d899"
+        }
+      },
+      {
+        "time": "2026-08-23T03:34:06.601Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "e2cbf96e541a4f146e37010ec3bd9efca1eb07053a926f6cd771c8f53310d899"
+        }
+      },
+      {
+        "time": "2026-08-23T03:34:19.929Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$env:GIT_INDEX_FILE='E:/DEV/Codex-web/.git/index.ledger-delivery-final-20260823'; if(Test-Path $env:GIT_INDEX_FILE){ Remove-Item $env:GIT_INDEX_FILE -Force }; git read-tree HEAD; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; npm run stage:coding-tools-delivery; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; npm run check:coding-tools-delivery; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; npm run check:coding-tools-history; if($LASTEXITCODE -ne 0){ exit $LASTEXI",
+          "session_id": "fRZ4VBNWy8_Q9F_kSjXFsGur"
+        }
+      },
+      {
+        "time": "2026-08-23T03:34:39.335Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$env:GIT_INDEX_FILE='E:/DEV/Codex-web/.git/index.ledger-delivery-final-20260823'; if(Test-Path $env:GIT_INDEX_FILE){ Remove-Item $env:GIT_INDEX_FILE -Force }; git read-tree HEAD; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; npm run stage:coding-tools-delivery; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; npm run check:coding-tools-delivery; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; npm run check:coding-tools-history; if($LASTEXITCODE -ne 0){ exit $LASTEXI",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T03:34:39.891Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "fRZ4VBNWy8_Q9F_kSjXFsGur",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "dae568b488d278caf53417ce780a1432aa7055e710556683ae4aa1904f0c5ac3"
+        }
+      },
+      {
+        "time": "2026-08-23T03:35:13.884Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "dae568b488d278caf53417ce780a1432aa7055e710556683ae4aa1904f0c5ac3"
+        }
+      },
+      {
+        "time": "2026-08-23T03:35:31.181Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$env:GIT_INDEX_FILE='E:/DEV/Codex-web/.git/index.ledger-delivery-final-20260823'; git fetch origin main; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; $expected='5e0910bd8b5cae8131faf1d900ecfec00ef6a73f'; $current=(git rev-parse HEAD).Trim(); if($current -ne $expected){ Write-Error ('HEAD drift before delivery: ' + $current); exit 41 }; git merge-base --is-ancestor origin/main $expected; if($LASTEXITCODE -ne 0){ Write-Error 'origin/main is not an ancestor of expe",
+          "session_id": "3EvHdGNjZHc_idUUpEDVhIX4"
+        }
+      },
+      {
+        "time": "2026-08-23T03:35:58.125Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$env:GIT_INDEX_FILE='E:/DEV/Codex-web/.git/index.ledger-delivery-final-20260823'; git fetch origin main; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; $expected='5e0910bd8b5cae8131faf1d900ecfec00ef6a73f'; $current=(git rev-parse HEAD).Trim(); if($current -ne $expected){ Write-Error ('HEAD drift before delivery: ' + $current); exit 41 }; git merge-base --is-ancestor origin/main $expected; if($LASTEXITCODE -ne 0){ Write-Error 'origin/main is not an ancestor of expe",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-23T03:35:58.601Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "3EvHdGNjZHc_idUUpEDVhIX4",
+          "accepted_or_not": "COMMAND_FAILED",
+          "report_id": "f0a6928d9d29216c1568cdb0dd0a8f77e788735dca5e1e2ad9e88abe1d26c0c7"
+        }
+      },
+      {
+        "time": "2026-08-23T03:36:02.479Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-08-23T03:36:12.561Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "f0a6928d9d29216c1568cdb0dd0a8f77e788735dca5e1e2ad9e88abe1d26c0c7"
+        }
+      }
+    ],
+    "archived_at": "2026-08-23T03:36:21.206Z",
     "archive_reason": "finished"
   }
 ]
