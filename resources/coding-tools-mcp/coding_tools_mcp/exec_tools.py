@@ -36,6 +36,7 @@ from .landlock_exec import (
 )
 from . import processes
 from .runtime_config import env_pattern_matches, is_core_command_env_name, is_filtered_env_var
+from .task_state import command_payload_succeeded
 from .processes import (
     ECOSYSTEM_CACHE_ENV_NAMES,
     MAX_ACTIVE_EXEC_SESSIONS,
@@ -508,7 +509,7 @@ class ExecToolsMixin:
                 })
             result = {
                 "command": command,
-                "status": "passed" if payload.get("exit_code") == 0 else "failed",
+                "status": "passed" if command_payload_succeeded(payload) else "failed",
                 "exit_code": payload.get("exit_code"),
                 "duration_ms": int((time.time() - started) * 1000),
                 "summary": str(payload.get("summary") or payload.get("stderr") or payload.get("stdout") or "")[:4000],

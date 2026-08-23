@@ -356,6 +356,103 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             self.assertTrue(population["policy"]["repair_label_uses_post_replan_patch_surface"])
             self.assertTrue(population["policy"]["workflow_replan_is_not_solution_repair"])
 
+    def test_source_state_is_bound_to_prediction_wave_across_source_replan(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(
+                objective="natural source repair",
+                metadata={"workflow": "bugfix", "evaluation": {"provenance": "representative"}},
+            )
+            prediction_wave = ledger.create_wave(
+                run_id,
+                execution_mode="mcp_only",
+                base_head="head-before",
+                worktree_fp="worktree-before",
+            )
+            record_solution_shadow(
+                ledger,
+                run_id=run_id,
+                wave_id=prediction_wave,
+                recommendation=recommendation("prediction-wave", risk="high"),
+            )
+            ledger.append_event(
+                run_id,
+                wave_id=prediction_wave,
+                event_type="failure_observed",
+                state_before="PROVING",
+                state_after="REPLAN",
+                payload={"failure_class": "PATCH_CONTEXT_AMBIGUOUS"},
+            )
+            ledger.finish_wave(prediction_wave, status="replanned")
+            repair_wave = ledger.create_wave(
+                run_id,
+                execution_mode="mcp_only",
+                base_head="head-before",
+                worktree_fp="worktree-after-source-write",
+            )
+            record_repair_patch(
+                ledger,
+                run_id=run_id,
+                wave_id=repair_wave,
+                label="natural_source_repair",
+            )
+            ledger.finish_wave(repair_wave, status="accepted")
+            ledger.finish_run(run_id, status="accepted")
+
+            report = solution_shadow_run_report(ledger, run_id)
+            source_state = report["source_state"]
+            self.assertEqual(source_state["measurement"], "solution_shadow_prediction_wave_identity_v2")
+            self.assertTrue(source_state["prediction_wave_found"])
+            self.assertEqual(source_state["prediction_wave_id"], prediction_wave)
+            self.assertEqual(source_state["base_head_identities"], ["head-before"])
+            self.assertEqual(source_state["worktree_fingerprint_identities"], ["worktree-before"])
+            self.assertTrue(source_state["worktree_changed_within_run"])
+            self.assertEqual(source_state["run_worktree_fingerprint_count"], 2)
+
+            population = solution_shadow_population_report(ledger)
+            design = population["measurement_design"]
+            self.assertFalse(design["prediction_source_state_diversity_observed"])
+            self.assertTrue(design["within_run_source_state_drift_observed"])
+            self.assertTrue(design["source_state_drift_observed"])
+            validation = population["predictive_validation"]
+            source_holdout = validation["signals"]["expected_repair_risk"]["source_state_holdout"]
+            self.assertEqual(source_holdout["missing_source_state_samples"], 0)
+            self.assertEqual(source_holdout["reason"], "at_least_two_source_states_required")
+
+    def test_missing_prediction_wave_fails_closed_without_run_identity_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = OrchestrationLedger(Path(temp))
+            run_id = ledger.create_run(
+                objective="legacy shadow without prediction wave",
+                metadata={"workflow": "bugfix", "evaluation": {"provenance": "representative"}},
+            )
+            wave_id = ledger.create_wave(
+                run_id,
+                execution_mode="mcp_only",
+                base_head="later-head",
+                worktree_fp="later-worktree",
+            )
+            ledger.append_event(
+                run_id,
+                event_type="solution_shadow_recommended",
+                payload=recommendation("missing-wave", risk="high"),
+            )
+            ledger.finish_wave(wave_id, status="accepted")
+            ledger.finish_run(run_id, status="accepted")
+
+            report = solution_shadow_run_report(ledger, run_id)
+            source_state = report["source_state"]
+            self.assertEqual(source_state["measurement"], "solution_shadow_prediction_wave_identity_v2")
+            self.assertIsNone(source_state["prediction_wave_id"])
+            self.assertFalse(source_state["prediction_wave_found"])
+            self.assertEqual(source_state["base_head_identities"], [])
+            self.assertEqual(source_state["worktree_fingerprint_identities"], [])
+
+            validation = solution_shadow_population_report(ledger)["predictive_validation"]
+            source_holdout = validation["signals"]["expected_repair_risk"]["source_state_holdout"]
+            self.assertEqual(source_holdout["reason"], "single_source_state_identity_required_for_every_sample")
+            self.assertEqual(source_holdout["missing_source_state_samples"], 1)
+
     def test_population_is_descriptive_only_and_exposes_repair_signal_buckets(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))
@@ -433,6 +530,8 @@ class SolutionEconomicsShadowTests(unittest.TestCase):
             design = population["measurement_design"]
             self.assertEqual(design["representative_base_head_count"], 2)
             self.assertEqual(design["representative_worktree_fingerprint_count"], 2)
+            self.assertTrue(design["prediction_source_state_diversity_observed"])
+            self.assertFalse(design["within_run_source_state_drift_observed"])
             self.assertTrue(design["source_state_drift_observed"])
             self.assertFalse(design["iid_assumption"])
             self.assertTrue(design["association_only"])

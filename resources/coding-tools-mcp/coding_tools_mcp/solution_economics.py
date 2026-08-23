@@ -473,23 +473,53 @@ def _repair_taxonomy(events: list[dict[str, Any]], replan_count: int) -> dict[st
     return result
 
 
-def _source_state_summary(ledger: OrchestrationLedger, run_id: str) -> dict[str, Any]:
+def _source_state_summary(
+    ledger: OrchestrationLedger,
+    run_id: str,
+    *,
+    prediction_wave_id: str,
+) -> dict[str, Any]:
     waves = ledger.list_waves(run_id)
-    base_heads = sorted({str(item.get("base_head") or "").strip() for item in waves if str(item.get("base_head") or "").strip()})
+    normalized_prediction_wave_id = str(prediction_wave_id or "").strip()
+    source_waves = [
+        item
+        for item in waves
+        if normalized_prediction_wave_id
+        and str(item.get("wave_id") or "").strip() == normalized_prediction_wave_id
+    ]
+    base_heads = sorted({
+        str(item.get("base_head") or "").strip()
+        for item in source_waves
+        if str(item.get("base_head") or "").strip()
+    })
     worktree_fingerprints = sorted({
+        str(item.get("worktree_fp") or "").strip()
+        for item in source_waves
+        if str(item.get("worktree_fp") or "").strip()
+    })
+    run_base_heads = sorted({
+        str(item.get("base_head") or "").strip()
+        for item in waves
+        if str(item.get("base_head") or "").strip()
+    })
+    run_worktree_fingerprints = sorted({
         str(item.get("worktree_fp") or "").strip()
         for item in waves
         if str(item.get("worktree_fp") or "").strip()
     })
     return {
-        "measurement": "orchestration_wave_identity_v1",
+        "measurement": "solution_shadow_prediction_wave_identity_v2",
         "wave_count": len(waves),
         "base_head_count": len(base_heads),
         "worktree_fingerprint_count": len(worktree_fingerprints),
-        "base_head_changed_within_run": len(base_heads) > 1,
-        "worktree_changed_within_run": len(worktree_fingerprints) > 1,
+        "base_head_changed_within_run": len(run_base_heads) > 1,
+        "worktree_changed_within_run": len(run_worktree_fingerprints) > 1,
         "base_head_identities": base_heads,
         "worktree_fingerprint_identities": worktree_fingerprints,
+        "prediction_wave_id": normalized_prediction_wave_id or None,
+        "prediction_wave_found": bool(source_waves),
+        "run_base_head_count": len(run_base_heads),
+        "run_worktree_fingerprint_count": len(run_worktree_fingerprints),
         "content_free": True,
     }
 
@@ -549,7 +579,11 @@ def solution_shadow_run_report(ledger: OrchestrationLedger, run_id: str) -> dict
         "status": "observed",
         "task_class": _run_workflow(run) or None,
         "evidence_provenance": _run_evidence_provenance(run),
-        "source_state": _source_state_summary(ledger, run_id),
+        "source_state": _source_state_summary(
+            ledger,
+            run_id,
+            prediction_wave_id=str(shadow.get("wave_id") or ""),
+        ),
         "recommendation": {**recommendation, "seq": shadow.get("seq"), "event_time": shadow.get("event_time")},
         "pre_mutation": {
             "recorded_before_first_write": first_write is None or int(shadow.get("seq") or 0) < int(first_write.get("seq") or 0),
@@ -1387,6 +1421,15 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
         for item in representative_terminal
         if str((item.get("recommendation") or {}).get("event_time") or "")
     )
+    prediction_source_state_diversity_observed = (
+        len(representative_base_heads) > 1
+        or len(representative_worktree_fingerprints) > 1
+    )
+    within_run_source_state_drift_observed = any(
+        bool((item.get("source_state") or {}).get("base_head_changed_within_run"))
+        or bool((item.get("source_state") or {}).get("worktree_changed_within_run"))
+        for item in representative_terminal
+    )
 
     overall_repaired = sum(1 for item in terminal if ((item.get("outcome") or {}).get("repair") or {}).get("repaired") is True)
     representative_repaired = sum(
@@ -1469,7 +1512,12 @@ def solution_shadow_population_report(ledger: OrchestrationLedger, *, limit: int
             "design": "longitudinal_evolving_checkout_v1",
             "representative_base_head_count": len(representative_base_heads),
             "representative_worktree_fingerprint_count": len(representative_worktree_fingerprints),
-            "source_state_drift_observed": len(representative_base_heads) > 1 or len(representative_worktree_fingerprints) > 1,
+            "source_state_drift_observed": (
+                prediction_source_state_diversity_observed
+                or within_run_source_state_drift_observed
+            ),
+            "prediction_source_state_diversity_observed": prediction_source_state_diversity_observed,
+            "within_run_source_state_drift_observed": within_run_source_state_drift_observed,
             "first_representative_shadow_event_time": representative_event_times[0] if representative_event_times else None,
             "last_representative_shadow_event_time": representative_event_times[-1] if representative_event_times else None,
             "iid_assumption": False,

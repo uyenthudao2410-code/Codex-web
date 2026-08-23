@@ -59,18 +59,7 @@ def command_payload_succeeded(payload: dict[str, Any]) -> bool:
     status = str(payload.get("status") or "").strip().lower()
     if bool(payload.get("timed_out")) or bool(payload.get("killed")):
         return False
-    if status in {
-        "timeout",
-        "timed_out",
-        "terminated",
-        "killed",
-        "cancelled",
-        "canceled",
-        "failed",
-        "error",
-    }:
-        return False
-    if status and status not in {"exited", "completed", "passed"}:
+    if status not in {"exited", "completed", "passed"}:
         return False
     return payload.get("exit_code") == 0
 

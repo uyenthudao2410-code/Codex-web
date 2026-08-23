@@ -19,7 +19,7 @@ import coding_tools_mcp.server as server_module
 import coding_tools_mcp.task_state as task_state_module
 from coding_tools_mcp.build_verify import collect_artifacts, detect_project
 from coding_tools_mcp.errors import ToolFailure
-from coding_tools_mcp.task_state import TaskStateStore, classify_command
+from coding_tools_mcp.task_state import TaskStateStore, classify_command, command_payload_succeeded
 from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.textutils import DEFAULT_MAX_LINES, truncate_text_head
 from coding_tools_mcp.protocol import dispatch_rpc
@@ -27,6 +27,24 @@ from coding_tools_mcp.document_tools import create_docx, extract_docx
 
 
 class TaskStateTests(unittest.TestCase):
+    def test_command_success_requires_explicit_success_terminal_lifecycle(self) -> None:
+        cases = (
+            ("exited", True),
+            ("completed", True),
+            ("passed", True),
+            ("", False),
+            ("running", False),
+            ("quiesced", False),
+            ("terminated", False),
+            ("timed_out", False),
+        )
+        for lifecycle, expected in cases:
+            with self.subTest(lifecycle=lifecycle):
+                self.assertEqual(
+                    command_payload_succeeded({"status": lifecycle, "exit_code": 0}),
+                    expected,
+                )
+
     def test_atomic_state_replace_retries_transient_windows_access_denial(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -480,6 +498,44 @@ class BuildVerificationTests(unittest.TestCase):
                 self.assertEqual(ref["sha256"], artifact["sha256"])
                 self.assertEqual(ref["content_hash"], artifact["sha256"])
                 self.assertEqual(runtime.task_state.get()["last_build_report"]["artifacts"][0]["artifact_ref"], ref)
+            finally:
+                runtime.close()
+
+    def test_verify_build_requires_success_terminal_lifecycle_for_exit_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                cases = (
+                    ("exited", "passed"),
+                    ("completed", "passed"),
+                    ("passed", "passed"),
+                    ("", "failed"),
+                    ("quiesced", "failed"),
+                    ("terminated", "failed"),
+                    ("timed_out", "failed"),
+                )
+                for lifecycle, expected in cases:
+                    terminal = {
+                        "ok": True,
+                        "status": lifecycle,
+                        "session_id": f"verify-build-{lifecycle}",
+                        "exit_code": 0,
+                        "elapsed_ms": 1,
+                    }
+                    with self.subTest(lifecycle=lifecycle), patch.object(
+                        runtime,
+                        "exec_command",
+                        return_value=terminal,
+                    ):
+                        report = runtime.verify_build({
+                            "path": ".",
+                            "run_tests": True,
+                            "run_build": False,
+                            "test_command": "python -m pytest -q",
+                        })
+                    self.assertEqual(report["test_result"]["status"], expected)
+                    self.assertEqual(report["overall_status"], expected)
+                    self.assertEqual(report["ok"], expected == "passed")
             finally:
                 runtime.close()
 
