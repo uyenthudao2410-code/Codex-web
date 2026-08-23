@@ -14,7 +14,12 @@ function probeMcpSemanticHealth({ port, token, expectedWorkspace = '', timeoutMs
       method: 'tools/call',
       params: {
         name: 'workspace_context',
-        arguments: { detail: 'compact', max_entries: 1 }
+        arguments: { detail: 'compact', max_entries: 1 },
+        _meta: {
+          'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+          'io.modelcontextprotocol/clientCapabilities': {},
+          'io.modelcontextprotocol/clientInfo': { name: 'recovery-semantic-watchdog', version: '1' }
+        }
       }
     });
     let settled = false;
@@ -32,7 +37,9 @@ function probeMcpSemanticHealth({ port, token, expectedWorkspace = '', timeoutMs
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
-        'MCP-Protocol-Version': '2025-11-25',
+        'MCP-Protocol-Version': '2026-07-28',
+        'Mcp-Method': 'tools/call',
+        'Mcp-Name': 'workspace_context',
         'X-Coding-Tools-Client-Id': 'recovery-semantic-watchdog',
         'X-Coding-Tools-Client-Type': 'electron'
       },

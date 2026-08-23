@@ -17,6 +17,9 @@ test('semantic probe proves workspace_context can execute, not only HTTP health'
   await withServer((request, response) => {
     assert.equal(request.url, '/mcp');
     assert.equal(request.headers.authorization, 'Bearer token');
+    assert.equal(request.headers['mcp-protocol-version'], '2026-07-28');
+    assert.equal(request.headers['mcp-method'], 'tools/call');
+    assert.equal(request.headers['mcp-name'], 'workspace_context');
     let body = '';
     request.setEncoding('utf8');
     request.on('data', (chunk) => { body += chunk; });
@@ -24,6 +27,11 @@ test('semantic probe proves workspace_context can execute, not only HTTP health'
       const parsed = JSON.parse(body);
       assert.equal(parsed.method, 'tools/call');
       assert.equal(parsed.params.name, 'workspace_context');
+      assert.deepEqual(parsed.params._meta, {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+        'io.modelcontextprotocol/clientInfo': { name: 'recovery-semantic-watchdog', version: '1' }
+      });
       const payload = JSON.stringify({
         jsonrpc: '2.0',
         id: parsed.id,
