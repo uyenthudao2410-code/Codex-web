@@ -10,7 +10,7 @@ REPOSITORY_ROOT = PACKAGE_ROOT.parents[1]
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
-from coding_tools_mcp.ledger_access import open_existing_ledger
+from coding_tools_mcp.ledger_access import open_existing_ledger_analysis
 from coding_tools_mcp.rework_diagnosis import stratified_rework_diagnosis
 
 
@@ -22,7 +22,8 @@ def main() -> int:
     parser.add_argument('--limit', type=int, default=5000)
     args = parser.parse_args()
     root = Path(args.workspace).resolve()
-    result = stratified_rework_diagnosis(open_existing_ledger(root), limit=args.limit)
+    with open_existing_ledger_analysis(root) as snapshot:
+        result = stratified_rework_diagnosis(snapshot.ledger, limit=args.limit)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

@@ -14,6 +14,8 @@ from . import __version__
 from .errors import ToolFailure
 from .p5_experiment import (
     P5_ENVIRONMENT_METHOD_VERSION,
+    P5_EPOCH_ACTIVE,
+    P5_EPOCH_PAUSED,
     P5ExperimentError,
     activation_epoch_id,
     analyzer_source_fingerprint,
@@ -166,6 +168,118 @@ class P5ControlMixin:
             )
         return {"runtime": observed_runtime, "source": observed_source, "environment": observed_environment}
 
+    def assert_current_epoch_contract(
+        self,
+        activation_epoch_id: str,
+        *,
+        operation: str,
+        authority: str,
+    ) -> dict[str, Any]:
+        """Revalidate a frozen live epoch immediately before a P5 side effect.
+
+        A manifest is a contract for the entire epoch, not merely for `open`.
+        Read the canonical epoch first, prove it against the live process, and
+        fail closed before enrollment, assignment, protocol start, or a
+        pre-write workflow binding.  A required hard stop travels through the
+        normal P5 lifecycle authority; this method never mutates a manifest or
+        reaches into SQLite directly.
+        """
+        normalized_epoch_id = str(activation_epoch_id or "").strip()
+        normalized_operation = str(operation or "").strip().lower()
+        if not normalized_epoch_id:
+            raise ToolFailure("P5_ACTIVATION_EPOCH_REQUIRED", "P5 operation requires an activation epoch identity.", category="validation")
+        if not normalized_operation or len(normalized_operation) > 64:
+            raise ToolFailure("P5_OPERATION_INVALID", "P5 contract revalidation requires a bounded operation name.", category="validation")
+
+        try:
+            snapshot = self.orchestration_ledger.p5_epoch_snapshot(normalized_epoch_id)
+        except P5ExperimentError as exc:
+            raise ToolFailure("P5_CONTRACT_VIOLATION", str(exc), category="validation") from exc
+        epoch = snapshot.get("epoch") if isinstance(snapshot.get("epoch"), dict) else {}
+        manifest = epoch.get("manifest") if isinstance(epoch.get("manifest"), dict) else {}
+        try:
+            verified = self._p5_assert_open_contract(manifest)
+        except ToolFailure as exc:
+            if exc.code != "P5_MANIFEST_RUNTIME_DRIFT":
+                raise
+            stop_rule = manifest.get("stop_rule") if isinstance(manifest.get("stop_rule"), dict) else {}
+            mismatches = [str(item) for item in exc.details.get("mismatches", [])]
+            source_identity_drift = any(
+                item.startswith("source_contract.") or item in {"source_worktree_clean", "head_matches_upstream"}
+                for item in mismatches
+            )
+            must_hard_stop = bool(stop_rule.get("stop_on_manifest_epoch_drift")) or (
+                source_identity_drift and bool(stop_rule.get("stop_on_source_identity_violation"))
+            )
+            hard_stop: dict[str, Any] | None = None
+            if must_hard_stop and str(epoch.get("lifecycle") or "") in {P5_EPOCH_ACTIVE, P5_EPOCH_PAUSED}:
+                reason = f"manifest_runtime_drift:{normalized_operation}"
+                try:
+                    transitioned = self.orchestration_ledger.p5_transition_epoch(
+                        activation_epoch_id=normalized_epoch_id,
+                        transition="hard_stop",
+                        reason=reason,
+                        authority=authority,
+                    )
+                except P5ExperimentError as transition_exc:
+                    # A concurrent official transition may have terminalized the
+                    # epoch between this snapshot and this compare-and-transition.
+                    # Re-read only to report a bounded receipt; do not retry a
+                    # mutation or reinterpret the frozen manifest.
+                    try:
+                        current_epoch = self.orchestration_ledger.p5_epoch_snapshot(normalized_epoch_id).get("epoch") or {}
+                    except P5ExperimentError:
+                        raise ToolFailure("P5_CONTRACT_VIOLATION", str(transition_exc), category="runtime") from transition_exc
+                    if str(current_epoch.get("lifecycle") or "") in {P5_EPOCH_ACTIVE, P5_EPOCH_PAUSED}:
+                        raise ToolFailure("P5_CONTRACT_VIOLATION", str(transition_exc), category="runtime") from transition_exc
+                    hard_stop = {
+                        "changed": False,
+                        "activation_epoch_id": normalized_epoch_id,
+                        "lifecycle": str(current_epoch.get("lifecycle") or ""),
+                    }
+                else:
+                    stopped_epoch = transitioned.get("epoch") if isinstance(transitioned.get("epoch"), dict) else {}
+                    hard_stop = {
+                        "changed": bool(transitioned.get("changed")),
+                        "activation_epoch_id": normalized_epoch_id,
+                        "lifecycle": str(stopped_epoch.get("lifecycle") or ""),
+                    }
+            raise ToolFailure(
+                "P5_MANIFEST_RUNTIME_DRIFT",
+                "The frozen P5 manifest does not match the currently loaded source/runtime contract.",
+                category="runtime",
+                details={
+                    **exc.details,
+                    "activation_epoch_id": normalized_epoch_id,
+                    "operation": normalized_operation,
+                    "hard_stop": hard_stop,
+                },
+            ) from exc
+        return {
+            "activation_epoch_id": normalized_epoch_id,
+            "operation": normalized_operation,
+            "epoch_lifecycle": str(epoch.get("lifecycle") or ""),
+            "verified_contract": verified,
+        }
+
+    def assert_current_assignment_contract(
+        self,
+        assignment_id: str,
+        *,
+        operation: str,
+        authority: str,
+    ) -> dict[str, Any]:
+        """Resolve one immutable assignment to its epoch before a P5 side effect."""
+        try:
+            activation_epoch_id = self.orchestration_ledger.p5_activation_epoch_for_assignment(assignment_id)
+        except P5ExperimentError as exc:
+            raise ToolFailure("P5_CONTRACT_VIOLATION", str(exc), category="validation") from exc
+        return self.assert_current_epoch_contract(
+            activation_epoch_id,
+            operation=operation,
+            authority=authority,
+        )
+
     def _p5_secret(self, handle: object) -> tuple[str, str]:
         seed_handle = str(handle or "").strip()
         if not seed_handle.startswith("secret://"):
@@ -276,17 +390,19 @@ class P5ControlMixin:
                 candidate = request.get("candidate")
                 if not isinstance(candidate, dict):
                     raise ToolFailure("P5_CANDIDATE_REQUIRED", "P5 enrollment requires candidate identity and eligibility facts.", category="validation")
+                verified = self.assert_current_epoch_contract(epoch_id, operation="enroll", authority=authority)
                 result = self.orchestration_ledger.p5_record_enrollment(
                     activation_epoch_id=epoch_id,
                     candidate=candidate,
                     enrolled=request.get("enrolled") is True,
                     authority=authority,
                 )
-                return {"p5": result}
+                return {"p5": result, "verified_contract": verified}
             if operation == "assign":
                 candidate = request.get("candidate")
                 if not isinstance(candidate, dict):
                     raise ToolFailure("P5_CANDIDATE_REQUIRED", "P5 assignment requires the pre-enrolled stable task identity.", category="validation")
+                verified = self.assert_current_epoch_contract(epoch_id, operation="assign", authority=authority)
                 seed_handle, seed = self._p5_secret(request.get("seed_handle"))
                 result = self.orchestration_ledger.p5_assign(
                     activation_epoch_id=epoch_id,
@@ -296,7 +412,7 @@ class P5ControlMixin:
                     pre_arm_action_attested=request.get("pre_arm_action_attested") is True,
                     authority=authority,
                 )
-                return {"p5": result, "seed_handle": seed_handle}
+                return {"p5": result, "seed_handle": seed_handle, "verified_contract": verified}
             if operation == "protocol_start":
                 if str(request.get("first_write_at") or "").strip():
                     raise ToolFailure(
@@ -304,13 +420,18 @@ class P5ControlMixin:
                         "P5 first-write timing is recorded only when agent_workflow binds the assignment to a live write lease.",
                         category="validation",
                     )
+                verified = self.assert_current_assignment_contract(
+                    str(request.get("assignment_id") or ""),
+                    operation="protocol_start",
+                    authority=authority,
+                )
                 result = self.orchestration_ledger.p5_record_arm_protocol_start(
                     assignment_id=str(request.get("assignment_id") or ""),
                     received_arm=str(request.get("received_arm") or ""),
                     protocol_id=str(request.get("protocol_id") or ""),
                     authority=authority,
                 )
-                return {"p5": result}
+                return {"p5": result, "verified_contract": verified}
             if operation == "outcome":
                 outcome = request.get("outcome")
                 if not isinstance(outcome, dict):

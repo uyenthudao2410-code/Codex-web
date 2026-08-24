@@ -612,7 +612,12 @@ class RuntimeOrchestrator {
       rediscovered,
       rediscoveredSha256,
       rediscoveredAt: rediscovered ? (String(discovery?.observed_at || '').trim() || null) : null,
-      refreshRequired: Boolean(contractChanged && !rediscovered),
+      // A persisted matching SHA says only that a contract was acknowledged at
+      // some earlier point.  It cannot prove that the *currently loaded MCP
+      // process* was rediscovered by its real ChatGPT client.  The discovery
+      // receipt is already bound by the MCP runtime to this process/server
+      // instance, so keep the UI/runtime status fail-closed until it exists.
+      refreshRequired: Boolean(currentSha256 && !rediscovered),
       acknowledgementPending: Boolean(contractChanged && rediscovered)
     };
   }
@@ -620,12 +625,12 @@ class RuntimeOrchestrator {
   acknowledgeConnectorContractHash(toolContract, discovery = null) {
     const status = this.connectorContractStatus(toolContract, discovery);
     if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
-    if (status.currentSha256 === status.acknowledgedSha256) return status;
     if (!status.rediscovered) {
       throw Object.assign(new Error('ChatGPT chưa đọc lại tools/list cho tool contract hiện tại.'), {
         code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
       });
     }
+    if (status.currentSha256 === status.acknowledgedSha256) return status;
     updateJsonAtomic(this.paths.stateFile(), (state) => ({
       ...state,
       chatgptToolContractSha256: status.currentSha256,

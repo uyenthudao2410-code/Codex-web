@@ -184,6 +184,33 @@ class P5ExperimentLedgerTests(unittest.TestCase):
         self.assertTrue(assigned["assigned"])
         return assigned["assignment"]
 
+    def open_runtime_epoch(self, runtime: Runtime) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
+        """Open a fixture epoch whose frozen identity remains patchable per test."""
+        observed_runtime = runtime._p5_runtime_contract()
+        observed_source: dict[str, object] = {
+            "control_plane_source_head": "fixture-head",
+            "upstream_identity": "fixture-upstream",
+            "source_worktree_clean": True,
+            "head_matches_upstream": True,
+            "worktree_fp": "fixture-worktree",
+        }
+        frozen = manifest()
+        frozen["runtime_contract"] = observed_runtime
+        frozen["analysis"]["analyzer_sha256"] = observed_runtime["analyzer_sha256"]
+        frozen["source_contract"]["control_plane_source_head"] = observed_source["control_plane_source_head"]
+        frozen["source_contract"]["upstream_identity"] = observed_source["upstream_identity"]
+        frozen["environment_contract"] = runtime._p5_environment_contract()
+        with patch.object(runtime, "_p5_source_contract", return_value=observed_source):
+            epoch = runtime.task_control({
+                "action": "p5",
+                "p5_experiment": {
+                    "operation": "open",
+                    "manifest": frozen,
+                    "seed_handle": "secret://experiment/p5/a",
+                },
+            })["p5"]["epoch"]
+        return frozen, epoch, observed_source
+
     def test_epoch_open_is_explicit_secret_backed_and_nonautomatic(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))
@@ -397,72 +424,51 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}),
             )
             try:
-                observed_runtime = runtime._p5_runtime_contract()
-                observed_source = {
-                    "control_plane_source_head": "fixture-head",
-                    "upstream_identity": "fixture-upstream",
-                    "source_worktree_clean": True,
-                    "head_matches_upstream": True,
-                    "worktree_fp": "fixture-worktree",
-                }
-                frozen = manifest()
-                frozen["runtime_contract"] = observed_runtime
-                frozen["analysis"]["analyzer_sha256"] = observed_runtime["analyzer_sha256"]
-                frozen["source_contract"]["control_plane_source_head"] = observed_source["control_plane_source_head"]
-                frozen["source_contract"]["upstream_identity"] = observed_source["upstream_identity"]
-                frozen["environment_contract"] = runtime._p5_environment_contract()
+                _frozen, epoch, observed_source = self.open_runtime_epoch(runtime)
                 with patch.object(runtime, "_p5_source_contract", return_value=observed_source):
-                    epoch = runtime.task_control({
+                    item = candidate(77)
+                    runtime.task_control({
                         "action": "p5",
                         "p5_experiment": {
-                            "operation": "open",
-                            "manifest": frozen,
-                            "seed_handle": "secret://experiment/p5/a",
+                            "operation": "enroll",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": item,
+                            "enrolled": True,
                         },
-                    })["p5"]["epoch"]
-                item = candidate(77)
-                runtime.task_control({
-                    "action": "p5",
-                    "p5_experiment": {
-                        "operation": "enroll",
-                        "activation_epoch_id": epoch["activation_epoch_id"],
-                        "candidate": item,
-                        "enrolled": True,
-                    },
-                })
-                assignment = runtime.task_control({
-                    "action": "p5",
-                    "p5_experiment": {
-                        "operation": "assign",
-                        "activation_epoch_id": epoch["activation_epoch_id"],
-                        "candidate": item,
-                        "manifest_sha256": epoch["manifest_sha256"],
-                        "seed_handle": "secret://experiment/p5/a",
-                        "pre_arm_action_attested": True,
-                    },
-                })["p5"]["assignment"]
-                runtime.task_control({
-                    "action": "p5",
-                    "p5_experiment": {
-                        "operation": "protocol_start",
-                        "assignment_id": assignment["assignment_id"],
-                        "received_arm": "control",
-                        "protocol_id": "eocl-current-control-v1",
-                    },
-                })
-                with patch.object(
-                    runtime,
-                    "apply_changes_and_verify",
-                    return_value={"ok": False, "error": {"code": "TEST_STOP"}},
-                ):
-                    result = runtime.agent_workflow({
-                        "workflow": "feature",
-                        "phase": "execute",
-                        "objective": "exercise P5 workflow lease binding",
-                        "patches": [],
-                        "evaluation": {"provenance": "synthetic"},
-                        "p5_assignment_id": assignment["assignment_id"],
                     })
+                    assignment = runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "assign",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": item,
+                            "manifest_sha256": epoch["manifest_sha256"],
+                            "seed_handle": "secret://experiment/p5/a",
+                            "pre_arm_action_attested": True,
+                        },
+                    })["p5"]["assignment"]
+                    runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "protocol_start",
+                            "assignment_id": assignment["assignment_id"],
+                            "received_arm": "control",
+                            "protocol_id": "eocl-current-control-v1",
+                        },
+                    })
+                    with patch.object(
+                        runtime,
+                        "apply_changes_and_verify",
+                        return_value={"ok": False, "error": {"code": "TEST_STOP"}},
+                    ):
+                        result = runtime.agent_workflow({
+                            "workflow": "feature",
+                            "phase": "execute",
+                            "objective": "exercise P5 workflow lease binding",
+                            "patches": [],
+                            "evaluation": {"provenance": "synthetic"},
+                            "p5_assignment_id": assignment["assignment_id"],
+                        })
                 self.assertFalse(result["execution"]["ok"])
                 binding = result["p5_workflow_binding"]
                 self.assertTrue(binding["recorded"])
@@ -471,6 +477,258 @@ class P5ExperimentLedgerTests(unittest.TestCase):
                 self.assertEqual(snapshot["workflow_bindings"][0]["assignment_id"], assignment["assignment_id"])
                 self.assertTrue(snapshot["workflow_bindings"][0]["write_lease_id"])
                 self.assertNotIn("fixture-seed", str(result))
+            finally:
+                runtime.close()
+
+    def test_post_open_source_drift_hard_stops_before_enrollment_and_preserves_zero_funnel(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(
+                Path(temp),
+                permission_mode="safe",
+                secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}),
+            )
+            try:
+                _frozen, epoch, observed_source = self.open_runtime_epoch(runtime)
+                drifted_source = {**observed_source, "source_worktree_clean": False}
+                with patch.object(runtime, "_p5_source_contract", return_value=drifted_source):
+                    with self.assertRaises(ToolFailure) as denied:
+                        runtime.task_control({
+                            "action": "p5",
+                            "p5_experiment": {
+                                "operation": "enroll",
+                                "activation_epoch_id": epoch["activation_epoch_id"],
+                                "candidate": candidate(91),
+                                "enrolled": True,
+                            },
+                        })
+                self.assertEqual(denied.exception.code, "P5_MANIFEST_RUNTIME_DRIFT")
+                self.assertIn("source_worktree_clean", denied.exception.details["mismatches"])
+                self.assertEqual(denied.exception.details["hard_stop"]["lifecycle"], P5_EPOCH_HARD_STOPPED)
+                snapshot = runtime.orchestration_ledger.p5_epoch_snapshot(epoch["activation_epoch_id"])
+                self.assertEqual(snapshot["epoch"]["lifecycle"], P5_EPOCH_HARD_STOPPED)
+                self.assertEqual(snapshot["enrollment"], [])
+                self.assertEqual(snapshot["assignments"], [])
+                self.assertEqual(snapshot["protocol_starts"], [])
+                self.assertEqual(snapshot["workflow_bindings"], [])
+                self.assertEqual(
+                    sum(item["event_type"] == "p5_epoch_hard_stopped" for item in snapshot["events"]),
+                    1,
+                )
+            finally:
+                runtime.close()
+
+    def test_evidence_only_source_scope_drift_does_not_block_revalidation_or_idempotent_enrollment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(
+                Path(temp),
+                permission_mode="safe",
+                secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}),
+            )
+            try:
+                _frozen, epoch, observed_source = self.open_runtime_epoch(runtime)
+                # `_p5_source_contract` excludes `.coding-tools/**`; preserving
+                # this contract models evidence-only drift without redefining
+                # the frozen source identity.
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source):
+                    first = runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "enroll",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": candidate(92),
+                            "enrolled": True,
+                        },
+                    })
+                    replay = runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "enroll",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": candidate(92),
+                            "enrolled": True,
+                        },
+                    })
+                self.assertTrue(first["p5"]["recorded"])
+                self.assertTrue(replay["p5"]["idempotent"])
+                self.assertEqual(replay["verified_contract"]["operation"], "enroll")
+                snapshot = runtime.orchestration_ledger.p5_epoch_snapshot(epoch["activation_epoch_id"])
+                self.assertEqual(snapshot["epoch"]["lifecycle"], P5_EPOCH_ACTIVE)
+                self.assertEqual(len(snapshot["enrollment"]), 1)
+            finally:
+                runtime.close()
+
+    def test_post_open_runtime_tool_contract_drift_hard_stops_before_assignment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(
+                Path(temp),
+                permission_mode="safe",
+                secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}),
+            )
+            try:
+                _frozen, epoch, observed_source = self.open_runtime_epoch(runtime)
+                item = candidate(93)
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source):
+                    runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "enroll",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": item,
+                            "enrolled": True,
+                        },
+                    })
+                drifted_runtime = {**runtime._p5_runtime_contract(), "tool_contract_fp": digest("post-open-tool-contract-drift")}
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source), patch.object(runtime, "_p5_runtime_contract", return_value=drifted_runtime):
+                    with self.assertRaises(ToolFailure) as denied:
+                        runtime.task_control({
+                            "action": "p5",
+                            "p5_experiment": {
+                                "operation": "assign",
+                                "activation_epoch_id": epoch["activation_epoch_id"],
+                                "candidate": item,
+                                "manifest_sha256": epoch["manifest_sha256"],
+                                "seed_handle": "secret://experiment/p5/a",
+                                "pre_arm_action_attested": True,
+                            },
+                        })
+                self.assertEqual(denied.exception.code, "P5_MANIFEST_RUNTIME_DRIFT")
+                self.assertIn("tool_contract_fp", denied.exception.details["mismatches"])
+                snapshot = runtime.orchestration_ledger.p5_epoch_snapshot(epoch["activation_epoch_id"])
+                self.assertEqual(snapshot["epoch"]["lifecycle"], P5_EPOCH_HARD_STOPPED)
+                self.assertEqual(snapshot["assignments"], [])
+            finally:
+                runtime.close()
+
+    def test_post_open_runtime_identity_drift_hard_stops_before_any_p5_side_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(
+                Path(temp),
+                permission_mode="safe",
+                secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}),
+            )
+            try:
+                _frozen, epoch, observed_source = self.open_runtime_epoch(runtime)
+                drifted_runtime = {**runtime._p5_runtime_contract(), "runtime_version": "post-open-runtime-drift"}
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source), patch.object(runtime, "_p5_runtime_contract", return_value=drifted_runtime):
+                    with self.assertRaises(ToolFailure) as denied:
+                        runtime.assert_current_epoch_contract(
+                            epoch["activation_epoch_id"],
+                            operation="pre_side_effect_probe",
+                            authority="test",
+                        )
+                self.assertEqual(denied.exception.code, "P5_MANIFEST_RUNTIME_DRIFT")
+                self.assertIn("runtime_version", denied.exception.details["mismatches"])
+                snapshot = runtime.orchestration_ledger.p5_epoch_snapshot(epoch["activation_epoch_id"])
+                self.assertEqual(snapshot["epoch"]["lifecycle"], P5_EPOCH_HARD_STOPPED)
+                self.assertEqual(snapshot["enrollment"], [])
+                self.assertEqual(snapshot["assignments"], [])
+            finally:
+                runtime.close()
+
+    def test_post_open_analyzer_drift_hard_stops_before_protocol_start(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(
+                Path(temp),
+                permission_mode="safe",
+                secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}),
+            )
+            try:
+                _frozen, epoch, observed_source = self.open_runtime_epoch(runtime)
+                item = candidate(94)
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source):
+                    runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "enroll",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": item,
+                            "enrolled": True,
+                        },
+                    })
+                    assignment = runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "assign",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": item,
+                            "manifest_sha256": epoch["manifest_sha256"],
+                            "seed_handle": "secret://experiment/p5/a",
+                            "pre_arm_action_attested": True,
+                        },
+                    })["p5"]["assignment"]
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source), patch("coding_tools_mcp.p5_control.analyzer_source_fingerprint", return_value=digest("post-open-analyzer-drift")):
+                    with self.assertRaises(ToolFailure) as denied:
+                        runtime.task_control({
+                            "action": "p5",
+                            "p5_experiment": {
+                                "operation": "protocol_start",
+                                "assignment_id": assignment["assignment_id"],
+                                "received_arm": "control",
+                                "protocol_id": "eocl-current-control-v1",
+                            },
+                        })
+                self.assertEqual(denied.exception.code, "P5_MANIFEST_RUNTIME_DRIFT")
+                self.assertIn("analysis.analyzer_sha256", denied.exception.details["mismatches"])
+                snapshot = runtime.orchestration_ledger.p5_epoch_snapshot(epoch["activation_epoch_id"])
+                self.assertEqual(snapshot["epoch"]["lifecycle"], P5_EPOCH_HARD_STOPPED)
+                self.assertEqual(snapshot["protocol_starts"], [])
+            finally:
+                runtime.close()
+
+    def test_post_open_source_drift_blocks_prewrite_before_binding_or_patch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(
+                Path(temp),
+                permission_mode="safe",
+                secret_broker=SecretBroker({"secret://experiment/p5/a": "fixture-seed"}),
+            )
+            try:
+                _frozen, epoch, observed_source = self.open_runtime_epoch(runtime)
+                item = candidate(95)
+                with patch.object(runtime, "_p5_source_contract", return_value=observed_source):
+                    runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "enroll",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": item,
+                            "enrolled": True,
+                        },
+                    })
+                    assignment = runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "assign",
+                            "activation_epoch_id": epoch["activation_epoch_id"],
+                            "candidate": item,
+                            "manifest_sha256": epoch["manifest_sha256"],
+                            "seed_handle": "secret://experiment/p5/a",
+                            "pre_arm_action_attested": True,
+                        },
+                    })["p5"]["assignment"]
+                    runtime.task_control({
+                        "action": "p5",
+                        "p5_experiment": {
+                            "operation": "protocol_start",
+                            "assignment_id": assignment["assignment_id"],
+                            "received_arm": "control",
+                            "protocol_id": "eocl-current-control-v1",
+                        },
+                    })
+                drifted_source = {**observed_source, "source_worktree_clean": False}
+                with patch.object(runtime, "_p5_source_contract", return_value=drifted_source), self.assertRaises(ToolFailure) as denied:
+                    runtime.agent_workflow({
+                        "workflow": "feature",
+                        "phase": "execute",
+                        "objective": "must not bind after frozen source drift",
+                        "patches": [],
+                        "evaluation": {"provenance": "synthetic"},
+                        "p5_assignment_id": assignment["assignment_id"],
+                    })
+                self.assertEqual(denied.exception.code, "P5_MANIFEST_RUNTIME_DRIFT")
+                snapshot = runtime.orchestration_ledger.p5_epoch_snapshot(epoch["activation_epoch_id"])
+                self.assertEqual(snapshot["epoch"]["lifecycle"], P5_EPOCH_HARD_STOPPED)
+                self.assertEqual(snapshot["workflow_bindings"], [])
             finally:
                 runtime.close()
 

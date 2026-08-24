@@ -467,7 +467,7 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "8108adc92029cc2aea47e7d4832c88bf329784649de7e84f556b36ea655c1c41")
+                self.assertEqual(contract["sha256"], "3e37f9fed85bd80f46ee79a820291f617584b6b6ba65b43c16f163adf37993fd")
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)
                 self.assertEqual(
@@ -622,7 +622,15 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(projection["write_lease_id"], "")
                 self.assertEqual(projection["write_owner"], "")
                 self.assertEqual(ledger.get_run(run_id)["status"], "stale")
-                self.assertEqual(ledger.list_waves(run_id)[0]["status"], "aborted")
+                # Startup only projects the terminal parent into task state. A
+                # terminal-parent child contradiction is preserved for Gate 0
+                # exact-ID maintenance rather than being silently repaired by
+                # an ordinary runtime construction.
+                self.assertEqual(ledger.list_waves(run_id)[0]["status"], "active")
+                self.assertFalse(any(
+                    item["event_type"] == "wave_lifecycle_reconciled"
+                    for item in ledger.list_events(run_id)
+                ))
                 self.assertEqual(state["events"][-1]["event"], "orchestration_projection_reconciled")
                 identity = runtime.workspace_context({"detail": "full"})["runtime"]
                 self.assertTrue(identity["task_orchestration_projection_reconciled"])
@@ -639,11 +647,17 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             with (
                 patch.dict("os.environ", {"CODING_TOOLS_MCP_STALE_RUN_SECONDS": "3600"}),
                 patch("coding_tools_mcp.orchestration_ledger.time.time", return_value=future),
+                patch.object(
+                    OrchestrationLedger,
+                    "reconcile_stale_runs",
+                    side_effect=AssertionError("runtime must not invoke the legacy bulk reconciler"),
+                ),
             ):
                 runtime = Runtime(root, permission_mode="safe")
                 try:
                     identity = runtime.workspace_context({"detail": "full"})["runtime"]
                     recovery = runtime.task_control({"action": "get"})["recovery"]
+                    self.assertEqual(runtime._maybe_reconcile_stale_orchestration(force=True), [])
                 finally:
                     runtime.close()
             self.assertEqual(ledger.get_run(run_id)["status"], "active")

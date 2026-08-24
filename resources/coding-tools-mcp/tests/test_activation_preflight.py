@@ -291,6 +291,47 @@ class ActivationPreflightTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_threshold_sensitive_rows_do_not_block_activation_or_call_writer_accessor(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            lifecycle = {
+                "classification_counts": {"THRESHOLD_SENSITIVE_STALE_CANDIDATE": 3},
+                "run_ids_by_class": {"THRESHOLD_SENSITIVE_STALE_CANDIDATE": ["run-threshold"]},
+                "unexplained_active_runs": 0,
+                "unbound_live_resource_residues": 0,
+                "p5_lifecycles": ["EPOCH_CLOSED"],
+            }
+            try:
+                with (
+                    patch.object(runtime, "_activation_lifecycle_summary", return_value=lifecycle),
+                    patch.object(runtime.orchestration_ledger, "current_active_execution_run", side_effect=AssertionError("must not query writer accessor")),
+                ):
+                    result = runtime.activation_preflight()
+                self.assertTrue(result["safe"])
+                self.assertEqual(result["orchestration_state"], "QUIESCENT_WITH_THRESHOLD_CANDIDATES")
+                self.assertEqual(result["counts"]["threshold_sensitive_stale_candidates"], 3)
+            finally:
+                runtime.close()
+
+    def test_unexplained_lifecycle_residue_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            lifecycle = {
+                "classification_counts": {"UNEXPLAINED_ACTIVE": 1},
+                "run_ids_by_class": {"UNEXPLAINED_ACTIVE": ["run-unknown"]},
+                "unexplained_active_runs": 1,
+                "unbound_live_resource_residues": 0,
+                "p5_lifecycles": [],
+            }
+            try:
+                with patch.object(runtime, "_activation_lifecycle_summary", return_value=lifecycle):
+                    result = runtime.activation_preflight()
+                self.assertFalse(result["safe"])
+                self.assertEqual(result["code"], "ORCHESTRATION_STATE_UNCERTAIN")
+                self.assertEqual(result["reason"], "lifecycle_unexplained_or_unbound")
+            finally:
+                runtime.close()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -466,6 +466,40 @@ test('connector contract stays pending until current tools/list rediscovery is o
   assert.equal(acknowledged.rediscovered, true);
 });
 
+test('persisted matching connector SHA cannot mask missing current-process tools/list discovery', () => {
+  const contract = { schema_version: 1, profile: 'smart-v3', sha256: 'b'.repeat(64) };
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: contract.sha256,
+    chatgptToolContractAcknowledgedAt: '2026-08-18T00:00:00.000Z'
+  }), 'utf8');
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+
+  const staleAcknowledgement = orchestrator.connectorContractStatus(contract);
+  assert.equal(staleAcknowledgement.acknowledgedSha256, contract.sha256);
+  assert.equal(staleAcknowledgement.rediscovered, false);
+  assert.equal(staleAcknowledgement.refreshRequired, true);
+  assert.throws(
+    () => orchestrator.acknowledgeConnectorContractHash(contract),
+    (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+  );
+
+  const discovery = {
+    current_contract_observed: true,
+    contract_sha256: contract.sha256,
+    observed_at: '2026-08-23T21:40:00.000Z'
+  };
+  const currentDiscovery = orchestrator.connectorContractStatus(contract, discovery);
+  assert.equal(currentDiscovery.refreshRequired, false);
+  assert.doesNotThrow(() => orchestrator.acknowledgeConnectorContractHash(contract, discovery));
+});
+
 test('supervisor consumes a fresh workspace-bound restart ticket exactly once', async () => {
   const workspace = 'C:\\work\\one';
   const calls = { activate: 0 };

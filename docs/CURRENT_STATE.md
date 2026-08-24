@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-22
+> **Status date:** 2026-08-24
 > **Desktop package:** `web-mcp-assistant 0.3.4`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
@@ -15,6 +15,16 @@ When repository documents disagree, use this order:
 5. Dated files under `docs/research/*` as historical evidence, plans, benchmarks, and decision snapshots. They do **not** override later source or this current-state document.
 
 A source implementation can be newer than the process currently running. For Electron, Recovery Host, Coding Tools MCP, and other supervised components, distinguish **source present**, **focused proof passed**, **EOCL accepted**, **controlled activation completed**, and **packaged/released**.
+
+### Operational recency override — 2026-08-24
+
+The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md) is the current operational receipt for volatile lifecycle, connector, PRL, and packaged-harness claims. It supersedes older uses of “current”, “active”, or “accepted” in this document when those terms describe a live process or connector rather than a source implementation.
+
+- Disk/upstream HEAD is `8ffa8bf…`; the code-bearing committed source is separately `ea6abcb…`. The source worktree is intentionally dirty, so it is not a clean-source cohort or delivery candidate.
+- Earlier P0/P4 connector receipts remain `VERIFIED_SNAPSHOT`. The current connector proof is `LIVE_PASS` at the tracker receipt dated `2026-08-24T02:06:58Z`: the current loaded Coding MCP process recorded a current contract rediscovery and Recovery Host invoked the official guarded acknowledgement. That receipt applies only to this loaded process/contract; a persisted SHA, prior PID, or source test still cannot substitute after a later runtime or contract change.
+- P5 anchors are terminal; the earlier A0 source-drift epoch has a truthful zero funnel. Gate 0 currently has only threshold-sensitive ordinary rows with no live owner/residue; they are retained until a fresh exact census demonstrates an actual threshold crossing.
+- PRL-D and A2 remain `HOLD_NATURAL_EVIDENCE`; missing natural observations, TTPR, stage coverage, and measured money remain unknown rather than zero.
+- The isolated P0.3 packaged Recovery lane is source/package-local evidence, not an exact-frozen release candidate, installed-session, reboot/logon, connector, or production claim.
 
 ## 2. Current product boundary
 
@@ -145,7 +155,7 @@ The P0-P3 program is no longer one undifferentiated implementation gate. Enginee
 
 | Phase | Engineering/source | Live / evidence boundary | Current interpretation |
 |---|---|---|---|
-| P0 — runtime truth/error boundary | **CLOSED** | **LIVE ACTIVATION ACCEPTED** | ExceptionGroup normalization and self-recovery hardening are implemented, and the currently connected Windows runtime has passed the live connector acceptance checklist on post-fix source. |
+| P0 — runtime truth/error boundary | **CLOSED (source)** | **Historical live receipt; current connector `LIVE_PASS`** | ExceptionGroup normalization and self-recovery hardening are implemented. The 2026-08-18 connector acceptance is retained as `VERIFIED_SNAPSHOT`; the current-process connector receipt is separately recorded in the tracker and must be repeated after every runtime or contract change. |
 | P1 — measurement integrity | **CLOSED** | **ECONOMICS DEFERRED** | Controlled plumbing is sufficient for experiments. Missing controller/provider usage or money remains unknown, never zero; it does not authorize automatic routing. |
 | P2 — rework diagnosis | **CLOSED** | **CAUSAL EFFICACY DEFERRED** | The diagnostic phase identified rework as a material cost. Generic `CHECK_FAILED` and `BUILD_VERIFICATION_FAILED` observations now receive prospective, content-free stage/family detail; historic rows without that detail remain unclassified rather than being backfilled into a causal repair cause. Incomplete historical causal/oracle coverage is a measurement limitation for later experiments, not a reason to expand P2 architecture indefinitely. |
 | P3 — compute-placement control | **CLOSED / ACCEPTED** | **REPRESENTATIVE EFFICACY DEFERRED** | Explicit placement control is implemented; the representative 10–20-pair pilot remains separate and global server-first stays off. |
@@ -181,9 +191,11 @@ npm run check:p5-readiness
 
 The manual-only GitHub workflow `.github/workflows/p4-readiness.yml` exposes the P4 gate without enabling ordinary push/PR Actions consumption. `--require-ready` succeeds only when `p4_gate.can_answer_which_signals_predict_repair=true`; missing or insufficient evidence cannot be converted into a green P4 closure claim. `--require-p5-experiment-active` is an observation assertion for an already explicit P5 epoch, not an activation command. `npm run check:p5-readiness` and the deprecated `--require-p5-ready` retain the legacy P4-predictive treatment readiness meaning and must not be used to claim P5-A0 integrity readiness.
 
-**Live collection health remains a separate boundary, and the currently connected process has now passed it.** On 2026-08-19 the live ChatWeb/Coding-VP plane exposes `task_control.solution_shadow`, reports exactly 8 `smart-v3` public tools with contract SHA `bd5c09aeffe02bb60d0f548ed02912e8a21e78b91404186e6896f6d6cbdedd70`, and reports zero stale orchestration runs, unresolved stale runs, orphaned background operations, and orphaned idempotency records. Live P4 collection is therefore active on this runtime instance. Future runtime-affecting changes still require their own activation check; historical raw `ExceptionGroup` incidents remain historical evidence rather than current runtime status.
+**The 2026-08-19 live collection receipt is historical (`VERIFIED_SNAPSHOT`), not a current P4 outcome.** At that snapshot the ChatWeb/Coding-VP plane exposed `task_control.solution_shadow`, exactly 8 `smart-v3` public tools, contract SHA `bd5c09aeffe02bb60d0f548ed02912e8a21e78b91404186e6896f6d6cbdedd70`, and no reported stale/orphan residue. The current loaded connector/process has since passed genuine rediscovery and official acknowledgement as recorded in the tracker; that proves connector/contract freshness only, not a current `solution_shadow` call or P4 outcome. Source support and later natural evidence remain separate gates.
 
 The P4 empirical gate remains **COLLECTING unless the canonical ledger reporter says `EMPIRICALLY_COMPLETE`**. The 2026-08-19 snapshot (9 representative terminal shadow tasks, 0 representative causal-solution repairs, and `validated_signals=[]`) remains historical evidence that predictive validity was not established; it must not be reused as an activation proof for later source. P4-C therefore remains strict/shadow-only and P4-E remains coverage-first/advisory-only.
+
+**Current P4 readiness (`VERIFIED_CURRENT`, descriptive) remains `COLLECTING`.** At the `2026-08-24T02:19:09.4513934Z` immutable ledger projection, there were `89` representative terminal shadows: causal-solution repair `n=2`, nonrepair `n=64`, and repair-unknown `n=23`; raw post-replan patched observations were `n=27`. `validated_signals=[]`, familywise/holdout validation was not evaluable, and predictive-policy activation remained false. These small/imbalanced labels do not establish a prediction effect or causal intervention result. The current connector `LIVE_PASS` recorded in the maintained tracker proves only connector/contract freshness; it is not a current P4 outcome and does not authorize automatic policy, P5 treatment, or routing.
 
 P5 has a separately gated **source implementation**: manifest v2, secret-handle seed commitment, pre-assignment arm-neutral eligibility/enrollment, restart-safe block randomization, immutable all-assigned ITT outcome rows, analyzer/source-identity checks, and pause/close/hard-stop controls are exposed as `task_control(action="p5")` inside the unchanged eight-tool `smart-v3` surface. A write-capable `agent_workflow` can carry `p5_assignment_id` only for the immutable `feature`/`bugfix` task class; after the ordinary workspace fence is acquired and before any mkdir/patch call, the runtime records an immutable P5 pre-write binding to the exact run, wave, and lease. Caller-supplied first-write time is rejected. The feasibility analyzer projects the complete durable funnel (`assessed → eligible → enrolled → assigned → protocol started → pre-write binding/first-write record → terminal → immediate quality → delayed follow-up/interference`) by assigned arm and workflow stratum. It verifies completed 2/2 block shape and exact table joins instead of pretending that a low-power canary SRM p-value proves randomization; completed-block mismatch, orphaned rows, arm crossover, or a write-binding/first-write mismatch hard-stops a live epoch. Incomplete live blocks are reported as pending, not claimed as imbalance. It does not loosen P4-C or require P4 predictive readiness before a P5-A0 instrumentation epoch. An operator must still explicitly open a frozen, source/runtime-matching manifest, with a clean upstream-matched control-plane source when the manifest requires it and with no active workspace write fence. `p5_automatic_start=false`, `automatic_policy_activation=false`, and automatic production promotion remain invariants. No source proof substitutes for a live P5-A0 A/A epoch, a P5-A treatment canary, an efficacy conclusion, or promotion.
 
@@ -193,9 +205,9 @@ P5 source identity is the latest code-bearing commit of `HEAD` and upstream, exc
 
 The P5-A0 operator path is intentionally narrow. The runtime can prepare a production A0 manifest only from the current code-bearing source/upstream identity, loaded eight-tool runtime contract, a material content-free environment fingerprint, the deterministic analyzer identity, and the SHA-256 commitment of `secret://experiment/p5/a`. `prepare_a0` is read-only and never opens an epoch. `open` rechecks source, runtime, analyzer, environment and writer quiescence, so a prepared manifest cannot be reused across environment drift. The production A0 horizon is four hours. Electron exposes only `status / prepare / open / analyze / pause / resume / close / hard-stop`; it keeps the prepared manifest in the trusted main process, never accepts raw seed material from the renderer, and exposes no P5-A treatment activation control. This remains shadow A/A instrumentation: both assigned labels receive the current control protocol and no automatic routing or promotion is enabled.
 
-### P0 live activation incident — CLOSED / ACCEPTED
+### P0 historical live activation incident — source CLOSED / prior receipt accepted
 
-During an earlier 2026-08-18 closure check, every ChatWeb Coding MCP action attempted through that connected tool surface (`workspace_context`, `task_control restart_runtime`, and `agent_workflow`) returned a raw `ExceptionGroup: unhandled errors in a TaskGroup` before a normal typed tool result could be observed. That observation remains historical incident evidence; it no longer describes the currently connected process.
+During an earlier 2026-08-18 closure check, every ChatWeb Coding MCP action attempted through that connected tool surface (`workspace_context`, `task_control restart_runtime`, and `agent_workflow`) returned a raw `ExceptionGroup: unhandled errors in a TaskGroup` before a normal typed tool result could be observed. The incident and the later acceptance are historical evidence for that source/runtime instance; neither establishes the identity or connector state of the current process.
 
 Two source-side gaps are now addressed:
 
@@ -204,7 +216,7 @@ Two source-side gaps are now addressed:
 
 Focused source regression proves the semantic canary accepts a real `workspace_context` response, rejects an HTTP-200 raw TaskGroup JSON-RPC failure, restarts only after the configured repeated-failure threshold, and does not restart while the lifecycle controller is busy.
 
-**Live acceptance is now CLOSED / ACCEPTED.** On 2026-08-18 the connected instance demonstrated the accepted behavior on the real tool path:
+**Historical live acceptance (`VERIFIED_SNAPSHOT`).** On 2026-08-18 the then-connected instance demonstrated the accepted behavior on the real tool path:
 
 - delivered/source HEAD `0cf1eec7366f09d52235ca235d92ccd8b3ea4e18` contains `beb2dc51` (protocol normalization) and `c7841920` (boundary regression) in its ancestry;
 - the primary Coding MCP process observed as PID `18444` was created at `2026-08-18 15:28:53 +07:00`, after both P0 source commits, and runs `E:\DEV\Codex-web\resources\native-python\pythonw.exe -m coding_tools_mcp --workspace E:\DEV\Codex-web`;
@@ -299,12 +311,12 @@ Account credential snapshots under `docs/ac/` are local-only data and must never
 
 The following are deliberate evidence/authority gates, not documentation bugs:
 
-- P0 live activation: **ACCEPTED** on the post-fix active Windows instance; future runtime-affecting changes still require their own activation proof;
+- P0 source activation: **ACCEPTED**; the post-fix connector receipt is historical, while the current loaded connector proof is `LIVE_PASS` after real rediscovery plus official acknowledgement; repeat that receipt after a runtime or public-contract change;
 - automatic non-deterministic routing: **OFF / deterministic fail-closed** pending representative accepted paired evidence;
 - automatic global server-first: **OFF** pending representative compute-placement evidence;
 - P3 representative efficacy: **DEFERRED**, separate from the closed engineering gate;
 - P4 source/gate engineering: **ACCEPTED**; development launch authority is pinned to the current checkout and `solution_shadow` schema publication has been observed;
-- P4 live tool-call health: **LIVE ACTIVE / VERIFIED** on the current 2026-08-19 ChatWeb/Coding-VP runtime contract; future runtime-affecting changes still require their own activation proof;
+- P4 live tool-call health: the 2026-08-19 `solution_shadow` call is **VERIFIED_SNAPSHOT**; current connector/contract health is `LIVE_PASS` in the tracker, but current P4 collection remains unobserved until a natural task actually records a P4 outcome;
 - P4 predictive validity: **COLLECTING unless `report_p4_readiness.py` reports `EMPIRICALLY_COMPLETE`**; benchmark, synthetic, and unlabeled shadow rows are not promotion evidence;
 - P5 experiment integrity source: **IMPLEMENTED / FAIL-CLOSED.** A prior explicit P5-A0 epoch was closed transparently with zero enrollment, assignment, write binding, or outcome when the Wave 3 funnel gap above was discovered; it is evidence of operator/seed/manifest control only, never A/A health, treatment feasibility, or efficacy. `task_control(action="p5")` validates a frozen manifest, source/runtime identity, secret-backed seed commitment, assignment/enrollment order, and the absence of an active workspace writer before opening a rebaselined epoch. P5-A0 may be explicitly opened for instrumentation before P4 predictive completion; P5-A treatment remains separately gated by its own registered manifest, natural eligible task/oracle funnel, and explicit operator authority. Neither starts automatically, and neither is a production-promotion signal;
 - auto-handoff: **OFF** pending more real A/B evidence;

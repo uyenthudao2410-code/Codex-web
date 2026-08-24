@@ -1,0 +1,196 @@
+from __future__ import annotations
+
+import hashlib
+import tempfile
+import unittest
+from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+from coding_tools_mcp.lifecycle_census import (
+    LIFECYCLE_CLASSES,
+    ProcessIdentityObservation,
+    lifecycle_census,
+    open_lifecycle_census_snapshot,
+)
+from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
+
+
+OBSERVED_AT = 1_800_000_000.0
+
+
+def _iso(seconds: float) -> str:
+    return datetime.fromtimestamp(seconds, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+class LifecycleCensusTests(unittest.TestCase):
+    def _run(self, ledger: OrchestrationLedger, *, started_at: str) -> str:
+        run_id = ledger.create_run(objective="test lifecycle")
+        with ledger._lock, ledger._connect() as connection:
+            connection.execute("UPDATE runs SET started_at=? WHERE run_id=?", (started_at, run_id))
+        return run_id
+
+    @staticmethod
+    def _probe(pid: int, _expected: str) -> ProcessIdentityObservation:
+        return ProcessIdentityObservation(pid=pid, exists=True, identity="MISMATCH")
+
+    def _fixture(self, root: Path) -> tuple[OrchestrationLedger, dict[str, str]]:
+        ledger = OrchestrationLedger(root)
+        old = _iso(OBSERVED_AT - 3_600)
+        live = self._run(ledger, started_at=old)
+        p5_anchor = self._run(ledger, started_at=old)
+        accepting = self._run(ledger, started_at=old)
+        grace = self._run(ledger, started_at=_iso(OBSERVED_AT - 60))
+        threshold = self._run(ledger, started_at=old)
+        unexplained = self._run(ledger, started_at=old)
+        terminal_parent = self._run(ledger, started_at=old)
+        terminal_wave = ledger.create_wave(terminal_parent, execution_mode="mcp_only")
+        ledger.finish_run(terminal_parent, status="accepted")
+        job_run = self._run(ledger, started_at=old)
+        ledger.append_event(accepting, event_type="state", state_after="ACCEPTING")
+        with ledger._lock, ledger._connect() as connection:
+            connection.execute("UPDATE runs SET started_at='' WHERE run_id=?", (unexplained,))
+            connection.execute(
+                """INSERT INTO agent_lanes(
+                    lane_id,run_id,wave_id,semantic_key,role,provider,thread_id,session_id,lifecycle,
+                    profile,model,effort,base_head,worktree_fp,contract_fp,last_turn_id,created_at,updated_at,metadata_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    "unbound-live-lane", "", "", "", "executor", "test", "", "", "active",
+                    "", "", "", "", "", "", "", old, old, "{}",
+                ),
+            )
+            connection.execute(
+                """INSERT INTO controller_leases(
+                    run_id,fencing_token,lease_id,owner_client_id,status,expires_at,updated_at
+                ) VALUES(?,?,?,?,?,?,?)""",
+                (live, 1, "lease", "controller", "active", OBSERVED_AT + 120, _iso(OBSERVED_AT)),
+            )
+            connection.execute(
+                """INSERT INTO p5_experiment_epochs(
+                    activation_epoch_id,experiment_id,ledger_run_id,manifest_sha256,manifest_json,
+                    phase,study_type,lifecycle,seed_commitment_sha256,seed_handle,opened_at,updated_at,
+                    closed_at,hard_stop_reason,metadata_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    "epoch-1", "experiment-1", p5_anchor, "a" * 64, "{}", "A0", "A/A",
+                    "EPOCH_HARD_STOPPED", "b" * 64, "secret://redacted", old, old, old,
+                    "test", "{}",
+                ),
+            )
+            connection.execute(
+                """INSERT INTO managed_process_jobs(
+                    job_id,run_id,wave_id,command_id,owner,checkout_id,resource_class,root_pid,
+                    root_process_token,process_instance_id,runtime_instance_id,lifecycle_state,
+                    started_at,updated_at,finished_at,metadata_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    "job-mismatch", job_run, "", "command-mismatch", "test", "wrong-checkout",
+                    "MEDIUM", 4242, "expected-token", "process", "runtime", "running", old, old, None, "{}",
+                ),
+            )
+        return ledger, {
+            "live": live,
+            "p5": p5_anchor,
+            "accepting": accepting,
+            "grace": grace,
+            "threshold": threshold,
+            "unexplained": unexplained,
+            "terminal_parent": terminal_parent,
+            "terminal_wave": terminal_wave,
+            "job_run": job_run,
+        }
+
+    def test_classifies_every_gate_zero_path_from_one_immutable_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger, ids = self._fixture(root)
+            before = hashlib.sha256(ledger.path.read_bytes()).hexdigest()
+            projection = {
+                "available": True,
+                "orchestration": {"run_id": ids["terminal_parent"], "wave_id": ids["terminal_wave"]},
+            }
+            with open_lifecycle_census_snapshot(root) as snapshot:
+                first = lifecycle_census(
+                    snapshot,
+                    workspace=root,
+                    observed_at=OBSERVED_AT,
+                    grace_seconds=300,
+                    stale_after_seconds=1_800,
+                    projection=projection,
+                    process_probe=self._probe,
+                )
+                second = lifecycle_census(
+                    snapshot,
+                    workspace=root,
+                    observed_at=OBSERVED_AT,
+                    grace_seconds=300,
+                    stale_after_seconds=1_800,
+                    projection=projection,
+                    process_probe=self._probe,
+                )
+                self.assertEqual(first, second)
+                self.assertEqual(snapshot.ledger_fact_load_statements, 8)
+                self.assertEqual(first["read_contract"]["ledger_facts_fact_load_statements"], 8)
+                self.assertEqual(first["snapshot"]["integrity_check"], ["ok"])
+                self.assertEqual(first["snapshot"]["foreign_key_check_rows"], 0)
+            self.assertEqual(hashlib.sha256(ledger.path.read_bytes()).hexdigest(), before)
+
+            classifications = {item["run_id"]: item["classification"] for item in first["runs"]}
+            self.assertEqual(classifications[ids["live"]], "LIVE_OWNED")
+            self.assertEqual(classifications[ids["p5"]], "P5_EXPERIMENT_ANCHOR")
+            self.assertEqual(classifications[ids["accepting"]], "AWAITING_ACCEPTANCE")
+            self.assertEqual(classifications[ids["grace"]], "GRACE_PERIOD_INACTIVE")
+            self.assertEqual(classifications[ids["threshold"]], "THRESHOLD_SENSITIVE_STALE_CANDIDATE")
+            self.assertEqual(classifications[ids["unexplained"]], "UNEXPLAINED_ACTIVE")
+            self.assertEqual(classifications[ids["terminal_parent"]], "TERMINAL_PARENT_CONTRADICTION")
+            self.assertEqual(first["managed_jobs"][0]["classification"], "ORPHANED_OR_FOREIGN_MANAGED_JOB")
+            self.assertEqual(first["projection"]["classification"], "PROJECTION_DRIFT")
+            self.assertEqual(first["summary"]["ordinary_active_runs"], 6)
+            self.assertEqual(first["summary"]["unbound_live_resource_residues"], 1)
+            self.assertEqual(first["unbound_live_resources"][0]["classification"], "UNEXPLAINED_ACTIVE")
+            self.assertTrue(LIFECYCLE_CLASSES.issuperset({
+                item["classification"] for item in first["runs"]
+            }))
+
+    def test_process_token_mismatch_never_becomes_live_ownership(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger, ids = self._fixture(root)
+            with ledger._lock, ledger._connect() as connection:
+                expected_checkout = hashlib.sha256(str(root.resolve()).lower().encode("utf-8")).hexdigest()
+                connection.execute(
+                    "UPDATE managed_process_jobs SET checkout_id=? WHERE run_id=?",
+                    (expected_checkout, ids["job_run"]),
+                )
+            with open_lifecycle_census_snapshot(root) as snapshot:
+                result = lifecycle_census(
+                    snapshot,
+                    workspace=root,
+                    observed_at=OBSERVED_AT,
+                    process_probe=self._probe,
+                )
+            job = next(item for item in result["managed_jobs"] if item["run_id"] == ids["job_run"])
+            run = next(item for item in result["runs"] if item["run_id"] == ids["job_run"])
+            self.assertEqual(job["identity"], "MISMATCH")
+            self.assertEqual(job["classification"], "ORPHANED_OR_FOREIGN_MANAGED_JOB")
+            self.assertEqual(run["ownership"]["live_managed_jobs"], 0)
+
+    def test_snapshot_never_initializes_writer_or_runtime_governor(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger, _ = self._fixture(root)
+            with patch.object(OrchestrationLedger, "__init__", side_effect=AssertionError("writer initialization is forbidden")):
+                with open_lifecycle_census_snapshot(root) as snapshot:
+                    result = lifecycle_census(
+                        snapshot,
+                        workspace=root,
+                        observed_at=OBSERVED_AT,
+                        process_probe=self._probe,
+                    )
+            self.assertFalse(result["read_contract"]["canonical_writer_instantiated"])
+            self.assertFalse(result["mutated_canonical_ledger"])
+
+
+if __name__ == "__main__":
+    unittest.main()

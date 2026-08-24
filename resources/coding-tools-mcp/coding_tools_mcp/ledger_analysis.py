@@ -353,6 +353,13 @@ class LedgerAnalysisSnapshot(AbstractContextManager["LedgerAnalysisSnapshot"]):
     def statement_count(self) -> int:
         return self._reader.statement_count if self._reader is not None else 0
 
+    @property
+    def reader(self) -> LedgerReadSession:
+        """Expose the active immutable reader to opt-in analysis fact loaders."""
+        if self._reader is None:
+            raise RuntimeError("LedgerAnalysisSnapshot is not open")
+        return self._reader
+
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
         if self._reader is not None:
             self._reader.__exit__(exc_type, exc, traceback)

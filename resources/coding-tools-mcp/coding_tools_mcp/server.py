@@ -177,7 +177,6 @@ TRACE_MAX_PAYLOAD_BYTES = 16 * 1024
 AUTO_IDEMPOTENCY_KEY_PREFIX = "auto-v1:"
 BACKGROUND_BUDGET_POLL_SECONDS = 1.0
 BACKGROUND_BUDGET_TERMINAL_GRACE_SECONDS = 5.0
-STALE_RECONCILIATION_INTERVAL_SECONDS = 30.0
 try:
     READ_RETRY_ATTEMPTS = max(
         1,
@@ -582,11 +581,10 @@ class Runtime(
             stale_run_seconds = 24 * 60 * 60
         stale_run_seconds = max(60 * 60, min(stale_run_seconds, 30 * 24 * 60 * 60))
         self.stale_run_seconds = stale_run_seconds
-        self._last_stale_reconciliation_monotonic = 0.0
-        self.reconciled_stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
-            stale_after_seconds=self.stale_run_seconds,
-            close_stale_active=False,
-        )
+        # Lifecycle terminalization is an explicit exact-ID maintenance action.
+        # Runtime construction must neither expire leases nor invoke the legacy
+        # bulk reconciler merely because a controller process restarted.
+        self.reconciled_stale_orchestration_runs: list[str] = []
         self.recovered_agent_lanes = 0
         for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
             owner_process = str((lane.get("metadata") or {}).get("owner_process_instance_id") or "")
@@ -844,11 +842,10 @@ class Runtime(
             self.orphaned_idempotency_records = self.orchestration_ledger.mark_orphaned_idempotency(
                 current_process_instance_id=self.process_instance_id
             )
-            self.reconciled_stale_orchestration_runs = self.orchestration_ledger.reconcile_stale_runs(
-                stale_after_seconds=self.stale_run_seconds,
-                close_stale_active=False,
-            )
-            self._last_stale_reconciliation_monotonic = 0.0
+            # Workspace switching is not lifecycle-maintenance authority.  Keep
+            # the current exact-ID reconciliation receipt scoped to its prior
+            # workspace and never invoke the legacy bulk reconciler here.
+            self.reconciled_stale_orchestration_runs = []
             self.recovered_agent_lanes = 0
             for lane in self.orchestration_ledger.list_agent_lanes(lifecycle="active"):
                 owner_process = str((lane.get("metadata") or {}).get("owner_process_instance_id") or "")
@@ -1035,16 +1032,16 @@ class Runtime(
         }
 
     def _maybe_reconcile_stale_orchestration(self, *, force: bool = False) -> list[str]:
-        """Run bounded stale cleanup without making every UI poll scan the ledger."""
+        """Preserve lifecycle evidence until the exact-ID authority is invoked.
 
-        now = time.monotonic()
-        if not force and now - self._last_stale_reconciliation_monotonic < STALE_RECONCILIATION_INTERVAL_SECONDS:
-            return []
-        self._last_stale_reconciliation_monotonic = now
-        return self.orchestration_ledger.reconcile_stale_runs(
-            stale_after_seconds=self.stale_run_seconds,
-            close_stale_active=True,
-        )
+        A heartbeat/UI poll is not sufficient authority to expire a lease or
+        terminalize a threshold-sensitive run.  Gate 0 maintenance therefore
+        uses ``reconcile_exact_stale_run`` after a fresh immutable census and a
+        stopped-runtime fence; this compatibility hook intentionally performs
+        no ledger mutation.
+        """
+        _ = force
+        return []
 
     def _projected_hub_run_id(self) -> str:
         # The task-state projection may lag after a reconnect.  Lease ownership
@@ -2613,7 +2610,7 @@ class Runtime(
             "patch_preflight": Runtime._preflight_patch_sequence,
             "verification_workdir": Runtime.verify_build,
             "verification_runner": run_build_verification,
-            "stale_reconciliation": OrchestrationLedger.reconcile_stale_runs,
+            "stale_reconciliation": Runtime._maybe_reconcile_stale_orchestration,
             "routing_policy": Runtime._select_agent_execution_route,
             "external_review_policy": Runtime._maybe_agent_workflow_external_review,
             "committed_review": Runtime.committed_review,

@@ -185,4 +185,5 @@ test('ChatViewController drains host observations to a best-effort main callback
   assert.match(main, /run_id: event\.run_id/);
   assert.match(main, /wave_id: event\.wave_id/);
   assert.match(main, /observation_span/);
+  assert.match(main, /stage: 'report_visible'/);
 });

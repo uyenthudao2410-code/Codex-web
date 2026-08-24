@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .evidence_completeness import evidence_completeness_population_report, evidence_completeness_run_report
-from .ledger_access import open_existing_ledger
+from .ledger_access import open_existing_ledger, open_existing_ledger_analysis
 from .orchestration_ledger import OrchestrationLedger
 from .rework_diagnosis import stratified_rework_diagnosis
 from .solution_economics import solution_shadow_population_report, solution_shadow_run_report
@@ -173,6 +173,8 @@ def host_binding_summary(workspace: Path, *, ledger: OrchestrationLedger | None 
 def current_ledger_baseline_report(workspace: Path) -> dict[str, Any]:
     root = workspace.resolve()
     ledger = open_existing_ledger(root)
+    with open_existing_ledger_analysis(root) as p2_snapshot:
+        p2_rework_diagnosis = stratified_rework_diagnosis(p2_snapshot.ledger, limit=5000)
     host_events, _ = _load_host_events(root)
     routing_regret = ledger.paired_policy_evaluation()
     performance_path = root / '.coding-tools' / 'performance.json'
@@ -190,7 +192,7 @@ def current_ledger_baseline_report(workspace: Path) -> dict[str, Any]:
         'ledger_path': str(root / '.coding-tools' / 'orchestration' / 'ledger.sqlite3'),
         'population': ledger.current_baseline_summary(),
         'organic_rework': ledger.organic_rework_summary(limit=5000),
-        'p2_rework_diagnosis': stratified_rework_diagnosis(ledger, limit=5000),
+        'p2_rework_diagnosis': p2_rework_diagnosis,
         'solution_economics_shadow': solution_shadow_population_report(ledger),
         'evidence_completeness': evidence_completeness_population_report(
             root,

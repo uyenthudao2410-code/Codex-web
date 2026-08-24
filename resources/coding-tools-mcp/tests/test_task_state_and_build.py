@@ -1348,6 +1348,40 @@ class ToolModeTests(unittest.TestCase):
             self.assertNotIn("path", git_diff.call_args.args[0])
             runtime.close()
 
+    def test_agent_workflow_build_failure_records_content_free_p2_v3_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "feature",
+                    "phase": "execute",
+                    "execution_route": "deterministic",
+                    "objective": "exercise P2 build verification observation",
+                    "patches": [],
+                    "verification": "build",
+                    "build_command": "python -c \"import sys; sys.exit(7)\"",
+                    "evaluation": {"provenance": "synthetic"},
+                    "include_diff": False,
+                })
+                self.assertFalse(result["execution"]["ok"])
+                self.assertEqual(result["execution"]["error"]["code"], "BUILD_VERIFICATION_FAILED")
+                run_id = result["orchestration"]["run_id"]
+                failures = [
+                    event for event in runtime.orchestration_ledger.list_events(run_id)
+                    if event["event_type"] == "failure_observed"
+                ]
+                self.assertEqual(len(failures), 1)
+                payload = failures[0]["payload"]
+                self.assertEqual(payload["failure_class"], "BUILD_VERIFICATION_FAILED")
+                detail = payload["p2_failure_detail"]
+                self.assertEqual(detail["schema"], "p2_failure_observation_v3")
+                self.assertEqual(detail["stage"], "verification")
+                self.assertEqual(detail["verification_failure_stage"], "build_command_failed")
+                self.assertNotIn("unknown_reason", detail)
+                self.assertNotIn("python -c", str(detail))
+            finally:
+                runtime.close()
+
     def test_agent_workflow_preflights_ambiguous_disjoint_patch_batch_before_orchestration(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

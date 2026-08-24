@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
 from collections import Counter, defaultdict
 from typing import Any
 
-from .orchestration_ledger import OrchestrationLedger
+from .ledger_analysis import LedgerFacts
 
 
 WORKFLOW_ORDER = ("feature", "diagnose", "bugfix", "test_failure", "build_release", "custom", "refactor")
@@ -100,12 +99,15 @@ def p2_check_failure_detail(command: object) -> dict[str, str]:
         family = "node_test"
     else:
         family = "other"
-    return {
+    detail = {
         "schema": P2_FAILURE_OBSERVATION_SCHEMA,
         "stage": "checks",
         "command_family": family,
         "causal_attribution": "unattributed",
     }
+    if family == "other":
+        detail["unknown_reason"] = "unrecognized_command_family"
+    return detail
 
 
 def p2_build_verification_failure_detail(report: object, verification: object) -> dict[str, str]:
@@ -128,13 +130,16 @@ def p2_build_verification_failure_detail(report: object, verification: object) -
     else:
         failure_stage = "verification_unspecified"
     mode = _normalized_text(verification)
-    return {
+    detail = {
         "schema": P2_FAILURE_OBSERVATION_SCHEMA,
         "stage": "verification",
         "verification_mode": mode if mode in {"tests", "build", "all"} else "unknown",
         "verification_failure_stage": failure_stage,
         "causal_attribution": "unattributed",
     }
+    if failure_stage == "verification_unspecified":
+        detail["unknown_reason"] = "verification_evidence_insufficient"
+    return detail
 
 
 def p2_failure_detail_bucket(failure_class: object, detail: object) -> str | None:
@@ -151,11 +156,17 @@ def p2_failure_detail_bucket(failure_class: object, detail: object) -> str | Non
         return None
     if failure == "CHECK_FAILED" and value.get("stage") == "checks":
         family = str(value.get("command_family") or "")
-        if family in P2_CHECK_COMMAND_FAMILIES:
+        if family in P2_CHECK_COMMAND_FAMILIES and (
+            (family != "other" and "unknown_reason" not in value)
+            or (family == "other" and value.get("unknown_reason") == "unrecognized_command_family")
+        ):
             return f"{failure}:{family}"
     if failure == "BUILD_VERIFICATION_FAILED" and value.get("stage") == "verification":
         stage = str(value.get("verification_failure_stage") or "")
-        if stage in P2_BUILD_VERIFICATION_STAGES:
+        if stage in P2_BUILD_VERIFICATION_STAGES and (
+            (stage != "verification_unspecified" and "unknown_reason" not in value)
+            or (stage == "verification_unspecified" and value.get("unknown_reason") == "verification_evidence_insufficient")
+        ):
             return f"{failure}:{stage}"
     return None
 
@@ -293,33 +304,71 @@ def _countermeasure_report(
     return result
 
 
-def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 5000) -> dict[str, Any]:
-    """Diagnose accepted-result rework without converting observational history into causal effects."""
+def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> dict[str, Any]:
+    """Diagnose accepted-result rework from one immutable, decoded fact set."""
     bounded_limit = max(1, min(int(limit), 5000))
-    clauses = [
-        "status='accepted'",
-        "(json_extract(metadata_json, '$.evaluation.provenance') IS NULL OR lower(json_extract(metadata_json, '$.evaluation.provenance'))='representative')",
-        "(json_extract(metadata_json, '$.evaluation.policy') IS NULL OR lower(json_extract(metadata_json, '$.evaluation.policy'))='chatweb_mcp')",
-    ]
-    with ledger._lock, ledger._connect() as connection:  # package-internal read of the canonical causal store
-        rows = connection.execute(
-            f"SELECT * FROM runs WHERE {' AND '.join(clauses)} ORDER BY started_at, run_id LIMIT ?",
-            [bounded_limit + 1],
-        ).fetchall()
-        preflight_rows = connection.execute(
-            """SELECT COALESCE(json_extract(summary_json, '$.error_code'), 'unknown') AS error_code,
-                      COUNT(*) AS count
-               FROM idempotency_records
-               WHERE operation='agent_workflow'
-                 AND status='failed'
-                 AND json_extract(summary_json, '$.workflow_patch_preflight')=1
-               GROUP BY error_code
-               ORDER BY count DESC, error_code"""
-        ).fetchall()
-    truncated = len(rows) > bounded_limit
-    selected = rows[:bounded_limit]
-    preflight_errors = {str(row["error_code"]): int(row["count"]) for row in preflight_rows}
-    preflight_avoided = {"count": sum(preflight_errors.values()), "error_codes": preflight_errors}
+    candidate_rows: list[dict[str, Any]] = []
+    for run in ledger._runs.values():
+        metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
+        evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+        if run.get("status") != "accepted":
+            continue
+        if str(evaluation.get("provenance") or "").lower() not in {"", "representative"}:
+            continue
+        if str(evaluation.get("policy") or "").lower() not in {"", "chatweb_mcp"}:
+            continue
+        candidate_rows.append(dict(run))
+    candidate_rows.sort(key=lambda item: (str(item.get("started_at") or ""), str(item.get("run_id") or "")))
+    truncated = len(candidate_rows) > bounded_limit
+    selected = candidate_rows[:bounded_limit]
+
+    preflight_errors: Counter[str] = Counter()
+    decoded_scalar_mismatch_rows = 0
+    decoded_preflight_rows = 0
+    legacy_plain_scalar_unavailable_rows = 0
+    legacy_plain_decoded_preflight_rows = 0
+    current_plain_decoded_preflight_rows = 0
+    compressed_decoded_preflight_rows = 0
+    for row in ledger.idempotency_records:
+        if str(row.get("operation") or "") != "agent_workflow" or str(row.get("status") or "") != "failed":
+            continue
+        summary = row.get("summary") if isinstance(row.get("summary"), dict) else {}
+        decoded_preflight = summary.get("workflow_patch_preflight") in {True, 1}
+        scalar_preflight = row.get("workflow_patch_preflight") in {True, 1}
+        decoded_error_code = str(summary.get("error_code") or "unknown")
+        scalar_error_code = str(row.get("error_code") or "")
+        codec = str(row.get("summary_codec") or "plain_json")
+        scalar_projection_available = bool(scalar_error_code) or scalar_preflight
+        legacy_plain_scalar_unavailable = codec == "plain_json" and not scalar_projection_available
+        if legacy_plain_scalar_unavailable:
+            legacy_plain_scalar_unavailable_rows += 1
+            if decoded_preflight:
+                legacy_plain_decoded_preflight_rows += 1
+                decoded_preflight_rows += 1
+                preflight_errors[decoded_error_code] += 1
+            continue
+        if decoded_preflight != scalar_preflight or scalar_error_code != decoded_error_code:
+            decoded_scalar_mismatch_rows += 1
+            continue
+        if decoded_preflight:
+            decoded_preflight_rows += 1
+            if codec == "zlib_json":
+                compressed_decoded_preflight_rows += 1
+            else:
+                current_plain_decoded_preflight_rows += 1
+            preflight_errors[decoded_error_code] += 1
+    preflight_avoided = {
+        "count": sum(preflight_errors.values()),
+        "error_codes": dict(sorted(preflight_errors.items())),
+        "projection": "decoded_scalar_v1",
+        "decoded_preflight_rows": decoded_preflight_rows,
+        "decoded_scalar_mismatch_rows": decoded_scalar_mismatch_rows,
+        "mismatched_rows_excluded": decoded_scalar_mismatch_rows > 0,
+        "legacy_plain_scalar_unavailable_rows": legacy_plain_scalar_unavailable_rows,
+        "legacy_plain_decoded_preflight_rows": legacy_plain_decoded_preflight_rows,
+        "current_plain_decoded_preflight_rows": current_plain_decoded_preflight_rows,
+        "compressed_decoded_preflight_rows": compressed_decoded_preflight_rows,
+    }
 
     buckets: dict[str, dict[str, Any]] = {}
     overall_failure_classes: Counter[str] = Counter()
@@ -383,12 +432,7 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
         if route not in {"", "unknown", "deterministic", "mcp_deterministic"}:
             explicit_model_route += 1
             continue
-        try:
-            metadata = json.loads(row["metadata_json"] or "{}")
-        except (TypeError, json.JSONDecodeError):
-            metadata = {}
-        if not isinstance(metadata, dict):
-            metadata = {}
+        metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
         workflow = _workflow_name(metadata)
         target = bucket(workflow)
         target["n"] += 1
@@ -553,7 +597,8 @@ def stratified_rework_diagnosis(ledger: OrchestrationLedger, *, limit: int = 500
     oracle_not_strong_runs = sum(int(item["oracle_not_strong"]) for item in buckets.values())
     oracle_unknown_runs = sum(int(item["oracle_unknown"]) for item in buckets.values())
     return {
-        "schema_version": 1,
+        "schema_version": 2,
+        "analysis_source": "immutable_ledger_facts_v1",
         "cohort": "accepted_representative_chatweb_mcp_model_free",
         "accepted_runs_scanned": len(selected),
         "accepted_runs": included,

@@ -728,6 +728,20 @@ class P5ExperimentLedgerMixin:
             )
         return {"recorded": True, "idempotent": False, "assignment_id": assignment_id, "received_arm": received, "protocol_id": protocol}
 
+    def p5_activation_epoch_for_assignment(self, assignment_id: str) -> str:
+        """Resolve one immutable assignment to its epoch without exposing arm data."""
+        normalized_assignment = _bounded_text(assignment_id, 128).strip()
+        if not normalized_assignment:
+            raise P5ExperimentError("P5 assignment identity is required")
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT activation_epoch_id FROM experiment_assignments WHERE assignment_id=?",
+                (normalized_assignment,),
+            ).fetchone()
+        if row is None:
+            raise P5ExperimentError("P5 assignment was not found")
+        return str(row["activation_epoch_id"])
+
     def p5_bind_workflow_prewrite(
         self,
         *,

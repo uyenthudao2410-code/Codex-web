@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from coding_tools_mcp.ledger_access import open_existing_ledger_analysis, open_existing_ledger_readonly
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.rework_diagnosis import (
     P2_FAILURE_OBSERVATION_SCHEMA,
@@ -14,6 +15,13 @@ from coding_tools_mcp.rework_diagnosis import (
 
 
 class ReworkDiagnosisTests(unittest.TestCase):
+    def snapshot_report(self, root: Path) -> dict[str, object]:
+        with open_existing_ledger_analysis(root) as snapshot:
+            self.assertEqual(snapshot.statement_count, 8)
+            report = stratified_rework_diagnosis(snapshot.ledger)
+            self.assertEqual(snapshot.statement_count, 8)
+        return report
+
     def test_stratifies_rework_and_preserves_unknown_causal_fields(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))
@@ -78,7 +86,7 @@ class ReworkDiagnosisTests(unittest.TestCase):
                 },
             )
 
-            report = stratified_rework_diagnosis(ledger)
+            report = self.snapshot_report(Path(temp))
             strata = {item['workflow']: item for item in report['workflow_strata']}
             self.assertEqual(strata['feature']['n'], 1)
             self.assertEqual(strata['feature']['first_pass_rate'], 1.0)
@@ -153,7 +161,7 @@ class ReworkDiagnosisTests(unittest.TestCase):
             ledger.finish_wave(repair_wave, status='accepted')
             ledger.finish_run(run_id, status='accepted')
 
-            report = stratified_rework_diagnosis(ledger)
+            report = self.snapshot_report(Path(temp))
             bugfix = next(item for item in report['workflow_strata'] if item['workflow'] == 'bugfix')
             self.assertEqual(bugfix['repair_failure_classes'], {'BUILD_VERIFICATION_FAILED': 1})
             self.assertEqual(bugfix['repair_causes']['unclassified_structured_failure_classes'], {})
@@ -215,7 +223,7 @@ class ReworkDiagnosisTests(unittest.TestCase):
             ledger.finish_wave(terminal_wave, status='accepted')
             ledger.finish_run(run_id, status='accepted')
 
-            report = stratified_rework_diagnosis(ledger)
+            report = self.snapshot_report(Path(temp))
             prospective = report['overall_repair_causes']['prospective_failure_detail']
             self.assertEqual(prospective['schema'], P2_FAILURE_OBSERVATION_SCHEMA)
             self.assertEqual(
@@ -233,6 +241,105 @@ class ReworkDiagnosisTests(unittest.TestCase):
             )
             self.assertTrue(report['policy']['generic_failure_details_are_prospective_only'])
             self.assertTrue(report['policy']['generic_failure_detail_is_not_a_causal_repair_label'])
+
+    def test_generic_failure_unknown_reasons_are_explicit_and_not_root_cause_labels(self) -> None:
+        unrecognized = p2_check_failure_detail('opaque_runner --verify')
+        self.assertEqual(unrecognized['command_family'], 'other')
+        self.assertEqual(unrecognized['unknown_reason'], 'unrecognized_command_family')
+        unspecified = p2_build_verification_failure_detail(
+            {'test_result': {'status': 'passed'}, 'build_result': {'status': 'passed'}, 'commands': {'build': 'build'}, 'artifacts': ['artifact']},
+            'all',
+        )
+        self.assertEqual(unspecified['verification_failure_stage'], 'verification_unspecified')
+        self.assertEqual(unspecified['unknown_reason'], 'verification_evidence_insufficient')
+        from coding_tools_mcp.rework_diagnosis import p2_failure_detail_bucket
+        self.assertEqual(p2_failure_detail_bucket('CHECK_FAILED', unrecognized), 'CHECK_FAILED:other')
+        self.assertEqual(p2_failure_detail_bucket('BUILD_VERIFICATION_FAILED', unspecified), 'BUILD_VERIFICATION_FAILED:verification_unspecified')
+        self.assertIsNone(p2_failure_detail_bucket('CHECK_FAILED', {**unrecognized, 'unknown_reason': 'guessed_cause'}))
+        self.assertIsNone(p2_failure_detail_bucket('BUILD_VERIFICATION_FAILED', {**unspecified, 'unknown_reason': 'guessed_cause'}))
+
+    def test_preflight_projection_has_plain_and_compressed_decoded_scalar_parity(self) -> None:
+        def report_for(*, compressed: bool) -> dict[str, object]:
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                ledger = OrchestrationLedger(root)
+                ledger.claim_idempotency(
+                    idempotency_key='preflight-parity',
+                    operation='agent_workflow',
+                    request_hash='preflight-parity-hash',
+                    process_instance_id='process',
+                )
+                summary = {
+                    'error_code': 'PATCH_CONTEXT_AMBIGUOUS',
+                    'outcome_unknown': False,
+                    'workflow_patch_preflight': True,
+                }
+                if compressed:
+                    summary['padding'] = 'fixture-padding-' * 1_000
+                ledger.finish_idempotency(
+                    'preflight-parity',
+                    request_hash='preflight-parity-hash',
+                    status='failed',
+                    summary=summary,
+                )
+                with open_existing_ledger_readonly(root) as reader:
+                    row = reader.one(
+                        'SELECT summary_codec FROM idempotency_records WHERE idempotency_key=?',
+                        ('preflight-parity',),
+                    )
+                self.assertEqual(str(row['summary_codec']), 'zlib_json' if compressed else 'plain_json')
+                return self.snapshot_report(root)
+
+        plain = report_for(compressed=False)
+        compressed = report_for(compressed=True)
+        projection = plain['preflight_avoided']
+        compressed_projection = compressed['preflight_avoided']
+        for field in ('count', 'error_codes', 'projection', 'decoded_scalar_mismatch_rows', 'mismatched_rows_excluded'):
+            self.assertEqual(projection[field], compressed_projection[field])
+        self.assertEqual(projection['projection'], 'decoded_scalar_v1')
+        self.assertEqual(projection['count'], 1)
+        self.assertEqual(projection['error_codes'], {'PATCH_CONTEXT_AMBIGUOUS': 1})
+        self.assertEqual(projection['decoded_scalar_mismatch_rows'], 0)
+        self.assertEqual(projection['current_plain_decoded_preflight_rows'], 1)
+        self.assertEqual(projection['compressed_decoded_preflight_rows'], 0)
+        self.assertEqual(compressed_projection['current_plain_decoded_preflight_rows'], 0)
+        self.assertEqual(compressed_projection['compressed_decoded_preflight_rows'], 1)
+
+    def test_preflight_projection_uses_decoded_legacy_plain_when_scalar_columns_are_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            ledger.claim_idempotency(
+                idempotency_key='legacy-preflight',
+                operation='agent_workflow',
+                request_hash='legacy-preflight-hash',
+                process_instance_id='process',
+            )
+            ledger.finish_idempotency(
+                'legacy-preflight',
+                request_hash='legacy-preflight-hash',
+                status='failed',
+                summary={
+                    'error_code': 'PATCH_CONTEXT_NOT_FOUND',
+                    'outcome_unknown': False,
+                    'workflow_patch_preflight': True,
+                },
+            )
+            # Temporary-fixture migration simulation only: older plain rows
+            # predate the scalar projection and must remain decoded, not
+            # discarded or rewritten by the reporter.
+            with ledger._lock, ledger._connect() as connection:
+                connection.execute(
+                    "UPDATE idempotency_records SET error_code='', workflow_patch_preflight=0 WHERE idempotency_key=?",
+                    ('legacy-preflight',),
+                )
+            report = self.snapshot_report(root)
+            projection = report['preflight_avoided']
+            self.assertEqual(projection['count'], 1)
+            self.assertEqual(projection['error_codes'], {'PATCH_CONTEXT_NOT_FOUND': 1})
+            self.assertEqual(projection['legacy_plain_decoded_preflight_rows'], 1)
+            self.assertEqual(projection['decoded_scalar_mismatch_rows'], 0)
+            self.assertFalse(projection['mismatched_rows_excluded'])
 
 
 if __name__ == '__main__':

@@ -2,127 +2,106 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import secrets
-import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from . import __version__
 from .errors import ToolFailure
 from .git_utils import DIFF_CONTINUATION_OPERATION
+from .host_correlation import (
+    HOST_CORRELATION_BINDING_RELATIVE,
+    HOST_CORRELATION_PENDING_RELATIVE,
+    HOST_CORRELATION_SCHEMA_VERSION,
+    claim_pending_host_turn,
+    discard_pending_host_turn,
+    publish_host_turn_binding,
+    restore_pending_host_turn,
+    validate_pending_host_turn,
+)
 from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
 from .p5_experiment import P5ExperimentError
+from .problem_lineage import ProblemLineageError
 from .solution_economics import ELIGIBLE_WORKFLOWS, SOLUTION_SHADOW_EVENT, record_solution_shadow
 from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
 
 
-HOST_CORRELATION_SCHEMA_VERSION = 1
-HOST_CORRELATION_PENDING_TTL_MS = 120_000
-HOST_CORRELATION_PENDING_RELATIVE = Path('.coding-tools') / 'evaluation' / 'chatweb-host-turn-pending.json'
-HOST_CORRELATION_BINDING_RELATIVE = Path('.coding-tools') / 'evaluation' / 'chatweb-host-turn-binding.json'
-
-
 class AgentWorkflowMixin:
     @staticmethod
     def _host_correlation_record(value: Any) -> dict[str, Any] | None:
-        if not isinstance(value, dict):
-            return None
-        allowed = {"schema_version", "turn_id", "trace_id", "staged_at_unix_ms"}
-        if set(value) - allowed or value.get("schema_version") != HOST_CORRELATION_SCHEMA_VERSION:
-            return None
-        turn_id = str(value.get("turn_id") or "").strip()
-        trace_id = str(value.get("trace_id") or "").strip()
-        staged_at = value.get("staged_at_unix_ms")
-        if not turn_id or len(turn_id) > 128 or not trace_id or len(trace_id) > 128:
-            return None
-        if any(ord(char) < 32 for char in turn_id + trace_id):
-            return None
-        if isinstance(staged_at, bool) or not isinstance(staged_at, (int, float)):
-            return None
-        now_ms = time.time() * 1000
-        if float(staged_at) > now_ms + 5_000 or now_ms - float(staged_at) > HOST_CORRELATION_PENDING_TTL_MS:
-            return None
-        return {"turn_id": turn_id, "trace_id": trace_id, "staged_at_unix_ms": float(staged_at)}
+        return validate_pending_host_turn(value)
 
     def _claim_pending_host_turn(self) -> dict[str, Any] | None:
-        pending = self.workspace.root / HOST_CORRELATION_PENDING_RELATIVE
-        claim = pending.with_name(f".{pending.name}.{self.process_instance_id}.{secrets.token_urlsafe(6)}.claim")
-        try:
-            os.replace(pending, claim)
-        except FileNotFoundError:
-            return None
-        except OSError:
-            return None
-        try:
-            value = json.loads(claim.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-            value = None
-        record = self._host_correlation_record(value)
-        if record is None:
-            try:
-                claim.unlink(missing_ok=True)
-            except OSError:
-                pass
-            return None
-        return {**record, "_claim_path": claim}
+        return claim_pending_host_turn(self.workspace.root, process_instance_id=self.process_instance_id)
 
     def _discard_pending_host_turn(self) -> None:
-        claimed = self._claim_pending_host_turn()
-        claim_path = claimed.get("_claim_path") if claimed else None
-        if isinstance(claim_path, Path):
-            try:
-                claim_path.unlink(missing_ok=True)
-            except OSError:
-                pass
+        discard_pending_host_turn(self.workspace.root, process_instance_id=self.process_instance_id)
 
     def _restore_pending_host_turn(self, claimed: dict[str, Any]) -> None:
-        claim = claimed.get("_claim_path")
-        if not isinstance(claim, Path) or not claim.exists():
-            return
-        pending = self.workspace.root / HOST_CORRELATION_PENDING_RELATIVE
-        try:
-            if pending.exists():
-                claim.unlink(missing_ok=True)
-            else:
-                os.replace(claim, pending)
-        except OSError:
-            try:
-                claim.unlink(missing_ok=True)
-            except OSError:
-                pass
+        restore_pending_host_turn(self.workspace.root, claimed)
 
     def _publish_host_turn_binding(self, claimed: dict[str, Any], ctx: RunContext) -> bool:
-        target = self.workspace.root / HOST_CORRELATION_BINDING_RELATIVE
-        temporary = target.with_name(f".{target.name}.{self.process_instance_id}.{secrets.token_urlsafe(6)}.tmp")
+        return publish_host_turn_binding(
+            self.workspace.root,
+            claimed,
+            process_instance_id=self.process_instance_id,
+            run_id=ctx.run_id,
+            wave_id=ctx.wave_id,
+        )
+
+    def _record_claimed_host_problem_relation(self, claimed: dict[str, Any], ctx: RunContext, *, task_id: str) -> dict[str, Any]:
+        """Append exactly one content-free PRL relation after a host claim.
+
+        A new run is never fabricated for PRL.  When no uniquely exact prior
+        problem event exists, retain that honest `UNLINKED` or `AMBIGUOUS`
+        measurement instead of guessing a problem thread or suppressing the
+        missingness.  v9 remains intentionally inert until the separately
+        authorized v10 activation has happened.
+        """
+        identity = self.orchestration_ledger.problem_find_exact_host_identity(
+            turn_id=str(claimed["turn_id"]),
+            trace_id=str(claimed["trace_id"]),
+        )
+        status = str(identity.get("status") or "schema_inactive")
+        if status == "schema_inactive":
+            return {"status": status, "recorded": False}
+        problem_id = str(identity.get("problem_id") or "")
+        exact = status == "exact" and bool(problem_id)
+        seed = "\x1f".join(("prl-host-run-binding-v1", status, problem_id, ctx.run_id, ctx.wave_id, str(claimed["turn_id"]), str(claimed["trace_id"])))
+        event = {
+            "operation": "link",
+            "event_id": f"prl-bind-{hashlib.sha256(seed.encode('utf-8')).hexdigest()}",
+            "task_id": str(task_id or ""),
+            "turn_id": str(claimed["turn_id"]),
+            "trace_id": str(claimed["trace_id"]),
+            "run_id": ctx.run_id,
+            "wave_id": ctx.wave_id,
+            "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+            "link_status": "EXACT" if exact else ("AMBIGUOUS" if status == "ambiguous" else "UNLINKED"),
+            "link_role": "PRIMARY" if exact else "SECONDARY",
+            "provenance": "DETERMINISTIC_EVIDENCE",
+            "evidence_level": "OBSERVED",
+            "eligible_for_policy": False,
+            "reason_code": "engineering_attempt_bound" if exact else ("ambiguous_relation" if status == "ambiguous" else "unlinked_relation"),
+        }
+        if exact:
+            event["problem_id"] = problem_id
         try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            payload = {
-                "schema_version": HOST_CORRELATION_SCHEMA_VERSION,
-                "turn_id": claimed["turn_id"],
-                "trace_id": claimed["trace_id"],
-                "run_id": ctx.run_id,
-                "wave_id": ctx.wave_id,
-                "bound_at_unix_ms": int(time.time() * 1000),
-            }
-            temporary.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True), encoding="utf-8")
-            os.replace(temporary, target)
-            return True
-        except OSError:
-            try:
-                temporary.unlink(missing_ok=True)
-            except OSError:
-                pass
-            return False
-        finally:
-            claim = claimed.get("_claim_path")
-            if isinstance(claim, Path):
-                try:
-                    claim.unlink(missing_ok=True)
-                except OSError:
-                    pass
+            recorded = self.orchestration_ledger.problem_record_event(
+                event,
+                now=datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+            )
+        except ProblemLineageError as exc:
+            raise ToolFailure(
+                "PRL_HOST_BINDING_FAILED",
+                "The exact host identity was claimed but its typed problem relation could not be recorded.",
+                category="runtime",
+                retryable=False,
+                details={"run_id": ctx.run_id, "wave_id": ctx.wave_id, "relation_status": status},
+            ) from exc
+        return {"status": status, "recorded": bool(recorded.get("recorded")), "idempotent": bool(recorded.get("idempotent")), "problem_id": problem_id or None}
 
     def _agent_patch_inputs(self, args: dict[str, Any]) -> tuple[list[str], list[str]]:
         directories = [str(item).strip() for item in args.get("directories", []) if str(item).strip()]
@@ -404,6 +383,15 @@ class AgentWorkflowMixin:
                     self._restore_pending_host_turn(claimed_host_turn)
                 raise
             if claimed_host_turn:
+                try:
+                    self._record_claimed_host_problem_relation(
+                        claimed_host_turn,
+                        current_ctx,
+                        task_id=str(current_task.get("task_id") or ""),
+                    )
+                except Exception:
+                    self._restore_pending_host_turn(claimed_host_turn)
+                    raise
                 self._publish_host_turn_binding(claimed_host_turn, current_ctx)
 
         self._project_orchestration(current_ctx, event="orchestration_context_ready")
@@ -1145,6 +1133,16 @@ class AgentWorkflowMixin:
             if hub_identity
             else self.server_instance_id
         )
+        if p5_assignment_id:
+            # This must run before the ordinary lease/binding and before any
+            # directory or patch mutation.  Checking after acquiring this
+            # workflow's own fence would make the frozen quiescence contract
+            # falsely see its own legitimate lease as an external writer.
+            self.assert_current_assignment_contract(
+                p5_assignment_id,
+                operation="agent_workflow_prewrite",
+                authority=str((self._current_hub_client() or {}).get("client_id") or "runtime"),
+            )
         self.orchestration_control.acquire_write_lease(
             ctx,
             owner="MCP",

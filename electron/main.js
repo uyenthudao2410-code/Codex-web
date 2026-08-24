@@ -357,7 +357,7 @@ async function recordHostObservationSpan(event) {
         wave_id: event.wave_id,
         observation_span: {
           span_id: event.span_id,
-          stage: 'host_turn_span',
+          stage: 'report_visible',
           source: 'electron_chatgpt_dom',
           measurement: event.measurement,
           clock_domain: event.clock_domain,
