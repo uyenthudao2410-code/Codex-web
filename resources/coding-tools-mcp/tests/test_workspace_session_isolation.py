@@ -678,6 +678,7 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                     "capabilities": {},
                 }
                 runtime.request_context.hub_client = identity
+                runtime.request_context.stateless_task_context_id = "ctx-background-test"
                 scoped = runtime.task_state.update({
                     "objective": "background-context-task",
                     "status": "active",
@@ -686,6 +687,7 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                 def fake_agent(_args: dict) -> dict:
                     observed["state"] = runtime.task_state.get()
                     observed["identity"] = runtime._current_hub_client()
+                    observed["scope"] = runtime._current_task_scope_id()
                     return {"ok": True, "phase": "run", "affected_files": []}
 
                 runtime._tool_handlers["agent_workflow"] = fake_agent
@@ -709,10 +711,13 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                     observed["identity"]["execution_context_id"],
                     "0123456789abcdef",
                 )
+                self.assertEqual(observed["scope"], "mcp2026:ctx-background-test")
             finally:
                 runtime._tool_handlers["agent_workflow"] = original
                 if hasattr(runtime.request_context, "hub_client"):
                     del runtime.request_context.hub_client
+                if hasattr(runtime.request_context, "stateless_task_context_id"):
+                    del runtime.request_context.stateless_task_context_id
                 runtime.close()
 
     def test_legacy_unscoped_session_alias_is_stably_isolated_from_global_task(self) -> None:

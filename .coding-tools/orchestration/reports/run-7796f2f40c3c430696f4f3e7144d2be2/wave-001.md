@@ -10,7 +10,7 @@
 - Base HEAD: `9e150020a0c0829a988ffea527d5c8d82132ed65`
 - Worktree fingerprint: `ca5a4f16a66bf9ff85498ad760934efe3b56b56ba49654e116f273e86fda0b09`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **replanned**
 
 ## Delegations
 
@@ -81,5 +81,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `39`
-- Chain head: `a34e189878c32a66f9a4f252e5784dcb413fcee1cd946d1bf05e0c37a6c79632`
+- Events checked: `43`
+- Chain head: `118e7757214469a8292f0930ef294c2a35abd62c15c23dc310e6ad0d77179c9f`

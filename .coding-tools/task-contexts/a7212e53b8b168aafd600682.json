@@ -1,0 +1,309 @@
+{
+  "version": 2,
+  "task_id": "335a2c36348d42b2bd9a010e98fd59f6",
+  "orchestration": {
+    "run_id": "d38ed4a4167e4121a3b44f505877aae5",
+    "wave_id": "0548a9073c4a4ab692d47540297433df",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "4d77edd521658d14d6f5125b1e8ff3498e80a77f",
+    "worktree_fp": "1e10aafa8d2dbcb94016d25007b474c49c11cb2e4d2a78a0094330dc48477c52",
+    "contract_fp": ""
+  },
+  "objective": "RUN-MW-CLOSURE: verify exact multi-workspace isolation, durable context, and scoped control on the current Codex-web worktree.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-24T11:55:01.737Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-24T11:55:01.737Z"
+    }
+  ],
+  "current_step": "Acceptance decision - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "r5-FKMwd8JvGpg3DvB_YlJly",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-24T11:55:01.356Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ACCEPTING",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 19,
+        "head_hash": "61d4146a115d54d3c00c11f0d5cb5d7bc605dc2b3d078f2927f526562f63a1af"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d38ed4a4167e4121a3b44f505877aae5\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d38ed4a4167e4121a3b44f505877aae5\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "d38ed4a4167e4121a3b44f505877aae5",
+      "wave_id": "0548a9073c4a4ab692d47540297433df",
+      "base_head": "4d77edd521658d14d6f5125b1e8ff3498e80a77f",
+      "worktree_fp": "1e10aafa8d2dbcb94016d25007b474c49c11cb2e4d2a78a0094330dc48477c52",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "RUN-MW-CLOSURE: verify exact multi-workspace isolation, durable context, and scoped control on the current Codex-web worktree.",
+        "objective_revision": 1,
+        "objective_sha256": "c02cf4099441e84652f1280ecb069139a8a13c75c9dd1dd6c67ad1cbb7915a89",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "356bc4e0dba347e084b13d1c01cac3ab",
+          "stage_id": "check:a5804220fb15a344",
+          "status": "passed",
+          "duration_ms": 41680,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+  },
+  "completion_report_id": "9590c3882055b95be3939f5bf2d182b9b13d9b335d7e767ada6c62b8755a7e69",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_workspace_session_isolation.py tests/test_multi_workspace_http_matrix.py tests/test_multi_workspace_lifecycle.py tests/test_stateless_http_2026.py tests/test_durable_coordination_runtime.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '37 passed in 38.10s'",
+      "finished_at": "2026-08-24T11:55:01.356Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "r5-FKMwd8JvGpg3DvB_YlJly"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d38ed4a4167e4121a3b44f505877aae5",
+        "owner_wave": "0548a9073c4a4ab692d47540297433df",
+        "size_bytes": 102,
+        "command_id": "r5-FKMwd8JvGpg3DvB_YlJly",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:r5-FKMwd8JvGpg3DvB_YlJly:stdout",
+            "total_stream_bytes": 102,
+            "total_retained_bytes": 102,
+            "head_retained_bytes": 102,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:r5-FKMwd8JvGpg3DvB_YlJly:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject.",
+  "created_at": "2026-08-24T11:54:11.876Z",
+  "updated_at": "2026-08-24T11:55:02.486Z",
+  "events": [
+    {
+      "time": "2026-08-24T11:54:11.876Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "RUN-MW-CLOSURE: verify exact multi-workspace isolation, durable context, and scoped control on the current Codex-web worktree."
+      }
+    },
+    {
+      "time": "2026-08-24T11:54:13.598Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-24T11:54:14.547Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-24T11:54:16.708Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-24T11:54:16.720Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T11:54:18.446Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-24T11:54:19.517Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T11:54:20.408Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_workspace_session_isolation.py tests/test_multi_workspace_http_matrix.py tests/test_multi_workspace_lifecycle.py tests/test_stateless_http_2026.py tests/test_durable_coordination_runtime.py -q",
+        "session_id": "r5-FKMwd8JvGpg3DvB_YlJly"
+      }
+    },
+    {
+      "time": "2026-08-24T11:55:01.356Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_workspace_session_isolation.py tests/test_multi_workspace_http_matrix.py tests/test_multi_workspace_lifecycle.py tests/test_stateless_http_2026.py tests/test_durable_coordination_runtime.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-24T11:55:01.735Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T11:55:01.737Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T11:55:02.156Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-24T11:55:02.162Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T11:55:02.285Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "9590c3882055b95be3939f5bf2d182b9b13d9b335d7e767ada6c62b8755a7e69"
+      }
+    },
+    {
+      "time": "2026-08-24T11:55:02.486Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

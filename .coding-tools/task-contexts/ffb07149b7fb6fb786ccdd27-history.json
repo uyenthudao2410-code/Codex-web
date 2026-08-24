@@ -1,0 +1,388 @@
+[
+  {
+    "version": 2,
+    "task_id": "0f3e8657cca74723a43e41a284b67815",
+    "orchestration": {
+      "run_id": "a326f7ddad004c0cb27e2e1f12fd925f",
+      "wave_id": "ed66e86f2f044480ad87c8de2e5e0311",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "4d77edd521658d14d6f5125b1e8ff3498e80a77f",
+      "worktree_fp": "d606fbfd9ddbb35bfa28b2891069399eee79f3a456242accc11cb2344673c2b9",
+      "contract_fp": ""
+    },
+    "objective": "RUN-MW-CLOSURE: prove the corrected stateless-background context propagation, multi-workspace isolation, durable context, and scoped control on the current Codex-web worktree.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-24T12:08:34.703Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-24T12:08:34.703Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "H0THK30fMjuZoyFQZioPCrnO",
+      "kind": "test",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-08-24T12:08:34.321Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 23,
+          "head_hash": "0da5901e3b2feb49bb77a44311824b549dc4992286def687f1ee9b1521af0bac"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a326f7ddad004c0cb27e2e1f12fd925f\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a326f7ddad004c0cb27e2e1f12fd925f\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "a326f7ddad004c0cb27e2e1f12fd925f",
+        "wave_id": "ed66e86f2f044480ad87c8de2e5e0311",
+        "base_head": "4d77edd521658d14d6f5125b1e8ff3498e80a77f",
+        "worktree_fp": "d606fbfd9ddbb35bfa28b2891069399eee79f3a456242accc11cb2344673c2b9",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "RUN-MW-CLOSURE: prove the corrected stateless-background context propagation, multi-workspace isolation, durable context, and scoped control on the current Codex-web worktree.",
+          "objective_revision": 1,
+          "objective_sha256": "df2a1dc35a6178a976099b503b4616d020c7064fc73af546d2341df3d89c60d8",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "22bffe1b7e184dec94b52082c227df72",
+            "stage_id": "check:a5804220fb15a344",
+            "status": "passed",
+            "duration_ms": 27747,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "228962bac2b3be3fdf7dbcf0ecc5e4ed70b1e8d67371fa9e9f664711982ef503",
+    "completion_report_acknowledged_id": "228962bac2b3be3fdf7dbcf0ecc5e4ed70b1e8d67371fa9e9f664711982ef503",
+    "completion_report_acknowledged_at": "2026-08-24T12:13:57.388Z",
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_workspace_session_isolation.py tests/test_multi_workspace_http_matrix.py tests/test_multi_workspace_lifecycle.py tests/test_stateless_http_2026.py tests/test_durable_coordination_runtime.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '37 passed in 25.17s'",
+        "finished_at": "2026-08-24T12:08:34.321Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "H0THK30fMjuZoyFQZioPCrnO"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "a326f7ddad004c0cb27e2e1f12fd925f",
+          "owner_wave": "ed66e86f2f044480ad87c8de2e5e0311",
+          "size_bytes": 102,
+          "command_id": "H0THK30fMjuZoyFQZioPCrnO",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:H0THK30fMjuZoyFQZioPCrnO:stdout",
+              "total_stream_bytes": 102,
+              "total_retained_bytes": 102,
+              "head_retained_bytes": 102,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:H0THK30fMjuZoyFQZioPCrnO:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-24T12:08:01.321Z",
+    "updated_at": "2026-08-24T12:14:26.910Z",
+    "events": [
+      {
+        "time": "2026-08-24T12:08:01.321Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "RUN-MW-CLOSURE: prove the corrected stateless-background context propagation, multi-workspace isolation, durable context, and scoped control on the current Codex-web worktree."
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:02.613Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:03.443Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:04.675Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:04.680Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:05.868Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:06.436Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:07.224Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_workspace_session_isolation.py tests/test_multi_workspace_http_matrix.py tests/test_multi_workspace_lifecycle.py tests/test_stateless_http_2026.py tests/test_durable_coordination_runtime.py -q",
+          "session_id": "H0THK30fMjuZoyFQZioPCrnO"
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:34.321Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_workspace_session_isolation.py tests/test_multi_workspace_http_matrix.py tests/test_multi_workspace_lifecycle.py tests/test_stateless_http_2026.py tests/test_durable_coordination_runtime.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:34.698Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:34.703Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:35.062Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:35.065Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:35.161Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "9d57fc51b042a3ccaec58ae06cfa38aac858f369675b6b45c5e7990a47b4b746"
+        }
+      },
+      {
+        "time": "2026-08-24T12:08:35.275Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-24T12:09:15.472Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T12:12:34.217Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-24T12:12:34.219Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T12:12:34.314Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "228962bac2b3be3fdf7dbcf0ecc5e4ed70b1e8d67371fa9e9f664711982ef503"
+        }
+      },
+      {
+        "time": "2026-08-24T12:12:48.285Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T12:13:57.388Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "228962bac2b3be3fdf7dbcf0ecc5e4ed70b1e8d67371fa9e9f664711982ef503"
+        }
+      },
+      {
+        "time": "2026-08-24T12:14:26.910Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T12:14:27.231Z",
+    "archive_reason": "cleared"
+  }
+]

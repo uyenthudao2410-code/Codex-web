@@ -2304,6 +2304,7 @@ class Runtime(
             timeout_seconds = min(timeout_seconds, workflow_runtime_seconds)
         budget = BudgetDeadline(max_runtime_seconds=timeout_seconds)
         hub_identity = dict(self._current_hub_client() or {})
+        stateless_task_context_id = self._current_stateless_task_context_id()
         trace_context = dict(getattr(self.request_context, "trace_context", {}) or {})
         workspace_root = getattr(self.request_context, "workspace_root", None)
         trace_metadata = trace_context_metadata(trace_context)
@@ -2368,6 +2369,8 @@ class Runtime(
             previous_budget = getattr(self.request_context, "background_budget", None)
             had_hub_client = hasattr(self.request_context, "hub_client")
             previous_hub_client = getattr(self.request_context, "hub_client", None)
+            had_stateless_task_context = hasattr(self.request_context, "stateless_task_context_id")
+            previous_stateless_task_context = getattr(self.request_context, "stateless_task_context_id", None)
             had_trace_context = hasattr(self.request_context, "trace_context")
             previous_trace_context = getattr(self.request_context, "trace_context", None)
             had_workspace_root = hasattr(self.request_context, "workspace_root")
@@ -2376,6 +2379,8 @@ class Runtime(
             self.request_context.background_budget = budget
             if hub_identity:
                 self.request_context.hub_client = dict(hub_identity)
+            if stateless_task_context_id:
+                self.request_context.stateless_task_context_id = stateless_task_context_id
             if trace_context:
                 self.request_context.trace_context = dict(trace_context)
             if workspace_root:
@@ -2409,6 +2414,13 @@ class Runtime(
                 else:
                     try:
                         del self.request_context.hub_client
+                    except AttributeError:
+                        pass
+                if had_stateless_task_context:
+                    self.request_context.stateless_task_context_id = previous_stateless_task_context
+                else:
+                    try:
+                        del self.request_context.stateless_task_context_id
                     except AttributeError:
                         pass
                 if had_trace_context:

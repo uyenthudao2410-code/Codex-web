@@ -1,0 +1,157 @@
+{
+  "version": 2,
+  "task_id": "",
+  "orchestration": {
+    "run_id": "d38ed4a4167e4121a3b44f505877aae5",
+    "wave_id": "0548a9073c4a4ab692d47540297433df",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "4d77edd521658d14d6f5125b1e8ff3498e80a77f",
+    "worktree_fp": "1e10aafa8d2dbcb94016d25007b474c49c11cb2e4d2a78a0094330dc48477c52",
+    "contract_fp": ""
+  },
+  "objective": "",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 25,
+        "head_hash": "f67dbf70ff68a15157f07daa37c9f814c3cab3c76e8c067cd3d972743a8818a0"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d38ed4a4167e4121a3b44f505877aae5\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d38ed4a4167e4121a3b44f505877aae5\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "d38ed4a4167e4121a3b44f505877aae5",
+      "wave_id": "0548a9073c4a4ab692d47540297433df",
+      "base_head": "4d77edd521658d14d6f5125b1e8ff3498e80a77f",
+      "worktree_fp": "1e10aafa8d2dbcb94016d25007b474c49c11cb2e4d2a78a0094330dc48477c52",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "RUN-MW-CLOSURE: verify exact multi-workspace isolation, durable context, and scoped control on the current Codex-web worktree.",
+        "objective_revision": 1,
+        "objective_sha256": "c02cf4099441e84652f1280ecb069139a8a13c75c9dd1dd6c67ad1cbb7915a89",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "356bc4e0dba347e084b13d1c01cac3ab",
+          "stage_id": "check:a5804220fb15a344",
+          "status": "passed",
+          "duration_ms": 41680,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "Live handoff capsule lacks the required base_head/worktree_fp/write-lease provenance because the stateless task context is not propagated into the background agent_workflow thread. Replan after the scoped-context propagation fix and focused regression.",
+      "event_seq": 28875
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "9ba5c3cf5eedc50f4bbb4b24ad7cf96e5a3778d9e4875808e6d6d90eb7b34213",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "This client is not the active semantic controller for the orchestration run.",
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-08-24T11:59:40.739Z",
+  "updated_at": "2026-08-24T12:05:50.315Z",
+  "events": [
+    {
+      "time": "2026-08-24T11:59:40.739Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T11:59:40.874Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "05e69e1bf48dd764b455d18274041344c59ef3068154eca7cc0564f8f882cb42"
+      }
+    },
+    {
+      "time": "2026-08-24T12:03:57.253Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "9ba5c3cf5eedc50f4bbb4b24ad7cf96e5a3778d9e4875808e6d6d90eb7b34213"
+      }
+    },
+    {
+      "time": "2026-08-24T12:05:46.777Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTROLLER_LEASE_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-24T12:05:50.315Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTROLLER_LEASE_REQUIRED"
+      }
+    }
+  ]
+}

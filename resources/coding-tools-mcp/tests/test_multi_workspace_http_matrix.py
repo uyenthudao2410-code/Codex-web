@@ -249,6 +249,50 @@ class MultiWorkspaceHttpMatrixTests(unittest.TestCase):
                     state["structuredContent"]["state"]["objective"],
                     "http-authorized-workspace-task",
                 )
+
+                # ``events`` must resolve the persisted opaque task context
+                # before selecting an orchestration ledger.  This is the
+                # restart-sensitive counterpart to the earlier ``get`` and
+                # cross-workspace rejection checks: a valid authorized context
+                # sees its durable event stream, while a primary context may
+                # not inspect that run and must leave both projections intact.
+                auth_events = self._tool(
+                    second_port,
+                    "task_control",
+                    {"task_context_id": auth_context, "action": "events", "run_id": auth_run},
+                    10,
+                )
+                self.assertFalse(auth_events["isError"], auth_events)
+                event_rows = auth_events["structuredContent"]["events"]
+                self.assertTrue(event_rows, auth_events)
+                self.assertEqual(event_rows[0]["run_id"], auth_run)
+                self.assertEqual(event_rows[0]["event_type"], "run_started")
+
+                auth_state_before = TaskStateStore(
+                    authorized, scope_id=task_scope(auth_context)
+                ).get()
+                primary_state_before = TaskStateStore(
+                    primary, scope_id=task_scope(primary_context)
+                ).get()
+                rejected_events = self._tool(
+                    second_port,
+                    "task_control",
+                    {"task_context_id": primary_context, "action": "events", "run_id": auth_run},
+                    11,
+                )
+                self.assertTrue(rejected_events["isError"], rejected_events)
+                self.assertEqual(
+                    rejected_events["structuredContent"]["error"]["code"],
+                    "RUN_WORKSPACE_MISMATCH",
+                )
+                self.assertEqual(
+                    TaskStateStore(authorized, scope_id=task_scope(auth_context)).get(),
+                    auth_state_before,
+                )
+                self.assertEqual(
+                    TaskStateStore(primary, scope_id=task_scope(primary_context)).get(),
+                    primary_state_before,
+                )
             finally:
                 second_server.shutdown()
                 second_server.server_close()
