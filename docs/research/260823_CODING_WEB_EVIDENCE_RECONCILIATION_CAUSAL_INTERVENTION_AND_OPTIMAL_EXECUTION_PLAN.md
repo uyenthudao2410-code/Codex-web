@@ -2,12 +2,12 @@
 
 > **Decision / Research Synthesis ID:** `CW-ERCIP-20260823-v2`
 > **Ngày:** 2026-08-23, `Asia/Saigon`
-> **Workspace chính:** `E:\DEV\Codex-web`
-> **Representative external workload:** `E:\DEV\HR STA\HR` — chỉ dùng như population/ledger riêng, không pooled assignment
-> **Vị trí repository hiện tại:** `E:\DEV\Codex-web\docs\research\260823_CODING_WEB_EVIDENCE_RECONCILIATION_CAUSAL_INTERVENTION_AND_OPTIMAL_EXECUTION_PLAN.md`
+> **Historical snapshot workspace:** `E:\DEV\Codex-web`
+> **Historical external workload:** `E:\DEV\HR STA\HR` — chronology only; không phải current cohort, gate hay completion dependency
+> **Vị trí repository hiện tại:** `E:\Github\Tools-Codex-web\docs\research\260823_CODING_WEB_EVIDENCE_RECONCILIATION_CAUSAL_INTERVENTION_AND_OPTIMAL_EXECUTION_PLAN.md`
 > **Companion scientific doctrine:** `docs/research/260823_CODING_WEB_PROBLEM_RESOLUTION_LINEAGE_AND_INTERACTIVE_ENGINEERING_SCIENCE.md`
-> **Trạng thái:** `REPOSITORY_SYNTHESIS_FOR_REVIEW — SNAPSHOT-BOUND / NO IMPLEMENTATION AUTHORITY`
-> **Phạm vi:** evidence reconciliation, lifecycle truth, causal execution intelligence, Problem Resolution Lineage (PRL), accepted-result/problem-resolution economics, P4/P5, routing economics, reliability/release hardening
+> **Trạng thái:** `HISTORICAL_SYNTHESIS v2 + CURRENT_RECONCILIATION v3`; implementation authority chỉ đến từ gate/tranche hiện hành và authority riêng
+> **Phạm vi hiện hành:** Tools-Codex-web evidence reconciliation, lifecycle truth, PRL v11 roadmap, accepted-result/problem-resolution economics và routing/P5 hold; historical HR/release material không mở rộng scope
 > **Không tự động kích hoạt:** source mutation, P5 enrollment/treatment, routing policy, runtime restart, package/release, commit/push
 
 ---
@@ -146,6 +146,100 @@ V1 phải được hiểu chính xác tại snapshot của nó:
 - trước bất kỳ P5 enrollment hoặc source-writing wave tương lai, phải fresh-recapture exact source/runtime/manifest/P5 identity và xử lý theo official P5 authority với manifest mới và authority riêng.
 
 Các con số `CW-S1`, `HR-S1`, `PKG-S1` dưới đây tiếp tục là **snapshot facts**, không được đọc như live-state guarantee tại thời điểm sau này.
+
+## 0.5. Reconciliation v3 — current-source decision update (2026-08-25)
+
+> **Status:** `CURRENT_RECONCILIATION / DOCUMENTATION-ONLY`. Mục này là authority hiện hành cho roadmap trong file này. Các section v2 bên dưới vẫn là chronology và evidence tại receipt của chúng; chúng không bị rewrite để giả làm current state.
+
+### Scope và precedence đã được thu hẹp
+
+- Product được vận hành là Windows Electron Execution Hub + Coding Tools MCP; `smart-v3` vẫn có đúng tám public tools theo `docs/CURRENT_STATE.md`.
+- `execution_route=auto` vẫn fail-closed về `deterministic`; P4/P5/routing promotion không được suy từ source presence hoặc historical receipt.
+- Cohort, implementation, metric và decision trong update này chỉ thuộc **Tools-Codex-web**. Các con số HR trong v2 được giữ làm historical external-workload evidence, không còn là future cohort, gate hay completion dependency.
+- Precedence: exact current implementation/focused proof/live contract → `docs/CURRENT_STATE.md` → maintained tracker → dated research snapshot. Vì vậy “Gate 0”, “current”, “active” và “accepted” trong v2 chỉ có nghĩa tại timestamp đã ghi.
+
+### Current evidence receipt (read-only)
+
+Một immutable canonical-ledger snapshot mới được chụp tại `main@d254ac067fac87fa9a7a1861620f8af701112fca`, `2026-08-24T19:51:50.137Z` (`2026-08-25T02:51:50.137+07:00`): `query_only` read transaction → SQLite Backup API copy ngoài repository → `immutable=1` analysis; canonical writer/runtime/migration không được khởi tạo.
+
+| Receipt | Value |
+|---|---|
+| Backup SHA-256 / size / schema | `6568d95ae3c85c85a3b6023e00d8240dd593a1cde6a81196be2b3122093ab83e` / 64.696.320 B / v10 |
+| Integrity / foreign keys | `ok` / 0 violation |
+| RUN / accepted / WAVE / replanned | 923 / 505 / 1.430 / 511 |
+| `failure_observed` / subset current accepted RUN | 656 / 436 |
+| `problem_threads` / `problem_events` | 0 / 1 |
+| PRL event | one `ENGINEERING_ATTEMPT_BOUND`, `UNLINKED`, policy-ineligible; exact primary RUN binding 0 |
+
+Không có time window, accepted-only population filter hoặc deduplication; ngoại lệ duy nhất là cross-check `failure_observed` join RUN với current `status='accepted'`. Vì zero problem thread là zero **risk set**, TTPR, confirmation, reopen rate, true resolution rate và right-censoring không estimable — không phải zero success hay zero failure.
+
+### Current source/tracker reconciliation
+
+| Area | Strongest current evidence | Decision now |
+|---|---|---|
+| Lifecycle / connector Gate 0 | Maintained tracker/current-state receipt records local Gate 0 and connector `LIVE_PASS` at its exact process receipt; a future process/component/contract change still requires rediscovery/acknowledgement. | Do not re-run a broad historical lifecycle program; retain a narrow connector-truth regression before PRL v11 writes. |
+| P0–P3 execution foundation | `CURRENT_STATE.md` records source closure separately from efficacy. | Do not reopen accepted architecture; reuse EOCL/proof/ledger primitives. |
+| P4 / P5 / routing | P4 descriptive collection only; P5 hard-stopped; `auto` route deterministic. | No promotion, new epoch, synthetic cohort or automatic routing. |
+| PRL v10 | `problem_lineage.py:19,172–249,307–380,427–474,542–557`; focused PRL tests exist. | Source-present v10 is not authority-safe problem resolution; close v11 mechanics first. |
+| Natural PRL/A2/PRL-D evidence | Current snapshot above and `CURRENT_STATE.md` say no natural problem denominator / TTPR/stage coverage. | `HOLD_NATURAL_EVIDENCE`; unknown must remain unknown. |
+
+The v10 source audit identifies concrete P0 defects that v2 did not specify tightly enough: caller-controlled `eligible_for_policy`/provenance/state/time can influence event semantics; generic feedback can select a canonical transition; revision is held only as a thread projection and reopen increments it; and handoff can read the current revision rather than the attempt-pinned contract. `HOST_OBSERVED` verifies turn/trace identity only, not semantic label correctness. These are source findings, not a claim about a released runtime.
+
+### Superseding decision: PRL v11 before adaptive policy
+
+The formerly separate `PRL-A → PRL-B/C → PRL-D` implementation sequence is superseded for future work by this smaller, authority-first order. It does **not** invalidate any old receipt; it prevents those older labels from authorizing an unsafe implementation.
+
+When a v2 roadmap/action/acceptance section below conflicts with this update, this §0.5 wins. In particular, Sections 21–22 are retained as the exact v2 plan/contract at its snapshot, not as current implementation authority.
+
+```text
+Gate 0 connector truth (serialized stdio/HTTP tools/list; no client-cache inference)
+  → C1 authority-safe PRL v11 foundation
+  → C2 capture, work origin, exact revision binding
+  → C3 conditional EOCL-to-problem outcome bridge
+  → C4 Tools-only natural canary and schema freeze
+  → C5 RDP-Shadow on replacement write-capable waves
+  → C6 controlled convergence evaluation
+```
+
+#### C1 — authority-safe foundation (P0)
+
+1. Add immutable `problem_revisions` in the same canonical SQLite with `(problem_id, revision)` primary key, authoritative contract fingerprint/capsule/criteria/task class/engineering floor and creation authority. `problem_threads` remains a compatibility projection. Exact events use the composite reference; `AMBIGUOUS`/`UNLINKED` use NULL pair, never a sentinel revision.
+2. Separate generic feedback observation from canonical transition. `PROVISIONALLY_RESOLVED` comes only from a full-problem EOCL bridge; `RESOLVED_CONFIRMED`/`REOPENED` only from structured explicit-user feedback or reviewed annotation; `REVISED` only from a compare-and-swap contract transaction; `BLOCKED`/`ABANDONED` require authority and typed reason.
+3. Make `eligible_for_policy` runtime-derived. Add runtime-owned `recorded_at`; optional `occurred_at` needs source and clock authority. Unattested caller time is excluded from policy/order/TTPR. Hash schema v2 covers clock fields while legacy hashes remain verifiable.
+4. Contract capsule is typed, immutable, canonical-encoded and ≤8 KiB: sanitized objective summary, stable-ID criteria, protected invariants, constraints and unresolved conditions only. It rejects secrets/PII/source/transcript/CoT/arbitrary JSON before ledger write; loss/mismatch is `BLOCKED_MISSING_PROBLEM_CONTEXT`.
+
+#### C2–C3 — honest capture and conditional outcome (P0)
+
+- `work_origin=problem|non_problem|unknown`; only `problem` requires exact revision, `non_problem` cannot manufacture lineage and `unknown` stays ineligible. Shadow-capture first; make it mandatory for write-capable RUN only after canary.
+- `resolution_claim=none|full_problem` is declared before first mutation and immutable per WAVE; escalation opens a new WAVE.
+- Full claim acceptance requires the exact revision/current contract, accepted EOCL checkpoint, engineering floor and structurally complete `criterion_id → passed_proof_id[]` manifest. That proves attribution/provenance, not semantic oracle adequacy.
+- A valid full bridge is deterministic/idempotent; `none`/non-problem attempt only records progress. Confirmation never creates proof, accepts a RUN or overrides an unsatisfied engineering floor.
+
+#### C4–C6 — evidence before enforcement (P1/P2)
+
+- C4: 30–50 Tools-only events are mechanics calibration, not efficacy. Freeze schema/taxonomy/transition semantics within cohort; report event-chain/FK/privacy/binding/coverage/false merge-split/authoritative-confirmation and confidence intervals.
+- C5: RDP-Shadow only for second-or-later, write-capable, full-resolution attempt of the same revision. It reuses WAVE/replan/handoff/P4 primitives; no Resolution Compiler, ninth tool, second DB, planner, route change or hard block.
+- Every write-capable replan records predecessor WAVE, action kind, runtime-verified `observed_delta_refs`, delta kind, strategy/hypothesis/oracle/scope fingerprints, discriminator/oracle ref, immutable claim ref and stop code. Semantic prose is advisory. Capacity/timeout/flaky retry, idempotent continuation, operator repeat and unsafe mutation have distinct treatment; no valid discriminator/oracle/authority yields typed `BLOCKED` with exact next evidence/action.
+- C6 is the first possible behavior-changing experiment: after accepted technical attempt or authoritative same-problem reopen, the next write-capable attempt must carry prior exact outcome/proof and fresh observed discriminator/evidence or a preregistered exception. It measures quality, repeated low-information waves, reopen/rework, `TTPR_wall`/active time, protocol burden, clarification and false blocks against a no-gate control.
+
+### Reporter and governance corrections
+
+PRL-D must report `time_to_provisional`, `time_to_confirmed_resolution` and `time_to_administrative_disposition` separately. `RESOLVED_UNCONFIRMED`, silence, `SUPERSEDED` and `ABANDONED` are never successful resolution; silence is censored/unknown and supersede/abandon are competing dispositions. Follow-up horizon, immature cohort handling, clock compatibility and sensitivity to informative censoring must be preregistered.
+
+History/process mining stays offline on the immutable Tools ledger and can only produce candidate mechanisms/playbooks. A confirmed playbook needs exact revision binding, prospective trusted outcomes, applicability, rebinding, invalidation, verification, negative/reopen history, version, revocation and kill switch. Vector DB, retrieval injection, P5/routing promotion and autonomous strategy selection remain hold.
+
+### Completion status for this update
+
+| Requirement | Status | Evidence / next evidence |
+|---|---|---|
+| Historical reconciliation | **COMPLETE** | v2 facts preserved; current receipt and precedence added above. |
+| Current source/ledger assessment | **COMPLETE at point-in-time** | current immutable v10 snapshot and source anchors; repeat if source/ledger boundary materially changes. |
+| C1–C3 mechanics | **NOT STARTED** | requires explicit source implementation wave and focused proof; no migration was run. |
+| C4 natural demonstration | **HOLD_NATURAL_EVIDENCE** | requires authorized real problem/correction events; cannot be synthetic-filled. |
+| C5 RDP shadow / C6 efficacy | **NOT STARTED** | depends on C1–C4 and preregistered evaluation. |
+| Routing/P5/playbook promotion | **HOLD** | no valid problem-level outcome cohort. |
+
+This documentation update performs no source mutation, canonical-ledger write, migration, restart, connector acknowledgement, P5 action, package/release, commit or push. Detailed v11 schema, source anchors, metric definitions, privacy/Goodhart register and scientific limitations are maintained in `260825_CODING_WEB_PRL_RESOLUTION_DECISION_PROTOCOL_STRATEGIC_CRITIQUE_AND_OPTIMAL_ROADMAP.md`; that companion is the implementation-ready normative detail for C1–C6.
 
 ---
 
@@ -1132,7 +1226,9 @@ Chỉ mở architecture mới khi ≥3 independent natural occurrences cùng cla
 
 ---
 
-# 21. EXACT NEXT ACTIONS SAU TÀI LIỆU NÀY
+# 21. HISTORICAL v2 EXACT NEXT ACTIONS
+
+> **Superseded for future implementation by §0.5 C1–C6.** The material below is preserved to explain the v2 causal order and receipts; it must not re-open a broad Gate 0, P5, routing or PRL v10 wave without the current reconciliation and separate authority.
 
 Không được nhảy thẳng vào router/P5 treatment/PRL mega-implementation.
 
@@ -1211,7 +1307,9 @@ Chỉ sau representative paired evidence + quality/problem-resolution/resource/c
 
 ---
 
-# 22. IMPLEMENTATION ACCEPTANCE CONTRACT CHO PRL TƯƠNG LAI
+# 22. HISTORICAL v2 IMPLEMENTATION ACCEPTANCE CONTRACT CHO PRL
+
+> **Superseded where it conflicts with §0.5 C1–C6.** Future PRL implementation uses the v11 transition, revision, clock, capsule, binding and conditional-outcome contract maintained in the 260825 companion report.
 
 Nếu PRL-A/B/C được triển khai, tối thiểu phải có deterministic tests cho:
 
@@ -1285,6 +1383,10 @@ later same-problem failure   = reopen evidence khi linkage đủ
 
 # 25. DELIVERY / SNAPSHOT RECONCILIATION
 
+## 25.0. v3 current reconciliation status
+
+§0.5 is the current documentation-only reconciliation at `main@d254ac0…`. The active worktree contains this report, the companion 260825 PRL/RDP report and volatile ledger drift; it is not a clean delivery candidate. No source/runtime/P5/ledger mutation, Git delivery or external service operation was performed for v3. The v1/v2 paragraphs below remain historical receipt chronology.
+
 ## 25.1. Historical v1 state được giữ như chronology
 
 V1 ghi:
@@ -1297,9 +1399,9 @@ V1 ghi:
 
 Những câu đó là **historical snapshot facts** tại thời điểm v1 soạn.
 
-## 25.2. Repository state sau đó
+## 25.2. Historical v2 repository state sau snapshot
 
-Tài liệu report và PRL hiện đã nằm trong `docs/research` dưới dạng **untracked repository drafts**. Vì vậy metadata “external draft/current draft target outside repo” của v1 đã stale và được thay bằng note post-snapshot ở §0.4.
+Tại receipt v2, tài liệu report và PRL đã xuất hiện trong `docs/research` dưới dạng **untracked repository drafts**. Vì vậy metadata “external draft/current draft target outside repo” của v1 đã stale tại receipt đó. §0.5 và §25.0 là authority cho vị trí/delivery state sau này; không dùng câu này như status Git hiện tại.
 
 Việc file nằm trong repository **không tự chứng minh**:
 
@@ -1382,6 +1484,7 @@ Tối ưu:
 - `docs/research/260822_CODING_WEB_EXECUTION_INTELLIGENCE_UPSTREAM_ADOPTION_AND_NEXT_IMPLEMENTATION_MASTER_PLAN.md`
 - `docs/research/260822_CODING_WEB_REWORK_DECISION_SCIENCE_AND_EXECUTION_DOCTRINE.md`
 - `docs/research/260823_CODING_WEB_PROBLEM_RESOLUTION_LINEAGE_AND_INTERACTIVE_ENGINEERING_SCIENCE.md`
+- `docs/research/260825_CODING_WEB_PRL_RESOLUTION_DECISION_PROTOCOL_STRATEGIC_CRITIQUE_AND_OPTIMAL_ROADMAP.md` — normative v11 C1–C6 detail for the v3 reconciliation
 
 ## External methodological families retained from v1/PRL review
 
@@ -1409,4 +1512,4 @@ External evidence informs methodology; **local exact prospective evidence remain
 
 ---
 
-**END — CW-ERCIP-20260823-v2**
+**END — CW-ERCIP-20260823-v2 + reconciliation v3**
