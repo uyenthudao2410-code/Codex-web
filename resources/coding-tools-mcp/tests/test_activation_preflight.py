@@ -194,6 +194,62 @@ class ActivationPreflightTests(unittest.TestCase):
                 )
                 runtime.close()
 
+    def test_owned_codex_sidecar_unbound_residue_is_closed_during_activation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            admission = runtime.execution_resource_governor.admit(
+                command="codex app-server",
+                command_id="codex-app-server-test-unbound",
+                owner="codex-app-server",
+                resource_class="MEDIUM",
+            )
+            runtime._codex_bridge._managed_job_id = admission.job_id
+            lifecycle = {
+                "classification_counts": {},
+                "run_ids_by_class": {},
+                "unexplained_active_runs": 0,
+                "unbound_live_resource_residues": 1,
+                "unbound_live_resources": [{
+                    "resource_type": "managed_process_job",
+                    "resource_id": admission.job_id,
+                    "run_id": "",
+                    "lifecycle_state": "running",
+                }],
+                "p5_lifecycles": [],
+            }
+
+            def close_sidecar() -> None:
+                runtime.execution_resource_governor.complete(
+                    admission.job_id,
+                    lifecycle_state="closed",
+                    exit_code=0,
+                )
+                runtime._codex_bridge._managed_job_id = ""
+
+            try:
+                with (
+                    patch.object(runtime, "_activation_lifecycle_summary", return_value=lifecycle),
+                    patch.object(runtime._codex_bridge, "close", side_effect=close_sidecar) as close,
+                ):
+                    prepared = runtime.activation_preflight(
+                        operation_id="activation-codex-sidecar-unbound-0001",
+                        expires_at_unix_ms=int(time.time() * 1000) + 30_000,
+                        prepare=True,
+                    )
+                self.assertTrue(prepared["safe"])
+                self.assertEqual(prepared["counts"]["owned_codex_sidecar_residues"], 1)
+                close.assert_called_once_with()
+                self.assertEqual(runtime.execution_resource_governor.snapshot()["active_command_count"], 0)
+                self.assertTrue(runtime.cancel_activation("activation-codex-sidecar-unbound-0001"))
+            finally:
+                runtime._codex_bridge._managed_job_id = ""
+                runtime.execution_resource_governor.complete(
+                    admission.job_id,
+                    lifecycle_state="closed",
+                    exit_code=0,
+                )
+                runtime.close()
+
     def test_ordinary_medium_managed_work_still_blocks_activation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp))

@@ -137,6 +137,10 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
             "run_ids_by_class": {key: sorted(values)[:20] for key, values in sorted(run_ids_by_class.items())},
             "unexplained_active_runs": int((census.get("summary") or {}).get("unexplained_active_runs") or 0),
             "unbound_live_resource_residues": int((census.get("summary") or {}).get("unbound_live_resource_residues") or 0),
+            "unbound_live_resources": [
+                dict(item) for item in census.get("unbound_live_resources", [])
+                if isinstance(item, dict)
+            ],
             "p5_lifecycles": sorted({
                 str(item.get("p5_epoch_lifecycle") or "")
                 for item in census.get("runs", [])
@@ -230,7 +234,24 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
             lifecycle_counts = lifecycle.get("classification_counts") if isinstance(lifecycle.get("classification_counts"), dict) else {}
             threshold_candidates = int(lifecycle_counts.get("THRESHOLD_SENSITIVE_STALE_CANDIDATE") or 0)
             counts["threshold_sensitive_stale_candidates"] = threshold_candidates
-            if int(lifecycle.get("unexplained_active_runs") or 0) or int(lifecycle.get("unbound_live_resource_residues") or 0):
+            unbound_count = int(lifecycle.get("unbound_live_resource_residues") or 0)
+            unbound_resources = lifecycle.get("unbound_live_resources")
+            sidecar_job_ids = {
+                str(row.get("job_id") or "") for row in owned_codex_sidecars
+                if str(row.get("job_id") or "")
+            }
+            owned_sidecar_residues = 0
+            if isinstance(unbound_resources, list) and len(unbound_resources) == unbound_count:
+                owned_sidecar_residues = len({
+                    str(row.get("resource_id") or "") for row in unbound_resources
+                    if isinstance(row, dict)
+                    and str(row.get("resource_type") or "") == "managed_process_job"
+                    and str(row.get("resource_id") or "") in sidecar_job_ids
+                    and not str(row.get("run_id") or "")
+                })
+            remaining_unbound_residues = unbound_count - owned_sidecar_residues
+            counts["owned_codex_sidecar_residues"] = owned_sidecar_residues
+            if int(lifecycle.get("unexplained_active_runs") or 0) or remaining_unbound_residues:
                 return {
                     "safe": False,
                     "code": "ORCHESTRATION_STATE_UNCERTAIN",

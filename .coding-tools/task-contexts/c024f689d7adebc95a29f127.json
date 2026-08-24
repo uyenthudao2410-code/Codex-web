@@ -1,0 +1,273 @@
+{
+  "version": 2,
+  "task_id": "8ece3bf00011475fb1a8902fb5d9d110",
+  "orchestration": {
+    "run_id": "da7c903fac354192b5cd90ae7854c982",
+    "wave_id": "9f932df80ad24291b6f471b0c374f820",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "f37b481e05c840c7d147f4643e17716a9b8250c0",
+    "worktree_fp": "ffbbbfa9f38b835e1bc5f931b673cddb2fbb387fa2a31570b66d69c96eed87db",
+    "contract_fp": ""
+  },
+  "objective": "MW-CLOSURE current-runtime live verification",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-24T18:04:37.630Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-24T18:04:37.630Z"
+    }
+  ],
+  "current_step": "Awaiting acceptance",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "u8wXHZBN-1ILOuiRQiLGicaX",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-24T18:04:37.403Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ACCEPTING",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 22,
+        "head_hash": "31bb26300dfaca86283c56560ed3fd91f079e5a5d56070aebc2a03aae3b9e047"
+      },
+      "reports": {
+        "run_report": "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-da7c903fac354192b5cd90ae7854c982\\run-summary.md",
+        "wave_reports": [
+          "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-da7c903fac354192b5cd90ae7854c982\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "da7c903fac354192b5cd90ae7854c982",
+      "wave_id": "9f932df80ad24291b6f471b0c374f820",
+      "base_head": "f37b481e05c840c7d147f4643e17716a9b8250c0",
+      "worktree_fp": "ffbbbfa9f38b835e1bc5f931b673cddb2fbb387fa2a31570b66d69c96eed87db",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "MW-CLOSURE current-runtime live verification",
+        "objective_revision": 1,
+        "objective_sha256": "c6bd91a84d7f2996507f3242a97dc7bd3d2adb5c42dd136cef15224a2b4dfbd7",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "d5166550ea19489a9eba2c20302203b8",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1919,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+  },
+  "completion_report_id": "1eb9502c932cc41d585691f9dacc39a15aaa152c552dd991b5e000f03f483f92",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "created_at": "2026-08-24T18:04:28.185Z",
+  "updated_at": "2026-08-24T18:04:59.227Z",
+  "events": [
+    {
+      "time": "2026-08-24T18:04:28.185Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "MW-CLOSURE current-runtime live verification"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:29.895Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:32.119Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:33.419Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:33.424Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:34.636Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:35.373Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:35.969Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check",
+        "session_id": "u8wXHZBN-1ILOuiRQiLGicaX"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:37.403Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:37.628Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:37.630Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:37.895Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:37.898Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:38.031Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "1eb9502c932cc41d585691f9dacc39a15aaa152c552dd991b5e000f03f483f92"
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:38.140Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-24T18:04:59.227Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

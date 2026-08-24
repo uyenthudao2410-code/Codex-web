@@ -1363,7 +1363,20 @@ class Runtime(
             key in args and str(args.get(key) or "").strip() not in {"", "."}
             for key in ("path", "workdir")
         )
+        run_bound_root: Path | None = None
+        if name == "task_control" and mutation and bound_root is None and not path_supplied:
+            requested_run_id = str(args.get("run_id") or "").strip()
+            if requested_run_id:
+                # A run ID is an allowed workspace authority for task_control,
+                # but only when its ledger location resolves to one configured
+                # canonical root.  This keeps a legacy client from falling
+                # back to the primary workspace merely because it lacks a
+                # stateless task-context handle.
+                run_bound_root = self._known_run_workspace(requested_run_id)
         if has_multiple_roots and mutation and bound_root is None and not path_supplied and name != "workspace_context":
+            if run_bound_root is not None:
+                self.request_context.workspace_root = str(run_bound_root)
+                return
             required_fields = (
                 ["workdir", "task_context_id"]
                 if name == "exec_command"

@@ -1,0 +1,123 @@
+[
+  {
+    "version": 2,
+    "task_id": "b71a3100a1f34411af0feb225a4ed73c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "6e4sGBoAsVxFyucBhxXWKtWG",
+      "kind": "test",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 1705,
+      "finished_at": "2026-08-24T17:31:03.924Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest -q resources/coding-tools-mcp/tests/test_activation_preflight.py resources/coding-tools-mcp/tests/test_workspace_session_isolation.py",
+        "status": "failed",
+        "exit_code": 2,
+        "duration_ms": 1705,
+        "summary": "exit 2 | 1.7s | 28 lines | tail: '2 errors in 0.71s'",
+        "finished_at": "2026-08-24T17:31:03.924Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "6e4sGBoAsVxFyucBhxXWKtWG"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 1899,
+          "command_id": "6e4sGBoAsVxFyucBhxXWKtWG",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:6e4sGBoAsVxFyucBhxXWKtWG:stdout",
+              "total_stream_bytes": 1899,
+              "total_retained_bytes": 1899,
+              "head_retained_bytes": 1899,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:6e4sGBoAsVxFyucBhxXWKtWG:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-24T17:30:53.287Z",
+    "updated_at": "2026-08-24T17:31:03.924Z",
+    "events": [
+      {
+        "time": "2026-08-24T17:30:53.287Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-24T17:30:53.517Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --stat && git diff --check && git status --short",
+          "session_id": "BSusC8xB4hd889QVHfCWEb21"
+        }
+      },
+      {
+        "time": "2026-08-24T17:30:56.650Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --stat && git diff --check && git status --short",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T17:31:02.125Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest -q resources/coding-tools-mcp/tests/test_activation_preflight.py resources/coding-tools-mcp/tests/test_workspace_session_isolation.py",
+          "session_id": "6e4sGBoAsVxFyucBhxXWKtWG"
+        }
+      },
+      {
+        "time": "2026-08-24T17:31:03.924Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest -q resources/coding-tools-mcp/tests/test_activation_preflight.py resources/coding-tools-mcp/tests/test_workspace_session_isolation.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T17:31:09.784Z",
+    "archive_reason": "finished"
+  }
+]

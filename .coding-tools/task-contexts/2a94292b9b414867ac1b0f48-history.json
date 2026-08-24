@@ -1,0 +1,103 @@
+[
+  {
+    "version": 2,
+    "task_id": "c392c8fe66254c1586fb9c135f313432",
+    "orchestration": {
+      "run_id": "ab0eedcbca744a8c92d6cb65e8b6193b",
+      "wave_id": "0f6cfed0963a4dc3af276250b00f017a",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "deep_single_lane",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "f37b481e05c840c7d147f4643e17716a9b8250c0",
+      "worktree_fp": "ffbbbfa9f38b835e1bc5f931b673cddb2fbb387fa2a31570b66d69c96eed87db",
+      "contract_fp": ""
+    },
+    "objective": "Đánh giá read-only, evidence-first về đề xuất chuyển Coding Tools từ Execution Orchestrator thành Problem Resolution Kernel (PRK V1). Đối chiếu mục tiêu dự án, tài liệu lịch sử, code hiện tại và dữ liệu .coding-tools. Xác định: (1) những năng lực hiện có có thể tái sử dụng: EOCL, PRL, P2, P4, P5, A2, routing, multi-workspace, proof provenance; (2) bằng chứng nào cho thấy object cấp cao hiện vẫn là RUN/TASK thay vì PROBLEM; (3) mọi implementation/schema/API/UI/metric hiện có liên quan problem_id, problem revision, acceptance contract, outcome feedback, reopen/correction/requirement evolution, experience retrieval; (4) khoảng trống thực tế và rủi ro migration; (5) lộ trình vertical slice nhỏ nhất có thể triển khai mà không tạo second orchestrator/database; (6) tiêu chí go/no-go và thứ tự wave. Không sửa file, không chạy mutation, không tạo tài liệu. Phân biệt rõ observed evidence, inference, và proposal.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "hdsrBfjcbFi9Y2pFteSTcE58",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 149,
+      "finished_at": "2026-08-24T18:07:36.036Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-24T18:07:06.641Z",
+    "updated_at": "2026-08-24T18:07:36.036Z",
+    "events": [
+      {
+        "time": "2026-08-24T18:07:06.641Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Đánh giá read-only, evidence-first về đề xuất chuyển Coding Tools từ Execution Orchestrator thành Problem Resolution Kernel (PRK V1). Đối chiếu mục tiêu dự án, tài liệu lịch sử, code hiện tại và dữ liệu .coding-tools. Xác định: (1) những năng lực hiện có có thể tái sử dụng: EOCL, PRL, P2, P4, P5, A2, routing, multi-workspace, proof provenance; (2) bằng chứng nào cho thấy object cấp cao hiện vẫn là RUN/TASK thay vì PROBLEM; (3) mọi implementation/schema/API/UI/metric hiện có liên quan problem_id, problem revision, acceptance contract, outcome feedback, reopen/correction/requirement evolution, experience retrieval; (4) khoảng trống thực tế và rủi ro migration; (5) lộ trình vertical slice nhỏ nhất có thể triển khai mà không tạo second orchestrator/database; (6) tiêu chí go/no-go và thứ tự wave. Không sửa file, không chạy mutation, không tạo tài liệu. Phân biệt rõ observed evidence, inference, và proposal."
+        }
+      },
+      {
+        "time": "2026-08-24T18:07:07.967Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T18:07:10.293Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T18:07:25.434Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S -g \"*.py\" -g \"*.ts\" -g \"*.tsx\" -g \"*.md\" -g \"*.json\" -g \"*.jsonl\" \"problem_id|problem_revision|PROVISIONALLY_RESOLVED|RESOLVED_CONFIRMED|First Problem Resolution|TTPR|acceptance_contract|outcome_feedback|requirement_evolution|SAME_PROBLEM_FAILURE|CORRECT_TARGET|NEW_EVIDENCE|NEW_REQUIREMENT|action.?problem|\\bPRL\\b|\\bEOCL\\b\" docs/research .coding-tools resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron renderer src",
+          "session_id": "e4mUFrLt-NUeeNljfa5f83D3"
+        }
+      },
+      {
+        "time": "2026-08-24T18:07:26.027Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S -g \"*.py\" -g \"*.ts\" -g \"*.tsx\" -g \"*.md\" -g \"*.json\" -g \"*.jsonl\" \"problem_id|problem_revision|PROVISIONALLY_RESOLVED|RESOLVED_CONFIRMED|First Problem Resolution|TTPR|acceptance_contract|outcome_feedback|requirement_evolution|SAME_PROBLEM_FAILURE|CORRECT_TARGET|NEW_EVIDENCE|NEW_REQUIREMENT|action.?problem|\\bPRL\\b|\\bEOCL\\b\" docs/research .coding-tools resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron renderer src",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:07:35.711Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"ProblemLineage|problem_lineage|problem_record|problem_open|problem_get|problem_report|problem_metrics|action.?problem|PRL\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests tests electron renderer src",
+          "session_id": "hdsrBfjcbFi9Y2pFteSTcE58"
+        }
+      },
+      {
+        "time": "2026-08-24T18:07:36.036Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"ProblemLineage|problem_lineage|problem_record|problem_open|problem_get|problem_report|problem_metrics|action.?problem|PRL\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests tests electron renderer src",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T18:07:50.854Z",
+    "archive_reason": "superseded"
+  }
+]

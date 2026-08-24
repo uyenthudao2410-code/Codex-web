@@ -1,0 +1,128 @@
+{
+  "version": 2,
+  "task_id": "",
+  "orchestration": {
+    "run_id": "da7c903fac354192b5cd90ae7854c982",
+    "wave_id": "9f932df80ad24291b6f471b0c374f820",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "f37b481e05c840c7d147f4643e17716a9b8250c0",
+    "worktree_fp": "ffbbbfa9f38b835e1bc5f931b673cddb2fbb387fa2a31570b66d69c96eed87db",
+    "contract_fp": ""
+  },
+  "objective": "",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 26,
+        "head_hash": "94a9a9a47fdfc6a28552e9440a6fb2ff7239a298f757d4bd203639c8ab3faec7"
+      },
+      "reports": {
+        "run_report": "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-da7c903fac354192b5cd90ae7854c982\\run-summary.md",
+        "wave_reports": [
+          "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-da7c903fac354192b5cd90ae7854c982\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "da7c903fac354192b5cd90ae7854c982",
+      "wave_id": "9f932df80ad24291b6f471b0c374f820",
+      "base_head": "f37b481e05c840c7d147f4643e17716a9b8250c0",
+      "worktree_fp": "ffbbbfa9f38b835e1bc5f931b673cddb2fbb387fa2a31570b66d69c96eed87db",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "MW-CLOSURE current-runtime live verification",
+        "objective_revision": 1,
+        "objective_sha256": "c6bd91a84d7f2996507f3242a97dc7bd3d2adb5c42dd136cef15224a2b4dfbd7",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "d5166550ea19489a9eba2c20302203b8",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1919,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "2900747db3a8ed930137049b0989b48bdcf2f6bf002de2ed337e787705a4427e",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-24T18:07:06.393Z",
+  "updated_at": "2026-08-24T18:07:06.643Z",
+  "events": [
+    {
+      "time": "2026-08-24T18:07:06.393Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-24T18:07:06.639Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "2900747db3a8ed930137049b0989b48bdcf2f6bf002de2ed337e787705a4427e"
+      }
+    }
+  ]
+}

@@ -1,0 +1,194 @@
+{
+  "version": 2,
+  "task_id": "b119214a92894977bde4fdb383e1e22d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Command failed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "HRiWpLrPFSVYy8TU3EI1jGKf",
+    "kind": "test",
+    "status": "terminated",
+    "result_status": "failed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-24T17:32:44.064Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "HRiWpLrPFSVYy8TU3EI1jGKf",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "HRiWpLrPFSVYy8TU3EI1jGKf",
+        "kind": "test",
+        "status": "terminated",
+        "result_status": "failed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "f37b481e05c840c7d147f4643e17716a9b8250c0",
+        "branch": "main",
+        "worktree_fp": "ffbbbfa9f38b835e1bc5f931b673cddb2fbb387fa2a31570b66d69c96eed87db",
+        "dirty_paths": [
+          "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/tests/test_activation_preflight.py",
+          "resources/coding-tools-mcp/tests/test_workspace_session_isolation.py"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "b119214a92894977bde4fdb383e1e22d",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "kind": "test",
+          "status": "failed",
+          "exit_code": 0,
+          "duration_ms": null,
+          "command_id": "HRiWpLrPFSVYy8TU3EI1jGKf"
+        }
+      ]
+    },
+    "accepted_or_not": "COMMAND_TERMINATED",
+    "blocker_or_failure": {
+      "failure_class": "COMMAND_TERMINATED",
+      "reason": "The command reached a terminal non-success state.",
+      "exit_code": 0
+    },
+    "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+  },
+  "completion_report_id": "4633b96d4cecda0ba87961aba72f3aafcdb0817ed13ce95562855199007ae4f6",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest -q tests/test_activation_preflight.py tests/test_workspace_session_isolation.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 20709,
+      "summary": "exit 0 | 20.7s | 3 lines | tail: '30 passed in 19.73s'",
+      "finished_at": "2026-08-24T17:31:30.799Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "3uERdmCWIxlRqw7mxnK-_JDB"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "size_bytes": 102,
+        "command_id": "3uERdmCWIxlRqw7mxnK-_JDB",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:3uERdmCWIxlRqw7mxnK-_JDB:stdout",
+            "total_stream_bytes": 102,
+            "total_retained_bytes": 102,
+            "head_retained_bytes": 102,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:3uERdmCWIxlRqw7mxnK-_JDB:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+  "created_at": "2026-08-24T17:31:09.786Z",
+  "updated_at": "2026-08-24T17:32:44.847Z",
+  "events": [
+    {
+      "time": "2026-08-24T17:31:09.786Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-24T17:31:10.232Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_activation_preflight.py tests/test_workspace_session_isolation.py",
+        "session_id": "3uERdmCWIxlRqw7mxnK-_JDB"
+      }
+    },
+    {
+      "time": "2026-08-24T17:31:30.799Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest -q tests/test_activation_preflight.py tests/test_workspace_session_isolation.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-24T17:31:38.782Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests",
+        "session_id": "HRiWpLrPFSVYy8TU3EI1jGKf"
+      }
+    },
+    {
+      "time": "2026-08-24T17:32:44.064Z",
+      "event": "command_terminated",
+      "details": {
+        "session_id": "HRiWpLrPFSVYy8TU3EI1jGKf"
+      }
+    },
+    {
+      "time": "2026-08-24T17:32:44.847Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "HRiWpLrPFSVYy8TU3EI1jGKf",
+        "accepted_or_not": "COMMAND_TERMINATED",
+        "report_id": "4633b96d4cecda0ba87961aba72f3aafcdb0817ed13ce95562855199007ae4f6"
+      }
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "version": 2,
+  "task_id": "b3428b4fe896419ebb2bcb184548724d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Command failed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "A2W1gs0c7XQseLa5e-6YpC_1",
+    "kind": "command",
+    "status": "terminated",
+    "result_status": "failed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-24T17:36:15.296Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "A2W1gs0c7XQseLa5e-6YpC_1",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "A2W1gs0c7XQseLa5e-6YpC_1",
+        "kind": "command",
+        "status": "terminated",
+        "result_status": "failed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "f37b481e05c840c7d147f4643e17716a9b8250c0",
+        "branch": "main",
+        "worktree_fp": "ffbbbfa9f38b835e1bc5f931b673cddb2fbb387fa2a31570b66d69c96eed87db",
+        "dirty_paths": [
+          "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/tests/test_activation_preflight.py",
+          "resources/coding-tools-mcp/tests/test_workspace_session_isolation.py"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "b3428b4fe896419ebb2bcb184548724d",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_TERMINATED",
+    "blocker_or_failure": {
+      "failure_class": "COMMAND_TERMINATED",
+      "reason": "The command reached a terminal non-success state.",
+      "exit_code": 0
+    },
+    "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+  },
+  "completion_report_id": "5ce2b0d1b485a145f36ba22ba22950f8e3fab05d11322e3485ca895b51a2d0ad",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+  "created_at": "2026-08-24T17:35:29.387Z",
+  "updated_at": "2026-08-24T17:36:16.065Z",
+  "events": [
+    {
+      "time": "2026-08-24T17:35:29.387Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-24T17:35:29.856Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_accepted_result_economics.py --help && python resources/coding-tools-mcp/scripts/report_p5_baseline.py --help && python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --help",
+        "session_id": "avO0_GVG8r8vtzCt1Mqz5D8V"
+      }
+    },
+    {
+      "time": "2026-08-24T17:35:32.013Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_accepted_result_economics.py --help && python resources/coding-tools-mcp/scripts/report_p5_baseline.py --help && python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --help",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-24T17:35:41.586Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace \"E:\\Github\\HR\" && python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace \"E:\\Github\\Tools-Codex-web\"",
+        "session_id": "A2W1gs0c7XQseLa5e-6YpC_1"
+      }
+    },
+    {
+      "time": "2026-08-24T17:36:15.296Z",
+      "event": "command_terminated",
+      "details": {
+        "session_id": "A2W1gs0c7XQseLa5e-6YpC_1"
+      }
+    },
+    {
+      "time": "2026-08-24T17:36:16.065Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "A2W1gs0c7XQseLa5e-6YpC_1",
+        "accepted_or_not": "COMMAND_TERMINATED",
+        "report_id": "5ce2b0d1b485a145f36ba22ba22950f8e3fab05d11322e3485ca895b51a2d0ad"
+      }
+    }
+  ]
+}

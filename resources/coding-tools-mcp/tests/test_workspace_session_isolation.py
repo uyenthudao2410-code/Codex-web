@@ -155,6 +155,40 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                     del runtime.request_context.workspace_root
                 runtime.close()
 
+    def test_task_control_run_binds_a_mutation_to_its_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            with patch.dict(os.environ, {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }):
+                runtime = Runtime(primary)
+            try:
+                prepared = runtime.call_tool("agent_workflow", {
+                    "workflow": "diagnose",
+                    "phase": "prepare",
+                    "path": str(authorized),
+                    "objective": "bind task control mutation to authorized run",
+                    "execution_route": "deterministic",
+                    "execution_mode": "mcp_only",
+                    "verification": "none",
+                })
+                self.assertFalse(prepared["isError"], prepared)
+                run_id = prepared["structuredContent"]["orchestration"]["run_id"]
+                runtime._set_request_workspace_scope("task_control", {
+                    "action": "restart_runtime",
+                    "run_id": run_id,
+                })
+                self.assertEqual(runtime._current_request_workspace_root(), authorized.resolve())
+            finally:
+                if hasattr(runtime.request_context, "workspace_root"):
+                    del runtime.request_context.workspace_root
+                runtime.close()
+
     def test_task_control_rejects_run_from_another_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)

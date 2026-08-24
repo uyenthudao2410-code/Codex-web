@@ -1,81 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "c0cc3f467a90471a9f5a71725989a782",
-    "orchestration": {
-      "run_id": "270004fba8fe4647b2d5dadc4f393e35",
-      "wave_id": "cec5e40efc824650b36c88882405ed1f",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "6d45e5bb00451f6d4418ed0b4e7c1dad185b0ac0",
-      "worktree_fp": "3f772125e2ee9ee0241440aa9afbe1fe02c393b08d367e8b1634999b9fc3b755",
-      "contract_fp": ""
-    },
-    "objective": "Continue the same canonical-ledger path-authority bugfix. Materialize report_p2_rework_diagnosis.py and its nearest existing tests only, because it is the second proven stateful reporter that can create a missing ledger from implicit CWD. No mutation in this prepare call. Preserve the fixed implementation decision: reporter-layer fail-closed + script-location repository-root default; no global OrchestrationLedger/Runtime restriction.",
-    "status": "waiting",
-    "steps": [],
-    "current_step": "Waiting for model",
-    "current_command": null,
-    "last_command_result": null,
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-22T13:57:37.845Z",
-    "updated_at": "2026-08-22T13:57:38.899Z",
-    "events": [
-      {
-        "time": "2026-08-22T13:57:37.845Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-22T13:57:38.368Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-22T13:57:38.899Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-22T13:57:38.899Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      }
-    ],
-    "archived_at": "2026-08-22T13:58:20.910Z",
-    "archive_reason": "superseded"
-  },
-  {
-    "version": 2,
     "task_id": "825a2198e5ed4711a20b4c457aa757f4",
     "orchestration": {
       "run_id": "728543c51a204bcba0cd35667c82dece",
@@ -91067,5 +90992,117 @@
     ],
     "archived_at": "2026-08-24T06:18:44.934Z",
     "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "67e4863f2df0402aaf570d41048e0f4e",
+    "orchestration": {
+      "run_id": "d04f9f9ee01148db93f454092716a096",
+      "wave_id": "33f57d4743634c749e3d30fe799cee14",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e5e00d9e17549700760bc92bd714378783e46587",
+      "worktree_fp": "c5cabdfca593880fdd17e371bb233f13222c2a18b7cf8178ec61a920ee106ff5",
+      "contract_fp": ""
+    },
+    "objective": "live matrix detail probe",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Controlled restart preflight refused: lifecycle_unexplained_or_unbound.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-08-24T06:18:45.021Z",
+    "updated_at": "2026-08-24T17:41:15.012Z",
+    "events": [
+      {
+        "time": "2026-08-24T06:18:45.021Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T06:18:45.464Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T06:18:46.088Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T06:18:46.102Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-24T08:57:53.597Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "workspace_context",
+          "code": "NOT_A_DIRECTORY"
+        }
+      },
+      {
+        "time": "2026-08-24T09:16:20.926Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-24T09:16:36.226Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-24T17:21:15.488Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "ORCHESTRATION_STATE_UNCERTAIN"
+        }
+      },
+      {
+        "time": "2026-08-24T17:41:15.012Z",
+        "event": "task_orchestration_aborted",
+        "details": {
+          "state": "ABORTED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T17:41:15.073Z",
+    "archive_reason": "cleared"
   }
 ]
