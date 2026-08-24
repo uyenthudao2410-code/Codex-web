@@ -27,7 +27,12 @@ STAGE_VOCABULARY = (
     "acceptance",
     "report_visible",
 )
-_BASE_REQUIRED_STAGES = tuple(stage for stage in STAGE_VOCABULARY if stage != "replan")
+# ``turn_received`` is an exact identity/milestone.  It is not a duration span
+# and therefore must not create a fake zero-duration record or a missing-time
+# denominator.  ``replan`` is measured only when it is actually reached.
+_MILESTONE_STAGES = ("turn_received",)
+_TIMED_STAGE_VOCABULARY = tuple(stage for stage in STAGE_VOCABULARY if stage not in {*_MILESTONE_STAGES})
+_BASE_REQUIRED_STAGES = tuple(stage for stage in _TIMED_STAGE_VOCABULARY if stage != "replan")
 _COVERAGE_THRESHOLD = 0.90
 _MIN_DECISION_COHORT = 50
 
@@ -256,6 +261,8 @@ def stage_latency_attribution_report(
             "timestamp_proximity_inference_forbidden": True,
         },
         "stage_completeness": {
+            "duration_stage_vocabulary": list(_TIMED_STAGE_VOCABULARY),
+            "milestone_vocabulary": list(_MILESTONE_STAGES),
             "expected_stage_observations": expected_total,
             "recorded_stage_observations": recorded_total,
             "coverage": stage_completeness,

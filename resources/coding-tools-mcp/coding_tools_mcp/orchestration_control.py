@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
 import threading
 import time
 import uuid
@@ -110,6 +111,7 @@ class RunContext:
     delegation_id: str | None = None
     write_lease: WriteLease | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    observation_stage_starts: dict[str, float] = field(default_factory=dict, repr=False)
 
     def projection(self) -> dict[str, Any]:
         return {
@@ -166,6 +168,72 @@ class OrchestrationControl:
         self._assert_wave_quiescent = assert_wave_quiescent
         self._lock = threading.RLock()
         self._contexts: dict[str, RunContext] = {}
+        # A monotonic interval is meaningful only inside this control instance.
+        # The opaque domain token keeps a later runtime instance from being
+        # mistaken for the same clock after restart.
+        self._observation_clock_domain = f"coding-mcp-monotonic:{uuid.uuid4().hex}"
+
+    @staticmethod
+    def _observation_now_ms() -> float:
+        return time.perf_counter() * 1_000.0
+
+    def record_observation_stage(
+        self,
+        ctx: RunContext,
+        *,
+        stage: str,
+        start_ms: float,
+        end_ms: float | None = None,
+    ) -> bool:
+        """Best-effort, content-free runtime timing on the existing span primitive.
+
+        Timing is descriptive only: an unavailable ledger observation must not
+        alter write, proof, acceptance, or lifecycle authority.  The stable
+        span ID makes a replay of the same completed stage idempotent.
+        """
+        stage_name = str(stage or "").strip().lower()
+        if stage_name not in {"preflight", "localization", "routing", "execution", "proof", "acceptance"}:
+            return False
+        try:
+            started = float(start_ms)
+            finished = self._observation_now_ms() if end_ms is None else float(end_ms)
+        except (TypeError, ValueError):
+            return False
+        if not math.isfinite(started) or not math.isfinite(finished):
+            return False
+        finished = max(started, finished)
+        try:
+            self.ledger.record_observation_span(
+                run_id=ctx.run_id,
+                wave_id=ctx.wave_id,
+                span={
+                    "span_id": f"a2-runtime-stage-v1:{ctx.wave_id}:{stage_name}",
+                    "stage": stage_name,
+                    "source": "coding_mcp_runtime",
+                    "measurement": "observed_stage_duration",
+                    "clock_domain": self._observation_clock_domain,
+                    "start_ms": started,
+                    "end_ms": finished,
+                    "observer_plane": "coding_mcp_runtime",
+                },
+            )
+        except Exception:
+            # A2 missingness is evidence; it must never make an otherwise
+            # valid execution/proof transition fail or write a second state.
+            return False
+        return True
+
+    def begin_observation_stage(self, ctx: RunContext, *, stage: str) -> None:
+        stage_name = str(stage or "").strip().lower()
+        if stage_name in {"execution", "proof", "acceptance"}:
+            ctx.observation_stage_starts[stage_name] = self._observation_now_ms()
+
+    def finish_observation_stage(self, ctx: RunContext, *, stage: str) -> bool:
+        stage_name = str(stage or "").strip().lower()
+        started = ctx.observation_stage_starts.pop(stage_name, None)
+        if started is None:
+            return False
+        return self.record_observation_stage(ctx, stage=stage_name, start_ms=started)
 
     def begin(
         self,
@@ -450,6 +518,7 @@ class OrchestrationControl:
                 },
             )
             self.transition(ctx, "EXECUTING", reason="write_authority_acquired")
+            self.begin_observation_stage(ctx, stage="execution")
             return lease
 
     def assert_write_allowed(
@@ -637,8 +706,11 @@ class OrchestrationControl:
     def begin_proof(self, ctx: RunContext) -> RunContext:
         if ctx.state != "EXECUTING":
             raise OrchestrationControlError("PROOF_OUTSIDE_EXECUTION", "Proof can only begin after execution.")
+        self.finish_observation_stage(ctx, stage="execution")
         self.revoke_write_lease(ctx, reason="execution_complete")
-        return self.transition(ctx, "PROVING", reason="execution_complete")
+        transitioned = self.transition(ctx, "PROVING", reason="execution_complete")
+        self.begin_observation_stage(ctx, stage="proof")
+        return transitioned
 
     def record_failure(
         self,
@@ -648,6 +720,13 @@ class OrchestrationControl:
         payload: dict[str, Any] | None = None,
         block: bool = False,
     ) -> str:
+        active_stage = {
+            "EXECUTING": "execution",
+            "PROVING": "proof",
+            "ACCEPTING": "acceptance",
+        }.get(ctx.state)
+        if active_stage:
+            self.finish_observation_stage(ctx, stage=active_stage)
         failure_class = normalize_failure_class(failure)
         self.ledger.append_event(
             ctx.run_id,
@@ -699,6 +778,7 @@ class OrchestrationControl:
         ctx.route_resolved = ""
         ctx.delegation_id = None
         ctx.write_lease = None
+        ctx.observation_stage_starts.clear()
         self.ledger.append_event(
             ctx.run_id,
             wave_id=wave_id,
@@ -728,11 +808,15 @@ class OrchestrationControl:
     def mark_accepting(self, ctx: RunContext, *, proof_summary: dict[str, Any] | None = None) -> RunContext:
         if ctx.state != "PROVING":
             raise OrchestrationControlError("ACCEPT_OUTSIDE_PROOF", "Final acceptance can only follow PROVING state.")
-        return self.transition(ctx, "ACCEPTING", reason="required_proof_green", payload=proof_summary or {})
+        self.finish_observation_stage(ctx, stage="proof")
+        transitioned = self.transition(ctx, "ACCEPTING", reason="required_proof_green", payload=proof_summary or {})
+        self.begin_observation_stage(ctx, stage="acceptance")
+        return transitioned
 
     def checkpoint(self, ctx: RunContext, *, reason: str = "chatweb_sol_acceptance") -> RunContext:
         if ctx.state != "ACCEPTING":
             raise OrchestrationControlError("CHECKPOINT_OUTSIDE_ACCEPTANCE", "Checkpoint requires ACCEPTING state.")
+        self.finish_observation_stage(ctx, stage="acceptance")
         return self.transition(ctx, "CHECKPOINTED", reason=reason)
 
     def accept(self, ctx: RunContext, *, proof_summary: dict[str, Any] | None = None) -> RunContext:

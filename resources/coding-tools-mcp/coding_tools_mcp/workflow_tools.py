@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -832,7 +833,14 @@ class AgentWorkflowMixin:
             except ToolFailure as exc:
                 exc.details = {**exc.details, "workflow_patch_preflight": True}
                 raise
+        preflight_started_ms = time.perf_counter() * 1_000.0
         ctx, initial_identity = self._agent_orchestration_context(args, objective=objective)
+        self.orchestration_control.record_observation_stage(
+            ctx,
+            stage="preflight",
+            start_ms=preflight_started_ms,
+            end_ms=time.perf_counter() * 1_000.0,
+        )
         requested_mode = str(args.get("execution_mode", "auto")).strip().lower() or "auto"
         requested_execution_route = str(args.get("execution_route", "auto")).strip().lower() or "auto"
         if requested_mode == "mcp_only":
@@ -871,21 +879,37 @@ class AgentWorkflowMixin:
         should_execute = phase in {"execute", "run"}
         prepared = None
         if should_prepare:
-            prepared = self.prepare_coding_context({
-                "objective": objective,
-                "path": args.get("path", "."),
-                "queries": args.get("queries", []),
-                "paths": args.get("paths", []),
-                "regex": args.get("regex", False),
-                "case_sensitive": args.get("case_sensitive", False),
-                "include_globs": args.get("include_globs", []),
-                "exclude_globs": args.get("exclude_globs", []),
-                "max_files": args.get("max_files", 12),
-                "max_entries": args.get("max_entries", 120),
-                "max_matches_per_query": args.get("max_matches_per_query", 20),
-                "max_total_bytes": args.get("max_total_bytes", 262144),
-                "force_refresh": args.get("force_refresh", False),
-            })
+            localization_started_ms = time.perf_counter() * 1_000.0
+            try:
+                prepared = self.prepare_coding_context({
+                    "objective": objective,
+                    "path": args.get("path", "."),
+                    "queries": args.get("queries", []),
+                    "paths": args.get("paths", []),
+                    "regex": args.get("regex", False),
+                    "case_sensitive": args.get("case_sensitive", False),
+                    "include_globs": args.get("include_globs", []),
+                    "exclude_globs": args.get("exclude_globs", []),
+                    "max_files": args.get("max_files", 12),
+                    "max_entries": args.get("max_entries", 120),
+                    "max_matches_per_query": args.get("max_matches_per_query", 20),
+                    "max_total_bytes": args.get("max_total_bytes", 262144),
+                    "force_refresh": args.get("force_refresh", False),
+                })
+            except Exception:
+                self.orchestration_control.record_observation_stage(
+                    ctx,
+                    stage="localization",
+                    start_ms=localization_started_ms,
+                    end_ms=time.perf_counter() * 1_000.0,
+                )
+                raise
+            self.orchestration_control.record_observation_stage(
+                ctx,
+                stage="localization",
+                start_ms=localization_started_ms,
+                end_ms=time.perf_counter() * 1_000.0,
+            )
             self.orchestration_ledger.append_event(
                 ctx.run_id,
                 wave_id=ctx.wave_id,
@@ -922,6 +946,7 @@ class AgentWorkflowMixin:
         }[workflow]
         verification = str(args.get("verification", default_verification)).lower()
 
+        routing_started_ms = time.perf_counter() * 1_000.0
         explicit_model_route = requested_execution_route not in {"auto", "deterministic"}
         execution_route: dict[str, Any]
         candidate_result: dict[str, Any] | None = None
@@ -987,6 +1012,12 @@ class AgentWorkflowMixin:
         try:
             resolved_mode = self._validate_execution_mode_route(requested_mode, execution_route)
         except ToolFailure as exc:
+            self.orchestration_control.record_observation_stage(
+                ctx,
+                stage="routing",
+                start_ms=routing_started_ms,
+                end_ms=time.perf_counter() * 1_000.0,
+            )
             self.orchestration_control.record_failure(ctx, exc.code, payload={"selected_route": execution_route.get("selected")})
             self._project_orchestration(ctx, event="mode_route_mismatch")
             raise
@@ -995,6 +1026,12 @@ class AgentWorkflowMixin:
             self.orchestration_control.mark_ready(ctx, readiness={"ready": True, "base_head": ctx.base_head, "worktree_fp": ctx.worktree_fp})
         self.orchestration_control.select_route(ctx, execution_route)
         self._project_orchestration(ctx, event="orchestration_routed")
+        self.orchestration_control.record_observation_stage(
+            ctx,
+            stage="routing",
+            start_ms=routing_started_ms,
+            end_ms=time.perf_counter() * 1_000.0,
+        )
 
         if candidate_branch and execution_route.get("selected") != "deterministic":
             allowed_scope = list(prepared.get("selected_paths") or []) if isinstance(prepared, dict) else []

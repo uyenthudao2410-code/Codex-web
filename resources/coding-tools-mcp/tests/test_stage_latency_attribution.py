@@ -78,7 +78,10 @@ class StageLatencyAttributionTests(unittest.TestCase):
             self.assertEqual(report["status"], "HOST_BINDING_COVERAGE_BELOW_THRESHOLD")
             self.assertEqual(report["host_to_run_binding"]["exact_ledger_binding_runs"], 0)
             self.assertTrue(report["host_to_run_binding"]["timestamp_proximity_inference_forbidden"])
-            self.assertEqual(report["stage_completeness"]["coverage"], 0.125)
+            self.assertEqual(report["stage_completeness"]["coverage"], 0.142857)
+            self.assertEqual(report["stage_completeness"]["rows"][0]["stage"], "turn_received")
+            self.assertEqual(report["stage_completeness"]["rows"][0]["expected_runs"], 0)
+            self.assertNotIn("turn_received", report["stage_completeness"]["stages_with_missingness_above_threshold"])
 
     def test_unrecognized_legacy_stages_are_descriptive_not_rewritten_or_counted_as_complete(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
