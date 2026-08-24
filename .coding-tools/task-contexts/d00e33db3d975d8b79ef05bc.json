@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "task_id": "3d4b6233bc1e46cb98b42af8c6e9bf17",
+  "orchestration": {
+    "run_id": "be2b27275f714b3d8ef86bf2c760c72d",
+    "wave_id": "7a30cfb72ccc4c339ca0a204e4d4b01b",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "d8dd423b79316d0475e770085d534075ad51ec0f",
+    "worktree_fp": "b486acb996f9a387e92032c54774a26eebf14c53ca6ca88577cc94fc5788a197",
+    "contract_fp": ""
+  },
+  "objective": "Verify the current PRL/EOCL implementation against the proposed PRK V1 Closure. Read only. Determine: whether PRL core already exists; how problem revisions are represented and whether events/RUN bindings pin a revision; whether EOCL accept/checkpoint automatically creates PROVISIONAL_RESOLUTION; and whether the public task_control connector schema currently excludes action=problem through an intersected enum/contract mismatch.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-24T18:22:39.383Z",
+  "updated_at": "2026-08-24T18:23:27.919Z",
+  "events": [
+    {
+      "time": "2026-08-24T18:22:39.383Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Verify the current PRL/EOCL implementation against the proposed PRK V1 Closure. Read only. Determine: whether PRL core already exists; how problem revisions are represented and whether events/RUN bindings pin a revision; whether EOCL accept/checkpoint automatically creates PROVISIONAL_RESOLUTION; and whether the public task_control connector schema currently excludes action=problem through an intersected enum/contract mismatch."
+      }
+    },
+    {
+      "time": "2026-08-24T18:22:40.490Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-24T18:23:27.915Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-24T18:23:27.919Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

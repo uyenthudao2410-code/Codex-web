@@ -1,0 +1,191 @@
+[
+  {
+    "version": 2,
+    "task_id": "2e97fcdd4ecd4ba682b5f8f6a701a4df",
+    "orchestration": {
+      "run_id": "c975a868f7a94699be9dad3bff301b9c",
+      "wave_id": "8582d7e998154247a7d2147ca237f7cf",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "d8dd423b79316d0475e770085d534075ad51ec0f",
+      "worktree_fp": "b486acb996f9a387e92032c54774a26eebf14c53ca6ca88577cc94fc5788a197",
+      "contract_fp": ""
+    },
+    "objective": "Read-only closure analysis for Tools-Codex-web. Evaluate the attached Problem Resolution Control Loop proposal against current source/runtime. Determine exact finite gaps to complete PRL operational closure without creating a new PRK framework: connector task_control(action=problem) contract exposure, immutable problem revision model, run/event revision binding, reopen semantics, durable bounded problem contract capsule, work_origin and resolution_claim semantics, conditional EOCL acceptance to provisional problem resolution, user-feedback close/reopen/revise loop, rollout/migration safety, and natural-evidence gates. Identify exact files/symbols/invariants, dependency order, cheapest sufficient proofs, risks, and a single implementation plan. Do not modify files or runtime state.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "F8sSU1eE-nFC7ktNFBXe_kdt",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 6485,
+      "finished_at": "2026-08-24T18:31:03.556Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "set PYTHONPATH=resources\\coding-tools-mcp&& python -m pytest resources\\coding-tools-mcp\\tests\\test_problem_lineage.py resources\\coding-tools-mcp\\tests\\test_problem_lineage_activation.py resources\\coding-tools-mcp\\tests\\test_problem_resolution_economics.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 4568,
+        "summary": "exit 0 | 4.6s | 3 lines | tail: '15 passed in 3.56s'",
+        "finished_at": "2026-08-24T18:30:35.685Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "Nx5BsudR1gshjrzTcOxJ1qlA"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "c975a868f7a94699be9dad3bff301b9c",
+          "owner_wave": "8582d7e998154247a7d2147ca237f7cf",
+          "size_bytes": 101,
+          "command_id": "Nx5BsudR1gshjrzTcOxJ1qlA",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:Nx5BsudR1gshjrzTcOxJ1qlA:stdout",
+              "total_stream_bytes": 101,
+              "total_retained_bytes": 101,
+              "head_retained_bytes": 101,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:Nx5BsudR1gshjrzTcOxJ1qlA:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-24T18:30:07.015Z",
+    "updated_at": "2026-08-24T18:31:03.556Z",
+    "events": [
+      {
+        "time": "2026-08-24T18:30:07.015Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only closure analysis for Tools-Codex-web. Evaluate the attached Problem Resolution Control Loop proposal against current source/runtime. Determine exact finite gaps to complete PRL operational closure without creating a new PRK framework: connector task_control(action=problem) contract exposure, immutable problem revision model, run/event revision binding, reopen semantics, durable bounded problem contract capsule, work_origin and resolution_claim semantics, conditional EOCL acceptance to provisional problem resolution, user-feedback close/reopen/revise loop, rollout/migration safety, and natural-evidence gates. Identify exact files/symbols/invariants, dependency order, cheapest sufficient proofs, risks, and a single implementation plan. Do not modify files or runtime state."
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:08.007Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:10.566Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:10.571Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:24.673Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"problem_revisions|resolution_claim|work_origin|PROBLEM_SCHEMA_VERSION|current_revision|PROVISIONAL_RESOLUTION|problem_handoff_for_run\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "kBvHYqEDL71YRGGo15iwOglB"
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:25.161Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem_revisions|resolution_claim|work_origin|PROBLEM_SCHEMA_VERSION|current_revision|PROVISIONAL_RESOLUTION|problem_handoff_for_run\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:30.432Z",
+        "event": "command_started",
+        "details": {
+          "command": "set PYTHONPATH=resources\\coding-tools-mcp&& python -m pytest resources\\coding-tools-mcp\\tests\\test_problem_lineage.py resources\\coding-tools-mcp\\tests\\test_problem_lineage_activation.py resources\\coding-tools-mcp\\tests\\test_problem_resolution_economics.py -q",
+          "session_id": "Nx5BsudR1gshjrzTcOxJ1qlA"
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:35.685Z",
+        "event": "command_finished",
+        "details": {
+          "command": "set PYTHONPATH=resources\\coding-tools-mcp&& python -m pytest resources\\coding-tools-mcp\\tests\\test_problem_lineage.py resources\\coding-tools-mcp\\tests\\test_problem_lineage_activation.py resources\\coding-tools-mcp\\tests\\test_problem_resolution_economics.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:46.468Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\report_problem_resolution_economics.py --workspace E:\\Github\\Tools-Codex-web && python resources\\coding-tools-mcp\\scripts\\report_problem_resolution_economics.py --workspace E:\\Github\\HR",
+          "session_id": "EXeJTILrcu8D9b9P9fcQ41_Y"
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:49.703Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\report_problem_resolution_economics.py --workspace E:\\Github\\Tools-Codex-web && python resources\\coding-tools-mcp\\scripts\\report_problem_resolution_economics.py --workspace E:\\Github\\HR",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:30:57.097Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\activate_problem_lineage.py --workspace E:\\Github\\Tools-Codex-web && python resources\\coding-tools-mcp\\scripts\\activate_problem_lineage.py --workspace E:\\Github\\HR",
+          "session_id": "F8sSU1eE-nFC7ktNFBXe_kdt"
+        }
+      },
+      {
+        "time": "2026-08-24T18:31:03.556Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\activate_problem_lineage.py --workspace E:\\Github\\Tools-Codex-web && python resources\\coding-tools-mcp\\scripts\\activate_problem_lineage.py --workspace E:\\Github\\HR",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T18:31:10.040Z",
+    "archive_reason": "finished"
+  }
+]
