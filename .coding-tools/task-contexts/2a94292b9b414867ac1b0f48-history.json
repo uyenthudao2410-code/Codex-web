@@ -191,5 +191,359 @@
     ],
     "archived_at": "2026-08-24T18:09:39.730Z",
     "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "626f2f9fbe0f4c62aa4dff3df5ca6016",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "YAaOMCSX1oqPajwWQuCuEiyb",
+      "kind": "test",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 2103,
+      "finished_at": "2026-08-24T18:11:46.379Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest resources\\coding-tools-mcp\\tests\\test_problem_lineage.py resources\\coding-tools-mcp\\tests\\test_problem_lineage_activation.py resources\\coding-tools-mcp\\tests\\test_problem_resolution_economics.py -q",
+        "status": "failed",
+        "exit_code": 2,
+        "duration_ms": 2103,
+        "summary": "exit 2 | 2.1s | 39 lines | tail: '3 errors in 0.72s'",
+        "finished_at": "2026-08-24T18:11:46.379Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "YAaOMCSX1oqPajwWQuCuEiyb"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 2722,
+          "command_id": "YAaOMCSX1oqPajwWQuCuEiyb",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:YAaOMCSX1oqPajwWQuCuEiyb:stdout",
+              "total_stream_bytes": 2722,
+              "total_retained_bytes": 2722,
+              "head_retained_bytes": 2722,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:YAaOMCSX1oqPajwWQuCuEiyb:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-24T18:09:39.732Z",
+    "updated_at": "2026-08-24T18:11:46.379Z",
+    "events": [
+      {
+        "time": "2026-08-24T18:09:39.732Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-24T18:09:40.073Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"argparse|__main__|problem_resolution_economics_report|preflight_problem_lineage_activation|PRAGMA user_version|problem_threads\" resources/coding-tools-mcp scripts tests -g \"*.py\" -g \"*.ps1\" -g \"*.js\" -g \"*.ts\"",
+          "session_id": "6r8CoHFDtk-gG043XJl7WBtP"
+        }
+      },
+      {
+        "time": "2026-08-24T18:09:40.481Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"argparse|__main__|problem_resolution_economics_report|preflight_problem_lineage_activation|PRAGMA user_version|problem_threads\" resources/coding-tools-mcp scripts tests -g \"*.py\" -g \"*.ps1\" -g \"*.js\" -g \"*.ts\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:09:47.880Z",
+        "event": "command_started",
+        "details": {
+          "command": "type resources\\coding-tools-mcp\\scripts\\report_problem_resolution_economics.py & echo ---ACTIVATION--- & type resources\\coding-tools-mcp\\scripts\\activate_problem_lineage.py",
+          "session_id": "9YQsPhPq1_Yy08N46dP7reMV"
+        }
+      },
+      {
+        "time": "2026-08-24T18:09:48.215Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type resources\\coding-tools-mcp\\scripts\\report_problem_resolution_economics.py & echo ---ACTIVATION--- & type resources\\coding-tools-mcp\\scripts\\activate_problem_lineage.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:09:56.471Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\report_problem_resolution_economics.py --workspace E:\\Github\\Tools-Codex-web",
+          "session_id": "qJ8klMVaxqKNyF4iGMlbbSdj"
+        }
+      },
+      {
+        "time": "2026-08-24T18:09:59.065Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\report_problem_resolution_economics.py --workspace E:\\Github\\Tools-Codex-web",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:10:45.229Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S -g \"*.md\" \"Problem Resolution Lineage|\\bPRL-D\\b|\\bPRK\\b|problem-first|problem lineage|schema v10|PRL_SCHEMA|First Problem Resolution|TTPR\" docs\\research .coding-tools\\orchestration\\reports",
+          "session_id": "39D1Oj3-5YWIPYT_T8nG88eD"
+        }
+      },
+      {
+        "time": "2026-08-24T18:10:45.596Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S -g \"*.md\" \"Problem Resolution Lineage|\\bPRL-D\\b|\\bPRK\\b|problem-first|problem lineage|schema v10|PRL_SCHEMA|First Problem Resolution|TTPR\" docs\\research .coding-tools\\orchestration\\reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:01.038Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"^### PRL-|^## .*PRL|PRL-B|PRL-C|A2-S1|natural problem|problem revision|criteria_fingerprint|current_revision\" docs\\research\\260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md docs\\research\\260823_CODING_WEB_PROBLEM_RESOLUTION_LINEAGE_AND_INTERACTIVE_ENGINEERING_SCIENCE.md docs\\research\\260823_CODING_WEB_EVIDENCE_RECONCILIATION_CAUSAL_INTERVENTION_AND_OPTIMAL_EXECUTION_PLAN.md",
+          "session_id": "-AVU75T1u83Ohy4OO0QlA2Gv"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:01.389Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"^### PRL-|^## .*PRL|PRL-B|PRL-C|A2-S1|natural problem|problem revision|criteria_fingerprint|current_revision\" docs\\research\\260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md docs\\research\\260823_CODING_WEB_PROBLEM_RESOLUTION_LINEAGE_AND_INTERACTIVE_ENGINEERING_SCIENCE.md docs\\research\\260823_CODING_WEB_EVIDENCE_RECONCILIATION_CAUSAL_INTERVENTION_AND_OPTIMAL_EXECUTION_PLAN.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:20.046Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"CREATE TABLE IF NOT EXISTS problem_threads|CREATE TABLE IF NOT EXISTS problem_events|current_revision|ENGINEERING_ATTEMPT_BOUND|PROVISIONAL_RESOLUTION|action == \\\"problem\\\"|action == \\\"accept\\\"|_record_claimed_host_problem_relation|problem_handoff_for_run\" resources\\coding-tools-mcp\\coding_tools_mcp\\problem_lineage.py resources\\coding-tools-mcp\\coding_tools_mcp\\problem_lineage_control.py resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py resources\\coding-tools-mcp\\coding_t",
+          "session_id": "RjjZCM4rmP3xDWmrbSfjVZx3"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:20.404Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"CREATE TABLE IF NOT EXISTS problem_threads|CREATE TABLE IF NOT EXISTS problem_events|current_revision|ENGINEERING_ATTEMPT_BOUND|PROVISIONAL_RESOLUTION|action == \\\"problem\\\"|action == \\\"accept\\\"|_record_claimed_host_problem_relation|problem_handoff_for_run\" resources\\coding-tools-mcp\\coding_tools_mcp\\problem_lineage.py resources\\coding-tools-mcp\\coding_tools_mcp\\problem_lineage_control.py resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py resources\\coding-tools-mcp\\coding_t",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:26.262Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"if action == \\\"accept\\\"\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "vA8u8IB1Rn7-jegjMO9e7PEL"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:26.654Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"if action == \\\"accept\\\"\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:32.588Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"record_checkpoint\\(\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "D05dD9dizSox23LUE7_59oAO"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:32.913Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"record_checkpoint\\(\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:44.162Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest resources\\coding-tools-mcp\\tests\\test_problem_lineage.py resources\\coding-tools-mcp\\tests\\test_problem_lineage_activation.py resources\\coding-tools-mcp\\tests\\test_problem_resolution_economics.py -q",
+          "session_id": "YAaOMCSX1oqPajwWQuCuEiyb"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:46.379Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest resources\\coding-tools-mcp\\tests\\test_problem_lineage.py resources\\coding-tools-mcp\\tests\\test_problem_lineage_activation.py resources\\coding-tools-mcp\\tests\\test_problem_resolution_economics.py -q",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T18:11:51.653Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "348c321bce9d43e6bf444e9c0b69acbb",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-24T18:12:06.068Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest tests\\test_problem_lineage.py tests\\test_problem_lineage_activation.py tests\\test_problem_resolution_economics.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 4486,
+        "summary": "exit 0 | 4.5s | 3 lines | tail: '15 passed in 3.60s'",
+        "finished_at": "2026-08-24T18:11:56.479Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "MBmZo9SkOA_Ozbu8fifxtgO3"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 101,
+          "command_id": "MBmZo9SkOA_Ozbu8fifxtgO3",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:MBmZo9SkOA_Ozbu8fifxtgO3:stdout",
+              "total_stream_bytes": 101,
+              "total_retained_bytes": 101,
+              "head_retained_bytes": 101,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:MBmZo9SkOA_Ozbu8fifxtgO3:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-24T18:11:51.656Z",
+    "updated_at": "2026-08-24T18:12:06.068Z",
+    "events": [
+      {
+        "time": "2026-08-24T18:11:51.656Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:51.895Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests\\test_problem_lineage.py tests\\test_problem_lineage_activation.py tests\\test_problem_resolution_economics.py -q",
+          "session_id": "MBmZo9SkOA_Ozbu8fifxtgO3"
+        }
+      },
+      {
+        "time": "2026-08-24T18:11:56.479Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests\\test_problem_lineage.py tests\\test_problem_lineage_activation.py tests\\test_problem_resolution_economics.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:12:06.068Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S -C 12 \"solution_shadow.*problem.*p5|\\\"problem\\\".*\\\"p5\\\"|task_control.*action|def input_schemas|INPUT_SCHEMAS|smart-v3\" resources\\coding-tools-mcp\\coding_tools_mcp resources\\coding-tools-mcp\\tests electron renderer src -g \"*.py\" -g \"*.ts\" -g \"*.js\" -g \"*.json\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-24T18:12:06.068Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T18:12:12.776Z",
+    "archive_reason": "finished"
   }
 ]
