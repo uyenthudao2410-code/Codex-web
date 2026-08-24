@@ -1,157 +1,6 @@
 [
   {
     "version": 2,
-    "task_id": "7c53c3248d1741c0930fb316e3e08614",
-    "orchestration": {
-      "run_id": "453e4a03eb054da58284a476fbc90c26",
-      "wave_id": "7bca668cb48b4f89badcaea617fb34ee",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "6d45e5bb00451f6d4418ed0b4e7c1dad185b0ac0",
-      "worktree_fp": "3f772125e2ee9ee0241440aa9afbe1fe02c393b08d367e8b1634999b9fc3b755",
-      "contract_fp": ""
-    },
-    "objective": "Fix accidental secondary project ledger creation under component working directories while preserving all canonical project history. Proven evidence: resources/coding-tools-mcp/.coding-tools/orchestration/ledger.sqlite3 is schema-only with zero durable project/P5 rows; canonical root .coding-tools/orchestration/ledger.sqlite3 contains all history. Read/report paths with implicit --workspace='.' must never create a new ledger under resources/coding-tools-mcp or another component CWD. Preserve explicit temp/non-git workspaces and normal Runtime workspace switching; do not impose a broad Git-root restriction on Runtime; do not hide the issue with .gitignore. Add focused regression, then only after proof recheck nested DB is still zero-data and remove it. Do not manually modify canonical ledger. No commit, push, restart, release, or P5 activation in this task.",
-    "status": "waiting",
-    "steps": [],
-    "current_step": "Waiting for model",
-    "current_command": null,
-    "last_command_result": null,
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "Inspect exact stateful reporter call sites and implement the smallest fail-closed fix with focused regression.",
-    "created_at": "2026-08-22T13:56:24.314Z",
-    "updated_at": "2026-08-22T13:56:36.587Z",
-    "events": [
-      {
-        "time": "2026-08-22T13:56:24.314Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status",
-            "steps"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-22T13:56:35.514Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-22T13:56:36.587Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-22T13:56:36.587Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      }
-    ],
-    "archived_at": "2026-08-22T13:57:24.845Z",
-    "archive_reason": "superseded"
-  },
-  {
-    "version": 2,
-    "task_id": "1bc85d2f720f4192b7f0ebab06d5cd3a",
-    "orchestration": {
-      "run_id": "fc25c32fb8454cdca53473eacb4a543a",
-      "wave_id": "2ee0b7d433e349ceba917bb0e0292252",
-      "orchestration_state": "PREFLIGHT",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "write_owner": "",
-      "write_lease_id": "",
-      "delegation_id": "",
-      "base_head": "6d45e5bb00451f6d4418ed0b4e7c1dad185b0ac0",
-      "worktree_fp": "3f772125e2ee9ee0241440aa9afbe1fe02c393b08d367e8b1634999b9fc3b755",
-      "contract_fp": ""
-    },
-    "objective": "Continue the active canonical-ledger path-authority bugfix. Materialize only the existing reporter-focused tests needed to implement regressions. The intended minimal change is now fixed: do not change OrchestrationLedger or Runtime globally; instead make stateful P2/P5 reporting paths fail closed before constructing a missing ledger, and make P2/P4/P5/plan CLI implicit workspace resolve to repository root derived from script location rather than component CWD. Preserve explicit --workspace behavior including temp/non-git workspaces. Need exact existing test import/style to add focused regressions that missing-ledger reports do not create .coding-tools and component-CWD implicit defaults resolve root. No mutation in this prepare call.",
-    "status": "waiting",
-    "steps": [],
-    "current_step": "Waiting for model",
-    "current_command": null,
-    "last_command_result": null,
-    "completion_report": null,
-    "completion_report_id": "",
-    "completion_report_acknowledged_id": "",
-    "completion_report_acknowledged_at": null,
-    "test_results": [],
-    "build_results": [],
-    "last_build_report": null,
-    "modified_files": [],
-    "failure": null,
-    "next_step": "",
-    "created_at": "2026-08-22T13:57:24.994Z",
-    "updated_at": "2026-08-22T13:57:30.564Z",
-    "events": [
-      {
-        "time": "2026-08-22T13:57:24.994Z",
-        "event": "task_started",
-        "details": {
-          "fields": [
-            "current_step",
-            "failure",
-            "new_task",
-            "next_step",
-            "objective",
-            "status"
-          ]
-        }
-      },
-      {
-        "time": "2026-08-22T13:57:25.664Z",
-        "event": "orchestration_context_ready",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-22T13:57:26.816Z",
-        "event": "orchestration_prepared",
-        "details": {
-          "state": "PREFLIGHT"
-        }
-      },
-      {
-        "time": "2026-08-22T13:57:26.820Z",
-        "event": "files_modified",
-        "details": {
-          "count": 0
-        }
-      }
-    ],
-    "archived_at": "2026-08-22T13:57:37.694Z",
-    "archive_reason": "superseded"
-  },
-  {
-    "version": 2,
     "task_id": "c0cc3f467a90471a9f5a71725989a782",
     "orchestration": {
       "run_id": "270004fba8fe4647b2d5dadc4f393e35",
@@ -90796,5 +90645,427 @@
     ],
     "archived_at": "2026-08-23T14:50:17.508Z",
     "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "734ee5921b8a4cddae0c0f876e1b1c21",
+    "orchestration": {
+      "run_id": "fd6ebbc5e99d4d12b445c01b5d77328d",
+      "wave_id": "1ad1c648d6ac485bac74d823d07c8004",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "4edb7a8d5cb0fd949f2cc46479ba3b1d9de7c4dd",
+      "worktree_fp": "22ba69c23dd6727829aa380fb083f6a3d86d0b9aa0627fea15b711fbbe510317",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ItlmjVc84LBCM5AkqB5_p-u-",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2664,
+      "finished_at": "2026-08-24T00:03:31.383Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-08-23T14:50:17.611Z",
+    "updated_at": "2026-08-24T06:16:50.326Z",
+    "events": [
+      {
+        "time": "2026-08-23T14:50:17.611Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-23T14:50:17.931Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh auth status",
+          "session_id": "DVko7-GsJVZTsQxCPLc2HzbX"
+        }
+      },
+      {
+        "time": "2026-08-23T14:50:19.000Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh auth status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:52:08.212Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh workflow run attendance-crawl.yml -R uyenthudao2410-code/attendance-timesheet-crawler -f target_date=2026-08-23 -f debug=false",
+          "session_id": "2p2c1iCFm-Qe-799t2CGOxfb"
+        }
+      },
+      {
+        "time": "2026-08-23T14:52:10.820Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh workflow run attendance-crawl.yml -R uyenthudao2410-code/attendance-timesheet-crawler -f target_date=2026-08-23 -f debug=false",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:52:18.585Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh run watch 32646747899 -R uyenthudao2410-code/attendance-timesheet-crawler --exit-status",
+          "session_id": "hic0dyFPOdNaa5dFBJPrycUk"
+        }
+      },
+      {
+        "time": "2026-08-23T14:52:35.244Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh run watch 32646747899 -R uyenthudao2410-code/attendance-timesheet-crawler --exit-status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:53:13.880Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh api repos/uyenthudao2410-code/attendance-timesheet-crawler/actions/secrets/public-key",
+          "session_id": "aOE_7ZW4c5sOxRGM8NSpb1UO"
+        }
+      },
+      {
+        "time": "2026-08-23T14:53:14.972Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh api repos/uyenthudao2410-code/attendance-timesheet-crawler/actions/secrets/public-key",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:05.945Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$c=[Console]::In.ReadToEnd(); [IO.File]::WriteAllText([IO.Path]::Combine($env:TEMP,'attendance-roster.json'),$c,[Text.UTF8Encoding]::new($false))\"",
+          "session_id": "BdijhL318xqld7uF3aoRKwVc"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:06.447Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$c=[Console]::In.ReadToEnd(); [IO.File]::WriteAllText([IO.Path]::Combine($env:TEMP,'attendance-roster.json'),$c,[Text.UTF8Encoding]::new($false))\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:13.889Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"type %TEMP%\\attendance-roster.json | gh secret set ATTENDANCE_ROSTER_JSON -R uyenthudao2410-code/attendance-timesheet-crawler\"",
+          "session_id": "3x61QyQlTQkrqLnYAOBCbib5"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:15.180Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"type %TEMP%\\attendance-roster.json | gh secret set ATTENDANCE_ROSTER_JSON -R uyenthudao2410-code/attendance-timesheet-crawler\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:20.064Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"del /f /q %TEMP%\\attendance-roster.json\"",
+          "session_id": "T9P0msWFvDdd_EguhpHueFr_"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:20.386Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"del /f /q %TEMP%\\attendance-roster.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:26.814Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh workflow run attendance-crawl.yml -R uyenthudao2410-code/attendance-timesheet-crawler -f target_date=2026-08-23 -f debug=false",
+          "session_id": "mBqP6sQFdJNg71N7fPNmJmTV"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:29.254Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh workflow run attendance-crawl.yml -R uyenthudao2410-code/attendance-timesheet-crawler -f target_date=2026-08-23 -f debug=false",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:37.530Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh run watch 32646868267 -R uyenthudao2410-code/attendance-timesheet-crawler --exit-status",
+          "session_id": "CZRPomwSm163dpTfb0KgP7TP"
+        }
+      },
+      {
+        "time": "2026-08-23T14:54:50.276Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh run watch 32646868267 -R uyenthudao2410-code/attendance-timesheet-crawler --exit-status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:26.036Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$b=[Console]::In.ReadToEnd(); [IO.File]::WriteAllBytes([IO.Path]::Combine($env:TEMP,'attendance-roster.json'),[Convert]::FromBase64String($b))\"",
+          "session_id": "2E_z_hCdZE4DPwGuFZHpk7An"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:26.425Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$b=[Console]::In.ReadToEnd(); [IO.File]::WriteAllBytes([IO.Path]::Combine($env:TEMP,'attendance-roster.json'),[Convert]::FromBase64String($b))\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:30.917Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"(Get-FileHash -Algorithm SHA256 ([IO.Path]::Combine($env:TEMP,'attendance-roster.json'))).Hash.ToLowerInvariant()\"",
+          "session_id": "phYR-jIlD8OGyM3MzSHsGIJY"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:31.716Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"(Get-FileHash -Algorithm SHA256 ([IO.Path]::Combine($env:TEMP,'attendance-roster.json'))).Hash.ToLowerInvariant()\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:38.131Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"type %TEMP%\\attendance-roster.json | gh secret set ATTENDANCE_ROSTER_JSON -R uyenthudao2410-code/attendance-timesheet-crawler\"",
+          "session_id": "m30H2kT-Lt5LMCBbLJnwkhSX"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:39.341Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"type %TEMP%\\attendance-roster.json | gh secret set ATTENDANCE_ROSTER_JSON -R uyenthudao2410-code/attendance-timesheet-crawler\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:44.873Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"del /f /q %TEMP%\\attendance-roster.json\"",
+          "session_id": "xJkVzX7e9ixzKLWSVSTq8Uik"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:45.266Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"del /f /q %TEMP%\\attendance-roster.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:52.109Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh workflow run attendance-crawl.yml -R uyenthudao2410-code/attendance-timesheet-crawler -f target_date=2026-08-23 -f debug=false",
+          "session_id": "94ssmOHlRQmQizVgw37lJ4WP"
+        }
+      },
+      {
+        "time": "2026-08-23T14:55:55.225Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh workflow run attendance-crawl.yml -R uyenthudao2410-code/attendance-timesheet-crawler -f target_date=2026-08-23 -f debug=false",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-23T14:56:00.398Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh run watch 32646943272 -R uyenthudao2410-code/attendance-timesheet-crawler --exit-status",
+          "session_id": "BtIo4sPQ4h9kDZbfJMnr9B2s"
+        }
+      },
+      {
+        "time": "2026-08-23T14:56:18.050Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh run watch 32646943272 -R uyenthudao2410-code/attendance-timesheet-crawler --exit-status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T00:03:28.657Z",
+        "event": "command_started",
+        "details": {
+          "command": "gh workflow run attendance-crawl.yml -R uyenthudao2410-code/attendance-timesheet-crawler -f target_date=2026-08-23 -f debug=false",
+          "session_id": "ItlmjVc84LBCM5AkqB5_p-u-"
+        }
+      },
+      {
+        "time": "2026-08-24T00:03:31.383Z",
+        "event": "command_finished",
+        "details": {
+          "command": "gh workflow run attendance-crawl.yml -R uyenthudao2410-code/attendance-timesheet-crawler -f target_date=2026-08-23 -f debug=false",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-24T03:32:16.069Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T03:32:17.460Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T03:32:17.462Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-24T03:32:29.515Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-24T04:19:57.890Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "workspace_context",
+          "code": "STALE_WORKSPACE_CONTEXT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T06:18:27.065Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "7fddab4e319545969d0c77d0752ac789",
+    "orchestration": {
+      "run_id": "0c02303c4f24435dba8747cfaccf1f01",
+      "wave_id": "37275d289f424be29343c1c2af2e1c42",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e5e00d9e17549700760bc92bd714378783e46587",
+      "worktree_fp": "c5cabdfca593880fdd17e371bb233f13222c2a18b7cf8178ec61a920ee106ff5",
+      "contract_fp": ""
+    },
+    "objective": "live multi-workspace Codex read-only prepare",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-24T06:18:27.150Z",
+    "updated_at": "2026-08-24T06:18:28.768Z",
+    "events": [
+      {
+        "time": "2026-08-24T06:18:27.150Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-24T06:18:27.580Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T06:18:28.759Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-24T06:18:28.768Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-24T06:18:44.934Z",
+    "archive_reason": "superseded"
   }
 ]

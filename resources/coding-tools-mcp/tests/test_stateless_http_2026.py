@@ -208,6 +208,18 @@ class StatelessHttp2026Tests(unittest.TestCase):
             self.assertEqual(result["state"]["orchestration"]["run_id"], run_id)
         self.assertEqual(self.runtime.task_state.get()["objective"], "global-sentinel")
 
+    def test_workspace_context_returns_the_minted_task_context_id(self) -> None:
+        status, _, response = self.tool_call(
+            "workspace_context",
+            {"detail": "compact", "path": "."},
+            request_id=25,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(response["result"]["isError"], response)
+        result = response["result"]
+        minted = result["_meta"][TASK_CONTEXT_META_KEY]
+        self.assertEqual(result["structuredContent"]["task_context_id"], minted)
+
     def test_controller_usage_binds_to_scoped_run_and_deduplicates_before_dispatch(self) -> None:
         context_id = "usage-context"
         status, _, prepared = self.tool_call(

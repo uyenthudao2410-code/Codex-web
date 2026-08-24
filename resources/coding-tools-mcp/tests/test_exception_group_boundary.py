@@ -133,6 +133,7 @@ class ExceptionGroupBoundaryTests(unittest.TestCase):
         runtime = FailingRuntime()
         handler = object.__new__(ExceptionSafeMCPHandler)
         handler._runtime = runtime
+        handler.headers = {}
         request = {
             "jsonrpc": "2.0",
             "id": 11,

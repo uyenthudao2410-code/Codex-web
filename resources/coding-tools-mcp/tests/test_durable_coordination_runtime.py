@@ -214,6 +214,11 @@ class DurableCoordinationRuntimeTests(unittest.TestCase):
                 self.assertTrue(recorded["recorded"])
                 self.assertEqual(recorded["capsule"]["conversation_epoch"], 3)
                 self.assertIn(message_id, recorded["capsule"]["payload"]["runtime"]["pending_message_ids"])
+                handoff_runtime = recorded["capsule"]["payload"]["runtime"]
+                self.assertIn("workspace_id", handoff_runtime)
+                self.assertIn("write_lease_id", handoff_runtime)
+                self.assertIn("delegation_id", handoff_runtime)
+                self.assertIn("proof_ids", handoff_runtime)
 
                 fetched = runtime.task_control(
                     {"action": "handoff", "handoff_action": "get"}

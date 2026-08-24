@@ -100,6 +100,7 @@ from .semantic_localization import (  # noqa: F401  # composition-root namespace
     semantic_provider_status,
 )
 from .task_state import ContextualTaskStateStore, TaskStateStore  # noqa: F401  # composition-root namespace
+from .workspace_context_registry import WorkspaceContextRegistry  # noqa: F401  # composition-root namespace
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, utc_now  # noqa: F401  # composition-root namespace
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class  # noqa: F401  # composition-root namespace
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
@@ -391,6 +392,44 @@ class Workspace:
         return {path for path in completed.stdout.split("\0") if path}
 
 
+class _PrimaryLedgerCompatibilityView:
+    """Read-compatible view for callers that inspect the primary Runtime ledger.
+
+    Workspace-bound operations write to their own ledger.  A few local/operator
+    callers historically inspect ``runtime.orchestration_ledger`` outside an
+    active request; for those read-only lookups, search the other workspace
+    ledgers by exact durable id while keeping all writes on the selected ledger.
+    """
+
+    _FALLBACK_READS = frozenset({
+        "get_run", "get_controller_lease", "get_write_fence", "get_wave",
+        "list_waves", "get_background_operation", "get_idempotency",
+    })
+
+    def __init__(self, runtime: "Runtime", primary: OrchestrationLedger) -> None:
+        self._runtime = runtime
+        self._primary = primary
+
+    def __getattr__(self, name: str) -> Any:
+        attribute = getattr(self._primary, name)
+        if name not in self._FALLBACK_READS or not callable(attribute):
+            return attribute
+
+        def lookup(*args: Any, **kwargs: Any) -> Any:
+            result = attribute(*args, **kwargs)
+            if result not in (None, [], {}):
+                return result
+            for key, ledger in self._runtime._orchestration_ledgers.items():
+                if ledger is self._primary:
+                    continue
+                candidate = getattr(ledger, name)(*args, **kwargs)
+                if candidate not in (None, [], {}):
+                    return candidate
+            return result
+
+        return lookup
+
+
 def configured_authorized_roots() -> list[Path]:
     raw = os.environ.get(f"{ENV_PREFIX}_AUTHORIZED_ROOTS", "").strip()
     if not raw:
@@ -426,6 +465,16 @@ class Runtime(
     ) -> None:
         self.authorized_roots = configured_authorized_roots()
         self.workspace = Workspace(workspace, self.authorized_roots)
+        self.workspace_context_registry = WorkspaceContextRegistry(self.workspace.root)
+        self._workspace_component_lock = threading.RLock()
+        self._orchestration_ledgers: dict[str, OrchestrationLedger] = {}
+        self._orchestration_controls: dict[str, OrchestrationControl] = {}
+        self._execution_resource_governors: dict[str, ExecutionResourceGovernor] = {}
+        self._proof_ledgers: dict[str, ProofLedger] = {}
+        self._orchestration_reports: dict[str, OrchestrationReport] = {}
+        self._primary_ledger_view: _PrimaryLedgerCompatibilityView | None = None
+        self._task_context_workspace_ids: dict[str, str] = {}
+        self._task_context_workspace_lock = threading.RLock()
         self.tool_mode = os.environ.get(f"{ENV_PREFIX}_TOOL_MODE", "coding").strip().lower()
         if self.tool_mode not in TOOL_MODE_ALLOWLISTS:
             self.tool_mode = "coding"
@@ -560,10 +609,16 @@ class Runtime(
         self.background_operations_lock = PROCESS_BACKGROUND_OPERATIONS_LOCK
         self.initialized = False
         self.telemetry = SessionTelemetry(permission_mode=self.permission_mode, transport=transport)
-        self.task_state = ContextualTaskStateStore(self.workspace.root, self._current_task_scope_id)
+        self.task_state = ContextualTaskStateStore(
+            self.workspace.root,
+            self._current_task_scope_id,
+            self._current_task_workspace_root,
+            lambda: self.workspace.authorized_roots,
+        )
         self.performance_trace = PerformanceTraceStore(self.workspace.root)
-        self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
-        self.execution_resource_governor = ExecutionResourceGovernor(
+        self._orchestration_ledger_primary = OrchestrationLedger(self.workspace.root)
+        self._orchestration_ledgers[str(self.workspace.root)] = self._orchestration_ledger_primary
+        self._execution_resource_governor_primary = ExecutionResourceGovernor(
             self.workspace.root,
             self.orchestration_ledger,
             process_instance_id=self.process_instance_id,
@@ -596,10 +651,14 @@ class Runtime(
                 metadata={"recovery_reason": "mcp_runtime_restarted"},
             ):
                 self.recovered_agent_lanes += 1
-        self.orchestration_control = self._new_orchestration_control()
+        self._execution_resource_governors[str(self.workspace.root)] = self._execution_resource_governor_primary
+        self._orchestration_control_primary = self._new_orchestration_control(self.workspace.root)
+        self._orchestration_controls[str(self.workspace.root)] = self._orchestration_control_primary
         self.reconciled_task_orchestration = self._reconcile_task_orchestration_projection()
-        self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
-        self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
+        self._proof_ledger_primary = ProofLedger(self.workspace.root, self.orchestration_ledger)
+        self._proof_ledgers[str(self.workspace.root)] = self._proof_ledger_primary
+        self._orchestration_report_primary = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
+        self._orchestration_reports[str(self.workspace.root)] = self._orchestration_report_primary
         self._opencode_provider = OpenCodeProviderAdapter(
             lambda: self.workspace.root,
             on_terminal=self._on_opencode_provider_terminal,
@@ -621,16 +680,108 @@ class Runtime(
         self.tmp_dir = self.runtime_dir / "tmp"
         self.cache_dir = self.runtime_dir / "cache"
 
-    def _new_orchestration_control(self) -> OrchestrationControl:
+    def _current_request_workspace_root(self) -> Path:
+        raw = getattr(self.request_context, "workspace_root", None)
+        if raw:
+            try:
+                candidate = Path(raw).resolve(strict=False)
+                if candidate.is_dir() and self.workspace._is_allowed(candidate):
+                    return candidate
+            except (OSError, RuntimeError, TypeError, ValueError):
+                pass
+        binding_id = self._current_workspace_binding_id()
+        if binding_id:
+            root = self._bound_task_context_workspace(binding_id)
+            if root is not None:
+                return root
+        return self.workspace.root
+
+    def _current_task_workspace_root(self) -> Path:
+        return self._current_request_workspace_root()
+
+    def _component_root_key(self, root: Path | None = None) -> str:
+        return str((root or self._current_request_workspace_root()).resolve(strict=False))
+
+    @property
+    def orchestration_ledger(self) -> OrchestrationLedger:
+        root = self._current_request_workspace_root()
+        ledger = self._orchestration_ledger_for_root(root)
+        if str(root) == str(self.workspace.root) and not getattr(self.request_context, "workspace_root", None):
+            if self._primary_ledger_view is None or self._primary_ledger_view._primary is not ledger:
+                self._primary_ledger_view = _PrimaryLedgerCompatibilityView(self, ledger)
+            return self._primary_ledger_view  # type: ignore[return-value]
+        return ledger
+
+    def _orchestration_ledger_for_root(self, root: Path) -> OrchestrationLedger:
+        key = self._component_root_key(root)
+        with self._workspace_component_lock:
+            ledger = self._orchestration_ledgers.get(key)
+            if ledger is None:
+                ledger = OrchestrationLedger(Path(key))
+                self._orchestration_ledgers[key] = ledger
+            return ledger
+
+    @property
+    def orchestration_control(self) -> OrchestrationControl:
+        key = self._component_root_key()
+        with self._workspace_component_lock:
+            control = self._orchestration_controls.get(key)
+            if control is None:
+                control = self._new_orchestration_control(Path(key))
+                self._orchestration_controls[key] = control
+            return control
+
+    @property
+    def execution_resource_governor(self) -> ExecutionResourceGovernor:
+        return self._execution_resource_governor_for_root(self._current_request_workspace_root())
+
+    def _execution_resource_governor_for_root(self, root: Path) -> ExecutionResourceGovernor:
+        key = self._component_root_key(root)
+        with self._workspace_component_lock:
+            governor = self._execution_resource_governors.get(key)
+            if governor is None:
+                governor = ExecutionResourceGovernor(
+                    Path(key),
+                    self._orchestration_ledger_for_root(Path(key)),
+                    process_instance_id=self.process_instance_id,
+                    runtime_instance_id=self.server_instance_id,
+                )
+                self._execution_resource_governors[key] = governor
+            return governor
+
+    @property
+    def proof_ledger(self) -> ProofLedger:
+        key = self._component_root_key()
+        with self._workspace_component_lock:
+            proof = self._proof_ledgers.get(key)
+            if proof is None:
+                proof = ProofLedger(Path(key), self.orchestration_ledger)
+                self._proof_ledgers[key] = proof
+            return proof
+
+    @property
+    def orchestration_report(self) -> OrchestrationReport:
+        key = self._component_root_key()
+        with self._workspace_component_lock:
+            report = self._orchestration_reports.get(key)
+            if report is None:
+                report = OrchestrationReport(Path(key), self.orchestration_ledger)
+                self._orchestration_reports[key] = report
+            return report
+
+    def _new_orchestration_control(self, root: Path | None = None) -> OrchestrationControl:
+        scope_root = (root or self._current_request_workspace_root()).resolve(strict=False)
+        ledger = self._orchestration_ledger_for_root(scope_root)
+        governor = self._execution_resource_governor_for_root(scope_root)
         return OrchestrationControl(
-            self.workspace.root,
-            self.orchestration_ledger,
-            on_wave_terminal=lambda ctx, state: self.execution_resource_governor.teardown_wave(
+            scope_root,
+            ledger,
+            on_wave_terminal=lambda ctx, state: governor.teardown_wave(
                 ctx.run_id,
                 ctx.wave_id,
                 reason=f"orchestration_state:{str(state).lower()}",
             ),
-            assert_wave_quiescent=self.execution_resource_governor.assert_wave_quiescent,
+            assert_wave_quiescent=governor.assert_wave_quiescent,
         )
 
     def _reconcile_task_orchestration_projection(self) -> bool:
@@ -820,6 +971,9 @@ class Runtime(
             self._invalidate_fast_cache()
             self._clear_context_bundle_cache()
             self.workspace = Workspace(target, self.authorized_roots)
+            self.workspace_context_registry = WorkspaceContextRegistry(self.workspace.root)
+            with self._task_context_workspace_lock:
+                self._task_context_workspace_ids.clear()
             self.http_session_id = new_workspace_session_id(self.workspace.root, self.auth_token)
             self.default_cwd = self.workspace.root
             self._set_runtime_dir(runtime_dir_for_workspace(self.workspace.root, self.server_instance_id))
@@ -827,15 +981,22 @@ class Runtime(
             self.project_context = load_project_context(self.workspace.root)
             if not self._semantic_localizer_injected:
                 self.semantic_localizer = semantic_localizer_from_env(self.workspace.root)
-            self.task_state = ContextualTaskStateStore(self.workspace.root, self._current_task_scope_id)
+            self.task_state = ContextualTaskStateStore(
+                self.workspace.root,
+                self._current_task_scope_id,
+                self._current_task_workspace_root,
+                lambda: self.workspace.authorized_roots,
+            )
             self.performance_trace = PerformanceTraceStore(self.workspace.root)
-            self.orchestration_ledger = OrchestrationLedger(self.workspace.root)
-            self.execution_resource_governor = ExecutionResourceGovernor(
+            self._orchestration_ledger_primary = OrchestrationLedger(self.workspace.root)
+            self._orchestration_ledgers[str(self.workspace.root)] = self._orchestration_ledger_primary
+            self._execution_resource_governor_primary = ExecutionResourceGovernor(
                 self.workspace.root,
                 self.orchestration_ledger,
                 process_instance_id=self.process_instance_id,
                 runtime_instance_id=self.server_instance_id,
             )
+            self._execution_resource_governors[str(self.workspace.root)] = self._execution_resource_governor_primary
             self.orphaned_background_operations = self.orchestration_ledger.mark_orphaned_background_operations(
                 current_server_instance_id=self.process_instance_id
             )
@@ -857,10 +1018,13 @@ class Runtime(
                     metadata={"recovery_reason": "workspace_runtime_restarted"},
                 ):
                     self.recovered_agent_lanes += 1
-            self.orchestration_control = self._new_orchestration_control()
+            self._orchestration_control_primary = self._new_orchestration_control(self.workspace.root)
+            self._orchestration_controls[str(self.workspace.root)] = self._orchestration_control_primary
             self.reconciled_task_orchestration = self._reconcile_task_orchestration_projection()
-            self.proof_ledger = ProofLedger(self.workspace.root, self.orchestration_ledger)
-            self.orchestration_report = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
+            self._proof_ledger_primary = ProofLedger(self.workspace.root, self.orchestration_ledger)
+            self._proof_ledgers[str(self.workspace.root)] = self._proof_ledger_primary
+            self._orchestration_report_primary = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
+            self._orchestration_reports[str(self.workspace.root)] = self._orchestration_report_primary
             self._opencode_provider = OpenCodeProviderAdapter(
                 lambda: self.workspace.root,
                 on_terminal=self._on_opencode_provider_terminal,
@@ -970,11 +1134,271 @@ class Runtime(
         value = getattr(self.request_context, "hub_client", None)
         return value if isinstance(value, dict) and value.get("client_id") else None
 
-    def _current_task_scope_id(self) -> str:
+    def _current_stateless_task_context_id(self) -> str:
+        return str(getattr(self.request_context, "stateless_task_context_id", "") or "").strip()
+
+    def _current_workspace_binding_id(self) -> str:
+        """Return the durable key used to bind an execution to a workspace."""
+        stateless_task_context_id = self._current_stateless_task_context_id()
+        if stateless_task_context_id:
+            return stateless_task_context_id
         identity = self._current_hub_client()
-        if identity is None or str(identity.get("client_type") or "") != "chatweb":
-            return ""
-        return str(identity.get("execution_context_id") or "").strip()
+        if identity is not None and str(identity.get("client_type") or "") == "chatweb":
+            execution_context_id = str(identity.get("execution_context_id") or "").strip()
+            if execution_context_id:
+                return execution_context_id
+        return ""
+
+    def _current_task_scope_id(self) -> str:
+        """Return the task-state namespace for the current execution.
+
+        The MCP-2026 opaque context is the durable workspace binding key, but
+        task-state storage must retain the modern namespace marker so it never
+        adopts a legacy/global task projection during first use.
+        """
+        stateless_task_context_id = self._current_stateless_task_context_id()
+        if stateless_task_context_id:
+            return f"mcp2026:{stateless_task_context_id}"
+        return self._current_workspace_binding_id()
+
+    def _bind_task_context_workspace(self, workspace_id: str, *, scope_id: str | None = None) -> None:
+        scope = str(scope_id if scope_id is not None else self._current_workspace_binding_id()).strip()
+        if not scope:
+            return
+        target = str(workspace_id or "").strip()
+        if not target:
+            return
+        root = self._workspace_root_for_identity(target)
+        if root is None:
+            raise ToolFailure(
+                "WORKSPACE_SCOPE_INCONSISTENT",
+                "The resolved workspace identity has no authorized canonical root.",
+                category="security",
+                retryable=False,
+                details={"workspace_id": target},
+            )
+        with self._task_context_workspace_lock:
+            existing = self._task_context_workspace_ids.get(scope)
+            if existing and existing != target:
+                raise ToolFailure(
+                    "TASK_CONTEXT_WORKSPACE_MISMATCH",
+                    "The task context is already bound to a different workspace.",
+                    category="security",
+                    retryable=False,
+                    details={"task_context_id": scope, "expected_workspace_id": existing, "received_workspace_id": target},
+                )
+            registered = self.workspace_context_registry.lookup(scope)
+            if isinstance(registered, dict) and registered.get("legacy") is True:
+                raise ToolFailure(
+                    "UNKNOWN_LEGACY_WORKSPACE",
+                    "The persisted task context has no trustworthy workspace identity.",
+                    category="security",
+                    retryable=False,
+                    details={"task_context_id": scope, "reason": str(registered.get("reason") or "legacy_workspace_mapping")},
+                )
+            if isinstance(registered, dict):
+                registered_workspace = str(registered.get("workspace_id") or "").strip()
+                registered_root = str(registered.get("canonical_root") or "").strip()
+                if registered_workspace and registered_workspace != target:
+                    raise ToolFailure(
+                        "TASK_CONTEXT_WORKSPACE_MISMATCH",
+                        "The task context is already bound to a different workspace.",
+                        category="security",
+                        retryable=False,
+                        details={"task_context_id": scope, "expected_workspace_id": registered_workspace, "received_workspace_id": target},
+                    )
+                if registered_root and Path(registered_root).resolve(strict=False) != root.resolve(strict=False):
+                    raise ToolFailure(
+                        "WORKSPACE_SCOPE_INCONSISTENT",
+                        "The persisted task context root does not match its workspace identity.",
+                        category="security",
+                        retryable=False,
+                        details={"task_context_id": scope, "workspace_id": target},
+                    )
+            else:
+                try:
+                    self.workspace_context_registry.bind(
+                        scope,
+                        workspace_id=target,
+                        canonical_root=root,
+                    )
+                except ValueError as exc:
+                    raise ToolFailure(
+                        "TASK_CONTEXT_WORKSPACE_MISMATCH",
+                        "The task context is already bound to a different workspace.",
+                        category="security",
+                        retryable=False,
+                        details={"task_context_id": scope},
+                    ) from exc
+            self._task_context_workspace_ids[scope] = target
+
+    def _bound_task_context_workspace(self, scope_id: object) -> Path | None:
+        scope = str(scope_id or "").strip()
+        if not scope:
+            return None
+        with self._task_context_workspace_lock:
+            root_id = self._task_context_workspace_ids.get(scope, "")
+        if root_id:
+            root = self._workspace_root_for_identity(root_id)
+            if root is not None:
+                return root
+        registered = self.workspace_context_registry.lookup(scope)
+        if registered is None:
+            return None
+        if registered.get("legacy") is True:
+            raise ToolFailure(
+                "UNKNOWN_LEGACY_WORKSPACE",
+                "The persisted task context has no trustworthy workspace identity.",
+                category="security",
+                retryable=False,
+                details={"task_context_id": scope, "reason": str(registered.get("reason") or "legacy_workspace_mapping")},
+            )
+        workspace_id = str(registered.get("workspace_id") or "").strip()
+        canonical_root = str(registered.get("canonical_root") or "").strip()
+        if not workspace_id or not canonical_root:
+            raise ToolFailure(
+                "UNKNOWN_LEGACY_WORKSPACE",
+                "The persisted task context is missing workspace identity evidence.",
+                category="security",
+                retryable=False,
+                details={"task_context_id": scope},
+            )
+        try:
+            root = Path(canonical_root).resolve(strict=True)
+        except (OSError, RuntimeError):
+            raise ToolFailure(
+                "UNKNOWN_LEGACY_WORKSPACE",
+                "The persisted task context root no longer exists.",
+                category="security",
+                retryable=False,
+                details={"task_context_id": scope, "workspace_id": workspace_id},
+            ) from None
+        if not self.workspace._is_allowed(root):
+            raise ToolFailure(
+                "WORKSPACE_NOT_AUTHORIZED",
+                "The persisted task context workspace is not authorized by the current Runtime.",
+                category="security",
+                retryable=False,
+                details={"task_context_id": scope, "workspace_id": workspace_id},
+            )
+        actual_workspace_id = self._content_free_workspace_root_id(root)
+        if actual_workspace_id != workspace_id:
+            raise ToolFailure(
+                "WORKSPACE_SCOPE_INCONSISTENT",
+                "The persisted task context workspace identity does not match its canonical root.",
+                category="security",
+                retryable=False,
+                details={"task_context_id": scope, "workspace_id": workspace_id},
+            )
+        with self._task_context_workspace_lock:
+            self._task_context_workspace_ids[scope] = workspace_id
+        return root
+
+    def _workspace_identity_for_request(self, raw_path: object = ".") -> tuple[ResolvedPath, Path, dict[str, Any]]:
+        requested = str(raw_path or ".")
+        binding_id = self._current_workspace_binding_id()
+        bound_root: Path | None = None
+        if requested in {"", "."} and binding_id:
+            bound_root = self._bound_task_context_workspace(binding_id)
+        resolved = self._resolve_authorized_execution_scope(
+            str(bound_root) if bound_root is not None else requested,
+            field="path",
+        )
+        scope_root = self.workspace._containing_root(resolved.path) or self.workspace.root
+        identity = self._workspace_scope_identity(resolved)
+        # Bind the opaque execution context, not the workspace identity, to the
+        # resolved root.  Workspace IDs are values in the binding; using one as
+        # the registry key would let a caller reuse a task context across
+        # authorized roots and silently rebind its task state.
+        self._bind_task_context_workspace(
+            str(identity.get("workspace_id") or ""),
+            scope_id=binding_id,
+        )
+        self.request_context.workspace_root = str(scope_root)
+        return resolved, scope_root, identity
+
+    @staticmethod
+    def _task_control_lifecycle_read_only(args: dict[str, Any]) -> bool:
+        """Return whether task_control may observe without changing task lifecycle.
+
+        Tool-level annotations are deliberately conservative because
+        ``task_control`` contains both EOCL mutations and read-only inspection.
+        Keep that distinction here so a rejected cross-workspace inspection can
+        never write a failure, REPLAN, or completion projection in whichever
+        workspace happened to be selected for the request.
+        """
+        action = str(args.get("action", "get") or "get").strip().lower()
+        if action in {"get", "history", "operation", "audit", "events", "messages"}:
+            return True
+        if action == "lane":
+            return str(args.get("lane_action", "list") or "list").strip().lower() in {"list", "observe"}
+        if action == "handoff":
+            return str(args.get("handoff_action", "get") or "get").strip().lower() == "get"
+        if action == "p5":
+            experiment = args.get("p5_experiment")
+            return isinstance(experiment, dict) and str(experiment.get("operation") or "status").strip().lower() == "status"
+        if action == "problem":
+            event = args.get("problem_event")
+            return isinstance(event, dict) and str(event.get("operation") or "get").strip().lower() == "get"
+        return False
+
+    def _should_record_task_tool_result(self, name: str, args: dict[str, Any]) -> bool:
+        spec = TOOL_REGISTRY.get(name)
+        if spec is not None and spec.read_only is True:
+            return False
+        return not (name == "task_control" and self._task_control_lifecycle_read_only(args))
+
+    def _set_request_workspace_scope(self, name: str, args: dict[str, Any]) -> None:
+        has_multiple_roots = len(self.workspace.authorized_roots) > 1
+        binding_id = self._current_workspace_binding_id()
+        bound_root: Path | None = None
+        if binding_id:
+            bound_root = self._bound_task_context_workspace(binding_id)
+        action = str(args.get("action", "get") or "get").strip().lower()
+        mutation = (
+            name in {"agent_workflow", "exec_command", "document_workflow", "apply_changes_and_verify"}
+            or (name == "task_control" and not self._task_control_lifecycle_read_only(args))
+        )
+        path_supplied = any(
+            key in args and str(args.get(key) or "").strip() not in {"", "."}
+            for key in ("path", "workdir")
+        )
+        if has_multiple_roots and mutation and bound_root is None and not path_supplied and name != "workspace_context":
+            required_fields = (
+                ["workdir", "task_context_id"]
+                if name == "exec_command"
+                else ["task_context_id", "run_id"]
+                if name == "task_control"
+                else ["path", "task_context_id"]
+            )
+            raise ToolFailure(
+                "WORKSPACE_TARGET_REQUIRED",
+                "Mutating operations must name a workspace when multiple authorized roots are available.",
+                category="security",
+                retryable=False,
+                details={
+                    "authorized_workspace_count": len(self.workspace.authorized_roots),
+                    "required_fields": required_fields,
+                },
+            )
+        raw_path: object | None = None
+        if name == "workspace_context":
+            raw_path = args.get("path", ".")
+        elif name == "agent_workflow":
+            raw_path = args.get("path", ".")
+        elif name == "exec_command":
+            raw_path = args.get("workdir", args.get("path", "."))
+        elif name in {"document_workflow", "prepare_coding_context", "apply_changes_and_verify"}:
+            raw_path = args.get("path", ".")
+        else:
+            if binding_id:
+                if bound_root is not None:
+                    self.request_context.workspace_root = str(bound_root)
+                    return
+        if raw_path is None:
+            return
+        _resolved, scope_root, _identity = self._workspace_identity_for_request(raw_path)
+        self.request_context.workspace_root = str(scope_root)
 
     @staticmethod
     def _hub_client_record_id(identity: dict[str, Any]) -> str:
@@ -1551,10 +1975,24 @@ class Runtime(
         return self.oauth_config is not None
 
     def default_cwd_display(self) -> str:
-        return normalize_rel_display(self.default_cwd, self.workspace.root)
+        return normalize_rel_display(self._request_default_cwd(), self.workspace.root)
+
+    def _request_default_cwd(self) -> Path:
+        """Select the default directory inside the request's resolved workspace.
+
+        A process still has one legacy ``default_cwd`` for unscoped clients.
+        A stateless task context is stronger: relative paths in that request
+        must resolve below its bound root, never below the primary runtime root.
+        """
+        root = self._current_request_workspace_root()
+        try:
+            default = self.default_cwd.resolve(strict=False)
+        except (OSError, RuntimeError):
+            return root
+        return default if self.workspace._containing_root(default) == root else root
 
     def resolve_existing(self, raw_path: str = ".") -> ResolvedPath:
-        return self.workspace.resolve_existing_at(self.default_cwd, raw_path)
+        return self.workspace.resolve_existing_at(self._request_default_cwd(), raw_path)
 
     def _resolve_authorized_execution_scope(self, raw_path: object, *, field: str) -> ResolvedPath:
         """Resolve a tool target against the primary workspace plus explicit authorized roots."""
@@ -1590,8 +2028,11 @@ class Runtime(
 
     def _workspace_scope_identity(self, resolved: ResolvedPath) -> dict[str, Any]:
         scope_root = self.workspace._containing_root(resolved.path) or self.workspace.root
-        workspace_id = self._content_free_workspace_root_id(self.workspace.root)
         root_id = self._content_free_workspace_root_id(scope_root)
+        # A workspace identity belongs to the canonical root selected by the
+        # request, not to the Runtime's primary root.  The latter caused an
+        # authorized project to inherit the primary project's task/run scope.
+        workspace_id = root_id
         requested_path_id = hashlib.sha256(
             ("coding-tools-requested-path-v1\0" + os.path.normcase(str(resolved.path))).encode(
                 "utf-8", errors="replace"
@@ -1618,6 +2059,52 @@ class Runtime(
                 return root
         return None
 
+    def _known_run_workspace(self, run_id: object) -> Path | None:
+        expected = str(run_id or "").strip()
+        if not expected:
+            return None
+        current_root = self._current_request_workspace_root()
+        current = self._orchestration_ledger_for_root(current_root).get_run(expected)
+        if isinstance(current, dict):
+            return current_root
+        # A stateless/reconnected request may arrive before the authorized
+        # workspace's ledger has been touched in this Runtime generation.  Do
+        # not treat that as evidence that the run is unknown: lazily inspect
+        # every configured canonical root so task_control cannot fall back to
+        # the primary workspace state for a run belonging elsewhere.
+        roots: list[Path] = [self.workspace.root, *self.workspace.authorized_roots]
+        with self._workspace_component_lock:
+            roots.extend(Path(key) for key in self._orchestration_ledgers)
+        seen: set[str] = set()
+        for root in roots:
+            canonical = root.resolve(strict=False)
+            key = str(canonical)
+            if key in seen or canonical == current_root.resolve(strict=False):
+                continue
+            seen.add(key)
+            ledger = self._orchestration_ledger_for_root(canonical)
+            if isinstance(ledger.get_run(expected), dict):
+                return canonical
+        return None
+
+    def _assert_task_control_workspace(self, run_id: object) -> None:
+        expected_root = self._known_run_workspace(run_id)
+        if expected_root is None:
+            return
+        current_root = self._current_request_workspace_root()
+        if expected_root.resolve(strict=False) != current_root.resolve(strict=False):
+            raise ToolFailure(
+                "RUN_WORKSPACE_MISMATCH",
+                "The requested orchestration run belongs to a different workspace.",
+                category="security",
+                retryable=False,
+                details={
+                    "run_id": str(run_id),
+                    "expected_workspace": str(expected_root),
+                    "received_workspace": str(current_root),
+                },
+            )
+
     def _assert_orchestration_workspace_scope(self, identity: dict[str, Any], *, run_id: object = "") -> None:
         owner_run = str(run_id or "").strip()
         if not owner_run:
@@ -1627,7 +2114,10 @@ class Runtime(
         if not owner_run:
             return
         run = self.orchestration_ledger.get_run(owner_run)
-        if not isinstance(run, dict) or str(run.get("status") or "") != "active":
+        if not isinstance(run, dict):
+            self._assert_task_control_workspace(owner_run)
+            return
+        if str(run.get("status") or "") != "active":
             return
         metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
         expected = metadata.get("workspace_identity") if isinstance(metadata.get("workspace_identity"), dict) else {}
@@ -1679,7 +2169,7 @@ class Runtime(
             )
 
     def resolve_for_write(self, raw_path: str) -> ResolvedPath:
-        return self.workspace.resolve_for_write_at(self.default_cwd, raw_path)
+        return self.workspace.resolve_for_write_at(self._request_default_cwd(), raw_path)
 
     def git_path_filter(self, raw_path: str) -> str:
         if raw_path == ".":
@@ -1815,11 +2305,12 @@ class Runtime(
         budget = BudgetDeadline(max_runtime_seconds=timeout_seconds)
         hub_identity = dict(self._current_hub_client() or {})
         trace_context = dict(getattr(self.request_context, "trace_context", {}) or {})
+        workspace_root = getattr(self.request_context, "workspace_root", None)
         trace_metadata = trace_context_metadata(trace_context)
         operation: dict[str, Any] = {
             "operation_id": operation_id,
             "tool": name,
-            "workspace": str(self.workspace.root),
+            "workspace": str(workspace_root or self.workspace.root),
             "execution_context_id": str(hub_identity.get("execution_context_id") or "")[:64],
             "started_monotonic": time.monotonic(),
             "started_at": datetime.now(timezone.utc).isoformat(),
@@ -1879,12 +2370,16 @@ class Runtime(
             previous_hub_client = getattr(self.request_context, "hub_client", None)
             had_trace_context = hasattr(self.request_context, "trace_context")
             previous_trace_context = getattr(self.request_context, "trace_context", None)
+            had_workspace_root = hasattr(self.request_context, "workspace_root")
+            previous_workspace_root = getattr(self.request_context, "workspace_root", None)
             self.request_context.background_cancel_event = cancel_event
             self.request_context.background_budget = budget
             if hub_identity:
                 self.request_context.hub_client = dict(hub_identity)
             if trace_context:
                 self.request_context.trace_context = dict(trace_context)
+            if workspace_root:
+                self.request_context.workspace_root = workspace_root
             try:
                 operation["result"] = self._call_tool_sync(name, arguments, request_id=request_id)
             except Exception as exc:  # noqa: BLE001 - background errors must become inspectable state
@@ -1921,6 +2416,13 @@ class Runtime(
                 else:
                     try:
                         del self.request_context.trace_context
+                    except AttributeError:
+                        pass
+                if had_workspace_root:
+                    self.request_context.workspace_root = previous_workspace_root
+                else:
+                    try:
+                        del self.request_context.workspace_root
                     except AttributeError:
                         pass
                 try:
@@ -2006,10 +2508,41 @@ class Runtime(
         args = dict(arguments or {})
         dispatch_started_wall_utc = utc_now()
         dispatch_started_at = time.monotonic()
+        had_workspace_root = hasattr(self.request_context, "workspace_root")
+        previous_workspace_root = getattr(self.request_context, "workspace_root", None)
+        try:
+            self._set_request_workspace_scope(name, args)
+        except ToolFailure as exc:
+            if had_workspace_root:
+                self.request_context.workspace_root = previous_workspace_root
+            else:
+                try:
+                    del self.request_context.workspace_root
+                except AttributeError:
+                    pass
+            payload = {
+                "ok": False,
+                "error": {
+                    "code": exc.code,
+                    "message": exc.message,
+                    "category": exc.category,
+                    "retryable": exc.retryable,
+                    "details": exc.details,
+                },
+            }
+            payload["presentation"] = TOOL_CONTRACT_RUNTIME.presentation(name, payload)
+            return make_tool_result(name, payload, is_error=True)
         if name in {"agent_workflow", "exec_command"}:
             try:
                 self._preflight_tool_workspace_scope(name, args)
             except ToolFailure as exc:
+                if had_workspace_root:
+                    self.request_context.workspace_root = previous_workspace_root
+                else:
+                    try:
+                        del self.request_context.workspace_root
+                    except AttributeError:
+                        pass
                 payload = {
                     "ok": False,
                     "error": {
@@ -2025,6 +2558,13 @@ class Runtime(
         try:
             self._activation_enter_tool_call(name, args)
         except ToolFailure as exc:
+            if had_workspace_root:
+                self.request_context.workspace_root = previous_workspace_root
+            else:
+                try:
+                    del self.request_context.workspace_root
+                except AttributeError:
+                    pass
             return make_tool_result(name, {
                 "ok": False,
                 "error": {
@@ -2084,6 +2624,13 @@ class Runtime(
             return result
         finally:
             self._activation_leave_tool_call()
+            if had_workspace_root:
+                self.request_context.workspace_root = previous_workspace_root
+            else:
+                try:
+                    del self.request_context.workspace_root
+                except AttributeError:
+                    pass
 
     def _idempotency_claim_or_replay(self, name: str, args: dict[str, Any]) -> dict[str, Any] | None:
         if name == "agent_workflow" or name not in TOOL_REGISTRY:
@@ -2344,17 +2891,11 @@ class Runtime(
                         self.request_sessions.pop(request_id, None)
                 self.request_context.request_id = None
             payload.setdefault("ok", True)
-            task_read_only = name == "task_control" and (
-                str(args.get("action", "get")).lower() in {"get", "history", "operation"}
-                or (
-                    str(args.get("action", "")).lower() == "p5"
-                    and isinstance(args.get("p5_experiment"), dict)
-                    and str(args["p5_experiment"].get("operation") or "status").lower() == "status"
-                )
-            )
+            task_read_only = name == "task_control" and self._task_control_lifecycle_read_only(args)
             if spec.read_only is not True and name not in {"agent_workflow", "document_workflow"} and not task_read_only and not payload.get("deduplicated"):
                 self._invalidate_fast_cache()
-            self._record_task_tool_result(name, args, payload)
+            if self._should_record_task_tool_result(name, args):
+                self._record_task_tool_result(name, args, payload)
             self.emit_tool_trace(name, args, payload, started_at, started_wall_utc=started_wall_utc)
             content = spec.content_builder(payload) if spec.content_builder else None
             payload.setdefault("presentation", TOOL_CONTRACT_RUNTIME.presentation(name, payload))
@@ -2385,7 +2926,8 @@ class Runtime(
                 }
             if exc.code == "ELICITATION_UNSUPPORTED":
                 payload["status"] = "unsupported"
-            self._record_task_tool_result(name, args, payload)
+            if self._should_record_task_tool_result(name, args):
+                self._record_task_tool_result(name, args, payload)
             self.emit_tool_trace(name, args, payload, started_at, started_wall_utc=started_wall_utc)
             return make_tool_result(name, payload, is_error=True)
         except Exception as exc:  # noqa: BLE001 - tool failures must stay structured
@@ -2409,7 +2951,8 @@ class Runtime(
             payload = {"ok": False, "error": error}
             if spec.error_status:
                 payload["status"] = spec.error_status
-            self._record_task_tool_result(name, args, payload)
+            if self._should_record_task_tool_result(name, args):
+                self._record_task_tool_result(name, args, payload)
             self.emit_tool_trace(name, args, payload, started_at, started_wall_utc=started_wall_utc)
             return make_tool_result(name, payload, is_error=True)
 
@@ -2430,6 +2973,8 @@ class Runtime(
         return False
 
     def _record_task_tool_result(self, name: str, args: dict[str, Any], payload: dict[str, Any]) -> None:
+        if not self._should_record_task_tool_result(name, args):
+            return
         try:
             self.task_state.record_tool_result(name, args, payload)
             if not self._plain_command_completion_required(name, args, payload):
@@ -2530,9 +3075,17 @@ class Runtime(
         threading.Thread(target=preheat, name="coding-tools-preheat", daemon=True).start()
 
     def _orchestration_workspace_identity(self, path_value: object = ".") -> dict[str, Any]:
-        resolved = self._resolve_authorized_execution_scope(path_value, field="path")
+        requested = str(path_value or ".")
+        bound_root = None
+        if requested in {"", "."}:
+            bound_root = self._bound_task_context_workspace(self._current_workspace_binding_id())
+        resolved = self._resolve_authorized_execution_scope(
+            str(bound_root) if bound_root is not None else requested,
+            field="path",
+        )
         workspace_identity = self._workspace_scope_identity(resolved)
         scope_root = self._workspace_root_for_identity(workspace_identity.get("root_id")) or self.workspace.root
+        self.request_context.workspace_root = str(scope_root)
         try:
             status = self.git_status({"path": str(resolved.path), "max_entries": 2000})
         except (ToolFailure, OSError, ValueError):

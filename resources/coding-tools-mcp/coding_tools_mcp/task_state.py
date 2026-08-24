@@ -735,14 +735,40 @@ class TaskStateStore:
 
 
 class ContextualTaskStateStore:
-    """Route task projections by execution context while preserving legacy global state."""
+    """Route task projections by execution context and workspace.
 
-    def __init__(self, workspace: Path, scope_provider: Callable[[], str]) -> None:
+    The original store was scoped only by the MCP execution context and kept a
+    single workspace root.  That is sufficient for one project, but it lets a
+    request that explicitly targets an authorized second root read or mutate
+    the primary project's task projection.  ``workspace_provider`` is evaluated
+    per call, so concurrent HTTP sessions can safely select independent roots
+    without mutating the Runtime's primary workspace.
+    """
+
+    def __init__(
+        self,
+        workspace: Path,
+        scope_provider: Callable[[], str],
+        workspace_provider: Callable[[], Path] | None = None,
+        workspace_roots_provider: Callable[[], list[Path] | tuple[Path, ...]] | None = None,
+    ) -> None:
         self.workspace = workspace.resolve()
         self._scope_provider = scope_provider
+        self._workspace_provider = workspace_provider
+        self._workspace_roots_provider = workspace_roots_provider
         self._global_store = TaskStateStore(self.workspace)
-        self._stores: dict[str, TaskStateStore] = {}
+        self._workspace_stores: dict[str, TaskStateStore] = {str(self.workspace): self._global_store}
+        self._stores: dict[tuple[str, str], TaskStateStore] = {}
         self._lock = threading.RLock()
+
+    def current_workspace(self) -> Path:
+        if self._workspace_provider is None:
+            return self.workspace
+        try:
+            candidate = Path(self._workspace_provider()).resolve(strict=False)
+        except (OSError, RuntimeError, TypeError, ValueError):
+            return self.workspace
+        return candidate if candidate.is_dir() else self.workspace
 
     def current_scope_id(self) -> str:
         try:
@@ -754,32 +780,45 @@ class ContextualTaskStateStore:
         return bool(self.current_scope_id())
 
     def _current_store(self) -> TaskStateStore:
+        workspace = self.current_workspace()
         scope_id = self.current_scope_id()
         if not scope_id:
-            return self._global_store
+            key = str(workspace)
+            with self._lock:
+                store = self._workspace_stores.get(key)
+                if store is None:
+                    store = TaskStateStore(workspace)
+                    self._workspace_stores[key] = store
+                return store
+        workspace_key = str(workspace)
+        key = (workspace_key, scope_id)
         with self._lock:
-            store = self._stores.get(scope_id)
+            store = self._stores.get(key)
             if store is None:
-                store = TaskStateStore(self.workspace, scope_id=scope_id)
+                store = TaskStateStore(workspace, scope_id=scope_id)
                 if (
                     not store.path.exists()
                     and not scope_id.startswith("mcp2026:")
                     and not scope_id.startswith("legacy:")
                 ):
-                    context_dir = self.workspace / ".coding-tools" / "task-contexts"
+                    context_dir = workspace / ".coding-tools" / "task-contexts"
                     existing_contexts = list(context_dir.glob("*.json")) if context_dir.exists() else []
                     existing_contexts = [
                         path for path in existing_contexts
                         if not path.name.endswith("-history.json")
                     ]
-                    legacy = self._global_store.get()
+                    legacy_store = self._workspace_stores.get(workspace_key)
+                    if legacy_store is None:
+                        legacy_store = TaskStateStore(workspace)
+                        self._workspace_stores[workspace_key] = legacy_store
+                    legacy = legacy_store.get()
                     if not existing_contexts and TaskStateStore._has_task(legacy):
                         # One-time migration: the first stateful ChatWeb context adopts
                         # the pre-isolation task. Modern MCP 2026 stateless handles are
                         # explicit new application-state scopes and never adopt global
                         # state; later stateful contexts also always start clean.
                         store._write(legacy)
-                self._stores[scope_id] = store
+                self._stores[key] = store
             return store
 
     @property
@@ -787,20 +826,27 @@ class ContextualTaskStateStore:
         return self._current_store().state_file_display
 
     def contexts(self, limit: int = 20) -> list[dict[str, Any]]:
-        context_dir = self.workspace / ".coding-tools" / "task-contexts"
-        if not context_dir.exists():
-            return []
         candidates: list[tuple[float, Path, dict[str, Any]]] = []
-        for path in context_dir.glob("*.json"):
-            if path.name.endswith("-history.json"):
-                continue
+        roots = [self.current_workspace()]
+        if not self.current_scope_id() and self._workspace_roots_provider is not None:
             try:
-                state = json.loads(path.read_text(encoding="utf-8"))
-                if not isinstance(state, dict):
-                    continue
-                candidates.append((path.stat().st_mtime, path, state))
-            except (OSError, ValueError):
+                roots = [Path(item).resolve(strict=False) for item in self._workspace_roots_provider()]
+            except (OSError, RuntimeError, TypeError, ValueError):
+                roots = [self.current_workspace()]
+        for root in roots:
+            context_dir = root / ".coding-tools" / "task-contexts"
+            if not context_dir.exists():
                 continue
+            for path in context_dir.glob("*.json"):
+                if path.name.endswith("-history.json"):
+                    continue
+                try:
+                    state = json.loads(path.read_text(encoding="utf-8"))
+                    if not isinstance(state, dict):
+                        continue
+                    candidates.append((path.stat().st_mtime, path, state))
+                except (OSError, ValueError):
+                    continue
         bounded = max(1, min(int(limit), 100))
         summaries: list[dict[str, Any]] = []
         for _mtime, path, state in sorted(candidates, key=lambda item: item[0], reverse=True)[:bounded]:
@@ -815,7 +861,8 @@ class ContextualTaskStateStore:
                 "run_id": projection.get("run_id"),
                 "wave_id": projection.get("wave_id"),
                 "orchestration_state": projection.get("orchestration_state"),
-                "state_file": path.relative_to(self.workspace).as_posix(),
+                "state_file": path.relative_to(path.parents[2]).as_posix(),
+                "workspace": str(path.parents[2]),
             })
         return summaries
 

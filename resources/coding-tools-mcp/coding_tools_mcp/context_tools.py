@@ -14,6 +14,8 @@ from .orchestration_control import OrchestrationControlError, RunContext
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH
 from .rework_diagnosis import p2_build_verification_failure_detail, p2_check_failure_detail
 from .task_state import command_payload_succeeded
+from .task_state import ContextualTaskStateStore
+from .fs_utils import normalize_rel_display
 from .semantic_localization import (
     run_semantic_localization,
     semantic_provider_resource_status,
@@ -35,23 +37,30 @@ WORKFLOW_PROOF_FINALIZATION_RESERVE_SECONDS = 5.0
 class ContextToolsMixin:
     def workspace_context(self, args: dict[str, Any]) -> dict[str, Any]:
         detail = str(args.get("detail", "compact")).lower()
-        cache_args = {"path": str(args.get("path", ".")), "max_entries": int(args.get("max_entries", 40)), "detail": detail}
+        resolved, scope_root, scope_identity = self._workspace_identity_for_request(args.get("path", "."))
+        cache_args = {
+            "path": str(resolved.path),
+            "max_entries": int(args.get("max_entries", 40)),
+            "detail": detail,
+            "task_scope": self._current_task_scope_id(),
+            "workspace_id": str(scope_identity.get("workspace_id") or ""),
+        }
         cache_key = self._fast_cache_key("workspace_context", cache_args)
         cached = self._fast_cache_get(cache_key, 30)
         if cached is not None:
             return cached
         root_entries = self.list_dir({
-            "path": str(args.get("path", ".")),
+            "path": str(resolved.path),
             "max_entries": min(int(args.get("max_entries", 40)), 500),
             "max_depth": 1,
             "recursive": False,
         })
         try:
-            git = self.git_status({"path": str(args.get("path", ".")), "max_entries": 100})
+            git = self.git_status({"path": str(scope_root), "max_entries": 100})
         except Exception as exc:  # non-Git folders remain valid workspaces
             git = {"is_repo": False, "warnings": [str(exc)]}
-        project = {"type": "unknown", "name": self.workspace.root.name, "version": ""}
-        package = self.workspace.root / "package.json"
+        project = {"type": "unknown", "name": scope_root.name, "version": ""}
+        package = scope_root / "package.json"
         if package.is_file():
             try:
                 metadata = json.loads(package.read_text(encoding="utf-8"))
@@ -62,15 +71,32 @@ class ContextToolsMixin:
                 }
             except (OSError, ValueError):
                 pass
-        elif (self.workspace.root / "pyproject.toml").is_file():
+        elif (scope_root / "pyproject.toml").is_file():
             project["type"] = "python"
-        elif (self.workspace.root / "Cargo.toml").is_file():
+        elif (scope_root / "Cargo.toml").is_file():
             project["type"] = "rust"
-        elif (self.workspace.root / "go.mod").is_file():
+        elif (scope_root / "go.mod").is_file():
             project["type"] = "go"
-        task = self.task_state.get()
+        task_store = ContextualTaskStateStore(
+            scope_root,
+            self._current_task_scope_id,
+        )
+        task = task_store.get()
+        if not str(task.get("task_id") or "").strip() and not str(task.get("objective") or "").strip():
+            task = None
         if detail != "full":
-            task = {key: task.get(key) for key in ("task_id", "objective", "status", "current_step", "next_step", "failure")}
+            task = (
+                {key: task.get(key) for key in ("task_id", "objective", "status", "current_step", "next_step", "failure")}
+                if isinstance(task, dict)
+                else {
+                    "task_id": "",
+                    "objective": "",
+                    "status": "NO_ACTIVE_TASK",
+                    "current_step": "",
+                    "next_step": "",
+                    "failure": None,
+                }
+            )
             git = {
                 "is_repo": git.get("is_repo", False),
                 "branch": git.get("branch") or git.get("head"),
@@ -78,8 +104,10 @@ class ContextToolsMixin:
                 "truncated": bool(git.get("truncated", False)),
             }
         payload = {
-            "workspace": str(self.workspace.root),
-            "default_cwd": self.default_cwd_display(),
+            "workspace": str(scope_root),
+            "workspace_id": str(scope_identity.get("workspace_id") or ""),
+            "task_context_id": self._current_task_scope_id() or None,
+            "default_cwd": normalize_rel_display(resolved.path, scope_root),
             "project": project,
             "entries": root_entries.get("entries", []),
             "entries_truncated": root_entries.get("truncated", False),
@@ -90,7 +118,7 @@ class ContextToolsMixin:
             "cache": {"hit": False, "age_ms": 0},
         }
         if detail == "full":
-            source = self._orchestration_workspace_identity(args.get("path", "."))
+            source = self._orchestration_workspace_identity(str(resolved.path))
             unresolved_stale_runs = self.orchestration_ledger.stale_run_candidates(
                 stale_after_seconds=self.stale_run_seconds
             )

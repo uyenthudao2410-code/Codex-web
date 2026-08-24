@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from . import __version__
 from .envutils import ENV_PREFIX, truthy_env
-from .errors import JsonRpcError, ToolFailure
+from .errors import JsonRpcError, ToolFailure, normalize_exception_group
 from .http_origin import _configured_allowed_origins, is_allowed_origin  # noqa: F401  # compatibility re-export
 from .oauth import (
     MAX_PENDING_CODES,
@@ -906,7 +906,27 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                     return
             self._runtime = self.server.control_runtime  # type: ignore[attr-defined]
             self._send_session_header = False
+            # Seed the transport handle before dispatch as a final guard for
+            # wrappers that replace or copy the handler state while invoking
+            # the request.  ``handle_rpc`` repeats the same normalization and
+            # therefore keeps the exact context used by the tool execution.
+            if not str(getattr(self, "_stateless_task_context_id", "") or ""):
+                try:
+                    _, seeded_task_context_id, _ = self._stateless_task_context(request)
+                    self._stateless_task_context_id = seeded_task_context_id
+                except ValueError:
+                    # Preserve the typed JSON-RPC validation boundary in
+                    # ``handle_rpc``; this pre-seed is only a best-effort
+                    # transport integrity check.
+                    pass
             response = self.handle_rpc(request, stateless_2026=True)
+            # Keep the MCP-2026 application handle at the transport boundary
+            # as a second integrity check.  The dispatcher decorates normal
+            # tool results, but a response wrapper/proxy must never be able to
+            # drop the handle before it is serialized to the client.
+            stateless_task_context_id = str(getattr(self, "_stateless_task_context_id", "") or "")
+            if response is not None and stateless_task_context_id:
+                self._decorate_stateless_task_context(response, stateless_task_context_id)
             if response is None:
                 self.send_response(202)
                 self.send_cors_headers()
@@ -1036,8 +1056,24 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             identity = self._hub_identity_from_request(request)
             if stateless_2026:
                 identity["execution_context_id"] = execution_context_id
+                runtime.request_context.stateless_task_context_id = task_context_id
             dispatch_request, controller_usage = controller_usage_request(dispatch_request, identity)
             runtime.request_context.hub_client = identity
+            # Resolve the requested workspace before registering the controller
+            # client.  Controller leases and task projections must be recorded
+            # in the same workspace ledger as the tool call, not in the
+            # Runtime's primary project ledger.
+            if dispatch_request.get("method") == "tools/call":
+                params = dispatch_request.get("params") if isinstance(dispatch_request.get("params"), dict) else {}
+                tool_name = str(params.get("name") or "")
+                tool_args = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
+                try:
+                    runtime._set_request_workspace_scope(tool_name, tool_args)
+                except Exception:
+                    # The normal tool dispatch remains the typed error boundary;
+                    # this pre-registration hint must never turn it into a raw
+                    # HTTP/JSON-RPC failure.
+                    pass
             runtime._touch_hub_client(identity)
             usage_receipt = None
             deferred_controller_usage = False
@@ -1061,6 +1097,19 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             return response
         except ValueError as exc:
             return jsonrpc_error(response_id(request), -32602, str(exc))
+        except ExceptionGroup as exc:
+            failure = normalize_exception_group(exc)
+            return jsonrpc_error(
+                response_id(request),
+                -32603,
+                failure.message,
+                {
+                    "code": failure.code,
+                    "category": failure.category,
+                    "retryable": failure.retryable,
+                    "details": failure.details,
+                },
+            )
         except Exception as exc:  # noqa: BLE001 - HTTP must always answer with JSON-RPC
             return jsonrpc_error(response_id(request), -32603, str(exc))
         finally:
@@ -1068,6 +1117,10 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 delattr(runtime.request_context, "hub_client")
             if hasattr(runtime.request_context, "trace_context"):
                 delattr(runtime.request_context, "trace_context")
+            if hasattr(runtime.request_context, "workspace_root"):
+                delattr(runtime.request_context, "workspace_root")
+            if hasattr(runtime.request_context, "stateless_task_context_id"):
+                delattr(runtime.request_context, "stateless_task_context_id")
 
     def _stateless_task_context(self, request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         """Return a request copy plus an isolated MCP-2026 application-state context."""
@@ -1096,6 +1149,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         execution_context_id = "mcp2026:" + hashlib.sha256(
             f"mcp2026-task:{task_context_id}".encode("utf-8")
         ).hexdigest()[:56]
+        self._stateless_task_context_id = task_context_id
         return dispatch_request, task_context_id, execution_context_id
 
     @staticmethod
@@ -1109,7 +1163,12 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             meta[STATELESS_TASK_CONTEXT_META_KEY] = task_context_id
             structured = result.get("structuredContent")
             if isinstance(structured, dict):
-                structured.setdefault("task_context_id", task_context_id)
+                # The tool payload may have populated this field from the
+                # request-scoped execution identity (or left it as null).
+                # The public MCP-2026 application handle is the minted
+                # task_context_id, so it must be authoritative in the
+                # structured result as well as in _meta.
+                structured["task_context_id"] = task_context_id
         error = response.get("error")
         if isinstance(error, dict):
             data = error.get("data")

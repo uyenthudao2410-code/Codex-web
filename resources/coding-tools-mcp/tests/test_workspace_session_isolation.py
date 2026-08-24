@@ -11,9 +11,323 @@ from unittest.mock import patch
 
 from coding_tools_mcp.protocol import PROTOCOL_VERSION
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
+from coding_tools_mcp.task_state import TaskStateStore
 
 
 class WorkspaceSessionIsolationTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows canonicalization contract")
+    def test_windows_case_and_separator_aliases_share_workspace_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "Primary"
+            authorized = base / "Authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            with patch.dict(os.environ, {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }):
+                runtime = Runtime(primary)
+            try:
+                canonical = runtime.workspace_context({"path": str(authorized), "detail": "compact"})
+                alias = str(authorized).swapcase().replace("\\", "/")
+                aliased = runtime.workspace_context({"path": alias, "detail": "compact"})
+                self.assertFalse(canonical.get("isError"), canonical)
+                self.assertFalse(aliased.get("isError"), aliased)
+                self.assertEqual(aliased["workspace"], canonical["workspace"])
+                self.assertEqual(aliased["workspace_id"], canonical["workspace_id"])
+            finally:
+                runtime.close()
+
+    def test_workspace_context_projects_task_state_from_requested_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            with patch.dict(os.environ, {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }):
+                runtime = Runtime(primary)
+            try:
+                runtime.task_state.update({"objective": "primary-only", "status": "active"})
+                TaskStateStore(authorized).update({"objective": "authorized-only", "status": "active"})
+
+                selected = runtime.workspace_context({"path": str(authorized), "detail": "compact"})
+                self.assertEqual(selected["workspace"], str(authorized.resolve()))
+                self.assertNotEqual(selected["workspace_id"], runtime._content_free_workspace_root_id(primary))
+                self.assertEqual(selected["task"]["objective"], "authorized-only")
+
+                primary_view = runtime.workspace_context({"path": str(primary), "detail": "compact"})
+                self.assertEqual(primary_view["workspace"], str(primary.resolve()))
+                self.assertEqual(primary_view["task"]["objective"], "primary-only")
+            finally:
+                runtime.close()
+
+    def test_task_context_cannot_switch_bound_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            with patch.dict(os.environ, {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }):
+                runtime = Runtime(primary, transport="http")
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb:test",
+                "client_type": "chatweb",
+                "execution_context_id": "ctx-bound-workspace",
+            }
+            try:
+                first = runtime.call_tool("workspace_context", {"path": str(authorized), "detail": "compact"})
+                self.assertFalse(first["isError"], first)
+                rejected = runtime.call_tool("workspace_context", {"path": str(primary), "detail": "compact"})
+                self.assertTrue(rejected["isError"], rejected)
+                self.assertEqual(
+                    rejected["structuredContent"]["error"]["code"],
+                    "TASK_CONTEXT_WORKSPACE_MISMATCH",
+                )
+            finally:
+                del runtime.request_context.hub_client
+                runtime.close()
+
+    def test_mutation_without_workspace_target_is_rejected_when_multiple_roots_are_authorized(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            with patch.dict(os.environ, {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }):
+                runtime = Runtime(primary)
+            try:
+                result = runtime.call_tool("exec_command", {"cmd": "echo must-not-run"})
+                self.assertTrue(result["isError"], result)
+                self.assertEqual(
+                    result["structuredContent"]["error"]["code"],
+                    "WORKSPACE_TARGET_REQUIRED",
+                )
+                self.assertEqual(
+                    result["structuredContent"]["error"]["details"]["required_fields"],
+                    ["workdir", "task_context_id"],
+                )
+            finally:
+                runtime.close()
+
+    def test_bound_task_context_is_a_valid_default_exec_workdir(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            with patch.dict(os.environ, {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }):
+                runtime = Runtime(primary, transport="http")
+            identity = {
+                "client_id": "chatweb:scoped-exec",
+                "client_type": "chatweb",
+                "execution_context_id": "mcp2026:scoped-exec-context",
+            }
+            runtime.request_context.hub_client = dict(identity)
+            try:
+                bound = runtime.call_tool("workspace_context", {
+                    "path": str(authorized), "detail": "compact",
+                })
+                self.assertFalse(bound["isError"], bound)
+                runtime._set_request_workspace_scope("exec_command", {"cmd": "echo scoped"})
+                runtime._preflight_tool_workspace_scope("exec_command", {"cmd": "echo scoped"})
+                self.assertEqual(runtime.resolve_existing(".").path, authorized.resolve())
+                self.assertEqual(runtime._current_request_workspace_root(), authorized.resolve())
+            finally:
+                del runtime.request_context.hub_client
+                if hasattr(runtime.request_context, "workspace_root"):
+                    del runtime.request_context.workspace_root
+                runtime.close()
+
+    def test_task_control_rejects_run_from_another_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            with patch.dict(os.environ, {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }):
+                runtime = Runtime(primary)
+            try:
+                result = runtime.call_tool("agent_workflow", {
+                    "workflow": "diagnose",
+                    "phase": "prepare",
+                    "path": str(authorized),
+                    "objective": "authorized run",
+                    "execution_route": "deterministic",
+                    "execution_mode": "mcp_only",
+                    "verification": "none",
+                })
+                self.assertFalse(result["isError"], result)
+                run_id = result["structuredContent"]["orchestration"]["run_id"]
+                rejected = runtime.call_tool("task_control", {"action": "get", "run_id": run_id})
+                self.assertTrue(rejected["isError"], rejected)
+                self.assertEqual(
+                    rejected["structuredContent"]["error"]["code"],
+                    "RUN_WORKSPACE_MISMATCH",
+                )
+            finally:
+                runtime.close()
+
+    def test_task_control_rejects_uncached_run_from_another_workspace_after_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            env = {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }
+            with patch.dict(os.environ, env):
+                first = Runtime(primary)
+            try:
+                created = first.call_tool("agent_workflow", {
+                    "workflow": "diagnose",
+                    "phase": "prepare",
+                    "path": str(authorized),
+                    "objective": "authorized run survives restart lookup",
+                    "execution_route": "deterministic",
+                    "execution_mode": "mcp_only",
+                    "verification": "none",
+                })
+                self.assertFalse(created["isError"], created)
+                run_id = created["structuredContent"]["orchestration"]["run_id"]
+            finally:
+                first.close()
+
+            with patch.dict(os.environ, env):
+                second = Runtime(primary)
+            try:
+                rejected = second.call_tool("task_control", {"action": "get", "run_id": run_id})
+                self.assertTrue(rejected["isError"], rejected)
+                self.assertEqual(
+                    rejected["structuredContent"]["error"]["code"],
+                    "RUN_WORKSPACE_MISMATCH",
+                )
+            finally:
+                second.close()
+
+    def test_task_context_workspace_binding_survives_runtime_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            environment = {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }
+            identity = {
+                "client_id": "chatweb:restart",
+                "client_type": "chatweb",
+                "execution_context_id": "mcp2026:restart-bound-context",
+            }
+            with patch.dict(os.environ, environment):
+                first = Runtime(primary, transport="http")
+            try:
+                first.request_context.hub_client = dict(identity)
+                first.request_context.workspace_root = str(authorized.resolve())
+                first._touch_hub_client(identity)
+                del first.request_context.workspace_root
+                bound = first.call_tool("workspace_context", {"path": str(authorized), "detail": "compact"})
+                self.assertFalse(bound["isError"], bound)
+                registry_path = primary / ".coding-tools" / "orchestration" / "task-context-workspaces.json"
+                self.assertTrue(registry_path.is_file())
+                first.request_context.workspace_root = str(authorized.resolve())
+                first._touch_hub_client(identity)
+                del first.request_context.workspace_root
+                prepared = first.call_tool("agent_workflow", {
+                    "workflow": "diagnose",
+                    "phase": "prepare",
+                    "objective": "restart-scoped-authorized-task",
+                    "execution_route": "deterministic",
+                    "execution_mode": "mcp_only",
+                    "verification": "none",
+                })
+                self.assertFalse(prepared["isError"], prepared)
+                run_id = prepared["structuredContent"]["orchestration"]["run_id"]
+            finally:
+                del first.request_context.hub_client
+                first.close()
+
+            with patch.dict(os.environ, environment):
+                second = Runtime(primary, transport="http")
+            try:
+                second.request_context.hub_client = dict(identity)
+                second.request_context.workspace_root = str(authorized.resolve())
+                second._touch_hub_client(identity)
+                del second.request_context.workspace_root
+                restored = second.call_tool("workspace_context", {"detail": "compact"})
+                self.assertFalse(restored["isError"], restored)
+                self.assertEqual(restored["structuredContent"]["workspace"], str(authorized.resolve()))
+                second.request_context.workspace_root = str(authorized.resolve())
+                second._touch_hub_client(identity)
+                del second.request_context.workspace_root
+                state = second.call_tool("task_control", {"action": "get"})
+                self.assertFalse(state["isError"], state)
+                self.assertEqual(
+                    state["structuredContent"]["state"]["orchestration"]["run_id"],
+                    run_id,
+                )
+            finally:
+                del second.request_context.hub_client
+                second.close()
+
+    def test_legacy_workspace_context_mapping_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            primary = Path(temp) / "primary"
+            primary.mkdir()
+            registry_path = primary / ".coding-tools" / "orchestration" / "task-context-workspaces.json"
+            registry_path.parent.mkdir(parents=True)
+            registry_path.write_text(json.dumps({
+                "schema_version": 0,
+                "contexts": {"mcp2026:legacy-context": {"root": "unknown"}},
+            }), encoding="utf-8")
+            with patch.dict(os.environ, {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+                runtime = Runtime(primary, transport="http")
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb:legacy",
+                "client_type": "chatweb",
+                "execution_context_id": "mcp2026:legacy-context",
+            }
+            try:
+                result = runtime.call_tool("workspace_context", {"detail": "compact"})
+                self.assertTrue(result["isError"], result)
+                self.assertEqual(
+                    result["structuredContent"]["error"]["code"],
+                    "UNKNOWN_LEGACY_WORKSPACE",
+                )
+                runtime.request_context.hub_client["execution_context_id"] = "mcp2026:new-context"
+                recovered = runtime.call_tool("workspace_context", {"path": str(primary), "detail": "compact"})
+                self.assertFalse(recovered["isError"], recovered)
+                persisted = json.loads(registry_path.read_text(encoding="utf-8"))
+                self.assertIn("mcp2026:legacy-context", persisted.get("legacy_contexts", {}))
+            finally:
+                del runtime.request_context.hub_client
+                runtime.close()
+
     def test_authorized_project_is_valid_execution_scope_without_switching_primary_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)

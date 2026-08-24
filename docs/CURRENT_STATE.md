@@ -21,7 +21,7 @@ A source implementation can be newer than the process currently running. For Ele
 The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md) is the current operational receipt for volatile lifecycle, connector, PRL, and packaged-harness claims. It supersedes older uses of “current”, “active”, or “accepted” in this document when those terms describe a live process or connector rather than a source implementation.
 
 - The source-freeze delivery commit is `8a6f322…`, which is the current code-bearing source and was observed matched to upstream at its delivery point. A subsequent local delivery-receipt correction may be one commit ahead until separately authorized push; runtime evidence may also continue to drift after any delivery snapshot. Do not treat either condition as a package, installer, release, deployment, production, or SLO claim.
-- Earlier P0/P4 connector receipts remain `VERIFIED_SNAPSHOT`. The current connector proof is `LIVE_PASS` at the tracker receipt dated `2026-08-24T02:06:58Z`: the current loaded Coding MCP process recorded a current contract rediscovery and Recovery Host invoked the official guarded acknowledgement. That receipt applies only to this loaded process/contract; a persisted SHA, prior PID, or source test still cannot substitute after a later runtime or contract change.
+- Earlier P0/P4 connector receipts remain `VERIFIED_SNAPSHOT`. The tracker receipt dated `2026-08-24T02:06:58Z` was `LIVE_PASS` for that loaded process/contract, but a controlled runtime restart at `2026-08-24T06:14Z` loaded the current source revision and reset the connector gate: the runtime now reports `connectorRefreshRequired=true` and `connectorRediscovered=false` until ChatWeb performs a fresh tools/list rediscovery and Recovery Host records the guarded acknowledgement. A persisted SHA, prior PID, or source test cannot substitute after this runtime change.
 - P5 anchors are terminal; the earlier A0 source-drift epoch has a truthful zero funnel. Gate 0 currently has only threshold-sensitive ordinary rows with no live owner/residue; they are retained until a fresh exact census demonstrates an actual threshold crossing.
 - PRL-D and A2 remain `HOLD_NATURAL_EVIDENCE`; missing natural observations, TTPR, stage coverage, and measured money remain unknown rather than zero.
 - The isolated P0.3 packaged Recovery lane is source/package-local evidence, not an exact-frozen release candidate, installed-session, reboot/logon, connector, or production claim.
@@ -65,6 +65,33 @@ The current `smart` profile intentionally exposes exactly these eight public too
 - `command_control`
 - `request_permissions`
 - `view_image`
+
+### Authorized-root workspace projection (source contract)
+
+When the Runtime has more than one authorized root, `workspace_context(path)`
+canonicalizes the requested root and reports that root's `workspace_id`, project
+metadata, Git summary, and task projection. The task projection is loaded from
+the selected root and current MCP execution context; it never falls back to the
+primary Runtime task or to another project. A context that has been bound by a
+workspace read cannot be rebound to a different root (`TASK_CONTEXT_WORKSPACE_MISMATCH`).
+Mutating public calls without an explicit path/workdir or an already-bound task
+context fail closed with `WORKSPACE_TARGET_REQUIRED` when multiple roots are
+authorized. This is source and focused-test proof only; it does not by itself
+prove controlled live activation, packaging, release, or production readiness.
+The binding is persisted as server-derived state in
+`.coding-tools/orchestration/task-context-workspaces.json`; after Runtime
+restart the canonical root, current authorization set, and content-free
+`workspace_id` are revalidated before reuse. Missing, malformed, legacy, or
+unauthorized mappings fail closed as `UNKNOWN_LEGACY_WORKSPACE`,
+`WORKSPACE_NOT_AUTHORIZED`, or `WORKSPACE_SCOPE_INCONSISTENT`.
+Handoff capsules include the bound workspace identity, authority transition,
+source/diff fingerprints, lease/delegation IDs, bounded dirty paths, proof IDs,
+and unresolved-risk projection; they do not replace the canonical ledger or
+carry transcript/raw command output.
+The repository also has a public stateless-HTTP matrix that binds two temporary
+workspace roots, creates separate task/run projections, rejects cross-workspace
+`task_control`, then recreates the Runtime and verifies the authorized context
+and task projection are restored.
 
 `restart_runtime` is an action of `task_control`, not a ninth public tool. The runtime publishes a deterministic contract fingerprint and tool count so Electron can detect a stale ChatGPT connector schema.
 
@@ -311,12 +338,12 @@ Account credential snapshots under `docs/ac/` are local-only data and must never
 
 The following are deliberate evidence/authority gates, not documentation bugs:
 
-- P0 source activation: **ACCEPTED**; the post-fix connector receipt is historical, while the current loaded connector proof is `LIVE_PASS` after real rediscovery plus official acknowledgement; repeat that receipt after a runtime or public-contract change;
+- P0 source activation: **ACCEPTED**; the current Coding MCP process is source/runtime-current after the 2026-08-24 controlled restart, while ChatWeb connector rediscovery/official acknowledgement is pending again (`connectorRefreshRequired=true`), so the prior `LIVE_PASS` receipt remains historical for its earlier process;
 - automatic non-deterministic routing: **OFF / deterministic fail-closed** pending representative accepted paired evidence;
 - automatic global server-first: **OFF** pending representative compute-placement evidence;
 - P3 representative efficacy: **DEFERRED**, separate from the closed engineering gate;
 - P4 source/gate engineering: **ACCEPTED**; development launch authority is pinned to the current checkout and `solution_shadow` schema publication has been observed;
-- P4 live tool-call health: the 2026-08-19 `solution_shadow` call is **VERIFIED_SNAPSHOT**; current connector/contract health is `LIVE_PASS` in the tracker, but current P4 collection remains unobserved until a natural task actually records a P4 outcome;
+- P4 live tool-call health: the 2026-08-19 `solution_shadow` call is **VERIFIED_SNAPSHOT**; the current process exposes the expected contract and 8-tool count, but ChatWeb connector rediscovery/acknowledgement is pending after the 2026-08-24 restart, and current P4 collection remains unobserved until a natural task actually records a P4 outcome;
 - P4 predictive validity: **COLLECTING unless `report_p4_readiness.py` reports `EMPIRICALLY_COMPLETE`**; benchmark, synthetic, and unlabeled shadow rows are not promotion evidence;
 - P5 experiment integrity source: **IMPLEMENTED / FAIL-CLOSED.** A prior explicit P5-A0 epoch was closed transparently with zero enrollment, assignment, write binding, or outcome when the Wave 3 funnel gap above was discovered; it is evidence of operator/seed/manifest control only, never A/A health, treatment feasibility, or efficacy. `task_control(action="p5")` validates a frozen manifest, source/runtime identity, secret-backed seed commitment, assignment/enrollment order, and the absence of an active workspace writer before opening a rebaselined epoch. P5-A0 may be explicitly opened for instrumentation before P4 predictive completion; P5-A treatment remains separately gated by its own registered manifest, natural eligible task/oracle funnel, and explicit operator authority. Neither starts automatically, and neither is a production-promotion signal;
 - auto-handoff: **OFF** pending more real A/B evidence;

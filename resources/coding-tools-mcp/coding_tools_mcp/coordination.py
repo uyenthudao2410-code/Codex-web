@@ -991,6 +991,9 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
         action = str(args.get("action", "get")).lower()
         if action == "restart_runtime":
             return self._enqueue_runtime_restart(args)
+        requested_run = str(args.get("run_id") or "").strip()
+        if requested_run:
+            self._assert_task_control_workspace(requested_run)
         self._reconcile_task_orchestration_projection()
         if action == "p5":
             return self._p5_control(args)
@@ -1125,6 +1128,14 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
             )
             active_lanes = self.orchestration_ledger.list_agent_lanes(run_id=run_id)
             augmented = dict(payload)
+            workspace_snapshot = self._orchestration_workspace_identity(".")
+            workspace_identity = workspace_snapshot.get("workspace_identity") if isinstance(workspace_snapshot.get("workspace_identity"), dict) else {}
+            proof_ids = [
+                str(item.get("proof_id") or "")
+                for item in self.orchestration_ledger.list_proofs(run_id, wave_id=wave_id or None)
+                if str(item.get("proof_id") or "").strip()
+            ][:100]
+            hub_identity = self._current_hub_client() or {}
             problem_lineage = self.orchestration_ledger.problem_handoff_for_run(run_id) if run_id else None
             if problem_lineage is not None:
                 augmented["problem_lineage"] = problem_lineage
@@ -1140,6 +1151,19 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                 "base_head": projection.get("base_head"),
                 "worktree_fp": projection.get("worktree_fp"),
                 "contract_fp": projection.get("contract_fp"),
+                "workspace_id": workspace_identity.get("workspace_id"),
+                "root_id": workspace_identity.get("root_id"),
+                "session_workspace_id": workspace_identity.get("session_workspace_id"),
+                "authority_from": str(hub_identity.get("client_id") or "runtime")[:128],
+                "authority_to": str(payload.get("authority_to") or "")[:128],
+                "write_lease_id": projection.get("write_lease_id"),
+                "write_owner": projection.get("write_owner"),
+                "delegation_id": projection.get("delegation_id"),
+                "source_fingerprint": workspace_snapshot.get("source_fingerprint"),
+                "diff_fp": workspace_snapshot.get("worktree_fp"),
+                "dirty_paths": list(workspace_snapshot.get("dirty_paths") or [])[:200],
+                "proof_ids": proof_ids,
+                "unresolved_risks": [str(item)[:500] for item in (payload.get("unresolved_risks") or [])[:50]] if isinstance(payload.get("unresolved_risks"), list) else [],
                 "active_lane_ids": [
                     row["lane_id"] for row in active_lanes
                     if row.get("lifecycle") not in {"closed"}
