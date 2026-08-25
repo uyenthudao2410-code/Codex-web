@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "8b58ec3d1197430c85331f5fb56abbbc",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "dQjBDpda3CX5p0GlYnP7wyvO",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 5124,
+      "finished_at": "2026-08-25T02:24:03.156Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T02:23:44.261Z",
+    "updated_at": "2026-08-25T02:24:03.156Z",
+    "events": [
+      {
+        "time": "2026-08-25T02:23:44.261Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-25T02:23:44.590Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/activate_problem_lineage.py --help",
+          "session_id": "DPLAW3P8TcC73hX75Yg2MW91"
+        }
+      },
+      {
+        "time": "2026-08-25T02:23:44.885Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/activate_problem_lineage.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T02:23:57.976Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/activate_problem_lineage.py --workspace \"E:\\DEV\\Codex-web\"",
+          "session_id": "dQjBDpda3CX5p0GlYnP7wyvO"
+        }
+      },
+      {
+        "time": "2026-08-25T02:24:03.156Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/activate_problem_lineage.py --workspace \"E:\\DEV\\Codex-web\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T02:24:10.601Z",
+    "archive_reason": "finished"
+  }
+]

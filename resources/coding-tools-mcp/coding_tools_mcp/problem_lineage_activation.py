@@ -102,7 +102,7 @@ def _snapshot_projection(workspace: Path, *, observed_at: float) -> dict[str, An
         }
 
 
-def _assert_preflight(preflight: dict[str, Any], *, require_v9: bool) -> None:
+def _assert_preflight(preflight: dict[str, Any], *, activation_preflight: bool) -> None:
     snapshot = preflight.get("snapshot") if isinstance(preflight.get("snapshot"), dict) else {}
     lifecycle = preflight.get("lifecycle") if isinstance(preflight.get("lifecycle"), dict) else {}
     summary = lifecycle.get("summary") if isinstance(lifecycle.get("summary"), dict) else {}
@@ -127,12 +127,29 @@ def _assert_preflight(preflight: dict[str, Any], *, require_v9: bool) -> None:
         blockers.append("nonterminal_p5_epoch")
     if event_chain.get("invalid_run_ids"):
         blockers.append("run_event_hash_chain_failure")
-    expected_schema = 9 if require_v9 else PROBLEM_SCHEMA_VERSION
-    if int(schema.get("user_version") or 0) != expected_schema:
-        blockers.append(f"unexpected_schema_version_{schema.get('user_version')}")
-    if require_v9 and schema.get("problem_tables"):
-        blockers.append("problem_tables_present_before_v10_activation")
-    if not require_v9:
+    current_schema = int(schema.get("user_version") or 0)
+    tables, indexes = set(schema.get("problem_tables") or []), set(schema.get("problem_indexes") or [])
+    if activation_preflight:
+        if current_schema not in {9, 10}:
+            blockers.append(f"unexpected_schema_version_{current_schema}")
+        elif current_schema == 9:
+            if tables:
+                blockers.append("problem_tables_present_before_v11_activation")
+        else:
+            expected_v10_tables = {"problem_threads", "problem_events"}
+            expected_v10_indexes = {
+                "idx_problem_events_problem_seq",
+                "idx_problem_events_task_turn",
+                "idx_problem_events_run_wave",
+                "idx_problem_events_one_primary_run_binding",
+            }
+            if tables != expected_v10_tables:
+                blockers.append("v10_problem_tables_incomplete")
+            if indexes != expected_v10_indexes:
+                blockers.append("v10_problem_indexes_incomplete")
+    else:
+        if current_schema != PROBLEM_SCHEMA_VERSION:
+            blockers.append(f"unexpected_schema_version_{current_schema}")
         expected_tables = {"problem_threads", "problem_revisions", "problem_events"}
         expected_indexes = {
             "idx_problem_events_problem_seq",
@@ -141,9 +158,9 @@ def _assert_preflight(preflight: dict[str, Any], *, require_v9: bool) -> None:
             "idx_problem_events_run_wave",
             "idx_problem_events_one_primary_run_binding",
         }
-        if set(schema.get("problem_tables") or []) != expected_tables:
+        if tables != expected_tables:
             blockers.append("problem_tables_incomplete")
-        if set(schema.get("problem_indexes") or []) != expected_indexes:
+        if indexes != expected_indexes:
             blockers.append("problem_indexes_incomplete")
     if blockers:
         raise ProblemLineageActivationError("PRL activation preflight failed: " + ",".join(blockers))
@@ -174,7 +191,7 @@ def preflight_problem_lineage_activation(workspace: Path, *, observed_at: float)
             )
         },
     }
-    _assert_preflight(result, require_v9=True)
+    _assert_preflight(result, activation_preflight=True)
     if result["maintenance"].get("blockers"):
         raise ProblemLineageActivationError(
             "PRL activation maintenance readiness failed: " + ",".join(str(item) for item in result["maintenance"]["blockers"])
@@ -190,7 +207,7 @@ def activate_problem_lineage_schema(
     expected_logical_sha256: str,
     runtime_stopped: bool,
 ) -> ProblemLineageActivationReceipt:
-    """Run the supported one-way v9→v11 migration after exact preflight.
+    """Run the supported one-way v9/v10→v11 migration after exact preflight.
 
     The caller must stop the authoritative runtime through its owning Recovery
     Host before passing ``runtime_stopped=True``.  This function never starts,
@@ -205,15 +222,16 @@ def activate_problem_lineage_schema(
     if str(snapshot.get("logical_sha256") or "").lower() != str(expected_logical_sha256 or "").lower():
         raise ProblemLineageActivationError("PRL activation logical SHA-256 changed or was not explicitly acknowledged")
     try:
-        migration = OrchestrationLedger(Path(workspace)).migrate_problem_lineage_schema(expected_schema_version=9)
+        source_schema = int(preflight["schema"]["user_version"])
+        migration = OrchestrationLedger(Path(workspace)).migrate_problem_lineage_schema(expected_schema_version=source_schema)
     except ProblemLineageError as exc:
         raise ProblemLineageActivationError(str(exc)) from exc
     postflight = _snapshot_projection(Path(workspace), observed_at=observed_at)
-    _assert_preflight(postflight, require_v9=False)
+    _assert_preflight(postflight, activation_preflight=False)
     if str(preflight["event_chain"]) != str(postflight["event_chain"]):
         raise ProblemLineageActivationError("event-chain verification changed during PRL schema activation")
     return ProblemLineageActivationReceipt(
         preflight=preflight,
-        migration={"migrated": bool(migration.get("migrated")), "schema_version": int(migration.get("schema_version") or 0)},
+        migration={"migrated": bool(migration.get("migrated")), "from_schema_version": source_schema, "schema_version": int(migration.get("schema_version") or 0)},
         postflight=postflight,
     )

@@ -155,6 +155,12 @@ def dispatch_rpc(
         if not stateless_2026 and not runtime.initialized and method not in {"initialize", "ping", "server/discover"}:
             raise JsonRpcError(-32002, "Server not initialized")
         if method == "server/discover" and stateless_2026:
+            # Stateless MCP clients can obtain the public tool inventory through
+            # server/discover without issuing a separate tools/list request.
+            # Record that real client contact under the same process/contract
+            # binding as tools/list, while preserving the discover response
+            # shape and its cache contract.
+            runtime.list_tools()
             result = _stateless_result(
                 runtime,
                 {

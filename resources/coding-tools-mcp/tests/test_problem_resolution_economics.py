@@ -56,6 +56,7 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
             self.assertEqual(report["resolution_outcomes"]["confirmed_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["trusted_resolution"]["true"], 1)
             self.assertEqual(report["mechanics_coverage"]["full_claim_waves_with_structural_manifest"], 1)
+            self.assertEqual(report["denominators"]["problem_chain_invalid_threads"], 0)
             self.assertTrue(report["resolution_outcomes"]["administrative_disposition_is_not_resolution"])
             self.assertEqual(report["time_to_administrative_disposition"]["observed"], 0)
             self.assertIn("attested_occurrence_clock_missing", report["time_to_provisional"]["missing_or_invalid_reason_counts"])

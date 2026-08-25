@@ -127,6 +127,10 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(result["ttlMs"], 0)
         self.assertEqual(result["cacheScope"], "private")
         self.assertEqual(result["_meta"]["io.modelcontextprotocol/serverInfo"]["name"], "coding-tools-mcp")
+        discovery = self.runtime.connector_tool_discovery()
+        self.assertTrue(discovery["current_contract_observed"])
+        self.assertEqual(discovery["contract_sha256"], self.runtime.tool_contract["sha256"])
+        self.assertEqual(discovery["client_id"], "chatweb")
 
         status, headers, body = self.request("tools/list", modern_params(), request_id=2)
         self.assertEqual(status, 200)

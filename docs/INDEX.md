@@ -43,6 +43,7 @@
 - [Session Model](agent/session-model.md)
 - [Permission Model](agent/permission-model.md)
 - [OpenAPI Guidelines](agent/openapi-guidelines.md)
+- [Problem Resolution Lineage v11 C4 Protocol](agent/problem-resolution-lineage.md)
 - [Claude Code MCP Provider](agent/claude-code-mcp-provider.md)
 
 ## Security

@@ -1,0 +1,63 @@
+[
+  {
+    "version": 2,
+    "task_id": "65969e109f1b42ad81bd6484fa67363e",
+    "orchestration": {
+      "run_id": "fcd5714546e341b4b14181438b1b1afa",
+      "wave_id": "54ab841281e94e26bca93a748ce6d58f",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "cab594e4a7a5a4b3189fd36fb009ad44f13da0de",
+      "worktree_fp": "a01103159268c24c57de13223f7078697d538347fe97f669bf9a15ab6e000b7d",
+      "contract_fp": ""
+    },
+    "objective": "Read-only verification of the current Coding-VP connector discovery receipt after the user refreshed the connected tool inventory in the same chat. Confirm this isolated context targets E:\\DEV\\Codex-web and determine, from current runtime/Recovery Host evidence only, the exact values or equivalent state of connectorRediscovered, connectorRediscoveredAt, and connectorRefreshRequired. Do not modify source, task state, C4/PRL evidence, Git, services, or runtime; do not create synthetic evidence. If the receipt cannot be observed from this tool path, state that explicitly and identify the minimal read-only next check.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T02:56:07.405Z",
+    "updated_at": "2026-08-25T02:56:10.086Z",
+    "events": [
+      {
+        "time": "2026-08-25T02:56:07.405Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only verification of the current Coding-VP connector discovery receipt after the user refreshed the connected tool inventory in the same chat. Confirm this isolated context targets E:\\DEV\\Codex-web and determine, from current runtime/Recovery Host evidence only, the exact values or equivalent state of connectorRediscovered, connectorRediscoveredAt, and connectorRefreshRequired. Do not modify source, task state, C4/PRL evidence, Git, services, or runtime; do not create synthetic evidence. If the receipt cannot be observed from this tool path, state that explicitly and identify the minimal read-only next check."
+        }
+      },
+      {
+        "time": "2026-08-25T02:56:08.640Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T02:56:10.080Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T02:56:26.398Z",
+    "archive_reason": "superseded"
+  }
+]

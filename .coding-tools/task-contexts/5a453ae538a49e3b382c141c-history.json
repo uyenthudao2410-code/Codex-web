@@ -1,0 +1,63 @@
+[
+  {
+    "version": 2,
+    "task_id": "35ac8303e5604bf7ba8ff03adfd7758a",
+    "orchestration": {
+      "run_id": "d6920717c87f4a358ef871406e46f8f1",
+      "wave_id": "eafda72d4bb84d9da6523f9cdd79bb4c",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "cab594e4a7a5a4b3189fd36fb009ad44f13da0de",
+      "worktree_fp": "a01103159268c24c57de13223f7078697d538347fe97f669bf9a15ab6e000b7d",
+      "contract_fp": ""
+    },
+    "objective": "Diagnose the missing fresh connector rediscovery receipt described by the user. Determine exactly where connectorRediscovered, connectorRediscoveredAt, and connectorRefreshRequired are produced/updated, what protocol event qualifies as a fresh receipt (tools/list, server/discover, or equivalent), whether ordinary MCP tool invocation such as workspace_context can ever satisfy it, and the safest deterministic way to create/observe the receipt from ChatGPT without fabricating C4 evidence. Do not modify files, do not create a run/wave, do not restart services, do not commit/push. Return a concrete resolution path and identify any product/client limitation if the currently exposed Coding-VP tool contract cannot itself invoke tools/list/server/discover.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T02:45:46.288Z",
+    "updated_at": "2026-08-25T02:45:50.199Z",
+    "events": [
+      {
+        "time": "2026-08-25T02:45:46.288Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Diagnose the missing fresh connector rediscovery receipt described by the user. Determine exactly where connectorRediscovered, connectorRediscoveredAt, and connectorRefreshRequired are produced/updated, what protocol event qualifies as a fresh receipt (tools/list, server/discover, or equivalent), whether ordinary MCP tool invocation such as workspace_context can ever satisfy it, and the safest deterministic way to create/observe the receipt from ChatGPT without fabricating C4 evidence. Do not modify files, do not create a run/wave, do not restart services, do not commit/push. Return a concrete resolution path and identify any product/client limitation if the currently exposed Coding-VP tool contract cannot itself invoke tools/list/server/discover."
+        }
+      },
+      {
+        "time": "2026-08-25T02:45:47.330Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T02:45:50.189Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T02:46:10.334Z",
+    "archive_reason": "superseded"
+  }
+]

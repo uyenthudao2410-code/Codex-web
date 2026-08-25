@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "task_id": "a640cea7eef247fe90d0a8a60ab6048c",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "active",
+  "steps": [],
+  "current_step": "Control command session",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "output_ref must look like command:<id>:stdout; legacy session:<id>:stdout is also accepted.",
+  "next_step": "",
+  "created_at": "2026-08-25T04:01:05.336Z",
+  "updated_at": "2026-08-25T04:01:05.338Z",
+  "events": [
+    {
+      "time": "2026-08-25T04:01:05.336Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-08-25T04:01:05.338Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    }
+  ]
+}

@@ -44,6 +44,24 @@ def _ordered(values: list[float]) -> list[float] | None:
     return [round(item, 6) for item in sorted(values)] if 0 < len(values) <= 20 else None
 
 
+def _fact_event(row: Any) -> dict[str, Any]:
+    """Normalize SQLite booleans exactly as the canonical event projection does.
+
+    Event hashes were written from Python booleans.  SQLite returns the stored
+    integer, whose JSON encoding differs (``0``/``1`` rather than
+    ``false``/``true``); retaining it would make every otherwise-valid chain
+    look corrupt to a read-only reporter.
+    """
+    event = dict(row)
+    raw_eligible = bool(event.get("eligible_for_policy"))
+    if int(event.get("event_schema_version") or 1) <= 1:
+        event["legacy_eligible_for_policy"] = raw_eligible
+        event["eligible_for_policy"] = False
+    else:
+        event["eligible_for_policy"] = raw_eligible
+    return event
+
+
 def _percentile(values: list[float], percentile: int) -> float | None:
     if len(values) < 20:
         return None
@@ -77,7 +95,7 @@ class ProblemLineageFacts:
             schema_version=schema,
             threads=[dict(row) for row in reader.rows("SELECT * FROM problem_threads ORDER BY problem_id")],
             revisions=[dict(row) for row in reader.rows("SELECT * FROM problem_revisions ORDER BY problem_id,revision")],
-            events=[dict(row) for row in reader.rows("SELECT * FROM problem_events ORDER BY problem_id,seq")],
+            events=[_fact_event(row) for row in reader.rows("SELECT * FROM problem_events ORDER BY problem_id,seq")],
             fact_load_statements=4,
         )
 

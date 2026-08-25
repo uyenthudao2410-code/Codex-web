@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only preflight or guarded local activation of canonical PRL schema v10."""
+"""Read-only preflight or guarded local activation of canonical PRL v9/v10-to-v11."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from coding_tools_mcp.problem_lineage_activation import (  # noqa: E402
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, default=Path.cwd())
-    parser.add_argument("--activate", action="store_true", help="perform the irreversible additive v9→v10 migration")
+    parser.add_argument("--activate", action="store_true", help="perform the irreversible additive v9/v10-to-v11 migration")
     parser.add_argument("--runtime-stopped", action="store_true", help="attest that Recovery Host stopped the canonical writer")
     parser.add_argument("--expected-snapshot-sha256", default="")
     parser.add_argument("--expected-logical-sha256", default="")

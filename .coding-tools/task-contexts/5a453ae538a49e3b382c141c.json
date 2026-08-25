@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "task_id": "d530bc6b7fdb4c5786678e3d902bc472",
+  "orchestration": {
+    "run_id": "63ea32856aca4f5a8333b71253d8d386",
+    "wave_id": "0ee84c493f60414e8a0ea0bed8b8f91b",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "cab594e4a7a5a4b3189fd36fb009ad44f13da0de",
+    "worktree_fp": "a01103159268c24c57de13223f7078697d538347fe97f669bf9a15ab6e000b7d",
+    "contract_fp": ""
+  },
+  "objective": "Locate the supported, existing repository operator command or script that reads the authoritative Recovery Host connector snapshot (including connectorRediscovered/connectorRediscoveredAt/connectorRefreshRequired) and, only if the rediscovery guard is already true, the supported official connector acknowledgement path. Do not modify source, do not fabricate tools/list, do not restart services, do not acknowledge unless a real current-process rediscovery is observed. Return exact script/module entry points suitable for a bounded read-only recapture.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T02:46:10.335Z",
+  "updated_at": "2026-08-25T02:46:11.901Z",
+  "events": [
+    {
+      "time": "2026-08-25T02:46:10.335Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T02:46:11.001Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T02:46:11.896Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    }
+  ]
+}

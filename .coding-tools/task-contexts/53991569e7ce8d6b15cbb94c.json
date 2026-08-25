@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "task_id": "e477e338015941f19b30437d41f62b69",
+  "orchestration": {
+    "run_id": "43bd318fb14d4c0d8adbd89c83c65b1a",
+    "wave_id": "9a5a210b78ae4e1a978eaeed45d38740",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "cab594e4a7a5a4b3189fd36fb009ad44f13da0de",
+    "worktree_fp": "a01103159268c24c57de13223f7078697d538347fe97f669bf9a15ab6e000b7d",
+    "contract_fp": ""
+  },
+  "objective": "Within the already isolated E:\\DEV\\Codex-web context, locate the existing supported read-only operator entry point that directly queries the live Recovery Host and returns the current runtime snapshot/status including connectorRediscovered, connectorRediscoveredAt, connectorRefreshRequired, process/server identity, and current workspace. Do not modify files, task/control state, services, Git, C4/PRL, or acknowledge anything. Prefer an existing script/module/API wrapper already used by repository operators; return the exact path and invocation needed for one bounded live read.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T02:56:26.399Z",
+  "updated_at": "2026-08-25T02:56:27.913Z",
+  "events": [
+    {
+      "time": "2026-08-25T02:56:26.399Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T02:56:26.955Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T02:56:27.906Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    }
+  ]
+}
