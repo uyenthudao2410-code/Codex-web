@@ -339,6 +339,14 @@ function connectorContractPresentation(status = {}) {
       toast: 'Tool contract hiện tại đã được discovery và acknowledge.'
     };
   }
+  if (explicit === 'COMPATIBLE_ACKNOWLEDGED') {
+    return {
+      state: explicit,
+      notice: false,
+      message: 'Tool contract SHA hiện tại khác snapshot đã acknowledge nhưng vẫn thuộc cùng compatibility epoch; không tạo rediscovery hoặc ACK giả.',
+      toast: 'Tool contract hiện tại tương thích với snapshot ChatGPT đã acknowledge.'
+    };
+  }
   if (explicit === 'CHANGED_DISCOVERED_NEEDS_ACK') {
     return {
       state: explicit,

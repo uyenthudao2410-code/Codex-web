@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "83f102fa78d64472911d9fee597bfc71",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "imnUd9R2Bev1MYB6ay7sf7xt",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 358,
+      "finished_at": "2026-08-25T14:42:02.117Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T14:41:48.408Z",
+    "updated_at": "2026-08-25T14:42:02.117Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:41:48.408Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-25T14:41:48.642Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --help",
+          "session_id": "WtlzsubHIsBAS_DHjmyXfqGQ"
+        }
+      },
+      {
+        "time": "2026-08-25T14:41:48.983Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:42:01.792Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m sqlite3 --help",
+          "session_id": "imnUd9R2Bev1MYB6ay7sf7xt"
+        }
+      },
+      {
+        "time": "2026-08-25T14:42:02.117Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m sqlite3 --help",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:42:21.883Z",
+    "archive_reason": "finished"
+  }
+]

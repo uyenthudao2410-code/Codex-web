@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "a03e781d24664971899845a8e0f2e91e",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "oNtuB819qMxd-OPBzJJxDJ3q",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 255,
+    "duration_ms": 303,
+    "finished_at": "2026-08-25T14:40:34.158Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T14:40:33.583Z",
+  "updated_at": "2026-08-25T14:40:34.158Z",
+  "events": [
+    {
+      "time": "2026-08-25T14:40:33.584Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T14:40:33.900Z",
+      "event": "command_started",
+      "details": {
+        "command": "git log --oneline --all -S\"task_context_id\" -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/server.py | head -n 20",
+        "session_id": "oNtuB819qMxd-OPBzJJxDJ3q"
+      }
+    },
+    {
+      "time": "2026-08-25T14:40:34.158Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git log --oneline --all -S\"task_context_id\" -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/server.py | head -n 20",
+        "status": "failed"
+      }
+    }
+  ]
+}

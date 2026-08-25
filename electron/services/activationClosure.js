@@ -3,7 +3,11 @@ const HEX64 = /^[a-f0-9]{64}$/;
 const GIT_OBJECT_ID = /^[a-f0-9]{40,64}$/;
 const CLOSURE_INPUT_SCHEMA_VERSION = 1;
 const COMPONENTS = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
-const CONNECTOR_CURRENT_STATES = new Set(['UNCHANGED_ACKNOWLEDGED', 'CURRENT_ACKNOWLEDGED']);
+const CONNECTOR_CURRENT_STATES = new Set([
+  'UNCHANGED_ACKNOWLEDGED',
+  'CURRENT_ACKNOWLEDGED',
+  'COMPATIBLE_ACKNOWLEDGED'
+]);
 const ACCEPTED_RECEIPT_KINDS = new Set(['explicit_existing_file', 'task_modified_file', 'durable_wave_patch_surface']);
 const { componentOwnsPath } = require('./componentRevision');
 const {
@@ -268,13 +272,18 @@ function computeActivationClosure({
   const acknowledgedConnectorSha = text(connectorAcknowledgedSha256).toLowerCase();
   const connectorShaCurrent = HEX64.test(currentConnectorSha)
     && currentConnectorSha === acknowledgedConnectorSha;
+  const connectorCompatibleSnapshotCurrent = connectorState === 'COMPATIBLE_ACKNOWLEDGED'
+    && HEX64.test(currentConnectorSha)
+    && HEX64.test(acknowledgedConnectorSha)
+    && currentConnectorSha !== acknowledgedConnectorSha;
   const rediscoveredAt = text(connectorRediscoveredAt);
   const connectorDiscoveryCurrent = connectorState === 'UNCHANGED_ACKNOWLEDGED'
+    || connectorState === 'COMPATIBLE_ACKNOWLEDGED'
     || (connectorState === 'CURRENT_ACKNOWLEDGED'
       && rediscoveredAt && Number.isFinite(Date.parse(rediscoveredAt)));
   const connectorCurrent = CONNECTOR_CURRENT_STATES.has(connectorState)
     && connectorRefreshRequired === false
-    && connectorShaCurrent
+    && (connectorShaCurrent || connectorCompatibleSnapshotCurrent)
     && connectorDiscoveryCurrent;
   const normalizedLifecycle = normalizeLifecycleDecision(source.lifecycle_decision);
   const lifecycleOperationBound = affectedComponents.length === 0

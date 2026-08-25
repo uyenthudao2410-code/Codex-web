@@ -530,6 +530,68 @@ test('persisted matching connector SHA survives process restart without forcing 
   assert.equal(orchestrator.connectorContractStatus(changedContract, discovery).contractState, 'CURRENT_ACKNOWLEDGED');
 });
 
+test('backward-compatible tool contract rollover preserves the exact acknowledged snapshot without fake rediscovery', () => {
+  const acknowledgedSha = '34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c';
+  const currentSha = 'fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585';
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: acknowledgedSha,
+    chatgptToolContractAcknowledgedAt: '2026-08-25T03:33:57.999Z'
+  }), 'utf8');
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  const contract = {
+    schema_version: 1,
+    profile: 'smart-v3',
+    sha256: currentSha,
+    compatible_predecessor_sha256: [acknowledgedSha]
+  };
+
+  const legacyCompatible = orchestrator.connectorContractStatus(contract);
+  assert.equal(legacyCompatible.contractState, 'COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(legacyCompatible.refreshRequired, false);
+  assert.equal(legacyCompatible.rediscovered, false);
+  assert.equal(legacyCompatible.backwardCompatible, true);
+  assert.equal(legacyCompatible.compatibilitySource, 'declared_predecessor');
+  assert.equal(legacyCompatible.acknowledgedSha256, acknowledgedSha);
+
+  const synchronized = orchestrator.synchronizeConnectorContract(contract);
+  assert.equal(synchronized.contractState, 'COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(synchronized.acknowledgedSha256, acknowledgedSha);
+  assert.equal(synchronized.acknowledgedSchemaVersion, 1);
+  assert.equal(synchronized.acknowledgedProfile, 'smart-v3');
+  const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+  assert.equal(persisted.chatgptToolContractSha256, acknowledgedSha);
+  assert.equal(persisted.chatgptToolContractSchemaVersion, 1);
+  assert.equal(persisted.chatgptToolContractProfile, 'smart-v3');
+  assert.equal(Object.hasOwn(persisted, 'chatgptToolContractRediscoveredAt'), false);
+
+  const nextCompatible = {
+    ...contract,
+    sha256: 'd'.repeat(64),
+    compatible_predecessor_sha256: []
+  };
+  const sameEpoch = orchestrator.connectorContractStatus(nextCompatible);
+  assert.equal(sameEpoch.contractState, 'COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(sameEpoch.compatibilitySource, 'schema_profile_epoch');
+  assert.equal(sameEpoch.refreshRequired, false);
+
+  const breaking = { ...nextCompatible, schema_version: 2, sha256: 'e'.repeat(64) };
+  const blocked = orchestrator.connectorContractStatus(breaking);
+  assert.equal(blocked.contractState, 'CHANGED_NEEDS_DISCOVERY');
+  assert.equal(blocked.refreshRequired, true);
+  assert.equal(blocked.backwardCompatible, false);
+  assert.throws(
+    () => orchestrator.acknowledgeConnectorContractHash(breaking),
+    (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+  );
+});
+
 test('Coding MCP activation prepare forwards the checkpoint-bound source receipt', async (t) => {
   let observed = null;
   const token = 'activation-test-token';

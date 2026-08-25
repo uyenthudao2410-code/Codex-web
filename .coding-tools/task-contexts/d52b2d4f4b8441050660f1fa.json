@@ -1,0 +1,67 @@
+{
+  "version": 2,
+  "task_id": "6edef4a1871f412ab695fe7c6e95363e",
+  "orchestration": {
+    "run_id": "bbdeac19ab324933a2f94608ad077b8a",
+    "wave_id": "092aa272d3f94680910689d837cd6831",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "6eb2f4d8c170c7ea6eab8caa668e0ef6a0ada54c",
+    "worktree_fp": "7a5fb898ea3a07d4b2b57a1778c4cfa1c31116698332740c3837a5aa032cbb22",
+    "contract_fp": ""
+  },
+  "objective": "Apply the prepared connector compatibility fix while preserving exact acknowledged SHA evidence and keeping breaking compatibility-epoch changes gated on real tools/list/server/discover.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Orchestration preflight",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+  "next_step": "",
+  "created_at": "2026-08-25T14:30:44.812Z",
+  "updated_at": "2026-08-25T14:30:45.677Z",
+  "events": [
+    {
+      "time": "2026-08-25T14:30:44.812Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T14:30:45.305Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T14:30:45.677Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_REQUIRED"
+      }
+    }
+  ]
+}

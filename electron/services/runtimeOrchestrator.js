@@ -617,8 +617,19 @@ class RuntimeOrchestrator {
 
   connectorContractStatus(toolContract, discovery = null) {
     const currentSha256 = String(toolContract?.sha256 || '').trim();
+    const schemaVersion = Number(toolContract?.schema_version || 0);
+    const profile = String(toolContract?.profile || '').trim();
+    const compatiblePredecessors = new Set(
+      (Array.isArray(toolContract?.compatible_predecessor_sha256)
+        ? toolContract.compatible_predecessor_sha256
+        : [])
+        .map((value) => String(value || '').trim())
+        .filter((value) => /^[a-f0-9]{64}$/i.test(value))
+    );
     const runtimeState = readJson(this.paths.stateFile(), {});
     const acknowledgedSha256 = String(runtimeState.chatgptToolContractSha256 || '').trim();
+    const acknowledgedSchemaVersion = Number(runtimeState.chatgptToolContractSchemaVersion || 0);
+    const acknowledgedProfile = String(runtimeState.chatgptToolContractProfile || '').trim();
     const rediscoveredSha256 = String(discovery?.contract_sha256 || '').trim();
     const observedAt = String(discovery?.observed_at || '').trim();
     const observedAtValid = Boolean(observedAt && Number.isFinite(Date.parse(observedAt)));
@@ -628,32 +639,79 @@ class RuntimeOrchestrator {
       && rediscoveredSha256 === currentSha256
       && observedAtValid
     );
-    const contractChanged = Boolean(currentSha256 && currentSha256 !== acknowledgedSha256);
+    const exactShaAcknowledged = Boolean(currentSha256 && currentSha256 === acknowledgedSha256);
+    const acknowledgedBoundaryKnown = acknowledgedSchemaVersion > 0 && Boolean(acknowledgedProfile);
+    const sameCompatibilityBoundary = Boolean(
+      acknowledgedBoundaryKnown
+      && schemaVersion > 0
+      && profile
+      && acknowledgedSchemaVersion === schemaVersion
+      && acknowledgedProfile === profile
+    );
+    const legacyCompatiblePredecessor = Boolean(
+      currentSha256
+      && acknowledgedSha256
+      && currentSha256 !== acknowledgedSha256
+      && schemaVersion > 0
+      && profile
+      && compatiblePredecessors.has(acknowledgedSha256)
+    );
+    const compatibilityMetadataBackfillPending = Boolean(
+      !acknowledgedBoundaryKnown
+      && acknowledgedSha256
+      && (exactShaAcknowledged || legacyCompatiblePredecessor)
+      && schemaVersion > 0
+      && profile
+    );
+    const boundaryChanged = Boolean(
+      exactShaAcknowledged
+      && acknowledgedBoundaryKnown
+      && !sameCompatibilityBoundary
+    );
+    const rawShaChanged = Boolean(currentSha256 && currentSha256 !== acknowledgedSha256);
+    const contractChanged = Boolean(rawShaChanged || boundaryChanged);
+    const backwardCompatible = Boolean(
+      rawShaChanged
+      && (sameCompatibilityBoundary || legacyCompatiblePredecessor)
+    );
+    const breakingContractChange = Boolean(contractChanged && !backwardCompatible);
     let contractState = 'UNAVAILABLE';
     if (currentSha256) {
-      if (currentSha256 === acknowledgedSha256) {
+      if (!contractChanged) {
         contractState = rediscovered ? 'CURRENT_ACKNOWLEDGED' : 'UNCHANGED_ACKNOWLEDGED';
+      } else if (rediscovered) {
+        contractState = 'CHANGED_DISCOVERED_NEEDS_ACK';
+      } else if (backwardCompatible) {
+        contractState = 'COMPATIBLE_ACKNOWLEDGED';
       } else {
-        contractState = rediscovered ? 'CHANGED_DISCOVERED_NEEDS_ACK' : 'CHANGED_NEEDS_DISCOVERY';
+        contractState = 'CHANGED_NEEDS_DISCOVERY';
       }
     }
     return {
       available: Boolean(currentSha256),
-      schemaVersion: Number(toolContract?.schema_version || 0),
-      profile: String(toolContract?.profile || ''),
+      schemaVersion,
+      profile,
       currentSha256,
       acknowledgedSha256,
+      acknowledgedSchemaVersion,
+      acknowledgedProfile,
       rediscovered,
       rediscoveredSha256,
       rediscoveredAt: rediscovered ? observedAt : null,
       contractState,
-      // Tool-contract freshness is a contract boundary, not a process-liveness
-      // boundary. ChatGPT may legitimately retain an already acknowledged tool
-      // schema across an MCP process restart and call tools/call directly. A new
-      // real discovery receipt is therefore required only when the contract SHA
-      // changes. Process/runtime freshness is proven independently by health and
-      // loaded-revision identity.
-      refreshRequired: Boolean(contractChanged && !rediscovered),
+      contractChanged,
+      backwardCompatible,
+      compatibilitySource: legacyCompatiblePredecessor
+        ? 'declared_predecessor'
+        : backwardCompatible && sameCompatibilityBoundary
+          ? 'schema_profile_epoch'
+          : null,
+      compatibilityMetadataBackfillPending,
+      // Exact SHA remains audit evidence. Connector freshness follows the
+      // declared compatibility epoch because ChatGPT may retain an approved
+      // tool-definition snapshot across backward-compatible MCP updates.
+      // Breaking changes still require a real current tools/list receipt.
+      refreshRequired: Boolean(breakingContractChange && !rediscovered),
       acknowledgementPending: Boolean(contractChanged && rediscovered)
     };
   }
@@ -661,7 +719,7 @@ class RuntimeOrchestrator {
   acknowledgeConnectorContractHash(toolContract, discovery = null) {
     const status = this.connectorContractStatus(toolContract, discovery);
     if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
-    if (status.currentSha256 === status.acknowledgedSha256) return status;
+    if (!status.contractChanged) return status;
     if (!status.rediscovered) {
       throw Object.assign(new Error('ChatGPT chưa đọc lại tools/list cho tool contract hiện tại.'), {
         code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
@@ -670,14 +728,30 @@ class RuntimeOrchestrator {
     updateJsonAtomic(this.paths.stateFile(), (state) => ({
       ...state,
       chatgptToolContractSha256: status.currentSha256,
+      chatgptToolContractSchemaVersion: status.schemaVersion,
+      chatgptToolContractProfile: status.profile,
       chatgptToolContractAcknowledgedAt: new Date().toISOString(),
-      chatgptToolContractRediscoveredAt: status.rediscoveredAt || new Date().toISOString()
+      chatgptToolContractRediscoveredAt: status.rediscoveredAt,
+      chatgptToolContractRediscoveredSha256: status.currentSha256
     }));
     return this.connectorContractStatus(toolContract, discovery);
   }
 
   synchronizeConnectorContract(toolContract, discovery = null) {
-    const status = this.connectorContractStatus(toolContract, discovery);
+    let status = this.connectorContractStatus(toolContract, discovery);
+    if (status.compatibilityMetadataBackfillPending) {
+      updateJsonAtomic(this.paths.stateFile(), (state) => ({
+        ...state,
+        // This does not move the acknowledged SHA. It records only the
+        // compatibility epoch proven by exact-SHA equality or by the current
+        // contract's explicit predecessor declaration.
+        chatgptToolContractSchemaVersion: status.schemaVersion,
+        chatgptToolContractProfile: status.profile,
+        chatgptToolContractCompatibilityBackfilledAt: new Date().toISOString(),
+        chatgptToolContractCompatibilityBaseSha256: status.acknowledgedSha256
+      }));
+      status = this.connectorContractStatus(toolContract, discovery);
+    }
     if (!status.acknowledgementPending) return status;
     return this.acknowledgeConnectorContractHash(toolContract, discovery);
   }

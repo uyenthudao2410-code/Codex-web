@@ -1,0 +1,278 @@
+[
+  {
+    "version": 2,
+    "task_id": "96b3726ccb7e4541a6e3ef0848bbf4a8",
+    "orchestration": {
+      "run_id": "d21ebe6fba51474497c1040c00bf85e2",
+      "wave_id": "bdb781b234584def930a29ac93b5b26d",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "6eb2f4d8c170c7ea6eab8caa668e0ef6a0ada54c",
+      "worktree_fp": "7a5fb898ea3a07d4b2b57a1778c4cfa1c31116698332740c3837a5aa032cbb22",
+      "contract_fp": ""
+    },
+    "objective": "Implement the connector contract compatibility fix on the CURRENT source baseline. Root cause is proven: acknowledged raw tools-list SHA 34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c differs from current fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585, but the exact public schema delta is backward-compatible (optional fields, enum expansion, description changes only). ChatGPT custom apps intentionally use a frozen approved tool snapshot and do not automatically rescan changes; backward-compatible updates may continue to work. Fix Recovery Host so raw SHA remains exact audit identity but does not itself define breaking compatibility. Use tool_contract schema_version + profile as the compatibility boundary going forward, persist that identity with acknowledgement, and let the current contract explicitly declare the known compatible predecessor SHA 34cbb... to safely bootstrap legacy state that only stored SHA. A compatible raw-SHA rollover must auto-ack without fabricating connectorRediscovered or a rediscovery timestamp. A profile/schema-version breaking change must remain fail-closed and require real tools/list/server/discover before acknowledgement. Keep smart-v3 at exactly 8 public tools, do not add a public tool, keep C4/natural-evidence gates separate, preserve unrelated dirty work and .coding-tools evidence, and update the stale pinned contract test to the real current SHA. Add focused regression tests and concise operational docs.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "tUVhpAqhiHT_7s3alOooPwCF",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 580,
+      "finished_at": "2026-08-25T14:28:07.293Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Patch context matched 6 locations in E:\\DEV\\Codex-web\\renderer\\app.js; add more context.",
+    "next_step": "",
+    "created_at": "2026-08-25T14:26:10.571Z",
+    "updated_at": "2026-08-25T14:29:07.725Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:26:10.571Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Implement the connector contract compatibility fix on the CURRENT source baseline. Root cause is proven: acknowledged raw tools-list SHA 34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c differs from current fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585, but the exact public schema delta is backward-compatible (optional fields, enum expansion, description changes only). ChatGPT custom apps intentionally use a frozen approved tool snapshot and do not automatically rescan changes; backward-compatible updates may continue to work. Fix Recovery Host so raw SHA remains exact audit identity but does not itself define breaking compatibility. Use tool_contract schema_version + profile as the compatibility boundary going forward, persist that identity with acknowledgement, and let the current contract explicitly declare the known compatible predecessor SHA 34cbb... to safely bootstrap legacy state that only stored SHA. A compatible raw-SHA rollover must auto-ack without fabricating connectorRediscovered or a rediscovery timestamp. A profile/schema-version breaking change must remain fail-closed and require real tools/list/server/discover before acknowledgement. Keep smart-v3 at exactly 8 public tools, do not add a public tool, keep C4/natural-evidence gates separate, preserve unrelated dirty work and .coding-tools evidence, and update the stale pinned contract test to the real current SHA. Add focused regression tests and concise operational docs."
+        }
+      },
+      {
+        "time": "2026-08-25T14:26:11.701Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:26:13.498Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:26:13.506Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-25T14:27:15.942Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"server/discover|tools/list|connector|tool contract|acknowledge\" docs/MCP.md docs/RECOVERY_HOST.md",
+          "session_id": "Zn56PJz-R22YMgkTC0KT8Zar"
+        }
+      },
+      {
+        "time": "2026-08-25T14:27:16.450Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"server/discover|tools/list|connector|tool contract|acknowledge\" docs/MCP.md docs/RECOVERY_HOST.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:27:58.834Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 38 \"CONNECTOR_CURRENT_STATES|connectorShaCurrent|connectorDiscoveryCurrent|connector_contract_current\" electron/services/activationClosure.js renderer/app.js tests/activation-closure.test.js tests/dev-ui-lifecycle.test.js",
+          "session_id": "kujNmOgGKl3CGpg75Ynsv754"
+        }
+      },
+      {
+        "time": "2026-08-25T14:27:59.269Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 38 \"CONNECTOR_CURRENT_STATES|connectorShaCurrent|connectorDiscoveryCurrent|connector_contract_current\" electron/services/activationClosure.js renderer/app.js tests/activation-closure.test.js tests/dev-ui-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:28:06.823Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 32 \"function connectorContractPresentation\" renderer/app.js",
+          "session_id": "tUVhpAqhiHT_7s3alOooPwCF"
+        }
+      },
+      {
+        "time": "2026-08-25T14:28:07.293Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 32 \"function connectorContractPresentation\" renderer/app.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:29:07.725Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:29:49.988Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "c970e66bb8d64bc3aa98868d4109e353",
+    "orchestration": {
+      "run_id": "b5fcf44e28814931b44ccd4cd0953cf4",
+      "wave_id": "5050672248d7456f8591e9ae9f7e862b",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "6eb2f4d8c170c7ea6eab8caa668e0ef6a0ada54c",
+      "worktree_fp": "7a5fb898ea3a07d4b2b57a1778c4cfa1c31116698332740c3837a5aa032cbb22",
+      "contract_fp": ""
+    },
+    "objective": "Apply the same prepared connector compatibility fix; prior patch preflight made no writes and failed only because the renderer hunk lacked unique context.",
+    "status": "active",
+    "steps": [],
+    "current_step": "Orchestration preflight",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+    "next_step": "",
+    "created_at": "2026-08-25T14:29:49.989Z",
+    "updated_at": "2026-08-25T14:29:50.782Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:29:49.989Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-25T14:29:50.508Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:29:50.782Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:30:03.330Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "c73ec1b126e143c5b393cd7658fccec2",
+    "orchestration": {
+      "run_id": "03d17af34a384bfab7d8973a93f80c17",
+      "wave_id": "3ba176aeb71042c0b8d10a56e0c9a429",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "6eb2f4d8c170c7ea6eab8caa668e0ef6a0ada54c",
+      "worktree_fp": "7a5fb898ea3a07d4b2b57a1778c4cfa1c31116698332740c3837a5aa032cbb22",
+      "contract_fp": ""
+    },
+    "objective": "Prepare the already-settled connector compatibility patch on the current replan wave before first write. No additional discovery is required; preserve exact acknowledged SHA semantics, add COMPATIBLE_ACKNOWLEDGED for backward-compatible current SHA, and keep breaking epoch changes gated on real discovery.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T14:30:03.331Z",
+    "updated_at": "2026-08-25T14:30:05.163Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:30:03.331Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-25T14:30:03.820Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:30:05.155Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:30:05.163Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:30:44.810Z",
+    "archive_reason": "superseded"
+  }
+]

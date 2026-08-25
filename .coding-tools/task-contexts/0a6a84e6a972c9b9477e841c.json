@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "d0d48202d2f9401c91717c1a6f5acec4",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "aaP5YVQGD777NvCAZqEQp7ES",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 276,
+    "finished_at": "2026-08-25T14:41:16.200Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T14:41:15.625Z",
+  "updated_at": "2026-08-25T14:41:16.200Z",
+  "events": [
+    {
+      "time": "2026-08-25T14:41:15.625Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T14:41:15.908Z",
+      "event": "command_started",
+      "details": {
+        "command": "git show 64f71a2:resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py | findstr /n /c:\"_task_context_property\"",
+        "session_id": "aaP5YVQGD777NvCAZqEQp7ES"
+      }
+    },
+    {
+      "time": "2026-08-25T14:41:16.200Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git show 64f71a2:resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py | findstr /n /c:\"_task_context_property\"",
+        "status": "failed"
+      }
+    }
+  ]
+}

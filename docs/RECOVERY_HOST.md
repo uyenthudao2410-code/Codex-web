@@ -218,9 +218,13 @@ phải bằng 0; cờ `clean=true` riêng lẻ không đủ. Quy tắc này cũn
 checkpoint không có component cần restart.
 
 Closure cuối còn yêu cầu component running/disk revision khớp, Runtime + Tunnel
-fully ready và connector contract current. `UNCHANGED_ACKNOWLEDGED` không cần tạo
-rediscovery giả khi current SHA đúng bằng acknowledged SHA và refresh flag là
-false. Khi SHA thay đổi thật, target process phải thực hiện `tools/list` hoặc
+fully ready và connector contract current. Exact `tools/list` SHA là audit
+identity; `schema_version + profile` là breaking-compatibility epoch.
+`UNCHANGED_ACKNOWLEDGED` không cần tạo rediscovery giả khi exact SHA không đổi.
+`COMPATIBLE_ACKNOWLEDGED` cho phép SHA mới tiếp tục dùng snapshot đã acknowledge
+chỉ khi current contract cùng epoch hoặc khai báo exact predecessor tương thích;
+acknowledged SHA không bị ghi đè và không tạo rediscovery timestamp giả. Khi
+compatibility epoch thay đổi, target process vẫn phải thực hiện `tools/list` hoặc
 `server/discover`, sau đó mới được acknowledgement qua Recovery Host; một
 `tools/call` thông thường không thay thế discovery. `LIVE_CLOSED` chỉ là local
 runtime closure; projection luôn ghi `release_state=NOT_RELEASED` và

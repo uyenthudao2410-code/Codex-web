@@ -479,6 +479,14 @@ test('connector fallback refuses to invent acknowledgement when both enum and le
   assert.equal(fixture.connector({ connectorContractState: 'UNKNOWN_STATE', connectorRefreshRequired: false }).state, 'UNAVAILABLE');
 });
 
+test('connector presentation distinguishes compatible snapshot continuity from a fresh rediscovery acknowledgement', () => {
+  const fixture = runtimeStatusHarness();
+  const compatible = fixture.connector({ connectorContractState: 'COMPATIBLE_ACKNOWLEDGED', connectorRefreshRequired: false });
+  assert.equal(compatible.state, 'COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(compatible.notice, false);
+  assert.match(compatible.message, /compatibility epoch/i);
+});
+
 test('Command Center exposes the machine closure state without promoting source health to LIVE_CLOSED', () => {
   const fixture = runtimeStatusHarness();
   const revision = { running_revision: REVISION, disk_revision: REVISION, update_pending: false };

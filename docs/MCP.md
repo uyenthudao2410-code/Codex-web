@@ -74,6 +74,13 @@ WebCodex serves the existing tools surface over two MCP protocol eras:
   requests remain strict. This path is kept for existing clients and is not
   silently converted into the 2026 lifecycle.
 
+Desktop `smart-v3` connector freshness is intentionally separate from protocol
+availability. Recovery Host keeps the exact `tools/list` SHA as audit identity,
+while `schema_version + profile` defines the breaking compatibility epoch. A
+reviewed backward-compatible SHA rollover does not fabricate a discovery
+receipt; a breaking epoch change still requires real `tools/list` or
+`server/discover`. See [RECOVERY_HOST.md](RECOVERY_HOST.md).
+
 Both paths expose the same selected WebCodex tool surface and authorization
 rules. MCP transport state is not WebCodex application state: durable work is
 identified by explicit WebCodex handles such as `task_id`, Workflow Session IDs,

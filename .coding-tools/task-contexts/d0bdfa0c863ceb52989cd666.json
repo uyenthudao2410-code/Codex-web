@@ -1,0 +1,123 @@
+{
+  "version": 2,
+  "task_id": "",
+  "orchestration": {
+    "run_id": "59c028640efb4701b4f21d2e37202d42",
+    "wave_id": "2c50b7d851e44813855163768773ff75",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "6eb2f4d8c170c7ea6eab8caa668e0ef6a0ada54c",
+    "worktree_fp": "7a5fb898ea3a07d4b2b57a1778c4cfa1c31116698332740c3837a5aa032cbb22",
+    "contract_fp": ""
+  },
+  "objective": "",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 64,
+        "head_hash": "697c6b056bf715ad8d1573dca5bc75daa5c5bbe5d97005ceed08f4a38271fa1b"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-59c028640efb4701b4f21d2e37202d42\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-59c028640efb4701b4f21d2e37202d42\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "59c028640efb4701b4f21d2e37202d42",
+      "wave_id": "2c50b7d851e44813855163768773ff75",
+      "base_head": "6eb2f4d8c170c7ea6eab8caa668e0ef6a0ada54c",
+      "worktree_fp": "7a5fb898ea3a07d4b2b57a1778c4cfa1c31116698332740c3837a5aa032cbb22",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fix the connector freshness deadlock by separating exact tools/list SHA audit identity from the breaking compatibility epoch. Preserve the exact acknowledged ChatGPT snapshot; classify the reviewed 34cbb... -> fb159d... delta as backward-compatible without fabricating tools/list or ACK; require real rediscovery for schema/profile epoch breaks. Keep exactly 8 smart-v3 public tools and keep C4 separate.",
+        "objective_revision": 1,
+        "objective_sha256": "44a2a2a0314e390cba3fc6d465e5d072218849f05dac90eb0900824c95d89fe9",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "Rejecting this wave after new live evidence invalidated the compatibility assumption. The currently exposed ChatGPT task_control schema is the older frozen snapshot and lacks task_context_id, while current source/stateless tests require task_context_id for context continuity. Live acceptance calls consequently arrived under new ChatWeb client identities and could not immediately retain the original semantic controller. Therefore 34cbb... -> fb159d... is not safely classifiable as operationally backward-compatible for EOCL. Replan must preserve the breaking discovery gate and solve continuity/refresh without fabricating rediscovery or acknowledgement.",
+      "event_seq": 29584
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "2e0b931cf0a46be5e47f77926e686a5f00351db9bd17bcbccfe28abe6e0dfd1d",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy.",
+  "created_at": "2026-08-25T14:40:13.255Z",
+  "updated_at": "2026-08-25T14:40:13.519Z",
+  "events": [
+    {
+      "time": "2026-08-25T14:40:13.255Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T14:40:13.519Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "2e0b931cf0a46be5e47f77926e686a5f00351db9bd17bcbccfe28abe6e0dfd1d"
+      }
+    }
+  ]
+}

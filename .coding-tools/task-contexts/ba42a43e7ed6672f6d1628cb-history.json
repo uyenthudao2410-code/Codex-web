@@ -1,0 +1,805 @@
+[
+  {
+    "version": 2,
+    "task_id": "f2354fb2572a4bda8318a5ceb4b9e75e",
+    "orchestration": {
+      "run_id": "8c7b54f158cf4a558d9011d8cce45ce9",
+      "wave_id": "65af85dfa69e4bc9bbf273051bf6b8d3",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "4a79af617bfa6ed1768f390da6c4f73c16aa86a2",
+      "worktree_fp": "02527c25cc4880788ba95159983c4a13bb90cf2f55b2d7dd6813f2a9a04ec61a",
+      "contract_fp": ""
+    },
+    "objective": "Fix the Coding-VP connector freshness deadlock in E:\\DEV\\Codex-web without weakening fail-closed semantics. Current condition: ChatGPT can successfully invoke real tools/call such as workspace_context against the target workspace, but platform schema caching may not emit tools/list/server/discover after a contract change, so Recovery Host remains connectorRediscovered=false and blocks acknowledgement forever. Preserve the invariant that ordinary tool success alone is NOT rediscovery. Design the smallest supported bridge/receipt mechanism that can prove the ChatGPT connector has observed the exact current tool contract, bound at minimum to client_type=chatweb, current process/server instance, and tool_contract_sha256, or otherwise provide a supported force-rediscovery path at the connector/bridge layer. Do not expose a new public business MCP tool unless absolutely required. Keep C4/natural-evidence gates separate. Preserve unrelated dirty worktree changes and .coding-tools evidence. Inspect both producer and consumer sides of the freshness contract, current tests/docs, and current runtime contract before proposing mutation.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "qye_qyhy3p-4V3QKbQD7HIX0",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 508,
+      "finished_at": "2026-08-25T14:19:56.123Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T14:16:40.981Z",
+    "updated_at": "2026-08-25T14:19:56.123Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:16:40.981Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Fix the Coding-VP connector freshness deadlock in E:\\DEV\\Codex-web without weakening fail-closed semantics. Current condition: ChatGPT can successfully invoke real tools/call such as workspace_context against the target workspace, but platform schema caching may not emit tools/list/server/discover after a contract change, so Recovery Host remains connectorRediscovered=false and blocks acknowledgement forever. Preserve the invariant that ordinary tool success alone is NOT rediscovery. Design the smallest supported bridge/receipt mechanism that can prove the ChatGPT connector has observed the exact current tool contract, bound at minimum to client_type=chatweb, current process/server instance, and tool_contract_sha256, or otherwise provide a supported force-rediscovery path at the connector/bridge layer. Do not expose a new public business MCP tool unless absolutely required. Keep C4/natural-evidence gates separate. Preserve unrelated dirty worktree changes and .coding-tools evidence. Inspect both producer and consumer sides of the freshness contract, current tests/docs, and current runtime contract before proposing mutation."
+        }
+      },
+      {
+        "time": "2026-08-25T14:16:42.274Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:16:44.024Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:16:44.031Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:11.936Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"current_contract_observed|connector_tool_discovery|record.*discover|client_type|process_instance_id|server_instance_id|server/discover|def list_tools|list_tools\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron/services/tunnelService.js",
+          "session_id": "X5djoBnFJmAm-2aCPWLdhkDn"
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:12.484Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"current_contract_observed|connector_tool_discovery|record.*discover|client_type|process_instance_id|server_instance_id|server/discover|def list_tools|list_tools\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron/services/tunnelService.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:25.933Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 current_contract_observed resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "NCLsK9kNzLwVr-qRm_iTmnqo"
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:26.300Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 current_contract_observed resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:34.720Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 16 _record_tool_discovery resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "BdQPTQoIPEgeH7dWDGRLeBig"
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:35.093Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 16 _record_tool_discovery resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:41.102Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 tool_discovery_receipts resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "81vg1mAlRho2ZUHPiPZyJqiq"
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:41.506Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 tool_discovery_receipts resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:17:59.698Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"tunnel-client|health|probe|discover|refresh|mcp\" electron/services/tunnelService.js electron/services/environmentService.js electron/paths.js package.json",
+          "session_id": "x5jHROdXb0U0DBZZcMBf67kF"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:00.059Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"tunnel-client|health|probe|discover|refresh|mcp\" electron/services/tunnelService.js electron/services/environmentService.js electron/paths.js package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:07.008Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 tunnelExecutable electron resources scripts",
+          "session_id": "t1k4tI7f_h9wRN-tRQJPx0cu"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:07.366Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 tunnelExecutable electron resources scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:13.449Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe --help",
+          "session_id": "10CFBdHo61TKYnJGLAWxRMFo"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:13.808Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:19.400Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe help plugin",
+          "session_id": "tfNx2t454lVD_xxsDykQVEwV"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:19.783Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe help plugin",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:25.632Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe codex plugin --help",
+          "session_id": "3qRAdIrAwLt16GaLEycme9cZ"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:26.000Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe codex plugin --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:34.650Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe runtimes --help",
+          "session_id": "Ul0-Z_OBYhqF953BHkULABjL"
+        }
+      },
+      {
+        "time": "2026-08-25T14:18:35.016Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe runtimes --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:19:14.657Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe run --help",
+          "session_id": "s4k8RwLz9ME04acLeXlzt5T8"
+        }
+      },
+      {
+        "time": "2026-08-25T14:19:15.190Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe run --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:19:23.500Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 \"def resolve|raw_client_type|raw_client_id|client_type =|client_id =\" resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "qgoQhjdgjE2DOTzE9sc-uwFh"
+        }
+      },
+      {
+        "time": "2026-08-25T14:19:23.833Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"def resolve|raw_client_type|raw_client_id|client_type =|client_id =\" resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:19:35.592Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe health --help",
+          "session_id": "n8beUGpm32t9PlGWVsg9cEPU"
+        }
+      },
+      {
+        "time": "2026-08-25T14:19:35.924Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe health --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:19:55.740Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"tool_contract|_tools_list_payload|inputSchema|additionalProperties|build.*tool|smart-v3|TOOL_CONTRACT\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | head -n 220",
+          "session_id": "qye_qyhy3p-4V3QKbQD7HIX0"
+        }
+      },
+      {
+        "time": "2026-08-25T14:19:56.123Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"tool_contract|_tools_list_payload|inputSchema|additionalProperties|build.*tool|smart-v3|TOOL_CONTRACT\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | head -n 220",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:20:01.969Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "56fbba62b4b64b4484884ba472cfe88e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-25T14:20:07.813Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-25T14:20:01.970Z",
+    "updated_at": "2026-08-25T14:20:07.813Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:20:01.970Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:02.238Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 120 -S \"tool_contract|_tools_list_payload|inputSchema|additionalProperties|smart-v3\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "kjq3IoSbM21y_vljNJzg6Drp"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:02.581Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 120 -S \"tool_contract|_tools_list_payload|inputSchema|additionalProperties|smart-v3\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:07.813Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"self._tools_list_payload|self.tool_contract =|def tool_metadata_contract|def build_tool|def tools_for_profile|SMART_TOOL_PROFILE\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:07.813Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:20:14.201Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "0ee223cfb1db4aa99861a4ef16078a25",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-25T14:20:19.436Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-25T14:20:14.205Z",
+    "updated_at": "2026-08-25T14:20:19.436Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:20:14.205Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:14.466Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 _tools_list_payload resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "fFriMKeeJo8lK4RqA5yCphJV"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:14.749Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 _tools_list_payload resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:19.436Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"elif method == \\\"tools/call\\\"|method == \\\"tools/call\\\"|dispatch_tool_call|call_tool\\(\" resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:19.436Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:20:26.006Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c825dc4a0d4641fd8de196ecdc5d27e7",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-25T14:23:08.901Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-08-25T14:20:26.006Z",
+    "updated_at": "2026-08-25T14:23:08.901Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:20:26.006Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:26.248Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"tools/call\" resources/coding-tools-mcp/coding_tools_mcp/protocol.py",
+          "session_id": "CyCbXY1lQFFwzdKA0rBCGGop"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:26.516Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"tools/call\" resources/coding-tools-mcp/coding_tools_mcp/protocol.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:31.846Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"def call_tool\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "Sen7y88ajdtqHgQ7Vm2677Sy"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:32.191Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"def call_tool\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:38.037Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 \"dispatch_started_wall_utc\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "kLgz5l6Lz90ePqR4ORZSkTRV"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:38.383Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 \"dispatch_started_wall_utc\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:47.583Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 60 \"def tool_definition\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "16gDQ7NoNnZ7v0RP3XYwMFDF"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:47.837Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 60 \"def tool_definition\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:53.546Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"class ToolContractRuntime|def definition\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "session_id": "rU7dKZloSGfwhvKbxfcq1P94"
+        }
+      },
+      {
+        "time": "2026-08-25T14:20:53.808Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"class ToolContractRuntime|def definition\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:21:13.206Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe admin --help",
+          "session_id": "L1Y06SE3wNCVvF0X56E8WVDe"
+        }
+      },
+      {
+        "time": "2026-08-25T14:21:13.659Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe admin --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:21:19.299Z",
+        "event": "command_started",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe admin tunnels --help",
+          "session_id": "Cn86_YVm7SjCMcyJ2s01S-QL"
+        }
+      },
+      {
+        "time": "2026-08-25T14:21:19.584Z",
+        "event": "command_finished",
+        "details": {
+          "command": "resources\\tools\\tunnel-client.exe admin tunnels --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:22:22.036Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c|fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585\" .",
+          "session_id": "Tj5TbVcTwi0nwnLCtCU3fDu1"
+        }
+      },
+      {
+        "time": "2026-08-25T14:22:22.356Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c|fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585\" .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:22:29.470Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "session_id": "fUQ6UcYoxJc0KkHNC45_gaPD"
+        }
+      },
+      {
+        "time": "2026-08-25T14:22:29.746Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:22:42.809Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 16 fake_readonly resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "YtXV0E__dwHITmngbcxh1K7q"
+        }
+      },
+      {
+        "time": "2026-08-25T14:22:43.125Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 16 fake_readonly resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:23:08.901Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import json,hashlib; from coding_tools_mcp.tool_contract import TOOL_MODE_ALLOWLISTS; from coding_tools_mcp.tool_schema import tool_definition; names=TOOL_MODE_ALLOWLISTS['smart']; print('normal',hashlib.sha256(json.dumps({'tools':[tool_definition(n,fake_readonly=False) for n in names]},ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()); print('fake',hashlib.sha256(json.dumps({'tools':[tool_definition(n,fake_readonly=True) for n in names]},ensure_ascii=Fals",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:23:08.901Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:23:24.061Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "0271efc5f29145e4aa7bc53751875a7a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Piyc_dwwytwMVuHHSPgyBgO4",
+      "kind": "test",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 4876,
+      "finished_at": "2026-08-25T14:23:49.559Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 4876,
+        "summary": "exit 1 | 4.9s | 89 lines | tail: '2 failed, 16 passed in 4.00s'",
+        "finished_at": "2026-08-25T14:23:49.559Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "Piyc_dwwytwMVuHHSPgyBgO4"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 5431,
+          "command_id": "Piyc_dwwytwMVuHHSPgyBgO4",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:Piyc_dwwytwMVuHHSPgyBgO4:stdout",
+              "total_stream_bytes": 5431,
+              "total_retained_bytes": 5431,
+              "head_retained_bytes": 5431,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:Piyc_dwwytwMVuHHSPgyBgO4:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T14:23:24.061Z",
+    "updated_at": "2026-08-25T14:23:49.559Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:23:24.061Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-25T14:23:24.619Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"connector_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "lKUcCklA2eVM8EBDdjFWfvKL"
+        }
+      },
+      {
+        "time": "2026-08-25T14:23:24.891Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"connector_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:23:31.136Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"fakeReadonly|fake_readonly|dangerously-fake-readonly|permissionMode|permission_mode\" electron resources/coding-tools-mcp/coding_tools_mcp tests | rg -n -m 120 \"fake|permission\"",
+          "session_id": "-v0OkRP3v_DytDPNt1Gih2OI"
+        }
+      },
+      {
+        "time": "2026-08-25T14:23:31.366Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"fakeReadonly|fake_readonly|dangerously-fake-readonly|permissionMode|permission_mode\" electron resources/coding-tools-mcp/coding_tools_mcp tests | rg -n -m 120 \"fake|permission\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:23:44.725Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+          "session_id": "Piyc_dwwytwMVuHHSPgyBgO4"
+        }
+      },
+      {
+        "time": "2026-08-25T14:23:49.559Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:23:54.815Z",
+    "archive_reason": "finished"
+  }
+]

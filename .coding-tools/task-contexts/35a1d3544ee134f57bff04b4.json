@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "c66c3070af854e8f92136a870db4a075",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "4s-SSk4svkglpE7-UfZhPbn2",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 329,
+    "finished_at": "2026-08-25T14:40:23.032Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T14:40:22.455Z",
+  "updated_at": "2026-08-25T14:40:23.032Z",
+  "events": [
+    {
+      "time": "2026-08-25T14:40:22.455Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T14:40:22.785Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff 64f71a2..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py | rg -n -C 12 \"task_context_id|task_control\"",
+        "session_id": "4s-SSk4svkglpE7-UfZhPbn2"
+      }
+    },
+    {
+      "time": "2026-08-25T14:40:23.032Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff 64f71a2..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py | rg -n -C 12 \"task_context_id|task_control\"",
+        "status": "failed"
+      }
+    }
+  ]
+}
