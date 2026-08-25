@@ -5,6 +5,7 @@ import json
 import tempfile
 import time
 import unittest
+import base64
 from pathlib import Path
 from unittest.mock import patch
 
@@ -37,6 +38,48 @@ def open_event(identifier: str = "open-1", **overrides: object) -> dict[str, obj
     }
     event.update(overrides)
     return event
+
+
+def public_event(event: dict[str, object]) -> dict[str, object]:
+    return {key: value for key, value in event.items() if key not in {"provenance", "evidence_level"}}
+
+
+def attach_chatweb(runtime: Runtime, context: str = "prl-test") -> None:
+    runtime.request_context.hub_client = {
+        "client_id": "chatweb",
+        "client_type": "chatweb",
+        "role": "controller",
+        "session_instance": "prl-session",
+        "execution_context_id": context,
+        "capabilities": {},
+    }
+    runtime._touch_hub_client(runtime.request_context.hub_client)
+
+
+def stage_host_turn(root: Path, identifier: str) -> Path:
+    pending = root / ".coding-tools" / "evaluation" / "chatweb-host-turn-pending.json"
+    pending.parent.mkdir(parents=True, exist_ok=True)
+    pending.write_text(json.dumps({
+        "schema_version": 1,
+        "turn_id": f"turn-{identifier}",
+        "trace_id": f"trace-{identifier}",
+        "staged_at_unix_ms": int(time.time() * 1000),
+    }), encoding="utf-8")
+    return pending
+
+
+def accepted_files(run_id: str, wave_id: str) -> dict[str, object]:
+    return {
+        "schema_version": 2,
+        "source": "task_modified_files",
+        "complete": True,
+        "count": 0,
+        "total_bytes": 0,
+        "run_id": run_id,
+        "wave_id": wave_id,
+        "files": [],
+        "incomplete_reasons": [],
+    }
 
 
 class ProblemLineageTests(unittest.TestCase):
@@ -116,7 +159,8 @@ class ProblemLineageTests(unittest.TestCase):
             self.assertEqual(revised["event"]["problem_revision"], 2)
             self.assertEqual(revised["event"]["reason_code"], "explicit_contract_revision")
             self.assertEqual(revised["thread"]["thread"]["current_revision"], 2)
-            self.assertEqual(revised["thread"]["thread"]["resolution_state"], "REVISED")
+            self.assertEqual(revised["event"]["relation_type"], "REVISION")
+            self.assertEqual(revised["thread"]["thread"]["resolution_state"], "OPEN")
             with self.assertRaises(ProblemLineageError):
                 ledger.problem_record_event({
                     "operation": "revise", "event_id": "stale-revision", "problem_id": problem_id,
@@ -144,15 +188,34 @@ class ProblemLineageTests(unittest.TestCase):
             proof_id = ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="focused", stage_version="1", input_fingerprint="proof-input", status="passed")
             manifest = {"criterion-1": [proof_id]}
             self.assertTrue(ledger.problem_record_coverage_manifest(run_id=run_id, wave_id=wave_id, manifest=manifest)["recorded"])
-            checkpoint_id = ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="head", proof_fingerprint="proofs", status="accepted")
+            proof_fingerprint = hashlib.sha256(f"{proof_id}:proof-input".encode()).hexdigest()
+            files = accepted_files(run_id, wave_id)
+            outcome = ledger.problem_prepare_eocl_outcome_claim(
+                run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
+                proof_fingerprint=proof_fingerprint, accepted_files=files, durable_mutation=False,
+                coverage_manifest=manifest,
+            )
+            checkpoint = ledger.accept_checkpoint_atomic(
+                run_id=run_id, wave_id=wave_id, git_head="head", proof_fingerprint=proof_fingerprint,
+                metadata={"worktree_fp": "worktree", "accepted_files": files, "problem_outcome_claim": outcome["claim"], "problem_outcome_claim_sha256": outcome["claim_sha256"]},
+            )
+            checkpoint_id = str(checkpoint["checkpoint_id"])
             bridge = ledger.problem_record_provisional_from_eocl(run_id=run_id, wave_id=wave_id, checkpoint_id=checkpoint_id, now=NOW)
             self.assertTrue(bridge["recorded"])
             replay = ledger.problem_record_provisional_from_eocl(run_id=run_id, wave_id=wave_id, checkpoint_id=checkpoint_id, now=NOW)
             self.assertFalse(replay["recorded"])
+            self.assertTrue(replay["idempotent"])
             thread = ledger.problem_get(problem_id)
             assert thread is not None
             self.assertEqual(thread["thread"]["resolution_state"], "PROVISIONALLY_RESOLVED")
             self.assertTrue(bridge["event"]["eligible_for_policy"])
+            terminal = next(
+                item for item in ledger.list_events(run_id)
+                if item["event_type"] == "state_transition" and item["state_after"] == "CHECKPOINTED"
+            )
+            self.assertEqual(bridge["event"]["occurred_at"], terminal["event_time"])
+            self.assertEqual(bridge["event"]["occurred_at_source"], "RUNTIME")
+            self.assertEqual(bridge["event"]["clock_authority"], "RUNTIME_OWNED")
         finally:
             temporary.cleanup()
 
@@ -191,14 +254,15 @@ class ProblemLineageTests(unittest.TestCase):
             runtime._orchestration_workspace_identity = lambda _path: {"branch": "test", "base_head": "head", "worktree_fp": "worktree"}
             try:
                 runtime.orchestration_ledger.migrate_problem_lineage_schema()
-                opened = runtime.task_control({"action": "problem", "problem_event": open_event("runtime-open")})
+                attach_chatweb(runtime)
+                stage_host_turn(root, "open")
+                opened = runtime.task_control({"action": "problem", "problem_event": public_event(open_event("runtime-open"))})
                 event = opened["problem"]["event"]
                 problem_id, fingerprint = str(event["problem_id"]), str(event["contract_fingerprint"])
-                pending = root / ".coding-tools" / "evaluation" / "chatweb-host-turn-pending.json"
-                pending.parent.mkdir(parents=True, exist_ok=True)
-                pending.write_text(json.dumps({"schema_version": 1, "turn_id": "turn-1", "trace_id": "trace-1", "staged_at_unix_ms": int(time.time() * 1000)}), encoding="utf-8")
-                observed = runtime.task_control({"action": "problem", "problem_event": {"operation": "observe_feedback", "event_id": "host-observed", "problem_id": problem_id, "problem_revision": 1, "provenance": "HOST_OBSERVED", "evidence_level": "OBSERVED"}})
-                self.assertEqual(observed["problem"]["event"]["turn_id"], "turn-1")
+                stage_host_turn(root, "observed")
+                observed = runtime.task_control({"action": "problem", "problem_event": {"operation": "observe_feedback", "event_id": "host-observed", "problem_id": problem_id, "problem_revision": 1}})
+                self.assertEqual(observed["problem"]["event"]["turn_id"], "turn-observed")
+                self.assertEqual(observed["receipt_id"], observed["problem"]["event"]["event_hash"])
                 ctx, _ = runtime._agent_orchestration_context({"workflow": "bugfix", "phase": "prepare", "execution_mode": "mcp_only", "problem_context": {"work_origin": "problem", "problem_id": problem_id, "problem_revision": 1, "contract_fingerprint": fingerprint, "resolution_claim": "none"}}, objective="pin revision before run")
                 run = runtime.orchestration_ledger.get_run(ctx.run_id)
                 assert run is not None
@@ -214,9 +278,12 @@ class ProblemLineageTests(unittest.TestCase):
             root = Path(temp)
             (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
             runtime = Runtime(root, permission_mode="dangerous")
+            runtime._orchestration_workspace_identity = lambda _path: {"branch": "test", "base_head": "head", "worktree_fp": "worktree"}
             try:
                 runtime.orchestration_ledger.migrate_problem_lineage_schema()
-                opened = runtime.task_control({"action": "problem", "problem_event": open_event("runtime-c3-open")})
+                attach_chatweb(runtime, "runtime-c3")
+                stage_host_turn(root, "runtime-c3-open")
+                opened = runtime.task_control({"action": "problem", "problem_event": public_event(open_event("runtime-c3-open"))})
                 event = opened["problem"]["event"]
                 problem_id = str(event["problem_id"])
                 fingerprint = str(event["contract_fingerprint"])
@@ -256,28 +323,46 @@ class ProblemLineageTests(unittest.TestCase):
                         "reason": "manifest has no exact passed proof",
                         "problem_coverage_manifest": {"criterion-1": ["not-a-proof"]},
                     })
-                self.assertEqual(invalid_manifest.exception.code, "PRL_COVERAGE_MANIFEST_INVALID")
+                self.assertEqual(invalid_manifest.exception.code, "PRL_OUTCOME_CLAIM_INVALID")
 
-                accepted = runtime.task_control({
-                    "action": "accept",
-                    "run_id": run_id,
-                    "reason": "exact full-problem claim has passed proof coverage",
-                    "problem_coverage_manifest": {"criterion-1": [proof_id]},
-                })
+                with patch.object(
+                    runtime.orchestration_ledger,
+                    "problem_reconcile_provisional_from_checkpoint",
+                    side_effect=OSError("injected post-checkpoint bridge failure"),
+                ):
+                    accepted = runtime.task_control({
+                        "action": "accept",
+                        "run_id": run_id,
+                        "reason": "exact full-problem claim has passed proof coverage",
+                        "problem_coverage_manifest": {"criterion-1": [proof_id]},
+                    })
                 self.assertTrue(accepted["accepted"])
-                self.assertTrue(accepted["problem_outcome_bridge"]["recorded"])
+                self.assertEqual(accepted["problem_outcome_bridge"]["status"], "RECONCILIATION_REQUIRED")
+                self.assertEqual(runtime.orchestration_ledger.get_run(run_id)["status"], "accepted")
+                checkpoint_id = runtime.orchestration_ledger.list_checkpoints(run_id, wave_id=wave_id)[-1]["checkpoint_id"]
+                reconciled = runtime.task_control({"action": "problem", "problem_event": {
+                    "operation": "reconcile_provisional", "run_id": run_id,
+                    "wave_id": wave_id, "checkpoint_id": checkpoint_id,
+                }})
+                self.assertTrue(reconciled["problem"]["recorded"])
+                self.assertEqual(reconciled["receipt_id"], reconciled["problem"]["event"]["event_hash"])
+                replayed = runtime.task_control({"action": "problem", "problem_event": {
+                    "operation": "reconcile_provisional", "run_id": run_id,
+                    "wave_id": wave_id, "checkpoint_id": checkpoint_id,
+                }})
+                self.assertTrue(replayed["problem"]["idempotent"])
                 self.assertEqual(runtime.orchestration_ledger.problem_get(problem_id)["thread"]["resolution_state"], "PROVISIONALLY_RESOLVED")
 
+                stage_host_turn(root, "runtime-c3-confirm")
                 confirmed = runtime.task_control({"action": "problem", "problem_event": {
                     "operation": "confirm", "event_id": "runtime-c3-confirm", "problem_id": problem_id,
                     "problem_revision": 1, "feedback_intent": "CONFIRM_RESOLVED",
-                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
                 }})
                 self.assertEqual(confirmed["problem"]["event"]["reason_code"], "user_confirmation")
+                stage_host_turn(root, "runtime-c3-reopen")
                 reopened = runtime.task_control({"action": "problem", "problem_event": {
                     "operation": "reopen", "event_id": "runtime-c3-reopen", "problem_id": problem_id,
                     "problem_revision": 1, "feedback_intent": "SAME_PROBLEM_STILL_FAILING",
-                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
                 }})
                 self.assertEqual(reopened["problem"]["event"]["problem_revision"], 1)
                 self.assertEqual(reopened["problem"]["event"]["reason_code"], "explicit_same_problem_correction")
@@ -298,6 +383,10 @@ class ProblemLineageTests(unittest.TestCase):
                     "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
                     "verification": "none", "include_diff": False,
                 })
+                runtime.orchestration_ledger.record_proof(
+                    run_id=workflow["orchestration"]["run_id"], wave_id=workflow["orchestration"]["wave_id"],
+                    stage_id="focused", stage_version="1", input_fingerprint="schema-inactive-proof", status="passed",
+                )
                 accepted = runtime.task_control({
                     "action": "accept", "run_id": workflow["orchestration"]["run_id"],
                     "reason": "ordinary EOCL acceptance remains available",
@@ -315,6 +404,7 @@ class ProblemLineageTests(unittest.TestCase):
                 runtime = Runtime(root, permission_mode="dangerous")
                 try:
                     runtime.orchestration_ledger.migrate_problem_lineage_schema()
+                    attach_chatweb(runtime, f"non-full-{origin}")
                     request: dict[str, object] = {
                         "workflow": "bugfix", "phase": "execute", "execution_mode": "mcp_only",
                         "objective": f"Accept a {origin} attempt without full closure",
@@ -325,7 +415,8 @@ class ProblemLineageTests(unittest.TestCase):
                     if origin == "non_problem":
                         request["problem_context"] = {"work_origin": "non_problem"}
                     elif origin == "problem":
-                        opened = runtime.task_control({"action": "problem", "problem_event": open_event(f"{origin}-none-open")})
+                        stage_host_turn(root, f"{origin}-none-open")
+                        opened = runtime.task_control({"action": "problem", "problem_event": public_event(open_event(f"{origin}-none-open"))})
                         event = opened["problem"]["event"]
                         request["problem_context"] = {
                             "work_origin": "problem", "problem_id": str(event["problem_id"]),
@@ -333,6 +424,10 @@ class ProblemLineageTests(unittest.TestCase):
                             "resolution_claim": "none",
                         }
                     workflow = runtime.agent_workflow(request)
+                    runtime.orchestration_ledger.record_proof(
+                        run_id=workflow["orchestration"]["run_id"], wave_id=workflow["orchestration"]["wave_id"],
+                        stage_id="focused", stage_version="1", input_fingerprint=f"non-full-{origin}-proof", status="passed",
+                    )
                     accepted = runtime.task_control({
                         "action": "accept", "run_id": workflow["orchestration"]["run_id"],
                         "reason": "this is not a full-problem resolution claim",
@@ -345,12 +440,188 @@ class ProblemLineageTests(unittest.TestCase):
                 finally:
                     runtime.close()
 
+    def test_public_semantic_authority_is_runtime_derived_and_claim_restores_on_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = Runtime(root, permission_mode="safe")
+            try:
+                runtime.orchestration_ledger.migrate_problem_lineage_schema()
+                attach_chatweb(runtime, "authority")
+                with self.assertRaises(ToolFailure) as human:
+                    runtime.task_control({"action": "problem", "problem_event": {**open_event("human"), "provenance": "HUMAN_ANNOTATED"}})
+                self.assertEqual(human.exception.code, "PRL_HUMAN_REVIEW_RECEIPT_REQUIRED")
+                with self.assertRaises(ToolFailure) as binding:
+                    runtime.task_control({"action": "problem", "problem_event": {"operation": "link", "event_id": "public-link"}})
+                self.assertEqual(binding.exception.code, "PRL_BINDING_RUNTIME_ONLY")
+                with self.assertRaises(ToolFailure) as guard:
+                    runtime.task_control({"action": "problem", "problem_event": {"operation": "block", "event_id": "public-guard", "provenance": "DETERMINISTIC_EVIDENCE"}})
+                self.assertEqual(guard.exception.code, "PRL_GUARD_RUNTIME_ONLY")
+                with self.assertRaises(ToolFailure) as clock:
+                    runtime.task_control({"action": "problem", "problem_event": {**public_event(open_event("clock")), "occurred_at": NOW, "occurred_at_source": "EXPLICIT_USER"}})
+                self.assertEqual(clock.exception.code, "PRL_CLOCK_FIELDS_FORBIDDEN")
+
+                pending = stage_host_turn(root, "restore")
+                with patch.object(runtime.orchestration_ledger, "problem_record_event", side_effect=ProblemLineageError("injected append failure")):
+                    with self.assertRaises(ToolFailure) as failed:
+                        runtime.task_control({"action": "problem", "problem_event": public_event(open_event("restored-open"))})
+                self.assertEqual(failed.exception.code, "PRL_EVENT_INVALID")
+                self.assertTrue(pending.exists())
+                recorded = runtime.task_control({"action": "problem", "problem_event": public_event(open_event("restored-open"))})
+                self.assertFalse(pending.exists())
+                self.assertEqual(recorded["receipt_id"], recorded["problem"]["event"]["event_hash"])
+                self.assertEqual(recorded["problem"]["event"]["transition_authority"], "RUNTIME_EXPLICIT_USER")
+                self.assertEqual(recorded["problem"]["event"]["provenance"], "CONTROLLER_REPORTED_EXPLICIT_USER")
+                self.assertEqual(recorded["problem"]["event"]["occurred_at"], "")
+            finally:
+                runtime.close()
+
+    def test_not_applicable_requires_exact_non_code_dispositions_and_no_source_receipts(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
+            opened = ledger.problem_record_event(
+                open_event("na-open", engineering_floor="NOT_APPLICABLE"),
+                now=NOW,
+                authority_context="RUNTIME_EXPLICIT_USER",
+            )
+            problem_id = str(opened["event"]["problem_id"])
+            fingerprint = str(opened["event"]["contract_fingerprint"])
+            context = {
+                "schema_version": 1, "work_origin": "problem", "resolution_claim": "full_problem",
+                "problem_id": problem_id, "problem_revision": 1, "contract_fingerprint": fingerprint,
+                "engineering_floor": "NOT_APPLICABLE", "policy_eligible": False,
+            }
+            run_id = ledger.create_run(objective="non-code fixture", metadata={"problem_resolution": context})
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", metadata={"problem_resolution": context})
+            client_id = "chatweb:non-code"
+            ledger.upsert_hub_client(
+                client_id=client_id, client_type="chatweb", role="controller", status="online",
+                runtime_instance_id="runtime-na",
+            )
+            controller = ledger.acquire_controller_lease(
+                run_id=run_id, owner_client_id=client_id, lease_id="lease-na", ttl_seconds=60,
+            )
+            authority = {
+                "client_id": client_id, "client_type": "chatweb", "runtime_instance_id": "runtime-na",
+                "lease_id": "lease-na", "fencing_token": controller["fencing_token"],
+            }
+            files = accepted_files(run_id, wave_id)
+            with self.assertRaises(ProblemLineageError):
+                ledger.problem_prepare_eocl_outcome_claim(
+                    run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
+                    proof_fingerprint="", accepted_files=files, durable_mutation=False,
+                    coverage_manifest={"criterion-1": []}, controller_authority=authority,
+                )
+            with self.assertRaises(ProblemLineageError):
+                ledger.problem_prepare_eocl_outcome_claim(
+                    run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
+                    proof_fingerprint="", accepted_files=files, durable_mutation=False,
+                    criterion_dispositions={"criterion-1": "UNKNOWN"}, controller_authority=authority,
+                )
+            outcome = ledger.problem_prepare_eocl_outcome_claim(
+                run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
+                proof_fingerprint="", accepted_files=files, durable_mutation=False,
+                criterion_dispositions={"criterion-1": "SATISFIED_NON_CODE"}, controller_authority=authority,
+            )
+            self.assertTrue(outcome["recorded"])
+            replay = ledger.problem_prepare_eocl_outcome_claim(
+                run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
+                proof_fingerprint="", accepted_files=files, durable_mutation=False,
+                criterion_dispositions={"criterion-1": "SATISFIED_NON_CODE"}, controller_authority=authority,
+            )
+            self.assertTrue(replay["idempotent"])
+            self.assertEqual(replay["claim_sha256"], outcome["claim_sha256"])
+        finally:
+            temporary.cleanup()
+
+    def test_contract_capsule_rejects_bounded_encoded_credentials_and_pii(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
+            encoded_header = base64.b64encode(b"Authorization: Bearer abcdefghijklmnop").decode("ascii")
+            encoded_pii = base64.b64encode(b"admin@example.com").decode("ascii")
+            encoded_pat = "github_pat_abcdefghijklmnopqrstuv".encode("utf-8").hex()
+            leaks = [
+                "api%5Fkey%3Dsupersecretvalue",
+                "api%255Fkey%253Dsupersecretvalue",
+                encoded_header,
+                encoded_pat,
+                "ａｐｉ＿ｋｅｙ＝abcdefghijklmnop",
+                encoded_pii,
+            ]
+            for index, leak in enumerate(leaks):
+                with self.assertRaises(ProblemLineageError):
+                    ledger.problem_record_event(
+                        open_event(f"encoded-leak-{index}", contract_capsule=capsule(leak)),
+                        now=NOW,
+                        authority_context="RUNTIME_EXPLICIT_USER",
+                    )
+        finally:
+            temporary.cleanup()
+
+    def test_contract_capsule_encoded_privacy_scan_preserves_benign_text(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
+            benign = ["Token budget is capped at 4096", "URL path /a%20b is expected", "c2VjcmV0YXJ5", "Checksum deadbeef1234", "Unicode emoji ✅"]
+            for index, text in enumerate(benign):
+                opened = ledger.problem_record_event(
+                    open_event(f"benign-{index}", contract_capsule=capsule(text)),
+                    now=NOW,
+                    authority_context="RUNTIME_EXPLICIT_USER",
+                )
+                self.assertEqual(
+                    ledger.problem_get(opened["event"]["problem_id"])["current_revision"]["capsule"]["objective_summary"],
+                    text,
+                )
+        finally:
+            temporary.cleanup()
+
+    def test_reconciliation_preserves_historical_no_clock_provisional_event(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
+            opened = ledger.problem_record_event(open_event("legacy-clock-open"), now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            problem_id = str(opened["event"]["problem_id"])
+            fingerprint = str(opened["event"]["contract_fingerprint"])
+            context = {"schema_version": 1, "work_origin": "problem", "resolution_claim": "full_problem", "problem_id": problem_id, "problem_revision": 1, "contract_fingerprint": fingerprint, "engineering_floor": "REQUIRED", "policy_eligible": False}
+            run_id = ledger.create_run(objective="historical bridge fixture", metadata={"problem_resolution": context})
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", metadata={"problem_resolution": context})
+            proof_id = ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="focused", stage_version="1", input_fingerprint="legacy-clock-proof", status="passed")
+            manifest = {"criterion-1": [proof_id]}
+            proof_fingerprint = hashlib.sha256(f"{proof_id}:legacy-clock-proof".encode()).hexdigest()
+            files = accepted_files(run_id, wave_id)
+            outcome = ledger.problem_prepare_eocl_outcome_claim(
+                run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
+                proof_fingerprint=proof_fingerprint, accepted_files=files, durable_mutation=False,
+                coverage_manifest=manifest,
+            )
+            checkpoint = ledger.accept_checkpoint_atomic(
+                run_id=run_id, wave_id=wave_id, git_head="head", proof_fingerprint=proof_fingerprint,
+                metadata={"worktree_fp": "worktree", "accepted_files": files, "problem_outcome_claim": outcome["claim"], "problem_outcome_claim_sha256": outcome["claim_sha256"]},
+            )
+            checkpoint_id = str(checkpoint["checkpoint_id"])
+            legacy_event_id = "prl-provisional-v11-" + hashlib.sha256("\x1f".join((run_id, wave_id, problem_id, "1", checkpoint_id)).encode()).hexdigest()
+            historical = ledger.problem_record_event({
+                "operation": "provisional_resolve", "event_id": legacy_event_id,
+                "problem_id": problem_id, "problem_revision": 1, "run_id": run_id, "wave_id": wave_id,
+                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_EOCL")
+            replay = ledger.problem_record_provisional_from_eocl(run_id=run_id, wave_id=wave_id, checkpoint_id=checkpoint_id, now="2026-08-25T01:00:00Z")
+            self.assertTrue(replay["idempotent"])
+            self.assertEqual(replay["event"]["event_hash"], historical["event"]["event_hash"])
+            self.assertEqual(replay["event"]["occurred_at"], "")
+            self.assertEqual(replay["event"]["clock_authority"], "")
+        finally:
+            temporary.cleanup()
+
     def test_public_schema_has_no_caller_state_or_policy_grant(self) -> None:
         schema = input_schemas()["task_control"]
         event_schema = schema["properties"]["problem_event"]
         self.assertEqual(schema["properties"]["action"]["enum"].count("problem"), 1)
         self.assertNotIn("eligible_for_policy", event_schema["properties"])
         self.assertNotIn("state", event_schema["properties"])
+        self.assertIn("reconcile_provisional", event_schema["properties"]["operation"]["enum"])
+        self.assertEqual(
+            schema["properties"]["problem_criterion_dispositions"]["additionalProperties"]["enum"],
+            ["SATISFIED_NON_CODE"],
+        )
         with self.assertRaises(Exception):
             validate_arguments("task_control", {"action": "problem", "problem_event": {"operation": "open", "event_id": "bad", "eligible_for_policy": True}})
 

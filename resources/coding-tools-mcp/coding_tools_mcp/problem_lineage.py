@@ -11,19 +11,32 @@ import hashlib
 import json
 import re
 import sqlite3
+import time
+import base64
+import binascii
+import unicodedata
 from datetime import datetime
 from typing import Any
+from urllib.parse import unquote
 
 
 PROBLEM_SCHEMA_VERSION = 11
 PROBLEM_EVENT_SCHEMA_LEGACY = 1
 PROBLEM_EVENT_SCHEMA_CURRENT = 2
 PROBLEM_CAPSULE_MAX_BYTES = 8_192
+PROBLEM_OUTCOME_CLAIM_MAX_BYTES = 131_072
 _ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 _FP_RE = re.compile(r"^[0-9a-f]{64}$")
-_SECRET_RE = re.compile(r"(?:\b(?:api[_-]?key|secret|token|password|passwd|authorization)\b\s*[:=]|\bBearer\s+[A-Za-z0-9._~+/-]{12,}|\b(?:sk|ghp|github_pat)_[A-Za-z0-9_-]{12,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)", re.I)
+_SECRET_RE = re.compile(r"(?:\b(?:api[_-]?key|secret|token|password|passwd|authorization)\b\s*[:=]|\bBearer\s+[A-Za-z0-9._~+/-]{12,}|\bsk-[A-Za-z0-9_-]{12,}|\bgh[pousr]_[A-Za-z0-9_-]{12,}|\bgithub_pat_[A-Za-z0-9_-]{12,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)", re.I)
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
 _PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d[\d .()-]{7,}\d)(?!\d)")
+_PERCENT_RE = re.compile(r"%(?:[0-9A-Fa-f]{2})")
+_ESCAPED_ASCII_RE = re.compile(r"\\(?:u[0-9A-Fa-f]{4}|x[0-9A-Fa-f]{2})")
+_BASE64_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{16,}={0,2}(?![A-Za-z0-9_-])")
+_HEX_TOKEN_RE = re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{24,}(?![0-9A-Fa-f])")
+_SECRET_SCAN_MAX_DEPTH = 2
+_SECRET_SCAN_MAX_VARIANTS = 32
+_SECRET_SCAN_MAX_DECODED_BYTES = 32_768
 
 PROBLEM_OPERATIONS = frozenset({"open", "link", "observe_feedback", "provisional_resolve", "confirm", "reopen", "revise", "block", "abandon", "get"})
 PROBLEM_RELATION_TYPES = frozenset({"OPEN", "LINK", "NO_RUN_CREATED", "ENGINEERING_ATTEMPT_BOUND", "USER_FEEDBACK", "PROVISIONAL_RESOLUTION", "CONFIRMED_RESOLUTION", "REOPEN", "REVISION", "BLOCK", "ABANDON"})
@@ -47,14 +60,21 @@ _AUTHORITY = {
     "open": frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
     "link": frozenset({"RUNTIME_BINDING", "RUNTIME_OBSERVATION"}),
     "observe_feedback": frozenset({"RUNTIME_OBSERVATION", "RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
-    "provisional_resolve": frozenset({"RUNTIME_EOCL"}),
+    "provisional_resolve": frozenset({"RUNTIME_EOCL", "RUNTIME_RECONCILIATION"}),
     "confirm": frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
     "reopen": frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
     "revise": frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
     "block": frozenset({"RUNTIME_GUARD", "RUNTIME_OPERATOR", "RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
     "abandon": frozenset({"RUNTIME_OPERATOR", "RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
 }
-_AUTHORITATIVE_PROVENANCE = frozenset({"CONTROLLER_REPORTED_EXPLICIT_USER", "HUMAN_ANNOTATED", "DETERMINISTIC_EVIDENCE"})
+_ELIGIBLE_AUTHORITY_PROVENANCE = frozenset({
+    ("RUNTIME_EXPLICIT_USER", "CONTROLLER_REPORTED_EXPLICIT_USER"),
+    ("RUNTIME_HUMAN_REVIEW", "HUMAN_ANNOTATED"),
+    ("RUNTIME_BINDING", "DETERMINISTIC_EVIDENCE"),
+    ("RUNTIME_GUARD", "DETERMINISTIC_EVIDENCE"),
+    ("RUNTIME_EOCL", "DETERMINISTIC_EVIDENCE"),
+    ("RUNTIME_RECONCILIATION", "DETERMINISTIC_EVIDENCE"),
+})
 
 
 class ProblemLineageError(ValueError):
@@ -124,12 +144,89 @@ def _timestamp(value: Any, name: str) -> str:
     return result
 
 
+def _decoded_printable(value: bytes) -> str | None:
+    if not value or len(value) > _SECRET_SCAN_MAX_DECODED_BYTES:
+        return None
+    try:
+        text = value.decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        return None
+    return text if all(char.isprintable() or char in "\t\r\n" for char in text) else None
+
+
+def _escape_ascii_variant(value: str) -> str | None:
+    if not _ESCAPED_ASCII_RE.search(value):
+        return None
+    try:
+        return _ESCAPED_ASCII_RE.sub(lambda item: chr(int(item.group(0)[2:], 16)), value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _encoded_text_variants(value: str) -> tuple[str, ...]:
+    """Return bounded, syntax-triggered scan variants without guessing entropy."""
+    pending = [unicodedata.normalize("NFKC", value)]
+    variants: list[str] = []
+    seen: set[str] = set()
+    decoded_bytes = 0
+    for depth in range(_SECRET_SCAN_MAX_DEPTH + 1):
+        next_pending: list[str] = []
+        for current in pending:
+            if current in seen:
+                continue
+            seen.add(current); variants.append(current)
+            folded = "".join(char for char in current if unicodedata.category(char) != "Cf")
+            if folded not in seen:
+                variants.append(folded); seen.add(folded)
+            if len(variants) > _SECRET_SCAN_MAX_VARIANTS:
+                raise ProblemLineageError("contract capsule privacy scan exceeded its bounded variant budget")
+            if depth == _SECRET_SCAN_MAX_DEPTH:
+                continue
+            if _PERCENT_RE.search(current):
+                candidate = unquote(current)
+                if candidate != current:
+                    next_pending.append(candidate)
+            escaped = _escape_ascii_variant(current)
+            if escaped is not None and escaped != current:
+                next_pending.append(escaped)
+            for token in _BASE64_TOKEN_RE.findall(current):
+                padded = token + "=" * (-len(token) % 4)
+                try:
+                    decoded = base64.b64decode(padded, altchars=b"-_", validate=True)
+                except (ValueError, binascii.Error):
+                    continue
+                decoded_bytes += len(decoded)
+                if decoded_bytes > _SECRET_SCAN_MAX_DECODED_BYTES:
+                    raise ProblemLineageError("contract capsule privacy scan exceeded its bounded decoded-byte budget")
+                candidate = _decoded_printable(decoded)
+                if candidate is not None:
+                    next_pending.append(candidate)
+            for token in _HEX_TOKEN_RE.findall(current):
+                try:
+                    decoded = bytes.fromhex(token)
+                except ValueError:
+                    continue
+                decoded_bytes += len(decoded)
+                if decoded_bytes > _SECRET_SCAN_MAX_DECODED_BYTES:
+                    raise ProblemLineageError("contract capsule privacy scan exceeded its bounded decoded-byte budget")
+                candidate = _decoded_printable(decoded)
+                if candidate is not None:
+                    next_pending.append(candidate)
+        pending = next_pending
+    return tuple(variants)
+
+
 def _safe_capsule_text(value: Any, name: str, *, limit: int, required: bool = False) -> str:
-    result = _text(value, name, required=required, limit=limit)
-    if _SECRET_RE.search(result):
-        raise ProblemLineageError("contract capsule contains credential-like material; use an approved opaque reference")
-    if _EMAIL_RE.search(result) or _PHONE_RE.search(result):
-        raise ProblemLineageError("contract capsule contains personal data; abstract it before durable storage")
+    result = unicodedata.normalize("NFKC", str(value or "")).strip()
+    if len(result) > limit:
+        raise ProblemLineageError(f"{name} exceeds its bounded length")
+    if required and not result:
+        raise ProblemLineageError(f"{name} is required")
+    for variant in _encoded_text_variants(result):
+        if _SECRET_RE.search(variant):
+            raise ProblemLineageError("contract capsule contains credential-like material; use an approved opaque reference")
+        if _EMAIL_RE.search(variant) or _PHONE_RE.search(variant):
+            raise ProblemLineageError("contract capsule contains personal data; abstract it before durable storage")
     return result
 
 
@@ -355,23 +452,24 @@ class ProblemLineageLedgerMixin:
     def _clock_authority(event: dict[str, Any], authority: str) -> str:
         if not event["occurred_at"]: return ""
         source = event["occurred_at_source"]
-        allowed = {("RUNTIME", "RUNTIME_EOCL"): "RUNTIME_OWNED", ("RUNTIME", "RUNTIME_GUARD"): "RUNTIME_OWNED", ("HOST", "RUNTIME_BINDING"): "HOST_ATTESTED", ("HOST", "RUNTIME_OBSERVATION"): "HOST_ATTESTED", ("EXPLICIT_USER", "RUNTIME_EXPLICIT_USER"): "EXPLICIT_USER_ATTESTED", ("HUMAN_REVIEW", "RUNTIME_HUMAN_REVIEW"): "HUMAN_REVIEWED", ("EXTERNAL", "RUNTIME_HUMAN_REVIEW"): "AUTHORIZED_EXTERNAL", ("EXTERNAL", "RUNTIME_OPERATOR"): "AUTHORIZED_EXTERNAL"}
+        allowed = {("RUNTIME", "RUNTIME_EOCL"): "RUNTIME_OWNED", ("RUNTIME", "RUNTIME_RECONCILIATION"): "RUNTIME_OWNED", ("RUNTIME", "RUNTIME_GUARD"): "RUNTIME_OWNED", ("HOST", "RUNTIME_BINDING"): "HOST_ATTESTED", ("HOST", "RUNTIME_OBSERVATION"): "HOST_ATTESTED", ("EXPLICIT_USER", "RUNTIME_EXPLICIT_USER"): "EXPLICIT_USER_ATTESTED", ("HUMAN_REVIEW", "RUNTIME_HUMAN_REVIEW"): "HUMAN_REVIEWED", ("EXTERNAL", "RUNTIME_HUMAN_REVIEW"): "AUTHORIZED_EXTERNAL", ("EXTERNAL", "RUNTIME_OPERATOR"): "AUTHORIZED_EXTERNAL"}
         result = allowed.get((source, authority))
         if not result: raise ProblemLineageError("occurred_at is not trusted by the supplied runtime authority")
         return result
 
     @staticmethod
     def _after(operation: str, before: str) -> str:
-        return {"open": "OPEN", "revise": "REVISED", "provisional_resolve": "PROVISIONALLY_RESOLVED", "confirm": "RESOLVED_CONFIRMED", "reopen": "REOPENED", "block": "BLOCKED", "abandon": "ABANDONED"}.get(operation, before)
+        return {"open": "OPEN", "revise": "OPEN", "provisional_resolve": "PROVISIONALLY_RESOLVED", "confirm": "RESOLVED_CONFIRMED", "reopen": "REOPENED", "block": "BLOCKED", "abandon": "ABANDONED"}.get(operation, before)
 
     @staticmethod
     def _allowed_transition(before: str, after: str, operation: str) -> bool:
         if operation in {"link", "observe_feedback"}: return before == after
+        if operation == "revise": return after == "OPEN"
         return after in {"OPEN": {"OPEN", "PROVISIONALLY_RESOLVED", "REOPENED", "REVISED", "BLOCKED", "ABANDONED"}, "REOPENED": {"REOPENED", "PROVISIONALLY_RESOLVED", "REVISED", "BLOCKED", "ABANDONED"}, "REVISED": {"REVISED", "PROVISIONALLY_RESOLVED", "REOPENED", "BLOCKED", "ABANDONED"}, "PROVISIONALLY_RESOLVED": {"PROVISIONALLY_RESOLVED", "RESOLVED_CONFIRMED", "REOPENED", "REVISED", "BLOCKED", "ABANDONED"}, "RESOLVED_CONFIRMED": {"RESOLVED_CONFIRMED", "REOPENED", "REVISED"}, "BLOCKED": {"BLOCKED", "REOPENED", "REVISED", "ABANDONED"}, "ABANDONED": {"ABANDONED", "REOPENED", "REVISED"}}.get(before, set())
 
     def _record_eligible(self, connection: sqlite3.Connection, event: dict[str, Any], authority: str, row: sqlite3.Row | None, clock: str) -> bool:
         if event["link_status"] != "EXACT" or row is None or event["operation"] == "observe_feedback": return False
-        if event["provenance"] not in _AUTHORITATIVE_PROVENANCE or event["evidence_level"] not in {"OBSERVED", "DERIVED_HIGH_CONFIDENCE"}: return False
+        if (authority, event["provenance"]) not in _ELIGIBLE_AUTHORITY_PROVENANCE or event["evidence_level"] not in {"OBSERVED", "DERIVED_HIGH_CONFIDENCE"}: return False
         if event["occurred_at"] and not clock: return False
         if event["operation"] == "link" and event["run_id"]:
             wave = connection.execute("SELECT metadata_json FROM waves WHERE run_id=? AND wave_id=?", (event["run_id"], event["wave_id"])).fetchone()
@@ -382,7 +480,14 @@ class ProblemLineageLedgerMixin:
             if not isinstance(context, dict) or context.get("work_origin") != "problem": return False
         return bool(authority and _revision(row)["capsule_valid"])
 
-    def problem_record_event(self, event: dict[str, Any], *, now: str, authority_context: str = "") -> dict[str, Any]:
+    def problem_record_event(
+        self,
+        event: dict[str, Any],
+        *,
+        now: str,
+        authority_context: str = "",
+        reconciliation: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         normalized = _normalize(event)
         if normalized["operation"] == "get": raise ProblemLineageError("get does not record a problem event")
         if authority_context not in _AUTHORITY.get(normalized["operation"], frozenset()): raise ProblemLineageError("problem operation lacks the required runtime transition authority")
@@ -390,6 +495,8 @@ class ProblemLineageLedgerMixin:
         clock = self._clock_authority(normalized, authority_context)
         with self._lock, self._connect() as connection:
             self._require_problem_schema(connection); connection.execute("BEGIN IMMEDIATE")
+            if reconciliation is not None:
+                self._problem_validate_reconciliation(connection, reconciliation)
             contract = normalized["contract_capsule"]
             input_fp = _fingerprints(contract)[0] if contract else ""
             material = {**{key: value for key, value in normalized.items() if key != "contract_capsule"}, "contract_fingerprint": input_fp, "authority_context": authority_context}
@@ -495,67 +602,460 @@ class ProblemLineageLedgerMixin:
         feedback = next((row for row in reversed(events) if str(row["relation_type"] or "") == "USER_FEEDBACK"), None)
         return {"active_problem_id": problem_id, "problem_revision": revision, "contract_fingerprint": context["contract_fingerprint"], "problem_state": str(thread["resolution_state"]) if int(thread["current_revision"]) == revision else "HISTORICAL_REVISION", "context_status": "VALID" if context["capsule_valid"] else "BLOCKED_MISSING_PROBLEM_CONTEXT", "policy_eligible": bool(context["capsule_valid"]), "latest_feedback_relation": str(feedback["feedback_intent"] if feedback is not None else "UNKNOWN"), "engineering_floor": context["engineering_floor"]}
 
-    def problem_record_coverage_manifest(self, *, run_id: str, wave_id: str, manifest: dict[str, Any]) -> dict[str, Any]:
-        if not isinstance(manifest, dict): raise ProblemLineageError("criterion coverage manifest must be an object")
-        with self._lock, self._connect() as connection:
-            self._require_problem_schema(connection); wave = connection.execute("SELECT metadata_json FROM waves WHERE wave_id=? AND run_id=?", (wave_id, run_id)).fetchone()
-            if wave is None: raise ProblemLineageError("problem coverage references an unknown exact run/wave")
-            metadata = json.loads(wave["metadata_json"] or "{}"); context = metadata.get("problem_resolution") if isinstance(metadata.get("problem_resolution"), dict) else {}
-            if context.get("work_origin") != "problem" or context.get("resolution_claim") != "full_problem": raise ProblemLineageError("coverage manifest requires an exact full_problem wave")
-            problem_id, revision = _opaque(context.get("problem_id"), "problem_id", required=True), _integer(context.get("problem_revision"), "problem_revision", required=True); row = self._revision_row(connection, problem_id, revision)
-            if row is None or not _revision(row)["capsule_valid"]: raise ProblemLineageError("BLOCKED_MISSING_PROBLEM_CONTEXT")
-            revision = _revision(row)
-            criteria = {str(item["criterion_id"]) for item in revision["capsule"]["acceptance_criteria"]}
-            if set(manifest) != criteria: raise ProblemLineageError("coverage manifest must map every and only current revision criterion IDs")
-            normalized: dict[str, list[str]] = {}
-            for criterion in sorted(criteria):
-                proofs = manifest[criterion]
-                if not isinstance(proofs, list) or len(proofs) > 100: raise ProblemLineageError("each criterion coverage entry must be a bounded proof-id list")
-                normalized[criterion] = [_opaque(value, "proof_id", required=True) for value in proofs]
-                if len(set(normalized[criterion])) != len(normalized[criterion]): raise ProblemLineageError("criterion coverage proof IDs must not repeat")
-            floor = revision["engineering_floor"]
-            if floor == "UNKNOWN": raise ProblemLineageError("engineering_floor_unknown")
-            for criterion in criteria:
-                proof_ids = normalized[criterion]
-                if floor == "REQUIRED" and not proof_ids: raise ProblemLineageError("required_criterion_proof_missing")
-                for proof_id in proof_ids:
-                    proof = connection.execute("SELECT run_id,wave_id,status FROM proofs WHERE proof_id=?", (proof_id,)).fetchone()
-                    if proof is None or str(proof["run_id"]) != run_id or str(proof["wave_id"]) != wave_id or str(proof["status"]).lower() != "passed": raise ProblemLineageError("criterion_proof_not_passed_exact_wave")
-            if "coverage_manifest" in context:
-                if _json(context["coverage_manifest"]) != _json(normalized): raise ProblemLineageError("criterion coverage manifest is immutable within a wave")
-                return {"recorded": False, "idempotent": True, "manifest_sha256": _sha(_json(normalized))}
-            context["coverage_manifest"], context["coverage_manifest_sha256"] = normalized, _sha(_json(normalized)); metadata["problem_resolution"] = context; connection.execute("UPDATE waves SET metadata_json=? WHERE wave_id=?", (_json(metadata), wave_id))
-        return {"recorded": True, "idempotent": False, "manifest_sha256": _sha(_json(normalized))}
+    @staticmethod
+    def _problem_coverage_manifest(
+        connection: sqlite3.Connection,
+        *,
+        run_id: str,
+        wave_id: str,
+        criteria: set[str],
+        manifest: Any,
+    ) -> dict[str, list[str]]:
+        if not isinstance(manifest, dict) or set(manifest) != criteria:
+            raise ProblemLineageError("coverage manifest must map every and only current revision criterion IDs")
+        normalized: dict[str, list[str]] = {}
+        for criterion in sorted(criteria):
+            proof_ids = manifest[criterion]
+            if not isinstance(proof_ids, list) or not proof_ids or len(proof_ids) > 100:
+                raise ProblemLineageError("required_criterion_proof_missing")
+            normalized[criterion] = [_opaque(value, "proof_id", required=True) for value in proof_ids]
+            if len(set(normalized[criterion])) != len(normalized[criterion]):
+                raise ProblemLineageError("criterion coverage proof IDs must not repeat")
+            for proof_id in normalized[criterion]:
+                proof = connection.execute(
+                    "SELECT run_id,wave_id,status FROM proofs WHERE proof_id=?",
+                    (proof_id,),
+                ).fetchone()
+                if (
+                    proof is None
+                    or str(proof["run_id"]) != run_id
+                    or str(proof["wave_id"]) != wave_id
+                    or str(proof["status"]).lower() != "passed"
+                ):
+                    raise ProblemLineageError("criterion_proof_not_passed_exact_wave")
+        return normalized
 
-    def problem_record_provisional_from_eocl(self, *, run_id: str, wave_id: str, checkpoint_id: str, now: str) -> dict[str, Any]:
+    @staticmethod
+    def _problem_non_code_dispositions(criteria: set[str], dispositions: Any) -> dict[str, str]:
+        if not isinstance(dispositions, dict) or set(dispositions) != criteria:
+            raise ProblemLineageError("non-code dispositions must map every and only current revision criterion IDs")
+        normalized: dict[str, str] = {}
+        for criterion in sorted(criteria):
+            if dispositions[criterion] != "SATISFIED_NON_CODE":
+                raise ProblemLineageError("non-code criterion disposition must be SATISFIED_NON_CODE")
+            normalized[criterion] = "SATISFIED_NON_CODE"
+        return normalized
+
+    @staticmethod
+    def _problem_accepted_files_identity(accepted_files: Any, *, run_id: str, wave_id: str) -> tuple[dict[str, Any], str]:
+        if not isinstance(accepted_files, dict):
+            raise ProblemLineageError("accepted source receipt contract is required")
+        files = accepted_files.get("files")
+        count = accepted_files.get("count")
+        total_bytes = accepted_files.get("total_bytes")
+        if (
+            accepted_files.get("complete") is not True
+            or str(accepted_files.get("run_id") or "") != run_id
+            or str(accepted_files.get("wave_id") or "") != wave_id
+            or not isinstance(files, list)
+            or isinstance(count, bool)
+            or not isinstance(count, int)
+            or count != len(files)
+            or isinstance(total_bytes, bool)
+            or not isinstance(total_bytes, int)
+            or total_bytes < 0
+        ):
+            raise ProblemLineageError("accepted source receipt contract is invalid")
+        canonical = json.loads(_json(accepted_files))
+        return canonical, _sha(_json(canonical))
+
+    @staticmethod
+    def _problem_current_controller_receipt(
+        connection: sqlite3.Connection,
+        *,
+        run_id: str,
+        authority: Any,
+    ) -> dict[str, Any]:
+        if not isinstance(authority, dict):
+            raise ProblemLineageError("NOT_APPLICABLE requires current ChatWeb controller authority")
+        client_id = str(authority.get("client_id") or "")
+        lease_id = str(authority.get("lease_id") or "")
+        runtime_instance_id = str(authority.get("runtime_instance_id") or "")
+        fencing_token = authority.get("fencing_token")
+        if not client_id or not lease_id or not runtime_instance_id or isinstance(fencing_token, bool) or not isinstance(fencing_token, int) or fencing_token < 1:
+            raise ProblemLineageError("NOT_APPLICABLE controller authority receipt is invalid")
+        client = connection.execute("SELECT * FROM hub_clients WHERE client_id=?", (client_id,)).fetchone()
+        lease = connection.execute("SELECT * FROM controller_leases WHERE run_id=?", (run_id,)).fetchone()
+        if (
+            client is None
+            or str(client["client_type"] or "") != "chatweb"
+            or str(client["role"] or "") != "controller"
+            or str(client["status"] or "") != "online"
+            or str(client["runtime_instance_id"] or "") != runtime_instance_id
+            or lease is None
+            or str(lease["status"] or "") != "active"
+            or float(lease["expires_at"] or 0) <= time.time()
+            or str(lease["owner_client_id"] or "") != client_id
+            or str(lease["lease_id"] or "") != lease_id
+            or int(lease["fencing_token"] or 0) != fencing_token
+        ):
+            raise ProblemLineageError("NOT_APPLICABLE requires the exact current ChatWeb controller lease")
+        return {
+            "client_id": client_id,
+            "client_type": "chatweb",
+            "runtime_instance_id": runtime_instance_id,
+            "lease_id": lease_id,
+            "fencing_token": fencing_token,
+        }
+
+    def problem_prepare_eocl_outcome_claim(
+        self,
+        *,
+        run_id: str,
+        wave_id: str,
+        git_head: str,
+        worktree_fp: str,
+        proof_fingerprint: str,
+        accepted_files: dict[str, Any],
+        durable_mutation: bool,
+        coverage_manifest: Any = None,
+        criterion_dispositions: Any = None,
+        controller_authority: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         with self._lock, self._connect() as connection:
-            # EOCL acceptance is available before a PRL migration.  In that case
-            # there can be no v11 exact claim to bridge, so report a truthful
-            # no-op instead of turning an ordinary acceptance into a migration
-            # failure.  Once v11 is active, all integrity failures remain fatal.
+            if int(connection.execute("PRAGMA user_version").fetchone()[0]) != PROBLEM_SCHEMA_VERSION:
+                return {"required": False, "reason": "schema_inactive"}
+            wave = connection.execute(
+                "SELECT metadata_json FROM waves WHERE wave_id=? AND run_id=?",
+                (wave_id, run_id),
+            ).fetchone()
+            if wave is None:
+                raise ProblemLineageError("problem outcome claim references an unknown exact run/wave")
+            metadata = json.loads(wave["metadata_json"] or "{}")
+            context = metadata.get("problem_resolution") if isinstance(metadata.get("problem_resolution"), dict) else {}
+            if context.get("work_origin") != "problem" or context.get("resolution_claim") != "full_problem":
+                return {"required": False, "reason": "not_exact_full_problem_claim"}
+            problem_id = _opaque(context.get("problem_id"), "problem_id", required=True)
+            revision_number = _integer(context.get("problem_revision"), "problem_revision", required=True)
+            row = self._revision_row(connection, problem_id, revision_number)
+            thread = connection.execute("SELECT current_revision FROM problem_threads WHERE problem_id=?", (problem_id,)).fetchone()
+            if row is None or thread is None:
+                raise ProblemLineageError("BLOCKED_MISSING_PROBLEM_CONTEXT")
+            revision = _revision(row)
+            if (
+                not revision["capsule_valid"]
+                or int(thread["current_revision"]) != revision_number
+                or str(context.get("contract_fingerprint") or "") != revision["contract_fingerprint"]
+                or str(context.get("engineering_floor") or "") != revision["engineering_floor"]
+            ):
+                raise ProblemLineageError("BLOCKED_MISSING_PROBLEM_CONTEXT")
+            if not str(git_head or "") or not str(worktree_fp or ""):
+                raise ProblemLineageError("problem outcome claim requires exact current Git HEAD and worktree fingerprint")
+            canonical_files, accepted_files_sha256 = self._problem_accepted_files_identity(
+                accepted_files,
+                run_id=run_id,
+                wave_id=wave_id,
+            )
+            criteria = {str(item["criterion_id"]) for item in revision["capsule"]["acceptance_criteria"]}
+            floor = revision["engineering_floor"]
+            if floor == "REQUIRED":
+                if criterion_dispositions is not None:
+                    raise ProblemLineageError("REQUIRED engineering floor accepts proof coverage only")
+                evidence = {
+                    "kind": "proof_coverage",
+                    "coverage_manifest": self._problem_coverage_manifest(
+                        connection,
+                        run_id=run_id,
+                        wave_id=wave_id,
+                        criteria=criteria,
+                        manifest=coverage_manifest,
+                    ),
+                }
+                evidence["coverage_manifest_sha256"] = _sha(_json(evidence["coverage_manifest"]))
+                if not str(proof_fingerprint or ""):
+                    raise ProblemLineageError("REQUIRED engineering floor requires passed proof authority")
+            elif floor == "NOT_APPLICABLE":
+                if coverage_manifest is not None or "coverage_manifest" in context:
+                    raise ProblemLineageError("NOT_APPLICABLE rejects the legacy empty proof-list coverage path")
+                if durable_mutation or canonical_files["count"] != 0 or canonical_files["total_bytes"] != 0 or canonical_files["files"]:
+                    raise ProblemLineageError("NOT_APPLICABLE requires zero mutation and zero source receipts")
+                dispositions = self._problem_non_code_dispositions(criteria, criterion_dispositions)
+                evidence = {
+                    "kind": "non_code_dispositions",
+                    "criterion_dispositions": dispositions,
+                    "criterion_dispositions_sha256": _sha(_json(dispositions)),
+                    "controller_authority": self._problem_current_controller_receipt(
+                        connection,
+                        run_id=run_id,
+                        authority=controller_authority,
+                    ),
+                }
+            else:
+                raise ProblemLineageError("engineering_floor_unknown")
+            claim = {
+                "schema_version": 1,
+                "resolution_claim": "full_problem",
+                "run_id": run_id,
+                "wave_id": wave_id,
+                "problem_id": problem_id,
+                "problem_revision": revision_number,
+                "contract_fingerprint": revision["contract_fingerprint"],
+                "criteria_fingerprint": revision["criteria_fingerprint"],
+                "criteria_count": revision["criteria_count"],
+                "engineering_floor": floor,
+                "source": {
+                    "git_head": str(git_head),
+                    "worktree_fp": str(worktree_fp),
+                    "proof_fingerprint": str(proof_fingerprint or ""),
+                    "accepted_files_sha256": accepted_files_sha256,
+                },
+                "evidence": evidence,
+            }
+            encoded = _json(claim).encode("utf-8")
+            if len(encoded) > PROBLEM_OUTCOME_CLAIM_MAX_BYTES:
+                raise ProblemLineageError("problem outcome claim exceeds its bounded size")
+            claim_sha256 = hashlib.sha256(encoded).hexdigest()
+            existing = context.get("outcome_claim")
+            existing_sha256 = str(context.get("outcome_claim_sha256") or "")
+            if existing is not None:
+                if _json(existing) != _json(claim) or existing_sha256 != claim_sha256:
+                    raise ProblemLineageError("problem outcome claim is immutable within a wave")
+                return {"required": True, "recorded": False, "idempotent": True, "claim": claim, "claim_sha256": claim_sha256}
+            context["outcome_claim"] = claim
+            context["outcome_claim_sha256"] = claim_sha256
+            if floor == "REQUIRED":
+                context["coverage_manifest"] = evidence["coverage_manifest"]
+                context["coverage_manifest_sha256"] = evidence["coverage_manifest_sha256"]
+            else:
+                context["criterion_dispositions"] = evidence["criterion_dispositions"]
+                context["criterion_dispositions_sha256"] = evidence["criterion_dispositions_sha256"]
+            metadata["problem_resolution"] = context
+            connection.execute("UPDATE waves SET metadata_json=? WHERE wave_id=? AND run_id=?", (_json(metadata), wave_id, run_id))
+        return {"required": True, "recorded": True, "idempotent": False, "claim": claim, "claim_sha256": claim_sha256}
+
+    def problem_record_coverage_manifest(self, *, run_id: str, wave_id: str, manifest: dict[str, Any]) -> dict[str, Any]:
+        """Compatibility helper for REQUIRED floors; N/A must use typed dispositions."""
+        with self._lock, self._connect() as connection:
+            self._require_problem_schema(connection)
+            wave = connection.execute("SELECT metadata_json FROM waves WHERE wave_id=? AND run_id=?", (wave_id, run_id)).fetchone()
+            if wave is None:
+                raise ProblemLineageError("problem coverage references an unknown exact run/wave")
+            metadata = json.loads(wave["metadata_json"] or "{}")
+            context = metadata.get("problem_resolution") if isinstance(metadata.get("problem_resolution"), dict) else {}
+            if context.get("work_origin") != "problem" or context.get("resolution_claim") != "full_problem":
+                raise ProblemLineageError("coverage manifest requires an exact full_problem wave")
+            problem_id = _opaque(context.get("problem_id"), "problem_id", required=True)
+            revision_number = _integer(context.get("problem_revision"), "problem_revision", required=True)
+            row = self._revision_row(connection, problem_id, revision_number)
+            if row is None or not _revision(row)["capsule_valid"]:
+                raise ProblemLineageError("BLOCKED_MISSING_PROBLEM_CONTEXT")
+            revision = _revision(row)
+            if revision["engineering_floor"] != "REQUIRED":
+                raise ProblemLineageError("coverage proof lists are valid only for REQUIRED engineering floors")
+            criteria = {str(item["criterion_id"]) for item in revision["capsule"]["acceptance_criteria"]}
+            normalized = self._problem_coverage_manifest(connection, run_id=run_id, wave_id=wave_id, criteria=criteria, manifest=manifest)
+            digest = _sha(_json(normalized))
+            if "coverage_manifest" in context:
+                if _json(context["coverage_manifest"]) != _json(normalized):
+                    raise ProblemLineageError("criterion coverage manifest is immutable within a wave")
+                return {"recorded": False, "idempotent": True, "manifest_sha256": digest}
+            context["coverage_manifest"], context["coverage_manifest_sha256"] = normalized, digest
+            metadata["problem_resolution"] = context
+            connection.execute("UPDATE waves SET metadata_json=? WHERE wave_id=? AND run_id=?", (_json(metadata), wave_id, run_id))
+        return {"recorded": True, "idempotent": False, "manifest_sha256": digest}
+
+    def _problem_validate_reconciliation(self, connection: sqlite3.Connection, reconciliation: dict[str, str]) -> dict[str, Any]:
+        required = {"run_id", "wave_id", "checkpoint_id", "current_git_head", "current_worktree_fp", "claim_sha256", "terminal_event_time"}
+        if not isinstance(reconciliation, dict) or set(reconciliation) != required:
+            raise ProblemLineageError("reconciliation contract is invalid")
+        run_id, wave_id, checkpoint_id = reconciliation["run_id"], reconciliation["wave_id"], reconciliation["checkpoint_id"]
+        checkpoint = connection.execute(
+            "SELECT * FROM checkpoints WHERE checkpoint_id=? AND run_id=? AND wave_id=? AND status='accepted'",
+            (checkpoint_id, run_id, wave_id),
+        ).fetchone()
+        run = connection.execute("SELECT status FROM runs WHERE run_id=?", (run_id,)).fetchone()
+        wave = connection.execute("SELECT status FROM waves WHERE run_id=? AND wave_id=?", (run_id, wave_id)).fetchone()
+        if checkpoint is None or run is None or wave is None or str(run["status"] or "") != "accepted" or str(wave["status"] or "") != "accepted":
+            raise ProblemLineageError("accepted terminal EOCL checkpoint is missing")
+        terminal_event_time = ""
+        for row in connection.execute(
+            "SELECT state_after,event_time,payload_json FROM events WHERE run_id=? AND wave_id=? AND event_type='state_transition' ORDER BY seq",
+            (run_id, wave_id),
+        ).fetchall():
+            try:
+                payload = json.loads(row["payload_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if str(row["state_after"] or "") == "CHECKPOINTED" and str(payload.get("checkpoint_id") or "") == checkpoint_id:
+                terminal_event_time = str(row["event_time"] or "")
+                break
+        if not terminal_event_time or terminal_event_time != reconciliation["terminal_event_time"]:
+            raise ProblemLineageError("accepted checkpoint lacks its exact terminal EOCL event")
+        metadata = json.loads(checkpoint["metadata_json"] or "{}")
+        claim = metadata.get("problem_outcome_claim")
+        claim_sha256 = str(metadata.get("problem_outcome_claim_sha256") or "")
+        if not isinstance(claim, dict) or claim_sha256 != _sha(_json(claim)) or claim_sha256 != reconciliation["claim_sha256"]:
+            raise ProblemLineageError("frozen problem outcome claim is missing or changed")
+        if (
+            claim.get("schema_version") != 1
+            or claim.get("resolution_claim") != "full_problem"
+            or str(claim.get("run_id") or "") != run_id
+            or str(claim.get("wave_id") or "") != wave_id
+        ):
+            raise ProblemLineageError("frozen problem outcome claim identity is invalid")
+        source = claim.get("source") if isinstance(claim.get("source"), dict) else {}
+        accepted_files = metadata.get("accepted_files")
+        if (
+            str(checkpoint["git_head"] or "") != str(source.get("git_head") or "")
+            or str(checkpoint["proof_fingerprint"] or "") != str(source.get("proof_fingerprint") or "")
+            or str(metadata.get("worktree_fp") or "") != str(source.get("worktree_fp") or "")
+            or str(reconciliation["current_git_head"]) != str(source.get("git_head") or "")
+            or str(reconciliation["current_worktree_fp"]) != str(source.get("worktree_fp") or "")
+            or not isinstance(accepted_files, dict)
+            or _sha(_json(accepted_files)) != str(source.get("accepted_files_sha256") or "")
+        ):
+            raise ProblemLineageError("accepted source evidence or current source identity changed")
+        problem_id = _opaque(claim.get("problem_id"), "problem_id", required=True)
+        revision_number = _integer(claim.get("problem_revision"), "problem_revision", required=True)
+        revision_row = self._revision_row(connection, problem_id, revision_number)
+        thread = connection.execute("SELECT current_revision FROM problem_threads WHERE problem_id=?", (problem_id,)).fetchone()
+        if revision_row is None or thread is None:
+            raise ProblemLineageError("BLOCKED_MISSING_PROBLEM_CONTEXT")
+        revision = _revision(revision_row)
+        if (
+            not revision["capsule_valid"]
+            or int(thread["current_revision"]) != revision_number
+            or claim.get("contract_fingerprint") != revision["contract_fingerprint"]
+            or claim.get("criteria_fingerprint") != revision["criteria_fingerprint"]
+            or claim.get("criteria_count") != revision["criteria_count"]
+            or claim.get("engineering_floor") != revision["engineering_floor"]
+        ):
+            raise ProblemLineageError("current problem revision changed after checkpoint")
+        criteria = {str(item["criterion_id"]) for item in revision["capsule"]["acceptance_criteria"]}
+        evidence = claim.get("evidence") if isinstance(claim.get("evidence"), dict) else {}
+        if revision["engineering_floor"] == "REQUIRED":
+            manifest = self._problem_coverage_manifest(connection, run_id=run_id, wave_id=wave_id, criteria=criteria, manifest=evidence.get("coverage_manifest"))
+            if evidence.get("kind") != "proof_coverage" or evidence.get("coverage_manifest_sha256") != _sha(_json(manifest)):
+                raise ProblemLineageError("frozen proof coverage changed")
+        elif revision["engineering_floor"] == "NOT_APPLICABLE":
+            canonical_files, _ = self._problem_accepted_files_identity(accepted_files, run_id=run_id, wave_id=wave_id)
+            dispositions = self._problem_non_code_dispositions(criteria, evidence.get("criterion_dispositions"))
+            if (
+                evidence.get("kind") != "non_code_dispositions"
+                or evidence.get("criterion_dispositions_sha256") != _sha(_json(dispositions))
+                or canonical_files["count"] != 0
+                or canonical_files["total_bytes"] != 0
+                or canonical_files["files"]
+                or not isinstance(evidence.get("controller_authority"), dict)
+            ):
+                raise ProblemLineageError("frozen non-code disposition authority changed")
+        else:
+            raise ProblemLineageError("engineering_floor_unknown")
+        return claim
+
+    def problem_reconcile_provisional_from_checkpoint(
+        self,
+        *,
+        run_id: str,
+        wave_id: str,
+        checkpoint_id: str,
+        current_git_head: str,
+        current_worktree_fp: str,
+        now: str,
+    ) -> dict[str, Any]:
+        with self._lock, self._connect() as connection:
             if int(connection.execute("PRAGMA user_version").fetchone()[0]) != PROBLEM_SCHEMA_VERSION:
                 return {"recorded": False, "reason": "schema_inactive"}
-            wave = connection.execute("SELECT metadata_json FROM waves WHERE wave_id=? AND run_id=?", (wave_id, run_id)).fetchone()
-            if wave is None: return {"recorded": False, "reason": "unknown_run_or_wave"}
-            context = (json.loads(wave["metadata_json"] or "{}")).get("problem_resolution", {})
-            if not isinstance(context, dict) or context.get("work_origin") != "problem" or context.get("resolution_claim") != "full_problem": return {"recorded": False, "reason": "not_exact_full_problem_claim"}
-            problem_id, revision, fingerprint = str(context.get("problem_id") or ""), int(context.get("problem_revision") or 0), str(context.get("contract_fingerprint") or ""); row = self._revision_row(connection, problem_id, revision) if problem_id and revision else None; thread = connection.execute("SELECT * FROM problem_threads WHERE problem_id=?", (problem_id,)).fetchone() if problem_id else None
-            if row is None or thread is None or not _revision(row)["capsule_valid"] or _revision(row)["contract_fingerprint"] != fingerprint: return {"recorded": False, "reason": "BLOCKED_MISSING_PROBLEM_CONTEXT"}
-            if int(thread["current_revision"]) != revision: return {"recorded": False, "reason": "current_revision_changed"}
-            checkpoint = connection.execute("SELECT 1 FROM checkpoints WHERE checkpoint_id=? AND run_id=? AND wave_id=? AND status='accepted'", (checkpoint_id, run_id, wave_id)).fetchone()
-            if checkpoint is None: return {"recorded": False, "reason": "accepted_checkpoint_missing"}
-            manifest = context.get("coverage_manifest"); capsule = _revision(row)["capsule"]; criteria = {str(item["criterion_id"]) for item in capsule["acceptance_criteria"]}
-            if not isinstance(manifest, dict) or set(manifest) != criteria: return {"recorded": False, "reason": "coverage_manifest_missing_or_incomplete"}
-            floor = _revision(row)["engineering_floor"]
-            if floor == "UNKNOWN": return {"recorded": False, "reason": "engineering_floor_unknown"}
-            for criterion in criteria:
-                proof_ids = manifest[criterion]
-                if not isinstance(proof_ids, list) or (floor == "REQUIRED" and not proof_ids): return {"recorded": False, "reason": "required_criterion_proof_missing"}
-                for proof_id in proof_ids:
-                    proof = connection.execute("SELECT run_id,wave_id,status FROM proofs WHERE proof_id=?", (proof_id,)).fetchone()
-                    if proof is None or str(proof["run_id"]) != run_id or str(proof["wave_id"]) != wave_id or str(proof["status"]).lower() != "passed": return {"recorded": False, "reason": "criterion_proof_not_passed_exact_wave"}
-            event_id = "prl-provisional-v11-" + _sha("\x1f".join((run_id, wave_id, problem_id, str(revision), checkpoint_id)))
-        return self.problem_record_event({"operation": "provisional_resolve", "event_id": event_id, "problem_id": problem_id, "problem_revision": revision, "run_id": run_id, "wave_id": wave_id, "relation_type": "PROVISIONAL_RESOLUTION", "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED"}, now=now, authority_context="RUNTIME_EOCL")
+            checkpoint = connection.execute(
+                "SELECT metadata_json FROM checkpoints WHERE checkpoint_id=? AND run_id=? AND wave_id=?",
+                (checkpoint_id, run_id, wave_id),
+            ).fetchone()
+            if checkpoint is None:
+                return {"recorded": False, "reason": "accepted_checkpoint_missing"}
+            metadata = json.loads(checkpoint["metadata_json"] or "{}")
+            claim = metadata.get("problem_outcome_claim")
+            claim_sha256 = str(metadata.get("problem_outcome_claim_sha256") or "")
+            if not isinstance(claim, dict) or claim_sha256 != _sha(_json(claim)):
+                return {"recorded": False, "reason": "frozen_problem_outcome_claim_missing"}
+            problem_id = str(claim.get("problem_id") or "")
+            revision_number = int(claim.get("problem_revision") or 0)
+            terminal_event_time = ""
+            for row in connection.execute(
+                "SELECT state_after,event_time,payload_json FROM events WHERE run_id=? AND wave_id=? AND event_type='state_transition' ORDER BY seq",
+                (run_id, wave_id),
+            ).fetchall():
+                try:
+                    payload = json.loads(row["payload_json"] or "{}")
+                except (TypeError, json.JSONDecodeError):
+                    continue
+                if str(row["state_after"] or "") == "CHECKPOINTED" and str(payload.get("checkpoint_id") or "") == checkpoint_id:
+                    terminal_event_time = str(row["event_time"] or "")
+                    break
+            if not terminal_event_time:
+                return {"recorded": False, "reason": "accepted_terminal_event_missing"}
+            event_id = "prl-provisional-v11-" + _sha("\x1f".join((run_id, wave_id, problem_id, str(revision_number), checkpoint_id)))
+            reconciliation = {
+                "run_id": run_id,
+                "wave_id": wave_id,
+                "checkpoint_id": checkpoint_id,
+                "current_git_head": current_git_head,
+                "current_worktree_fp": current_worktree_fp,
+                "claim_sha256": claim_sha256,
+                "terminal_event_time": terminal_event_time,
+            }
+            existing = connection.execute("SELECT * FROM problem_events WHERE event_id=?", (event_id,)).fetchone()
+            if existing is not None:
+                self._problem_validate_reconciliation(connection, reconciliation)
+                projection = _event(existing)
+                if (
+                    projection["problem_id"] != problem_id
+                    or projection["problem_revision"] != revision_number
+                    or projection["run_id"] != run_id
+                    or projection["wave_id"] != wave_id
+                    or projection["relation_type"] != "PROVISIONAL_RESOLUTION"
+                    or projection["provenance"] != "DETERMINISTIC_EVIDENCE"
+                    or projection["evidence_level"] != "OBSERVED"
+                    or projection["transition_authority"] not in {"RUNTIME_EOCL", "RUNTIME_RECONCILIATION"}
+                ):
+                    raise ProblemLineageError("historical provisional event conflicts with the exact checkpoint claim")
+                return {"recorded": False, "idempotent": True, "event": projection, "thread": self.problem_get(problem_id, connection=connection)}
+        return self.problem_record_event(
+            {
+                "operation": "provisional_resolve",
+                "event_id": event_id,
+                "problem_id": problem_id,
+                "problem_revision": revision_number,
+                "run_id": run_id,
+                "wave_id": wave_id,
+                "relation_type": "PROVISIONAL_RESOLUTION",
+                "provenance": "DETERMINISTIC_EVIDENCE",
+                "evidence_level": "OBSERVED",
+                "occurred_at": terminal_event_time,
+                "occurred_at_source": "RUNTIME",
+            },
+            now=now,
+            authority_context="RUNTIME_RECONCILIATION",
+            reconciliation=reconciliation,
+        )
+
+    def problem_record_provisional_from_eocl(self, *, run_id: str, wave_id: str, checkpoint_id: str, now: str) -> dict[str, Any]:
+        """Compatibility wrapper; reconciliation still requires the exact frozen checkpoint."""
+        with self._lock, self._connect() as connection:
+            checkpoint = connection.execute(
+                "SELECT git_head,metadata_json FROM checkpoints WHERE checkpoint_id=? AND run_id=? AND wave_id=?",
+                (checkpoint_id, run_id, wave_id),
+            ).fetchone()
+        if checkpoint is None:
+            return {"recorded": False, "reason": "accepted_checkpoint_missing"}
+        metadata = json.loads(checkpoint["metadata_json"] or "{}")
+        return self.problem_reconcile_provisional_from_checkpoint(
+            run_id=run_id,
+            wave_id=wave_id,
+            checkpoint_id=checkpoint_id,
+            current_git_head=str(checkpoint["git_head"] or ""),
+            current_worktree_fp=str(metadata.get("worktree_fp") or ""),
+            now=now,
+        )
 
     def problem_verify_chain(self, problem_id: str) -> dict[str, Any]:
         result = self.problem_get(problem_id, limit=500)

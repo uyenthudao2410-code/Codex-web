@@ -390,7 +390,12 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "problem_coverage_manifest": {
                 "type": "object",
                 "additionalProperties": {"type": "array", "maxItems": 100, "items": {**string, "maxLength": 128}},
-                "description": "For a full_problem v11 wave only: maps every stable criterion ID to passed proof IDs from this exact accepted wave. The runtime validates and freezes it; it cannot create proof or accept a run.",
+                "description": "For a REQUIRED full_problem v11 wave only: maps every stable criterion ID to passed proof IDs from this exact accepted wave. The runtime validates and freezes it; it cannot create proof or accept a run.",
+            },
+            "problem_criterion_dispositions": {
+                "type": "object",
+                "additionalProperties": {**string, "enum": ["SATISFIED_NON_CODE"]},
+                "description": "For a NOT_APPLICABLE full_problem v11 wave only: maps every and only current criterion ID to SATISFIED_NON_CODE. It requires zero mutation/source receipts and current ChatWeb controller authority.",
             },
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
             "after_seq": {**integer, "minimum": 0, "default": 0, "description": "Durable orchestration event sequence cursor for action=events."},
@@ -477,7 +482,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
-                    "operation": {**string, "enum": ["open", "link", "observe_feedback", "confirm", "reopen", "revise", "block", "abandon", "get"], "default": "get"},
+                    "operation": {**string, "enum": ["open", "link", "observe_feedback", "confirm", "reopen", "revise", "block", "abandon", "reconcile_provisional", "get"], "default": "get"},
                     "event_id": {**string, "maxLength": 128},
                     "problem_id": {**string, "maxLength": 128},
                     "problem_revision": {**integer, "minimum": 1, "maximum": 1000000},
@@ -488,6 +493,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                     "trace_id": {**string, "maxLength": 128},
                     "run_id": {**string, "maxLength": 128},
                     "wave_id": {**string, "maxLength": 128},
+                    "checkpoint_id": {**string, "maxLength": 128, "description": "Exact accepted checkpoint identity required only by reconcile_provisional."},
                     "capsule_id": {**string, "maxLength": 128},
                     "conversation_epoch": {**integer, "minimum": 0, "maximum": 1000000},
                     "task_class": {**string, "enum": ["feature", "bugfix", "diagnose", "test_failure", "build_release", "custom", "refactor", "unknown"]},
@@ -517,7 +523,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                     },
                 },
                 "required": ["operation"],
-                "description": "Typed v11 Problem Resolution Lineage event. Caller cannot select canonical state, policy eligibility, recorded_at or transition authority. observe_feedback is observation-only; provisional resolution is EOCL-internal; confirm/reopen/revise/block/abandon require runtime-derived explicit-user or reviewed authority.",
+                "description": "Typed v11 Problem Resolution Lineage event. Public callers cannot grant provenance, evidence, clock, binding, guard, policy, or transition authority. Semantic transitions consume an exact host-turn receipt under a current ChatWeb controller; provisional resolution is checkpoint-reconciled only.",
             },
             "p5_experiment": {
                 "type": "object",

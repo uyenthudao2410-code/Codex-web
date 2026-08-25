@@ -1393,32 +1393,22 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                         retryable=False,
                         details={"run_id": run_id, "wave_id": ctx.wave_id},
                     )
-                current_wave = next(
-                    (item for item in self.orchestration_ledger.list_waves(run_id) if str(item.get("wave_id") or "") == ctx.wave_id),
-                    {},
-                )
-                prl_context = (
-                    (current_wave.get("metadata") or {}).get("problem_resolution")
-                    if isinstance(current_wave.get("metadata"), dict)
-                    else {}
-                )
-                full_problem_claim = isinstance(prl_context, dict) and prl_context.get("work_origin") == "problem" and prl_context.get("resolution_claim") == "full_problem"
                 coverage_manifest = args.get("problem_coverage_manifest")
-                if full_problem_claim and not isinstance(coverage_manifest, dict):
-                    raise ToolFailure(
-                        "PRL_COVERAGE_MANIFEST_REQUIRED",
-                        "An exact full_problem claim requires criterion-to-passed-proof coverage before EOCL acceptance.",
-                        category="validation",
+                criterion_dispositions = args.get("problem_criterion_dispositions")
+                controller_authority = self._problem_chatweb_controller_authority(run_id, controller=controller) if criterion_dispositions is not None else None
+                try:
+                    problem_outcome = self.orchestration_ledger.problem_prepare_eocl_outcome_claim(
+                        run_id=run_id, wave_id=ctx.wave_id,
+                        git_head=str(identity.get("base_head") or ""), worktree_fp=str(identity.get("worktree_fp") or ""),
+                        proof_fingerprint=proof_fp, accepted_files=accepted_files, durable_mutation=durable_mutation,
+                        coverage_manifest=coverage_manifest, criterion_dispositions=criterion_dispositions,
+                        controller_authority=controller_authority,
                     )
-                if coverage_manifest is not None:
-                    try:
-                        self.orchestration_ledger.problem_record_coverage_manifest(
-                            run_id=run_id,
-                            wave_id=ctx.wave_id,
-                            manifest=coverage_manifest,
-                        )
-                    except ProblemLineageError as exc:
-                        raise ToolFailure("PRL_COVERAGE_MANIFEST_INVALID", str(exc), category="validation") from exc
+                except ProblemLineageError as exc:
+                    missing = coverage_manifest is None and "coverage manifest" in str(exc)
+                    missing_dispositions = criterion_dispositions is None and "dispositions must map" in str(exc)
+                    code = "PRL_COVERAGE_MANIFEST_REQUIRED" if missing else "PRL_CRITERION_DISPOSITIONS_REQUIRED" if missing_dispositions else "PRL_OUTCOME_CLAIM_INVALID"
+                    raise ToolFailure(code, str(exc), category="validation") from exc
                 if proofs and any(str(item.get("status") or "") == "passed" for item in proofs):
                     if self.orchestration_ledger.latest_quality_outcome(run_id) is None:
                         self.orchestration_ledger.record_quality_outcome(
@@ -1426,26 +1416,24 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                             wave_id=ctx.wave_id,
                             outcome={"source": "accepted_proof_auto_v1", "oracle_pass": True},
                         )
+                checkpoint_metadata = {
+                    "accepted_by": accepted_by, "worktree_fp": identity.get("worktree_fp"),
+                    "workspace_identity": dict(identity.get("workspace_identity") or {}), "accepted_files": accepted_files,
+                }
+                if problem_outcome.get("required"):
+                    checkpoint_metadata.update({"problem_outcome_claim": problem_outcome["claim"], "problem_outcome_claim_sha256": problem_outcome["claim_sha256"]})
                 _checkpoint_ctx, checkpoint_result = self.orchestration_control.checkpoint_with_receipt(
                     ctx,
                     reason="controller_acceptance" if controller else "chatweb_sol_acceptance",
                     git_head=str(identity.get("base_head") or ""),
                     proof_fingerprint=proof_fp,
                     status="accepted",
-                    metadata={
-                        "accepted_by": accepted_by,
-                        "worktree_fp": identity.get("worktree_fp"),
-                        "workspace_identity": dict(identity.get("workspace_identity") or {}),
-                        "accepted_files": accepted_files,
-                    },
+                    metadata=checkpoint_metadata,
                 )
                 checkpoint_id = str(checkpoint_result.get("checkpoint_id") or "")
-                problem_outcome_bridge = self.orchestration_ledger.problem_record_provisional_from_eocl(
-                    run_id=run_id,
-                    wave_id=ctx.wave_id,
-                    checkpoint_id=checkpoint_id,
-                    now=datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-                )
+                problem_outcome_bridge = self._problem_reconcile_after_checkpoint(
+                    run_id=run_id, wave_id=ctx.wave_id, checkpoint_id=checkpoint_id, identity=identity,
+                ) if problem_outcome.get("required") else {"recorded": False, "reason": problem_outcome.get("reason")}
                 self._project_orchestration(ctx, event="final_acceptance_recorded")
                 accepted_state = self.task_state.update({
                     "status": "completed",
@@ -1461,6 +1449,7 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                     "orchestration": orchestration_result,
                     "completion_report": (orchestration_result or {}).get("completion_report"),
                     "problem_outcome_bridge": problem_outcome_bridge,
+                    "reconciliation_status": problem_outcome_bridge.get("status"),
                 }
             reason = str(args.get("reason", "")).strip()
             if not reason:

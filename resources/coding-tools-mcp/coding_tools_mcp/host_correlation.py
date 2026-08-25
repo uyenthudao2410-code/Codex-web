@@ -122,6 +122,23 @@ def restore_pending_host_turn(workspace: Path, claimed: dict[str, Any]) -> None:
             pass
 
 
+def consume_pending_host_turn(claimed: dict[str, Any]) -> None:
+    """Consume one successfully used host-turn claim.
+
+    The pending file was atomically renamed by :func:`claim_pending_host_turn`.
+    Removing only that private claim path completes the one-shot receipt without
+    touching a newer pending turn that the host may already have staged.
+    """
+
+    claim = claimed.get("_claim_path")
+    if not isinstance(claim, Path):
+        return
+    try:
+        claim.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def publish_host_turn_binding(
     workspace: Path,
     claimed: dict[str, Any],
