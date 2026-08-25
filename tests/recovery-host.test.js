@@ -38,6 +38,42 @@ const SOURCE_CHECKPOINT = Object.freeze({
   git_head: 'd'.repeat(40)
 });
 
+function activationLifecycle(operationId, sourceCheckpoint, fenced) {
+  return {
+    safe: true,
+    code: 'READY',
+    reason: 'idle',
+    operation_id: operationId,
+    counts: {
+      active_tool_calls: 0,
+      active_commands: 0,
+      starting_commands: 0,
+      active_background_operations: 0,
+      active_managed_processes: 0,
+      foreign_heavy_processes: 0,
+      active_agent_lanes: 0,
+      threshold_sensitive_stale_candidates: 0,
+      owned_codex_sidecar_residues: 0
+    },
+    lifecycle: {
+      snapshot: {
+        backup_api_copy: true,
+        immutable: true,
+        query_only: true,
+        integrity_check: ['ok'],
+        foreign_key_check_rows: 0,
+        sha256: 'e'.repeat(64),
+        logical_sha256: 'f'.repeat(64)
+      },
+      unexplained_active_runs: 0,
+      unbound_live_resource_residues: 0
+    },
+    source_checkpoint: { ok: true, code: 'ACTIVATABLE', ...sourceCheckpoint },
+    fenced: fenced === true,
+    fence_operation_id: fenced === true ? operationId : null
+  };
+}
+
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-recovery-host-'));
   const dataRoot = path.join(root, 'data');
@@ -393,25 +429,13 @@ test('Recovery Host replacement hands off ownership without stopping Coding MCP 
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
     inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
-    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
-      safe: true,
-      code: 'READY',
-      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
-      fenced: true,
-      fence_operation_id: operationId
-    }),
+    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => (
+      activationLifecycle(operationId, sourceCheckpoint, true)
+    ),
     cancelCodeActivation: async () => { calls.cancelFence += 1; return true; },
-    verifyCodeActivation: async (operationId) => ({
-      safe: true,
-      code: 'READY',
-      reason: 'idle',
-      counts: {},
-      lifecycle: { unexplained_active_runs: 0, unbound_live_resource_residues: 0 },
-      source_checkpoint: { ok: true },
-      operation_id: operationId,
-      fenced: false,
-      fence_operation_id: null
-    }),
+    verifyCodeActivation: async (operationId, sourceCheckpoint) => (
+      activationLifecycle(operationId, sourceCheckpoint, false)
+    ),
     start: async () => ({}),
     stop: async () => { calls.runtimeStop += 1; },
     restart: async () => ({}),
@@ -525,13 +549,9 @@ test('Recovery Host handoff drains in-flight supervision before releasing owners
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
     inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
-    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
-      safe: true,
-      code: 'READY',
-      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
-      fenced: true,
-      fence_operation_id: operationId
-    }),
+    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => (
+      activationLifecycle(operationId, sourceCheckpoint, true)
+    ),
     cancelCodeActivation: async () => true,
     ensureToken: async () => 'x'.repeat(32),
     preflightLegacyDeviceMigration: async () => ({ required: false }),
@@ -672,13 +692,9 @@ test('Recovery Host resumes ownership and releases the fence when replacement do
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
     inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
-    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
-      safe: true,
-      code: 'READY',
-      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
-      fenced: true,
-      fence_operation_id: operationId
-    }),
+    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => (
+      activationLifecycle(operationId, sourceCheckpoint, true)
+    ),
     cancelCodeActivation: async () => { calls.cancelFence += 1; return true; },
     start: async () => ({}),
     stop: async () => { calls.runtimeStop += 1; },

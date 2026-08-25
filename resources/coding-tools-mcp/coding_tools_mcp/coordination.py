@@ -16,6 +16,7 @@ from .acceptance_receipts import (
     _durable_wave_acceptance_paths,
     _verify_activation_source_checkpoint,
     _verify_lifecycle_snapshot,
+    has_passed_proof,
     passed_proof_fingerprint,
 )
 from .codex_bridge import CodexBridgeError
@@ -406,6 +407,7 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                 "safe": True,
                 "code": "READY",
                 "reason": "idle" if not acceptance_pending else "acceptance_state_is_durable",
+                "operation_id": operation_id or None,
                 "run_id": run_id,
                 "orchestration_state": orchestration_state,
                 "acceptance_pending": acceptance_pending,
@@ -1376,10 +1378,14 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                 )
                 receipt_mutation = any(
                     isinstance(item, dict)
-                    and str(item.get("receipt_kind") or "") in {"task_modified_file", "durable_wave_patch_surface"}
+                    and str(item.get("receipt_kind") or "") in {
+                        "explicit_existing_file",
+                        "task_modified_file",
+                        "durable_wave_patch_surface",
+                    }
                     for item in (accepted_files.get("files") or [])
                 )
-                if (durable_mutation or receipt_mutation) and not proof_fp:
+                if (durable_mutation or receipt_mutation) and not has_passed_proof(proofs):
                     raise ToolFailure(
                         "ACCEPTANCE_PROOF_REQUIRED",
                         "Mutation-bearing acceptance requires at least one passed proof for this exact RUN/WAVE.",

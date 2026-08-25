@@ -15,6 +15,21 @@ const HEAD = 'b'.repeat(40);
 const REVISION = 'c'.repeat(64);
 const CONTRACT = 'd'.repeat(64);
 
+function lifecycleCounts(overrides = {}) {
+  return {
+    active_tool_calls: 0,
+    active_commands: 0,
+    starting_commands: 0,
+    active_background_operations: 0,
+    active_managed_processes: 0,
+    foreign_heavy_processes: 0,
+    active_agent_lanes: 0,
+    threshold_sensitive_stale_candidates: 0,
+    owned_codex_sidecar_residues: 0,
+    ...overrides
+  };
+}
+
 function lifecycle(overrides = {}) {
   return {
     schema_version: 1,
@@ -28,7 +43,7 @@ function lifecycle(overrides = {}) {
     fence_released: true,
     fenced: false,
     fence_operation_id: null,
-    counts: {},
+    counts: lifecycleCounts(),
     unexplained_active_runs: 0,
     unbound_live_resource_residues: 0,
     ...overrides
@@ -97,6 +112,17 @@ function acceptedCode(overrides = {}) {
     lifecycle_decision: lifecycle(),
     ...overrides
   };
+}
+
+function zeroTargetAcceptedCode(overrides = {}) {
+  return acceptedCode({
+    proof_fingerprint: '',
+    affected_components: [],
+    component_receipts: {},
+    postflight_receipts: {},
+    components_current: true,
+    ...overrides
+  });
 }
 
 function revisions(overrides = {}) {
@@ -243,6 +269,63 @@ test('running revision drift keeps closure open even when durable postflight was
   assert.equal(closure.closure_state, 'COMPONENTS_NOT_CURRENT');
 });
 
+test('Recovery Host legacy revision bridge closes when verified postflight matches live running and disk revision', () => {
+  const source = acceptedCode({
+    postflight_receipts: {
+      recovery_host: postflight({
+        expected_revision: '9'.repeat(64),
+        running_revision: REVISION,
+        disk_revision: REVISION,
+        revision_contract: 'recovery_host_legacy_v1_without_device_identity'
+      })
+    }
+  });
+  const closure = computeActivationClosure(liveArgs({ acceptedCode: source }));
+  assert.equal(closure.postflight_receipts_valid, true);
+  assert.equal(closure.components_current, true);
+  assert.equal(closure.closure_state, 'LIVE_CLOSED');
+});
+
+test('Recovery Host legacy revision bridge rejects unknown contracts and live revision drift', () => {
+  const legacy = postflight({
+    expected_revision: '9'.repeat(64),
+    running_revision: REVISION,
+    disk_revision: REVISION,
+    revision_contract: 'recovery_host_legacy_v1_without_device_identity'
+  });
+  const unknownContract = computeActivationClosure(liveArgs({
+    acceptedCode: acceptedCode({
+      postflight_receipts: { recovery_host: { ...legacy, revision_contract: 'tampered-contract' } }
+    })
+  }));
+  assert.equal(unknownContract.closure_state, 'POSTFLIGHT_RECEIPTS_INVALID');
+
+  const liveDrift = computeActivationClosure(liveArgs({
+    acceptedCode: acceptedCode({ postflight_receipts: { recovery_host: legacy } }),
+    componentRevisions: revisions({
+      running_revision: '8'.repeat(64),
+      disk_revision: '8'.repeat(64)
+    })
+  }));
+  assert.equal(liveDrift.postflight_receipts_valid, true);
+  assert.equal(liveDrift.components_current, false);
+  assert.equal(liveDrift.closure_state, 'COMPONENTS_NOT_CURRENT');
+});
+
+test('canonical empty proof closes only a valid zero-target checkpoint', () => {
+  const closure = computeActivationClosure(liveArgs({ acceptedCode: zeroTargetAcceptedCode() }));
+  assert.equal(closure.checkpoint_identity_valid, true);
+  assert.deepEqual(closure.affected_components, []);
+  assert.equal(closure.lifecycle_clean, true);
+  assert.equal(closure.closure_state, 'LIVE_CLOSED');
+
+  const mutationBearing = computeActivationClosure(liveArgs({
+    acceptedCode: acceptedCode({ proof_fingerprint: '' })
+  }));
+  assert.equal(mutationBearing.checkpoint_identity_valid, false);
+  assert.equal(mutationBearing.closure_state, 'CHECKPOINT_IDENTITY_INVALID');
+});
+
 test('unchanged acknowledgement needs matching SHA and no refresh, while changed acknowledgement needs timestamp', () => {
   assert.equal(computeActivationClosure(liveArgs()).closure_state, 'LIVE_CLOSED');
   assert.equal(computeActivationClosure(liveArgs({ connectorRefreshRequired: true })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
@@ -261,11 +344,26 @@ test('unknown, duplicate, or unordered affected components fail closed', () => {
   for (const affected of [
     ['recovery_host', 'unknown_component'],
     ['recovery_host', 'recovery_host'],
-    ['electron_ui', 'recovery_host']
+    ['electron_ui', 'recovery_host'],
+    [' recovery_host']
   ]) {
     const closure = computeActivationClosure(liveArgs({ acceptedCode: acceptedCode({ affected_components: affected }) }));
     assert.equal(closure.affected_components_valid, false);
     assert.equal(closure.closure_state, 'AFFECTED_COMPONENTS_INVALID');
+  }
+});
+
+test('closure checkpoint identity is strict and is never normalized into authority', () => {
+  for (const overrides of [
+    { source_checkpoint_id: ` ${CHECKPOINT}` },
+    { run_id: `${RUN} ` },
+    { wave_id: ` ${WAVE}` },
+    { proof_fingerprint: PROOF.toUpperCase() },
+    { accepted_head: HEAD.toUpperCase() }
+  ]) {
+    const closure = computeActivationClosure(liveArgs({ acceptedCode: acceptedCode(overrides) }));
+    assert.equal(closure.checkpoint_identity_valid, false);
+    assert.equal(closure.closure_state, 'CHECKPOINT_IDENTITY_INVALID');
   }
 });
 
@@ -284,6 +382,27 @@ test('schema, receipt, eligibility, lifecycle, source-current and readiness gate
   assert.equal(computeActivationClosure(liveArgs({ acceptedCode: acceptedCode({ components_current: false }) })).closure_state, 'COMPONENTS_NOT_CURRENT');
   assert.equal(computeActivationClosure(liveArgs({ runtimeFullyReady: true, runtimeRunning: false, tunnelRunning: true })).closure_state, 'RUNTIME_NOT_READY');
   assert.equal(computeActivationClosure(liveArgs({ runtimeFullyReady: true, runtimeRunning: true, tunnelRunning: false })).closure_state, 'RUNTIME_NOT_READY');
+});
+
+test('declared clean lifecycle cannot hide active work, unexplained runs, residue, or an incomplete census', () => {
+  for (const lifecycleOverride of [
+    { counts: lifecycleCounts({ active_commands: 4 }) },
+    { counts: lifecycleCounts({ active_agent_lanes: 1 }) },
+    { unexplained_active_runs: 3 },
+    { unbound_live_resource_residues: 2 },
+    { counts: {} }
+  ]) {
+    const contradictoryLifecycle = lifecycle(lifecycleOverride);
+    const source = acceptedCode({
+      lifecycle_decision: contradictoryLifecycle,
+      postflight_receipts: {
+        recovery_host: postflight({ lifecycle_decision: contradictoryLifecycle })
+      }
+    });
+    const closure = computeActivationClosure(liveArgs({ acceptedCode: source }));
+    assert.notEqual(closure.closure_state, 'LIVE_CLOSED');
+    assert.equal(closure.lifecycle_clean, false);
+  }
 });
 
 test('Recovery Host projection uses fresh component revision and contradictory runtime status cannot close', () => {

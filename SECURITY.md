@@ -33,6 +33,10 @@ The current source implements an independent break-glass Recovery MCP and, when 
 
 Do not kill the active MCP process from inside the request it is serving. `task_control(action="restart_runtime")` uses the supervised restart path and explicit confirmation. Source changes do not prove that the live process loaded them; verify the new process/runtime identity and revision/contract after runtime-affecting work.
 
+Safe Code Activation accepts authority only from the exact five-field accepted checkpoint (`checkpoint_id`, `run_id`, `wave_id`, `proof_fingerprint`, `git_head`) and exact operation-bound responses. A schema-v2 component postflight must include a verified instance/revision/health transition and a fresh post-cancel canonical lifecycle decision from an immutable, query-only, integrity-checked SQLite Backup-API snapshot. No `clean` flag may override an active command, lane, tool call, background operation, managed process, foreign process, unexplained RUN, unbound live residue, or unreleased fence.
+
+`LIVE_CLOSED` is a local loaded-runtime result, not release or production authorization; closure output keeps `release_state=NOT_RELEASED` and `production_state=NOT_CLAIMED`. Connector acknowledgement is a separate guarded boundary: an unchanged and already acknowledged contract SHA can remain `UNCHANGED_ACKNOWLEDGED`, but any changed SHA requires current-process `tools/list` or `server/discover` before official Recovery Host acknowledgement. Do not impersonate discovery with raw HTTP, a copied bearer, or an ordinary tool call.
+
 ## Secrets and logs
 
 Never commit or expose MCP/tunnel/recovery/loopback tokens, OAuth/account credentials, private keys, secret-store exports, `.env` values, Authorization headers, or raw sensitive provider/workspace content. Provider usage/cost telemetry should persist measured numeric facts and correlation identifiers rather than prompt/response content.

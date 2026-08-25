@@ -3113,20 +3113,38 @@ class Runtime(
         self.request_context.workspace_root = str(scope_root)
         try:
             status = self.git_status({"path": str(resolved.path), "max_entries": 2000})
-        except (ToolFailure, OSError, ValueError):
-            status = {"is_repo": False, "head": "", "branch": "", "entries": []}
+        except ToolFailure:
+            raise
+        except (OSError, ValueError) as exc:
+            raise ToolFailure(
+                "WORKTREE_IDENTITY_UNAVAILABLE",
+                "The exact source worktree identity could not be observed.",
+                category="runtime",
+                details={"error_type": type(exc).__name__},
+            ) from exc
+        if status.get("truncated") is True:
+            raise ToolFailure(
+                "WORKTREE_STATUS_TRUNCATED",
+                "Git status exceeded the bounded exact-source identity limit.",
+                category="validation",
+                details={"max_entries": 2000},
+            )
         raw_entries = status.get("entries") if isinstance(status.get("entries"), list) else []
-        entries = [
-            {
-                "path": str(item.get("path") or "").replace("\\", "/"),
+        entries: list[dict[str, str]] = []
+        for item in raw_entries:
+            if not isinstance(item, dict):
+                continue
+            portable_path = str(item.get("path") or "").replace("\\", "/")
+            if not portable_path.strip():
+                continue
+            protected_key = portable_path.casefold() if os.name == "nt" else portable_path
+            if protected_key == ".coding-tools" or protected_key.startswith(".coding-tools/"):
+                continue
+            entries.append({
+                "path": portable_path,
                 "index_status": str(item.get("index_status") or ""),
                 "worktree_status": str(item.get("worktree_status") or ""),
-            }
-            for item in raw_entries
-            if isinstance(item, dict)
-            and str(item.get("path") or "").strip()
-            and not str(item.get("path") or "").replace("\\", "/").startswith(".coding-tools/")
-        ]
+            })
         dirty_paths = [item["path"] for item in entries]
         head = str(status.get("head") or "")
         worktree_fp = fingerprint_paths(

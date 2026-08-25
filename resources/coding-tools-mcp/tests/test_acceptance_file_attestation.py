@@ -12,6 +12,7 @@ from coding_tools_mcp.acceptance_receipts import (
     _durable_wave_acceptance_paths,
 )
 from coding_tools_mcp.errors import ToolFailure
+from coding_tools_mcp.git_tools import _parse_git_status_porcelain_v1_z
 from coding_tools_mcp.server import Runtime, validate_arguments
 from coding_tools_mcp.solution_economics import record_patch_surface
 
@@ -74,6 +75,37 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
         runtime.task_state.set_orchestration_projection(ctx.projection(), event="test_accepting_projection")
         return ctx
 
+    def test_nul_git_status_parser_preserves_unicode_and_rename_copy_records(self) -> None:
+        raw = (
+            "## main...origin/main [ahead 1]\0"
+            " M café.js\0"
+            "R  current.py\0original.py\0"
+            "C  copied.py\0source.py\0"
+        ).encode("utf-8")
+        branch, upstream, ahead, behind, entries = _parse_git_status_porcelain_v1_z(raw)
+        self.assertEqual((branch, upstream, ahead, behind), ("main", "origin/main", 1, 0))
+        self.assertEqual(entries, [
+            {"path": "café.js", "original_path": None, "index_status": " ", "worktree_status": "M"},
+            {"path": "current.py", "original_path": "original.py", "index_status": "R", "worktree_status": " "},
+            {"path": "copied.py", "original_path": "source.py", "index_status": "C", "worktree_status": " "},
+        ])
+
+    def test_nul_git_status_parser_fails_closed_on_invalid_utf8_records_and_oversize(self) -> None:
+        invalid_inputs = [
+            b"## main\0?? \xff\0",
+            b"## main\0R  current.py\0",
+            b"## main\0?? missing-terminator",
+            b"## main\0bad\0",
+        ]
+        for raw in invalid_inputs:
+            with self.subTest(raw=raw), self.assertRaises(ToolFailure) as malformed:
+                _parse_git_status_porcelain_v1_z(raw)
+            self.assertEqual(malformed.exception.code, "GIT_STATUS_MALFORMED")
+        oversized = ("## main\0" + "".join(f"?? file-{index}.py\0" for index in range(2001))).encode("utf-8")
+        with self.assertRaises(ToolFailure) as too_large:
+            _parse_git_status_porcelain_v1_z(oversized)
+        self.assertEqual(too_large.exception.code, "WORKTREE_STATUS_TOO_LARGE")
+
     def test_accept_attests_unchanged_file_without_false_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -82,7 +114,7 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
             (root / "unrelated.py").write_text("UNRELATED = True\n", encoding="utf-8")
             runtime = Runtime(root)
             try:
-                ctx = self._accepting_run(runtime)
+                ctx = self._accepting_run(runtime, proof_statuses=["passed"])
                 expected_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
                 args = {
                     "action": "accept",
@@ -226,6 +258,91 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
                     wave_id="wave-protected-case-0001",
                 )
             self.assertEqual(invalid.exception.code, "ACCEPTANCE_FILE_INVALID")
+
+    @unittest.skipUnless(os.name == "nt", "Windows protected-path aliases are case-insensitive")
+    def test_explicit_git_case_alias_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            git_config = root / ".git" / "config"
+            git_config.parent.mkdir()
+            git_config.write_bytes(b"[core]\n")
+            with self.assertRaises(ToolFailure) as invalid:
+                _accepted_file_receipts(
+                    root,
+                    [],
+                    acceptance_files=[{
+                        "path": ".GIT/config",
+                        "sha256": hashlib.sha256(git_config.read_bytes()).hexdigest(),
+                    }],
+                    run_id="run-protected-git-case-0001",
+                    wave_id="wave-protected-git-case-0001",
+                )
+            self.assertEqual(invalid.exception.code, "ACCEPTANCE_FILE_INVALID")
+
+    def test_real_parent_symlink_is_rejected_when_supported(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "target"
+            target.mkdir()
+            source = target / "app.py"
+            source.write_bytes(b"VALUE = 1\n")
+            linked = root / "linked"
+            try:
+                linked.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"directory symlink creation unavailable: {type(exc).__name__}")
+            with self.assertRaises(ToolFailure) as invalid:
+                _accepted_file_receipts(
+                    root,
+                    [],
+                    acceptance_files=[{
+                        "path": "linked/app.py",
+                        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                    }],
+                    run_id="run-real-parent-link-0001",
+                    wave_id="wave-real-parent-link-0001",
+                )
+            self.assertEqual(invalid.exception.code, "ACCEPTANCE_FILE_NOT_REGULAR")
+
+    @unittest.skipUnless(os.name == "nt", "Windows protected-path aliases are case-insensitive")
+    def test_durable_protected_case_alias_cannot_be_checkpointed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=[".GIT/config"],
+                    patch_paths=[".GIT/config"],
+                )
+                with self.assertRaises(ToolFailure) as invalid:
+                    runtime.task_control({"action": "accept", "run_id": ctx.run_id, "wave_id": ctx.wave_id})
+                self.assertEqual(invalid.exception.code, "ACCEPTANCE_FILE_ATTESTATION_REQUIRED")
+                self.assertEqual(runtime.orchestration_ledger.list_checkpoints(ctx.run_id), [])
+            finally:
+                runtime.close()
+
+    def test_explicit_receipt_without_passed_proof_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "app.py"
+            source.write_bytes(b"VALUE = 1\n")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(runtime)
+                with self.assertRaises(ToolFailure) as missing:
+                    runtime.task_control({
+                        "action": "accept",
+                        "run_id": ctx.run_id,
+                        "wave_id": ctx.wave_id,
+                        "acceptance_files": [{
+                            "path": "app.py",
+                            "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                        }],
+                    })
+                self.assertEqual(missing.exception.code, "ACCEPTANCE_PROOF_REQUIRED")
+                self.assertEqual(runtime.orchestration_ledger.list_checkpoints(ctx.run_id), [])
+            finally:
+                runtime.close()
 
     def test_duplicate_durable_file_ids_are_incomplete_evidence(self) -> None:
         file_id = hashlib.sha256(b"app.py").hexdigest()

@@ -17,14 +17,58 @@ const SOURCE_CHECKPOINT = Object.freeze({
   git_head: 'd'.repeat(40)
 });
 
-function safeLifecycle({ sourceVerified = true } = {}) {
+function lifecycleCounts(overrides = {}) {
+  return {
+    active_tool_calls: 0,
+    active_commands: 0,
+    starting_commands: 0,
+    active_background_operations: 0,
+    active_managed_processes: 0,
+    foreign_heavy_processes: 0,
+    active_agent_lanes: 0,
+    threshold_sensitive_stale_candidates: 0,
+    owned_codex_sidecar_residues: 0,
+    ...overrides
+  };
+}
+
+function lifecycleSnapshot(overrides = {}) {
+  return {
+    backup_api_copy: true,
+    immutable: true,
+    query_only: true,
+    integrity_check: ['ok'],
+    foreign_key_check_rows: 0,
+    sha256: 'e'.repeat(64),
+    logical_sha256: 'f'.repeat(64),
+    ...overrides
+  };
+}
+
+function safeLifecycle({
+  sourceVerified = true,
+  operationId = 'operation-00000001',
+  sourceCheckpoint = SOURCE_CHECKPOINT,
+  countOverrides = {},
+  lifecycleOverrides = {}
+} = {}) {
   return {
     safe: true,
     code: 'READY',
     reason: 'idle',
-    counts: {},
-    lifecycle: { unexplained_active_runs: 0, unbound_live_resource_residues: 0 },
-    ...(sourceVerified ? { source_checkpoint: { ok: true } } : {})
+    operation_id: operationId,
+    counts: lifecycleCounts(countOverrides),
+    lifecycle: {
+      snapshot: lifecycleSnapshot(),
+      unexplained_active_runs: 0,
+      unbound_live_resource_residues: 0,
+      ...lifecycleOverrides
+    },
+    ...(sourceVerified ? { source_checkpoint: {
+      ok: true,
+      code: 'ACTIVATABLE',
+      ...sourceCheckpoint
+    } } : {})
   };
 }
 
@@ -78,14 +122,14 @@ function orchestrator(overrides = {}) {
     codingMcpRevisionStatus: customRevisionStatus || (() => ({ running_revision: runningRevision, disk_revision: NEXT, update_pending: runningRevision !== NEXT, state: runningRevision === NEXT ? 'current' : 'update_pending' })),
     currentMcpHealth: customHealth || (async () => ({ process_instance_id: processInstanceId, code_revision: runningRevision })),
     inspectCodeActivation: async () => ({ ...safeLifecycle({ sourceVerified: false }), workspace: 'C:\\work' }),
-    prepareCodeActivation: async ({ operationId }) => ({
-      ...safeLifecycle(),
+    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
+      ...safeLifecycle({ operationId, sourceCheckpoint }),
       fenced: true,
       fence_operation_id: operationId
     }),
     cancelCodeActivation: async () => true,
-    verifyCodeActivation: async (operationId) => ({
-      ...safeLifecycle(),
+    verifyCodeActivation: async (operationId, sourceCheckpoint) => ({
+      ...safeLifecycle({ operationId, sourceCheckpoint }),
       operation_id: operationId,
       fenced: false,
       fence_operation_id: null
@@ -124,6 +168,10 @@ test('activation requests are strict, bounded, and expire', () => {
   }, now), { code: 'INVALID_SOURCE_CHECKPOINT' });
   assert.throws(() => normalizeActivationRequest({
     ...request('coding_mcp', now),
+    source_checkpoint: { ...SOURCE_CHECKPOINT, proof_fingerprint: '' }
+  }, now), { code: 'INVALID_SOURCE_CHECKPOINT' });
+  assert.throws(() => normalizeActivationRequest({
+    ...request('coding_mcp', now),
     source_checkpoint: { ...SOURCE_CHECKPOINT, checkpoint_id: ` ${SOURCE_CHECKPOINT.checkpoint_id}` }
   }, now), { code: 'INVALID_SOURCE_CHECKPOINT' });
   assert.throws(() => normalizeActivationRequest({
@@ -132,6 +180,161 @@ test('activation requests are strict, bounded, and expire', () => {
   }, now), { code: 'INVALID_SOURCE_CHECKPOINT' });
   assert.throws(() => normalizeActivationRequest(request('all', now), now), { code: 'INVALID_COMPONENT' });
   assert.throws(() => normalizeActivationRequest({ ...request('coding_mcp', now), expires_at_unix_ms: now - 1 }, now), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+});
+
+test('direct activation without source authority is rejected before an action claim', async (t) => {
+  const paths = fixture(t);
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(),
+    orchestrator: orchestrator(),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: OLD
+  });
+  const input = request('coding_mcp');
+  delete input.source_checkpoint;
+  await assert.rejects(manager.activate(input), { code: 'ACTIVATION_SOURCE_CHECKPOINT_REQUIRED' });
+  assert.equal(manager.actions.load().actions.length, 0);
+});
+
+test('noncanonical or identity-mismatched prepare receipt releases the fence before mutation', async (t) => {
+  for (const [label, prepareResult] of [
+    ['unverified-source', ({ operationId }) => ({
+      ...safeLifecycle({ sourceVerified: false, operationId }),
+      fenced: true,
+      fence_operation_id: operationId
+    })],
+    ['wrong-operation', () => ({
+      ...safeLifecycle({ operationId: 'operation-other-0001' }),
+      fenced: true,
+      fence_operation_id: 'operation-other-0001'
+    })],
+    ['wrong-response-operation', ({ operationId }) => ({
+      ...safeLifecycle({ operationId: 'operation-other-0001' }),
+      fenced: true,
+      fence_operation_id: operationId
+    })],
+    ['wrong-checkpoint', ({ operationId }) => ({
+      ...safeLifecycle({
+        operationId,
+        sourceCheckpoint: { ...SOURCE_CHECKPOINT, wave_id: 'wave-activation-other' }
+      }),
+      fenced: true,
+      fence_operation_id: operationId
+    })],
+    ['active-runtime-count', ({ operationId }) => ({
+      ...safeLifecycle({ operationId, countOverrides: { active_commands: 1 } }),
+      fenced: true,
+      fence_operation_id: operationId
+    })],
+    ['invalid-lifecycle-snapshot', ({ operationId }) => ({
+      ...safeLifecycle({
+        operationId,
+        lifecycleOverrides: { snapshot: lifecycleSnapshot({ immutable: false }) }
+      }),
+      fenced: true,
+      fence_operation_id: operationId
+    })]
+  ]) {
+    await t.test(label, async (t) => {
+      const paths = fixture(t);
+      let activated = false;
+      let cancelled = 0;
+      const manager = new RecoveryActivation({
+        paths,
+        revisions: revisions(),
+        orchestrator: orchestrator({
+          prepareCodeActivation: async (options) => prepareResult(options),
+          activateCodingMcpUpdate: async () => { activated = true; },
+          cancelCodeActivation: async () => { cancelled += 1; return true; }
+        }),
+        log: {},
+        recoveryInstanceId: 'recovery-instance-0001',
+        recoveryRunningRevision: OLD
+      });
+      const result = await manager.activate(request('coding_mcp'));
+      assert.equal(result.state, 'refused');
+      assert.equal(result.error.code, 'ACTIVATION_PREFLIGHT_UNVERIFIED');
+      assert.equal(activated, false);
+      assert.equal(cancelled, 1);
+    });
+  }
+});
+
+test('fresh post-cancel verification requires exact operation, checkpoint, zero blockers, and canonical snapshot', async (t) => {
+  const cases = [
+    ['wrong-operation', (operationId, sourceCheckpoint) => safeLifecycle({
+      operationId: 'operation-other-0001', sourceCheckpoint
+    })],
+    ['wrong-checkpoint', (operationId) => safeLifecycle({
+      operationId,
+      sourceCheckpoint: { ...SOURCE_CHECKPOINT, checkpoint_id: 'checkpoint-activation-other' }
+    })],
+    ['active-runtime-count', (operationId, sourceCheckpoint) => safeLifecycle({
+      operationId, sourceCheckpoint, countOverrides: { active_agent_lanes: 1 }
+    })],
+    ['unexplained-run', (operationId, sourceCheckpoint) => safeLifecycle({
+      operationId, sourceCheckpoint, lifecycleOverrides: { unexplained_active_runs: 1 }
+    })],
+    ['invalid-snapshot', (operationId, sourceCheckpoint) => safeLifecycle({
+      operationId,
+      sourceCheckpoint,
+      lifecycleOverrides: { snapshot: lifecycleSnapshot({ integrity_check: ['corrupt'] }) }
+    })]
+  ];
+  for (const [label, verification] of cases) {
+    await t.test(label, async (t) => {
+      const paths = fixture(t);
+      const manager = new RecoveryActivation({
+        paths,
+        revisions: revisions(),
+        orchestrator: orchestrator({
+          verifyCodeActivation: async (operationId, sourceCheckpoint) => ({
+            ...verification(operationId, sourceCheckpoint),
+            fenced: false,
+            fence_operation_id: null
+          })
+        }),
+        log: {},
+        recoveryInstanceId: 'recovery-instance-0001',
+        recoveryRunningRevision: OLD
+      });
+      await assert.rejects(
+        manager.verifyCheckpointLifecycle({
+          operationId: 'operation-verify-0001',
+          sourceCheckpoint: SOURCE_CHECKPOINT
+        }),
+        { code: 'LIFECYCLE_VERIFICATION_FAILED' }
+      );
+    });
+  }
+});
+
+test('zero-target lifecycle verification accepts canonical empty proof without weakening component activation requests', async (t) => {
+  const paths = fixture(t);
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(),
+    orchestrator: orchestrator(),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: OLD
+  });
+  const sourceCheckpoint = { ...SOURCE_CHECKPOINT, proof_fingerprint: '' };
+  const verified = await manager.verifyCheckpointLifecycle({
+    operationId: 'operation-zero-target-0001',
+    sourceCheckpoint
+  });
+  assert.equal(verified.clean, true);
+  assert.equal(verified.source_checkpoint_verified, true);
+  assert.throws(
+    () => normalizeActivationRequest({
+      ...request('coding_mcp'),
+      source_checkpoint: sourceCheckpoint
+    }),
+    { code: 'INVALID_SOURCE_CHECKPOINT' }
+  );
 });
 
 test('durable action store replays the same operation and rejects payload conflicts', (t) => {
@@ -196,7 +399,7 @@ test('Coding MCP activation is fenced, component-scoped, verified, and idempoten
       prepareCodeActivation: async (options) => {
         calls.prepare += 1;
         prepareOptions = options;
-        return { ...safeLifecycle(), fenced: true, fence_operation_id: options.operationId };
+        return { ...safeLifecycle({ operationId: options.operationId, sourceCheckpoint: options.sourceCheckpoint }), fenced: true, fence_operation_id: options.operationId };
       },
       activateCodingMcpUpdate: async (_revision, options) => {
         calls.activate += 1;
@@ -271,7 +474,7 @@ test('Coding MCP activation failure releases the admission fence before persisti
     orchestrator: orchestrator({
       prepareCodeActivation: async ({ operationId }) => {
         events.push('prepare');
-        return { ...safeLifecycle(), fenced: true, fence_operation_id: operationId };
+        return { ...safeLifecycle({ operationId }), fenced: true, fence_operation_id: operationId };
       },
       activateCodingMcpUpdate: async () => {
         events.push('activate');
@@ -329,7 +532,7 @@ test('Recovery Host activation prepares MCP continuity before scheduling a fixed
     orchestrator: orchestrator({
       prepareCodeActivation: async ({ operationId }) => {
         events.push('preflight');
-        return { ...safeLifecycle(), fenced: true, fence_operation_id: operationId };
+        return { ...safeLifecycle({ operationId }), fenced: true, fence_operation_id: operationId };
       }
     }),
     log: {},

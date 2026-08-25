@@ -123,6 +123,7 @@ class OrchestrationControlTests(unittest.TestCase):
             self.assertEqual(failed.exception.code, "CHECKPOINT_ATOMIC_FAILED")
             self.assertEqual(ctx.state, "ACCEPTING")
             self.assertEqual(control.snapshot(ctx.run_id).state, "ACCEPTING")
+            self.assertIn("acceptance", ctx.observation_stage_starts)
             self.assertEqual(ledger.get_run(ctx.run_id)["status"], "active")
             wave = next(item for item in ledger.list_waves(ctx.run_id) if item["wave_id"] == ctx.wave_id)
             self.assertEqual(wave["status"], "active")
@@ -133,6 +134,10 @@ class OrchestrationControlTests(unittest.TestCase):
             ]
             self.assertEqual(terminal_transitions, [])
             self.assertTrue(ledger.verify_chain(ctx.run_id)["ok"])
+            self.assertEqual(
+                [item for item in ledger.list_observation_spans(ctx.run_id) if item.get("stage") == "acceptance"],
+                [],
+            )
             self.assertEqual(terminal_callbacks, [])
 
     def test_recovery_reconstructs_active_write_lease(self) -> None:

@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
-const { promisify } = require('node:util');
+const { promisify, TextDecoder } = require('node:util');
 const { DatabaseSync } = require('node:sqlite');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
 const {
@@ -12,6 +12,7 @@ const {
   componentOwners
 } = require('./componentRevision');
 const {
+  lifecycleDecisionIsClean,
   normalizeActivationPostflight,
   normalizeLifecycleDecision,
   postflightRevisionVerified: importedPostflightRevisionVerified,
@@ -40,6 +41,7 @@ const RETRYABLE_REFUSALS = new Set(['RUNTIME_BUSY', 'ORCHESTRATION_STATE_UNCERTA
 const TERMINAL_INTENT_STATES = new Set(['completed', 'blocked', 'failed', 'superseded']);
 const HEX64 = /^[a-f0-9]{64}$/;
 const GIT_OBJECT_ID = /^[a-f0-9]{40,64}$/;
+const CHECKPOINT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
 const ACCEPTED_FILE_SCHEMA_VERSION = 2;
 const CLOSURE_INPUT_SCHEMA_VERSION = 1;
 const ACCEPTED_RECEIPT_KINDS = new Set(['explicit_existing_file', 'task_modified_file', 'durable_wave_patch_surface']);
@@ -298,19 +300,56 @@ function samePath(left, right) {
 }
 
 function parseGitStatus(output) {
+  if (!Buffer.isBuffer(output) && !(output instanceof Uint8Array)) {
+    throw actionError('AUTO_ACTIVATION_GIT_MALFORMED', 'Git status identity must be parsed from raw bytes.');
+  }
+  let decoded;
+  try {
+    decoded = new TextDecoder('utf-8', { fatal: true }).decode(output);
+  } catch {
+    throw actionError('AUTO_ACTIVATION_GIT_MALFORMED', 'Git status contained non-UTF-8 path bytes.');
+  }
+  if (!decoded.endsWith('\0')) {
+    throw actionError('AUTO_ACTIVATION_GIT_MALFORMED', 'Git status did not use complete NUL-delimited records.');
+  }
+  const records = decoded.slice(0, -1).split('\0');
   let branch = '';
   const entries = [];
-  for (const line of String(output || '').split(/\r?\n/)) {
-    if (line.startsWith('## ')) {
-      const value = line.slice(3);
-      branch = (value.includes('...') ? value.split('...', 1)[0] : value).trim();
-      continue;
+  let index = 0;
+  if (records[0]?.startsWith('## ')) {
+    const value = records[0].slice(3);
+    branch = (value.includes('...') ? value.split('...', 1)[0] : value).trim();
+    index = 1;
+  }
+  while (index < records.length) {
+    const record = records[index];
+    if (!record || record.length < 4 || record[2] !== ' ' || record.startsWith('## ')) {
+      throw actionError('AUTO_ACTIVATION_GIT_MALFORMED', 'Git status contained a malformed porcelain record.');
     }
-    if (!line) continue;
-    let pathText = line.slice(3);
-    if (pathText.includes(' -> ')) pathText = pathText.split(' -> ', 2)[1];
-    entries.push({ path: String(pathText || '').replace(/\\/g, '/'), index_status: line[0] || '', worktree_status: line[1] || '' });
-    if (entries.length > MAX_DIRTY_ENTRIES) throw actionError('AUTO_ACTIVATION_GIT_TOO_LARGE', 'Git status exceeded the bounded activation limit.');
+    const indexStatus = record[0] || '';
+    const worktreeStatus = record[1] || '';
+    const pathText = record.slice(3);
+    if (!pathText) {
+      throw actionError('AUTO_ACTIVATION_GIT_MALFORMED', 'Git status contained an empty path.');
+    }
+    let originalPath = null;
+    if ('RC'.includes(indexStatus) || 'RC'.includes(worktreeStatus)) {
+      index += 1;
+      originalPath = records[index];
+      if (!originalPath) {
+        throw actionError('AUTO_ACTIVATION_GIT_MALFORMED', 'Git rename/copy status omitted its original path.');
+      }
+    }
+    entries.push({
+      path: pathText,
+      original_path: originalPath,
+      index_status: indexStatus,
+      worktree_status: worktreeStatus
+    });
+    index += 1;
+  }
+  if (entries.length > MAX_DIRTY_ENTRIES) {
+    throw actionError('AUTO_ACTIVATION_GIT_TOO_LARGE', 'Git status exceeded the bounded activation limit.');
   }
   return { branch, entries };
 }
@@ -327,12 +366,23 @@ async function runGit(workspace, args) {
   }
 }
 
+async function runGitBytes(workspace, args) {
+  try {
+    return await execFileAsync('git', ['-C', workspace, ...args], {
+      cwd: workspace, windowsHide: true, encoding: 'buffer', timeout: 5000, maxBuffer: MAX_GIT_OUTPUT_BYTES
+    });
+  } catch (error) {
+    throw actionError('AUTO_ACTIVATION_GIT_UNAVAILABLE', 'Git identity required for automatic activation is unavailable.', {
+      exit_code: Number.isInteger(error?.code) ? error.code : null
+    });
+  }
+}
+
 async function gitStatus(workspace, forceUntracked = false) {
   const root = String((await runGit(workspace, ['rev-parse', '--show-toplevel'])).stdout || '').trim();
   if (!root || !samePath(root, workspace)) throw actionError('AUTO_ACTIVATION_WORKSPACE_MISMATCH', 'Automatic activation requires the configured workspace Git root.');
-  const args = ['status', '--porcelain=v1', '-b'];
-  if (forceUntracked) args.push('--untracked-files=all');
-  const parsed = parseGitStatus((await runGit(workspace, args)).stdout);
+  const args = ['status', '--porcelain=v1', '-z', '-b', forceUntracked ? '--untracked-files=all' : '--untracked-files=no'];
+  const parsed = parseGitStatus((await runGitBytes(workspace, args)).stdout);
   const head = String((await runGit(workspace, ['rev-parse', 'HEAD'])).stdout || '').trim();
   return { ...parsed, head };
 }
@@ -359,14 +409,21 @@ async function gitChangedPaths(workspace, fromHead, toHead) {
 
 function fingerprintPaths(workspace, entries, head, branch) {
   const digest = crypto.createHash('sha256');
+  const root = fs.realpathSync.native(path.resolve(workspace));
   for (const relative of [...new Set(entries.map((item) => item.path).filter(Boolean))].sort()) {
     digest.update(relative, 'utf8');
-    const target = path.resolve(workspace, ...relative.split('/'));
-    const outside = path.relative(workspace, target);
+    const target = path.resolve(root, ...relative.split('/'));
+    const outside = path.relative(root, target);
     if (outside.startsWith('..') || path.isAbsolute(outside)) { digest.update('<outside>', 'utf8'); continue; }
     try {
-      const stat = fs.statSync(target);
-      digest.update(stat.isFile() ? fs.readFileSync(target) : Buffer.from('<non-file>'));
+      const realTarget = fs.realpathSync.native(target);
+      const realOutside = path.relative(root, realTarget);
+      if (realOutside.startsWith('..') || path.isAbsolute(realOutside)) {
+        digest.update('<outside>', 'utf8');
+        continue;
+      }
+      const stat = fs.statSync(realTarget);
+      digest.update(stat.isFile() ? fs.readFileSync(realTarget) : Buffer.from('<non-file>'));
     } catch (error) {
       digest.update(error?.code === 'ENOENT' ? '<missing>' : `<error:${String(error?.name || 'Error')}>`, 'utf8');
     }
@@ -376,8 +433,16 @@ function fingerprintPaths(workspace, entries, head, branch) {
 }
 
 async function workspaceIdentity(workspace) {
-  const status = await gitStatus(workspace, false);
-  const entries = status.entries.filter((item) => item.path && !item.path.startsWith('.coding-tools/'));
+  const status = await gitStatus(workspace, true);
+  const entries = status.entries.filter((item) => {
+    if (!item.path) return false;
+    const protectedPath = process.platform === 'win32' ? item.path.toLowerCase() : item.path;
+    return protectedPath !== '.coding-tools' && !protectedPath.startsWith('.coding-tools/');
+  }).map((item) => ({
+    path: item.path,
+    index_status: item.index_status,
+    worktree_status: item.worktree_status
+  }));
   return { head: status.head, branch: status.branch, entries, worktree_fp: fingerprintPaths(workspace, entries, status.head, status.branch) };
 }
 
@@ -519,12 +584,12 @@ function eligibilityResult(checkpoint, patch = {}) {
     eligible: false,
     code: 'CHECKPOINT_NOT_ACTIVATABLE',
     message: 'Accepted checkpoint is not eligible for activation.',
-    source_checkpoint_id: String(checkpoint?.checkpoint_id || ''),
-    run_id: String(checkpoint?.run_id || ''),
-    wave_id: String(checkpoint?.wave_id || ''),
-    proof_fingerprint: String(checkpoint?.proof_fingerprint || '').toLowerCase(),
-    accepted_head: String(checkpoint?.git_head || '').toLowerCase(),
-    source_accepted: String(checkpoint?.status || '') === 'accepted',
+    source_checkpoint_id: typeof checkpoint?.checkpoint_id === 'string' ? checkpoint.checkpoint_id : '',
+    run_id: typeof checkpoint?.run_id === 'string' ? checkpoint.run_id : '',
+    wave_id: typeof checkpoint?.wave_id === 'string' ? checkpoint.wave_id : '',
+    proof_fingerprint: typeof checkpoint?.proof_fingerprint === 'string' ? checkpoint.proof_fingerprint : '',
+    accepted_head: typeof checkpoint?.git_head === 'string' ? checkpoint.git_head : '',
+    source_accepted: checkpoint?.status === 'accepted',
     accepted_receipts_complete: false,
     affected_components: [],
     component_receipts: {},
@@ -540,20 +605,27 @@ function evaluateActivationEligibility(checkpoint, {
   componentOwnersProvider = componentOwners
 } = {}) {
   const base = eligibilityResult(checkpoint);
-  if (!base.source_checkpoint_id || !base.run_id || !base.wave_id
-    || !HEX64.test(base.proof_fingerprint) || !GIT_OBJECT_ID.test(base.accepted_head)) {
+  const proofIsEmpty = base.proof_fingerprint === '';
+  if (!CHECKPOINT_ID_PATTERN.test(base.source_checkpoint_id)
+    || !CHECKPOINT_ID_PATTERN.test(base.run_id)
+    || !CHECKPOINT_ID_PATTERN.test(base.wave_id)
+    || (!proofIsEmpty && !HEX64.test(base.proof_fingerprint))
+    || !GIT_OBJECT_ID.test(base.accepted_head)) {
     return { ...base, code: 'CHECKPOINT_IDENTITY_INVALID', message: 'Accepted checkpoint identity is incomplete or invalid.' };
   }
   if (!base.source_accepted) {
     return { ...base, code: 'CHECKPOINT_NOT_ACCEPTED', message: 'Checkpoint status is not accepted.' };
   }
-  const head = String(currentHead || '').toLowerCase();
+  const head = typeof currentHead === 'string' ? currentHead : '';
   if (!GIT_OBJECT_ID.test(head) || head !== base.accepted_head) {
     return { ...base, code: 'SOURCE_HEAD_DRIFT', message: 'Git HEAD no longer matches the accepted checkpoint.' };
   }
   const parsed = parseAcceptedReceiptEnvelope(checkpoint);
   if (!parsed.ok) return { ...base, code: parsed.code, message: parsed.message };
   const receipts = parsed.envelope.files;
+  if (proofIsEmpty && receipts.length !== 0) {
+    return { ...base, code: 'CHECKPOINT_IDENTITY_INVALID', message: 'Empty proof identity is reserved for an authoritative zero-file checkpoint.' };
+  }
   const componentReceipts = Object.fromEntries(COMPONENT_ORDER.map((component) => [component, []]));
   const affected = new Set();
   for (const trusted of receipts) {
@@ -623,9 +695,10 @@ function receiptMatches(current, trusted) {
 
 function trustedAcceptedCheckpoints(checkpoints, head) {
   return (Array.isArray(checkpoints) ? checkpoints : []).map((checkpoint) => ({ checkpoint, receipts: acceptedReceipts(checkpoint) }))
-    .filter(({ checkpoint, receipts }) => String(checkpoint.status || '') === 'accepted'
-      && String(checkpoint.git_head || '').toLowerCase() === String(head || '').toLowerCase()
-      && HEX64.test(String(checkpoint.proof_fingerprint || '').toLowerCase()) && receipts !== null);
+    .filter(({ checkpoint, receipts }) => checkpoint?.status === 'accepted'
+      && typeof checkpoint.git_head === 'string' && checkpoint.git_head === head
+      && HEX64.test(typeof checkpoint.proof_fingerprint === 'string' ? checkpoint.proof_fingerprint : '')
+      && receipts !== null);
 }
 
 function acceptedReceiptUnion(checkpoints, head) {
@@ -671,12 +744,14 @@ function postflightMatchesIntent(postflight, intent, operationId = '') {
 
 function normalizeClosureInput(value) {
   if (!value || typeof value !== 'object' || Number(value.schema_version) !== CLOSURE_INPUT_SCHEMA_VERSION) return null;
-  const runId = String(value.run_id || '');
-  const waveId = String(value.wave_id || '');
-  const checkpointId = String(value.source_checkpoint_id || '');
-  const proofFingerprint = String(value.proof_fingerprint || '').toLowerCase();
-  const acceptedHead = String(value.accepted_head || '').toLowerCase();
-  if (!runId || !waveId || !checkpointId || !HEX64.test(proofFingerprint) || !GIT_OBJECT_ID.test(acceptedHead)) return null;
+  const runId = typeof value.run_id === 'string' ? value.run_id : '';
+  const waveId = typeof value.wave_id === 'string' ? value.wave_id : '';
+  const checkpointId = typeof value.source_checkpoint_id === 'string' ? value.source_checkpoint_id : '';
+  const proofFingerprint = typeof value.proof_fingerprint === 'string' ? value.proof_fingerprint : '';
+  const acceptedHead = typeof value.accepted_head === 'string' ? value.accepted_head : '';
+  if (!CHECKPOINT_ID_PATTERN.test(runId) || !CHECKPOINT_ID_PATTERN.test(waveId)
+    || !CHECKPOINT_ID_PATTERN.test(checkpointId) || !GIT_OBJECT_ID.test(acceptedHead)
+    || (proofFingerprint !== '' && !HEX64.test(proofFingerprint))) return null;
   const rawAffectedComponents = Array.isArray(value.affected_components)
     ? value.affected_components.slice(0, 16).map((component) => String(component || ''))
     : [];
@@ -714,10 +789,13 @@ function normalizeClosureInput(value) {
     && componentReceiptsValid && value.activation_eligible === true;
   const lifecycleDecision = normalizeLifecycleDecision(value.lifecycle_decision);
   const zeroTargetVerified = knownAffectedComponents.length === 0
-    && lifecycleDecision?.clean === true
-    && lifecycleDecision?.source_checkpoint_verified === true
-    && lifecycleDecision?.fence_released === true
-    && lifecycleDecision?.fenced === false;
+    && lifecycleDecisionIsClean(lifecycleDecision);
+  const emptyProofAuthorized = proofFingerprint === ''
+    && knownAffectedComponents.length === 0
+    && affectedComponentsValid
+    && componentReceiptsValid
+    && activationEligible;
+  if (proofFingerprint === '' && !emptyProofAuthorized) return null;
   const componentsCurrent = activationEligible && (knownAffectedComponents.length === 0 ? zeroTargetVerified : knownAffectedComponents.every((component) => {
     const postflight = postflightReceipts[component];
     return Boolean(postflight
@@ -748,7 +826,7 @@ function normalizeClosureInput(value) {
     postflight_receipts: postflightReceipts,
     components_current: componentsCurrent,
     lifecycle_decision: lifecycleDecision,
-    lifecycle_clean: lifecycleDecision?.clean === true,
+    lifecycle_clean: lifecycleDecisionIsClean(lifecycleDecision),
     observed_at: String(value.observed_at || '') || null
   };
 }
@@ -844,10 +922,7 @@ class AcceptedCodeActivationController {
       if (intent.lifecycle_decision && typeof intent.lifecycle_decision === 'object') lifecycleDecision = intent.lifecycle_decision;
     }
     const allCurrent = closure.affected_components.length === 0
-      ? lifecycleDecision?.clean === true
-        && lifecycleDecision?.source_checkpoint_verified === true
-        && lifecycleDecision?.fence_released === true
-        && lifecycleDecision?.fenced === false
+      ? lifecycleDecisionIsClean(lifecycleDecision)
       : closure.affected_components.every((component) => {
       const intent = intents.find((item) => item.component === component);
       const postflight = postflightReceipts[component];
@@ -861,7 +936,7 @@ class AcceptedCodeActivationController {
       postflight_receipts: postflightReceipts,
       components_current: allCurrent,
       lifecycle_decision: lifecycleDecision,
-      lifecycle_clean: lifecycleDecision?.clean === true,
+      lifecycle_clean: lifecycleDecisionIsClean(lifecycleDecision),
       observed_at: new Date(this.now()).toISOString()
     });
     return state.closure_input;
@@ -977,7 +1052,9 @@ class AcceptedCodeActivationController {
   candidate(checkpoints, state, workspace, head) {
     const processed = new Set(state.processed_checkpoint_ids);
     for (const checkpoint of (Array.isArray(checkpoints) ? checkpoints : [])) {
-      if (processed.has(String(checkpoint?.checkpoint_id || '')) || String(checkpoint?.git_head || '').toLowerCase() !== String(head || '').toLowerCase()) continue;
+      if (processed.has(String(checkpoint?.checkpoint_id || ''))
+        || typeof checkpoint?.git_head !== 'string'
+        || checkpoint.git_head !== head) continue;
       const evaluation = evaluateActivationEligibility(checkpoint, { workspace, currentHead: head });
       return { checkpoint, evaluation, receipts: evaluation.receipts };
     }

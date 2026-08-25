@@ -13,6 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 from coding_tools_mcp.solution_economics import record_patch_surface
 
@@ -30,8 +31,25 @@ class ActivationPreflightTests(unittest.TestCase):
             "logical_sha256": "e" * 64,
         }
 
+    def test_workspace_identity_rejects_truncated_git_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                with patch.object(runtime, "git_status", return_value={
+                    "is_repo": True,
+                    "branch": "main",
+                    "head": "a" * 40,
+                    "entries": [],
+                    "truncated": True,
+                }):
+                    with self.assertRaises(ToolFailure) as truncated:
+                        runtime._orchestration_workspace_identity(".")
+                self.assertEqual(truncated.exception.code, "WORKTREE_STATUS_TRUNCATED")
+            finally:
+                runtime.close()
+
     @staticmethod
-    def _accepted_checkpoint_fixture(root: Path, *, auth_token: str = ""):
+    def _accepted_checkpoint_fixture(root: Path, *, auth_token: str = "", mutate: bool = True):
         subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
         subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=root, check=True)
         subprocess.run(["git", "config", "user.name", "Fixture"], cwd=root, check=True)
@@ -58,29 +76,31 @@ class ActivationPreflightTests(unittest.TestCase):
             ctx,
             owner="MCP",
             mode="mcp_only",
-            allowed_paths=["app.py"],
+            allowed_paths=["app.py"] if mutate else [],
         )
-        source.write_text("VALUE = 2\n", encoding="utf-8")
-        record_patch_surface(
-            runtime.orchestration_ledger,
-            run_id=ctx.run_id,
-            wave_id=ctx.wave_id,
-            patch_result={
-                "affected_files": [{"path": "app.py"}],
-                "additions": 1,
-                "removals": 1,
-                "dry_run": False,
-            },
-        )
+        if mutate:
+            source.write_text("VALUE = 2\n", encoding="utf-8")
+            record_patch_surface(
+                runtime.orchestration_ledger,
+                run_id=ctx.run_id,
+                wave_id=ctx.wave_id,
+                patch_result={
+                    "affected_files": [{"path": "app.py"}],
+                    "additions": 1,
+                    "removals": 1,
+                    "dry_run": False,
+                },
+            )
         runtime.orchestration_control.begin_proof(ctx)
-        runtime.orchestration_ledger.record_proof(
-            run_id=ctx.run_id,
-            wave_id=ctx.wave_id,
-            stage_id="activation-fixture",
-            stage_version="1",
-            input_fingerprint="b" * 64,
-            status="passed",
-        )
+        if mutate:
+            runtime.orchestration_ledger.record_proof(
+                run_id=ctx.run_id,
+                wave_id=ctx.wave_id,
+                stage_id="activation-fixture",
+                stage_version="1",
+                input_fingerprint="b" * 64,
+                status="passed",
+            )
         runtime.orchestration_control.mark_accepting(ctx, proof_summary={"proof": "green"})
         runtime.task_state.set_orchestration_projection(ctx.projection(), event="test_accepting_projection")
         runtime.task_control({"action": "accept", "run_id": ctx.run_id, "wave_id": ctx.wave_id})
@@ -196,6 +216,7 @@ class ActivationPreflightTests(unittest.TestCase):
                 connection.close()
                 self.assertEqual(response.status, 200)
                 self.assertTrue(prepared["safe"])
+                self.assertEqual(prepared["operation_id"], operation_id)
                 self.assertEqual(prepared["source_checkpoint"]["code"], "ACTIVATABLE")
                 self.assertTrue(runtime.cancel_activation(operation_id))
             finally:
@@ -216,6 +237,62 @@ class ActivationPreflightTests(unittest.TestCase):
                 self.assertFalse(refused["safe"])
                 self.assertEqual(refused["code"], "SOURCE_DRIFT")
                 self.assertEqual(refused["reason"], "accepted_source_receipt_changed")
+            finally:
+                runtime.close()
+
+    def test_true_no_mutation_checkpoint_is_exactly_activatable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime, _source, source_checkpoint = self._accepted_checkpoint_fixture(
+                Path(temp).resolve(),
+                mutate=False,
+            )
+            try:
+                self.assertEqual(source_checkpoint["proof_fingerprint"], "")
+                verified = runtime.activation_preflight(source_checkpoint=source_checkpoint)
+                self.assertTrue(verified["safe"])
+                self.assertEqual(verified["source_checkpoint"]["code"], "ACTIVATABLE")
+                self.assertEqual(verified["source_checkpoint"]["accepted_file_count"], 0)
+            finally:
+                runtime.close()
+
+    def test_empty_proof_is_rejected_for_mutation_bearing_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime, _source, source_checkpoint = self._accepted_checkpoint_fixture(Path(temp).resolve())
+            try:
+                refused = runtime.activation_preflight(source_checkpoint={
+                    **source_checkpoint,
+                    "proof_fingerprint": "",
+                })
+                self.assertFalse(refused["safe"])
+                self.assertEqual(refused["code"], "CHECKPOINT_NOT_ACTIVATABLE")
+                self.assertIn(refused["reason"], {"checkpoint_identity_mismatch", "proof_fingerprint_mismatch"})
+            finally:
+                runtime.close()
+
+    def test_source_checkpoint_noncanonical_authority_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime, _source, source_checkpoint = self._accepted_checkpoint_fixture(Path(temp).resolve())
+            try:
+                invalid_values = []
+                for field in ("checkpoint_id", "run_id", "wave_id"):
+                    invalid_values.extend([
+                        {**source_checkpoint, field: f" {source_checkpoint[field]}"},
+                        {**source_checkpoint, field: f"{source_checkpoint[field]} "},
+                        {**source_checkpoint, field: 123},
+                    ])
+                invalid_values.extend([
+                    {**source_checkpoint, "proof_fingerprint": source_checkpoint["proof_fingerprint"].upper()},
+                    {**source_checkpoint, "proof_fingerprint": f" {source_checkpoint['proof_fingerprint']}"},
+                    {**source_checkpoint, "proof_fingerprint": 123},
+                    {**source_checkpoint, "git_head": source_checkpoint["git_head"].upper()},
+                    {**source_checkpoint, "git_head": f"{source_checkpoint['git_head']} "},
+                    {**source_checkpoint, "git_head": 123},
+                ])
+                for invalid in invalid_values:
+                    with self.subTest(invalid=invalid):
+                        result = runtime.activation_preflight(source_checkpoint=invalid)
+                        self.assertEqual(result["code"], "CHECKPOINT_NOT_ACTIVATABLE")
+                        self.assertEqual(result["reason"], "source_checkpoint_identity_invalid")
             finally:
                 runtime.close()
 
@@ -295,6 +372,25 @@ class ActivationPreflightTests(unittest.TestCase):
                     malformed = runtime.activation_preflight(source_checkpoint=source_checkpoint)
                     self.assertEqual(malformed["code"], "ORCHESTRATION_STATE_UNCERTAIN")
                     self.assertEqual(malformed["reason"], "lifecycle_snapshot_integrity_failed")
+                for label, snapshot_patch in (
+                    ("integrity", {"integrity_check": ["corrupt"]}),
+                    ("foreign-keys", {"foreign_key_check_rows": 1}),
+                    ("mutable", {"immutable": False}),
+                    ("writer-enabled", {"query_only": False}),
+                    ("physical-sha", {"sha256": "bad"}),
+                    ("logical-sha", {"logical_sha256": "bad"}),
+                ):
+                    with self.subTest(snapshot=label), patch.object(
+                        runtime,
+                        "_activation_lifecycle_summary",
+                        return_value={
+                            **incomplete_lifecycle,
+                            "snapshot": {**self._canonical_lifecycle_snapshot(), **snapshot_patch},
+                        },
+                    ):
+                        refused = runtime.activation_preflight(source_checkpoint=source_checkpoint)
+                        self.assertEqual(refused["code"], "ORCHESTRATION_STATE_UNCERTAIN")
+                        self.assertEqual(refused["reason"], "lifecycle_snapshot_integrity_failed")
             finally:
                 runtime.close()
 
@@ -309,6 +405,7 @@ class ActivationPreflightTests(unittest.TestCase):
                     prepare=True,
                 )
                 self.assertTrue(prepared["safe"])
+                self.assertEqual(prepared["operation_id"], operation_id)
                 self.assertTrue(prepared["fenced"])
                 self.assertEqual(prepared["fence_operation_id"], operation_id)
                 blocked = runtime.call_tool("server_info", {})

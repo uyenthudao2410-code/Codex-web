@@ -11,6 +11,42 @@ const { readJson, writeJsonAtomic } = require('../../electron/services/jsonStore
 const OLD_REVISION = 'a'.repeat(64);
 const NEXT_REVISION = 'b'.repeat(64);
 
+function activationLifecycle(operationId, sourceCheckpoint, fenced) {
+  return {
+    safe: true,
+    code: 'READY',
+    reason: 'idle',
+    operation_id: operationId,
+    counts: {
+      active_tool_calls: 0,
+      active_commands: 0,
+      starting_commands: 0,
+      active_background_operations: 0,
+      active_managed_processes: 0,
+      foreign_heavy_processes: 0,
+      active_agent_lanes: 0,
+      threshold_sensitive_stale_candidates: 0,
+      owned_codex_sidecar_residues: 0
+    },
+    lifecycle: {
+      snapshot: {
+        backup_api_copy: true,
+        immutable: true,
+        query_only: true,
+        integrity_check: ['ok'],
+        foreign_key_check_rows: 0,
+        sha256: 'c'.repeat(64),
+        logical_sha256: 'd'.repeat(64)
+      },
+      unexplained_active_runs: 0,
+      unbound_live_resource_residues: 0
+    },
+    source_checkpoint: { ok: true, code: 'ACTIVATABLE', ...sourceCheckpoint },
+    fenced: fenced === true,
+    fence_operation_id: fenced === true ? operationId : null
+  };
+}
+
 function argument(name, fallback = '') {
   const index = process.argv.indexOf(name);
   return index >= 0 && index + 1 < process.argv.length ? process.argv[index + 1] : fallback;
@@ -141,23 +177,10 @@ async function runHost(paths, dataRoot, reportFile, errorFile, nodeExecutable) {
     ),
     inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: dataRoot }),
     prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
-      safe: true,
-      code: 'READY',
-      counts: {},
-      lifecycle: { unexplained_active_runs: 0, unbound_live_resource_residues: 0 },
-      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
-      fenced: true,
-      fence_operation_id: operationId
+      ...activationLifecycle(operationId, sourceCheckpoint, true)
     }),
     verifyCodeActivation: async (operationId, sourceCheckpoint) => ({
-      safe: true,
-      code: 'READY',
-      counts: {},
-      lifecycle: { unexplained_active_runs: 0, unbound_live_resource_residues: 0 },
-      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
-      operation_id: operationId,
-      fenced: false,
-      fence_operation_id: null,
+      ...activationLifecycle(operationId, sourceCheckpoint, false),
       workspace: dataRoot
     }),
     cancelCodeActivation: async () => true,

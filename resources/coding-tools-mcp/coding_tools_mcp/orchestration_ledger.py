@@ -317,7 +317,11 @@ def fingerprint_paths(root: Path, paths: Iterable[str], *, extra: dict[str, Any]
         except OSError as exc:
             digest.update(f"<error:{type(exc).__name__}>".encode("ascii", errors="replace"))
     if extra:
-        digest.update(_json(_sanitize(extra)).encode("utf-8"))
+        # Fingerprint metadata is already a bounded, caller-selected identity
+        # contract.  Do not pass it through the audit-payload sanitizer: that
+        # helper intentionally truncates lists and would make Python disagree
+        # with the Electron activation verifier after 500 dirty entries.
+        digest.update(_json(extra).encode("utf-8"))
     return digest.hexdigest()
 
 class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLedgerMixin, P5ExperimentLedgerMixin, ProblemLineageLedgerMixin, QualityOutcomeLedgerMixin):

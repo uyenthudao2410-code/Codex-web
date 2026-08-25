@@ -859,7 +859,6 @@ class OrchestrationControl:
     ) -> tuple[RunContext, dict[str, Any]]:
         if ctx.state != "ACCEPTING":
             raise OrchestrationControlError("CHECKPOINT_OUTSIDE_ACCEPTANCE", "Checkpoint requires ACCEPTING state.")
-        self.finish_observation_stage(ctx, stage="acceptance")
         try:
             result = self.ledger.accept_checkpoint_atomic(
                 run_id=ctx.run_id,
@@ -882,6 +881,7 @@ class OrchestrationControl:
                 "Terminal acceptance/checkpoint transaction failed and was rolled back.",
                 details={"run_id": ctx.run_id, "wave_id": ctx.wave_id, "error_type": type(exc).__name__},
             ) from exc
+        self.finish_observation_stage(ctx, stage="acceptance")
         with self._lock:
             ctx.state = "CHECKPOINTED"
             self._contexts[ctx.run_id] = ctx

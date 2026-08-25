@@ -18,11 +18,17 @@ const LIFECYCLE_FIELDS = new Set([
   'fence_released', 'fenced', 'fence_operation_id', 'counts',
   'unexplained_active_runs', 'unbound_live_resource_residues'
 ]);
-const LIFECYCLE_COUNT_FIELDS = new Set([
+const LIFECYCLE_COUNT_KEYS = Object.freeze([
   'active_tool_calls', 'active_commands', 'starting_commands',
   'active_background_operations', 'active_managed_processes',
   'foreign_heavy_processes', 'active_agent_lanes',
   'threshold_sensitive_stale_candidates', 'owned_codex_sidecar_residues'
+]);
+const LIFECYCLE_COUNT_FIELDS = new Set(LIFECYCLE_COUNT_KEYS);
+const BLOCKING_LIFECYCLE_COUNT_KEYS = Object.freeze([
+  'active_tool_calls', 'active_commands', 'starting_commands',
+  'active_background_operations', 'active_managed_processes',
+  'foreign_heavy_processes', 'active_agent_lanes'
 ]);
 
 function text(value) { return String(value || '').trim(); }
@@ -56,6 +62,8 @@ function checkpointIdentity(value) {
 function normalizeLifecycleDecision(value) {
   if (!exactFields(value, LIFECYCLE_FIELDS) || Number(value.schema_version) !== 1) return null;
   if (!value.counts || typeof value.counts !== 'object' || Array.isArray(value.counts)
+    || Object.keys(value.counts).length !== LIFECYCLE_COUNT_FIELDS.size
+    || LIFECYCLE_COUNT_KEYS.some((key) => !Object.hasOwn(value.counts, key))
     || Object.keys(value.counts).some((key) => !LIFECYCLE_COUNT_FIELDS.has(key))
     || Object.values(value.counts).some((count) => !Number.isSafeInteger(count) || count < 0)
     || !Number.isSafeInteger(value.unexplained_active_runs) || value.unexplained_active_runs < 0
@@ -82,6 +90,23 @@ function normalizeLifecycleDecision(value) {
     unexplained_active_runs: value.unexplained_active_runs,
     unbound_live_resource_residues: value.unbound_live_resource_residues
   };
+}
+
+function lifecycleDecisionIsClean(value) {
+  const lifecycle = normalizeLifecycleDecision(value);
+  return Boolean(lifecycle
+    && lifecycle.clean === true
+    && lifecycle.code === 'READY'
+    && lifecycle.observed_at
+    && OPERATION_ID_PATTERN.test(lifecycle.operation_id || '')
+    && lifecycle.canonical_lifecycle_observed === true
+    && lifecycle.source_checkpoint_verified === true
+    && lifecycle.fence_released === true
+    && lifecycle.fenced === false
+    && lifecycle.fence_operation_id === null
+    && BLOCKING_LIFECYCLE_COUNT_KEYS.every((key) => lifecycle.counts[key] === 0)
+    && lifecycle.unexplained_active_runs === 0
+    && lifecycle.unbound_live_resource_residues === 0);
 }
 
 function normalizeActivationPostflight(value) {
@@ -143,15 +168,9 @@ function postflightIdentityVerified(postflight) {
 
 function lifecycleMatchesPostflight(postflight) {
   const lifecycle = postflight?.lifecycle_decision;
-  return Boolean(lifecycle
-    && lifecycle.clean === true
-    && lifecycle.canonical_lifecycle_observed === true
-    && lifecycle.source_checkpoint_verified === true
-    && lifecycle.fence_released === true
-    && lifecycle.fenced === false
-    && lifecycle.fence_operation_id === null
+  return Boolean(lifecycleDecisionIsClean(lifecycle)
     && lifecycle.operation_id === postflight.operation_id
-    && lifecycle.observed_at);
+  );
 }
 
 function verifyActivationPostflight(value, {
@@ -266,8 +285,11 @@ module.exports = {
   COMPONENTS,
   OLD_INSTANCE_STATES,
   OPERATION_ID_PATTERN,
+  LIFECYCLE_COUNT_KEYS,
+  BLOCKING_LIFECYCLE_COUNT_KEYS,
   normalizeActivationPostflight,
   normalizeLifecycleDecision,
+  lifecycleDecisionIsClean,
   postflightRevisionVerified,
   postflightIdentityVerified,
   lifecycleMatchesPostflight,

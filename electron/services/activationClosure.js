@@ -8,18 +8,21 @@ const ACCEPTED_RECEIPT_KINDS = new Set(['explicit_existing_file', 'task_modified
 const { componentOwnsPath } = require('./componentRevision');
 const {
   OPERATION_ID_PATTERN,
+  lifecycleDecisionIsClean,
   normalizeLifecycleDecision,
+  postflightRevisionVerified,
   verifyActivationPostflight
 } = require('./activationPostflight');
 
 function text(value) { return String(value || '').trim(); }
 
 function normalizedComponents(value) {
-  const requested = Array.isArray(value) ? value.map(text).filter(Boolean) : [];
+  const requested = Array.isArray(value) ? value.slice() : [];
   const unique = [...new Set(requested)];
   return {
     components: COMPONENTS.filter((component) => unique.includes(component)),
     valid: requested.length === unique.length
+      && requested.every((component) => typeof component === 'string' && component === text(component))
       && unique.every((component) => COMPONENTS.includes(component))
       && requested.every((component, index) => index === 0
         || COMPONENTS.indexOf(component) > COMPONENTS.indexOf(requested[index - 1]))
@@ -27,23 +30,23 @@ function normalizedComponents(value) {
 }
 
 function normalizedRevision(value) {
-  const revision = text(value).toLowerCase();
+  const revision = typeof value === 'string' ? value : '';
   return HEX64.test(revision) ? revision : null;
 }
 
-function checkpointIdentity(source) {
+function checkpointIdentity(source, { allowEmptyProof = false } = {}) {
   const value = source && typeof source === 'object' ? source : {};
   const identity = {
-    source_checkpoint_id: text(value.source_checkpoint_id),
-    run_id: text(value.run_id),
-    wave_id: text(value.wave_id),
-    proof_fingerprint: text(value.proof_fingerprint).toLowerCase(),
-    accepted_head: text(value.accepted_head).toLowerCase()
+    source_checkpoint_id: typeof value.source_checkpoint_id === 'string' ? value.source_checkpoint_id : '',
+    run_id: typeof value.run_id === 'string' ? value.run_id : '',
+    wave_id: typeof value.wave_id === 'string' ? value.wave_id : '',
+    proof_fingerprint: typeof value.proof_fingerprint === 'string' ? value.proof_fingerprint : '',
+    accepted_head: typeof value.accepted_head === 'string' ? value.accepted_head : ''
   };
   const valid = CHECKPOINT_ID.test(identity.source_checkpoint_id)
     && CHECKPOINT_ID.test(identity.run_id)
     && CHECKPOINT_ID.test(identity.wave_id)
-    && HEX64.test(identity.proof_fingerprint)
+    && (HEX64.test(identity.proof_fingerprint) || (allowEmptyProof && identity.proof_fingerprint === ''))
     && GIT_OBJECT_ID.test(identity.accepted_head);
   return { ...identity, valid };
 }
@@ -127,7 +130,11 @@ function componentIsCurrent(component, status, receipt, identity) {
   if (!receiptBelongsToCheckpoint(receipt, identity, component)) return false;
   const running = normalizedRevision(status?.running_revision);
   const disk = normalizedRevision(status?.disk_revision);
-  return Boolean(running && running === disk && running === normalizedRevision(receipt.expected_revision)
+  const receiptRunning = normalizedRevision(receipt?.running_revision);
+  const receiptDisk = normalizedRevision(receipt?.disk_revision);
+  return Boolean(postflightRevisionVerified(receipt)
+    && running && running === disk
+    && running === receiptRunning && disk === receiptDisk
     && status?.update_pending === false);
 }
 
@@ -137,13 +144,16 @@ function plainObject(value) {
 
 function normalizedAcceptedReceipt(value, identity, component) {
   if (!plainObject(value)) return null;
-  const portable = text(value.path).replace(/\\/g, '/');
+  const rawPath = typeof value.path === 'string' ? value.path : '';
+  const portable = rawPath.replace(/\\/g, '/');
+  const protectedPath = portable.toLowerCase();
   const state = text(value.state);
   const sha256 = value.sha256 == null ? null : text(value.sha256).toLowerCase();
   const sizeBytes = value.size_bytes;
   const kind = text(value.receipt_kind);
-  if (!portable || portable.startsWith('/') || portable.split('/').includes('..')
-    || portable === '.coding-tools' || portable.startsWith('.coding-tools/')
+  if (!portable || rawPath !== text(rawPath) || portable.startsWith('/') || portable.split('/').includes('..')
+    || protectedPath === '.coding-tools' || protectedPath.startsWith('.coding-tools/')
+    || protectedPath === '.git' || protectedPath.startsWith('.git/')
     || !componentOwnsPath(component, portable)
     || text(value.run_id) !== identity.run_id
     || text(value.wave_id) !== identity.wave_id
@@ -217,9 +227,11 @@ function computeActivationClosure({
   observedAt = new Date().toISOString()
 } = {}) {
   const source = acceptedCode && typeof acceptedCode === 'object' ? acceptedCode : {};
-  const identity = checkpointIdentity(source);
   const normalizedAffectedComponents = normalizedComponents(source.affected_components);
   const affectedComponents = normalizedAffectedComponents.components;
+  const identity = checkpointIdentity(source, {
+    allowEmptyProof: normalizedAffectedComponents.valid && affectedComponents.length === 0
+  });
   const acceptedComponentReceipts = normalizeComponentReceipts(source.component_receipts, affectedComponents, identity);
   const rawPostflightReceipts = source.postflight_receipts;
   const postflightKeysValid = plainObject(rawPostflightReceipts)
@@ -271,12 +283,7 @@ function computeActivationClosure({
       receipt?.lifecycle_decision?.operation_id === normalizedLifecycle?.operation_id
     ));
   const lifecycleClean = source.lifecycle_clean === true
-    && normalizedLifecycle?.clean === true
-    && normalizedLifecycle.canonical_lifecycle_observed === true
-    && normalizedLifecycle.source_checkpoint_verified === true
-    && normalizedLifecycle.fence_released === true
-    && normalizedLifecycle.fenced === false
-    && normalizedLifecycle.fence_operation_id === null
+    && lifecycleDecisionIsClean(normalizedLifecycle)
     && lifecycleOperationBound;
   const runtimeReady = runtimeFullyReady === true && runtimeRunning === true && tunnelRunning === true;
   const projection = {

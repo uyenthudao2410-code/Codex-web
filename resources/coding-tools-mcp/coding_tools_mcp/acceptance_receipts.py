@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import sqlite3
 import stat
 from pathlib import Path
@@ -21,6 +22,8 @@ ACCEPTED_FILE_RECEIPT_KINDS = frozenset({
     "durable_wave_patch_surface",
 })
 _HEX_DIGITS = frozenset("0123456789abcdef")
+_PROTECTED_ACCEPTANCE_ROOTS = frozenset({".coding-tools", ".git"})
+_SOURCE_CHECKPOINT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$")
 
 
 def _portable_path_key(value: Any) -> str:
@@ -32,6 +35,11 @@ def _portable_path_key(value: Any) -> str:
     """
     portable = _portable_path(value)
     return portable.casefold() if os.name == "nt" else portable
+
+
+def _is_protected_acceptance_path(value: Any) -> bool:
+    key = _portable_path_key(value)
+    return any(key == root or key.startswith(f"{root}/") for root in _PROTECTED_ACCEPTANCE_ROOTS)
 
 
 def _reparse_component(path: Path) -> Path | None:
@@ -85,26 +93,35 @@ def _assert_safe_path(root: Path, relative: Path, *, explicit: bool, portable: s
     return False
 
 
-def passed_proof_fingerprint(proofs: Any) -> str:
-    """Compute the shared deterministic fingerprint of exact passed proofs.
-
-    Failed, skipped, and other non-passed observations are deliberately
-    excluded.  An empty passed set returns an empty fingerprint, allowing a
-    true no-mutation acceptance to remain distinguishable from a mutation
-    wave that forgot to produce proof.
-    """
-    passed: list[tuple[str, str]] = []
+def _passed_proof_keys(proofs: Any) -> list[tuple[str, str]]:
+    passed: set[tuple[str, str]] = set()
     for item in proofs if isinstance(proofs, list) else []:
         if not isinstance(item, dict) or str(item.get("status") or "").strip().lower() != "passed":
             continue
         proof_id = str(item.get("proof_id") or "").strip()
         input_fingerprint = str(item.get("input_fingerprint") or "").strip()
         if proof_id and input_fingerprint:
-            passed.append((proof_id, input_fingerprint))
-    if not passed:
-        return ""
-    material = "|".join(f"{proof_id}:{input_fingerprint}" for proof_id, input_fingerprint in sorted(set(passed)))
-    return hashlib.sha256(material.encode("utf-8")).hexdigest()
+            passed.add((proof_id, input_fingerprint))
+    return sorted(passed)
+
+
+def has_passed_proof(proofs: Any) -> bool:
+    """Return whether the exact proof set contains one usable passed proof."""
+    return bool(_passed_proof_keys(proofs))
+
+
+def passed_proof_fingerprint(proofs: Any) -> str:
+    """Compute the shared deterministic fingerprint of exact passed proofs.
+
+    Failed, skipped, and other non-passed observations are deliberately
+    excluded.  The canonical no-mutation proof identity is the empty string;
+    callers that require a real passed proof must use :func:`has_passed_proof`.
+    """
+    material = "|".join(
+        f"{proof_id}:{input_fingerprint}"
+        for proof_id, input_fingerprint in _passed_proof_keys(proofs)
+    )
+    return hashlib.sha256(material.encode("utf-8")).hexdigest() if material else ""
 
 
 def _portable_path(value: Any) -> str:
@@ -117,6 +134,10 @@ def _portable_path(value: Any) -> str:
 def _is_hex_digest(value: Any, length: int = 64) -> bool:
     text = str(value or "").strip().lower()
     return len(text) == length and all(char in _HEX_DIGITS for char in text)
+
+
+def _is_canonical_hex(value: Any, length: int) -> bool:
+    return isinstance(value, str) and len(value) == length and all(char in _HEX_DIGITS for char in value)
 
 
 def _accepted_file_receipts(
@@ -166,12 +187,11 @@ def _accepted_file_receipts(
             )
         if not value:
             continue
-        value_key = _portable_path_key(value)
-        if value_key == ".coding-tools" or value_key.startswith(".coding-tools/"):
+        if _is_protected_acceptance_path(value):
             if explicit_attestation:
                 raise ToolFailure(
                     "ACCEPTANCE_FILE_INVALID",
-                    "Runtime evidence under .coding-tools cannot be used as an explicit source-file attestation.",
+                    "Protected repository control paths cannot be used as explicit source-file attestations.",
                     category="validation",
                     details={"path": value},
                 )
@@ -650,17 +670,20 @@ def _verify_activation_source_checkpoint(
     required = {"checkpoint_id", "run_id", "wave_id", "proof_fingerprint", "git_head"}
     if not isinstance(source_checkpoint, dict) or set(source_checkpoint) != required:
         return _checkpoint_failure("CHECKPOINT_NOT_ACTIVATABLE", "source_checkpoint_contract_invalid")
-    checkpoint_id = str(source_checkpoint.get("checkpoint_id") or "").strip()
-    run_id = str(source_checkpoint.get("run_id") or "").strip()
-    wave_id = str(source_checkpoint.get("wave_id") or "").strip()
-    proof_fingerprint = str(source_checkpoint.get("proof_fingerprint") or "").strip().lower()
-    git_head = str(source_checkpoint.get("git_head") or "").strip().lower()
+    checkpoint_id = source_checkpoint.get("checkpoint_id")
+    run_id = source_checkpoint.get("run_id")
+    wave_id = source_checkpoint.get("wave_id")
+    proof_fingerprint = source_checkpoint.get("proof_fingerprint")
+    git_head = source_checkpoint.get("git_head")
     if (
-        not checkpoint_id
-        or not run_id
-        or not wave_id
-        or max(len(checkpoint_id), len(run_id), len(wave_id)) > 256
-        or (proof_fingerprint and not _is_hex_digest(proof_fingerprint))
+        not isinstance(checkpoint_id, str)
+        or not isinstance(run_id, str)
+        or not isinstance(wave_id, str)
+        or _SOURCE_CHECKPOINT_ID.fullmatch(checkpoint_id) is None
+        or _SOURCE_CHECKPOINT_ID.fullmatch(run_id) is None
+        or _SOURCE_CHECKPOINT_ID.fullmatch(wave_id) is None
+        or not (proof_fingerprint == "" or _is_canonical_hex(proof_fingerprint, 64))
+        or not isinstance(git_head, str)
         or len(git_head) not in {40, 64}
         or any(char not in _HEX_DIGITS for char in git_head)
     ):
@@ -693,8 +716,8 @@ def _verify_activation_source_checkpoint(
     checkpoint = checkpoints[0]
     if (
         str(checkpoint.get("status") or "") != "accepted"
-        or str(checkpoint.get("proof_fingerprint") or "").lower() != proof_fingerprint
-        or str(checkpoint.get("git_head") or "").lower() != git_head
+        or checkpoint.get("proof_fingerprint") != proof_fingerprint
+        or checkpoint.get("git_head") != git_head
     ):
         return _checkpoint_failure("CHECKPOINT_NOT_ACTIVATABLE", "checkpoint_identity_mismatch", checkpoint_id=checkpoint_id)
     recomputed_proof_fingerprint = passed_proof_fingerprint(proofs)
@@ -706,7 +729,7 @@ def _verify_activation_source_checkpoint(
             expected=proof_fingerprint,
             observed=recomputed_proof_fingerprint,
         )
-    if str(current_git_head or "").strip().lower() != git_head:
+    if current_git_head != git_head:
         return _checkpoint_failure("SOURCE_DRIFT", "git_head_changed", expected_git_head=git_head)
 
     metadata = checkpoint.get("metadata") if isinstance(checkpoint.get("metadata"), dict) else {}
@@ -755,8 +778,7 @@ def _verify_activation_source_checkpoint(
             or portable != str(item.get("path") or "")
             or relative.is_absolute()
             or ".." in relative.parts
-            or portable == ".coding-tools"
-            or portable.startswith(".coding-tools/")
+            or _is_protected_acceptance_path(portable)
             or portable in seen
             or receipt_kind not in ACCEPTED_FILE_RECEIPT_KINDS
             or item.get("run_id") != run_id
@@ -822,11 +844,8 @@ def _verify_activation_source_checkpoint(
         current_item = current_by_path.get(str(item.get("path") or ""))
         if not current_item or any(current_item.get(key) != item.get(key) for key in ("state", "sha256", "size_bytes")):
             return _checkpoint_failure("SOURCE_DRIFT", "accepted_source_receipt_changed", path=item.get("path"))
-    mutation_bearing_receipts = durable_mutation or any(
-        receipt_kinds.get(path) in {"task_modified_file", "durable_wave_patch_surface"}
-        for path in seen
-    )
-    if mutation_bearing_receipts and not recomputed_proof_fingerprint:
+    mutation_bearing_receipts = durable_mutation or bool(files)
+    if mutation_bearing_receipts and not has_passed_proof(proofs):
         return _checkpoint_failure("RECEIPT_INCOMPLETE", "passed_proof_missing")
     if durable_mutation and (not files or set(durable_paths).difference(seen)):
         return _checkpoint_failure("RECEIPT_INCOMPLETE", "durable_patch_surface_not_covered")

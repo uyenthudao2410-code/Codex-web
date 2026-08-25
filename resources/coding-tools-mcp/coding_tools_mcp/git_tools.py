@@ -33,6 +33,7 @@ COMMITTED_REVIEW_OPERATION = "committed_review"
 COMMITTED_REVIEW_MAX_FILES = 100
 COMMITTED_REVIEW_MAX_BYTES = 262_144
 COMMITTED_REVIEW_MAX_LINES = 2_000
+MAX_EXACT_STATUS_ENTRIES = 2_000
 _COMMIT_SHA_RE = re.compile(r"[0-9a-f]{40}")
 _SENSITIVE_ASSIGNMENT_RE = re.compile(
     r"(?i)\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|secret|password)\b\s*[:=]"
@@ -40,6 +41,72 @@ _SENSITIVE_ASSIGNMENT_RE = re.compile(
 _AUTHORIZATION_RE = re.compile(r"(?i)\bauthorization\s*:\s*(?:bearer|token)\b")
 _PRIVATE_KEY_BEGIN_RE = re.compile(r"(?i)-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")
 _PRIVATE_KEY_END_RE = re.compile(r"(?i)-----END (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")
+
+
+def _parse_git_status_porcelain_v1_z(raw: bytes) -> tuple[str, str, int, int, list[dict[str, Any]]]:
+    """Parse one complete NUL-delimited porcelain-v1 status result."""
+    try:
+        decoded = bytes(raw).decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise ToolFailure(
+            "GIT_STATUS_MALFORMED",
+            "Git status contained non-UTF-8 path bytes.",
+            category="runtime",
+        ) from exc
+    if not decoded.endswith("\0"):
+        raise ToolFailure(
+            "GIT_STATUS_MALFORMED",
+            "Git status did not use complete NUL-delimited records.",
+            category="runtime",
+        )
+    records = decoded[:-1].split("\0")
+    branch = ""
+    upstream = ""
+    ahead = 0
+    behind = 0
+    index = 0
+    if records and records[0].startswith("## "):
+        branch, upstream, ahead, behind = parse_branch_line(records[0][3:])
+        index = 1
+    entries: list[dict[str, Any]] = []
+    while index < len(records):
+        record = records[index]
+        if not record or len(record) < 4 or record[2] != " " or record.startswith("## "):
+            raise ToolFailure(
+                "GIT_STATUS_MALFORMED",
+                "Git status contained a malformed porcelain record.",
+                category="runtime",
+            )
+        index_status = record[0]
+        worktree_status = record[1]
+        path_text = record[3:]
+        if not path_text:
+            raise ToolFailure("GIT_STATUS_MALFORMED", "Git status contained an empty path.", category="runtime")
+        original = None
+        if index_status in {"R", "C"} or worktree_status in {"R", "C"}:
+            index += 1
+            original = records[index] if index < len(records) else ""
+            if not original:
+                raise ToolFailure(
+                    "GIT_STATUS_MALFORMED",
+                    "Git rename/copy status omitted its original path.",
+                    category="runtime",
+                )
+        entries.append({
+            "path": path_text,
+            "original_path": original,
+            "index_status": index_status,
+            "worktree_status": worktree_status,
+        })
+        index += 1
+    if len(entries) > MAX_EXACT_STATUS_ENTRIES:
+        raise ToolFailure(
+            "WORKTREE_STATUS_TOO_LARGE",
+            "Git status exceeded the bounded exact-source identity limit.",
+            category="validation",
+            details={"max_entries": MAX_EXACT_STATUS_ENTRIES, "observed_entries": len(entries)},
+        )
+    return branch, upstream, ahead, behind, entries
 
 
 def parse_diff_files(diff_text: str) -> list[dict[str, Any]]:
@@ -397,38 +464,14 @@ class GitToolsMixin:
         )
         if root_check.returncode != 0:
             return self._git_status_not_repo(root_check)
-        status_cmd = [git, "-C", str(resolved.path), "status", "--porcelain=v1", "-b"]
-        if not include_untracked:
-            status_cmd.append("--untracked-files=no")
-        completed = self._run_git_text(status_cmd, timeout=10, env=git_env)
+        status_cmd = [git, "-C", str(resolved.path), "status", "--porcelain=v1", "-z", "-b"]
+        status_cmd.append("--untracked-files=all" if include_untracked else "--untracked-files=no")
+        completed = self._run_git_bytes(status_cmd, timeout=10, env=git_env)
         if completed.returncode != 0:
-            raise ToolFailure("GIT_ERROR", completed.stderr.strip() or "git status failed", category="runtime")
-        lines = completed.stdout.splitlines()
-        branch = ""
-        upstream = ""
-        ahead = 0
-        behind = 0
-        entries: list[dict[str, Any]] = []
-        for line in lines:
-            if line.startswith("## "):
-                branch, upstream, ahead, behind = parse_branch_line(line[3:])
-                continue
-            if not line:
-                continue
-            path_text = line[3:]
-            original = None
-            if " -> " in path_text:
-                original, path_text = path_text.split(" -> ", 1)
-            entries.append(
-                {
-                    "path": path_text,
-                    "original_path": original,
-                    "index_status": line[0],
-                    "worktree_status": line[1],
-                }
-            )
-            if len(entries) >= max_entries:
-                break
+            message = completed.stderr.decode("utf-8", errors="replace").strip()
+            raise ToolFailure("GIT_ERROR", message or "git status failed", category="runtime")
+        branch, upstream, ahead, behind, all_entries = _parse_git_status_porcelain_v1_z(completed.stdout)
+        entries = all_entries[:max_entries]
         return {
             "is_repo": True,
             "branch": branch,
@@ -436,9 +479,9 @@ class GitToolsMixin:
             "upstream": upstream,
             "ahead": ahead,
             "behind": behind,
-            "clean": not entries,
+            "clean": not all_entries,
             "entries": entries,
-            "truncated": len(entries) >= max_entries and len(lines) > max_entries + 1,
+            "truncated": len(all_entries) > max_entries,
         }
 
     @staticmethod

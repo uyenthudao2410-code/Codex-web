@@ -200,6 +200,32 @@ Workflow là: sửa source, chạy test, xem `update_pending`, gọi explicit pr
 và `activate_update` đúng component, rồi đọc operation status cùng
 `running_revision == disk_revision`. Không có watcher hoặc `restart-all`.
 
+### Activation Closure Contract
+
+Chuỗi authority bắt buộc là `ACCEPTED/CHECKPOINTED -> ACTIVATABLE -> component
+postflight -> LIVE_CLOSED`. Mỗi request phải mang đúng năm field của accepted
+checkpoint: `checkpoint_id`, `run_id`, `wave_id`, `proof_fingerprint` và
+`git_head`. Giá trị được so exact; runtime không trim/lowercase hoặc tái dựng ID
+không canonical để biến input thành authority. Cả source-checkpoint response,
+prepare response và post-cancel verification phải bind đúng operation/checkpoint.
+
+Component receipt dùng schema v2. Ngoài revision/health/instance/timestamp,
+receipt chỉ hợp lệ sau khi fence đã được cancel/release và một verifier mới đọc
+canonical lifecycle snapshot qua SQLite Backup API, immutable + query-only,
+`integrity_check=["ok"]`, không có foreign-key row, và có physical/logical SHA-256
+hợp lệ. Toàn bộ blocking count, unexplained active RUN và unbound live residue
+phải bằng 0; cờ `clean=true` riêng lẻ không đủ. Quy tắc này cũng áp dụng khi
+checkpoint không có component cần restart.
+
+Closure cuối còn yêu cầu component running/disk revision khớp, Runtime + Tunnel
+fully ready và connector contract current. `UNCHANGED_ACKNOWLEDGED` không cần tạo
+rediscovery giả khi current SHA đúng bằng acknowledged SHA và refresh flag là
+false. Khi SHA thay đổi thật, target process phải thực hiện `tools/list` hoặc
+`server/discover`, sau đó mới được acknowledgement qua Recovery Host; một
+`tools/call` thông thường không thay thế discovery. `LIVE_CLOSED` chỉ là local
+runtime closure; projection luôn ghi `release_state=NOT_RELEASED` và
+`production_state=NOT_CLAIMED`.
+
 For the ordinary development UI path, `npm run dev` automates only that supported
 Electron component flow: `CURRENT` is focused, `STALE` goes through
 `code.activation_preflight` plus `code.activate_update`, and `MISSING` is launched.
@@ -225,6 +251,12 @@ fingerprint chứng minh; staged/tracked source không có giới hạn này. Kh
 `recovery_host -> coding_mcp -> electron_ui`; busy/uncertain chỉ deferred, không
 restart. Queue nằm trong user-data nên Recovery Host mới tiếp tục được sau
 handoff và không cần ChatGPT gọi loopback IPC để kích hoạt mỗi lần.
+
+Exact worktree identity ép Git trả toàn bộ untracked paths, loại `.coding-tools`
+không phân biệt casing trên Windows, không đưa bytes của symlink/reparse target
+ngoài workspace vào digest, và fail closed nếu bounded status bị truncate. Python
+acceptance và Electron verifier phải tạo cùng fingerprint trên cùng snapshot;
+không được reuse proof khi hai phía lệch hoặc source tiếp tục đổi.
 
 Lần chuyển đầu tiên từ Recovery Host/Coding MCP legacy chưa expose activation
 RPC là một mixed-version bootstrap boundary. Process legacy không thể tự chứng

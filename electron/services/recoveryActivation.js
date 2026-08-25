@@ -6,6 +6,9 @@ const { recoveryHostLegacyV1Revision, RECOVERY_HOST_LEGACY_V1_CONTRACT } = requi
 const { readJson, writeJsonAtomic } = require('./jsonStore');
 const {
   activationPostflight,
+  BLOCKING_LIFECYCLE_COUNT_KEYS,
+  LIFECYCLE_COUNT_KEYS,
+  lifecycleDecisionIsClean,
   OLD_INSTANCE_STATES,
   normalizeActivationPostflight,
   verifyActivationPostflight
@@ -42,7 +45,7 @@ function exactObject(value, allowed, label) {
   return value;
 }
 
-function normalizeSourceCheckpoint(input) {
+function normalizeSourceCheckpoint(input, { allowEmptyProof = false } = {}) {
   if (input === undefined || input === null) {
     throw activationError('ACTIVATION_SOURCE_CHECKPOINT_REQUIRED', 'Activation requires an exact accepted source_checkpoint.');
   }
@@ -59,7 +62,9 @@ function normalizeSourceCheckpoint(input) {
       throw activationError('INVALID_SOURCE_CHECKPOINT', `source_checkpoint.${field} is invalid.`);
     }
   }
-  if (!REVISION_PATTERN.test(checkpoint.proof_fingerprint) || !GIT_OBJECT_ID_PATTERN.test(checkpoint.git_head)) {
+  if ((!REVISION_PATTERN.test(checkpoint.proof_fingerprint)
+      && !(allowEmptyProof && checkpoint.proof_fingerprint === ''))
+    || !GIT_OBJECT_ID_PATTERN.test(checkpoint.git_head)) {
     throw activationError('INVALID_SOURCE_CHECKPOINT', 'source_checkpoint proof or Git identity is invalid.');
   }
   return checkpoint;
@@ -98,37 +103,112 @@ function normalizeActivationRequest(input, now = Date.now(), { allowExpiredRepla
   return request;
 }
 
+function nonnegativeInteger(value) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+function canonicalLifecycleSnapshot(lifecycle) {
+  const snapshot = lifecycle && typeof lifecycle === 'object' && !Array.isArray(lifecycle)
+    ? lifecycle.snapshot
+    : null;
+  return Boolean(snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot)
+    && snapshot.backup_api_copy === true
+    && snapshot.immutable === true
+    && snapshot.query_only === true
+    && Array.isArray(snapshot.integrity_check)
+    && snapshot.integrity_check.length === 1
+    && snapshot.integrity_check[0] === 'ok'
+    && nonnegativeInteger(snapshot.foreign_key_check_rows)
+    && snapshot.foreign_key_check_rows === 0
+    && REVISION_PATTERN.test(String(snapshot.sha256 || ''))
+    && REVISION_PATTERN.test(String(snapshot.logical_sha256 || '')));
+}
+
+function sourceCheckpointMatches(value, expected) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || !expected || typeof expected !== 'object') return false;
+  return value.ok === true
+    && value.code === 'ACTIVATABLE'
+    && value.checkpoint_id === expected.checkpoint_id
+    && value.run_id === expected.run_id
+    && value.wave_id === expected.wave_id
+    && value.proof_fingerprint === expected.proof_fingerprint
+    && value.git_head === expected.git_head;
+}
+
+function lifecycleEvidence(source, request) {
+  const runtime = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
+  const lifecycle = runtime.lifecycle && typeof runtime.lifecycle === 'object' && !Array.isArray(runtime.lifecycle)
+    ? runtime.lifecycle
+    : null;
+  const rawCounts = runtime.counts && typeof runtime.counts === 'object' && !Array.isArray(runtime.counts)
+    ? runtime.counts
+    : null;
+  const countsValid = Boolean(rawCounts
+    && Object.keys(rawCounts).length === LIFECYCLE_COUNT_KEYS.length
+    && LIFECYCLE_COUNT_KEYS.every((key) => Object.hasOwn(rawCounts, key) && nonnegativeInteger(rawCounts[key])));
+  const counts = countsValid
+    ? Object.fromEntries(LIFECYCLE_COUNT_KEYS.map((key) => [key, rawCounts[key]]))
+    : {};
+  const unexplained = lifecycle?.unexplained_active_runs;
+  const residues = lifecycle?.unbound_live_resource_residues;
+  return {
+    lifecycle,
+    counts,
+    countsValid,
+    canonicalLifecycleObserved: canonicalLifecycleSnapshot(lifecycle),
+    sourceCheckpointVerified: sourceCheckpointMatches(runtime.source_checkpoint, request?.source_checkpoint),
+    operationBound: runtime.operation_id === request?.operation_id,
+    blockersClear: countsValid
+      && BLOCKING_LIFECYCLE_COUNT_KEYS.every((key) => counts[key] === 0)
+      && unexplained === 0
+      && residues === 0,
+    unexplainedActiveRuns: nonnegativeInteger(unexplained) ? unexplained : null,
+    unboundLiveResourceResidues: nonnegativeInteger(residues) ? residues : null
+  };
+}
+
+function verifiedLifecycleResponse(source, request, { fenced }) {
+  const evidence = lifecycleEvidence(source, request);
+  const expectedFence = fenced === true;
+  return Boolean(source && typeof source === 'object' && !Array.isArray(source)
+    && source.safe === true
+    && source.code === 'READY'
+    && evidence.operationBound
+    && evidence.sourceCheckpointVerified
+    && evidence.canonicalLifecycleObserved
+    && evidence.blockersClear
+    && source.fenced === expectedFence
+    && (expectedFence
+      ? source.fence_operation_id === request.operation_id
+      : source.fence_operation_id === null));
+}
+
 function lifecycleDecision(runtime, request, observedAt) {
   const source = runtime && typeof runtime === 'object' ? runtime : {};
-  const lifecycle = source.lifecycle && typeof source.lifecycle === 'object' ? source.lifecycle : null;
-  const counts = source.counts && typeof source.counts === 'object' ? source.counts : {};
-  const countKeys = [
-    'active_tool_calls', 'active_commands', 'starting_commands', 'active_background_operations',
-    'active_managed_processes', 'foreign_heavy_processes', 'active_agent_lanes',
-    'threshold_sensitive_stale_candidates', 'owned_codex_sidecar_residues'
-  ];
-  const boundedCounts = Object.fromEntries(countKeys.map((key) => [key, Math.max(0, Number.isSafeInteger(counts[key]) ? counts[key] : 0)]));
-  const sourceCheckpointVerified = source.source_checkpoint?.ok === true;
-  const lifecycleObserved = Boolean(lifecycle);
+  const evidence = lifecycleEvidence(source, request);
   return {
     schema_version: 1,
     clean: source.safe === true
-      && lifecycleObserved
-      && sourceCheckpointVerified === true
+      && source.code === 'READY'
+      && evidence.operationBound
+      && evidence.canonicalLifecycleObserved
+      && evidence.sourceCheckpointVerified
+      && evidence.blockersClear
       && source.fenced === false
       && source.fence_operation_id == null,
     code: String(source.code || 'ORCHESTRATION_STATE_UNCERTAIN').slice(0, 80),
     reason: String(source.reason || '').slice(0, 120),
     observed_at: String(observedAt || new Date().toISOString()),
-    canonical_lifecycle_observed: lifecycleObserved,
-    source_checkpoint_verified: sourceCheckpointVerified,
+    canonical_lifecycle_observed: evidence.canonicalLifecycleObserved,
+    source_checkpoint_verified: evidence.sourceCheckpointVerified,
     fence_released: source.fenced === false && source.fence_operation_id == null,
     fenced: typeof source.fenced === 'boolean' ? source.fenced : null,
     fence_operation_id: String(source.fence_operation_id || '') || null,
-    operation_id: String(source.operation_id || request?.operation_id || '') || null,
-    counts: boundedCounts,
-    unexplained_active_runs: Math.max(0, Number.isSafeInteger(lifecycle?.unexplained_active_runs) ? lifecycle.unexplained_active_runs : 0),
-    unbound_live_resource_residues: Math.max(0, Number.isSafeInteger(lifecycle?.unbound_live_resource_residues) ? lifecycle.unbound_live_resource_residues : 0)
+    operation_id: typeof source.operation_id === 'string' ? source.operation_id : null,
+    counts: evidence.counts,
+    unexplained_active_runs: evidence.unexplainedActiveRuns,
+    unbound_live_resource_residues: evidence.unboundLiveResourceResidues
   };
 }
 
@@ -380,17 +460,20 @@ class RecoveryActivation {
     } catch (error) {
       throw activationError(String(error?.code || 'LIFECYCLE_VERIFICATION_FAILED'), String(error?.message || 'Fresh lifecycle verification failed.'));
     }
-    if (!verification || verification.safe !== true || verification.fenced !== false
-      || verification.fence_operation_id != null
-      || verification.source_checkpoint?.ok !== true) {
+    const decision = lifecycleDecision(verification, request, new Date(this.now()).toISOString());
+    if (!verifiedLifecycleResponse(verification, request, { fenced: false })
+      || !lifecycleDecisionIsClean(decision)) {
       throw activationError('LIFECYCLE_VERIFICATION_FAILED', 'Fresh lifecycle evidence is not checkpoint-bound and unfenced.', {
         safe: verification?.safe,
+        operation_id_matches: verification?.operation_id === request.operation_id,
         fenced: verification?.fenced,
         fence_operation_id: verification?.fence_operation_id || null,
-        source_checkpoint: verification?.source_checkpoint || null
+        source_checkpoint_verified: decision.source_checkpoint_verified,
+        canonical_lifecycle_observed: decision.canonical_lifecycle_observed,
+        lifecycle_clean: decision.clean
       });
     }
-    return lifecycleDecision({ ...verification, operation_id: request.operation_id }, request, new Date(this.now()).toISOString());
+    return decision;
   }
 
   async releaseFenceAndBuildPostflight(request, values = {}) {
@@ -412,7 +495,7 @@ class RecoveryActivation {
   async verifyCheckpointLifecycle({ operationId, sourceCheckpoint }) {
     const request = {
       operation_id: String(operationId || ''),
-      source_checkpoint: normalizeSourceCheckpoint(sourceCheckpoint)
+      source_checkpoint: normalizeSourceCheckpoint(sourceCheckpoint, { allowEmptyProof: true })
     };
     return this.verifyFreshLifecycle(request);
   }
@@ -495,10 +578,11 @@ class RecoveryActivation {
         sourceCheckpoint: request.source_checkpoint
       });
       fencePrepared = preflight?.fenced === true;
-      const preflightBound = preflight?.safe === true
+      lifecycle = lifecycleDecision(preflight, request, new Date(this.now()).toISOString());
+      const preflightBound = verifiedLifecycleResponse(preflight, request, { fenced: true })
         && fencePrepared
         && preflight.fence_operation_id === request.operation_id
-        && preflight.source_checkpoint?.ok === true;
+        && lifecycle.source_checkpoint_verified === true;
       if (!preflightBound) {
         if (fencePrepared) await this.orchestrator.cancelCodeActivation(request.operation_id).catch(() => false);
         return this.actions.finish(request.operation_id, 'refused', null, {
@@ -508,7 +592,6 @@ class RecoveryActivation {
           message: `Activation refused: ${preflight?.reason || 'checkpoint-bound activation fence was not verified'}`
         });
       }
-      lifecycle = lifecycleDecision(preflight, request, new Date(this.now()).toISOString());
       this.actions.annotate(request.operation_id, { lifecycle_decision: lifecycle });
 
       if (revision.running_revision === revision.disk_revision) {

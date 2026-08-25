@@ -12,11 +12,27 @@ const {
   AcceptedCodeActivationController,
   acceptedReceipts,
   evaluateActivationEligibility,
+  fingerprintPaths,
   gitStatus,
+  parseGitStatus,
   workspaceIdentity
 } = require('../electron/services/recoveryActionStore');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
+
+function lifecycleCounts() {
+  return {
+    active_tool_calls: 0,
+    active_commands: 0,
+    starting_commands: 0,
+    active_background_operations: 0,
+    active_managed_processes: 0,
+    foreign_heavy_processes: 0,
+    active_agent_lanes: 0,
+    threshold_sensitive_stale_candidates: 0,
+    owned_codex_sidecar_residues: 0
+  };
+}
 
 function canonicalPythonFingerprint(workspace, identity) {
   const python = [
@@ -99,20 +115,47 @@ function insertAcceptedCheckpoint(workspace, { checkpointId, runId, waveId, head
   database.close();
 }
 
+function canonicalPythonIdentity(workspace) {
+  const python = [
+    'import json,sys',
+    'from pathlib import Path',
+    'from coding_tools_mcp.server import Runtime',
+    'runtime=Runtime(Path(sys.argv[1]))',
+    'try:',
+    '    status=runtime.git_status({"path": ".", "max_entries": 2000, "include_untracked": True})',
+    '    identity=runtime._orchestration_workspace_identity(".")',
+    '    print(json.dumps({"status": status, "identity": identity}, ensure_ascii=True))',
+    'finally:',
+    '    runtime.close()'
+  ].join('\n');
+  return JSON.parse(execFileSync('python', ['-c', python, workspace], {
+    encoding: 'utf8',
+    windowsHide: true,
+    env: {
+      ...process.env,
+      PYTHONDONTWRITEBYTECODE: '1',
+      PYTHONPATH: [path.join(REPO_ROOT, 'resources', 'coding-tools-mcp'), process.env.PYTHONPATH || '']
+        .filter(Boolean)
+        .join(path.delimiter)
+    }
+  }));
+}
+
 function checkpointFor(workspace, {
   checkpointId = 'checkpoint-evaluator-0001',
   runId = 'run-evaluator-0001',
   waveId = 'wave-evaluator-0001',
   head = git(workspace, ['rev-parse', 'HEAD']).trim(),
   files = ['electron/services/recoveryHost.js'],
-  source = 'task_modified_files'
+  source = 'task_modified_files',
+  proofFingerprint = files.length ? 'a'.repeat(64) : ''
 } = {}) {
   return {
     checkpoint_id: checkpointId,
     run_id: runId,
     wave_id: waveId,
     git_head: head,
-    proof_fingerprint: 'a'.repeat(64),
+    proof_fingerprint: proofFingerprint,
     status: 'accepted',
     metadata: { accepted_files: acceptedFileSet(workspace, files, { runId, waveId, source }) }
   };
@@ -151,7 +194,7 @@ function postflightFor(request, overrides = {}) {
       fence_released: true,
       fenced: false,
       fence_operation_id: null,
-      counts: {},
+      counts: lifecycleCounts(),
       unexplained_active_runs: 0,
       unbound_live_resource_residues: 0
     },
@@ -236,6 +279,7 @@ function controllerFor(paths, workspace, activation, options = {}) {
     revisions: { disk: (component) => ({ revision: String(diskRevision(component)) }) },
     runningRevisionProvider: (component) => ({ running_revision: String(runningRevision(component)), disk_revision: String(diskRevision(component)) }),
     activation: activationAdapter,
+    acceptedCheckpointProvider: options.acceptedCheckpointProvider,
     log: { warn() {} },
     intervalMs: 60000
   });
@@ -305,6 +349,71 @@ test('true no-mutation accepted checkpoint is activation eligible without compon
   assert.equal(result.eligible, true);
   assert.equal(result.accepted_receipts_complete, true);
   assert.deepEqual(result.affected_components, []);
+  assert.equal(result.proof_fingerprint, '');
+});
+
+test('zero-target controller performs fresh lifecycle verification with the canonical empty proof', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const checkpoint = checkpointFor(workspace, { files: [] });
+  let observed = null;
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => { throw new Error('component preflight must not run'); },
+    activate: async () => { throw new Error('component activation must not run'); },
+    status: () => null,
+    verifyCheckpointLifecycle: async (request) => {
+      observed = request;
+      return {
+        schema_version: 1,
+        operation_id: request.operationId,
+        clean: true,
+        code: 'READY',
+        reason: 'idle',
+        observed_at: '2026-08-25T08:00:01.000Z',
+        canonical_lifecycle_observed: true,
+        source_checkpoint_verified: true,
+        fence_released: true,
+        fenced: false,
+        fence_operation_id: null,
+        counts: lifecycleCounts(),
+        unexplained_active_runs: 0,
+        unbound_live_resource_residues: 0
+      };
+    }
+  }, {
+    acceptedCheckpointProvider: () => [checkpoint]
+  });
+  assert.equal(await controller.discover(), false);
+  assert.equal(observed.sourceCheckpoint.proof_fingerprint, '');
+  assert.equal(observed.sourceCheckpoint.checkpoint_id, checkpoint.checkpoint_id);
+  const closure = controller.status().closure_input;
+  assert.equal(closure.proof_fingerprint, '');
+  assert.equal(closure.lifecycle_clean, true);
+  assert.equal(closure.components_current, true);
+});
+
+test('empty proof is rejected for a mutation-bearing checkpoint and identity input is never normalized', async (t) => {
+  const { workspace } = await fixture(t);
+  const mutationBearing = checkpointFor(workspace, { proofFingerprint: '' });
+  assert.equal(evaluateActivationEligibility(mutationBearing, {
+    workspace,
+    currentHead: mutationBearing.git_head
+  }).code, 'CHECKPOINT_IDENTITY_INVALID');
+
+  for (const overrides of [
+    { checkpoint_id: ` ${'checkpoint-evaluator-0001'}` },
+    { run_id: 'run-evaluator-0001 ' },
+    { wave_id: 123 },
+    { proof_fingerprint: 'A'.repeat(64) },
+    { git_head: mutationBearing.git_head.toUpperCase() }
+  ]) {
+    const checkpoint = { ...checkpointFor(workspace), ...overrides };
+    const result = evaluateActivationEligibility(checkpoint, {
+      workspace,
+      currentHead: checkpointFor(workspace).git_head
+    });
+    assert.equal(result.eligible, false);
+    assert.equal(result.code, 'CHECKPOINT_IDENTITY_INVALID');
+  }
 });
 
 test('controller status identifies the V2 baseline and accepted-receipt trust model', async (t) => {
@@ -322,6 +431,120 @@ test('Recovery Host worktree fingerprint is byte-compatible with canonical Pytho
   const { workspace } = await fixture(t);
   const identity = await workspaceIdentity(workspace);
   assert.equal(identity.worktree_fp, canonicalPythonFingerprint(workspace, identity));
+});
+
+test('NUL-delimited Git parsers preserve Unicode paths and Node/Python worktree identity remains byte-compatible', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-fingerprint-unicode-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }));
+  git(root, ['init']);
+  git(root, ['config', 'user.email', 'fixture@example.invalid']);
+  git(root, ['config', 'user.name', 'Fixture']);
+  const relative = 'café.js';
+  write(path.join(root, relative), 'module.exports = "first";\n');
+  git(root, ['add', relative]);
+  git(root, ['commit', '-m', 'unicode baseline']);
+  write(path.join(root, relative), 'module.exports = "second";\n');
+
+  const pythonFirst = canonicalPythonIdentity(root);
+  const nodeStatusFirst = await gitStatus(root, true);
+  const nodeFirst = await workspaceIdentity(root);
+  const sourceEntries = (entries) => entries.filter((item) => {
+    const key = process.platform === 'win32' ? item.path.toLowerCase() : item.path;
+    return key !== '.coding-tools' && !key.startsWith('.coding-tools/');
+  });
+  assert.deepEqual(sourceEntries(nodeStatusFirst.entries), sourceEntries(pythonFirst.status.entries));
+  assert.equal(nodeFirst.entries[0].path, relative);
+  assert.equal(nodeFirst.worktree_fp, pythonFirst.identity.worktree_fp);
+
+  write(path.join(root, relative), 'module.exports = "third";\n');
+  const pythonSecond = canonicalPythonIdentity(root);
+  const nodeSecond = await workspaceIdentity(root);
+  assert.equal(nodeSecond.worktree_fp, pythonSecond.identity.worktree_fp);
+  assert.notEqual(nodeSecond.worktree_fp, nodeFirst.worktree_fp);
+});
+
+test('NUL-delimited Git parser consumes rename/copy source paths and fails closed on malformed input', () => {
+  const parsed = parseGitStatus(Buffer.from(
+    '## main...origin/main [ahead 1]\0R  current.js\0original.js\0C  copied.js\0source.js\0',
+    'utf8'
+  ));
+  assert.equal(parsed.branch, 'main');
+  assert.deepEqual(parsed.entries, [
+    { path: 'current.js', original_path: 'original.js', index_status: 'R', worktree_status: ' ' },
+    { path: 'copied.js', original_path: 'source.js', index_status: 'C', worktree_status: ' ' }
+  ]);
+
+  assert.throws(
+    () => parseGitStatus(Buffer.from([0x23, 0x23, 0x20, 0x6d, 0x61, 0x69, 0x6e, 0x00, 0x3f, 0x3f, 0x20, 0xff, 0x00])),
+    { code: 'AUTO_ACTIVATION_GIT_MALFORMED' }
+  );
+  assert.throws(
+    () => parseGitStatus(Buffer.from('## main\0R  current.js\0', 'utf8')),
+    { code: 'AUTO_ACTIVATION_GIT_MALFORMED' }
+  );
+  assert.throws(
+    () => parseGitStatus(Buffer.from(['## main', ...Array.from({ length: 2001 }, (_unused, index) => `?? file-${index}.js`), ''].join('\0'), 'utf8')),
+    { code: 'AUTO_ACTIVATION_GIT_TOO_LARGE' }
+  );
+});
+
+test('Recovery Host and Python fingerprints remain byte-compatible beyond 500 entries', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-fingerprint-many-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }));
+  const entries = Array.from({ length: 501 }, (_unused, index) => ({
+    path: `source/missing-${String(index).padStart(4, '0')}.js`,
+    index_status: '',
+    worktree_status: '?'
+  }));
+  const identity = { head: 'a'.repeat(40), branch: 'main', entries };
+  const electronFingerprint = fingerprintPaths(root, entries, identity.head, identity.branch);
+  assert.equal(electronFingerprint, canonicalPythonFingerprint(root, identity));
+});
+
+test('workspace identity forces complete untracked discovery despite Git configuration', async (t) => {
+  const { workspace } = await fixture(t, { concurrentUntracked: true });
+  assert.equal(git(workspace, ['config', 'status.showUntrackedFiles']).trim(), 'no');
+  const identity = await workspaceIdentity(workspace);
+  assert.equal(identity.entries.some((item) => item.path === 'electron/services/nativeService.js'), true);
+  assert.equal(identity.worktree_fp, canonicalPythonFingerprint(workspace, identity));
+});
+
+test('Windows workspace identity excludes case aliases of protected runtime evidence', {
+  skip: process.platform !== 'win32' ? 'Windows protected-path aliases are case-insensitive' : false
+}, async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-fingerprint-protected-case-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }));
+  git(root, ['init']);
+  git(root, ['config', 'user.email', 'fixture@example.invalid']);
+  git(root, ['config', 'user.name', 'Fixture']);
+  write(path.join(root, 'app.js'), 'module.exports = true;\n');
+  git(root, ['add', 'app.js']);
+  git(root, ['commit', '-m', 'baseline']);
+  write(path.join(root, '.CODING-TOOLS', 'runtime.json'), '{}\n');
+  const identity = await workspaceIdentity(root);
+  assert.deepEqual(identity.entries, []);
+  assert.equal(identity.worktree_fp, canonicalPythonFingerprint(root, identity));
+});
+
+test('Recovery Host and Python fingerprints use the same outside marker for linked targets', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-fingerprint-link-'));
+  const workspace = path.join(root, 'workspace');
+  const outside = path.join(root, 'outside');
+  fs.mkdirSync(workspace, { recursive: true });
+  fs.mkdirSync(outside, { recursive: true });
+  write(path.join(outside, 'secret.txt'), 'outside bytes must not enter the source fingerprint\n');
+  try {
+    fs.symlinkSync(outside, path.join(workspace, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
+  } catch (error) {
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    t.skip(`directory link creation unavailable: ${String(error?.code || error?.name || 'Error')}`);
+    return;
+  }
+  t.after(() => fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }));
+  const entries = [{ path: 'linked/secret.txt', index_status: '', worktree_status: 'M' }];
+  const identity = { head: 'b'.repeat(40), branch: 'main', entries };
+  const electronFingerprint = fingerprintPaths(workspace, entries, identity.head, identity.branch);
+  assert.equal(electronFingerprint, canonicalPythonFingerprint(workspace, identity));
 });
 
 test('finally accepted tracked recovery-host code activates automatically from canonical checkpoint', async (t) => {
