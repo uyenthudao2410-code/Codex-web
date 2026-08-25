@@ -817,10 +817,78 @@ class OrchestrationControl:
         return transitioned
 
     def checkpoint(self, ctx: RunContext, *, reason: str = "chatweb_sol_acceptance") -> RunContext:
+        self._checkpoint_terminal(
+            ctx,
+            reason=reason,
+            git_head=ctx.base_head,
+            proof_fingerprint="",
+            status="accepted",
+            metadata={},
+        )
+        return ctx
+
+    def checkpoint_with_receipt(
+        self,
+        ctx: RunContext,
+        *,
+        reason: str = "chatweb_sol_acceptance",
+        git_head: str = "",
+        proof_fingerprint: str = "",
+        status: str = "accepted",
+        metadata: dict[str, Any] | None = None,
+    ) -> tuple[RunContext, dict[str, Any]]:
+        """Commit a terminal checkpoint and synchronize context after commit."""
+        return self._checkpoint_terminal(
+            ctx,
+            reason=reason,
+            git_head=git_head or ctx.base_head,
+            proof_fingerprint=proof_fingerprint,
+            status=status,
+            metadata=metadata or {},
+        )
+
+    def _checkpoint_terminal(
+        self,
+        ctx: RunContext,
+        *,
+        reason: str,
+        git_head: str,
+        proof_fingerprint: str,
+        status: str,
+        metadata: dict[str, Any],
+    ) -> tuple[RunContext, dict[str, Any]]:
         if ctx.state != "ACCEPTING":
             raise OrchestrationControlError("CHECKPOINT_OUTSIDE_ACCEPTANCE", "Checkpoint requires ACCEPTING state.")
         self.finish_observation_stage(ctx, stage="acceptance")
-        return self.transition(ctx, "CHECKPOINTED", reason=reason)
+        try:
+            result = self.ledger.accept_checkpoint_atomic(
+                run_id=ctx.run_id,
+                wave_id=ctx.wave_id,
+                git_head=git_head,
+                proof_fingerprint=proof_fingerprint,
+                status=status,
+                metadata=metadata,
+                state_before=ctx.state,
+                state_after="CHECKPOINTED",
+                reason=reason,
+                delegation_id=ctx.delegation_id,
+            )
+        except Exception as exc:
+            # The durable transaction has rolled back.  Keep both the caller's
+            # context and the in-memory cache at ACCEPTING; do not emit a
+            # terminal callback or a misleading projection.
+            raise OrchestrationControlError(
+                "CHECKPOINT_ATOMIC_FAILED",
+                "Terminal acceptance/checkpoint transaction failed and was rolled back.",
+                details={"run_id": ctx.run_id, "wave_id": ctx.wave_id, "error_type": type(exc).__name__},
+            ) from exc
+        with self._lock:
+            ctx.state = "CHECKPOINTED"
+            self._contexts[ctx.run_id] = ctx
+            callback = self._on_wave_terminal
+        if callback is not None:
+            callback(ctx, "CHECKPOINTED")
+        return ctx, result
 
     def accept(self, ctx: RunContext, *, proof_summary: dict[str, Any] | None = None) -> RunContext:
         self.mark_accepting(ctx, proof_summary=proof_summary)

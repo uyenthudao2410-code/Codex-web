@@ -2,8 +2,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { RecoveryActionStore, OPERATION_ID_PATTERN } = require('./recoveryActionStore');
 const { isProcessAlive } = require('./recoveryIpc');
-const { recoveryHostLegacyV1Revision } = require('./componentRevision');
+const { recoveryHostLegacyV1Revision, RECOVERY_HOST_LEGACY_V1_CONTRACT } = require('./componentRevision');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
+const {
+  activationPostflight,
+  OLD_INSTANCE_STATES,
+  normalizeActivationPostflight,
+  verifyActivationPostflight
+} = require('./activationPostflight');
 
 const COMPONENTS = new Set(['coding_mcp', 'electron_ui', 'recovery_host']);
 const REVISION_PATTERN = /^[a-f0-9]{64}$/;
@@ -12,6 +18,10 @@ const MAX_REQUEST_TTL_MS = 60_000;
 const CLOCK_SKEW_MS = 5_000;
 const UI_RECOVERY_STATE_VERSION = 1;
 const UI_RECOVERY_EXIT_REASONS = new Set(['operator_quit', 'runtime_stop']);
+const SOURCE_CHECKPOINT_FIELDS = new Set(['checkpoint_id', 'run_id', 'wave_id', 'proof_fingerprint', 'git_head']);
+const SOURCE_ID_MAX_LENGTH = 256;
+const GIT_OBJECT_ID_PATTERN = /^[a-f0-9]{40,64}$/;
+const CHECKPOINT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
 
 function activationError(code, message, details = {}) {
   return Object.assign(new Error(message), { code, details });
@@ -32,10 +42,33 @@ function exactObject(value, allowed, label) {
   return value;
 }
 
+function normalizeSourceCheckpoint(input) {
+  if (input === undefined || input === null) {
+    throw activationError('ACTIVATION_SOURCE_CHECKPOINT_REQUIRED', 'Activation requires an exact accepted source_checkpoint.');
+  }
+  const value = exactObject(input, SOURCE_CHECKPOINT_FIELDS, 'source_checkpoint');
+  const checkpoint = {
+    checkpoint_id: typeof value.checkpoint_id === 'string' ? value.checkpoint_id : '',
+    run_id: typeof value.run_id === 'string' ? value.run_id : '',
+    wave_id: typeof value.wave_id === 'string' ? value.wave_id : '',
+    proof_fingerprint: typeof value.proof_fingerprint === 'string' ? value.proof_fingerprint : '',
+    git_head: typeof value.git_head === 'string' ? value.git_head : ''
+  };
+  for (const field of ['checkpoint_id', 'run_id', 'wave_id']) {
+    if (!CHECKPOINT_ID_PATTERN.test(checkpoint[field]) || checkpoint[field].length > SOURCE_ID_MAX_LENGTH) {
+      throw activationError('INVALID_SOURCE_CHECKPOINT', `source_checkpoint.${field} is invalid.`);
+    }
+  }
+  if (!REVISION_PATTERN.test(checkpoint.proof_fingerprint) || !GIT_OBJECT_ID_PATTERN.test(checkpoint.git_head)) {
+    throw activationError('INVALID_SOURCE_CHECKPOINT', 'source_checkpoint proof or Git identity is invalid.');
+  }
+  return checkpoint;
+}
+
 function normalizeActivationRequest(input, now = Date.now(), { allowExpiredReplay = false } = {}) {
   const value = exactObject(input, new Set([
     'operation_id', 'component', 'requested_at_unix_ms', 'expires_at_unix_ms',
-    'expected_disk_revision', 'allow_acceptance_pending'
+    'expected_disk_revision', 'allow_acceptance_pending', 'source_checkpoint'
   ]), 'activation request');
   const request = {
     operation_id: String(value.operation_id || ''),
@@ -43,7 +76,8 @@ function normalizeActivationRequest(input, now = Date.now(), { allowExpiredRepla
     requested_at_unix_ms: Number(value.requested_at_unix_ms || 0),
     expires_at_unix_ms: Number(value.expires_at_unix_ms || 0),
     expected_disk_revision: String(value.expected_disk_revision || '').toLowerCase(),
-    allow_acceptance_pending: value.allow_acceptance_pending === true
+    allow_acceptance_pending: value.allow_acceptance_pending === true,
+    source_checkpoint: normalizeSourceCheckpoint(value.source_checkpoint)
   };
   if (!OPERATION_ID_PATTERN.test(request.operation_id)) throw activationError('INVALID_OPERATION_ID', 'Invalid activation operation_id.');
   if (!COMPONENTS.has(request.component)) throw activationError('INVALID_COMPONENT', 'Activation component is not allowlisted.');
@@ -62,6 +96,40 @@ function normalizeActivationRequest(input, now = Date.now(), { allowExpiredRepla
     throw activationError('ACTIVATION_REQUEST_EXPIRED', 'Activation request timestamp is outside the allowed window.');
   }
   return request;
+}
+
+function lifecycleDecision(runtime, request, observedAt) {
+  const source = runtime && typeof runtime === 'object' ? runtime : {};
+  const lifecycle = source.lifecycle && typeof source.lifecycle === 'object' ? source.lifecycle : null;
+  const counts = source.counts && typeof source.counts === 'object' ? source.counts : {};
+  const countKeys = [
+    'active_tool_calls', 'active_commands', 'starting_commands', 'active_background_operations',
+    'active_managed_processes', 'foreign_heavy_processes', 'active_agent_lanes',
+    'threshold_sensitive_stale_candidates', 'owned_codex_sidecar_residues'
+  ];
+  const boundedCounts = Object.fromEntries(countKeys.map((key) => [key, Math.max(0, Number.isSafeInteger(counts[key]) ? counts[key] : 0)]));
+  const sourceCheckpointVerified = source.source_checkpoint?.ok === true;
+  const lifecycleObserved = Boolean(lifecycle);
+  return {
+    schema_version: 1,
+    clean: source.safe === true
+      && lifecycleObserved
+      && sourceCheckpointVerified === true
+      && source.fenced === false
+      && source.fence_operation_id == null,
+    code: String(source.code || 'ORCHESTRATION_STATE_UNCERTAIN').slice(0, 80),
+    reason: String(source.reason || '').slice(0, 120),
+    observed_at: String(observedAt || new Date().toISOString()),
+    canonical_lifecycle_observed: lifecycleObserved,
+    source_checkpoint_verified: sourceCheckpointVerified,
+    fence_released: source.fenced === false && source.fence_operation_id == null,
+    fenced: typeof source.fenced === 'boolean' ? source.fenced : null,
+    fence_operation_id: String(source.fence_operation_id || '') || null,
+    operation_id: String(source.operation_id || request?.operation_id || '') || null,
+    counts: boundedCounts,
+    unexplained_active_runs: Math.max(0, Number.isSafeInteger(lifecycle?.unexplained_active_runs) ? lifecycle.unexplained_active_runs : 0),
+    unbound_live_resource_residues: Math.max(0, Number.isSafeInteger(lifecycle?.unbound_live_resource_residues) ? lifecycle.unbound_live_resource_residues : 0)
+  };
 }
 
 class RecoveryActivation {
@@ -170,14 +238,14 @@ class RecoveryActivation {
     return this.writeUiRecoveryPreference(true, intent.reason);
   }
 
-  recoveryRevisionStatus() {
-    return this.revisions.status('recovery_host', this.recoveryRunningRevision);
+  recoveryRevisionStatus(options = {}) {
+    return this.revisions.status('recovery_host', this.recoveryRunningRevision, options);
   }
 
-  uiRevisionStatus() {
+  uiRevisionStatus(options = {}) {
     const presence = this.uiPresence();
     try {
-      return this.revisions.status('electron_ui', presence.alive ? this.uiRegistration?.revision || null : null);
+      return this.revisions.status('electron_ui', presence.alive ? this.uiRegistration?.revision || null : null, options);
     } catch (error) {
       return {
         running_revision: presence.alive ? this.uiRegistration?.revision || null : null,
@@ -189,14 +257,23 @@ class RecoveryActivation {
     }
   }
 
-  componentRevisionStatus(component) {
-    if (component === 'recovery_host') return this.recoveryRevisionStatus();
-    if (component === 'electron_ui') return this.uiRevisionStatus();
-    return this.orchestrator.codingMcpRevisionStatus();
+  componentRevisionStatus(component, options = {}) {
+    if (component === 'recovery_host') return this.recoveryRevisionStatus(options);
+    if (component === 'electron_ui') return this.uiRevisionStatus(options);
+    return this.orchestrator.codingMcpRevisionStatus(options);
+  }
+
+  async componentInstanceId(component) {
+    if (component === 'recovery_host') return String(this.recoveryInstanceId || '') || null;
+    if (component === 'electron_ui') return String(this.uiPresence().instance_id || '') || null;
+    try {
+      const health = await this.orchestrator.currentMcpHealth();
+      return String(health?.process_instance_id || '') || null;
+    } catch { return null; }
   }
 
   validateExpectedRevision(request) {
-    const status = this.componentRevisionStatus(request.component);
+    const status = this.componentRevisionStatus(request.component, { force: true });
     if (!status.disk_revision) throw activationError('REVISION_UNAVAILABLE', 'The component disk revision is unavailable.');
     if (status.disk_revision !== request.expected_disk_revision) {
       throw activationError('REVISION_CHANGED', 'The component changed after this activation request was created.', {
@@ -210,54 +287,199 @@ class RecoveryActivation {
   async preflight(input) {
     const request = normalizeActivationRequest(input, this.now());
     const revision = this.validateExpectedRevision(request);
-    if (revision.running_revision === revision.disk_revision) {
-      return { safe: true, code: 'ALREADY_CURRENT', component: request.component, revision };
+    const conflict = this.actions.active(request.operation_id);
+    if (conflict) {
+      return {
+        safe: false,
+        code: 'ACTIVATION_CONFLICT',
+        component: request.component,
+        revision,
+        conflicting_operation_id: conflict.operation_id,
+        lifecycle_decision: lifecycleDecision(null, request, new Date(this.now()).toISOString())
+      };
     }
-    if (request.component === 'electron_ui') {
-      return { safe: true, code: 'READY', component: request.component, revision };
+    const inspected = await this.orchestrator.inspectCodeActivation();
+    const runtime = inspected.code === 'COMPONENT_STOPPED'
+      ? inspected
+      : await this.orchestrator.verifyCodeActivation(request.operation_id, request.source_checkpoint);
+    if (runtime.code === 'COMPONENT_STOPPED' && request.component !== 'coding_mcp') {
+      return {
+        safe: false,
+        code: 'ORCHESTRATION_STATE_UNCERTAIN',
+        component: request.component,
+        revision,
+        runtime,
+        lifecycle_decision: lifecycleDecision(runtime, request, new Date(this.now()).toISOString())
+      };
     }
-    const runtime = await this.orchestrator.inspectCodeActivation();
     if (!runtime.safe) {
       if (runtime.code === 'ACCEPTANCE_PENDING' && request.allow_acceptance_pending) {
-        return { safe: true, code: 'READY', component: request.component, revision, runtime: { ...runtime, acceptance_preserved: true } };
+        const preserved = { ...runtime, safe: true, acceptance_preserved: true };
+        return {
+          safe: true,
+          code: revision.running_revision === revision.disk_revision ? 'ALREADY_CURRENT' : 'READY',
+          component: request.component,
+          revision,
+          runtime: preserved,
+          lifecycle_decision: lifecycleDecision(preserved, request, new Date(this.now()).toISOString())
+        };
       }
-      return { safe: false, code: runtime.code || 'ORCHESTRATION_STATE_UNCERTAIN', component: request.component, revision, runtime };
+      return {
+        safe: false,
+        code: runtime.code || 'ORCHESTRATION_STATE_UNCERTAIN',
+        component: request.component,
+        revision,
+        runtime,
+        lifecycle_decision: lifecycleDecision(runtime, request, new Date(this.now()).toISOString())
+      };
     }
-    return { safe: true, code: 'READY', component: request.component, revision, runtime };
+    return {
+      safe: true,
+      code: runtime.code === 'COMPONENT_STOPPED'
+        ? 'COMPONENT_STOPPED'
+        : revision.running_revision === revision.disk_revision ? 'ALREADY_CURRENT' : 'READY',
+      component: request.component,
+      revision,
+      runtime,
+      lifecycle_decision: lifecycleDecision(runtime, request, new Date(this.now()).toISOString())
+    };
+  }
+
+  async componentInstanceEvidence(component) {
+    if (component === 'recovery_host') {
+      const instanceId = String(this.recoveryInstanceId || '') || null;
+      return { instanceId, state: instanceId ? 'RUNNING' : null, proven: Boolean(instanceId) };
+    }
+    if (component === 'electron_ui') {
+      const presence = this.uiPresence();
+      if (presence.alive && presence.instance_id) {
+        return { instanceId: String(presence.instance_id), state: 'RUNNING', proven: true };
+      }
+      // A local presence census is authoritative for the tracked UI process:
+      // either no UI is registered or the exact tracked PID is dead.
+      if (!presence.alive && (presence.tracked === false || presence.instance_id)) {
+        return { instanceId: String(presence.instance_id || '') || null, state: 'ABSENT', proven: true };
+      }
+      return { instanceId: null, state: null, proven: false };
+    }
+    try {
+      const health = await this.orchestrator.currentMcpHealth();
+      const instanceId = String(health?.process_instance_id || '') || null;
+      if (instanceId) return { instanceId, state: 'RUNNING', proven: true };
+    } catch { /* the inspection below distinguishes stopped from unavailable */ }
+    return { instanceId: null, state: null, proven: false };
+  }
+
+  async verifyFreshLifecycle(request) {
+    if (typeof this.orchestrator.verifyCodeActivation !== 'function') {
+      throw activationError('LIFECYCLE_VERIFICATION_UNAVAILABLE', 'The official post-cancel lifecycle verifier is unavailable.');
+    }
+    let verification;
+    try {
+      verification = await this.orchestrator.verifyCodeActivation(request.operation_id, request.source_checkpoint);
+    } catch (error) {
+      throw activationError(String(error?.code || 'LIFECYCLE_VERIFICATION_FAILED'), String(error?.message || 'Fresh lifecycle verification failed.'));
+    }
+    if (!verification || verification.safe !== true || verification.fenced !== false
+      || verification.fence_operation_id != null
+      || verification.source_checkpoint?.ok !== true) {
+      throw activationError('LIFECYCLE_VERIFICATION_FAILED', 'Fresh lifecycle evidence is not checkpoint-bound and unfenced.', {
+        safe: verification?.safe,
+        fenced: verification?.fenced,
+        fence_operation_id: verification?.fence_operation_id || null,
+        source_checkpoint: verification?.source_checkpoint || null
+      });
+    }
+    return lifecycleDecision({ ...verification, operation_id: request.operation_id }, request, new Date(this.now()).toISOString());
+  }
+
+  async releaseFenceAndBuildPostflight(request, values = {}) {
+    // Replacing Coding MCP destroys the old in-memory fence along with the old
+    // process, so cancel may legitimately report "already absent".  The
+    // authoritative condition is the fresh, authenticated verify call below:
+    // it must observe this exact operation unfenced and revalidate the exact
+    // source checkpoint against a new immutable lifecycle census.
+    await this.orchestrator.cancelCodeActivation(request.operation_id).catch(() => false);
+    const lifecycle = await this.verifyFreshLifecycle(request);
+    return activationPostflight(request, {
+      ...values,
+      startedAt: values.startedAt || new Date(this.now()).toISOString(),
+      completedAt: values.completedAt || new Date(this.now()).toISOString(),
+      lifecycle
+    });
+  }
+
+  async verifyCheckpointLifecycle({ operationId, sourceCheckpoint }) {
+    const request = {
+      operation_id: String(operationId || ''),
+      source_checkpoint: normalizeSourceCheckpoint(sourceCheckpoint)
+    };
+    return this.verifyFreshLifecycle(request);
   }
 
   async activate(input) {
     const now = this.now();
     const replayRequest = normalizeActivationRequest(input, now, { allowExpiredReplay: true });
     const replay = this.actions.replay(replayRequest);
-    if (replay) return { ...replay, deduplicated: true };
+    const resumableStopped = replay?.state === 'accepted'
+      && replay?.component === 'coding_mcp'
+      && replay?.result?.component_stopped === true;
+    if (replay && !resumableStopped) return { ...replay, deduplicated: true };
     const request = normalizeActivationRequest(input, now);
-    const claim = this.actions.begin(request);
-    if (!claim.created) return { ...claim.record, deduplicated: true };
+    let claim;
+    if (resumableStopped) {
+      this.actions.resume(request.operation_id);
+      claim = { created: true, record: this.actions.get(request.operation_id) };
+    } else {
+      claim = this.actions.begin(request);
+      if (!claim.created) return { ...claim.record, deduplicated: true };
+    }
     let revision;
+    let lifecycle = null;
+    const startedAt = new Date(this.now()).toISOString();
+    let fencePrepared = false;
     try {
       revision = this.validateExpectedRevision(request);
-      if (revision.running_revision === revision.disk_revision) {
-        return this.actions.finish(request.operation_id, 'completed', {
-          activated: false,
-          already_current: true,
-          revision: revision.disk_revision
-        });
-      }
-      if (request.component === 'electron_ui') {
-        ensureActivationFresh(request, this.now());
-        if (!this.uiRegistration && typeof this.spawnElectronUi === 'function') {
-          await this.spawnElectronUi({ expiresAtUnixMs: request.expires_at_unix_ms });
-        }
-        return this.actions.get(request.operation_id);
-      }
-
+      const oldEvidence = await this.componentInstanceEvidence(request.component);
+      const oldInstanceId = oldEvidence.instanceId;
+      const oldInstanceState = oldEvidence.state;
+      this.actions.annotate(request.operation_id, {
+        started_at: startedAt,
+        old_instance_id: oldInstanceId,
+        old_instance_state: oldInstanceState
+      });
       const inspection = await this.orchestrator.inspectCodeActivation();
+      ensureActivationFresh(request, this.now());
       if (inspection.code === 'COMPONENT_STOPPED' && request.component === 'coding_mcp') {
-        return this.actions.finish(request.operation_id, 'completed', {
+        lifecycle = lifecycleDecision(inspection, request, new Date(this.now()).toISOString());
+        this.actions.annotate(request.operation_id, { lifecycle_decision: lifecycle });
+        const stoppedStatus = this.componentRevisionStatus('coding_mcp', { force: true });
+        const completedAt = new Date(this.now()).toISOString();
+        const postflight = activationPostflight(request, {
+          oldInstanceId,
+          oldInstanceState: oldInstanceState || 'ABSENT',
+          newInstanceId: null,
+          runningRevision: stoppedStatus.running_revision,
+          diskRevision: stoppedStatus.disk_revision || request.expected_disk_revision,
+          startedAt,
+          completedAt,
+          healthVerified: false,
+          lifecycle
+        });
+        return this.actions.defer(request.operation_id, {
           activated: false,
           component_stopped: true,
-          next_start_revision: request.expected_disk_revision
+          next_start_revision: request.expected_disk_revision,
+          postflight
+        }, {
+          code: 'COMPONENT_AWAITING_START',
+          message: 'Coding MCP is stopped; activation remains resumable until a fresh instance starts.'
+        });
+      }
+      if (inspection.code === 'COMPONENT_STOPPED') {
+        return this.actions.finish(request.operation_id, 'refused', null, {
+          code: 'ORCHESTRATION_STATE_UNCERTAIN',
+          message: 'Canonical lifecycle evidence is unavailable while Coding MCP is stopped.'
         });
       }
       if (!inspection.safe && !(inspection.code === 'ACCEPTANCE_PENDING' && request.allow_acceptance_pending)) {
@@ -266,25 +488,92 @@ class RecoveryActivation {
           message: `Activation refused: ${inspection.reason || 'runtime preflight failed'}`
         });
       }
-      if (inspection.code !== 'COMPONENT_STOPPED') {
-        const preflight = await this.orchestrator.prepareCodeActivation({
-          operationId: request.operation_id,
-          expiresAtUnixMs: Math.min(request.expires_at_unix_ms, this.now() + 55_000),
-          allowAcceptancePending: request.allow_acceptance_pending
+      const preflight = await this.orchestrator.prepareCodeActivation({
+        operationId: request.operation_id,
+        expiresAtUnixMs: Math.min(request.expires_at_unix_ms, this.now() + 55_000),
+        allowAcceptancePending: request.allow_acceptance_pending,
+        sourceCheckpoint: request.source_checkpoint
+      });
+      fencePrepared = preflight?.fenced === true;
+      const preflightBound = preflight?.safe === true
+        && fencePrepared
+        && preflight.fence_operation_id === request.operation_id
+        && preflight.source_checkpoint?.ok === true;
+      if (!preflightBound) {
+        if (fencePrepared) await this.orchestrator.cancelCodeActivation(request.operation_id).catch(() => false);
+        return this.actions.finish(request.operation_id, 'refused', null, {
+          code: preflight?.safe === false
+            ? preflight.code || 'ORCHESTRATION_STATE_UNCERTAIN'
+            : 'ACTIVATION_PREFLIGHT_UNVERIFIED',
+          message: `Activation refused: ${preflight?.reason || 'checkpoint-bound activation fence was not verified'}`
         });
-        if (!preflight.safe) {
-          return this.actions.finish(request.operation_id, 'refused', null, {
-            code: preflight.code || 'ORCHESTRATION_STATE_UNCERTAIN',
-            message: `Activation refused: ${preflight.reason || 'runtime preflight failed'}`
-          });
-        }
       }
+      lifecycle = lifecycleDecision(preflight, request, new Date(this.now()).toISOString());
+      this.actions.annotate(request.operation_id, { lifecycle_decision: lifecycle });
+
+      if (revision.running_revision === revision.disk_revision) {
+        const current = this.validateExpectedRevision(request);
+        const currentEvidence = await this.componentInstanceEvidence(request.component);
+        const currentInstanceId = currentEvidence.instanceId || oldInstanceId;
+        const completedAt = new Date(this.now()).toISOString();
+        const postflight = await this.releaseFenceAndBuildPostflight(request, {
+          oldInstanceId: currentInstanceId,
+          oldInstanceState: currentEvidence.state || oldInstanceState,
+          newInstanceId: currentInstanceId,
+          runningRevision: current.running_revision,
+          diskRevision: current.disk_revision,
+          startedAt,
+          completedAt,
+          healthVerified: Boolean(currentInstanceId && current.running_revision === current.disk_revision),
+          alreadyCurrent: true
+        });
+        return this.actions.finish(request.operation_id, 'completed', {
+          activated: false,
+          already_current: true,
+          revision: current.disk_revision,
+          postflight
+        });
+      }
+
+      if (request.component === 'electron_ui') {
+        ensureActivationFresh(request, this.now());
+        if (!this.uiPresence().alive) {
+          if (typeof this.spawnElectronUi !== 'function') {
+            await this.orchestrator.cancelCodeActivation(request.operation_id).catch(() => false);
+            return this.actions.finish(request.operation_id, 'failed', null, {
+              code: 'UI_REPLACEMENT_UNAVAILABLE',
+              message: 'Electron UI replacement launcher is unavailable.'
+            });
+          }
+          await this.spawnElectronUi({ expiresAtUnixMs: request.expires_at_unix_ms });
+        }
+        return this.actions.get(request.operation_id);
+      }
+
       if (request.component === 'coding_mcp') {
         ensureActivationFresh(request, this.now());
         const result = await this.orchestrator.activateCodingMcpUpdate(request.expected_disk_revision, {
           expiresAtUnixMs: request.expires_at_unix_ms
         });
-        return this.actions.finish(request.operation_id, 'completed', { activated: true, ...result });
+        const current = this.componentRevisionStatus('coding_mcp', { force: true });
+        const completedAt = new Date(this.now()).toISOString();
+        const postflight = await this.releaseFenceAndBuildPostflight(request, {
+          oldInstanceState: OLD_INSTANCE_STATES[1],
+          oldInstanceId: result.old_instance_id || oldInstanceId,
+          newInstanceId: result.new_instance_id,
+          runningRevision: current.running_revision || result.new_revision,
+          diskRevision: current.disk_revision,
+          startedAt,
+          completedAt,
+          healthVerified: result.health_verified === true
+        });
+        const payload = { activated: true, ...result, postflight };
+        return postflight.postflight_verified
+          ? this.actions.finish(request.operation_id, 'completed', payload)
+          : this.actions.finish(request.operation_id, 'failed', payload, {
+            code: 'POSTFLIGHT_UNVERIFIED',
+            message: 'Coding MCP replacement did not satisfy the checkpoint-bound postflight contract.'
+          });
       }
       ensureActivationFresh(request, this.now());
       if (typeof this.spawnRecoveryReplacement !== 'function' || typeof this.beginRecoveryHandoff !== 'function') {
@@ -302,7 +591,7 @@ class RecoveryActivation {
       this.beginRecoveryHandoff(request.operation_id);
       return this.actions.get(request.operation_id);
     } catch (error) {
-      if (request.component !== 'electron_ui') await this.orchestrator.cancelCodeActivation(request.operation_id).catch(() => false);
+      await this.orchestrator.cancelCodeActivation(request.operation_id).catch(() => false);
       const code = String(error?.code || '');
       const expiredAfterMutation = code === 'ACTIVATION_REQUEST_EXPIRED' && error?.details?.process_mutated === true;
       const state = ['RUNTIME_BUSY', 'ORCHESTRATION_STATE_UNCERTAIN', 'ACCEPTANCE_PENDING', 'WORKSPACE_MISMATCH', 'COMPONENT_STOPPED', 'REVISION_CHANGED', 'ACTIVATION_REQUEST_EXPIRED'].includes(code)
@@ -318,7 +607,7 @@ class RecoveryActivation {
     return record;
   }
 
-  registerUi(input) {
+  async registerUi(input) {
     const value = exactObject(input, new Set(['instance_id', 'pid', 'revision', 'started_at_unix_ms']), 'UI registration');
     const registration = {
       instance_id: String(value.instance_id || ''),
@@ -342,22 +631,68 @@ class RecoveryActivation {
       && Number(item.expires_at_unix_ms || 0) > this.now()
     )) || null;
     if (!pending) return { registered: true, restart_required: false, code_revision: this.uiRevisionStatus() };
-    if (pending.expected_disk_revision === registration.revision) {
-      const completed = this.actions.finish(pending.operation_id, 'completed', {
-        activated: true,
-        new_instance_id: registration.instance_id,
-        new_revision: registration.revision,
-        health_verified: true
-      });
-      return { registered: true, restart_required: false, activation: completed, code_revision: this.uiRevisionStatus() };
+    if (pending.expected_disk_revision !== registration.revision) {
+      if (!pending.old_instance_id) this.actions.annotate(pending.operation_id, { old_instance_id: registration.instance_id });
+      return {
+        registered: true,
+        restart_required: true,
+        operation_id: pending.operation_id,
+        expires_at_unix_ms: Number(pending.expires_at_unix_ms || 0),
+        expected_revision: pending.expected_disk_revision,
+        code_revision: this.uiRevisionStatus()
+      };
     }
+    const refreshed = this.actions.get(pending.operation_id) || pending;
+    const request = {
+      operation_id: pending.operation_id,
+      component: 'electron_ui',
+      expected_disk_revision: refreshed.expected_disk_revision,
+      source_checkpoint: refreshed.source_checkpoint || null
+    };
+    const revision = this.uiRevisionStatus({ force: true });
+    const completedAt = new Date(this.now()).toISOString();
+    let postflight;
+    try {
+      postflight = await this.releaseFenceAndBuildPostflight(request, {
+        oldInstanceState: refreshed.old_instance_state,
+        oldInstanceId: refreshed.old_instance_id,
+        newInstanceId: registration.instance_id,
+        runningRevision: revision.running_revision,
+        diskRevision: revision.disk_revision,
+        startedAt: refreshed.started_at,
+        completedAt,
+        healthVerified: this.uiPresence().alive
+      });
+    } catch (error) {
+      const failed = this.actions.finish(pending.operation_id, 'failed', null, {
+        code: String(error?.code || 'POSTFLIGHT_LIFECYCLE_UNVERIFIED'),
+        message: String(error?.message || 'Electron UI postflight lifecycle verification failed.')
+      });
+      return { registered: true, restart_required: true, activation: failed, code_revision: revision };
+    }
+    const result = {
+      activated: true,
+      old_instance_id: refreshed.old_instance_id,
+      new_instance_id: registration.instance_id,
+      new_revision: registration.revision,
+      health_verified: postflight.health_verified,
+      postflight
+    };
+    const completed = postflight.postflight_verified
+      ? this.actions.finish(pending.operation_id, 'completed', result)
+      : this.actions.finish(pending.operation_id, 'failed', result, {
+        code: revision.disk_revision !== pending.expected_disk_revision
+          ? 'REVISION_CHANGED_DURING_ACTIVATION'
+          : (!refreshed.old_instance_id || refreshed.old_instance_id === registration.instance_id)
+            ? 'ACTIVATION_IDENTITY_UNCHANGED'
+            : 'POSTFLIGHT_UNVERIFIED',
+        message: 'Electron UI registration did not satisfy the checkpoint-bound postflight contract.'
+      });
     return {
       registered: true,
-      restart_required: true,
-      operation_id: pending.operation_id,
-      expires_at_unix_ms: Number(pending.expires_at_unix_ms || 0),
-      expected_revision: pending.expected_disk_revision,
-      code_revision: this.uiRevisionStatus()
+      restart_required: completed.state !== 'completed',
+      activation: completed,
+      code_revision: revision
     };
   }
 
@@ -366,7 +701,7 @@ class RecoveryActivation {
     if (!record || record.component !== 'recovery_host' || record.state !== 'accepted') {
       throw activationError('ACTIVATION_OPERATION_MISMATCH', 'Recovery replacement operation is not pending.');
     }
-    const revision = this.recoveryRevisionStatus();
+    const revision = this.recoveryRevisionStatus({ force: true });
     if (!revision.running_revision || revision.running_revision !== revision.disk_revision || revision.update_pending) {
       throw activationError('REVISION_VERIFICATION_FAILED', 'Replacement Recovery Host did not load the expected revision.');
     }
@@ -393,11 +728,34 @@ class RecoveryActivation {
   }
 
   async completeRecoveryReplacement(operationId, oldInstanceId, options = {}) {
-    const { revision, revisionContract } = this.verifyRecoveryReplacement(operationId);
-    await this.orchestrator.cancelCodeActivation(operationId).catch(() => false);
-    return this.actions.finish(operationId, 'completed', {
+    const { record, revision, revisionContract } = this.verifyRecoveryReplacement(operationId);
+    if (!record.old_instance_id || String(record.old_instance_id) === String(this.recoveryInstanceId || '')) {
+      throw activationError('ACTIVATION_IDENTITY_UNCHANGED', 'Recovery Host replacement did not produce a new verified instance identity.');
+    }
+    if (String(oldInstanceId || '') !== String(record.old_instance_id || '')) {
+      throw activationError('ACTIVATION_OPERATION_MISMATCH', 'Recovery Host replacement old instance does not match the durable activation record.');
+    }
+    const request = {
+      operation_id: operationId,
+      component: 'recovery_host',
+      expected_disk_revision: record.expected_disk_revision,
+      source_checkpoint: record.source_checkpoint || null
+    };
+    const completedAt = new Date(this.now()).toISOString();
+    const postflight = await this.releaseFenceAndBuildPostflight(request, {
+      oldInstanceState: record.old_instance_state,
+      oldInstanceId: record.old_instance_id,
+      newInstanceId: this.recoveryInstanceId,
+      runningRevision: revision.running_revision,
+      diskRevision: revision.disk_revision,
+      startedAt: record.started_at,
+      completedAt,
+      healthVerified: true,
+      revisionContract
+    });
+    const result = {
       activated: true,
-      old_instance_id: oldInstanceId,
+      old_instance_id: record.old_instance_id,
       new_instance_id: this.recoveryInstanceId,
       old_revision: null,
       new_revision: revision.running_revision,
@@ -408,14 +766,24 @@ class RecoveryActivation {
       legacy_device_migration: {
         primary_required: options.primaryLegacyMigrationRequired === true,
         recovery_required: options.recoveryLegacyMigrationRequired === true
-      }
-    });
+      },
+      postflight
+    };
+    return postflight.postflight_verified
+      ? this.actions.finish(operationId, 'completed', result)
+      : this.actions.finish(operationId, 'failed', result, {
+        code: 'POSTFLIGHT_UNVERIFIED',
+        message: 'Recovery Host replacement did not satisfy the checkpoint-bound postflight contract.'
+      });
   }
 }
 
 module.exports = {
   RecoveryActivation,
   normalizeActivationRequest,
+  normalizeSourceCheckpoint,
+  activationPostflight,
+  lifecycleDecision,
   COMPONENTS,
   REVISION_PATTERN,
   MAX_REQUEST_TTL_MS,

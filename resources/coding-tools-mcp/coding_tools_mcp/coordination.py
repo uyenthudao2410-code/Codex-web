@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from .envutils import ENV_PREFIX
-from .acceptance_receipts import _accepted_file_receipts
+from .acceptance_receipts import (
+    _accepted_checkpoint_file_receipts,
+    _durable_wave_acceptance_paths,
+    _verify_activation_source_checkpoint,
+    _verify_lifecycle_snapshot,
+    passed_proof_fingerprint,
+)
 from .codex_bridge import CodexBridgeError
 from .errors import ToolFailure
 from .fs_utils import is_relative_to
@@ -25,7 +31,6 @@ from .solution_shadow_control import SolutionShadowControlMixin
 SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
 SUPERVISOR_RESTART_RESPONSE_GRACE_MS = 2_000
 BACKGROUND_OPERATION_WAIT_MAX_MS = 60_000
-
 COORDINATION_LANE_OUTPUT_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -59,7 +64,6 @@ COORDINATION_LANE_OUTPUT_SCHEMA = {
         "confidence",
     ],
 }
-
 class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLineageControlMixin):
     def _activation_owned_codex_sidecar_rows(self, managed: dict[str, Any]) -> list[dict[str, Any]]:
         bridge_job_id = str(getattr(self._codex_bridge, "_managed_job_id", "") or "")
@@ -78,7 +82,6 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
             and not str(row.get("wave_id") or "")
             and str(row.get("lifecycle_state") or "") in {"starting", "running", "terminating", "orphaned"}
         ]
-
     def _activation_cleanup_locked(self) -> None:
         fence = self.activation_fence
         if fence and int(fence.get("expires_at_unix_ms") or 0) <= int(time.time() * 1000):
@@ -148,7 +151,6 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                 if isinstance(item, dict) and str(item.get("classification") or "") == "P5_EXPERIMENT_ANCHOR"
             }),
         }
-
     def activation_preflight(
         self,
         *,
@@ -157,15 +159,18 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
         allow_acceptance_pending: bool = False,
         prepare: bool = False,
         ignore_active_tool_calls: int = 0,
+        source_checkpoint: Any = None,
+        require_unfenced: bool = False,
     ) -> dict[str, Any]:
         """Return canonical restart safety and optionally fence new tool admission."""
         with self.activation_lock:
             self._activation_cleanup_locked()
             now_ms = int(time.time() * 1000)
-            if prepare:
+            if prepare or require_unfenced:
                 allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
                 if not (16 <= len(operation_id) <= 128) or any(char not in allowed for char in operation_id):
                     raise ToolFailure("INVALID_OPERATION_ID", "Invalid activation operation_id.", category="validation")
+            if prepare:
                 if expires_at_unix_ms <= now_ms or expires_at_unix_ms > now_ms + 60_000:
                     raise ToolFailure("ACTIVATION_REQUEST_EXPIRED", "Activation expiry must be within the next 60 seconds.", category="validation")
             if self.activation_fence and str(self.activation_fence.get("operation_id") or "") != operation_id:
@@ -174,6 +179,15 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                     "code": "RUNTIME_BUSY",
                     "reason": "another_activation_pending",
                     "operation_id": str(self.activation_fence.get("operation_id") or ""),
+                }
+            if require_unfenced and self.activation_fence:
+                return {
+                    "safe": False,
+                    "code": "RUNTIME_BUSY",
+                    "reason": "activation_fence_present",
+                    "operation_id": operation_id,
+                    "fence_operation_id": str(self.activation_fence.get("operation_id") or ""),
+                    "fenced": True,
                 }
 
             with self.sessions_lock:
@@ -231,6 +245,14 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                     "reason": "activation_lifecycle_snapshot_failed",
                     "error_type": type(exc).__name__,
                     "counts": counts,
+                }
+            if not _verify_lifecycle_snapshot(lifecycle):
+                return {
+                    "safe": False,
+                    "code": "ORCHESTRATION_STATE_UNCERTAIN",
+                    "reason": "lifecycle_snapshot_integrity_failed",
+                    "counts": counts,
+                    "lifecycle": lifecycle,
                 }
             lifecycle_counts = lifecycle.get("classification_counts") if isinstance(lifecycle.get("classification_counts"), dict) else {}
             threshold_candidates = int(lifecycle_counts.get("THRESHOLD_SENSITIVE_STALE_CANDIDATE") or 0)
@@ -355,6 +377,15 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                         "counts": counts,
                     }
 
+            checkpoint_verification = None if source_checkpoint is None else _verify_activation_source_checkpoint(
+                self.workspace.root,
+                self.orchestration_ledger,
+                source_checkpoint,
+                current_git_head=str(self._orchestration_workspace_identity(str(self.workspace.root)).get("base_head") or ""),
+                lifecycle=lifecycle,
+            )
+            if checkpoint_verification is not None and checkpoint_verification.get("ok") is not True:
+                return {**checkpoint_verification, "safe": False, "counts": counts, "lifecycle": lifecycle}
             if prepare and owned_codex_sidecars:
                 self._codex_bridge.close()
                 refreshed_managed = self.execution_resource_governor.snapshot(limit=100)
@@ -383,6 +414,9 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                 "server_instance_id": self.server_instance_id,
                 "workspace": str(self.workspace.root),
                 "lifecycle": lifecycle,
+                "source_checkpoint": checkpoint_verification,
+                "fenced": bool(self.activation_fence),
+                "fence_operation_id": str(self.activation_fence.get("operation_id") or "") if self.activation_fence else None,
             }
             if prepare:
                 self.activation_fence = {
@@ -391,6 +425,7 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                     "prepared_at_unix_ms": now_ms,
                 }
                 result["fenced"] = True
+                result["fence_operation_id"] = operation_id
                 result["expires_at_unix_ms"] = expires_at_unix_ms
             return result
 
@@ -1312,9 +1347,7 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                         details={"run_id": run_id, "requested_wave_id": requested_wave_id, "current_wave_id": ctx.wave_id},
                     )
                 proofs = self.orchestration_ledger.list_proofs(run_id, wave_id=ctx.wave_id)
-                proof_fp = hashlib.sha256(
-                    "|".join(f"{item['proof_id']}:{item['input_fingerprint']}" for item in proofs).encode("utf-8")
-                ).hexdigest() if proofs else ""
+                proof_fp = passed_proof_fingerprint(proofs)
                 run = self.orchestration_ledger.get_run(run_id)
                 run_metadata = run.get("metadata") if isinstance(run, dict) and isinstance(run.get("metadata"), dict) else {}
                 run_workspace_identity = (
@@ -1327,13 +1360,33 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                 if run_workspace_identity:
                     self._assert_orchestration_workspace_scope(identity.get("workspace_identity") or {}, run_id=run_id)
                 accepted_by = str((self._current_hub_client() or {}).get("client_id") or "ChatWeb Sol")
-                accepted_files = _accepted_file_receipts(
+                accepted_files = _accepted_checkpoint_file_receipts(
                     scope_root,
+                    self.orchestration_ledger,
                     state.get("modified_files"),
                     acceptance_files=args.get("acceptance_files") if "acceptance_files" in args else None,
                     run_id=run_id,
                     wave_id=ctx.wave_id,
                 )
+                durable_mutation, _durable_paths = _durable_wave_acceptance_paths(
+                    self.orchestration_ledger,
+                    run_id,
+                    ctx.wave_id,
+                    workspace=scope_root,
+                )
+                receipt_mutation = any(
+                    isinstance(item, dict)
+                    and str(item.get("receipt_kind") or "") in {"task_modified_file", "durable_wave_patch_surface"}
+                    for item in (accepted_files.get("files") or [])
+                )
+                if (durable_mutation or receipt_mutation) and not proof_fp:
+                    raise ToolFailure(
+                        "ACCEPTANCE_PROOF_REQUIRED",
+                        "Mutation-bearing acceptance requires at least one passed proof for this exact RUN/WAVE.",
+                        category="runtime",
+                        retryable=False,
+                        details={"run_id": run_id, "wave_id": ctx.wave_id},
+                    )
                 current_wave = next(
                     (item for item in self.orchestration_ledger.list_waves(run_id) if str(item.get("wave_id") or "") == ctx.wave_id),
                     {},
@@ -1367,10 +1420,9 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                             wave_id=ctx.wave_id,
                             outcome={"source": "accepted_proof_auto_v1", "oracle_pass": True},
                         )
-                self.orchestration_control.checkpoint(ctx, reason="controller_acceptance" if controller else "chatweb_sol_acceptance")
-                checkpoint_id = self.orchestration_ledger.record_checkpoint(
-                    run_id=run_id,
-                    wave_id=ctx.wave_id,
+                _checkpoint_ctx, checkpoint_result = self.orchestration_control.checkpoint_with_receipt(
+                    ctx,
+                    reason="controller_acceptance" if controller else "chatweb_sol_acceptance",
                     git_head=str(identity.get("base_head") or ""),
                     proof_fingerprint=proof_fp,
                     status="accepted",
@@ -1381,6 +1433,7 @@ class CoordinationMixin(SolutionShadowControlMixin, P5ControlMixin, ProblemLinea
                         "accepted_files": accepted_files,
                     },
                 )
+                checkpoint_id = str(checkpoint_result.get("checkpoint_id") or "")
                 problem_outcome_bridge = self.orchestration_ledger.problem_record_provisional_from_eocl(
                     run_id=run_id,
                     wave_id=ctx.wave_id,

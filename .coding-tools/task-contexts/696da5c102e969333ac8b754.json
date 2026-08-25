@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "bf6e9a7d6569444586b5f288a867a1e2",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "qtrJZF8FN5TvX5xZ5YfujKH-",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 262,
+    "finished_at": "2026-08-25T07:13:33.820Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T07:13:33.292Z",
+  "updated_at": "2026-08-25T07:13:33.820Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:13:33.292Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T07:13:33.534Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"baseline\" electron\\services\\recoveryActionStore.js | rg -n \"ensure|capture|advance|reset|baseline|status\"",
+        "session_id": "qtrJZF8FN5TvX5xZ5YfujKH-"
+      }
+    },
+    {
+      "time": "2026-08-25T07:13:33.820Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"baseline\" electron\\services\\recoveryActionStore.js | rg -n \"ensure|capture|advance|reset|baseline|status\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

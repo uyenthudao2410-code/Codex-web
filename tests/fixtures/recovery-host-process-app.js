@@ -140,7 +140,26 @@ async function runHost(paths, dataRoot, reportFile, errorFile, nodeExecutable) {
       activationMode === 'coding-mcp' ? NEXT_REVISION : codingMcpRevision
     ),
     inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: dataRoot }),
-    prepareCodeActivation: async () => ({ safe: true, code: 'READY', fenced: true }),
+    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
+      safe: true,
+      code: 'READY',
+      counts: {},
+      lifecycle: { unexplained_active_runs: 0, unbound_live_resource_residues: 0 },
+      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
+      fenced: true,
+      fence_operation_id: operationId
+    }),
+    verifyCodeActivation: async (operationId, sourceCheckpoint) => ({
+      safe: true,
+      code: 'READY',
+      counts: {},
+      lifecycle: { unexplained_active_runs: 0, unbound_live_resource_residues: 0 },
+      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
+      operation_id: operationId,
+      fenced: false,
+      fence_operation_id: null,
+      workspace: dataRoot
+    }),
     cancelCodeActivation: async () => true,
     activateCodingMcpUpdate: async (expectedRevision, options = {}) => {
       if (activationMode !== 'coding-mcp') {

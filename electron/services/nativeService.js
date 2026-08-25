@@ -343,11 +343,11 @@ class NativeService {
     return !settings || state.nativeFingerprint === runtimeFingerprint(settings);
   }
 
-  revisionStatus() {
+  revisionStatus(options = {}) {
     const state = readJson(this.paths.stateFile(), {});
     const alive = isAlive(state.nativePid);
     try {
-      const status = this.revisions.status('coding_mcp', alive ? state.nativeCodeRevision : null);
+      const status = this.revisions.status('coding_mcp', alive ? state.nativeCodeRevision : null, options);
       if (!alive) return { ...status, update_pending: false, state: 'stopped' };
       return status;
     } catch (error) {

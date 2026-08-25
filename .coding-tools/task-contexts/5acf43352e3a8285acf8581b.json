@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "task_id": "923abf18ab0648b6a92ac1e4520d658c",
+  "orchestration": {
+    "run_id": "e0523a8abeb54c7b8e88bfb9b6148d01",
+    "wave_id": "3ba0e973f47b484c8b249f1e075eef74",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "7f2d95b27cfd82a9590b0e1dc06ec156b795ebde2eb7c2c574af7642dc1da5ef",
+    "contract_fp": ""
+  },
+  "objective": "Read-only verification of whether every newly implemented Coding-VP/MCP function or tool-schema change is now propagated durably to the live MCP and ChatGPT connector. Determine the exact update chain from accepted source changes through Coding MCP activation, tool-contract SHA change, connector discovery/acknowledgement, and public smart-v3 exposure. Identify any remaining gap that can leave ChatGPT using an old tool schema after source changes. Do not modify files, restart/activate runtime, commit, or push.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T09:17:02.504Z",
+  "updated_at": "2026-08-25T09:17:05.332Z",
+  "events": [
+    {
+      "time": "2026-08-25T09:17:02.504Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only verification of whether every newly implemented Coding-VP/MCP function or tool-schema change is now propagated durably to the live MCP and ChatGPT connector. Determine the exact update chain from accepted source changes through Coding MCP activation, tool-contract SHA change, connector discovery/acknowledgement, and public smart-v3 exposure. Identify any remaining gap that can leave ChatGPT using an old tool schema after source changes. Do not modify files, restart/activate runtime, commit, or push."
+      }
+    },
+    {
+      "time": "2026-08-25T09:17:03.699Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T09:17:05.326Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T09:17:05.332Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

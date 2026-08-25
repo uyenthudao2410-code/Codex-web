@@ -89,7 +89,14 @@ function activationRequest(component, operationId) {
     requested_at_unix_ms: now,
     expires_at_unix_ms: now + 30_000,
     expected_disk_revision: NEXT_REVISION,
-    allow_acceptance_pending: false
+    allow_acceptance_pending: false,
+    source_checkpoint: {
+      checkpoint_id: 'checkpoint-process-activation-0001',
+      run_id: 'run-process-activation-0001',
+      wave_id: 'wave-process-activation-0001',
+      proof_fingerprint: 'c'.repeat(64),
+      git_head: 'd'.repeat(40)
+    }
   };
 }
 

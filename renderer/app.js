@@ -15,9 +15,9 @@ function createPreviewApi() {
       proxy: { mode: 'auto', configured: false, reachable: true, source: 'auto-direct', url: '' }, tunnelClient: { installed: true },
       workspace: { configured: true, exists: true }, ports: { mcpListening: true, tunnelListening: true }
     },
-    status: { busy: false, runtimeRunning: true, tunnelRunning: true, fullyReady: true, localMcpUrl: 'http://127.0.0.1:18766/mcp', tunnelUiUrl: 'http://127.0.0.1:18082/ui' },
+    status: { busy: false, runtimeRunning: true, tunnelRunning: true, fullyReady: true, localMcpUrl: 'http://127.0.0.1:18766/mcp', tunnelUiUrl: 'http://127.0.0.1:18082/ui', connectorContractState: 'UNCHANGED_ACKNOWLEDGED', connectorRefreshRequired: false, codeRevision: { codingMcp: { state: 'current', running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false } } },
     device: { scope: 'current_device_only', registry: 'local', device_id: '12345678-1234-4123-8123-123456789abc', device_instance_id: 'preview-device-instance-0001', display_name: 'Máy bàn', online: true, workspace: previewSettings.workspace, coding: { mcp_running: true, native_alive: true, tunnel_running: true, tunnel_id: 'tunnel_demo', ownership: 'device_id' }, recovery: { host_running: true, mcp_running: true, tunnel_running: false, tunnel_state: 'not_configured', tunnel_id: null }, git: { available: true, branch: 'main', head: 'cf6cb6ddbf29d90515d003ce72490ffda985c37f', head_short: 'cf6cb6dd', dirty: true } },
-    recoveryHost: { device_id: '12345678-1234-4123-8123-123456789abc', device_instance_id: 'preview-device-instance-0001', device_display_name: 'Máy bàn', recovery_plane: { tunnel: { state: 'not_configured', configured: false, pid: null } } }
+    recoveryHost: { state: 'healthy', device_id: '12345678-1234-4123-8123-123456789abc', device_instance_id: 'preview-device-instance-0001', device_display_name: 'Máy bàn', code_revision: { state: 'current', running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false }, electron_ui_revision: { state: 'current', running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false }, electron_ui_recovery: { state: 'healthy', alive: true, pid: 42001, instance_id: 'preview-electron-ui-0001', runtime_mode: 'development' }, recovery_plane: { tunnel: { state: 'not_configured', configured: false, pid: null } } }
   };
   const ok = (data) => Promise.resolve({ ok: true, data });
   return {
@@ -303,6 +303,213 @@ function applyFormValues(snapshot, force = false) {
   state.initializedForms = true;
 }
 
+function shortRevision(value) {
+  const revision = String(value || '');
+  return revision ? `${revision.slice(0, 12)}${revision.length > 12 ? '…' : ''}` : 'unknown';
+}
+
+function componentSourcePresentation(revision, { running = true, label = 'component' } = {}) {
+  if (!running) return { state: 'STOPPED', detail: `${label} hiện không chạy.` };
+  const runningRevision = String(revision?.running_revision || '');
+  const diskRevision = String(revision?.disk_revision || '');
+  if (runningRevision && diskRevision && runningRevision === diskRevision && revision?.update_pending !== true) {
+    return { state: 'CURRENT', detail: `${shortRevision(runningRevision)} · running = disk` };
+  }
+  if (diskRevision) {
+    return { state: 'STALE', detail: `${shortRevision(runningRevision)} → ${shortRevision(diskRevision)}` };
+  }
+  return { state: 'UNKNOWN', detail: `${label} chưa có revision receipt.` };
+}
+
+function connectorContractPresentation(status = {}) {
+  const explicit = String(status.connectorContractState || '').toUpperCase();
+  if (explicit === 'UNCHANGED_ACKNOWLEDGED') {
+    return {
+      state: explicit,
+      notice: false,
+      message: 'Tool contract không đổi và SHA hiện tại đã được acknowledge; process restart không yêu cầu tools/list mới.',
+      toast: 'Tool contract không đổi; connector vẫn acknowledged sau process restart.'
+    };
+  }
+  if (explicit === 'CURRENT_ACKNOWLEDGED') {
+    return {
+      state: explicit,
+      notice: false,
+      message: 'Tool contract hiện tại đã được discovery và acknowledge.',
+      toast: 'Tool contract hiện tại đã được discovery và acknowledge.'
+    };
+  }
+  if (explicit === 'CHANGED_DISCOVERED_NEEDS_ACK') {
+    return {
+      state: explicit,
+      notice: true,
+      message: 'ChatGPT đã discovery contract SHA mới; acknowledgement chính thức vẫn đang chờ Recovery Host hoàn tất.',
+      toast: 'Contract SHA mới đã được discovery; acknowledgement chính thức vẫn đang chờ.'
+    };
+  }
+  if (explicit === 'CHANGED_NEEDS_DISCOVERY') {
+    return {
+      state: explicit,
+      notice: true,
+      message: 'Tool contract SHA đã đổi. ChatGPT cần thực hiện tools/list hoặc server/discover cho contract hiện tại.',
+      toast: 'ChatGPT chưa discovery tool contract SHA hiện tại.'
+    };
+  }
+  if (explicit === 'UNAVAILABLE') {
+    return {
+      state: explicit,
+      notice: false,
+      message: 'Chưa có tool contract runtime để đánh giá connector freshness.',
+      toast: 'Tool contract runtime hiện chưa khả dụng.'
+    };
+  }
+  if (explicit || typeof status.connectorRefreshRequired !== 'boolean') {
+    return {
+      state: 'UNAVAILABLE',
+      notice: false,
+      message: explicit
+        ? `Connector contract state không được nhận diện: ${explicit}.`
+        : 'Chưa có connector contract state hoặc refresh receipt để đánh giá freshness.',
+      toast: 'Connector contract freshness hiện chưa khả dụng.'
+    };
+  }
+  // A legacy boolean can tell us that no refresh is requested, but cannot
+  // prove the authenticated acknowledgement/discovery state required by the
+  // current closure contract. Keep it visibly unavailable until the enum is
+  // present.
+  return {
+    state: 'UNAVAILABLE',
+    notice: false,
+    message: 'Runtime chỉ cung cấp cờ tương thích cũ; chưa có connectorContractState để chứng minh freshness/acknowledgement.',
+    toast: 'Connector contract freshness hiện chưa có receipt đủ mạnh.'
+  };
+}
+
+// The backend is the authority for computing activation closure, but the
+// renderer must not hide the warning merely because an untrusted/stale
+// snapshot happens to contain closure_state="LIVE_CLOSED".  Keep this check
+// deliberately redundant and fail-closed: every gate that is rendered green
+// must be present, true, and agree with the current runtime status.
+function activationClosureDisplayState(closure, status = {}) {
+  const value = closure && typeof closure === 'object' ? closure : {};
+  const requiredTrue = [
+    'closure_input_schema_supported',
+    'checkpoint_identity_valid',
+    'source_accepted',
+    'accepted_receipts_complete',
+    'activation_eligible',
+    'affected_components_valid',
+    'component_receipts_valid',
+    'postflight_receipts_valid',
+    'lifecycle_clean',
+    'components_current',
+    'connector_contract_current',
+    'runtime_fully_ready'
+  ];
+  const missingGate = requiredTrue.find((key) => value[key] !== true);
+  if (missingGate) return { liveClosed: false, reason: missingGate };
+  if (String(value.closure_state || '') !== 'LIVE_CLOSED') return { liveClosed: false, reason: 'closure_state' };
+  if (Number(value.schema_version) !== 1) return { liveClosed: false, reason: 'schema_version' };
+  if (!String(value.source_checkpoint_id || '').trim()
+    || !String(value.run_id || '').trim()
+    || !String(value.wave_id || '').trim()
+    || !String(value.proof_fingerprint || '').trim()
+    || !String(value.accepted_head || '').trim()) {
+    return { liveClosed: false, reason: 'checkpoint_identity' };
+  }
+  if (value.release_state !== 'NOT_RELEASED' || value.production_state !== 'NOT_CLAIMED') {
+    return { liveClosed: false, reason: 'release_claim_separation' };
+  }
+  // If the closure projection carries these fields, they are authenticated
+  // runtime facts and must not contradict the point-in-time status.
+  if (Object.hasOwn(value, 'connector_refresh_required') && value.connector_refresh_required !== false) {
+    return { liveClosed: false, reason: 'connector_refresh_required' };
+  }
+  if (Object.hasOwn(value, 'runtime_running') && value.runtime_running !== true) {
+    return { liveClosed: false, reason: 'runtime_running' };
+  }
+  if (Object.hasOwn(value, 'tunnel_running') && value.tunnel_running !== true) {
+    return { liveClosed: false, reason: 'tunnel_running' };
+  }
+  if (status.runtimeRunning !== true || status.tunnelRunning !== true || status.fullyReady !== true) {
+    return { liveClosed: false, reason: 'runtime_status_disagreement' };
+  }
+  return { liveClosed: true, reason: null };
+}
+
+function renderRuntimeSourceStatus(snapshot) {
+  const status = snapshot?.status || {};
+  const recoveryHost = snapshot?.recoveryHost || {};
+  const uiRecovery = recoveryHost.electron_ui_recovery || {};
+  const electron = componentSourcePresentation(recoveryHost.electron_ui_revision, {
+    running: uiRecovery.alive === true,
+    label: 'Electron UI'
+  });
+  const recovery = componentSourcePresentation(recoveryHost.code_revision, {
+    running: recoveryHost.state === 'healthy',
+    label: 'Recovery Host'
+  });
+  const coding = componentSourcePresentation(status.codeRevision?.codingMcp, {
+    running: status.runtimeRunning === true,
+    label: 'Coding MCP'
+  });
+  const tunnel = status.tunnelRunning === true
+    ? { state: 'READY', detail: 'Tunnel READY · health receipt present' }
+    : { state: 'STOPPED', detail: 'Tunnel hiện chưa kết nối.' };
+  const sourcePresentations = [electron, recovery, coding];
+  const bindings = [
+    ['#runtimeElectronState', '#runtimeElectronMeta', electron, uiRecovery.pid ? `PID ${uiRecovery.pid} · ${uiRecovery.runtime_mode || 'unknown'} · ${electron.detail}` : electron.detail],
+    ['#runtimeRecoveryState', '#runtimeRecoveryMeta', recovery, recovery.detail],
+    ['#runtimeMcpSourceState', '#runtimeMcpSourceMeta', coding, coding.detail],
+    ['#runtimeTunnelSourceState', '#runtimeTunnelSourceMeta', tunnel, tunnel.detail]
+  ];
+  bindings.forEach(([stateSelector, metaSelector, presentation, detail]) => {
+    const stateElement = $(stateSelector);
+    const metaElement = $(metaSelector);
+    if (stateElement) {
+      stateElement.textContent = presentation.state;
+      stateElement.dataset.state = presentation.state.toLowerCase();
+    }
+    if (metaElement) metaElement.textContent = detail;
+  });
+  const stale = sourcePresentations.filter((item) => item.state === 'STALE').length;
+  const current = sourcePresentations.filter((item) => item.state === 'CURRENT').length;
+  const tunnelReady = tunnel.state === 'READY';
+  const summary = $('#runtimeSourceSummary');
+  if (summary) {
+    summary.textContent = stale
+      ? `SOURCE STALE · ${stale}/3 pending · TUNNEL ${tunnel.state}`
+      : `SOURCE ${current}/3 CURRENT · TUNNEL ${tunnel.state}`;
+    summary.className = `cc-pill ${stale ? 'is-blocked' : current === 3 && tunnelReady ? 'is-active' : 'is-waiting'}`;
+  }
+  const notice = $('#sourceUpdateNotice');
+  if (notice) notice.hidden = stale === 0;
+  const message = $('#sourceUpdateMessage');
+  if (message && stale) {
+    message.textContent = `${stale} component đang chạy revision khác disk. Dùng controlled activation hoặc npm run dev; service health không thay thế loaded-source proof.`;
+  }
+  const closure = recoveryHost.activation_closure || snapshot?.activationClosure || status.activationClosure || {};
+  const closureState = String(closure.closure_state || 'UNAVAILABLE');
+  const closureDisplay = activationClosureDisplayState(closure, status);
+  const liveClosed = closureDisplay.liveClosed;
+  const closureElement = $('#runtimeClosureState');
+  if (closureElement) {
+    closureElement.textContent = closureState;
+    closureElement.dataset.state = liveClosed ? 'current' : 'stale';
+  }
+  const closureMeta = $('#runtimeClosureMeta');
+  if (closureMeta) {
+    const checkpoint = shortRevision(closure.source_checkpoint_id);
+    closureMeta.textContent = `${checkpoint} · release ${closure.release_state || 'NOT_RELEASED'} · production ${closure.production_state || 'NOT_CLAIMED'}`;
+  }
+  const closureNotice = $('#activationClosureNotice');
+  if (closureNotice) closureNotice.hidden = liveClosed;
+  const closureMessage = $('#activationClosureMessage');
+  if (closureMessage && !liveClosed) {
+    closureMessage.textContent = `${closureState}: source acceptance, exact postflight, connector freshness và runtime readiness phải cùng thuộc checkpoint hiện tại (${closureDisplay.reason}).`;
+  }
+}
+
 function renderSnapshot(snapshot, options = {}) {
   state.snapshot = snapshot;
   applyFormValues(snapshot, options.forceForms);
@@ -311,6 +518,7 @@ function renderSnapshot(snapshot, options = {}) {
   const ready = status.fullyReady;
   renderRecoveryTunnelSettings(snapshot);
   renderDevice(snapshot);
+  renderRuntimeSourceStatus(snapshot);
 
   $('#sideRuntimeText').textContent = ready ? 'Dịch vụ sẵn sàng' : status.runtimeRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
   setDot($('#sideRuntimeDot'), ready ? 'ready' : status.runtimeRunning ? 'warn' : 'error');
@@ -347,12 +555,13 @@ function renderSnapshot(snapshot, options = {}) {
   $('#settingsKeyState').textContent = secrets.runtimeApiKey ? 'Đã mã hóa và lưu' : 'Chưa lưu';
   $('#guideLocalUrl').textContent = status.localMcpUrl;
   $('#guideTunnelId').textContent = settings.tunnelId || 'Chưa điền';
+  const connector = connectorContractPresentation(status);
   const connectorContractNotice = $('#connectorContractNotice');
   if (connectorContractNotice) {
-    connectorContractNotice.hidden = !status.connectorRefreshRequired;
-    if (status.connectorRefreshRequired) {
+    connectorContractNotice.hidden = !connector.notice;
+    if (connector.notice) {
       const shortHash = status.toolContract?.sha256 ? `${status.toolContract.sha256.slice(0, 12)}…` : 'không xác định';
-      $('#connectorContractMessage').textContent = `Tool contract MCP hiện tại (${shortHash}) chưa được ChatGPT đọc lại. Hãy dùng Refresh trong Action control của app MCP; nếu workspace không hỗ trợ cập nhật app đã publish, hãy tạo/publish lại app. Cảnh báo chỉ tự đóng sau khi MCP quan sát được tools/list cho đúng contract này.`;
+      $('#connectorContractMessage').textContent = `${connector.message} SHA hiện tại: ${shortHash}.`;
     }
   }
   renderEnvironment(environment);
@@ -444,7 +653,7 @@ function renderDeploySummary() {
 
 async function refreshSnapshot(options = {}) {
   try {
-    const snapshot = unwrap(await api.snapshot());
+    const snapshot = unwrap(await api.snapshot(options));
     renderSnapshot(snapshot, options);
     return snapshot;
   } catch (error) {
@@ -663,13 +872,23 @@ async function repairHealth() {
 
 function applyHeartbeat(status) {
   if (!state.snapshot || !status) return;
+  // Heartbeats are authoritative point-in-time projections. Never retain a
+  // previous green closure/connector receipt when the current host omits it.
+  for (const key of ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure']) {
+    if (!Object.hasOwn(status, key)) delete state.snapshot.status[key];
+  }
   state.snapshot.status.runtimeRunning = Boolean(status.mcpRunning);
   state.snapshot.status.tunnelRunning = Boolean(status.tunnelRunning);
   state.snapshot.status.fullyReady = Boolean(status.fullyReady);
+  ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure'].forEach((key) => {
+    if (Object.hasOwn(status, key)) state.snapshot.status[key] = status[key];
+  });
   if (status.recoveryHost) state.snapshot.recoveryHost = status.recoveryHost;
+  else delete state.snapshot.recoveryHost;
   if (status.device) state.snapshot.device = status.device;
   renderRecoveryTunnelSettings(state.snapshot);
   renderDevice(state.snapshot);
+  renderRuntimeSourceStatus(state.snapshot);
   const ready = state.snapshot.status.fullyReady;
   $('#sideMcp').textContent = status.mcpRunning ? 'ON' : 'OFF';
   $('#sideTunnel').textContent = status.tunnelRunning ? 'ON' : 'OFF';
@@ -836,9 +1055,7 @@ function bindEvents() {
       renderSnapshot(snapshot, { forceForms: false });
       toast(
         'Đã kiểm tra lại tool contract',
-        snapshot.status?.connectorRefreshRequired
-          ? 'ChatGPT chưa đọc lại tools/list cho contract hiện tại.'
-          : 'ChatGPT đã đọc lại contract hiện tại.'
+        connectorContractPresentation(snapshot.status).toast
       );
     } catch (error) { toast('Không thể kiểm tra tool contract', error.message, 'error'); }
   });

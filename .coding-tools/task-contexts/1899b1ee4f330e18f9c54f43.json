@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "task_id": "b3a602a3e04843fb83c6917d20b4a5b6",
+  "orchestration": {
+    "run_id": "102e5f4168ba488795a3172dbeed1f16",
+    "wave_id": "c66ea9d109ed433d8c773ef65d51b693",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "93a417de1c854e66c0fc4267671bb6b45218df052e82c8f0ed12180e390fcb69",
+    "contract_fp": ""
+  },
+  "objective": "Read-only diagnosis of the current MCP task-list/task-history implementation and whether stale/stateless task contexts can still make the task list empty or inconsistent with durable orchestration ledger state. Inspect implementation and focused tests only; do not modify files or runtime state.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T09:13:57.209Z",
+  "updated_at": "2026-08-25T09:14:00.103Z",
+  "events": [
+    {
+      "time": "2026-08-25T09:13:57.209Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only diagnosis of the current MCP task-list/task-history implementation and whether stale/stateless task contexts can still make the task list empty or inconsistent with durable orchestration ledger state. Inspect implementation and focused tests only; do not modify files or runtime state."
+      }
+    },
+    {
+      "time": "2026-08-25T09:13:58.277Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T09:14:00.095Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T09:14:00.103Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

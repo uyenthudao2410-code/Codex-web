@@ -1,6 +1,6 @@
 # Release Readiness Checklist — Desktop Execution Hub
 
-This checklist is for the current Windows Electron **Tools-Codex-web / web-mcp-assistant** product. WebCodex core/server/npm release procedures are component-specific.
+This checklist is for the current Windows Electron **Tools-Codex-web / Coding Tools MCP** product. WebCodex core/server/npm release procedures are component-specific.
 
 Do not create tags, push commits, publish artifacts, deploy, rotate credentials, or restart external systems unless explicitly requested.
 
@@ -44,6 +44,10 @@ npm run canary:opencode-flash:preflight
 
 Runtime-affecting source tests do not prove the current process loaded new code. Use supported controlled activation and verify expected reconnect, new process/server instance identity, unchanged workspace identity, intended revision/contract, and preserved fail-closed authority state. Do not substitute `taskkill` of the serving MCP for supervised restart.
 
+For development Electron changes, exercise the deterministic lifecycle with mocked tests first, then—only when local service operation is authorized—use `npm run dev` or `npm run dev:replace`. A stale UI must carry the exact checkpoint/run/wave/proof/accepted-HEAD identity from an eligible `auto_activation.closure_input`; capture the typed refusal if that durable authority is absent, incomplete, invalid, or does not own `electron_ui`. Record the exact development installation, old/new UI instance where replacement is expected, PID, runtime mode, and `running_revision == disk_revision`. `npm start` focusing an existing window is not activation evidence. Use `npm run dev:stop` for a graceful UI-only stop; require an observable exact Recovery Host at entry and either its `MISSING` UI receipt or proof that the prior exact PID exited. Confirm Recovery Host/MCP/Tunnel preservation and watchdog suppression rather than killing `electron.exe` by name.
+
+In the Command Center, capture the three loaded-source receipts for Electron UI, Recovery Host, and Coding MCP, the separate Tunnel `READY`/`STOPPED` health state, and any source-update notice. Service availability, Tunnel readiness, and `fullyReady` do not override a `STALE` component receipt. Connector status should be interpreted from `connectorContractState` when available; when both that enum and the legacy `connectorRefreshRequired` boolean are absent, the truthful state is `UNAVAILABLE`, not acknowledged. An unchanged acknowledged SHA survives process restart, while a changed SHA requires the discovery/acknowledgement sequence.
+
 ## 6. Recovery plane checks
 
 For recovery-related releases confirm Recovery Host ownership, bounded Windows Recovery Supervisor behavior, independent Recovery MCP identity, distinct Recovery Tunnel identity when configured, `recovery_plane_mode=independent_mcp_tunnel_v1`, confirmed bounded repair surface, and appropriate packaged Windows/login/fault-matrix proof.
@@ -67,7 +71,7 @@ npm run dist
 npm run dist:dir
 ```
 
-Output root is `dist\`. `package.json` currently names the installer `web-mcp-assistant-setup-${version}.${ext}` and uses `scripts/verify-packaged-resources.js` as `afterPack`. Verify bundled resources and packaged behavior from the exact accepted source.
+Output root is `dist\`. `package.json` currently names the installer `coding-tools-mcp-setup-${version}.${ext}` and uses `scripts/verify-packaged-resources.js` as `afterPack`. Verify bundled resources and packaged behavior from the exact accepted source.
 
 For Recovery changes, `npm run test:recovery:packaged` is the safe isolated packaged-runtime lane. It intentionally does not install/uninstall the Windows Recovery Supervisor Scheduled Task and therefore does not replace an installed-logon/session smoke when that OS boundary is part of the release.
 

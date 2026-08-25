@@ -3,7 +3,8 @@
 > Status date: 2026-08-21
 > Baseline HEAD at plan start: `3059b218989fda8ebf217d121cd6e8f74a71587d`
 > Current delivered HEAD before sparse-state remediation delivery: `d5d4bbb533b21937041c1b48a2005583f2652383`
-> Product: `web-mcp-assistant 0.3.4`
+> Current product: `coding-tools-mcp 1.0.0`
+> Historical release baseline used by the evidence below: `web-mcp-assistant 0.3.4`
 > Control authority: ChatWeb GPT-5.6 Sol
 > Deterministic execution/proof authority: Coding Tools MCP / EOCL
 > Canonical causal audit: `.coding-tools/orchestration/ledger.sqlite3`

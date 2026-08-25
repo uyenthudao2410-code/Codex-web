@@ -1,0 +1,281 @@
+{
+  "version": 2,
+  "task_id": "edac71f608dd4dbd93f8d7b4436481a4",
+  "orchestration": {
+    "run_id": "01ee147f30614fcda9d3185d089f64f4",
+    "wave_id": "7dfbdf1117f84487adabff634cc184e1",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "dd22b108e8f8235159d01415d83e8846e33076fe0284543b316fec600b7eff0e",
+    "contract_fp": ""
+  },
+  "objective": "Read-only final verification of the stale Electron dev lifecycle fix: check diff hygiene for the relevant lifecycle files and query the built-in dev lifecycle status entrypoint for current Recovery Host/Electron UI installation/revision state. Do not modify files or runtime state, do not stop/restart/activate processes, and do not commit or push.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-08-25T09:10:45.786Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-25T09:10:45.786Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "6yyibcLFM7hXXPuNjXw76Txa",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 532,
+    "finished_at": "2026-08-25T09:10:45.519Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 29,
+        "head_hash": "cc2bd045cc9145bb1a32d0b6353713be3144f1ae3f22f1e5ffa135756d2275e9"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01ee147f30614fcda9d3185d089f64f4\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01ee147f30614fcda9d3185d089f64f4\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "01ee147f30614fcda9d3185d089f64f4",
+      "wave_id": "7dfbdf1117f84487adabff634cc184e1",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "dd22b108e8f8235159d01415d83e8846e33076fe0284543b316fec600b7eff0e",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only final verification of the stale Electron dev lifecycle fix: check diff hygiene for the relevant lifecycle files and query the built-in dev lifecycle status entrypoint for current Recovery Host/Electron UI installation/revision state. Do not modify files or runtime state, do not stop/restart/activate processes, and do not commit or push.",
+        "objective_revision": 1,
+        "objective_sha256": "64bf7b7ece5cbb46c0dcef14fd701acb201f3f146848e3d445364588fb183a1f",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "4341f8d0b874486e8874ece9e1a05a60",
+          "stage_id": "check:f64cb3c4299751a8",
+          "status": "passed",
+          "duration_ms": 957,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "b64b63c91f1b4434a37e538642ecea8e",
+          "stage_id": "check:d5d15774ddf3e900",
+          "status": "failed",
+          "duration_ms": 902,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 29438
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "3c67885761bc1ad97716eca7e07878506f05506de841239f970e3fd33ba13ede",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy.",
+  "created_at": "2026-08-25T09:10:36.665Z",
+  "updated_at": "2026-08-25T09:10:46.453Z",
+  "events": [
+    {
+      "time": "2026-08-25T09:10:36.665Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only final verification of the stale Electron dev lifecycle fix: check diff hygiene for the relevant lifecycle files and query the built-in dev lifecycle status entrypoint for current Recovery Host/Electron UI installation/revision state. Do not modify files or runtime state, do not stop/restart/activate processes, and do not commit or push."
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:37.774Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:39.844Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:41.127Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:41.133Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:42.446Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:43.075Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:43.821Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- package.json scripts/dev-ui-lifecycle.js electron/main.js electron/services/recoveryHost.js electron/services/recoveryActivation.js electron/services/componentRevision.js electron/services/activationClosure.js electron/services/activationPostflight.js electron/services/runtimeOrchestrator.js renderer/app.js renderer/index.html tests/dev-ui-lifecycle.test.js tests/activation-closure.test.js tests/recovery-activation.test.js tests/runtime-lifecycle.test.js",
+        "session_id": "c6XQW7BJwMnpLzcKx6Bk_QWZ"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:44.222Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- package.json scripts/dev-ui-lifecycle.js electron/main.js electron/services/recoveryHost.js electron/services/recoveryActivation.js electron/services/componentRevision.js electron/services/activationClosure.js electron/services/activationPostflight.js electron/services/runtimeOrchestrator.js renderer/app.js renderer/index.html tests/dev-ui-lifecycle.test.js tests/activation-closure.test.js tests/recovery-activation.test.js tests/runtime-lifecycle.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:45.158Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/dev-ui-lifecycle.js status",
+        "session_id": "6yyibcLFM7hXXPuNjXw76Txa"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:45.519Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/dev-ui-lifecycle.js status",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:45.786Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:46.336Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:46.338Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:46.341Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:46.450Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "3c67885761bc1ad97716eca7e07878506f05506de841239f970e3fd33ba13ede"
+      }
+    },
+    {
+      "time": "2026-08-25T09:10:46.453Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

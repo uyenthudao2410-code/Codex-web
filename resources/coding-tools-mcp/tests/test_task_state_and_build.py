@@ -1527,10 +1527,12 @@ class ToolModeTests(unittest.TestCase):
             checkpoint = runtime.orchestration_ledger.export_summary(result["orchestration"]["run_id"])["checkpoints"][-1]
             receipt = checkpoint["metadata"]["accepted_files"]
             self.assertTrue(receipt["complete"])
-            self.assertEqual(receipt["schema_version"], 1)
+            self.assertEqual(receipt["schema_version"], 2)
             self.assertEqual(receipt["count"], 1)
             self.assertEqual(receipt["files"][0]["path"], "src/main.py")
             self.assertEqual(receipt["files"][0]["state"], "file")
+            self.assertEqual(receipt["files"][0]["receipt_kind"], "durable_wave_patch_surface")
+            self.assertEqual(receipt["files"][0]["run_id"], result["orchestration"]["run_id"])
             self.assertEqual(
                 receipt["files"][0]["sha256"],
                 __import__("hashlib").sha256(b"print('ready')\n").hexdigest(),

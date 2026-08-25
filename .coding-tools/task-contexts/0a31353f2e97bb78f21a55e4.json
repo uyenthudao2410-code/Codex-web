@@ -1,0 +1,155 @@
+{
+  "version": 2,
+  "task_id": "",
+  "orchestration": {
+    "run_id": "01c24c41272b4055ab0e99446b53b9f8",
+    "wave_id": "fcd0952f058842aa8401820bd69d7322",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "5e37b839e4aaa553b3df1b710b358b54e751c461196e3952e87b47fb3beb9a9c",
+    "contract_fp": ""
+  },
+  "objective": "",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "state": "file",
+          "sha256": "f7794dc77c3b3a508a216c2d890a4374f4c33447944d58d71e1e8d7545c23625",
+          "size_bytes": 92981,
+          "receipt_kind": null,
+          "run_id": null,
+          "wave_id": null
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "state": "file",
+          "sha256": "cdc79a33e235756e80e06cd5a5430b6ad2154b404d4d248a65e505e95ffd3f71",
+          "size_bytes": 10842,
+          "receipt_kind": null,
+          "run_id": null,
+          "wave_id": null
+        }
+      ],
+      "source": "accepted_checkpoint_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 31,
+        "head_hash": "008b67216cdcc8c98a44c3a95351e4fe56bb28887d36a27043898553cf098e2e"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01c24c41272b4055ab0e99446b53b9f8\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01c24c41272b4055ab0e99446b53b9f8\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "01c24c41272b4055ab0e99446b53b9f8",
+      "wave_id": "fcd0952f058842aa8401820bd69d7322",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "5e37b839e4aaa553b3df1b710b358b54e751c461196e3952e87b47fb3beb9a9c",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fix EOCL final acceptance so stateless task_control acceptance reconstructs exact accepted source-file receipts from durable exact-run/exact-wave mutation evidence when request-local task_state.modified_files is empty. Use complete patch_surface_observed file_ids matched against write_lease_acquired allowed_paths, exclude pre-existing dirty and protected paths, and fail closed before checkpoint if durable mutation cannot be reconstructed. Preserve explicit acceptance_files behavior, preserve zero-file acceptance for truly no-mutation runs, do not change the public smart-v3 tool contract, and preserve all existing unrelated worktree edits. Add focused regression tests. Do not commit or push.",
+        "objective_revision": 1,
+        "objective_sha256": "92a91416049d86358e54408f2ea5d11d173a70ac894b0ec0d91dd4980a4ac9b9",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "b99f9a1edf9c4a0895648b5803121c69",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1499,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "d13ff67f2ea2477f8b7ce227ff4eccf6",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 11296,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "5484796b9351a0a5eb24d55c763dabb4d9e4f09cdcdfdc2ec20a67198f14d61b",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-25T07:05:04.503Z",
+  "updated_at": "2026-08-25T07:05:04.681Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:05:04.503Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T07:05:04.675Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "5484796b9351a0a5eb24d55c763dabb4d9e4f09cdcdfdc2ec20a67198f14d61b"
+      }
+    }
+  ]
+}

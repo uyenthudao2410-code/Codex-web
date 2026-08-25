@@ -23,6 +23,12 @@ route IPC dùng action allowlist và bounded JSON request/response; không có
 arbitrary shell, executable, PID hoặc environment input. Per-action typed schema
 được enforce cho preflight, activation, operation status và UI registration.
 
+> **Compatibility note for Coding Tools MCP 1.0:** the desktop display and package
+> names were renamed from the historical upstream identity, but the existing
+> `%APPDATA%\web-mcp-assistant` data root is intentionally retained. This keeps
+> encrypted credentials, descriptors, Recovery Host state, and existing desktop
+> connections available during the in-place upgrade.
+
 ## Phase 3A independent Recovery Supervisor
 
 `resources/recovery-supervisor/recovery-supervisor.ps1` là watchdog cùng Windows
@@ -91,6 +97,18 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
 - Thao tác operator quit gửi authenticated `client.suppress_ui_recovery` cho đúng
   UI instance trước khi thoát. Suppression được lưu trong user-data và sống qua
   Recovery Host replacement; registration UI hợp lệ kế tiếp sẽ xóa suppression.
+- Development operators use `npm run dev`, `npm run dev:stop`, and
+  `npm run dev:replace`. These commands bind every mutating signal to the exact
+  `development` installation identity from the authenticated Recovery Host
+  descriptor. They never scan by process name or accept an arbitrary PID.
+- `dev:stop` persists watchdog suppression before dispatching an Electron
+  single-instance stop signal containing the exact registered UI instance ID.
+  The primary UI accepts that signal only when it matches its in-memory identity,
+  then follows the ordinary graceful `quitUi` path. Coding MCP, Recovery Host,
+  and Tunnel remain resident. The command refuses to claim `STOPPED` when the
+  Recovery Host is initially unavailable. After signaling, success requires the
+  exact current host to report the UI `MISSING` or the previously bound PID to be
+  proven dead; transient host loss alone is not a successful postflight.
 - `startWithWindows`: Windows login item được cấu hình với `--recovery-host`,
   nên host có thể khởi động trước UI và giữ runtime resident.
 - Chạy trực tiếp trong bản development: `electron . --recovery-host`.
@@ -142,7 +160,9 @@ dùng làm remote kill target. `recoveryHost.electron_ui_revision` vì thế ph�
 
 `recoveryHost.electron_ui_recovery` phản ánh watchdog riêng cho UI (`healthy`,
 `waiting_for_registration`, `cooldown`, `suppressed`, `circuit_suppressed`, ...),
-không nhập trạng thái đó vào Coding MCP/Tunnel. Controlled electron code activation
+cùng bounded `pid`, `instance_id`, `started_at_unix_ms`, và `runtime_mode` để
+local DEV lifecycle postflight có thể bind đúng process. Không có descriptor token
+hoặc credential nào trong projection này. Trạng thái UI không được nhập vào Coding MCP/Tunnel. Controlled electron code activation
 có ưu tiên hơn crash recovery; khi activation đang `accepted`, watchdog không spawn
 UI thứ hai và chờ luồng activation/re-registration hoàn tất.
 
@@ -179,6 +199,20 @@ failure thay vì để control plane mất chủ.
 Workflow là: sửa source, chạy test, xem `update_pending`, gọi explicit preflight
 và `activate_update` đúng component, rồi đọc operation status cùng
 `running_revision == disk_revision`. Không có watcher hoặc `restart-all`.
+
+For the ordinary development UI path, `npm run dev` automates only that supported
+Electron component flow: `CURRENT` is focused, `STALE` goes through
+`code.activation_preflight` plus `code.activate_update`, and `MISSING` is launched.
+The `STALE` path must bind the exact `source_checkpoint` identity from
+`hostStatus.auto_activation.closure_input`; it refuses when source acceptance,
+accepted-receipt completeness, activation eligibility, affected-component
+validity, or `electron_ui` ownership is absent. Prepare does not infer authority
+from component postflight receipts.
+It then re-reads Recovery Host status and reports PID, instance, runtime mode,
+running revision, and disk revision. `npm run dev:replace` deliberately activates
+a stale handler first, suppresses recovery, gracefully stops that exact instance,
+launches once, and requires a new instance with matching revisions. A different
+checkout/installation is a typed refusal, not an implicit takeover.
 
 Sau final acceptance, Recovery Host có accepted-code auto activation. Host không
 watch source file: nó chỉ xét task current/history đã `CHECKPOINTED`, yêu cầu

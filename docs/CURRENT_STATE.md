@@ -1,7 +1,7 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-24
-> **Desktop package:** `web-mcp-assistant 0.3.4`
+> **Status date:** 2026-08-25
+> **Desktop package:** `coding-tools-mcp 1.0.0`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
 ## 1. Source of truth and document precedence
@@ -15,6 +15,10 @@ When repository documents disagree, use this order:
 5. Dated files under `docs/research/*` as historical evidence, plans, benchmarks, and decision snapshots. They do **not** override later source or this current-state document.
 
 A source implementation can be newer than the process currently running. For Electron, Recovery Host, Coding Tools MCP, and other supervised components, distinguish **source present**, **focused proof passed**, **EOCL accepted**, **controlled activation completed**, and **packaged/released**.
+
+Development startup now has an explicit UI lifecycle contract. `npm run dev` inspects the authenticated Recovery Host receipt for this exact development installation, classifies Electron UI as `CURRENT`, `STALE`, or `MISSING`, uses component activation for a stale UI, launches a missing UI, and succeeds only after `running_revision == disk_revision` is observed with PID/instance/mode metadata. Stale activation is authorized only from `auto_activation.closure_input` when source acceptance, accepted-receipt completeness, activation eligibility, affected-component validity, and `electron_ui` ownership are all explicit; the exact checkpoint/run/wave/proof/accepted-HEAD identity is forwarded as `source_checkpoint`, while missing or ineligible closure state is a typed refusal. `npm run dev:stop` suppresses UI watchdog recovery and asks the exact registered single instance to quit while preserving Recovery Host, MCP, and Tunnel. It refuses an initially unavailable Recovery Host and reports success only after that exact host reports the UI `MISSING` or the previously bound PID is proven dead; transient host loss is not stop proof. `npm run dev:replace` applies the same exact-instance stop postflight, then relaunches and verifies a different UI instance. Direct `npm start` remains a compatibility entry point; when another UI owns the lock it prints an actionable diagnostic instead of silently appearing successful.
+
+The Command Center exposes loaded-source status for the three revisioned components—Electron UI, Recovery Host, and Coding MCP—and reports Tunnel health separately as `READY` or `STOPPED`. `CURRENT` is process/revision evidence only and never derives from Tunnel availability; it is not EOCL acceptance, release, deployment, production, or SLO proof. A source-update notice remains visible whenever a running component revision differs from disk.
 
 ### Operational recency override — 2026-08-25
 

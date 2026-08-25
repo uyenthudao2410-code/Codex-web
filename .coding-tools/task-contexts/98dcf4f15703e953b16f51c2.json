@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "88f71ae10c6c4faea939ae0b30547dda",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "rPirLrL4rc87C3wCDXHfGAy4",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 218,
+    "finished_at": "2026-08-25T07:15:43.743Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T07:15:43.302Z",
+  "updated_at": "2026-08-25T07:15:43.743Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:15:43.302Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T07:15:43.526Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --porcelain=v1 -- package.json electron\\recoveryHost.js electron\\paths.js electron\\services\\commandRunner.js electron\\services\\componentRevision.js electron\\services\\config.js electron\\services\\deviceIdentity.js electron\\services\\environmentService.js electron\\services\\healthService.js electron\\services\\hubProxyGateway.js electron\\services\\jsonStore.js electron\\services\\logService.js electron\\services\\nativeService.js electron\\services\\proxyService.js electron\\services\\recoveryActionS",
+        "session_id": "rPirLrL4rc87C3wCDXHfGAy4"
+      }
+    },
+    {
+      "time": "2026-08-25T07:15:43.743Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --porcelain=v1 -- package.json electron\\recoveryHost.js electron\\paths.js electron\\services\\commandRunner.js electron\\services\\componentRevision.js electron\\services\\config.js electron\\services\\deviceIdentity.js electron\\services\\environmentService.js electron\\services\\healthService.js electron\\services\\hubProxyGateway.js electron\\services\\jsonStore.js electron\\services\\logService.js electron\\services\\nativeService.js electron\\services\\proxyService.js electron\\services\\recoveryActionS",
+        "status": "passed"
+      }
+    }
+  ]
+}

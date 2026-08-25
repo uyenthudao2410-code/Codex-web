@@ -431,9 +431,9 @@ class RuntimeOrchestrator {
     return true;
   }
 
-  codingMcpRevisionStatus() {
+  codingMcpRevisionStatus(options = {}) {
     try {
-      if (typeof this.native?.revisionStatus === 'function') return this.native.revisionStatus();
+      if (typeof this.native?.revisionStatus === 'function') return this.native.revisionStatus(options);
     } catch { /* revision awareness must never take down lifecycle supervision */ }
     return {
       running_revision: null,
@@ -457,7 +457,7 @@ class RuntimeOrchestrator {
     return String(this.secrets.get(P5_A0_SEED_SECRET) || '');
   }
 
-  async prepareCodeActivation({ operationId, expiresAtUnixMs, allowAcceptancePending = false }) {
+  async prepareCodeActivation({ operationId, expiresAtUnixMs, allowAcceptancePending = false, sourceCheckpoint = null }) {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
     if (!token || !(await this.native.status(settings))) {
@@ -468,7 +468,8 @@ class RuntimeOrchestrator {
       operation_id: operationId,
       expires_at_unix_ms: expiresAtUnixMs,
       workspace: settings.workspace,
-      allow_acceptance_pending: allowAcceptancePending === true
+      allow_acceptance_pending: allowAcceptancePending === true,
+      ...(sourceCheckpoint && typeof sourceCheckpoint === 'object' ? { source_checkpoint: sourceCheckpoint } : {})
     });
   }
 
@@ -485,20 +486,42 @@ class RuntimeOrchestrator {
     return result;
   }
 
+  async verifyCodeActivation(operationId, sourceCheckpoint) {
+    const settings = this.settingsStore.load();
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) throw Object.assign(new Error('Coding Tools MCP is not running under this Recovery Host.'), { code: 'COMPONENT_STOPPED' });
+    const result = await controlMcpActivation(settings.mcpPort, token, {
+      action: 'verify',
+      operation_id: String(operationId || ''),
+      workspace: settings.workspace,
+      source_checkpoint: sourceCheckpoint && typeof sourceCheckpoint === 'object' ? sourceCheckpoint : null
+    });
+    if (workspaceKey(result.workspace) !== workspaceKey(settings.workspace)) {
+      throw Object.assign(new Error('Coding MCP activation verification returned another workspace.'), { code: 'WORKSPACE_MISMATCH' });
+    }
+    return result;
+  }
+
   async currentMcpHealth() {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
     return token ? readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '') : null;
   }
 
-  async cancelCodeActivation(operationId) {
+  async cancelCodeActivation(operationId, { strict = false } = {}) {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
-    if (!token) return false;
+    if (!token) {
+      if (strict) throw Object.assign(new Error('Coding Tools MCP activation fence could not be reached.'), { code: 'ACTIVATION_FENCE_RELEASE_FAILED' });
+      return false;
+    }
     try {
       const result = await controlMcpActivation(settings.mcpPort, token, { action: 'cancel', operation_id: operationId });
-      return result.cancelled === true;
-    } catch {
+      if (result.cancelled === true) return true;
+      if (strict) throw Object.assign(new Error('Coding Tools MCP did not confirm activation fence release.'), { code: 'ACTIVATION_FENCE_RELEASE_FAILED' });
+      return false;
+    } catch (error) {
+      if (strict) throw Object.assign(error, { code: String(error?.code || 'ACTIVATION_FENCE_RELEASE_FAILED') });
       return false;
     }
   }
@@ -597,12 +620,23 @@ class RuntimeOrchestrator {
     const runtimeState = readJson(this.paths.stateFile(), {});
     const acknowledgedSha256 = String(runtimeState.chatgptToolContractSha256 || '').trim();
     const rediscoveredSha256 = String(discovery?.contract_sha256 || '').trim();
+    const observedAt = String(discovery?.observed_at || '').trim();
+    const observedAtValid = Boolean(observedAt && Number.isFinite(Date.parse(observedAt)));
     const rediscovered = Boolean(
       currentSha256
       && discovery?.current_contract_observed === true
       && rediscoveredSha256 === currentSha256
+      && observedAtValid
     );
     const contractChanged = Boolean(currentSha256 && currentSha256 !== acknowledgedSha256);
+    let contractState = 'UNAVAILABLE';
+    if (currentSha256) {
+      if (currentSha256 === acknowledgedSha256) {
+        contractState = rediscovered ? 'CURRENT_ACKNOWLEDGED' : 'UNCHANGED_ACKNOWLEDGED';
+      } else {
+        contractState = rediscovered ? 'CHANGED_DISCOVERED_NEEDS_ACK' : 'CHANGED_NEEDS_DISCOVERY';
+      }
+    }
     return {
       available: Boolean(currentSha256),
       schemaVersion: Number(toolContract?.schema_version || 0),
@@ -611,13 +645,15 @@ class RuntimeOrchestrator {
       acknowledgedSha256,
       rediscovered,
       rediscoveredSha256,
-      rediscoveredAt: rediscovered ? (String(discovery?.observed_at || '').trim() || null) : null,
-      // A persisted matching SHA says only that a contract was acknowledged at
-      // some earlier point.  It cannot prove that the *currently loaded MCP
-      // process* was rediscovered by its real ChatGPT client.  The discovery
-      // receipt is already bound by the MCP runtime to this process/server
-      // instance, so keep the UI/runtime status fail-closed until it exists.
-      refreshRequired: Boolean(currentSha256 && !rediscovered),
+      rediscoveredAt: rediscovered ? observedAt : null,
+      contractState,
+      // Tool-contract freshness is a contract boundary, not a process-liveness
+      // boundary. ChatGPT may legitimately retain an already acknowledged tool
+      // schema across an MCP process restart and call tools/call directly. A new
+      // real discovery receipt is therefore required only when the contract SHA
+      // changes. Process/runtime freshness is proven independently by health and
+      // loaded-revision identity.
+      refreshRequired: Boolean(contractChanged && !rediscovered),
       acknowledgementPending: Boolean(contractChanged && rediscovered)
     };
   }
@@ -625,12 +661,12 @@ class RuntimeOrchestrator {
   acknowledgeConnectorContractHash(toolContract, discovery = null) {
     const status = this.connectorContractStatus(toolContract, discovery);
     if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
+    if (status.currentSha256 === status.acknowledgedSha256) return status;
     if (!status.rediscovered) {
       throw Object.assign(new Error('ChatGPT chưa đọc lại tools/list cho tool contract hiện tại.'), {
         code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
       });
     }
-    if (status.currentSha256 === status.acknowledgedSha256) return status;
     updateJsonAtomic(this.paths.stateFile(), (state) => ({
       ...state,
       chatgptToolContractSha256: status.currentSha256,
@@ -1173,7 +1209,9 @@ class RuntimeOrchestrator {
           sha256: connectorContract.currentSha256
         } : null,
         connectorContractAcknowledgedSha256: connectorContract.acknowledgedSha256,
+        connectorContractState: connectorContract.contractState,
         connectorRefreshRequired: connectorContract.refreshRequired,
+        connectorAcknowledgementPending: connectorContract.acknowledgementPending,
         connectorRediscovered: connectorContract.rediscovered,
         connectorRediscoveredAt: connectorContract.rediscoveredAt,
         codeRevision: { codingMcp: this.codingMcpRevisionStatus() },

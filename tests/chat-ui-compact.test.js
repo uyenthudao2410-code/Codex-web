@@ -44,11 +44,14 @@ test('workspace manager exposes extra authorized roots without changing the chat
   assert.match(app, /updateAuthorizedRoots/);
 });
 
-test('package and manager identify the 0.3.4 release', () => {
+test('package and manager identify the Coding Tools MCP 1.0 release', () => {
   const pkg = JSON.parse(read('package.json'));
   const manager = read('renderer/index.html');
-  assert.equal(pkg.version, '0.3.4');
-  assert.match(manager, /Trợ lý Web MCP <span>v0\.3\.4<\/span>/);
+  assert.equal(pkg.name, 'coding-tools-mcp');
+  assert.equal(pkg.version, '1.0.0');
+  assert.equal(pkg.build.productName, 'Coding Tools MCP');
+  assert.equal(pkg.build.artifactName, 'coding-tools-mcp-setup-${version}.${ext}');
+  assert.match(manager, /Coding Tools MCP <span>v1\.0\.0<\/span>/);
   assert.match(manager, /Coding Tools MCP · 0\.4\.3/);
 });
 

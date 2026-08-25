@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "63e02261208f47a3aa78076e9f933369",
+    "orchestration": {
+      "run_id": "bead3ec694654ace8ebb5347bebab939",
+      "wave_id": "5e2b37a1f02c4775935936668f51ffcc",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "8ef276970782a7d2e21bfe7a2ea401e99a611dc59e41dc6aa27ae498fe1fb322",
+      "contract_fp": ""
+    },
+    "objective": "Classify the six focused test failures from the stale Electron dev lifecycle verification into real product defects vs stale/incorrect test expectations. Focus only on connectorContractPresentation/renderRuntimeSourceStatus/activation closure rendering and the dev-ui lifecycle test harness processAlive semantics. Read-only only; do not modify files or runtime state.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T09:07:59.425Z",
+    "updated_at": "2026-08-25T09:08:02.099Z",
+    "events": [
+      {
+        "time": "2026-08-25T09:07:59.425Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Classify the six focused test failures from the stale Electron dev lifecycle verification into real product defects vs stale/incorrect test expectations. Focus only on connectorContractPresentation/renderRuntimeSourceStatus/activation closure rendering and the dev-ui lifecycle test harness processAlive semantics. Read-only only; do not modify files or runtime state."
+        }
+      },
+      {
+        "time": "2026-08-25T09:08:00.429Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T09:08:02.092Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T09:08:02.099Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T09:08:24.695Z",
+    "archive_reason": "superseded"
+  }
+]

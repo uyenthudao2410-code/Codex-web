@@ -1,10 +1,10 @@
-# Tools-Codex-web — Trợ lý Web MCP cho Coding
+# Tools-Codex-web — Coding Tools MCP Execution Hub
 
 > Bộ công cụ desktop Windows giúp kết nối ChatGPT với máy lập trình của bạn qua MCP, quản lý workspace, chạy lệnh/test/build, thao tác Git, xử lý tài liệu và điều phối Codex theo mức độ khó của công việc.
 
 > **Nguồn trạng thái hiện tại:** [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md). Các file có ngày dưới `docs/research/` là evidence/plan lịch sử và không được dùng để ghi đè source, test hoặc trạng thái vận hành mới hơn.
 
-**Phiên bản desktop hiện tại:** `web-mcp-assistant 0.3.4`  
+**Phiên bản desktop hiện tại:** `coding-tools-mcp 1.0.0`
 **Repository:** `uyenthudao2410-code/Tools-Codex-web`  
 **Nền tảng chính:** Windows + Electron  
 **MCP runtime chính:** `Coding Tools MCP`

@@ -449,6 +449,7 @@ test('connector contract stays pending until current tools/list rediscovery is o
   });
   const contract = { schema_version: 1, profile: 'smart-v3', sha256: 'a'.repeat(64) };
   const pending = orchestrator.connectorContractStatus(contract);
+  assert.equal(pending.contractState, 'CHANGED_NEEDS_DISCOVERY');
   assert.equal(pending.refreshRequired, true);
   assert.equal(pending.rediscovered, false);
   assert.throws(
@@ -460,13 +461,30 @@ test('connector contract stays pending until current tools/list rediscovery is o
     contract_sha256: contract.sha256,
     observed_at: '2026-08-18T00:00:00.000Z'
   };
+  assert.equal(orchestrator.connectorContractStatus(contract, discovery).contractState, 'CHANGED_DISCOVERED_NEEDS_ACK');
   const acknowledged = orchestrator.synchronizeConnectorContract(contract, discovery);
   assert.equal(acknowledged.refreshRequired, false);
   assert.equal(acknowledged.acknowledgedSha256, contract.sha256);
   assert.equal(acknowledged.rediscovered, true);
+  assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
 });
 
-test('persisted matching connector SHA cannot mask missing current-process tools/list discovery', () => {
+test('connector contract state is unavailable without a current contract fingerprint', () => {
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  const unavailable = orchestrator.connectorContractStatus(null);
+  assert.equal(unavailable.contractState, 'UNAVAILABLE');
+  assert.equal(unavailable.available, false);
+  assert.equal(unavailable.refreshRequired, false);
+  assert.equal(unavailable.acknowledgementPending, false);
+});
+
+test('persisted matching connector SHA survives process restart without forcing rediscovery', () => {
   const contract = { schema_version: 1, profile: 'smart-v3', sha256: 'b'.repeat(64) };
   fs.writeFileSync(runtimeStatePath, JSON.stringify({
     manualStop: false,
@@ -481,23 +499,75 @@ test('persisted matching connector SHA cannot mask missing current-process tools
     emitProgress() {}
   });
 
-  const staleAcknowledgement = orchestrator.connectorContractStatus(contract);
-  assert.equal(staleAcknowledgement.acknowledgedSha256, contract.sha256);
-  assert.equal(staleAcknowledgement.rediscovered, false);
-  assert.equal(staleAcknowledgement.refreshRequired, true);
+  const retainedAcknowledgement = orchestrator.connectorContractStatus(contract);
+  assert.equal(retainedAcknowledgement.contractState, 'UNCHANGED_ACKNOWLEDGED');
+  assert.equal(retainedAcknowledgement.acknowledgedSha256, contract.sha256);
+  assert.equal(retainedAcknowledgement.rediscovered, false);
+  assert.equal(retainedAcknowledgement.refreshRequired, false);
+  assert.equal(retainedAcknowledgement.acknowledgementPending, false);
+  assert.doesNotThrow(() => orchestrator.acknowledgeConnectorContractHash(contract));
+
+  const changedContract = { ...contract, sha256: 'c'.repeat(64) };
+  const changedWithoutDiscovery = orchestrator.connectorContractStatus(changedContract);
+  assert.equal(changedWithoutDiscovery.contractState, 'CHANGED_NEEDS_DISCOVERY');
+  assert.equal(changedWithoutDiscovery.refreshRequired, true);
+  assert.equal(changedWithoutDiscovery.rediscovered, false);
   assert.throws(
-    () => orchestrator.acknowledgeConnectorContractHash(contract),
+    () => orchestrator.acknowledgeConnectorContractHash(changedContract),
     (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
   );
 
   const discovery = {
     current_contract_observed: true,
-    contract_sha256: contract.sha256,
+    contract_sha256: changedContract.sha256,
     observed_at: '2026-08-23T21:40:00.000Z'
   };
-  const currentDiscovery = orchestrator.connectorContractStatus(contract, discovery);
+  const currentDiscovery = orchestrator.connectorContractStatus(changedContract, discovery);
+  assert.equal(currentDiscovery.contractState, 'CHANGED_DISCOVERED_NEEDS_ACK');
   assert.equal(currentDiscovery.refreshRequired, false);
-  assert.doesNotThrow(() => orchestrator.acknowledgeConnectorContractHash(contract, discovery));
+  assert.equal(currentDiscovery.acknowledgementPending, true);
+  assert.doesNotThrow(() => orchestrator.acknowledgeConnectorContractHash(changedContract, discovery));
+  assert.equal(orchestrator.connectorContractStatus(changedContract, discovery).contractState, 'CURRENT_ACKNOWLEDGED');
+});
+
+test('Coding MCP activation prepare forwards the checkpoint-bound source receipt', async (t) => {
+  let observed = null;
+  const token = 'activation-test-token';
+  const server = http.createServer((request, response) => {
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk) => { body += chunk; });
+    request.on('end', () => {
+      observed = JSON.parse(body);
+      const payload = JSON.stringify({ safe: true, code: 'READY', lifecycle_decision: { clean: true } });
+      response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });
+      response.end(payload);
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => server.close());
+  const sourceCheckpoint = {
+    checkpoint_id: 'checkpoint-forward-0001',
+    run_id: 'run-forward-0001',
+    wave_id: 'wave-forward-0001',
+    proof_fingerprint: 'a'.repeat(64),
+    git_head: 'b'.repeat(40)
+  };
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one', mcpPort: server.address().port }) },
+    secrets: { get: (name) => name === 'mcpAuthToken' ? token : '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.native = { status: async () => true };
+  const result = await orchestrator.prepareCodeActivation({
+    operationId: 'operation_forward_0001',
+    expiresAtUnixMs: Date.now() + 30_000,
+    sourceCheckpoint
+  });
+  assert.equal(result.safe, true);
+  assert.deepEqual(observed.source_checkpoint, sourceCheckpoint);
 });
 
 test('supervisor consumes a fresh workspace-bound restart ticket exactly once', async () => {

@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "09b93e05980441f3a49e6cea2baddc29",
+    "orchestration": {
+      "run_id": "292bccbf54e24b98b8f81529b483d40e",
+      "wave_id": "3c092d2ac42045c8ba8a60eb215cc880",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "8ef276970782a7d2e21bfe7a2ea401e99a611dc59e41dc6aa27ae498fe1fb322",
+      "contract_fp": ""
+    },
+    "objective": "Verify whether the stale Electron development lifecycle bug is now fully fixed. Inspect the newly changed dev lifecycle and activation closure implementation and determine whether it actually prevents `npm start`/dev launch from silently deferring to an old single-instance UI, provides deterministic dev status/stop/replace behavior without Recovery Host reviving intentionally stopped UI, and exposes/verifies component running_revision vs disk_revision. Also assess whether Recovery Host/Coding MCP source updates remain correctly handled by controlled activation rather than being incorrectly assumed to reload via UI restart. Read-only inspection only; do not modify files, restart/kill processes, commit, push, or acknowledge connector state.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T09:05:42.117Z",
+    "updated_at": "2026-08-25T09:05:53.352Z",
+    "events": [
+      {
+        "time": "2026-08-25T09:05:42.117Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Verify whether the stale Electron development lifecycle bug is now fully fixed. Inspect the newly changed dev lifecycle and activation closure implementation and determine whether it actually prevents `npm start`/dev launch from silently deferring to an old single-instance UI, provides deterministic dev status/stop/replace behavior without Recovery Host reviving intentionally stopped UI, and exposes/verifies component running_revision vs disk_revision. Also assess whether Recovery Host/Coding MCP source updates remain correctly handled by controlled activation rather than being incorrectly assumed to reload via UI restart. Read-only inspection only; do not modify files, restart/kill processes, commit, push, or acknowledge connector state."
+        }
+      },
+      {
+        "time": "2026-08-25T09:05:43.246Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T09:05:53.343Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T09:05:53.352Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T09:06:28.104Z",
+    "archive_reason": "superseded"
+  }
+]

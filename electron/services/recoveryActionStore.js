@@ -5,11 +5,23 @@ const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const { DatabaseSync } = require('node:sqlite');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
-const { componentOwnsPath } = require('./componentRevision');
+const {
+  COMPONENT_ORDER,
+  RECOVERY_HOST_LEGACY_V1_CONTRACT,
+  componentOwnsPath,
+  componentOwners
+} = require('./componentRevision');
+const {
+  normalizeActivationPostflight,
+  normalizeLifecycleDecision,
+  postflightRevisionVerified: importedPostflightRevisionVerified,
+  postflightMatchesIntent: verifyPostflightMatchesIntent,
+  verifyActivationPostflight
+} = require('./activationPostflight');
 
 const execFileAsync = promisify(execFile);
 
-const STORE_VERSION = 1;
+const STORE_VERSION = 2;
 const MAX_ACTIONS = 64;
 const MAX_OPERATION_AGE_MS = 24 * 60 * 60 * 1000;
 const OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
@@ -21,14 +33,23 @@ const MAX_AUTO_INTENTS = 96;
 const MAX_AUTO_ATTEMPTS = 5;
 const MAX_ACCEPTED_CHECKPOINTS = 256;
 const MAX_PROCESSED_CHECKPOINTS = 512;
-const MAX_TRUST_RECEIPTS = 512;
+const MAX_TRUST_RECEIPTS = 256;
 const MAX_TRUST_RECEIPT_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_TRUST_RECEIPT_TOTAL_BYTES = 64 * 1024 * 1024;
-const COMPONENT_ORDER = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
-const RETRYABLE_REFUSALS = new Set(['RUNTIME_BUSY', 'ORCHESTRATION_STATE_UNCERTAIN', 'ACCEPTANCE_PENDING', 'ACTIVATION_REQUEST_EXPIRED']);
+const RETRYABLE_REFUSALS = new Set(['RUNTIME_BUSY', 'ORCHESTRATION_STATE_UNCERTAIN', 'ACCEPTANCE_PENDING', 'ACTIVATION_REQUEST_EXPIRED', 'ACTIVATION_CONFLICT']);
 const TERMINAL_INTENT_STATES = new Set(['completed', 'blocked', 'failed', 'superseded']);
 const HEX64 = /^[a-f0-9]{64}$/;
 const GIT_OBJECT_ID = /^[a-f0-9]{40,64}$/;
+const ACCEPTED_FILE_SCHEMA_VERSION = 2;
+const CLOSURE_INPUT_SCHEMA_VERSION = 1;
+const ACCEPTED_RECEIPT_KINDS = new Set(['explicit_existing_file', 'task_modified_file', 'durable_wave_patch_surface']);
+const ACCEPTED_RECEIPT_SOURCES = new Set(['explicit_acceptance_attestations', 'task_modified_files', 'durable_wave_patch_surface']);
+const ALLOWED_MULTI_OWNER_PATHS = new Set(['package.json']);
+const RUNTIME_SENSITIVE_PREFIXES = Object.freeze([
+  'electron/',
+  'renderer/',
+  'resources/coding-tools-mcp/coding_tools_mcp/'
+]);
 
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
@@ -89,9 +110,25 @@ class RecoveryActionStore {
     return existing;
   }
 
+  active(excludeOperationId = '') {
+    const now = this.now();
+    return this.load().actions.find((item) => (
+      item.state === 'accepted'
+      && Number(item.expires_at_unix_ms || 0) > now
+      && String(item.operation_id || '') !== String(excludeOperationId || '')
+    )) || null;
+  }
+
   begin(request) {
     const replay = this.replay(request);
     if (replay) return { created: false, record: replay };
+    const conflict = this.active(request?.operation_id);
+    if (conflict) {
+      throw actionError('ACTIVATION_CONFLICT', 'Another activation operation is already in flight.', {
+        operation_id: conflict.operation_id,
+        component: conflict.component
+      });
+    }
     const now = this.now();
     const expiresAt = Number(request?.expires_at_unix_ms || 0);
     if (!Number.isSafeInteger(expiresAt) || expiresAt <= now) {
@@ -101,18 +138,28 @@ class RecoveryActionStore {
     const fingerprint = requestFingerprint(request);
     const store = this.load();
     const record = {
-      version: 1,
+      version: STORE_VERSION,
       operation_id: operationId,
       component: request.component,
       action: 'activate_update',
       request_fingerprint: fingerprint,
       expected_disk_revision: request.expected_disk_revision,
+      source_checkpoint: request.source_checkpoint && typeof request.source_checkpoint === 'object'
+        ? stableValue(request.source_checkpoint)
+        : null,
       allow_acceptance_pending: request.allow_acceptance_pending === true,
+      requested_at_unix_ms: Number(request.requested_at_unix_ms || now),
       state: 'accepted',
       created_at: new Date(now).toISOString(),
       created_at_unix_ms: now,
       expires_at_unix_ms: expiresAt,
       updated_at: new Date(now).toISOString(),
+      started_at: null,
+      old_instance_state: null,
+      old_instance_id: null,
+      new_instance_id: null,
+      lifecycle_decision: null,
+      postflight: null,
       result: null,
       error: null
     };
@@ -132,6 +179,34 @@ class RecoveryActionStore {
     return record;
   }
 
+  annotate(operationId, patch = {}) {
+    const store = this.load();
+    const index = store.actions.findIndex((item) => item.operation_id === String(operationId || ''));
+    if (index < 0) throw actionError('ACTIVATION_OPERATION_NOT_FOUND', 'Activation operation was not found.');
+    const current = store.actions[index];
+    if (['completed', 'failed', 'refused'].includes(current.state)) return current;
+    const now = this.now();
+    const next = {
+      ...current,
+      ...(Object.prototype.hasOwnProperty.call(patch, 'started_at') && !current.started_at
+        ? { started_at: String(patch.started_at || '') || new Date(now).toISOString() }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'old_instance_id') && !current.old_instance_id
+        ? { old_instance_id: String(patch.old_instance_id || '') || null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'old_instance_state') && !current.old_instance_state
+        ? { old_instance_state: ['ABSENT', 'RUNNING'].includes(String(patch.old_instance_state || '')) ? String(patch.old_instance_state) : null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'lifecycle_decision') && patch.lifecycle_decision && typeof patch.lifecycle_decision === 'object'
+        ? { lifecycle_decision: stableValue(patch.lifecycle_decision) }
+        : {}),
+      updated_at: new Date(now).toISOString()
+    };
+    store.actions[index] = next;
+    this.save(store.actions);
+    return next;
+  }
+
   finish(operationId, state, result = null, error = null) {
     if (!['completed', 'failed', 'refused'].includes(state)) {
       throw actionError('INVALID_ACTION_STATE', 'Recovery action terminal state is invalid.');
@@ -147,11 +222,56 @@ class RecoveryActionStore {
       state,
       updated_at: new Date(now).toISOString(),
       finished_at: new Date(now).toISOString(),
+      old_instance_state: String(result?.postflight?.old_instance_state || current.old_instance_state || '') || null,
+      new_instance_id: String(result?.postflight?.new_instance_id || current.new_instance_id || '') || null,
+      postflight: result?.postflight && typeof result.postflight === 'object' ? stableValue(result.postflight) : null,
       result: result && typeof result === 'object' ? result : null,
       error: error && typeof error === 'object' ? {
         code: String(error.code || 'ACTIVATION_FAILED').slice(0, 80),
         message: String(error.message || 'Activation failed.').slice(0, 1000)
       } : null
+    };
+    store.actions[index] = next;
+    this.save(store.actions);
+    return next;
+  }
+
+  defer(operationId, result = null, error = null) {
+    const store = this.load();
+    const index = store.actions.findIndex((item) => item.operation_id === String(operationId || ''));
+    if (index < 0) throw actionError('ACTIVATION_OPERATION_NOT_FOUND', 'Activation operation was not found.');
+    const current = store.actions[index];
+    if (['completed', 'failed', 'refused'].includes(current.state)) return current;
+    const now = this.now();
+    const next = {
+      ...current,
+      state: 'accepted',
+      updated_at: new Date(now).toISOString(),
+      result: result && typeof result === 'object' ? result : null,
+      postflight: result?.postflight && typeof result.postflight === 'object' ? stableValue(result.postflight) : null,
+      error: error && typeof error === 'object' ? {
+        code: String(error.code || 'ACTIVATION_DEFERRED').slice(0, 80),
+        message: String(error.message || 'Activation is waiting for a runtime condition.').slice(0, 1000)
+      } : null
+    };
+    store.actions[index] = next;
+    this.save(store.actions);
+    return next;
+  }
+
+  resume(operationId) {
+    const store = this.load();
+    const index = store.actions.findIndex((item) => item.operation_id === String(operationId || ''));
+    if (index < 0) throw actionError('ACTIVATION_OPERATION_NOT_FOUND', 'Activation operation was not found.');
+    const current = store.actions[index];
+    if (current.state !== 'accepted' || current.result?.component_stopped !== true) return current;
+    const now = this.now();
+    const next = {
+      ...current,
+      result: null,
+      postflight: null,
+      error: null,
+      updated_at: new Date(now).toISOString()
     };
     store.actions[index] = next;
     this.save(store.actions);
@@ -279,7 +399,7 @@ function readAcceptedCheckpoints(workspace, limit = MAX_ACCEPTED_CHECKPOINTS) {
   try {
     database = new DatabaseSync(ledger, { readOnly: true, timeout: 1000 });
     const bounded = Math.max(1, Math.min(MAX_ACCEPTED_CHECKPOINTS, Number(limit) || MAX_ACCEPTED_CHECKPOINTS));
-    return database.prepare(`SELECT checkpoint_id,run_id,wave_id,git_head,proof_fingerprint,created_at,metadata_json FROM checkpoints WHERE status='accepted' ORDER BY created_at DESC,checkpoint_id DESC LIMIT ?`).all(bounded).reverse().map(parseCheckpointRow);
+    return database.prepare(`SELECT checkpoint_id,run_id,wave_id,git_head,proof_fingerprint,status,created_at,metadata_json FROM checkpoints WHERE status='accepted' ORDER BY created_at DESC,checkpoint_id DESC LIMIT ?`).all(bounded).reverse().map(parseCheckpointRow);
   } catch (error) {
     throw actionError('AUTO_ACTIVATION_LEDGER_UNAVAILABLE', 'Accepted orchestration checkpoint could not be read safely.', { sqlite_code: String(error?.code || '') });
   } finally {
@@ -291,34 +411,186 @@ function readAcceptedCheckpoint(workspace, runId, waveId) {
   return readAcceptedCheckpoints(workspace).slice().reverse().find((item) => String(item.run_id) === String(runId) && String(item.wave_id) === String(waveId)) || null;
 }
 
-function normalizeReceipt(item) {
+function normalizeReceipt(item, provenance = null) {
   if (!item || typeof item !== 'object') return null;
   const relative = normalizeRelative(item.path);
   if (!relative || relative.startsWith('.coding-tools/')) return null;
   const state = String(item.state || '');
-  if (state === 'missing') return { path: relative, state, sha256: null, size_bytes: 0 };
-  const sha256 = String(item.sha256 || '').toLowerCase();
-  const sizeBytes = Number(item.size_bytes);
-  if (state !== 'file' || !HEX64.test(sha256) || !Number.isSafeInteger(sizeBytes) || sizeBytes < 0 || sizeBytes > MAX_TRUST_RECEIPT_FILE_BYTES) return null;
-  return { path: relative, state, sha256, size_bytes: sizeBytes };
+  let receipt;
+  if (state === 'missing') {
+    if (item.sha256 !== null || Number(item.size_bytes) !== 0) return null;
+    receipt = { path: relative, state, sha256: null, size_bytes: 0 };
+  } else {
+    const sha256 = String(item.sha256 || '').toLowerCase();
+    const sizeBytes = Number(item.size_bytes);
+    if (state !== 'file' || !HEX64.test(sha256) || !Number.isSafeInteger(sizeBytes) || sizeBytes < 0 || sizeBytes > MAX_TRUST_RECEIPT_FILE_BYTES) return null;
+    receipt = { path: relative, state, sha256, size_bytes: sizeBytes };
+  }
+  if (!provenance) return receipt;
+  const receiptKind = String(item.receipt_kind || '');
+  const runId = String(item.run_id || '');
+  const waveId = String(item.wave_id || '');
+  const source = String(provenance.source || '');
+  const allowedKinds = source === 'explicit_acceptance_attestations'
+    ? new Set(['explicit_existing_file'])
+    : source === 'durable_wave_patch_surface'
+      ? new Set(['durable_wave_patch_surface', 'task_modified_file'])
+      : new Set(['task_modified_file']);
+  if (!ACCEPTED_RECEIPT_KINDS.has(receiptKind)
+    || !allowedKinds.has(receiptKind)
+    || runId !== String(provenance.runId || '')
+    || waveId !== String(provenance.waveId || '')
+    || item.restart_safe !== true
+    || item.content_addressed !== (state === 'file')) return null;
+  const normalized = {
+    ...receipt,
+    receipt_kind: receiptKind,
+    run_id: runId,
+    wave_id: waveId,
+    restart_safe: true,
+    content_addressed: state === 'file'
+  };
+  if (receiptKind === 'explicit_existing_file') {
+    const expectedSha256 = String(item.expected_sha256 || '').toLowerCase();
+    if (state !== 'file' || !HEX64.test(expectedSha256) || expectedSha256 !== receipt.sha256) return null;
+    normalized.expected_sha256 = expectedSha256;
+  }
+  return normalized;
 }
 
-function acceptedReceipts(checkpoint) {
+function parseAcceptedReceiptEnvelope(checkpoint) {
   const value = checkpoint?.metadata?.accepted_files;
-  if (!value || Number(value.schema_version) !== 1 || value.complete !== true || !Array.isArray(value.files) || value.files.length > MAX_TRUST_RECEIPTS) return null;
+  const runId = String(checkpoint?.run_id || '');
+  const waveId = String(checkpoint?.wave_id || '');
+  if (!value || value.schema_version !== ACCEPTED_FILE_SCHEMA_VERSION) {
+    return { ok: false, code: 'RECEIPT_SCHEMA_UNSUPPORTED', message: 'Accepted checkpoint does not use the activation-safe receipt schema.' };
+  }
+  if (value.complete !== true || !Array.isArray(value.incomplete_reasons) || value.incomplete_reasons.length
+    || !Array.isArray(value.files) || value.files.length > MAX_TRUST_RECEIPTS) {
+    return { ok: false, code: 'RECEIPT_INCOMPLETE', message: 'Accepted checkpoint file receipts are incomplete.' };
+  }
+  const source = String(value.source || '');
+  if (!runId || !waveId || String(value.run_id || '') !== runId || String(value.wave_id || '') !== waveId
+    || !ACCEPTED_RECEIPT_SOURCES.has(source)) {
+    return { ok: false, code: 'RECEIPT_PROVENANCE_INVALID', message: 'Accepted checkpoint receipt provenance is invalid.' };
+  }
   const receipts = [];
   const seen = new Set();
   let totalBytes = 0;
   for (const item of value.files) {
-    const receipt = normalizeReceipt(item);
-    if (!receipt || seen.has(receipt.path)) return null;
+    const receipt = normalizeReceipt(item, { runId, waveId, source });
+    if (!receipt || seen.has(receipt.path)) {
+      return { ok: false, code: 'RECEIPT_PROVENANCE_INVALID', message: 'Accepted checkpoint contains an invalid or duplicate file receipt.' };
+    }
     seen.add(receipt.path);
     totalBytes += receipt.size_bytes;
-    if (totalBytes > MAX_TRUST_RECEIPT_TOTAL_BYTES) return null;
+    if (totalBytes > MAX_TRUST_RECEIPT_TOTAL_BYTES) {
+      return { ok: false, code: 'RECEIPT_INCOMPLETE', message: 'Accepted checkpoint receipt bytes exceed the bounded activation budget.' };
+    }
     receipts.push(receipt);
   }
-  if (Number(value.count) !== receipts.length) return null;
-  return receipts;
+  if (!Number.isSafeInteger(value.count) || value.count !== receipts.length
+    || !Number.isSafeInteger(value.total_bytes) || value.total_bytes !== totalBytes) {
+    return { ok: false, code: 'RECEIPT_INCOMPLETE', message: 'Accepted checkpoint receipt counts do not reconcile.' };
+  }
+  return {
+    ok: true,
+    envelope: {
+      schema_version: ACCEPTED_FILE_SCHEMA_VERSION,
+      source,
+      run_id: runId,
+      wave_id: waveId,
+      complete: true,
+      count: receipts.length,
+      total_bytes: totalBytes,
+      files: receipts,
+      incomplete_reasons: []
+    }
+  };
+}
+
+function acceptedReceipts(checkpoint) {
+  const parsed = parseAcceptedReceiptEnvelope(checkpoint);
+  return parsed.ok ? parsed.envelope.files : null;
+}
+
+function eligibilityResult(checkpoint, patch = {}) {
+  return {
+    eligible: false,
+    code: 'CHECKPOINT_NOT_ACTIVATABLE',
+    message: 'Accepted checkpoint is not eligible for activation.',
+    source_checkpoint_id: String(checkpoint?.checkpoint_id || ''),
+    run_id: String(checkpoint?.run_id || ''),
+    wave_id: String(checkpoint?.wave_id || ''),
+    proof_fingerprint: String(checkpoint?.proof_fingerprint || '').toLowerCase(),
+    accepted_head: String(checkpoint?.git_head || '').toLowerCase(),
+    source_accepted: String(checkpoint?.status || '') === 'accepted',
+    accepted_receipts_complete: false,
+    affected_components: [],
+    component_receipts: {},
+    receipts: [],
+    ...patch
+  };
+}
+
+function evaluateActivationEligibility(checkpoint, {
+  workspace,
+  currentHead,
+  currentReceiptProvider = currentFileReceipt,
+  componentOwnersProvider = componentOwners
+} = {}) {
+  const base = eligibilityResult(checkpoint);
+  if (!base.source_checkpoint_id || !base.run_id || !base.wave_id
+    || !HEX64.test(base.proof_fingerprint) || !GIT_OBJECT_ID.test(base.accepted_head)) {
+    return { ...base, code: 'CHECKPOINT_IDENTITY_INVALID', message: 'Accepted checkpoint identity is incomplete or invalid.' };
+  }
+  if (!base.source_accepted) {
+    return { ...base, code: 'CHECKPOINT_NOT_ACCEPTED', message: 'Checkpoint status is not accepted.' };
+  }
+  const head = String(currentHead || '').toLowerCase();
+  if (!GIT_OBJECT_ID.test(head) || head !== base.accepted_head) {
+    return { ...base, code: 'SOURCE_HEAD_DRIFT', message: 'Git HEAD no longer matches the accepted checkpoint.' };
+  }
+  const parsed = parseAcceptedReceiptEnvelope(checkpoint);
+  if (!parsed.ok) return { ...base, code: parsed.code, message: parsed.message };
+  const receipts = parsed.envelope.files;
+  const componentReceipts = Object.fromEntries(COMPONENT_ORDER.map((component) => [component, []]));
+  const affected = new Set();
+  for (const trusted of receipts) {
+    let current;
+    try { current = currentReceiptProvider(workspace, trusted.path); }
+    catch (error) {
+      return { ...base, code: 'SOURCE_DRIFT', message: 'Accepted source receipt could not be re-read.', details: { path: trusted.path, error_code: String(error?.code || '') } };
+    }
+    if (!receiptMatches(current, trusted)) {
+      return { ...base, code: 'SOURCE_DRIFT', message: 'Accepted source bytes changed before activation.', details: { path: trusted.path } };
+    }
+    const owners = componentOwnersProvider(trusted.path);
+    if (!Array.isArray(owners) || owners.some((component, index) => !COMPONENT_ORDER.includes(component) || owners.indexOf(component) !== index)) {
+      return { ...base, code: 'COMPONENT_MAPPING_AMBIGUOUS', message: 'Component ownership mapping is not deterministic.', details: { path: trusted.path } };
+    }
+    if (owners.length > 1 && !ALLOWED_MULTI_OWNER_PATHS.has(trusted.path)) {
+      return { ...base, code: 'COMPONENT_MAPPING_AMBIGUOUS', message: 'Accepted source maps to an undeclared multi-component owner set.', details: { path: trusted.path, owners } };
+    }
+    if (!owners.length && RUNTIME_SENSITIVE_PREFIXES.some((prefix) => trusted.path.startsWith(prefix))) {
+      return { ...base, code: 'COMPONENT_MAPPING_UNMAPPED', message: 'Runtime-owned accepted source has no component mapping.', details: { path: trusted.path } };
+    }
+    for (const component of owners) {
+      affected.add(component);
+      componentReceipts[component].push(trusted);
+    }
+  }
+  const affectedComponents = COMPONENT_ORDER.filter((component) => affected.has(component));
+  return eligibilityResult(checkpoint, {
+    eligible: true,
+    code: 'ACTIVATABLE',
+    message: 'Accepted checkpoint is eligible for component activation.',
+    source_accepted: true,
+    accepted_receipts_complete: true,
+    affected_components: affectedComponents,
+    component_receipts: Object.fromEntries(affectedComponents.map((component) => [component, componentReceipts[component]])),
+    receipts
+  });
 }
 
 function currentFileReceipt(workspace, relative) {
@@ -351,7 +623,8 @@ function receiptMatches(current, trusted) {
 
 function trustedAcceptedCheckpoints(checkpoints, head) {
   return (Array.isArray(checkpoints) ? checkpoints : []).map((checkpoint) => ({ checkpoint, receipts: acceptedReceipts(checkpoint) }))
-    .filter(({ checkpoint, receipts }) => String(checkpoint.git_head || '') === String(head || '')
+    .filter(({ checkpoint, receipts }) => String(checkpoint.status || '') === 'accepted'
+      && String(checkpoint.git_head || '').toLowerCase() === String(head || '').toLowerCase()
       && HEX64.test(String(checkpoint.proof_fingerprint || '').toLowerCase()) && receipts !== null);
 }
 
@@ -383,6 +656,103 @@ function normalizeBaseline(value) {
   return { head: String(value.head), components, captured_at: String(value.captured_at || ''), updated_at: String(value.updated_at || '') };
 }
 
+function normalizePostflightReceipt(value) {
+  return normalizeActivationPostflight(value);
+}
+
+function postflightRevisionVerified(postflight) {
+  return importedPostflightRevisionVerified(postflight);
+}
+
+function postflightMatchesIntent(postflight, intent, operationId = '') {
+  const expectedOperationId = String(operationId || intent?.current_operation_id || intent?.activation_operation_id || '').trim();
+  return verifyPostflightMatchesIntent(postflight, intent, { operationId: expectedOperationId });
+}
+
+function normalizeClosureInput(value) {
+  if (!value || typeof value !== 'object' || Number(value.schema_version) !== CLOSURE_INPUT_SCHEMA_VERSION) return null;
+  const runId = String(value.run_id || '');
+  const waveId = String(value.wave_id || '');
+  const checkpointId = String(value.source_checkpoint_id || '');
+  const proofFingerprint = String(value.proof_fingerprint || '').toLowerCase();
+  const acceptedHead = String(value.accepted_head || '').toLowerCase();
+  if (!runId || !waveId || !checkpointId || !HEX64.test(proofFingerprint) || !GIT_OBJECT_ID.test(acceptedHead)) return null;
+  const rawAffectedComponents = Array.isArray(value.affected_components)
+    ? value.affected_components.slice(0, 16).map((component) => String(component || ''))
+    : [];
+  const affectedComponentsValid = Array.isArray(value.affected_components)
+    && value.affected_components.length <= COMPONENT_ORDER.length
+    && rawAffectedComponents.every((component, index) => COMPONENT_ORDER.includes(component)
+      && rawAffectedComponents.indexOf(component) === index)
+    && rawAffectedComponents.every((component, index) => COMPONENT_ORDER.indexOf(component)
+      > (index === 0 ? -1 : COMPONENT_ORDER.indexOf(rawAffectedComponents[index - 1])));
+  const knownAffectedComponents = COMPONENT_ORDER.filter((component) => rawAffectedComponents.includes(component));
+  const componentReceipts = {};
+  const postflightReceipts = {};
+  const rawComponentReceipts = value.component_receipts;
+  let componentReceiptsValid = Boolean(rawComponentReceipts
+    && typeof rawComponentReceipts === 'object'
+    && !Array.isArray(rawComponentReceipts)
+    && Object.keys(rawComponentReceipts).length === knownAffectedComponents.length
+    && Object.keys(rawComponentReceipts).every((component) => knownAffectedComponents.includes(component)));
+  for (const component of knownAffectedComponents) {
+    const rawReceipts = Array.isArray(rawComponentReceipts?.[component]) ? rawComponentReceipts[component] : [];
+    const normalizedReceipts = rawReceipts.map((item) => normalizeReceipt(item, { runId, waveId, source: String(item?.receipt_kind || '') === 'explicit_existing_file' ? 'explicit_acceptance_attestations' : String(item?.receipt_kind || '') === 'durable_wave_patch_surface' ? 'durable_wave_patch_surface' : 'task_modified_files' }));
+    if (!rawReceipts.length || normalizedReceipts.some((item) => !item)
+      || new Set(normalizedReceipts.map((item) => item?.path)).size !== normalizedReceipts.length) {
+      componentReceiptsValid = false;
+      componentReceipts[component] = [];
+    } else {
+      componentReceipts[component] = normalizedReceipts;
+    }
+    const postflight = normalizePostflightReceipt(value.postflight_receipts?.[component]);
+    if (postflight) postflightReceipts[component] = postflight;
+  }
+  const sourceAccepted = value.source_accepted === true;
+  const acceptedReceiptsComplete = value.accepted_receipts_complete === true;
+  const activationEligible = sourceAccepted && acceptedReceiptsComplete && affectedComponentsValid
+    && componentReceiptsValid && value.activation_eligible === true;
+  const lifecycleDecision = normalizeLifecycleDecision(value.lifecycle_decision);
+  const zeroTargetVerified = knownAffectedComponents.length === 0
+    && lifecycleDecision?.clean === true
+    && lifecycleDecision?.source_checkpoint_verified === true
+    && lifecycleDecision?.fence_released === true
+    && lifecycleDecision?.fenced === false;
+  const componentsCurrent = activationEligible && (knownAffectedComponents.length === 0 ? zeroTargetVerified : knownAffectedComponents.every((component) => {
+    const postflight = postflightReceipts[component];
+    return Boolean(postflight
+      && postflight.source_checkpoint_id === checkpointId
+      && postflight.run_id === runId
+      && postflight.wave_id === waveId
+      && postflight.health_verified === true
+      && postflight.postflight_verified === true
+      && postflightRevisionVerified(postflight)
+      && postflight.started_at
+      && postflight.completed_at);
+  }));
+  return {
+    schema_version: CLOSURE_INPUT_SCHEMA_VERSION,
+    source_checkpoint_id: checkpointId,
+    run_id: runId,
+    wave_id: waveId,
+    proof_fingerprint: proofFingerprint,
+    accepted_head: acceptedHead,
+    source_accepted: sourceAccepted,
+    accepted_receipts_complete: acceptedReceiptsComplete,
+    activation_eligible: activationEligible,
+    eligibility_code: String(value.eligibility_code || ''),
+    affected_components: rawAffectedComponents,
+    affected_components_valid: affectedComponentsValid,
+    component_receipts_valid: componentReceiptsValid,
+    component_receipts: componentReceipts,
+    postflight_receipts: postflightReceipts,
+    components_current: componentsCurrent,
+    lifecycle_decision: lifecycleDecision,
+    lifecycle_clean: lifecycleDecision?.clean === true,
+    observed_at: String(value.observed_at || '') || null
+  };
+}
+
 function autoState(value) {
   const source = value && typeof value === 'object' ? value : {};
   const compatible = Number(source.version) === 2;
@@ -394,6 +764,7 @@ function autoState(value) {
     active_checkpoint_id: compatible ? (String(source.active_checkpoint_id || '') || null) : null,
     processed_checkpoint_ids: processed,
     baseline: compatible ? normalizeBaseline(source.baseline) : null,
+    closure_input: compatible ? normalizeClosureInput(source.closure_input) : null,
     intents,
     updated_at: String(source.updated_at || new Date().toISOString())
   };
@@ -402,6 +773,17 @@ function autoState(value) {
 function autoOperationId(intent, attempt) {
   const digest = crypto.createHash('sha256').update(`${intent.checkpoint_id}:${intent.component}:${attempt}`).digest('hex');
   return `auto_${digest.slice(0, 48)}`;
+}
+
+function zeroTargetVerificationOperationId(checkpoint) {
+  const digest = crypto.createHash('sha256').update(canonicalJson({
+    checkpoint_id: checkpoint?.checkpoint_id,
+    run_id: checkpoint?.run_id,
+    wave_id: checkpoint?.wave_id,
+    proof_fingerprint: checkpoint?.proof_fingerprint,
+    git_head: checkpoint?.git_head
+  })).digest('hex');
+  return `auto_zero_${digest.slice(0, 48)}`;
 }
 
 class AcceptedCodeActivationController {
@@ -420,10 +802,70 @@ class AcceptedCodeActivationController {
   status() {
     const state = this.loadState();
     const count = (name) => state.intents.filter((item) => item.state === name).length;
-    return { trust_model: 'running_baseline_accepted_receipts_v2', continuity_mode: 'detached_runtime_children_v1', running: Boolean(this.timer), processing: this.processing, pending: count('pending'), deferred: count('deferred'), awaiting: count('awaiting'), blocked: count('blocked'), failed: count('failed'), completed: count('completed'), baseline_head: state.baseline?.head || null, processed_checkpoints: state.processed_checkpoint_ids.length, last_error: this.lastError };
+    return { trust_model: 'running_baseline_accepted_receipts_v2', continuity_mode: 'detached_runtime_children_v1', running: Boolean(this.timer), processing: this.processing, pending: count('pending'), deferred: count('deferred'), awaiting: count('awaiting'), blocked: count('blocked'), failed: count('failed'), completed: count('completed'), baseline_head: state.baseline?.head || null, processed_checkpoints: state.processed_checkpoint_ids.length, closure_input: state.closure_input, last_error: this.lastError };
   }
   start() { if (this.timer) return this.status(); this.timer = setInterval(() => { this.tick().catch(() => {}); }, this.intervalMs); this.timer.unref(); setImmediate(() => { this.tick().catch(() => {}); }); return this.status(); }
   stop() { if (this.timer) clearInterval(this.timer); this.timer = null; return true; }
+
+  newClosureInput(evaluation) {
+    return normalizeClosureInput({
+      schema_version: CLOSURE_INPUT_SCHEMA_VERSION,
+      source_checkpoint_id: evaluation.source_checkpoint_id,
+      run_id: evaluation.run_id,
+      wave_id: evaluation.wave_id,
+      proof_fingerprint: evaluation.proof_fingerprint,
+      accepted_head: evaluation.accepted_head,
+      source_accepted: evaluation.source_accepted,
+      accepted_receipts_complete: evaluation.accepted_receipts_complete,
+      activation_eligible: evaluation.eligible,
+      eligibility_code: evaluation.code,
+      affected_components: evaluation.affected_components,
+      component_receipts: evaluation.component_receipts,
+      postflight_receipts: {},
+      components_current: false,
+      lifecycle_decision: null,
+      lifecycle_clean: false,
+      observed_at: new Date(this.now()).toISOString()
+    });
+  }
+
+  refreshClosureInput(state) {
+    const closure = state.closure_input;
+    if (!closure) return null;
+    const intents = state.intents.filter((item) => item.checkpoint_id === closure.source_checkpoint_id);
+    const postflightReceipts = {};
+    let lifecycleDecision = closure.lifecycle_decision;
+    for (const intent of intents) {
+      const postflight = normalizePostflightReceipt(intent.result?.postflight);
+      if (postflight) {
+        postflightReceipts[intent.component] = postflight;
+        if (postflight.lifecycle_decision) lifecycleDecision = postflight.lifecycle_decision;
+      }
+      if (intent.lifecycle_decision && typeof intent.lifecycle_decision === 'object') lifecycleDecision = intent.lifecycle_decision;
+    }
+    const allCurrent = closure.affected_components.length === 0
+      ? lifecycleDecision?.clean === true
+        && lifecycleDecision?.source_checkpoint_verified === true
+        && lifecycleDecision?.fence_released === true
+        && lifecycleDecision?.fenced === false
+      : closure.affected_components.every((component) => {
+      const intent = intents.find((item) => item.component === component);
+      const postflight = postflightReceipts[component];
+      return Boolean(intent?.state === 'completed' && postflightMatchesIntent(postflight, intent));
+    });
+    const activationEligible = closure.activation_eligible
+      && !intents.some((item) => ['blocked', 'failed', 'superseded'].includes(String(item.state || '')));
+    state.closure_input = normalizeClosureInput({
+      ...closure,
+      activation_eligible: activationEligible,
+      postflight_receipts: postflightReceipts,
+      components_current: allCurrent,
+      lifecycle_decision: lifecycleDecision,
+      lifecycle_clean: lifecycleDecision?.clean === true,
+      observed_at: new Date(this.now()).toISOString()
+    });
+    return state.closure_input;
+  }
 
   runtimeRevisionStatus(component) {
     try {
@@ -532,9 +974,14 @@ class AcceptedCodeActivationController {
     return { error: null, receipts: currentReceipts, committed_paths: committed };
   }
 
-  candidate(checkpoints, state, head) {
+  candidate(checkpoints, state, workspace, head) {
     const processed = new Set(state.processed_checkpoint_ids);
-    return trustedAcceptedCheckpoints(checkpoints, head).find(({ checkpoint, receipts }) => !processed.has(String(checkpoint.checkpoint_id)) && receipts.length) || null;
+    for (const checkpoint of (Array.isArray(checkpoints) ? checkpoints : [])) {
+      if (processed.has(String(checkpoint?.checkpoint_id || '')) || String(checkpoint?.git_head || '').toLowerCase() !== String(head || '').toLowerCase()) continue;
+      const evaluation = evaluateActivationEligibility(checkpoint, { workspace, currentHead: head });
+      return { checkpoint, evaluation, receipts: evaluation.receipts };
+    }
+    return null;
   }
 
   markActiveProcessed(state) {
@@ -568,6 +1015,7 @@ class AcceptedCodeActivationController {
         updated_at: updatedAt
       });
     }
+    this.refreshClosureInput(state);
     this.saveState(state);
     return { changed: true, awaiting_operation: false };
   }
@@ -587,13 +1035,56 @@ class AcceptedCodeActivationController {
       if (!this.markActiveProcessed(state)) return false;
     }
     const checkpoints = this.acceptedCheckpointProvider(workspace, MAX_ACCEPTED_CHECKPOINTS);
-    const candidate = this.candidate(checkpoints, state, forced.head);
+    const candidate = this.candidate(checkpoints, state, workspace, forced.head);
     if (!candidate) return false;
     const checkpointId = String(candidate.checkpoint.checkpoint_id);
-    const targets = COMPONENT_ORDER.filter((component) => candidate.receipts.some((receipt) => componentOwnsPath(component, receipt.path)));
-    if (!targets.length) {
+    state.closure_input = this.newClosureInput(candidate.evaluation);
+    if (!candidate.evaluation.eligible) {
       state.processed_checkpoint_ids = [...new Set([...state.processed_checkpoint_ids, checkpointId])].slice(-MAX_PROCESSED_CHECKPOINTS);
       this.saveState(state);
+      return false;
+    }
+    const targets = candidate.evaluation.affected_components;
+    if (!targets.length) {
+      try {
+        const lifecycle = await this.activation.verifyCheckpointLifecycle({
+          operationId: zeroTargetVerificationOperationId(candidate.checkpoint),
+          sourceCheckpoint: {
+            checkpoint_id: candidate.checkpoint.checkpoint_id,
+            run_id: candidate.checkpoint.run_id,
+            wave_id: candidate.checkpoint.wave_id,
+            proof_fingerprint: candidate.checkpoint.proof_fingerprint,
+            git_head: candidate.checkpoint.git_head
+          }
+        });
+        state.closure_input.lifecycle_decision = lifecycle;
+        state.closure_input.lifecycle_clean = lifecycle.clean === true;
+        state.closure_input.components_current = lifecycle.clean === true;
+        state.closure_input.observed_at = new Date(this.now()).toISOString();
+        state.processed_checkpoint_ids = [...new Set([...state.processed_checkpoint_ids, checkpointId])].slice(-MAX_PROCESSED_CHECKPOINTS);
+        state.closure_input = normalizeClosureInput(state.closure_input);
+        this.saveState(state);
+      } catch (error) {
+        state.closure_input.lifecycle_decision = {
+          schema_version: 1,
+          clean: false,
+          code: String(error?.code || 'LIFECYCLE_VERIFICATION_FAILED'),
+          reason: String(error?.message || 'Zero-target lifecycle verification failed.'),
+          observed_at: new Date(this.now()).toISOString(),
+          canonical_lifecycle_observed: false,
+          source_checkpoint_verified: false,
+          fence_released: false,
+          fenced: null,
+          fence_operation_id: null,
+          operation_id: zeroTargetVerificationOperationId(candidate.checkpoint),
+          counts: {},
+          unexplained_active_runs: 0,
+          unbound_live_resource_residues: 0
+        };
+        state.closure_input.lifecycle_clean = false;
+        state.closure_input.components_current = false;
+        this.saveState(state);
+      }
       return false;
     }
     const accepted = acceptedReceiptUnion(checkpoints, forced.head);
@@ -620,6 +1111,10 @@ class AcceptedCodeActivationController {
       });
     }
     state.intents = state.intents.slice(-MAX_AUTO_INTENTS);
+    if (state.intents.some((item) => item.checkpoint_id === checkpointId && item.state === 'blocked')) {
+      state.closure_input.activation_eligible = false;
+    }
+    this.refreshClosureInput(state);
     this.saveState(state); return true;
   }
 
@@ -631,9 +1126,10 @@ class AcceptedCodeActivationController {
     const state = this.loadState();
     const baseline = await this.ensureBaseline(workspace, state, forced);
     const checkpoints = this.acceptedCheckpointProvider(workspace, MAX_ACCEPTED_CHECKPOINTS);
-    const trusted = trustedAcceptedCheckpoints(checkpoints, forced.head);
-    const checkpoint = trusted.find((item) => String(item.checkpoint.checkpoint_id) === intent.checkpoint_id)?.checkpoint || null;
+    const checkpoint = checkpoints.find((item) => String(item?.checkpoint_id || '') === intent.checkpoint_id) || null;
     if (!checkpoint || String(checkpoint.proof_fingerprint).toLowerCase() !== intent.proof_fingerprint || String(checkpoint.git_head || '') !== intent.accepted_head) throw actionError('ACCEPTED_CHECKPOINT_CHANGED', 'Accepted checkpoint identity changed before activation.');
+    const eligibility = evaluateActivationEligibility(checkpoint, { workspace, currentHead: forced.head });
+    if (!eligibility.eligible) throw actionError(eligibility.code, eligibility.message, eligibility.details || {});
     const accepted = acceptedReceiptUnion(checkpoints, forced.head);
     const gate = await this.componentGate(workspace, intent.component, baseline, accepted, forced);
     if (gate.error) throw actionError(gate.error.code, gate.error.message, { files: gate.error.files });
@@ -642,14 +1138,19 @@ class AcceptedCodeActivationController {
     return { head: String(forced.head || ''), receipts: gate.receipts };
   }
 
-  updateIntent(state, intent, patch) { Object.assign(intent, patch, { updated_at: new Date(this.now()).toISOString() }); this.saveState(state); }
-  advanceBaseline(state, intent) {
+  updateIntent(state, intent, patch) {
+    Object.assign(intent, patch, { updated_at: new Date(this.now()).toISOString() });
+    this.refreshClosureInput(state);
+    this.saveState(state);
+  }
+  advanceBaseline(state, intent, postflight) {
     if (!state.baseline || !GIT_OBJECT_ID.test(String(intent.trusted_head || '').toLowerCase()) || !Array.isArray(intent.trusted_receipts)) return false;
     const row = state.baseline.components?.[intent.component];
-    if (!row || !HEX64.test(String(intent.expected_revision || '').toLowerCase())) return false;
+    const runningRevision = String(postflight?.running_revision || '').toLowerCase();
+    if (!row || !postflightMatchesIntent(postflight, intent) || !HEX64.test(runningRevision)) return false;
     row.head = String(intent.trusted_head).toLowerCase();
-    row.revision = String(intent.expected_revision).toLowerCase();
-    row.receipts = intent.trusted_receipts.map(normalizeReceipt).filter(Boolean);
+    row.revision = runningRevision;
+    row.receipts = intent.trusted_receipts.map((item) => normalizeReceipt(item)).filter(Boolean);
     const rowHeads = COMPONENT_ORDER.map((component) => String(state.baseline.components?.[component]?.head || ''));
     if (rowHeads.length && rowHeads.every((head) => head === row.head)) state.baseline.head = row.head;
     state.baseline.updated_at = new Date(this.now()).toISOString();
@@ -658,13 +1159,34 @@ class AcceptedCodeActivationController {
   applyRecord(state, intent, record) {
     const recordState = String(record?.state || '');
     if (recordState === 'completed') {
-      if (!this.advanceBaseline(state, intent)) {
-        this.updateIntent(state, intent, { state: 'failed', current_operation_id: null, error: { code: 'AUTO_ACTIVATION_BASELINE_ADVANCE_FAILED', message: 'Activation completed but its trusted running baseline could not be advanced.' }, result: record.result || null });
+      const postflight = normalizePostflightReceipt(record?.result?.postflight || record?.postflight);
+      const operationMatches = String(record?.operation_id || '') === String(intent?.current_operation_id || intent?.activation_operation_id || '');
+      if (!operationMatches || !postflightMatchesIntent(postflight, intent, record?.operation_id)) {
+        this.updateIntent(state, intent, {
+          state: 'failed',
+          current_operation_id: null,
+          lifecycle_decision: postflight?.lifecycle_decision || intent.lifecycle_decision || null,
+          error: {
+            code: operationMatches ? 'POSTFLIGHT_UNVERIFIED' : 'POSTFLIGHT_OPERATION_MISMATCH',
+            message: 'Activation completed without a checkpoint-bound verified component postflight receipt.'
+          },
+          result: record?.result || null
+        });
         return;
       }
-      this.updateIntent(state, intent, { state: 'completed', current_operation_id: null, error: null, result: record.result || null }); return;
+      if (!this.advanceBaseline(state, intent, postflight)) {
+        this.updateIntent(state, intent, { state: 'failed', current_operation_id: null, lifecycle_decision: postflight.lifecycle_decision, error: { code: 'AUTO_ACTIVATION_BASELINE_ADVANCE_FAILED', message: 'Activation completed but its trusted running baseline could not be advanced.' }, result: record.result || null });
+        return;
+      }
+      this.updateIntent(state, intent, { state: 'completed', current_operation_id: null, lifecycle_decision: postflight.lifecycle_decision, error: null, result: { ...(record.result || {}), postflight } }); return;
     }
     if (recordState === 'accepted') {
+      if (record?.result?.component_stopped === true) {
+        this.updateIntent(state, intent, Number(record.expires_at_unix_ms || 0) > this.now()
+          ? { state: 'awaiting', error: { code: 'COMPONENT_AWAITING_START', message: 'Coding MCP is stopped; activation remains resumable until a fresh instance starts.' } }
+          : { state: 'deferred', current_operation_id: null, error: { code: 'ACTIVATION_REQUEST_EXPIRED', message: 'Activation attempt expired before Coding MCP restarted.' } });
+        return;
+      }
       this.updateIntent(state, intent, Number(record.expires_at_unix_ms || 0) > this.now()
         ? { state: 'awaiting', error: null }
         : { state: 'deferred', current_operation_id: null, error: { code: 'ACTIVATION_REQUEST_EXPIRED', message: 'Activation attempt expired before completion.' } });
@@ -679,6 +1201,33 @@ class AcceptedCodeActivationController {
     if (['blocked', 'failed', 'superseded'].includes(intent.state)) return;
     if (intent.state === 'awaiting' && intent.current_operation_id) {
       const record = this.activation.status(intent.current_operation_id);
+      if (record?.state === 'accepted' && record?.result?.component_stopped === true) {
+        try {
+          const now = this.now();
+          const resumed = await this.activation.activate({
+            operation_id: intent.current_operation_id,
+            component: intent.component,
+            requested_at_unix_ms: Number(record.requested_at_unix_ms || now),
+            expires_at_unix_ms: Number(record.expires_at_unix_ms || now + ACTIVATION_REQUEST_TTL_MS),
+            expected_disk_revision: intent.expected_revision,
+            allow_acceptance_pending: false,
+            source_checkpoint: {
+              checkpoint_id: intent.checkpoint_id,
+              run_id: intent.run_id,
+              wave_id: intent.wave_id,
+              proof_fingerprint: intent.proof_fingerprint,
+              git_head: intent.accepted_head
+            }
+          });
+          this.applyRecord(state, intent, resumed);
+        } catch (error) {
+          const code = String(error?.code || 'AUTO_ACTIVATION_RESUME_FAILED');
+          this.updateIntent(state, intent, RETRYABLE_REFUSALS.has(code)
+            ? { state: 'deferred', current_operation_id: null, error: { code, message: String(error?.message || error) } }
+            : { state: 'failed', current_operation_id: null, error: { code, message: String(error?.message || error) } });
+        }
+        return;
+      }
       this.applyRecord(state, intent, record); return;
     }
     let trusted;
@@ -688,20 +1237,52 @@ class AcceptedCodeActivationController {
     const attempt = Number(intent.attempt || 0) + 1;
     if (attempt > MAX_AUTO_ATTEMPTS) { this.updateIntent(state, intent, { state: 'blocked', error: { code: 'AUTO_ACTIVATION_RETRY_EXHAUSTED', message: 'Automatic activation exceeded the bounded retry limit.' } }); return; }
     const now = this.now();
-    const request = { operation_id: autoOperationId(intent, attempt), component: intent.component, requested_at_unix_ms: now, expires_at_unix_ms: now + ACTIVATION_REQUEST_TTL_MS, expected_disk_revision: intent.expected_revision, allow_acceptance_pending: false };
-    const preflight = await this.activation.preflight(request);
-    if (preflight.code === 'ALREADY_CURRENT') {
-      if (!this.advanceBaseline(state, intent)) { this.updateIntent(state, intent, { state: 'failed', error: { code: 'AUTO_ACTIVATION_BASELINE_ADVANCE_FAILED', message: 'Current component baseline could not be advanced.' } }); return; }
-      this.updateIntent(state, intent, { state: 'completed', error: null, result: { activated: false, already_current: true, revision: intent.expected_revision } }); return;
-    }
-    if (!preflight.safe) {
-      this.updateIntent(state, intent, RETRYABLE_REFUSALS.has(String(preflight.code || ''))
-        ? { state: 'deferred', error: { code: preflight.code, message: `Activation deferred: ${preflight.runtime?.reason || preflight.code}` } }
-        : { state: 'blocked', error: { code: preflight.code || 'AUTO_ACTIVATION_PREFLIGHT_FAILED', message: 'Automatic activation preflight was refused.' } });
+    const request = {
+      operation_id: autoOperationId(intent, attempt),
+      component: intent.component,
+      requested_at_unix_ms: now,
+      expires_at_unix_ms: now + ACTIVATION_REQUEST_TTL_MS,
+      expected_disk_revision: intent.expected_revision,
+      allow_acceptance_pending: false,
+      source_checkpoint: {
+        checkpoint_id: intent.checkpoint_id,
+        run_id: intent.run_id,
+        wave_id: intent.wave_id,
+        proof_fingerprint: intent.proof_fingerprint,
+        git_head: intent.accepted_head
+      }
+    };
+    let preflight;
+    try { preflight = await this.activation.preflight(request); }
+    catch (error) {
+      const code = String(error?.code || 'AUTO_ACTIVATION_PREFLIGHT_FAILED');
+      this.updateIntent(state, intent, RETRYABLE_REFUSALS.has(code)
+        ? { state: 'deferred', attempt, current_operation_id: null, error: { code, message: String(error?.message || 'Automatic activation preflight was deferred.') } }
+        : { state: 'blocked', attempt, current_operation_id: null, error: { code, message: String(error?.message || 'Automatic activation preflight failed.') } });
       return;
     }
-    this.updateIntent(state, intent, { state: 'awaiting', attempt, current_operation_id: request.operation_id, error: null });
-    this.applyRecord(state, intent, await this.activation.activate(request));
+    const lifecycleDecision = preflight?.lifecycle_decision || preflight?.runtime?.lifecycle_decision || null;
+    if (lifecycleDecision) this.updateIntent(state, intent, { lifecycle_decision: lifecycleDecision });
+    if (!preflight.safe) {
+      this.updateIntent(state, intent, RETRYABLE_REFUSALS.has(String(preflight.code || ''))
+        ? { state: 'deferred', attempt, current_operation_id: null, error: { code: preflight.code, message: `Activation deferred: ${preflight.runtime?.reason || preflight.code}` } }
+        : { state: 'blocked', attempt, current_operation_id: null, error: { code: preflight.code || 'AUTO_ACTIVATION_PREFLIGHT_FAILED', message: 'Automatic activation preflight was refused.' } });
+      return;
+    }
+    this.updateIntent(state, intent, {
+      state: 'awaiting',
+      attempt,
+      activation_operation_id: request.operation_id,
+      current_operation_id: request.operation_id,
+      error: null
+    });
+    try { this.applyRecord(state, intent, await this.activation.activate(request)); }
+    catch (error) {
+      const code = String(error?.code || 'AUTO_ACTIVATION_FAILED');
+      this.updateIntent(state, intent, RETRYABLE_REFUSALS.has(code)
+        ? { state: 'deferred', current_operation_id: null, error: { code, message: String(error?.message || 'Automatic activation was deferred.') } }
+        : { state: 'failed', current_operation_id: null, error: { code, message: String(error?.message || 'Automatic activation failed.') } });
+    }
   }
 
   async tick() {
@@ -732,6 +1313,8 @@ module.exports = {
   fingerprintPaths,
   readAcceptedCheckpoint,
   readAcceptedCheckpoints,
+  acceptedReceipts,
+  evaluateActivationEligibility,
   OPERATION_ID_PATTERN,
   MAX_ACTIONS
 };

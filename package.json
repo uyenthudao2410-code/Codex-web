@@ -1,13 +1,16 @@
 {
-  "name": "web-mcp-assistant",
-  "version": "0.3.4",
-  "description": "Trợ lý desktop Windows giúp triển khai và quản lý Coding Tools MCP, OpenAI Tunnel và kết nối ChatGPT chỉ với 1 cú nhấp chuột.",
+  "name": "coding-tools-mcp",
+  "version": "1.0.0",
+  "description": "Windows Execution Hub để vận hành Coding Tools MCP, OpenAI Tunnel và kết nối ChatGPT.",
   "author": "3169657175",
   "license": "MIT",
   "main": "electron/main.js",
   "scripts": {
     "icon:build": "node scripts/generate-icon.js",
     "start": "electron .",
+    "dev": "node scripts/dev-ui-lifecycle.js start",
+    "dev:stop": "node scripts/dev-ui-lifecycle.js stop",
+    "dev:replace": "node scripts/dev-ui-lifecycle.js replace",
     "test": "node --test tests/*.test.js && node scripts/check-source-root-clean.js && node scripts/check-sensitive-tracked.js",
     "test:recovery:e2e": "node --test tests/integration/recovery-host-process.test.js",
     "test:recovery:packaged": "npm run dist:dir && node scripts/packaged-recovery-smoke.js",
@@ -49,8 +52,8 @@
   "build": {
     "electronDist": "node_modules/electron/dist",
     "appId": "com.gptwebcodex.assistant",
-    "productName": "Trợ lý Web MCP",
-    "artifactName": "web-mcp-assistant-setup-${version}.${ext}",
+    "productName": "Coding Tools MCP",
+    "artifactName": "coding-tools-mcp-setup-${version}.${ext}",
     "directories": {
       "output": "dist"
     },
@@ -90,7 +93,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "Trợ lý Web MCP",
+      "shortcutName": "Coding Tools MCP",
       "installerIcon": "electron/app-icon.ico",
       "uninstallerIcon": "electron/app-icon.ico",
       "installerHeaderIcon": "electron/app-icon.ico",

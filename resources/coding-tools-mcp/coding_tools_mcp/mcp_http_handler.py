@@ -621,8 +621,9 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             return
         action = str(payload.get("action") or "").strip().lower()
         allowed = {
-            "prepare": {"action", "operation_id", "expires_at_unix_ms", "workspace", "allow_acceptance_pending"},
+            "prepare": {"action", "operation_id", "expires_at_unix_ms", "workspace", "allow_acceptance_pending", "source_checkpoint"},
             "cancel": {"action", "operation_id"},
+            "verify": {"action", "operation_id", "workspace", "source_checkpoint"},
         }
         if action not in allowed or set(payload) - allowed[action]:
             self.send_json({"error": "Invalid activation control request", "code": "INVALID_ARGUMENT"}, status=400)
@@ -640,12 +641,47 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                     operation_id=str(payload.get("operation_id") or ""),
                     expires_at_unix_ms=int(payload.get("expires_at_unix_ms") or 0),
                     allow_acceptance_pending=payload.get("allow_acceptance_pending") is True,
+                    source_checkpoint=payload.get("source_checkpoint") if "source_checkpoint" in payload else None,
                     prepare=True,
                 )
                 self.send_json(result, status=200 if result.get("safe") else 409)
                 return
+            if action == "verify":
+                workspace = str(payload.get("workspace") or "")
+                if os.path.normcase(os.path.abspath(workspace)) != os.path.normcase(str(self.runtime.workspace.root)):
+                    raise ToolFailure(
+                        "WORKSPACE_MISMATCH",
+                        "Activation verification workspace does not match the running MCP workspace.",
+                        category="validation",
+                    )
+                source_checkpoint = payload.get("source_checkpoint")
+                if not isinstance(source_checkpoint, dict):
+                    raise ToolFailure(
+                        "CHECKPOINT_REQUIRED",
+                        "A source_checkpoint is required for post-cancel activation verification.",
+                        category="validation",
+                    )
+                operation_id = str(payload.get("operation_id") or "")
+                result = self.runtime.activation_preflight(
+                    operation_id=operation_id,
+                    source_checkpoint=source_checkpoint,
+                    require_unfenced=True,
+                    prepare=False,
+                )
+                result = {
+                    **result,
+                    "operation_id": operation_id,
+                    "fenced": bool(result.get("fenced")),
+                    "fence_operation_id": result.get("fence_operation_id"),
+                }
+                self.send_json(result, status=200 if result.get("safe") else 409)
+                return
             cancelled = self.runtime.cancel_activation(str(payload.get("operation_id") or ""))
-            self.send_json({"cancelled": cancelled})
+            self.send_json({
+                "cancelled": cancelled,
+                "fenced": bool(self.runtime.activation_fence),
+                "fence_operation_id": str(self.runtime.activation_fence.get("operation_id") or "") if self.runtime.activation_fence else None,
+            })
         except ToolFailure as exc:
             self.send_json({"error": exc.message, "code": exc.code, "details": exc.details}, status=409)
         except (TypeError, ValueError) as exc:

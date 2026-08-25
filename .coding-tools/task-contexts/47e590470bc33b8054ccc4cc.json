@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "task_id": "71a32700ab094e558f2f0eadf49e16ae",
+  "orchestration": {
+    "run_id": "d1eee16dff104113b717f6438fe30a08",
+    "wave_id": "98346fb4368648619afad5d909f0d002",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "c4d9c59e1c80da2f34c680461b6dfe3855bc7820f396690ae0242a8871b95a69",
+    "contract_fp": ""
+  },
+  "objective": "Design a durable, system-level closure plan for the already-live EOCL/runtime fix so the same failure class cannot recur. Review the current implementation across final-acceptance file attestation, accepted-code activation/Recovery Host handoff, connector contract freshness/rediscovery semantics, and stale-run reconciliation. Identify residual architectural gaps, invariants that should become executable gates, and the minimum sequence of source/test/runtime-hardening changes needed. Read-only diagnosis only: do not modify files, do not create implementation waves, do not commit or push.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T07:20:35.492Z",
+  "updated_at": "2026-08-25T07:20:37.843Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:20:35.492Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Design a durable, system-level closure plan for the already-live EOCL/runtime fix so the same failure class cannot recur. Review the current implementation across final-acceptance file attestation, accepted-code activation/Recovery Host handoff, connector contract freshness/rediscovery semantics, and stale-run reconciliation. Identify residual architectural gaps, invariants that should become executable gates, and the minimum sequence of source/test/runtime-hardening changes needed. Read-only diagnosis only: do not modify files, do not create implementation waves, do not commit or push."
+      }
+    },
+    {
+      "time": "2026-08-25T07:20:36.386Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T07:20:37.837Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    }
+  ]
+}

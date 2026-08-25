@@ -30,6 +30,14 @@ const {
 } = require('../electron/services/recoveryHostLauncher');
 const { replacementArguments } = require('../electron/recoveryHost');
 
+const SOURCE_CHECKPOINT = Object.freeze({
+  checkpoint_id: 'checkpoint-recovery-host-0001',
+  run_id: 'run-recovery-host-0001',
+  wave_id: 'wave-recovery-host-0001',
+  proof_fingerprint: 'c'.repeat(64),
+  git_head: 'd'.repeat(40)
+});
+
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-recovery-host-'));
   const dataRoot = path.join(root, 'data');
@@ -385,8 +393,25 @@ test('Recovery Host replacement hands off ownership without stopping Coding MCP 
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
     inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
-    prepareCodeActivation: async () => ({ safe: true, code: 'READY', fenced: true }),
+    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
+      safe: true,
+      code: 'READY',
+      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
+      fenced: true,
+      fence_operation_id: operationId
+    }),
     cancelCodeActivation: async () => { calls.cancelFence += 1; return true; },
+    verifyCodeActivation: async (operationId) => ({
+      safe: true,
+      code: 'READY',
+      reason: 'idle',
+      counts: {},
+      lifecycle: { unexplained_active_runs: 0, unbound_live_resource_residues: 0 },
+      source_checkpoint: { ok: true },
+      operation_id: operationId,
+      fenced: false,
+      fence_operation_id: null
+    }),
     start: async () => ({}),
     stop: async () => { calls.runtimeStop += 1; },
     restart: async () => ({}),
@@ -449,7 +474,14 @@ test('Recovery Host replacement hands off ownership without stopping Coding MCP 
     requested_at_unix_ms: now,
     expires_at_unix_ms: now + 60_000,
     expected_disk_revision: newRevision,
-    allow_acceptance_pending: false
+    allow_acceptance_pending: false,
+    source_checkpoint: {
+      checkpoint_id: 'checkpoint-replacement-0001',
+      run_id: 'run-replacement-0001',
+      wave_id: 'wave-replacement-0001',
+      proof_fingerprint: 'c'.repeat(64),
+      git_head: 'd'.repeat(40)
+    }
   });
   assert.equal(activation.state, 'accepted');
   await replacementStarted;
@@ -493,7 +525,13 @@ test('Recovery Host handoff drains in-flight supervision before releasing owners
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
     inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
-    prepareCodeActivation: async () => ({ safe: true, code: 'READY', fenced: true }),
+    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
+      safe: true,
+      code: 'READY',
+      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
+      fenced: true,
+      fence_operation_id: operationId
+    }),
     cancelCodeActivation: async () => true,
     ensureToken: async () => 'x'.repeat(32),
     preflightLegacyDeviceMigration: async () => ({ required: false }),
@@ -550,7 +588,8 @@ test('Recovery Host handoff drains in-flight supervision before releasing owners
     requested_at_unix_ms: now,
     expires_at_unix_ms: now + 60_000,
     expected_disk_revision: newRevision,
-    allow_acceptance_pending: false
+    allow_acceptance_pending: false,
+    source_checkpoint: { ...SOURCE_CHECKPOINT }
   })).state, 'accepted');
 
   await new Promise((resolve) => setTimeout(resolve, 150));
@@ -633,7 +672,13 @@ test('Recovery Host resumes ownership and releases the fence when replacement do
     lightweightSnapshot: async () => ({ mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true }),
     codingMcpRevisionStatus: () => ({ running_revision: oldRevision, disk_revision: oldRevision, update_pending: false, state: 'current' }),
     inspectCodeActivation: async () => ({ safe: true, code: 'READY' }),
-    prepareCodeActivation: async () => ({ safe: true, code: 'READY', fenced: true }),
+    prepareCodeActivation: async ({ operationId, sourceCheckpoint }) => ({
+      safe: true,
+      code: 'READY',
+      source_checkpoint: { ok: Boolean(sourceCheckpoint) },
+      fenced: true,
+      fence_operation_id: operationId
+    }),
     cancelCodeActivation: async () => { calls.cancelFence += 1; return true; },
     start: async () => ({}),
     stop: async () => { calls.runtimeStop += 1; },
@@ -682,7 +727,8 @@ test('Recovery Host resumes ownership and releases the fence when replacement do
     requested_at_unix_ms: now,
     expires_at_unix_ms: now + 60_000,
     expected_disk_revision: newRevision,
-    allow_acceptance_pending: false
+    allow_acceptance_pending: false,
+    source_checkpoint: { ...SOURCE_CHECKPOINT }
   })).state, 'accepted');
 
   let status = host.activation.status(operationId);

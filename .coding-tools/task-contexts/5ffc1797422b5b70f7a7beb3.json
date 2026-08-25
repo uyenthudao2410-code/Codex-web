@@ -1,0 +1,346 @@
+{
+  "version": 2,
+  "task_id": "a4c921df35d74decbfafa4a1ec93dae9",
+  "orchestration": {
+    "run_id": "51ed7fefe8c4419a8fde3ea557d59afe",
+    "wave_id": "be3552d34c1640c38ea023662ee153f6",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "c4d9c59e1c80da2f34c680461b6dfe3855bc7820f396690ae0242a8871b95a69",
+    "contract_fp": ""
+  },
+  "objective": "Diagnose why after the operator closes/stops the Electron development session launched by `npm start`, a project tray/background app still appears to run, and whether this can cause new source changes to appear not updated. Determine the exact ownership/lifecycle relationship among npm/electron UI, Recovery Host, Coding MCP, tunnel, detached child processes, Electron UI auto-recovery, revision capture/activation, and dev-mode relaunch. Inspect current live status only through read-only supported commands. Identify whether an old Electron/Recovery Host instance can keep serving stale JS/renderer source after `npm start` exits, what components reload automatically vs require controlled activation, and the safest durable fix that preserves recovery reliability while giving development mode deterministic stop/reload semantics. Do not modify files, kill processes, restart services, acknowledge connector discovery, commit, or push.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-25T07:32:34.798Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-25T07:32:34.798Z"
+    }
+  ],
+  "current_step": "Acceptance decision - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "jUSpbaS-sNbGUG7bGPXXSq8o",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 526,
+    "finished_at": "2026-08-25T07:32:34.495Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ACCEPTING",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 37,
+        "head_hash": "633a558beaaff40b4a432e4eb7cb1caa1a936ae4fef8708a203eed5d50cdafa1"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-51ed7fefe8c4419a8fde3ea557d59afe\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-51ed7fefe8c4419a8fde3ea557d59afe\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "51ed7fefe8c4419a8fde3ea557d59afe",
+      "wave_id": "be3552d34c1640c38ea023662ee153f6",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "c4d9c59e1c80da2f34c680461b6dfe3855bc7820f396690ae0242a8871b95a69",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Diagnose why after the operator closes/stops the Electron development session launched by `npm start`, a project tray/background app still appears to run, and whether this can cause new source changes to appear not updated. Determine the exact ownership/lifecycle relationship among npm/electron UI, Recovery Host, Coding MCP, tunnel, detached child processes, Electron UI auto-recovery, revision capture/activation, and dev-mode relaunch. Inspect current live status only through read-only supported commands. Identify whether an old Electron/Recovery Host instance can keep serving stale JS/renderer source after `npm start` exits, what components reload automatically vs require controlled activation, and the safest durable fix that preserves recovery reliability while giving development mode deterministic stop/reload semantics. Do not modify files, kill processes, restart services, acknowledge connector discovery, commit, or push.",
+        "objective_revision": 1,
+        "objective_sha256": "988e1fc30103ff896f8b238a2c364d2a8db693181f098258f33ef2cfad974d9a",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 4,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "c94ec0ddf290410f8db00971e382e794",
+          "stage_id": "check:de487489d6655339",
+          "status": "passed",
+          "duration_ms": 2644,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "59c0aeb0569548508e89bfec9a4d7e8e",
+          "stage_id": "check:2be094743bdf8724",
+          "status": "passed",
+          "duration_ms": 751,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "73730b63acdd41aa940d8cfaf78275a7",
+          "stage_id": "check:6e26545342b091f0",
+          "status": "passed",
+          "duration_ms": 766,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "02aa6d12958841a88644140eeefd23bf",
+          "stage_id": "check:12a2a7ea4715cef9",
+          "status": "passed",
+          "duration_ms": 880,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+  },
+  "completion_report_id": "08198bdffc08fe5ccba24403f814f72a050f109121908b066a8abbeb1f92caff",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject.",
+  "created_at": "2026-08-25T07:31:39.918Z",
+  "updated_at": "2026-08-25T07:32:35.286Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:31:39.918Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Diagnose why after the operator closes/stops the Electron development session launched by `npm start`, a project tray/background app still appears to run, and whether this can cause new source changes to appear not updated. Determine the exact ownership/lifecycle relationship among npm/electron UI, Recovery Host, Coding MCP, tunnel, detached child processes, Electron UI auto-recovery, revision capture/activation, and dev-mode relaunch. Inspect current live status only through read-only supported commands. Identify whether an old Electron/Recovery Host instance can keep serving stale JS/renderer source after `npm start` exits, what components reload automatically vs require controlled activation, and the safest durable fix that preserves recovery reliability while giving development mode deterministic stop/reload semantics. Do not modify files, kill processes, restart services, acknowledge connector discovery, commit, or push."
+      }
+    },
+    {
+      "time": "2026-08-25T07:31:40.829Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T07:31:42.365Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:24.848Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:25.545Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:26.495Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:26.509Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:27.578Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:28.142Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:28.762Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run recovery:supervisor:status",
+        "session_id": "xo3xejRyKyE7zYzNy1HWpb3E"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:30.896Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run recovery:supervisor:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:31.712Z",
+      "event": "command_started",
+      "details": {
+        "command": "tasklist.exe /FI \"IMAGENAME eq electron.exe\" /FO LIST",
+        "session_id": "AXKBSDtCBVxaOyC3ZVPYlId-"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:32.079Z",
+      "event": "command_finished",
+      "details": {
+        "command": "tasklist.exe /FI \"IMAGENAME eq electron.exe\" /FO LIST",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:32.928Z",
+      "event": "command_started",
+      "details": {
+        "command": "tasklist.exe /FI \"IMAGENAME eq pythonw.exe\" /FO LIST",
+        "session_id": "2cAByKbb-UtsjP2S6JXVASQX"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:33.244Z",
+      "event": "command_finished",
+      "details": {
+        "command": "tasklist.exe /FI \"IMAGENAME eq pythonw.exe\" /FO LIST",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:34.144Z",
+      "event": "command_started",
+      "details": {
+        "command": "tasklist.exe /FI \"IMAGENAME eq code-tunnel.exe\" /FO LIST",
+        "session_id": "jUSpbaS-sNbGUG7bGPXXSq8o"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:34.495Z",
+      "event": "command_finished",
+      "details": {
+        "command": "tasklist.exe /FI \"IMAGENAME eq code-tunnel.exe\" /FO LIST",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:34.794Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:34.798Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:35.069Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:35.070Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:35.184Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "08198bdffc08fe5ccba24403f814f72a050f109121908b066a8abbeb1f92caff"
+      }
+    },
+    {
+      "time": "2026-08-25T07:32:35.286Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "c409e55f99e2455e8f531fcd7221cc24",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "rNTbUHWTIHPfFtSy-YxFmWaU",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 398,
+    "finished_at": "2026-08-25T07:11:53.355Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T07:11:52.722Z",
+  "updated_at": "2026-08-25T07:11:53.355Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:11:52.722Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T07:11:53.108Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 24 \"recovery\\.replace|replace.*recovery|handoff|replacement\" electron\\services\\recoveryIpc.js electron\\services\\recoveryHost.js electron\\services\\recoveryHostLauncher.js electron\\services\\recoveryActivation.js",
+        "session_id": "rNTbUHWTIHPfFtSy-YxFmWaU"
+      }
+    },
+    {
+      "time": "2026-08-25T07:11:53.355Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 24 \"recovery\\.replace|replace.*recovery|handoff|replacement\" electron\\services\\recoveryIpc.js electron\\services\\recoveryHost.js electron\\services\\recoveryHostLauncher.js electron\\services\\recoveryActivation.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "0fd58a2ee74b48efb48012d14a17973c",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "mS2i1-rnckjZazP4h5XJcVDq",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 195,
+    "finished_at": "2026-08-25T07:10:21.607Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T07:10:21.101Z",
+  "updated_at": "2026-08-25T07:10:21.607Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:10:21.116Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T07:10:21.351Z",
+      "event": "command_started",
+      "details": {
+        "command": "type .coding-tools\\orchestration\\reports\\run-75838f9184de47728e3d4f3b3df403ca\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-be20fe25636e4bb3b04de831fb037fd6\\run-summary.md",
+        "session_id": "mS2i1-rnckjZazP4h5XJcVDq"
+      }
+    },
+    {
+      "time": "2026-08-25T07:10:21.607Z",
+      "event": "command_finished",
+      "details": {
+        "command": "type .coding-tools\\orchestration\\reports\\run-75838f9184de47728e3d4f3b3df403ca\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-be20fe25636e4bb3b04de831fb037fd6\\run-summary.md",
+        "status": "passed"
+      }
+    }
+  ]
+}

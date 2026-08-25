@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import sqlite3
 import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from coding_tools_mcp.orchestration_control import OrchestrationControl, OrchestrationControlError
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
@@ -82,6 +84,56 @@ class OrchestrationControlTests(unittest.TestCase):
             self.assertEqual(second["objective_source"], "replan_request")
             self.assertTrue(second["objective_changed_from_previous"])
             self.assertTrue(second["objective_hash_valid"])
+
+    def test_atomic_checkpoint_failure_preserves_accepting_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            terminal_callbacks: list[tuple[str, str]] = []
+            control = OrchestrationControl(
+                root,
+                ledger,
+                on_wave_terminal=lambda ctx, state: terminal_callbacks.append((ctx.run_id, state)),
+            )
+            ctx = control.begin(
+                objective="atomic checkpoint rollback",
+                task_id="task-atomic-checkpoint",
+                execution_mode="mcp_only",
+                base_head="abc",
+                worktree_fp="fp",
+            )
+            control.mark_ready(ctx)
+            control.select_route(ctx, {"requested": "auto", "selected": "deterministic"})
+            control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only")
+            control.begin_proof(ctx)
+            control.mark_accepting(ctx, proof_summary={"proof": "green"})
+
+            with patch.object(
+                ledger,
+                "_insert_checkpoint_row",
+                side_effect=sqlite3.OperationalError("injected checkpoint failure"),
+            ):
+                with self.assertRaises(OrchestrationControlError) as failed:
+                    control.checkpoint_with_receipt(
+                        ctx,
+                        git_head="abc",
+                        proof_fingerprint="proof-fingerprint",
+                    )
+
+            self.assertEqual(failed.exception.code, "CHECKPOINT_ATOMIC_FAILED")
+            self.assertEqual(ctx.state, "ACCEPTING")
+            self.assertEqual(control.snapshot(ctx.run_id).state, "ACCEPTING")
+            self.assertEqual(ledger.get_run(ctx.run_id)["status"], "active")
+            wave = next(item for item in ledger.list_waves(ctx.run_id) if item["wave_id"] == ctx.wave_id)
+            self.assertEqual(wave["status"], "active")
+            self.assertEqual(ledger.list_checkpoints(ctx.run_id, wave_id=ctx.wave_id), [])
+            terminal_transitions = [
+                item for item in ledger.list_events(ctx.run_id)
+                if item.get("event_type") == "state_transition" and item.get("state_after") == "CHECKPOINTED"
+            ]
+            self.assertEqual(terminal_transitions, [])
+            self.assertTrue(ledger.verify_chain(ctx.run_id)["ok"])
+            self.assertEqual(terminal_callbacks, [])
 
     def test_recovery_reconstructs_active_write_lease(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -1,0 +1,136 @@
+{
+  "version": 2,
+  "task_id": "",
+  "orchestration": {
+    "run_id": "65018d2dca7c4da182282edabbdca379",
+    "wave_id": "f896aa5843f24992b9cb4c1ada335682",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "dc7ffb74618cf84abd9e3c96ffbfc5dd2ebb328e210eab19b7f6fd3459ec3e1b",
+    "contract_fp": ""
+  },
+  "objective": "",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 62,
+        "head_hash": "c7516635569b87f32cdbd2277b73646748dc9535f5fde859a8eddc49254301ff"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-65018d2dca7c4da182282edabbdca379\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-65018d2dca7c4da182282edabbdca379\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "65018d2dca7c4da182282edabbdca379",
+      "wave_id": "f896aa5843f24992b9cb4c1ada335682",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "dc7ffb74618cf84abd9e3c96ffbfc5dd2ebb328e210eab19b7f6fd3459ec3e1b",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fix connector freshness so a Coding MCP process restart does not require a new ChatGPT tools/list/server/discover receipt when the loaded smart-v3 tool-contract SHA is unchanged and was already acknowledged. Preserve fail-closed behavior when the tool-contract SHA changes: a new real current-contract discovery receipt is still required before acknowledgement. Do not weaken discovery binding for changed contracts, do not synthesize discovery, do not alter tunnel/sessionless initialized behavior, and do not ACK connector freshness. Update focused regression tests and run the smallest authoritative Electron test proof plus diff check.",
+        "objective_revision": 1,
+        "objective_sha256": "3747691f9e6fc717215e1b31119df0619a3666949c05d14a80a8bdab9ffb83f7",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "d27afa659e474338b120ece950ed6942",
+          "stage_id": "check:94e824a3884457f8",
+          "status": "passed",
+          "duration_ms": 1234,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "d88a430b7097479f99a66d4c10baae1d",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 8390,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "ba78a360299498b229a93c8339dabb8f052af36efd3f491a467333b940255af5",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-25T06:37:20.627Z",
+  "updated_at": "2026-08-25T06:37:20.738Z",
+  "events": [
+    {
+      "time": "2026-08-25T06:37:20.627Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T06:37:20.738Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "ba78a360299498b229a93c8339dabb8f052af36efd3f491a467333b940255af5"
+      }
+    }
+  ]
+}

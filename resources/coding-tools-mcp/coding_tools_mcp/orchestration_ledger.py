@@ -2490,20 +2490,116 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
     ) -> str:
         checkpoint_id = uuid.uuid4().hex
         with self._lock, self._connect() as connection:
-            connection.execute(
-                "INSERT INTO checkpoints VALUES(?,?,?,?,?,?,?,?)",
-                (
-                    checkpoint_id,
-                    run_id,
-                    wave_id,
-                    _bounded_text(git_head, 128),
-                    _bounded_text(proof_fingerprint, 128),
-                    _bounded_text(status, 64),
-                    utc_now(),
-                    _json(_sanitize(metadata or {})),
-                ),
+            self._insert_checkpoint_row(
+                connection,
+                checkpoint_id=checkpoint_id,
+                run_id=run_id,
+                wave_id=wave_id,
+                git_head=git_head,
+                proof_fingerprint=proof_fingerprint,
+                status=status,
+                metadata=metadata,
             )
         return checkpoint_id
+
+    @staticmethod
+    def _insert_checkpoint_row(
+        connection: sqlite3.Connection,
+        *,
+        checkpoint_id: str,
+        run_id: str,
+        wave_id: str | None,
+        git_head: str,
+        proof_fingerprint: str,
+        status: str,
+        metadata: dict[str, Any] | None,
+    ) -> str:
+        """Insert a checkpoint using the caller's transaction."""
+        connection.execute(
+            "INSERT INTO checkpoints VALUES(?,?,?,?,?,?,?,?)",
+            (
+                checkpoint_id,
+                run_id,
+                wave_id,
+                _bounded_text(git_head, 128),
+                _bounded_text(proof_fingerprint, 128),
+                _bounded_text(status, 64),
+                utc_now(),
+                _json(_sanitize(metadata or {})),
+            ),
+        )
+        return checkpoint_id
+
+    def accept_checkpoint_atomic(
+        self,
+        *,
+        run_id: str,
+        wave_id: str,
+        git_head: str,
+        proof_fingerprint: str,
+        status: str = "accepted",
+        metadata: dict[str, Any] | None = None,
+        state_before: str = "ACCEPTING",
+        state_after: str = "CHECKPOINTED",
+        reason: str = "chatweb_sol_acceptance",
+        delegation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Atomically append terminal acceptance and its checkpoint receipt.
+
+        The state-transition event, run/wave terminal updates, and checkpoint
+        row share one ``BEGIN IMMEDIATE`` transaction.  Any injected or
+        unexpected failure rolls all three back, leaving the authoritative
+        ledger in ``ACCEPTING`` with a valid prior event-chain head.
+        """
+        checkpoint_id = uuid.uuid4().hex
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            run = connection.execute(
+                "SELECT status FROM runs WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+            wave = connection.execute(
+                "SELECT run_id,status FROM waves WHERE wave_id=?",
+                (wave_id,),
+            ).fetchone()
+            if run is None or wave is None or str(wave["run_id"] or "") != str(run_id):
+                raise ValueError("atomic checkpoint run/wave was not found")
+            if str(run["status"] or "") != "active" or str(wave["status"] or "") != "active":
+                raise ValueError("atomic checkpoint requires an active run and wave")
+            event = append_hash_chained_event(
+                connection,
+                run_id=run_id,
+                wave_id=wave_id,
+                delegation_id=delegation_id,
+                event_type="state_transition",
+                state_before=_bounded_text(state_before, 64),
+                state_after=_bounded_text(state_after, 64),
+                payload={"reason": reason, "checkpoint_id": checkpoint_id},
+                event_time=now,
+                sanitize=_sanitize,
+                serialize=_json,
+                bounded_text=_bounded_text,
+            )
+            connection.execute(
+                "UPDATE waves SET status=?, finished_at=? WHERE wave_id=?",
+                (_bounded_text(status, 64), now, wave_id),
+            )
+            connection.execute(
+                "UPDATE runs SET status=?, finished_at=? WHERE run_id=?",
+                (_bounded_text(status, 64), now, run_id),
+            )
+            self._insert_checkpoint_row(
+                connection,
+                checkpoint_id=checkpoint_id,
+                run_id=run_id,
+                wave_id=wave_id,
+                git_head=git_head,
+                proof_fingerprint=proof_fingerprint,
+                status=status,
+                metadata=metadata,
+            )
+        return {"checkpoint_id": checkpoint_id, "event": event}
 
     def list_checkpoints(self, run_id: str, *, wave_id: str | None = None) -> list[dict[str, Any]]:
         query = "SELECT * FROM checkpoints WHERE run_id=?"

@@ -10,6 +10,7 @@ const RECOVERY_HOST_LEGACY_V1_ADDED_FILE_DIGESTS = Object.freeze({
   'electron/services/deviceIdentity.js': '8b673b83c76f6cf745d36849af677ce9f97e8b3441ffd14f1c220311c20e144e',
   'electron/services/runtimeIdentity.js': '4774b0922cbcf859addd99899a76db449477cfe0643bcacdb00f9549d02caea5'
 });
+const COMPONENT_ORDER = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
 
 const COMPONENT_SPECS = Object.freeze({
   recovery_host: Object.freeze({
@@ -117,6 +118,15 @@ function componentOwnsPath(component, workspaceRelative, specs = COMPONENT_SPECS
     return relative.startsWith(prefix)
       && (directory.extensions || []).includes(path.extname(relative).toLowerCase());
   });
+}
+
+function componentOwners(workspaceRelative, specs = COMPONENT_SPECS) {
+  const configured = Object.keys(specs || {});
+  const ordered = [
+    ...COMPONENT_ORDER.filter((component) => configured.includes(component)),
+    ...configured.filter((component) => !COMPONENT_ORDER.includes(component)).sort()
+  ];
+  return ordered.filter((component) => componentOwnsPath(component, workspaceRelative, specs));
 }
 
 function hashComponentRevision(appRoot, component, specs = COMPONENT_SPECS) {
@@ -247,8 +257,8 @@ class ComponentRevisionTracker {
     return disk.revision;
   }
 
-  status(component, runningRevision = undefined) {
-    const disk = this.disk(component);
+  status(component, runningRevision = undefined, options = {}) {
+    const disk = this.disk(component, { force: options?.force === true });
     const running = runningRevision === undefined
       ? String(this.running.get(component) || '')
       : String(runningRevision || '');
@@ -265,8 +275,10 @@ class ComponentRevisionTracker {
 
 module.exports = {
   COMPONENT_SPECS,
+  COMPONENT_ORDER,
   ComponentRevisionTracker,
   componentOwnsPath,
+  componentOwners,
   hashComponentRevision,
   recoveryHostLegacyV1Revision,
   RECOVERY_HOST_LEGACY_V1_CONTRACT,

@@ -1,0 +1,285 @@
+{
+  "version": 2,
+  "task_id": "abe780c832684e4d87c81854e0facf0c",
+  "orchestration": {
+    "run_id": "ec4e82273742458ea82b4d7e06f0eee2",
+    "wave_id": "a6219b7cc0a741089021bec348a62b3b",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "8ef276970782a7d2e21bfe7a2ea401e99a611dc59e41dc6aa27ae498fe1fb322",
+    "contract_fp": ""
+  },
+  "objective": "Verify whether the stale Electron development lifecycle bug is now fully fixed. Read-only verification only; no file modifications or runtime restart/stop/activation.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-08-25T09:06:38.070Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-25T09:06:38.070Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Y9IlwnX6BuKscbD2EvWMLQ0p",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-08-25T09:06:37.806Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 21,
+        "head_hash": "ea7853146fae353cb072d2376797f002348cc281515b8fa9104bc49b3d5fd755"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ec4e82273742458ea82b4d7e06f0eee2\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ec4e82273742458ea82b4d7e06f0eee2\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "ec4e82273742458ea82b4d7e06f0eee2",
+      "wave_id": "a6219b7cc0a741089021bec348a62b3b",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "8ef276970782a7d2e21bfe7a2ea401e99a611dc59e41dc6aa27ae498fe1fb322",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Verify whether the stale Electron development lifecycle bug is now fully fixed. Read-only verification only; no file modifications or runtime restart/stop/activation.",
+        "objective_revision": 1,
+        "objective_sha256": "f35307353036c4b1bda8c04ef5e4d66e79e96bd8934035d7271cc64b6469a647",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "cb41dd47275f443fa350479b5f79ef3a",
+          "stage_id": "check:caf5dc59182be717",
+          "status": "failed",
+          "duration_ms": 5263,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 29353
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "8aaeeebb702c454fba7178f84e7cd7eecb33e1fb342b1dce1a40b124e2b02498",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-08-25T09:06:28.106Z",
+  "updated_at": "2026-08-25T09:07:36.721Z",
+  "events": [
+    {
+      "time": "2026-08-25T09:06:28.106Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:28.553Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:29.279Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:30.412Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:30.420Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:31.703Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:32.405Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:33.146Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/dev-ui-lifecycle.test.js tests/activation-closure.test.js",
+        "session_id": "Y9IlwnX6BuKscbD2EvWMLQ0p"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:37.806Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/dev-ui-lifecycle.test.js tests/activation-closure.test.js",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:38.071Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:38.687Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:38.693Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:38.700Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:38.934Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "8aaeeebb702c454fba7178f84e7cd7eecb33e1fb342b1dce1a40b124e2b02498"
+      }
+    },
+    {
+      "time": "2026-08-25T09:06:39.078Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-25T09:07:30.473Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:07:30.805Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    }
+  ]
+}

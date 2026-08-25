@@ -4,7 +4,7 @@ Tools-Codex-web is a local Windows desktop execution bridge that lets authentica
 
 ## Supported version
 
-The current desktop package is `web-mcp-assistant 0.3.4`. Security fixes should target the currently maintained `0.3.x` line unless a release note states otherwise.
+The current desktop package is `coding-tools-mcp 1.0.0`. Security fixes should target the currently maintained `1.0.x` line unless a release note states otherwise.
 
 ## Trust and authority model
 

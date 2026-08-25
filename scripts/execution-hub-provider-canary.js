@@ -40,7 +40,8 @@ function configureElectronAppContext(app, appData = process.env.APPDATA) {
   const root = safeText(appData, 2000);
   if (!root) throw new CanaryError('APPDATA_UNAVAILABLE', 'Windows APPDATA is unavailable.');
   const dataRoot = path.join(root, 'web-mcp-assistant');
-  app.setName('web-mcp-assistant');
+  // Keep the legacy data root so version 1.0 reuses the managed runtime state.
+  app.setName('Coding Tools MCP');
   app.setPath('userData', dataRoot);
   return dataRoot;
 }

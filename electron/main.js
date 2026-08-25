@@ -26,7 +26,13 @@ const {
   assertActivationDeadline
 } = require('./services/recoveryHostLauncher');
 const { ComponentRevisionTracker } = require('./services/componentRevision');
+const { activationSourceCheckpoint } = require('./services/activationClosure');
 const { startRecoveryHostApplication } = require('./recoveryHost');
+
+// Version 1.0 has a new product identity but retains the existing encrypted
+// desktop profile so an upgrade does not orphan its runtime configuration.
+app.setName('Coding Tools MCP');
+app.setPath('userData', path.join(app.getPath('appData'), 'web-mcp-assistant'));
 
 let chatWindow;
 let managerWindow;
@@ -58,10 +64,52 @@ let uiExitInFlight = false;
 let preparedP5A0Manifest = null;
 let latestP5A0EpochId = '';
 const P5_A0_SEED_HANDLE = 'secret://experiment/p5/a';
+const DEV_UI_INSTANCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 
-function codeActivationRequest(component, allowAcceptancePending = false) {
+function devUiSecondInstanceRequest(commandLine = []) {
+  const controls = (Array.isArray(commandLine) ? commandLine : [])
+    .map((value) => String(value || ''))
+    .filter((value) => value.startsWith('--dev-ui-focus=') || value.startsWith('--dev-ui-stop='));
+  if (!controls.length) return null;
+  if (controls.length !== 1) return { action: 'invalid', instanceId: '' };
+  const match = /^--dev-ui-(focus|stop)=(.+)$/.exec(controls[0]);
+  if (!match || !DEV_UI_INSTANCE_PATTERN.test(match[2])) return { action: 'invalid', instanceId: '' };
+  return { action: match[1], instanceId: match[2] };
+}
+
+function handleSecondInstance(commandLine = []) {
+  const request = devUiSecondInstanceRequest(commandLine);
+  if (!request) {
+    showChatWindow();
+    return;
+  }
+  if (request.action === 'invalid' || request.instanceId !== uiInstanceId) {
+    log.warn('Refused an Electron UI lifecycle signal that did not match the live single instance', {
+      stage: 'dev-ui-lifecycle',
+      action: request.action
+    });
+    return;
+  }
+  if (request.action === 'stop') {
+    void quitUi('operator_quit');
+    return;
+  }
+  showChatWindow();
+}
+
+function existingInstanceDiagnostic(argv = process.argv) {
+  const request = devUiSecondInstanceRequest(argv);
+  if (request && request.action !== 'invalid') {
+    return `DEV_UI SIGNAL_DISPATCHED action=${request.action} target_instance=${request.instanceId}`;
+  }
+  return 'Coding Tools MCP UI is already running. Use "npm run dev" to inspect/activate the current checkout or "npm run dev:replace" for a verified replacement.';
+}
+
+async function codeActivationRequest(component, allowAcceptancePending = false) {
   const allowed = new Set(['coding_mcp', 'electron_ui', 'recovery_host']);
   if (!allowed.has(component)) throw Object.assign(new Error('Component kích hoạt không hợp lệ.'), { code: 'INVALID_COMPONENT' });
+  const snapshot = await orchestrator.snapshot({ force: true, reason: 'manual-code-activation-authority' });
+  const sourceCheckpoint = activationSourceCheckpoint(snapshot?.recoveryHost, component);
   const now = Date.now();
   return {
     operation_id: crypto.randomBytes(18).toString('base64url'),
@@ -69,7 +117,8 @@ function codeActivationRequest(component, allowAcceptancePending = false) {
     requested_at_unix_ms: now,
     expires_at_unix_ms: now + 60_000,
     expected_disk_revision: uiRevisionTracker.disk(component, { force: true }).revision,
-    allow_acceptance_pending: allowAcceptancePending === true
+    allow_acceptance_pending: allowAcceptancePending === true,
+    source_checkpoint: sourceCheckpoint
   };
 }
 
@@ -230,7 +279,7 @@ async function panelTaskControl(action) {
       _meta: {
         'io.modelcontextprotocol/protocolVersion': '2026-07-28',
         'io.modelcontextprotocol/clientCapabilities': {},
-        'io.modelcontextprotocol/clientInfo': { name: 'web-mcp-assistant-panel', version: app.getVersion() }
+        'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-panel', version: app.getVersion() }
       }
     }
   };
@@ -275,7 +324,7 @@ async function callP5TaskControl(p5Experiment, requestIdPrefix) {
       _meta: {
         'io.modelcontextprotocol/protocolVersion': '2026-07-28',
         'io.modelcontextprotocol/clientCapabilities': {},
-        'io.modelcontextprotocol/clientInfo': { name: 'web-mcp-assistant-panel', version: app.getVersion() }
+        'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-panel', version: app.getVersion() }
       }
     }
   };
@@ -371,7 +420,7 @@ async function recordHostObservationSpan(event) {
       _meta: {
         'io.modelcontextprotocol/protocolVersion': '2026-07-28',
         'io.modelcontextprotocol/clientCapabilities': {},
-        'io.modelcontextprotocol/clientInfo': { name: 'web-mcp-assistant-host-observer', version: app.getVersion() }
+        'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-host-observer', version: app.getVersion() }
       }
     }
   };
@@ -444,12 +493,12 @@ function createTray() {
   if (tray && !tray.isDestroyed()) return tray;
   const icon = nativeImage.createFromPath(appIconPath()).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
-  tray.setToolTip('Trợ lý Web MCP · Đang chạy ngầm');
+  tray.setToolTip('Coding Tools MCP · Đang chạy ngầm');
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Mở Trợ lý Web MCP', click: () => showChatWindow() },
+    { label: 'Mở Coding Tools MCP', click: () => showChatWindow() },
     { label: 'Mở Cấu hình Quản lý', click: () => { showChatWindow(); openManagerWindow(); } },
     { type: 'separator' },
-    { label: 'Thoát Trợ lý (Giữ dịch vụ MCP)', click: () => { void quitUi('operator_quit'); } }
+    { label: 'Thoát ứng dụng (Giữ dịch vụ MCP)', click: () => { void quitUi('operator_quit'); } }
   ]));
   tray.on('click', () => showChatWindow());
   tray.on('double-click', () => showChatWindow());
@@ -470,7 +519,7 @@ function createChatWindow() {
     minHeight: 640,
     show: false,
     backgroundColor: '#f7f7f8',
-    title: 'Trợ lý Web MCP',
+    title: 'Coding Tools MCP',
     icon: appIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'browserPreload.js'),
@@ -570,7 +619,7 @@ function openManagerWindow() {
     frame: false,
     transparent: false,
     backgroundColor: '#f7f7f8',
-    title: 'Trợ lý Web MCP · Trung tâm Quản lý',
+    title: 'Coding Tools MCP · Trung tâm Quản lý',
     icon: appIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -758,7 +807,7 @@ function registerIpc() {
         _meta: {
           'io.modelcontextprotocol/protocolVersion': '2026-07-28',
           'io.modelcontextprotocol/clientCapabilities': {},
-          'io.modelcontextprotocol/clientInfo': { name: 'web-mcp-assistant-panel', version: app.getVersion() }
+          'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-panel', version: app.getVersion() }
         }
       }
     };
@@ -822,11 +871,11 @@ function registerIpc() {
   secureHandle('runtime:stop', () => invokeSafely(() => orchestrator.stop()));
   secureHandle('runtime:restart', () => invokeSafely(() => orchestrator.restart()));
   secureHandle('code:activation-preflight', (_event, component, allowAcceptancePending) => invokeSafely(async () => {
-    const request = codeActivationRequest(component, allowAcceptancePending);
+    const request = await codeActivationRequest(component, allowAcceptancePending);
     return { request, preflight: await orchestrator.activationPreflight(request) };
   }));
   secureHandle('code:activate-update', (_event, component, allowAcceptancePending) => invokeSafely(async () => {
-    const request = codeActivationRequest(component, allowAcceptancePending);
+    const request = await codeActivationRequest(component, allowAcceptancePending);
     const result = await orchestrator.activateUpdate(request);
     if (component === 'electron_ui') setImmediate(() => registerUiRevision().catch(() => {}));
     return result;
@@ -867,10 +916,13 @@ if (recoveryHostMode) {
   app.whenReady().then(() => startRecoveryHostApplication(app));
 } else {
   const hasSingleInstanceLock = app.requestSingleInstanceLock();
-  if (!hasSingleInstanceLock) app.quit();
-  app.on('second-instance', () => showChatWindow());
+  if (!hasSingleInstanceLock) {
+    process.stderr.write(`${existingInstanceDiagnostic()}\n`);
+    app.quit();
+  } else {
+    app.on('second-instance', (_event, commandLine) => handleSecondInstance(commandLine));
 
-  app.whenReady().then(async () => {
+    app.whenReady().then(async () => {
     app.setLoginItemSettings({
       openAtLogin: Boolean(settings.load().startWithWindows),
       path: process.execPath,
@@ -902,13 +954,14 @@ if (recoveryHostMode) {
       sendManager('runtime:heartbeat', status);
       if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
     }).then(() => registerUiRevision()).catch(() => {}), 5000).unref();
-    log.info('Trợ lý Web MCP UI đã kết nối Recovery Host');
-  });
+    log.info('Coding Tools MCP UI đã kết nối Recovery Host');
+    });
 
-  app.on('before-quit', () => { forceQuit = true; });
-  app.on('window-all-closed', () => {
-    if (!forceQuit && settings.load().keepRunningOnClose) return;
-    if (!forceQuit) app.quit();
-  });
-  app.on('activate', () => showChatWindow());
+    app.on('before-quit', () => { forceQuit = true; });
+    app.on('window-all-closed', () => {
+      if (!forceQuit && settings.load().keepRunningOnClose) return;
+      if (!forceQuit) app.quit();
+    });
+    app.on('activate', () => showChatWindow());
+  }
 }

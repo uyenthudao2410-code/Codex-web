@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "51953a7ffe14445b9f2da8acc356433f",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "3Pi2Nr4Kq135F3uy3PpQf4kP",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 231,
+    "finished_at": "2026-08-25T07:13:20.536Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T07:13:20.058Z",
+  "updated_at": "2026-08-25T07:13:20.536Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:13:20.058Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T07:13:20.294Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 20 \"'recovery\\.\" electron\\services\\recoveryHost.js",
+        "session_id": "3Pi2Nr4Kq135F3uy3PpQf4kP"
+      }
+    },
+    {
+      "time": "2026-08-25T07:13:20.536Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 20 \"'recovery\\.\" electron\\services\\recoveryHost.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

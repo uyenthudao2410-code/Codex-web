@@ -41,7 +41,7 @@ test('Electron entry detection is explicit and independent of require.main', () 
   assert.equal(isElectronEntrypoint({ versions: { node: process.versions.node }, argv: ['node.exe', filename], filename }), false);
 });
 
-test('standalone Electron context is aligned to the managed app userData before readiness', () => {
+test('standalone Electron context uses the Coding Tools MCP name while preserving the managed userData root', () => {
   const calls = [];
   const fakeApp = {
     setName(value) { calls.push(['name', value]); },
@@ -50,7 +50,7 @@ test('standalone Electron context is aligned to the managed app userData before 
   const root = configureElectronAppContext(fakeApp, 'C:\\Users\\tester\\AppData\\Roaming');
   assert.equal(root, 'C:\\Users\\tester\\AppData\\Roaming\\web-mcp-assistant');
   assert.deepEqual(calls, [
-    ['name', 'web-mcp-assistant'],
+    ['name', 'Coding Tools MCP'],
     ['path', 'userData', root]
   ]);
 });

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "7e8ce4fb523b487ea161de3b874f738d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "uwGiC_bP637QdHQG741ee_TH",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 251,
+    "finished_at": "2026-08-25T07:09:32.376Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T07:09:31.861Z",
+  "updated_at": "2026-08-25T07:09:32.376Z",
+  "events": [
+    {
+      "time": "2026-08-25T07:09:31.861Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T07:09:32.095Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 28 \"acceptance_files\" resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py resources\\coding-tools-mcp\\coding_tools_mcp\\acceptance_receipts.py",
+        "session_id": "uwGiC_bP637QdHQG741ee_TH"
+      }
+    },
+    {
+      "time": "2026-08-25T07:09:32.376Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 28 \"acceptance_files\" resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py resources\\coding-tools-mcp\\coding_tools_mcp\\acceptance_receipts.py",
+        "status": "passed"
+      }
+    }
+  ]
+}

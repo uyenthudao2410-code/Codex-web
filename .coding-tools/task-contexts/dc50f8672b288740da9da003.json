@@ -1,0 +1,428 @@
+{
+  "version": 2,
+  "task_id": "666a26b639474b46aac172922941303e",
+  "orchestration": {
+    "run_id": "b38aef703ee3458aa48ee0a66ecb3361",
+    "wave_id": "2562298e063b42d5882de2199cf1020e",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "5e37b839e4aaa553b3df1b710b358b54e751c461196e3952e87b47fb3beb9a9c",
+    "contract_fp": ""
+  },
+  "objective": "Fix the EOCL final-acceptance attestation bug proven by accepted checkpoint e227e11563644d5f9424218033861fe1: a stateless resume/accept can have request-local task_state.modified_files empty even though the durable RUN/WAVE ledger proves a 2-file mutation, causing accepted_files.count=0 and preventing AcceptedCodeActivationController from activating the accepted Recovery Host patch. Make final acceptance restart/stateless-safe without weakening trust. Required behavior: (1) keep current request-local modified_files as the primary source when present; (2) when it is empty, inspect only durable events for the exact run_id + current wave_id; if patch_surface_observed proves file_count>0, derive fallback candidate paths from the exact write_lease_acquired.allowed_paths for that wave, excluding existing_dirty_source_paths and protected/runtime evidence paths; (3) hash the current workspace bytes through the existing _accepted_file_receipts mechanism; (4) if durable mutation is proven but no safe source paths/receipts can be derived, fail final acceptance before checkpoint instead of recording accepted_files.count=0; (5) source/no-mutation runs may still accept with zero files; (6) do not expose new top-level tools or change the smart-v3 public contract; (7) add regression tests covering stateless empty modified_files + durable mutation fallback, exclusion of pre-existing dirty paths, and fail-closed missing durable paths. Preserve all existing connector-freshness edits and unrelated worktree state. Do not commit or push. Run the focused acceptance-file-attestation tests and any directly affected task/orchestration tests, plus git diff --check.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-25T06:52:31.426Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "failed",
+      "updated_at": "2026-08-25T06:52:31.426Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-25T06:52:31.426Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": {
+    "command": "resources\\native-python\\python.exe -m pytest resources\\coding-tools-mcp\\tests\\test_acceptance_file_attestation.py -q",
+    "kind": "test",
+    "session_id": "tehJKJn4GwAHVxUWWAkS5fMh",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-25T06:52:30.820Z",
+    "owner_run": "b38aef703ee3458aa48ee0a66ecb3361",
+    "owner_wave": "2562298e063b42d5882de2199cf1020e"
+  },
+  "last_command_result": {
+    "command_id": "5C5d6TMUwPQYFP27VHaDKx_d",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-25T06:52:29.963Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 33,
+        "head_hash": "fee9cb6f802043408ccb9e8e87c6546a990583982783293e94e194f74f0b7acd"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b38aef703ee3458aa48ee0a66ecb3361\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b38aef703ee3458aa48ee0a66ecb3361\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "b38aef703ee3458aa48ee0a66ecb3361",
+      "wave_id": "2562298e063b42d5882de2199cf1020e",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "5e37b839e4aaa553b3df1b710b358b54e751c461196e3952e87b47fb3beb9a9c",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fix the EOCL final-acceptance attestation bug proven by accepted checkpoint e227e11563644d5f9424218033861fe1: a stateless resume/accept can have request-local task_state.modified_files empty even though the durable RUN/WAVE ledger proves a 2-file mutation, causing accepted_files.count=0 and preventing AcceptedCodeActivationController from activating the accepted Recovery Host patch. Make final acceptance restart/stateless-safe without weakening trust. Required behavior: (1) keep current request-local modified_files as the primary source when present; (2) when it is empty, inspect only durable events for the exact run_id + current wave_id; if patch_surface_observed proves file_count>0, derive fallback candidate paths from the exact write_lease_acquired.allowed_paths for that wave, excluding existing_dirty_source_paths and protected/runtime evidence paths; (3) hash the current workspace bytes through the existing _accepted_file_receipts mechanism; (4) if durable mutation is proven but no safe source paths/receipts can be derived, fail final acceptance before checkpoint instead of recording accepted_files.count=0; (5) source/no-mutation runs may still accept with zero files; (6) do not expose new top-level tools or change the smart-v3 public contract; (7) add regression tests covering stateless empty modified_files + durable mutation fallback, exclusion of pre-existing dirty paths, and fail-closed missing durable paths. Preserve all existing connector-freshness edits and unrelated worktree state. Do not commit or push. Run the focused acceptance-file-attestation tests and any directly affected task/orchestration tests, plus git diff --check.",
+        "objective_revision": 1,
+        "objective_sha256": "930069a7acc93b9af5d7ab07e0c5359692430d872564072822a306353bf4c4d4",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "50db73b4b3fc4d439a2bc4d64b671bf4",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1469,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "6c744e526d28429581e987a1a7adf413",
+          "stage_id": "verify:tests",
+          "status": "failed",
+          "duration_ms": 860,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "BUILD_VERIFICATION_FAILED",
+      "reason": null,
+      "event_seq": 29238
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "fdd9f430eb6f53d0760fb065dd288e4b844903aff5abf7ca745020e34d4e43c1",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "resources\\native-python\\python.exe -m pytest resources\\coding-tools-mcp\\tests\\test_acceptance_file_attestation.py -q",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": 555,
+      "summary": "exit 1 | 0.6s | 2 lines | tail: 'E:\\\\DEV\\\\Codex-web\\\\resources\\\\native-python\\\\python.exe: No module named pytest'",
+      "finished_at": "2026-08-25T06:52:25.087Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "oY6PC0CVZhpGyiYuvbsOL1xQ"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "b38aef703ee3458aa48ee0a66ecb3361",
+        "owner_wave": "2562298e063b42d5882de2199cf1020e",
+        "size_bytes": 77,
+        "command_id": "oY6PC0CVZhpGyiYuvbsOL1xQ",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:oY6PC0CVZhpGyiYuvbsOL1xQ:stdout",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:oY6PC0CVZhpGyiYuvbsOL1xQ:stderr",
+            "total_stream_bytes": 77,
+            "total_retained_bytes": 77,
+            "head_retained_bytes": 77,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "resources\\native-python\\python.exe -m pytest resources\\coding-tools-mcp\\tests\\test_acceptance_file_attestation.py -q",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": 856,
+      "summary": "exit 1 | 0.5s | 2 lines | tail: 'E:\\\\DEV\\\\Codex-web\\\\resources\\\\native-python\\\\python.exe: No module named pytest'"
+    }
+  ],
+  "build_results": [],
+  "last_build_report": {
+    "project": {
+      "type": "electron",
+      "name": "web-mcp-assistant",
+      "version": "0.3.4",
+      "package_manager": "npm",
+      "test_command": "npm run test",
+      "build_command": "npm run dist",
+      "artifact_paths": [
+        "dist",
+        "build"
+      ]
+    },
+    "commands": {
+      "test": "resources\\native-python\\python.exe -m pytest resources\\coding-tools-mcp\\tests\\test_acceptance_file_attestation.py -q",
+      "build": "npm run dist"
+    },
+    "test_result": {
+      "command": "resources\\native-python\\python.exe -m pytest resources\\coding-tools-mcp\\tests\\test_acceptance_file_attestation.py -q",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": 856,
+      "summary": "exit 1 | 0.5s | 2 lines | tail: 'E:\\\\DEV\\\\Codex-web\\\\resources\\\\native-python\\\\python.exe: No module named pytest'"
+    },
+    "build_result": null,
+    "artifacts": [],
+    "hash_algorithm": "sha256",
+    "overall_status": "failed",
+    "failure": "Tests failed.",
+    "report_generated_at": "2026-08-25T06:52:31.171Z"
+  },
+  "modified_files": [],
+  "failure": "Present and acknowledge the pending operator completion report before starting or continuing a material agent workflow.",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-08-25T06:52:21.650Z",
+  "updated_at": "2026-08-25T06:53:41.994Z",
+  "events": [
+    {
+      "time": "2026-08-25T06:52:21.650Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fix the EOCL final-acceptance attestation bug proven by accepted checkpoint e227e11563644d5f9424218033861fe1: a stateless resume/accept can have request-local task_state.modified_files empty even though the durable RUN/WAVE ledger proves a 2-file mutation, causing accepted_files.count=0 and preventing AcceptedCodeActivationController from activating the accepted Recovery Host patch. Make final acceptance restart/stateless-safe without weakening trust. Required behavior: (1) keep current request-local modified_files as the primary source when present; (2) when it is empty, inspect only durable events for the exact run_id + current wave_id; if patch_surface_observed proves file_count>0, derive fallback candidate paths from the exact write_lease_acquired.allowed_paths for that wave, excluding existing_dirty_source_paths and protected/runtime evidence paths; (3) hash the current workspace bytes through the existing _accepted_file_receipts mechanism; (4) if durable mutation is proven but no safe source paths/receipts can be derived, fail final acceptance before checkpoint instead of recording accepted_files.count=0; (5) source/no-mutation runs may still accept with zero files; (6) do not expose new top-level tools or change the smart-v3 public contract; (7) add regression tests covering stateless empty modified_files + durable mutation fallback, exclusion of pre-existing dirty paths, and fail-closed missing durable paths. Preserve all existing connector-freshness edits and unrelated worktree state. Do not commit or push. Run the focused acceptance-file-attestation tests and any directly affected task/orchestration tests, plus git diff --check."
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:22.628Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:24.743Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m pytest resources\\coding-tools-mcp\\tests\\test_acceptance_file_attestation.py -q",
+        "session_id": "oY6PC0CVZhpGyiYuvbsOL1xQ"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:25.087Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m pytest resources\\coding-tools-mcp\\tests\\test_acceptance_file_attestation.py -q",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:25.733Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:26.832Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:26.832Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:27.853Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:28.381Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:29.038Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check",
+        "session_id": "5C5d6TMUwPQYFP27VHaDKx_d"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:29.963Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:30.179Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:30.820Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m pytest resources\\coding-tools-mcp\\tests\\test_acceptance_file_attestation.py -q",
+        "session_id": "tehJKJn4GwAHVxUWWAkS5fMh"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:31.171Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:31.426Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:32.036Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:32.041Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:32.045Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:32.226Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "fdd9f430eb6f53d0760fb065dd288e4b844903aff5abf7ca745020e34d4e43c1"
+      }
+    },
+    {
+      "time": "2026-08-25T06:52:32.234Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-25T06:53:41.535Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T06:53:41.994Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    }
+  ]
+}

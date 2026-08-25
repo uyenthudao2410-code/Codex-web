@@ -1,0 +1,301 @@
+{
+  "version": 2,
+  "task_id": "38479831f92a453a99f612ab27633b50",
+  "orchestration": {
+    "run_id": "e72dfc427e9249fca7b45d7861527750",
+    "wave_id": "9b07693a2ad84987b166c1dfb41788f4",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+    "worktree_fp": "8ef276970782a7d2e21bfe7a2ea401e99a611dc59e41dc6aa27ae498fe1fb322",
+    "contract_fp": ""
+  },
+  "objective": "Classify the focused verification failures and capture independent read-only proof of activation/runtime and current live Recovery Host/UI revision state. Do not modify source or runtime state.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-08-25T09:08:31.652Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-25T09:08:31.652Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "lGMfNU48gwxy6wNOEOGoXM9e",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 815,
+    "finished_at": "2026-08-25T09:08:31.402Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 26,
+        "head_hash": "74a399d09aa5193110e6cda0737b92b2d4f0e7e4a470dc14316d33fa06736f02"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e72dfc427e9249fca7b45d7861527750\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e72dfc427e9249fca7b45d7861527750\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "e72dfc427e9249fca7b45d7861527750",
+      "wave_id": "9b07693a2ad84987b166c1dfb41788f4",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "8ef276970782a7d2e21bfe7a2ea401e99a611dc59e41dc6aa27ae498fe1fb322",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Classify the focused verification failures and capture independent read-only proof of activation/runtime and current live Recovery Host/UI revision state. Do not modify source or runtime state.",
+        "objective_revision": 1,
+        "objective_sha256": "ebfa9552c5a564e3ce84908901c432a9d0d91eeaba89c8c83a34bc996bf43f42",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "feb8d9ebf7b341cd918980d079e12c98",
+          "stage_id": "check:f91abf21fea46bcd",
+          "status": "passed",
+          "duration_ms": 877,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "1c10089848a0437b94bc666faa197cab",
+          "stage_id": "check:5895b0eb8e5499f7",
+          "status": "failed",
+          "duration_ms": 1225,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 29383
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "eccace32eb58665b8606a00ebebc5e830f1c239e34173bf0353c322ff969fce6",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-08-25T09:08:24.696Z",
+  "updated_at": "2026-08-25T09:08:39.144Z",
+  "events": [
+    {
+      "time": "2026-08-25T09:08:24.696Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:25.111Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:25.852Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:26.918Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:26.926Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:28.136Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:28.717Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:29.394Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/activation-closure.test.js",
+        "session_id": "SnbonE4SPsY4Kcs3pUAYs8S3"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:29.719Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/activation-closure.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:30.669Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/recovery-activation.test.js tests/runtime-lifecycle.test.js",
+        "session_id": "lGMfNU48gwxy6wNOEOGoXM9e"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:31.402Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/recovery-activation.test.js tests/runtime-lifecycle.test.js",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:31.652Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:32.285Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:32.287Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:32.289Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:32.402Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "eccace32eb58665b8606a00ebebc5e830f1c239e34173bf0353c322ff969fce6"
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:32.573Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-25T09:08:38.828Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

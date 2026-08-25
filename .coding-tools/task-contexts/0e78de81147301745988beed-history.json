@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "264144c40d4d4521b086d1c8e24d5216",
+    "orchestration": {
+      "run_id": "d7f7771b1aeb4e2e893083d0989af94c",
+      "wave_id": "0c6232c52a4d4ef8baaf5e9c8a135c40",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "1d4d3dc86a8fafcf33d44f7cd35b18990428302b2731fd0bf85214d9ce7eb616",
+      "contract_fp": ""
+    },
+    "objective": "Determine whether the three failing recovery-activation tests are real activation defects or stale test expectations after activation postflight/closure hardening. Inspect only the exact failing tests and RecoveryActionStore/RecoveryActivation paths for replay expiry, Coding MCP completion, and Electron UI registration/postflight. Read-only only.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T09:08:48.526Z",
+    "updated_at": "2026-08-25T09:08:51.225Z",
+    "events": [
+      {
+        "time": "2026-08-25T09:08:48.526Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Determine whether the three failing recovery-activation tests are real activation defects or stale test expectations after activation postflight/closure hardening. Inspect only the exact failing tests and RecoveryActionStore/RecoveryActivation paths for replay expiry, Coding MCP completion, and Electron UI registration/postflight. Read-only only."
+        }
+      },
+      {
+        "time": "2026-08-25T09:08:49.632Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T09:08:51.218Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T09:08:51.225Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T09:10:07.018Z",
+    "archive_reason": "superseded"
+  }
+]

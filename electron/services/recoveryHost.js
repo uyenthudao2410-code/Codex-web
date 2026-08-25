@@ -10,6 +10,7 @@ const { loadOrCreateDeviceIdentity, normalizeDeviceIdentity } = require('./devic
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { RecoveryActivation } = require('./recoveryActivation');
 const { AcceptedCodeActivationController } = require('./recoveryActionStore');
+const { computeActivationClosure } = require('./activationClosure');
 
 const SUPERVISION_INTERVAL_MS = 5000;
 const REPLACEMENT_WAIT_MS = 15_000;
@@ -25,6 +26,50 @@ function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function isProcessAlive(pid) {
   if (!Number.isInteger(Number(pid)) || Number(pid) <= 0) return false;
   try { process.kill(Number(pid), 0); return true; } catch { return false; }
+}
+
+function activationClosureProjection({
+  autoActivation = null,
+  recoveryHostRevision = {},
+  electronUiRevision = {},
+  codingMcpRevision = {},
+  runtime = {}
+} = {}) {
+  const status = runtime?.status && typeof runtime.status === 'object' ? runtime.status : runtime;
+  const connectorContractState = String(
+    status?.connectorContractState
+    || status?.connector_contract_state
+    || runtime?.status?.connectorContractState
+    || runtime?.activationClosure?.connector_contract_state
+    || 'UNAVAILABLE'
+  );
+  const runtimeFullyReady = Object.prototype.hasOwnProperty.call(status || {}, 'fullyReady')
+    ? status.fullyReady === true
+    : status?.fully_ready === true;
+  const runtimeRunning = Object.prototype.hasOwnProperty.call(status || {}, 'runtimeRunning')
+    ? status.runtimeRunning === true
+    : status?.mcpRunning === true;
+  const tunnelRunning = status?.tunnelRunning === true;
+  const freshCodingMcpRevision = codingMcpRevision && typeof codingMcpRevision === 'object'
+    && Object.keys(codingMcpRevision).length
+    ? codingMcpRevision
+    : status?.codeRevision?.codingMcp || {};
+  return computeActivationClosure({
+    acceptedCode: autoActivation?.closure_input || null,
+    componentRevisions: {
+      recovery_host: recoveryHostRevision || {},
+      electron_ui: electronUiRevision || {},
+      coding_mcp: freshCodingMcpRevision
+    },
+    connectorContractState,
+    connectorRefreshRequired: status?.connectorRefreshRequired,
+    connectorRediscoveredAt: status?.connectorRediscoveredAt,
+    connectorCurrentSha256: status?.toolContract?.sha256,
+    connectorAcknowledgedSha256: status?.connectorContractAcknowledgedSha256,
+    runtimeFullyReady,
+    runtimeRunning,
+    tunnelRunning
+  });
 }
 
 function readLock(file) {
@@ -192,6 +237,10 @@ class RecoveryHost {
       state,
       registered: presence.tracked,
       alive: presence.alive,
+      pid: presence.pid || null,
+      instance_id: presence.instance_id || null,
+      started_at_unix_ms: Number(this.activation.uiRegistration?.started_at_unix_ms || 0) || null,
+      runtime_mode: typeof this.paths.runtimeMode === 'function' ? this.paths.runtimeMode() : null,
       suppressed: preference.suppressed,
       suppression_reason: preference.reason || '',
       attempts_in_window: this.uiRecoveryAttempts.length,
@@ -281,7 +330,7 @@ class RecoveryHost {
   hostStatus() {
     let codeRevision;
     try {
-      codeRevision = this.revisions.status('recovery_host', this.recoveryHostRunningRevision);
+      codeRevision = this.revisions.status('recovery_host', this.recoveryHostRunningRevision, { force: true });
     } catch (error) {
       codeRevision = {
         running_revision: this.recoveryHostRunningRevision || null,
@@ -291,6 +340,20 @@ class RecoveryHost {
         error_code: String(error?.code || 'REVISION_UNAVAILABLE')
       };
     }
+    const electronUiRevision = this.activation.uiRevisionStatus({ force: true });
+    const autoActivation = this.autoActivation?.status?.() || null;
+    let codingMcpRevision = {};
+    try { codingMcpRevision = this.orchestrator.codingMcpRevisionStatus?.({ force: true }) || {}; } catch {}
+    const activationClosure = activationClosureProjection({
+      autoActivation,
+      recoveryHostRevision: codeRevision,
+      electronUiRevision,
+      codingMcpRevision,
+      runtime: {
+        ...(this.lastSupervisionStatus || {}),
+        connectorContractState: 'UNAVAILABLE'
+      }
+    });
     return {
       state: this.running ? 'healthy' : 'starting',
       pid: process.pid,
@@ -303,9 +366,10 @@ class RecoveryHost {
       gateway: this.gateway?.server ? 'healthy' : 'stopped',
       gateway_metrics: this.gateway?.metrics?.() || null,
       code_revision: codeRevision,
-      electron_ui_revision: this.activation.uiRevisionStatus(),
+      electron_ui_revision: electronUiRevision,
       electron_ui_recovery: this.uiRecoveryStatus(),
-      auto_activation: this.autoActivation?.status?.() || null,
+      auto_activation: autoActivation,
+      activation_closure: activationClosure,
       recovery_plane_mode: 'independent_mcp_tunnel_v1',
       recovery_plane: this.lastRecoveryPlaneStatus,
       last_progress: this.lastProgress,
@@ -322,12 +386,25 @@ class RecoveryHost {
   decorate(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     const recoveryHost = this.hostStatus();
+    const activationClosure = activationClosureProjection({
+      autoActivation: recoveryHost.auto_activation,
+      recoveryHostRevision: recoveryHost.code_revision,
+      electronUiRevision: recoveryHost.electron_ui_revision,
+      codingMcpRevision: (() => {
+        try { return this.orchestrator.codingMcpRevisionStatus?.({ force: true }) || {}; } catch { return {}; }
+      })(),
+      runtime: value
+    });
+    recoveryHost.activation_closure = activationClosure;
     let currentSettings = {};
     try { currentSettings = this.settings.load() || {}; } catch {}
     const device = value.device && typeof value.device === 'object' ? value.device : {};
     const coding = device.coding && typeof device.coding === 'object' ? device.coding : { mcp_running: Boolean(value.mcpRunning ?? value.status?.runtimeRunning), native_alive: Boolean(value.nativeAlive ?? value.status?.runtimeRunning), tunnel_running: Boolean(value.tunnelRunning ?? value.status?.tunnelRunning), tunnel_id: String(currentSettings.tunnelId || '') || null, ownership: 'device_id' };
     const plane = recoveryHost.recovery_plane || {};
-    return { ...value, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost };
+    const status = value.status && typeof value.status === 'object'
+      ? { ...value.status, activationClosure }
+      : value.status;
+    return { ...value, ...(status ? { status } : {}), activationClosure, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost };
   }
 
   handlers() {
@@ -338,7 +415,7 @@ class RecoveryHost {
       'code.activate_update': async (request) => this.activation.activate(request),
       'code.activation_status': async (operationId) => this.activation.status(operationId),
       'client.register_ui_revision': async (registration) => {
-        const result = this.activation.registerUi(registration);
+        const result = await this.activation.registerUi(registration);
         this.resetUiRecoveryTracking('healthy');
         return result;
       },
@@ -578,5 +655,6 @@ module.exports = {
   UI_RECOVERY_REGISTRATION_TIMEOUT_MS,
   UI_RECOVERY_COOLDOWN_MS,
   UI_RECOVERY_ATTEMPT_LIMIT,
-  waitForReplacementLockRelease
+  waitForReplacementLockRelease,
+  activationClosureProjection
 };

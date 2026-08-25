@@ -1,0 +1,71 @@
+[
+  {
+    "version": 2,
+    "task_id": "4a95212fd764408db69406909541c27b",
+    "orchestration": {
+      "run_id": "fc64964db0e64f8690c2a410be70b841",
+      "wave_id": "7f62e4f3fcbf463abd70551a5badac59",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "5e37b839e4aaa553b3df1b710b358b54e751c461196e3952e87b47fb3beb9a9c",
+      "contract_fp": ""
+    },
+    "objective": "Read-only inspect the durable patch-surface identity mapping needed for the EOCL stateless acceptance-file-attestation fix. Determine exactly how patch_surface_observed.file_ids are derived from file paths and how write_lease_acquired.allowed_paths/existing_dirty_source_paths are recorded, so a fresh bugfix run can reconstruct only the exact durably touched files. Also identify the canonical stdlib unittest command for test_acceptance_file_attestation.py. Do not modify files, do not mutate the prior REPLAN run b38aef703ee3458aa48ee0a66ecb3361, and do not commit/push.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Patch context matched 3 locations in resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py; add more context.",
+    "next_step": "",
+    "created_at": "2026-08-25T06:54:43.707Z",
+    "updated_at": "2026-08-25T06:56:20.893Z",
+    "events": [
+      {
+        "time": "2026-08-25T06:54:43.707Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only inspect the durable patch-surface identity mapping needed for the EOCL stateless acceptance-file-attestation fix. Determine exactly how patch_surface_observed.file_ids are derived from file paths and how write_lease_acquired.allowed_paths/existing_dirty_source_paths are recorded, so a fresh bugfix run can reconstruct only the exact durably touched files. Also identify the canonical stdlib unittest command for test_acceptance_file_attestation.py. Do not modify files, do not mutate the prior REPLAN run b38aef703ee3458aa48ee0a66ecb3361, and do not commit/push."
+        }
+      },
+      {
+        "time": "2026-08-25T06:54:44.799Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T06:54:46.262Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T06:56:20.893Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T06:56:56.236Z",
+    "archive_reason": "superseded"
+  }
+]

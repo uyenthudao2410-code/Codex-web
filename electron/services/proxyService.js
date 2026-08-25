@@ -79,7 +79,7 @@ function probeDirect(timeout = 2500) {
       path: '/',
       method: 'HEAD',
       timeout,
-      headers: { 'User-Agent': 'web-mcp-assistant-network-check' }
+      headers: { 'User-Agent': 'coding-tools-mcp-network-check' }
     }, (response) => {
       response.resume();
       resolve(response.statusCode >= 200 && response.statusCode < 500);

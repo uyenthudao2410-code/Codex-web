@@ -1,0 +1,209 @@
+[
+  {
+    "version": 2,
+    "task_id": "5b3b78dbb54b4bf59ed63f62340153d0",
+    "orchestration": {
+      "run_id": "9a6369bfeca04646a621a6b7b4d012ef",
+      "wave_id": "0521c3852544469f89ce5ba06ec76dd3",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "026f79b3ab5997cb15f38a3b41769da6a79d790b",
+      "worktree_fp": "dc7ffb74618cf84abd9e3c96ffbfc5dd2ebb328e210eab19b7f6fd3459ec3e1b",
+      "contract_fp": ""
+    },
+    "objective": "Read-only diagnosis of why the Coding-VP connector never produces a fresh discovery receipt even though a real workspace_context tools/call succeeds. Determine exactly: (1) where tools/list and server/discover are handled and where connectorRediscovered/connectorRefreshRequired are recorded; (2) whether server/discover is an actual MCP protocol method supported by this server or only an internal/legacy alias; (3) whether the current ChatGPT Coding-VP integration exposes any assistant-callable way to force raw tools/list/server/discover, versus discovery being connector-host-controlled and cached; (4) whether the recent sessionless notifications/initialized tunnel patch can affect discovery receipt; (5) the smallest truthful fix if the connector host does not naturally rediscover after runtime restart. Do not edit files, do not restart runtime, do not ACK connector freshness, do not create synthetic discovery evidence, and do not run write-capable commands. Return evidence with exact paths/symbols and a clear root-cause ranking.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Q_tbd_xO4ppeP3LF9B9ldIJ0",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 629,
+      "finished_at": "2026-08-25T05:57:13.150Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T05:56:34.036Z",
+    "updated_at": "2026-08-25T05:57:13.150Z",
+    "events": [
+      {
+        "time": "2026-08-25T05:56:34.036Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only diagnosis of why the Coding-VP connector never produces a fresh discovery receipt even though a real workspace_context tools/call succeeds. Determine exactly: (1) where tools/list and server/discover are handled and where connectorRediscovered/connectorRefreshRequired are recorded; (2) whether server/discover is an actual MCP protocol method supported by this server or only an internal/legacy alias; (3) whether the current ChatGPT Coding-VP integration exposes any assistant-callable way to force raw tools/list/server/discover, versus discovery being connector-host-controlled and cached; (4) whether the recent sessionless notifications/initialized tunnel patch can affect discovery receipt; (5) the smallest truthful fix if the connector host does not naturally rediscover after runtime restart. Do not edit files, do not restart runtime, do not ACK connector freshness, do not create synthetic discovery evidence, and do not run write-capable commands. Return evidence with exact paths/symbols and a clear root-cause ranking."
+        }
+      },
+      {
+        "time": "2026-08-25T05:56:35.159Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T05:56:36.926Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T05:56:50.450Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"list_tools|tools/list|server/discover|connectorRediscovered|connector_rediscovered|rediscovered|discovery|record.*discover|client.*discover\" resources/coding-tools-mcp electron tests",
+          "session_id": "4Ex-FdSYzD2Vw9yfImntQvjl"
+        }
+      },
+      {
+        "time": "2026-08-25T05:56:50.918Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"list_tools|tools/list|server/discover|connectorRediscovered|connector_rediscovered|rediscovered|discovery|record.*discover|client.*discover\" resources/coding-tools-mcp electron tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:03.973Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 -e \"def list_tools\" -e \"def _record_tool_discovery\" -e \"def connector_tool_discovery\" -e \"server/discover\" -e \"tools/list\" -e \"connectorContractStatus\" -e \"acknowledgeConnectorContractHash\" -e \"notifications/initialized\" -e \"sessionless\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py electron/servic",
+          "session_id": "RfBSB7VVDxvjhhrpqdutGkwC"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:04.433Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 -e \"def list_tools\" -e \"def _record_tool_discovery\" -e \"def connector_tool_discovery\" -e \"server/discover\" -e \"tools/list\" -e \"connectorContractStatus\" -e \"acknowledgeConnectorContractHash\" -e \"notifications/initialized\" -e \"sessionless\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py electron/servic",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:12.726Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S -e \"RecoveryIpcClient\" -e \"lightweightSnapshot\" -e \"acknowledgeConnectorContract\" scripts electron | head -n 120",
+          "session_id": "Q_tbd_xO4ppeP3LF9B9ldIJ0"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:13.150Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S -e \"RecoveryIpcClient\" -e \"lightweightSnapshot\" -e \"acknowledgeConnectorContract\" scripts electron | head -n 120",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T05:57:19.143Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "51abb0cf210c4832b1f37b4336c64859",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-25T05:57:38.311Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-25T05:57:19.148Z",
+    "updated_at": "2026-08-25T05:57:38.311Z",
+    "events": [
+      {
+        "time": "2026-08-25T05:57:19.148Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:19.495Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n --max-count 120 -S -e \"RecoveryIpcClient\" -e \"lightweightSnapshot\" -e \"acknowledgeConnectorContract\" scripts electron",
+          "session_id": "BNyc4FhHvrWjY_Jw2uQeD92_"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:19.818Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n --max-count 120 -S -e \"RecoveryIpcClient\" -e \"lightweightSnapshot\" -e \"acknowledgeConnectorContract\" scripts electron",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:29.243Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -e \"202\" -e \"notifications/initialized\" -e \"Mcp-Session-Id\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "3159AHkweZhq_q1jDZsFn4_f"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:29.498Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -e \"202\" -e \"notifications/initialized\" -e \"Mcp-Session-Id\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:38.311Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S -e \"snapshot\" -e \"recovery\" -e \"runtime\" package.json scripts/*.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-25T05:57:38.311Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T05:57:43.132Z",
+    "archive_reason": "finished"
+  }
+]

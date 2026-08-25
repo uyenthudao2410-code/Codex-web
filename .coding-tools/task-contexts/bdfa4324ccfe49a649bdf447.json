@@ -1,0 +1,104 @@
+{
+  "version": 2,
+  "task_id": "5636d16fd60845e5b92ac7d0366d35a3",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "H7Ez-wkRJqMV30SYyGXPELKX",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 627,
+    "finished_at": "2026-08-25T06:51:53.411Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T06:51:09.872Z",
+  "updated_at": "2026-08-25T06:51:53.411Z",
+  "events": [
+    {
+      "time": "2026-08-25T06:51:09.872Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T06:51:10.486Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m sqlite3 .coding-tools\\orchestration\\ledger.sqlite3 \"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;\"",
+        "session_id": "REHlU0NaNYp7cxg5k5Wtbzyv"
+      }
+    },
+    {
+      "time": "2026-08-25T06:51:10.902Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m sqlite3 .coding-tools\\orchestration\\ledger.sqlite3 \"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T06:51:17.495Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m sqlite3 .coding-tools\\orchestration\\ledger.sqlite3 \"SELECT sql FROM sqlite_master WHERE type='table' AND name='events';\"",
+        "session_id": "6T2SDFEN8JcNthHAXo_nUAw4"
+      }
+    },
+    {
+      "time": "2026-08-25T06:51:17.836Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m sqlite3 .coding-tools\\orchestration\\ledger.sqlite3 \"SELECT sql FROM sqlite_master WHERE type='table' AND name='events';\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T06:51:26.287Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m sqlite3 .coding-tools\\orchestration\\ledger.sqlite3 \"SELECT seq,event_type,substr(payload_json,1,800) FROM events WHERE run_id='65018d2dca7c4da182282edabbdca379' ORDER BY seq;\"",
+        "session_id": "G1XHv2Pv6NfoUQ3xtSXhZ5l1"
+      }
+    },
+    {
+      "time": "2026-08-25T06:51:26.778Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\native-python\\python.exe -m sqlite3 .coding-tools\\orchestration\\ledger.sqlite3 \"SELECT seq,event_type,substr(payload_json,1,800) FROM events WHERE run_id='65018d2dca7c4da182282edabbdca379' ORDER BY seq;\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T06:51:52.963Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 80 -F \"def evidence_query\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py && rg -n -C 80 -F \"write_lease_acquired\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_control.py",
+        "session_id": "H7Ez-wkRJqMV30SYyGXPELKX"
+      }
+    },
+    {
+      "time": "2026-08-25T06:51:53.411Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 80 -F \"def evidence_query\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py && rg -n -C 80 -F \"write_lease_acquired\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_control.py",
+        "status": "passed"
+      }
+    }
+  ]
+}

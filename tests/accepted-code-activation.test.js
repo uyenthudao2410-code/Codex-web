@@ -7,9 +7,11 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { DatabaseSync } = require('node:sqlite');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
-const { componentOwnsPath } = require('../electron/services/componentRevision');
+const { componentOwnsPath, componentOwners } = require('../electron/services/componentRevision');
 const {
   AcceptedCodeActivationController,
+  acceptedReceipts,
+  evaluateActivationEligibility,
   gitStatus,
   workspaceIdentity
 } = require('../electron/services/recoveryActionStore');
@@ -57,10 +59,27 @@ function acceptedReceipt(workspace, relative) {
   return { path: relative, state: 'file', sha256: crypto.createHash('sha256').update(content).digest('hex'), size_bytes: content.length };
 }
 
-function acceptedFileSet(workspace, files) {
-  const receipts = files.map((relative) => acceptedReceipt(workspace, relative));
+function acceptedFileSet(workspace, files, { runId, waveId, source = 'task_modified_files' } = {}) {
+  const receiptKind = source === 'explicit_acceptance_attestations'
+    ? 'explicit_existing_file'
+    : source === 'durable_wave_patch_surface' ? 'durable_wave_patch_surface' : 'task_modified_file';
+  const receipts = files.map((relative) => {
+    const receipt = acceptedReceipt(workspace, relative);
+    return {
+      ...receipt,
+      receipt_kind: receiptKind,
+      run_id: runId,
+      wave_id: waveId,
+      restart_safe: true,
+      content_addressed: receipt.state === 'file',
+      ...(receiptKind === 'explicit_existing_file' ? { expected_sha256: receipt.sha256 } : {})
+    };
+  });
   return {
-    schema_version: 1,
+    schema_version: 2,
+    source,
+    run_id: runId,
+    wave_id: waveId,
     complete: true,
     count: receipts.length,
     total_bytes: receipts.reduce((total, item) => total + item.size_bytes, 0),
@@ -71,13 +90,73 @@ function acceptedFileSet(workspace, files) {
 
 function insertAcceptedCheckpoint(workspace, { checkpointId, runId, waveId, head, files, createdAt, worktreeFp = null }) {
   const database = new DatabaseSync(path.join(workspace, '.coding-tools', 'orchestration', 'ledger.sqlite3'));
-  const metadata = { accepted_files: acceptedFileSet(workspace, files) };
+  const metadata = { accepted_files: acceptedFileSet(workspace, files, { runId, waveId }) };
   if (worktreeFp) metadata.worktree_fp = worktreeFp;
   database.prepare(`
     INSERT INTO checkpoints(checkpoint_id, run_id, wave_id, git_head, proof_fingerprint, status, created_at, metadata_json)
     VALUES (?, ?, ?, ?, ?, 'accepted', ?, ?)
   `).run(checkpointId, runId, waveId, head, 'a'.repeat(64), createdAt, JSON.stringify(metadata));
   database.close();
+}
+
+function checkpointFor(workspace, {
+  checkpointId = 'checkpoint-evaluator-0001',
+  runId = 'run-evaluator-0001',
+  waveId = 'wave-evaluator-0001',
+  head = git(workspace, ['rev-parse', 'HEAD']).trim(),
+  files = ['electron/services/recoveryHost.js'],
+  source = 'task_modified_files'
+} = {}) {
+  return {
+    checkpoint_id: checkpointId,
+    run_id: runId,
+    wave_id: waveId,
+    git_head: head,
+    proof_fingerprint: 'a'.repeat(64),
+    status: 'accepted',
+    metadata: { accepted_files: acceptedFileSet(workspace, files, { runId, waveId, source }) }
+  };
+}
+
+function postflightFor(request, overrides = {}) {
+  const expected = request.expected_disk_revision;
+  return {
+    schema_version: 2,
+    operation_id: request.operation_id,
+    source_checkpoint_id: request.source_checkpoint.checkpoint_id,
+    run_id: request.source_checkpoint.run_id,
+    wave_id: request.source_checkpoint.wave_id,
+    component: request.component,
+    old_instance_state: 'RUNNING',
+    old_instance_id: 'instance_old_000000000001',
+    new_instance_id: 'instance_new_000000000001',
+    already_current: false,
+    expected_revision: expected,
+    running_revision: expected,
+    disk_revision: expected,
+    revision_contract: 'current',
+    started_at: '2026-01-01T00:00:00.000Z',
+    completed_at: '2026-01-01T00:00:01.000Z',
+    health_verified: true,
+    postflight_verified: true,
+    lifecycle_decision: {
+      schema_version: 1,
+      operation_id: request.operation_id,
+      clean: true,
+      code: 'READY',
+      reason: 'idle',
+      observed_at: '2026-01-01T00:00:01.000Z',
+      canonical_lifecycle_observed: true,
+      source_checkpoint_verified: true,
+      fence_released: true,
+      fenced: false,
+      fence_operation_id: null,
+      counts: {},
+      unexplained_active_runs: 0,
+      unbound_live_resource_residues: 0
+    },
+    ...overrides
+  };
 }
 
 async function fixture(t, options = {}) {
@@ -142,12 +221,21 @@ async function fixture(t, options = {}) {
 function controllerFor(paths, workspace, activation, options = {}) {
   const diskRevision = typeof options.diskRevision === 'function' ? options.diskRevision : () => String(options.diskRevision || 'b'.repeat(64));
   const runningRevision = typeof options.runningRevision === 'function' ? options.runningRevision : (component) => String(options.runningRevision || diskRevision(component));
+  const activationAdapter = {
+    ...activation,
+    activate: async (request) => {
+      const record = await activation.activate(request);
+      const operationBound = { ...record, operation_id: record?.operation_id || request.operation_id };
+      if (options.rawActivationResults === true || record?.state !== 'completed' || record?.result?.postflight) return operationBound;
+      return { ...operationBound, result: { ...(record?.result || {}), postflight: postflightFor(request) } };
+    }
+  };
   return new AcceptedCodeActivationController({
     paths,
     settings: { load: () => ({ workspace }) },
     revisions: { disk: (component) => ({ revision: String(diskRevision(component)) }) },
     runningRevisionProvider: (component) => ({ running_revision: String(runningRevision(component)), disk_revision: String(diskRevision(component)) }),
-    activation,
+    activation: activationAdapter,
     log: { warn() {} },
     intervalMs: 60000
   });
@@ -159,6 +247,64 @@ test('component ownership recognizes only fixed activation manifests', () => {
   assert.equal(componentOwnsPath('coding_mcp', 'resources/coding-tools-mcp/tests/test_coordination_state.py'), false);
   assert.equal(componentOwnsPath('electron_ui', 'renderer/control-center.js'), true);
   assert.equal(componentOwnsPath('electron_ui', 'electron/services/nativeService.js'), false);
+  assert.deepEqual(componentOwners('package.json'), ['recovery_host', 'electron_ui']);
+  assert.deepEqual(componentOwners('docs/CURRENT_STATE.md'), []);
+  assert.deepEqual(componentOwners('tests/runtime-lifecycle.test.js'), []);
+});
+
+test('activation eligibility accepts strict v2 receipts and deterministic component ownership', async (t) => {
+  const { workspace } = await fixture(t);
+  const checkpoint = checkpointFor(workspace);
+  const result = evaluateActivationEligibility(checkpoint, { workspace, currentHead: checkpoint.git_head });
+  assert.equal(result.eligible, true);
+  assert.equal(result.code, 'ACTIVATABLE');
+  assert.deepEqual(result.affected_components, ['recovery_host']);
+  assert.equal(acceptedReceipts(checkpoint)?.[0].run_id, checkpoint.run_id);
+});
+
+test('activation eligibility rejects receipt provenance mismatch', async (t) => {
+  const { workspace } = await fixture(t);
+  const checkpoint = checkpointFor(workspace);
+  checkpoint.metadata.accepted_files.files[0].wave_id = 'wave-other-0001';
+  const result = evaluateActivationEligibility(checkpoint, { workspace, currentHead: checkpoint.git_head });
+  assert.equal(result.eligible, false);
+  assert.equal(result.code, 'RECEIPT_PROVENANCE_INVALID');
+});
+
+test('historical v1 accepted receipts remain non-activatable', async (t) => {
+  const { workspace } = await fixture(t);
+  const checkpoint = checkpointFor(workspace);
+  checkpoint.metadata.accepted_files.schema_version = 1;
+  const result = evaluateActivationEligibility(checkpoint, { workspace, currentHead: checkpoint.git_head });
+  assert.equal(result.eligible, false);
+  assert.equal(result.code, 'RECEIPT_SCHEMA_UNSUPPORTED');
+});
+
+test('activation eligibility rejects accepted source byte drift', async (t) => {
+  const { workspace } = await fixture(t);
+  const checkpoint = checkpointFor(workspace);
+  write(path.join(workspace, 'electron', 'services', 'recoveryHost.js'), 'module.exports = { drifted: true };\n');
+  const result = evaluateActivationEligibility(checkpoint, { workspace, currentHead: checkpoint.git_head });
+  assert.equal(result.eligible, false);
+  assert.equal(result.code, 'SOURCE_DRIFT');
+});
+
+test('activation eligibility rejects unmapped runtime-sensitive source', async (t) => {
+  const { workspace } = await fixture(t);
+  write(path.join(workspace, 'electron', 'services', 'unmappedRuntime.js'), 'module.exports = true;\n');
+  const checkpoint = checkpointFor(workspace, { files: ['electron/services/unmappedRuntime.js'] });
+  const result = evaluateActivationEligibility(checkpoint, { workspace, currentHead: checkpoint.git_head });
+  assert.equal(result.eligible, false);
+  assert.equal(result.code, 'COMPONENT_MAPPING_UNMAPPED');
+});
+
+test('true no-mutation accepted checkpoint is activation eligible without component targets', async (t) => {
+  const { workspace } = await fixture(t);
+  const checkpoint = checkpointFor(workspace, { files: [] });
+  const result = evaluateActivationEligibility(checkpoint, { workspace, currentHead: checkpoint.git_head });
+  assert.equal(result.eligible, true);
+  assert.equal(result.accepted_receipts_complete, true);
+  assert.deepEqual(result.affected_components, []);
 });
 
 test('controller status identifies the V2 baseline and accepted-receipt trust model', async (t) => {
@@ -180,20 +326,74 @@ test('Recovery Host worktree fingerprint is byte-compatible with canonical Pytho
 
 test('finally accepted tracked recovery-host code activates automatically from canonical checkpoint', async (t) => {
   const { workspace, paths } = await fixture(t);
-  const calls = { preflight: 0, activate: 0 };
+  const calls = { preflight: 0, activate: 0, request: null };
   const activation = {
     preflight: async () => { calls.preflight += 1; return { safe: true, code: 'READY' }; },
     activate: async (request) => {
       calls.activate += 1;
+      calls.request = request;
       return { state: 'completed', component: request.component, result: { activated: true }, expires_at_unix_ms: request.expires_at_unix_ms };
     },
     status: () => { throw new Error('not expected'); }
   };
   const controller = controllerFor(paths, workspace, activation);
   await controller.tick();
-  assert.deepEqual(calls, { preflight: 1, activate: 1 });
+  assert.equal(calls.preflight, 1);
+  assert.equal(calls.activate, 1);
+  assert.deepEqual(calls.request.source_checkpoint, {
+    checkpoint_id: 'checkpoint-auto-activation-0001',
+    run_id: 'run-auto-activation-0001',
+    wave_id: 'wave-auto-activation-0001',
+    proof_fingerprint: 'a'.repeat(64),
+    git_head: git(workspace, ['rev-parse', 'HEAD']).trim()
+  });
   assert.equal(controller.status().completed, 1);
   assert.equal(controller.status().blocked, 0);
+  assert.equal(controller.status().closure_input.source_checkpoint_id, 'checkpoint-auto-activation-0001');
+  assert.deepEqual(controller.status().closure_input.affected_components, ['recovery_host']);
+  assert.equal(controller.status().closure_input.components_current, true);
+  assert.equal(controller.status().closure_input.lifecycle_clean, true);
+});
+
+test('completed action without verified postflight cannot advance baseline or close components', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => ({ safe: true, code: 'READY' }),
+    activate: async () => ({ state: 'completed', result: { activated: true } }),
+    status: () => null
+  }, {
+    diskRevision: () => 'c'.repeat(64),
+    runningRevision: () => 'b'.repeat(64),
+    rawActivationResults: true
+  });
+  await controller.tick();
+  const state = controller.loadState();
+  assert.equal(state.intents[0].state, 'failed');
+  assert.equal(state.intents[0].error.code, 'POSTFLIGHT_UNVERIFIED');
+  assert.equal(state.baseline.components.recovery_host.revision, 'b'.repeat(64));
+  assert.equal(state.closure_input.components_current, false);
+});
+
+test('checkpoint-bound verified postflight advances baseline and closes affected components', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => ({ safe: true, code: 'READY' }),
+    activate: async (request) => ({
+      state: 'completed',
+      result: { activated: true, postflight: postflightFor(request) }
+    }),
+    status: () => null
+  }, {
+    diskRevision: () => 'c'.repeat(64),
+    runningRevision: () => 'b'.repeat(64),
+    rawActivationResults: true
+  });
+  await controller.tick();
+  const state = controller.loadState();
+  assert.equal(state.intents[0].state, 'completed');
+  assert.equal(state.baseline.components.recovery_host.revision, 'c'.repeat(64));
+  assert.equal(state.closure_input.components_current, true);
+  assert.equal(state.closure_input.postflight_receipts.recovery_host.postflight_verified, true);
 });
 
 test('automatic activation defers while canonical preflight is busy and retries after it becomes safe', async (t) => {
@@ -231,7 +431,7 @@ test('pre-existing dirty component source is trusted only as a matching running 
   assert.equal(activations, 1);
   const state = JSON.parse(fs.readFileSync(paths.acceptedCodeActivationFile(), 'utf8'));
   assert.equal(state.intents[0].state, 'completed');
-  assert.equal(state.baseline.components.recovery_host.receipts.some((item) => item.path === 'electron/services/nativeService.js'), true);
+  assert.equal(state.baseline.components.recovery_host.receipts.some((item) => item.path === 'electron/services/nativeService.js'), true, JSON.stringify({ baseline: state.baseline.components.recovery_host, trusted: state.intents[0].trusted_receipts }));
 });
 
 test('component bytes changed after running baseline are blocked without final acceptance', async (t) => {
@@ -294,7 +494,7 @@ test('later accepted untracked source activates with prior accepted dirty wave t
   const second = state.intents.find((item) => item.checkpoint_id === 'checkpoint-auto-activation-0002');
   assert.equal(second.state, 'completed');
   assert.equal(state.baseline.components.recovery_host.revision, 'c'.repeat(64));
-  assert.equal(state.baseline.components.recovery_host.receipts.some((item) => item.path === 'electron/services/nativeService.js'), true);
+  assert.equal(state.baseline.components.recovery_host.receipts.some((item) => item.path === 'electron/services/nativeService.js'), true, JSON.stringify(state.baseline.components.recovery_host));
 });
 
 test('accepted committed recovery-host bytes on a new Git HEAD activate from the prior component baseline', async (t) => {
@@ -358,8 +558,8 @@ test('ALREADY_CURRENT accepted bytes on a new HEAD advance the trusted component
   let activationCalls = 0;
   let alreadyCurrent = false;
   const activation = {
-    preflight: async () => alreadyCurrent ? ({ safe: false, code: 'ALREADY_CURRENT' }) : ({ safe: true, code: 'READY' }),
-    activate: async (request) => { activationCalls += 1; recoveryRunning = request.expected_disk_revision; return { state: 'completed' }; },
+    preflight: async () => alreadyCurrent ? ({ safe: true, code: 'ALREADY_CURRENT' }) : ({ safe: true, code: 'READY' }),
+    activate: async (request) => { activationCalls += 1; recoveryRunning = request.expected_disk_revision; return { state: 'completed', result: alreadyCurrent ? { activated: false, already_current: true } : { activated: true } }; },
     status: () => null
   };
   const controller = controllerFor(paths, workspace, activation, {
@@ -378,7 +578,7 @@ test('ALREADY_CURRENT accepted bytes on a new HEAD advance the trusted component
   await controller.tick();
   const state = controller.loadState();
   const intent = state.intents.find((item) => item.checkpoint_id === 'checkpoint-auto-activation-already-current');
-  assert.equal(activationCalls, 1);
+  assert.equal(activationCalls, 2);
   assert.equal(intent.state, 'completed');
   assert.equal(intent.result.already_current, true);
   assert.equal(state.baseline.components.recovery_host.head, newHead);
