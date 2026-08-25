@@ -42,8 +42,8 @@ from .protocol import (
 )
 from .controller_usage_ingress import active_controller_usage_context, controller_usage_request, decorate_controller_usage_status, record_controller_usage, tool_call_name
 from .live_control import control_presence_projection, live_control_snapshot
+from .mcp_metadata import MCP_ENDPOINT_PATH, SERVER_NAME, SERVER_TITLE, server_card_payload
 from .operations_analytics import operations_analytics
-from .tool_schema import tool_annotations
 from .trace_context import parse_trace_context
 from .truth_snapshot import build_truth_snapshot
 from .transport_http import (
@@ -60,9 +60,6 @@ from .transport_http import (
     stateless_http_2026_enabled,
 )
 
-SERVER_NAME = "coding-tools-mcp"
-SERVER_TITLE = "Coding Tools MCP"
-
 if TYPE_CHECKING:
     from .server import Runtime
 
@@ -75,7 +72,6 @@ HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
 STATELESS_TASK_CONTEXT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 STATELESS_TASK_CONTEXT_META_KEY = "io.coding-tools/taskContextId"
-MCP_ENDPOINT_PATH = "/mcp"
 
 MAX_HTTP_REQUEST_BYTES = 1_048_576
 
@@ -89,61 +85,6 @@ def json_response_payload(payload: Any) -> bytes:
 
 def is_loopback_bind_host(host: str) -> bool:
     return host in {"localhost", "127.0.0.1", "::1", ""}
-
-
-def _server_card_auth(runtime: Runtime, *, oauth_base_url: str | None = None) -> dict[str, Any]:
-    if runtime.oauth_enabled():
-        cfg = runtime.oauth_config
-        assert cfg is not None
-        base = (oauth_base_url or cfg.server_url or "").rstrip("/")
-        return {
-            "type": "oauth2",
-            "scheme": "Bearer",
-            "header": "Authorization",
-            "authorizationUrl": f"{base}/oauth/authorize",
-            "tokenUrl": f"{base}/oauth/token",
-        }
-    if runtime.auth_token is not None:
-        return {"type": "bearer", "scheme": "Bearer", "header": "Authorization"}
-    return {"type": "none", "scheme": None, "header": None}
-
-
-def server_card_payload(runtime: Runtime, *, oauth_base_url: str | None = None) -> dict[str, Any]:
-    names = runtime.exposed_tool_names()
-    # Always the real annotations, never the tools/list override: this card is
-    # what an operator fetches to find out what the endpoint actually does.
-    annotations = {name: tool_annotations(name, fake_readonly=False) for name in names}
-    read_only = [name for name in names if annotations[name].get("readOnlyHint") is True]
-    mutating = [name for name in names if annotations[name].get("readOnlyHint") is not True]
-    payload = {
-        "protocolVersion": PROTOCOL_VERSION,
-        "server": {
-            "name": SERVER_NAME,
-            "title": SERVER_TITLE,
-            "version": __version__,
-        },
-        "transport": {
-            "type": "streamable_http",
-            "endpoint": MCP_ENDPOINT_PATH,
-            "methods": ["POST", "DELETE", "OPTIONS"],
-        },
-        "auth": _server_card_auth(runtime, oauth_base_url=oauth_base_url),
-        "tools": {
-            "count": len(names),
-            "names": names,
-            "readOnlyHintTrue": read_only,
-            "readOnlyHintFalse": mutating,
-            "annotationOverride": ("fake_readonly" if runtime.fake_readonly_annotations else None),
-            "contractVersion": runtime.tool_contract["schema_version"],
-            "contractProfile": runtime.tool_contract["profile"],
-            "contractSha256": runtime.tool_contract["sha256"],
-        },
-        "capabilities": {
-            "tools": {"listChanged": False},
-        },
-    }
-    return payload
-
 
 
 class MCPHandler(http.server.BaseHTTPRequestHandler):
@@ -1003,6 +944,18 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 return
         elif method == "ping":
             self._runtime = self.server.control_runtime  # type: ignore[attr-defined]
+        elif method == "notifications/initialized":
+            # Some legacy tunnel health probes complete their initialize
+            # handshake without returning the server-issued session header on
+            # this notification.  It has no stateful effect, so accepting the
+            # already-validated no-op is safer than minting an unbound session
+            # or rejecting an otherwise healthy probe.  Stateful requests
+            # continue to require a session (or use their explicit
+            # compatibility path below).
+            self.send_response(202)
+            self.send_cors_headers()
+            self.end_headers()
+            return
         elif method in {"server/discover", "tools/list", "tools/call"}:
             # Compatibility path for stateless/proxying MCP clients. The response
             # includes Mcp-Session-Id so capable clients become stateful after the
