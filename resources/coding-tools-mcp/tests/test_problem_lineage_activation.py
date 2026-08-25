@@ -37,7 +37,7 @@ class ProblemLineageActivationTests(unittest.TestCase):
             self.assertTrue(receipt.migration["migrated"])
             self.assertEqual(receipt.migration["schema_version"], PROBLEM_SCHEMA_VERSION)
             self.assertEqual(receipt.postflight["schema"]["user_version"], PROBLEM_SCHEMA_VERSION)
-            self.assertEqual(set(receipt.postflight["schema"]["problem_tables"]), {"problem_threads", "problem_events"})
+            self.assertEqual(set(receipt.postflight["schema"]["problem_tables"]), {"problem_threads", "problem_revisions", "problem_events"})
             self.assertEqual(receipt.preflight["event_chain"], receipt.postflight["event_chain"])
             self.assertTrue(OrchestrationLedger(root).verify_chain(run_id)["ok"])
 

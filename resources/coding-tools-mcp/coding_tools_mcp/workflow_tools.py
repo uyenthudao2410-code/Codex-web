@@ -52,7 +52,56 @@ class AgentWorkflowMixin:
             wave_id=ctx.wave_id,
         )
 
-    def _record_claimed_host_problem_relation(self, claimed: dict[str, Any], ctx: RunContext, *, task_id: str) -> dict[str, Any]:
+    def _problem_resolution_context_for_run(
+        self,
+        args: dict[str, Any],
+        *,
+        host_identity: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Validate the C2 declaration before ``create_run`` writes durable bytes."""
+        requested = args.get("problem_context")
+        if requested is None:
+            requested = {}
+        if not isinstance(requested, dict):
+            raise ToolFailure("PRL_CONTEXT_INVALID", "problem_context must be an object when supplied.", category="validation")
+        origin = str(requested.get("work_origin") or "unknown").strip().lower()
+        claim = str(requested.get("resolution_claim") or "none").strip().lower()
+        if origin not in {"problem", "non_problem", "unknown"} or claim not in {"none", "full_problem"}:
+            raise ToolFailure("PRL_CONTEXT_INVALID", "problem_context has an invalid work_origin or resolution_claim.", category="validation")
+        problem_id = str(requested.get("problem_id") or "").strip()
+        revision = requested.get("problem_revision")
+        contract_fp = str(requested.get("contract_fingerprint") or "").strip().lower()
+        if origin != "problem":
+            if problem_id or revision or contract_fp or claim != "none":
+                raise ToolFailure("PRL_CONTEXT_INVALID", "Only work_origin=problem may carry exact binding or full_problem claim.", category="validation")
+            return {"schema_version": 1, "work_origin": origin, "resolution_claim": "none", "policy_eligible": False}
+        if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1 or len(contract_fp) != 64:
+            raise ToolFailure("PRL_EXACT_BINDING_REQUIRED", "problem work requires problem_id, positive problem_revision and exact contract_fingerprint before RUN creation.", category="validation")
+        try:
+            resolved = self.orchestration_ledger.problem_get_exact_revision(problem_id, revision, expected_contract_fingerprint=contract_fp)
+        except ProblemLineageError as exc:
+            code = "PRL_SCHEMA_NOT_ACTIVATED" if "schema is not activated" in str(exc) else "PRL_EXACT_BINDING_INVALID"
+            raise ToolFailure(code, str(exc), category="validation") from exc
+        if host_identity and str(host_identity.get("status") or "") == "exact":
+            if str(host_identity.get("problem_id") or "") != problem_id or int(host_identity.get("problem_revision") or 0) != revision:
+                raise ToolFailure("PRL_HOST_BINDING_MISMATCH", "Declared problem revision conflicts with the exact pending host identity.", category="validation")
+        return {
+            "schema_version": 1, "work_origin": "problem", "resolution_claim": claim,
+            "problem_id": problem_id, "problem_revision": revision,
+            "contract_fingerprint": resolved["contract_fingerprint"],
+            "engineering_floor": resolved["engineering_floor"],
+            "policy_eligible": False,
+        }
+
+    def _record_claimed_host_problem_relation(
+        self,
+        claimed: dict[str, Any],
+        ctx: RunContext,
+        *,
+        task_id: str,
+        host_identity: dict[str, Any] | None = None,
+        problem_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Append exactly one content-free PRL relation after a host claim.
 
         A new run is never fabricated for PRL.  When no uniquely exact prior
@@ -61,16 +110,20 @@ class AgentWorkflowMixin:
         missingness.  v9 remains intentionally inert until the separately
         authorized v10 activation has happened.
         """
-        identity = self.orchestration_ledger.problem_find_exact_host_identity(
-            turn_id=str(claimed["turn_id"]),
-            trace_id=str(claimed["trace_id"]),
+        identity = host_identity or self.orchestration_ledger.problem_find_exact_host_identity(
+            turn_id=str(claimed["turn_id"]), trace_id=str(claimed["trace_id"]),
         )
         status = str(identity.get("status") or "schema_inactive")
         if status == "schema_inactive":
             return {"status": status, "recorded": False}
-        problem_id = str(identity.get("problem_id") or "")
-        exact = status == "exact" and bool(problem_id)
-        seed = "\x1f".join(("prl-host-run-binding-v1", status, problem_id, ctx.run_id, ctx.wave_id, str(claimed["turn_id"]), str(claimed["trace_id"])))
+        declared = problem_context or {}
+        origin = str(declared.get("work_origin") or "unknown")
+        if origin == "non_problem":
+            return {"status": "non_problem", "recorded": False}
+        problem_id = str(declared.get("problem_id") or identity.get("problem_id") or "")
+        problem_revision = int(declared.get("problem_revision") or identity.get("problem_revision") or 0)
+        exact = bool(problem_id) and problem_revision > 0 and (origin == "problem" or status == "exact")
+        seed = "\x1f".join(("prl-host-run-binding-v2", status, problem_id, str(problem_revision), ctx.run_id, ctx.wave_id, str(claimed["turn_id"]), str(claimed["trace_id"])))
         event = {
             "operation": "link",
             "event_id": f"prl-bind-{hashlib.sha256(seed.encode('utf-8')).hexdigest()}",
@@ -84,15 +137,16 @@ class AgentWorkflowMixin:
             "link_role": "PRIMARY" if exact else "SECONDARY",
             "provenance": "DETERMINISTIC_EVIDENCE",
             "evidence_level": "OBSERVED",
-            "eligible_for_policy": False,
             "reason_code": "engineering_attempt_bound" if exact else ("ambiguous_relation" if status == "ambiguous" else "unlinked_relation"),
         }
         if exact:
             event["problem_id"] = problem_id
+            event["problem_revision"] = problem_revision
         try:
             recorded = self.orchestration_ledger.problem_record_event(
                 event,
                 now=datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+                authority_context="RUNTIME_BINDING",
             )
         except ProblemLineageError as exc:
             raise ToolFailure(
@@ -103,6 +157,49 @@ class AgentWorkflowMixin:
                 details={"run_id": ctx.run_id, "wave_id": ctx.wave_id, "relation_status": status},
             ) from exc
         return {"status": status, "recorded": bool(recorded.get("recorded")), "idempotent": bool(recorded.get("idempotent")), "problem_id": problem_id or None}
+
+    def _record_declared_problem_run_binding(self, ctx: RunContext, *, task_id: str, problem_context: dict[str, Any]) -> dict[str, Any]:
+        """Append the durable relation after its exact revision was pinned in RUN metadata."""
+        if str(problem_context.get("work_origin") or "") != "problem":
+            return {"status": "not_problem", "recorded": False}
+        problem_id = str(problem_context.get("problem_id") or "")
+        revision = int(problem_context.get("problem_revision") or 0)
+        seed = "\x1f".join(("prl-declared-run-binding-v11", problem_id, str(revision), ctx.run_id, ctx.wave_id))
+        try:
+            recorded = self.orchestration_ledger.problem_record_event(
+                {
+                    "operation": "link",
+                    "event_id": f"prl-bind-{hashlib.sha256(seed.encode('utf-8')).hexdigest()}",
+                    "problem_id": problem_id,
+                    "problem_revision": revision,
+                    "task_id": str(task_id or ""),
+                    "run_id": ctx.run_id,
+                    "wave_id": ctx.wave_id,
+                    "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                    "link_status": "EXACT",
+                    "link_role": "PRIMARY",
+                    "provenance": "DETERMINISTIC_EVIDENCE",
+                    "evidence_level": "OBSERVED",
+                    "reason_code": "engineering_attempt_bound",
+                },
+                now=datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+                authority_context="RUNTIME_BINDING",
+            )
+        except ProblemLineageError as exc:
+            raise ToolFailure("PRL_RUN_BINDING_FAILED", "The exact v11 problem revision was pinned but could not be linked to its RUN.", category="runtime", retryable=False, details={"run_id": ctx.run_id, "wave_id": ctx.wave_id}) from exc
+        return {"status": "exact", "recorded": bool(recorded.get("recorded")), "idempotent": bool(recorded.get("idempotent")), "problem_id": problem_id, "problem_revision": revision}
+
+    def _problem_resolution_context_for_replan(self, args: dict[str, Any], ctx: RunContext) -> dict[str, Any]:
+        waves = self.orchestration_ledger.list_waves(ctx.run_id)
+        current = next((item for item in waves if str(item.get("wave_id") or "") == ctx.wave_id), {})
+        previous = (current.get("metadata") or {}).get("problem_resolution") if isinstance(current.get("metadata"), dict) else None
+        if "problem_context" not in args:
+            return dict(previous) if isinstance(previous, dict) else {"schema_version": 1, "work_origin": "unknown", "resolution_claim": "none", "policy_eligible": False}
+        desired = self._problem_resolution_context_for_run(args, host_identity=None)
+        if isinstance(previous, dict) and previous.get("work_origin") == "problem":
+            if desired.get("work_origin") != "problem" or desired.get("problem_id") != previous.get("problem_id") or int(desired.get("problem_revision") or 0) != int(previous.get("problem_revision") or 0):
+                raise ToolFailure("PRL_REPLAN_BINDING_CHANGE", "A replacement wave cannot silently switch problem revision; start a new RUN after explicit problem transition.", category="validation")
+        return desired
 
     def _agent_patch_inputs(self, args: dict[str, Any]) -> tuple[list[str], list[str]]:
         directories = [str(item).strip() for item in args.get("directories", []) if str(item).strip()]
@@ -285,6 +382,7 @@ class AgentWorkflowMixin:
                     contract_fp=contract_fp,
                     reason=replan_reason,
                     objective=objective,
+                    metadata={"problem_resolution": self._problem_resolution_context_for_replan(args, current_ctx)},
                 )
             elif current_ctx.state in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
                 current_ctx = None
@@ -319,6 +417,7 @@ class AgentWorkflowMixin:
                         contract_fp=contract_fp,
                         reason=replan_reason,
                         objective=objective,
+                        metadata={"problem_resolution": self._problem_resolution_context_for_replan(args, current_ctx)},
                     )
 
         if current_ctx is None:
@@ -345,6 +444,7 @@ class AgentWorkflowMixin:
                 or str(evaluation.get("turn_id") or "").strip()
             )
             claimed_host_turn = None
+            host_problem_identity: dict[str, Any] | None = None
             if explicit_evaluation_identity:
                 self._discard_pending_host_turn()
             else:
@@ -357,6 +457,15 @@ class AgentWorkflowMixin:
                         "source": "electron_pending_host_turn",
                         "eligible": True,
                     }
+                    host_problem_identity = self.orchestration_ledger.problem_find_exact_host_identity(
+                        turn_id=str(claimed_host_turn["turn_id"]),
+                        trace_id=str(claimed_host_turn["trace_id"]),
+                    )
+            problem_resolution = self._problem_resolution_context_for_run(
+                args,
+                host_identity=host_problem_identity,
+            )
+            run_metadata["problem_resolution"] = problem_resolution
             if evaluation:
                 environment_id = str(evaluation.pop("environment_id", "") or "").strip()
                 evaluation.update({
@@ -389,11 +498,19 @@ class AgentWorkflowMixin:
                         claimed_host_turn,
                         current_ctx,
                         task_id=str(current_task.get("task_id") or ""),
+                        host_identity=host_problem_identity,
+                        problem_context=problem_resolution,
                     )
                 except Exception:
                     self._restore_pending_host_turn(claimed_host_turn)
                     raise
                 self._publish_host_turn_binding(claimed_host_turn, current_ctx)
+            elif str(problem_resolution.get("work_origin") or "") == "problem":
+                self._record_declared_problem_run_binding(
+                    current_ctx,
+                    task_id=str(current_task.get("task_id") or ""),
+                    problem_context=problem_resolution,
+                )
 
         self._project_orchestration(current_ctx, event="orchestration_context_ready")
         return current_ctx, identity

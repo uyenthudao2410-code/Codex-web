@@ -751,6 +751,7 @@ class OrchestrationControl:
         contract_fp: str,
         reason: str,
         objective: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> RunContext:
         if ctx.state != "REPLAN":
             raise OrchestrationControlError("REPLAN_REQUIRED", "A replacement wave requires REPLAN state.")
@@ -764,7 +765,7 @@ class OrchestrationControl:
             base_head=base_head,
             worktree_fp=worktree_fp,
             contract_fp=contract_fp,
-            metadata={**run_metadata, "replan_reason": reason},
+            metadata={**run_metadata, "replan_reason": reason, **(metadata or {})},
             objective=objective,
             objective_source="replan_request" if objective is not None else "previous_wave_inherited",
         )
@@ -774,6 +775,8 @@ class OrchestrationControl:
         ctx.base_head = base_head
         ctx.worktree_fp = worktree_fp
         ctx.contract_fp = contract_fp
+        if metadata:
+            ctx.metadata.update(copy.deepcopy(metadata))
         ctx.route_requested = ""
         ctx.route_resolved = ""
         ctx.delegation_id = None

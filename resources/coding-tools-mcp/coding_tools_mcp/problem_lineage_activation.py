@@ -58,14 +58,14 @@ def _snapshot_projection(workspace: Path, *, observed_at: float) -> dict[str, An
         tables = [
             str(row[0])
             for row in reader.rows(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('problem_threads','problem_events') ORDER BY name"
+                "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('problem_threads','problem_revisions','problem_events') ORDER BY name"
             )
         ]
         indexes = [
             str(row[0])
             for row in reader.rows(
                 "SELECT name FROM sqlite_master WHERE type='index' "
-                "AND name IN ('idx_problem_events_problem_seq','idx_problem_events_task_turn','idx_problem_events_run_wave','idx_problem_events_one_primary_run_binding') "
+                "AND name IN ('idx_problem_events_problem_seq','idx_problem_events_problem_revision_seq','idx_problem_events_task_turn','idx_problem_events_run_wave','idx_problem_events_one_primary_run_binding') "
                 "ORDER BY name"
             )
         ]
@@ -133,9 +133,10 @@ def _assert_preflight(preflight: dict[str, Any], *, require_v9: bool) -> None:
     if require_v9 and schema.get("problem_tables"):
         blockers.append("problem_tables_present_before_v10_activation")
     if not require_v9:
-        expected_tables = {"problem_threads", "problem_events"}
+        expected_tables = {"problem_threads", "problem_revisions", "problem_events"}
         expected_indexes = {
             "idx_problem_events_problem_seq",
+            "idx_problem_events_problem_revision_seq",
             "idx_problem_events_task_turn",
             "idx_problem_events_run_wave",
             "idx_problem_events_one_primary_run_binding",
@@ -189,7 +190,7 @@ def activate_problem_lineage_schema(
     expected_logical_sha256: str,
     runtime_stopped: bool,
 ) -> ProblemLineageActivationReceipt:
-    """Run the supported one-way v9→v10 migration after exact preflight.
+    """Run the supported one-way v9→v11 migration after exact preflight.
 
     The caller must stop the authoritative runtime through its owning Recovery
     Host before passing ``runtime_stopped=True``.  This function never starts,

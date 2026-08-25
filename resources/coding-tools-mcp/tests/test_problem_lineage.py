@@ -1,339 +1,358 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import tempfile
 import time
 import unittest
-import json
 from pathlib import Path
 from unittest.mock import patch
 
-from coding_tools_mcp.errors import JsonRpcError, ToolFailure
+from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
-from coding_tools_mcp.problem_lineage import PROBLEM_SCHEMA_VERSION, ProblemLineageError
-from coding_tools_mcp.server import Runtime, validate_arguments
-from coding_tools_mcp.tool_schema import input_schemas
+from coding_tools_mcp.problem_lineage import PROBLEM_SCHEMA_VERSION, ProblemLineageError, problem_event_hash_material
+from coding_tools_mcp.server import Runtime
+from coding_tools_mcp.tool_schema import input_schemas, validate_arguments
 
 
-def event_id(value: str) -> str:
-    return value.replace("_", "-")
+NOW = "2026-08-25T00:00:00Z"
+
+
+def capsule(summary: str = "Resolve the bounded defect", criterion: str = "The focused proof passes") -> dict[str, object]:
+    return {
+        "objective_summary": summary,
+        "acceptance_criteria": [{"criterion_id": "criterion-1", "summary": criterion}],
+        "protected_invariants": ["Preserve the existing public contract"],
+        "constraints": ["Do not store raw user content"],
+        "unresolved_conditions": [],
+    }
+
+
+def open_event(identifier: str = "open-1", **overrides: object) -> dict[str, object]:
+    event: dict[str, object] = {
+        "operation": "open", "event_id": identifier, "task_id": "task-1",
+        "task_class": "bugfix", "engineering_floor": "REQUIRED",
+        "contract_capsule": capsule(),
+        "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+    }
+    event.update(overrides)
+    return event
 
 
 class ProblemLineageTests(unittest.TestCase):
-    @staticmethod
-    def open_event(*, identifier: str = "problem-open", task_id: str = "task-1") -> dict[str, object]:
-        return {
-            "operation": "open",
-            "event_id": event_id(identifier),
-            "task_id": task_id,
-            "task_class": "feature",
-            "engineering_floor": "REQUIRED",
-            "relation_type": "OPEN",
-            "link_status": "EXACT",
-            "link_role": "PRIMARY",
-            "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
-            "evidence_level": "OBSERVED",
-            "eligible_for_policy": True,
-        }
+    def _ledger(self) -> tuple[tempfile.TemporaryDirectory[str], OrchestrationLedger]:
+        temporary = tempfile.TemporaryDirectory()
+        ledger = OrchestrationLedger(Path(temporary.name))
+        ledger.migrate_problem_lineage_schema()
+        self.assertEqual(ledger.problem_lineage_schema_version(), PROBLEM_SCHEMA_VERSION)
+        return temporary, ledger
 
-    def test_v10_activation_is_forward_only_and_never_constructor_implicit(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            ledger = OrchestrationLedger(Path(temp))
-            self.assertEqual(ledger.problem_lineage_schema_version(), 9)
-            migrated = ledger.migrate_problem_lineage_schema()
-            self.assertTrue(migrated["migrated"])
-            self.assertEqual(migrated["schema_version"], PROBLEM_SCHEMA_VERSION)
-            replay = ledger.migrate_problem_lineage_schema()
-            self.assertFalse(replay["migrated"])
-            self.assertEqual(ledger.problem_lineage_schema_version(), PROBLEM_SCHEMA_VERSION)
-            restarted = OrchestrationLedger(Path(temp))
-            self.assertEqual(restarted.problem_lineage_schema_version(), PROBLEM_SCHEMA_VERSION)
+    def test_v11_authority_feedback_and_runtime_owned_eligibility(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
             with self.assertRaises(ProblemLineageError):
-                ledger.migrate_problem_lineage_schema(expected_schema_version=8)
-
-    def test_typed_open_link_feedback_reopen_chain_and_idempotency(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            ledger = OrchestrationLedger(Path(temp))
-            ledger.migrate_problem_lineage_schema()
-            opened = ledger.problem_record_event(self.open_event(), now="2026-08-23T00:00:00Z")
-            self.assertTrue(opened["recorded"])
-            problem_id = opened["thread"]["thread"]["problem_id"]
-            replay = ledger.problem_record_event(self.open_event(), now="2026-08-23T00:01:00Z")
-            self.assertTrue(replay["idempotent"])
-            self.assertEqual(replay["event"]["event_id"], "problem-open")
-
-            run_id = ledger.create_run(objective="fixture engineering run", task_id="task-1")
-            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
-            linked = ledger.problem_record_event({
-                "operation": "link", "event_id": "problem-link", "problem_id": problem_id,
-                "task_id": "task-1", "run_id": run_id, "wave_id": wave_id,
-                "relation_type": "ENGINEERING_ATTEMPT_BOUND", "link_status": "EXACT", "link_role": "PRIMARY",
-                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED", "eligible_for_policy": True,
-            }, now="2026-08-23T00:02:00Z")
-            self.assertTrue(linked["recorded"])
-            provisional = ledger.problem_record_event({
-                "operation": "resolution", "event_id": "problem-provisional", "problem_id": problem_id,
-                "task_id": "task-1", "run_id": run_id, "wave_id": wave_id,
-                "relation_type": "PROVISIONAL_RESOLUTION", "link_status": "EXACT", "link_role": "SECONDARY",
-                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED", "eligible_for_policy": True,
-                "state": "PROVISIONALLY_RESOLVED",
-            }, now="2026-08-23T00:03:00Z")
-            self.assertEqual(provisional["thread"]["thread"]["resolution_state"], "PROVISIONALLY_RESOLVED")
-            confirmation = ledger.problem_record_event({
-                "operation": "feedback", "event_id": "problem-confirm", "problem_id": problem_id,
-                "task_id": "task-1", "run_id": run_id, "wave_id": wave_id,
-                "relation_type": "USER_FEEDBACK", "link_status": "EXACT", "link_role": "SECONDARY",
-                "feedback_intent": "CONFIRM_RESOLVED", "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
-                "evidence_level": "OBSERVED", "eligible_for_policy": True, "reason_code": "user_confirmation",
-            }, now="2026-08-23T00:04:00Z")
-            self.assertEqual(confirmation["thread"]["thread"]["resolution_state"], "RESOLVED_CONFIRMED")
-            # PRL feedback is evaluation evidence only: it must not accept an
-            # EOCL run or mutate its execution state.
-            self.assertEqual(ledger.get_run(run_id)["status"], "active")
-            reopened = ledger.problem_record_event({
-                "operation": "reopen", "event_id": "problem-reopen", "problem_id": problem_id,
-                "task_id": "task-1", "relation_type": "REOPEN", "link_status": "EXACT", "link_role": "SECONDARY",
-                "feedback_intent": "SAME_PROBLEM_STILL_FAILING", "causal_mechanism": "UNKNOWN",
-                "economic_class": "UNKNOWN", "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
-                "evidence_level": "OBSERVED", "eligible_for_policy": True, "reason_code": "explicit_same_problem_correction",
-            }, now="2026-08-23T00:05:00Z")
-            self.assertEqual(reopened["thread"]["thread"]["resolution_state"], "REOPENED")
-            self.assertEqual(reopened["thread"]["thread"]["current_revision"], 2)
-            self.assertTrue(ledger.problem_verify_chain(problem_id)["ok"])
-
-    def test_ambiguous_unlinked_event_is_excluded_and_no_raw_payload_is_accepted(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            ledger = OrchestrationLedger(Path(temp))
-            ledger.migrate_problem_lineage_schema()
-            ambiguous = ledger.problem_record_event({
-                "operation": "link", "event_id": "ambiguous-link", "task_id": "task-ambiguous",
-                "relation_type": "LINK", "link_status": "AMBIGUOUS", "link_role": "SECONDARY",
-                "provenance": "SHADOW_MODEL_INFERRED", "evidence_level": "INFERRED", "eligible_for_policy": False,
-                "reason_code": "ambiguous_relation",
-            }, now="2026-08-23T00:00:00Z")
-            self.assertIsNone(ambiguous["thread"])
-            self.assertFalse(ambiguous["event"]["eligible_for_policy"])
+                ledger.problem_record_event(open_event("shadow-open"), now=NOW, authority_context="RUNTIME_OBSERVATION")
+            opened = ledger.problem_record_event(open_event(), now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            problem_id = str(opened["event"]["problem_id"])
+            self.assertTrue(opened["event"]["eligible_for_policy"])
+            self.assertEqual(opened["event"]["recorded_at"], NOW)
             with self.assertRaises(ProblemLineageError):
-                ledger.problem_record_event({**self.open_event(identifier="payload-rejected"), "payload_json": {"prompt": "must not persist"}}, now="2026-08-23T00:01:00Z")
+                ledger.problem_record_event({**open_event("caller-eligibility"), "eligible_for_policy": True}, now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            observation = ledger.problem_record_event({
+                "operation": "observe_feedback", "event_id": "shadow-observation", "problem_id": problem_id,
+                "problem_revision": 1, "task_id": "task-1", "feedback_intent": "CONFIRM_RESOLVED",
+                "provenance": "SHADOW_MODEL_INFERRED", "evidence_level": "INFERRED",
+            }, now=NOW, authority_context="RUNTIME_OBSERVATION")
+            self.assertEqual(observation["event"]["state_before"], "OPEN")
+            self.assertEqual(observation["event"]["state_after"], "OPEN")
+            self.assertFalse(observation["event"]["eligible_for_policy"])
+            self.assertEqual(ledger.problem_get(problem_id)["thread"]["resolution_state"], "OPEN")
             with self.assertRaises(ProblemLineageError):
                 ledger.problem_record_event({
-                    "operation": "link", "event_id": "ambiguous-policy", "link_status": "AMBIGUOUS",
-                    "link_role": "SECONDARY", "relation_type": "LINK", "eligible_for_policy": True,
-                }, now="2026-08-23T00:02:00Z")
+                    "operation": "confirm", "event_id": "bad-confirm", "problem_id": problem_id,
+                    "problem_revision": 1, "feedback_intent": "CONFIRM_RESOLVED",
+                    "provenance": "SHADOW_MODEL_INFERRED", "evidence_level": "INFERRED",
+                }, now=NOW, authority_context="RUNTIME_OBSERVATION")
+            with self.assertRaises(ProblemLineageError):
+                ledger.problem_record_event({
+                    "operation": "block", "event_id": "untyped-block", "problem_id": problem_id,
+                    "problem_revision": 1, "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+                }, now=NOW, authority_context="RUNTIME_GUARD")
+            with self.assertRaises(ProblemLineageError):
+                ledger.problem_record_event({
+                    "operation": "reopen", "event_id": "ambiguous-reopen", "link_status": "UNLINKED",
+                    "feedback_intent": "SAME_PROBLEM_STILL_FAILING",
+                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+                }, now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            with self.assertRaises(ProblemLineageError):
+                ledger.problem_record_event(open_event("mismatched-relation", relation_type="BLOCK"), now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+        finally:
+            temporary.cleanup()
 
-    def test_problem_feedback_without_engineering_run_is_content_free_and_not_counted_as_avoidable_failure(self) -> None:
+    def test_reopen_keeps_revision_and_revise_uses_compare_and_swap(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
+            opened = ledger.problem_record_event(open_event(), now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            problem_id = str(opened["event"]["problem_id"])
+            fingerprint = str(opened["event"]["contract_fingerprint"])
+            ledger.problem_record_event({
+                "operation": "provisional_resolve", "event_id": "technical-pass", "problem_id": problem_id,
+                "problem_revision": 1, "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_EOCL")
+            reopened = ledger.problem_record_event({
+                "operation": "reopen", "event_id": "same-problem-reopen", "problem_id": problem_id,
+                "problem_revision": 1, "feedback_intent": "SAME_PROBLEM_STILL_FAILING",
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            self.assertEqual(reopened["event"]["problem_revision"], 1)
+            self.assertEqual(reopened["event"]["reason_code"], "explicit_same_problem_correction")
+            self.assertEqual(reopened["thread"]["thread"]["current_revision"], 1)
+            revised = ledger.problem_record_event({
+                "operation": "revise", "event_id": "revision-2", "problem_id": problem_id,
+                "expected_revision": 1, "expected_contract_fingerprint": fingerprint,
+                "task_class": "bugfix", "engineering_floor": "REQUIRED", "contract_capsule": capsule("Resolve the revised bounded defect"),
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            self.assertEqual(revised["event"]["problem_revision"], 2)
+            self.assertEqual(revised["event"]["reason_code"], "explicit_contract_revision")
+            self.assertEqual(revised["thread"]["thread"]["current_revision"], 2)
+            self.assertEqual(revised["thread"]["thread"]["resolution_state"], "REVISED")
+            with self.assertRaises(ProblemLineageError):
+                ledger.problem_record_event({
+                    "operation": "revise", "event_id": "stale-revision", "problem_id": problem_id,
+                    "expected_revision": 1, "expected_contract_fingerprint": fingerprint,
+                    "task_class": "bugfix", "engineering_floor": "REQUIRED", "contract_capsule": capsule("Another revision"),
+                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+                }, now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            self.assertTrue(ledger.problem_verify_chain(problem_id)["ok"])
+        finally:
+            temporary.cleanup()
+
+    def test_c3_exact_manifest_checkpoint_bridge_is_idempotent(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
+            opened = ledger.problem_record_event(open_event(), now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            problem_id, fingerprint = str(opened["event"]["problem_id"]), str(opened["event"]["contract_fingerprint"])
+            context = {"schema_version": 1, "work_origin": "problem", "resolution_claim": "full_problem", "problem_id": problem_id, "problem_revision": 1, "contract_fingerprint": fingerprint, "engineering_floor": "REQUIRED", "policy_eligible": False}
+            run_id = ledger.create_run(objective="fixture", metadata={"problem_resolution": context})
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", metadata={"problem_resolution": context})
+            ledger.problem_record_event({
+                "operation": "link", "event_id": "bind-run", "problem_id": problem_id, "problem_revision": 1,
+                "run_id": run_id, "wave_id": wave_id, "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_BINDING")
+            proof_id = ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="focused", stage_version="1", input_fingerprint="proof-input", status="passed")
+            manifest = {"criterion-1": [proof_id]}
+            self.assertTrue(ledger.problem_record_coverage_manifest(run_id=run_id, wave_id=wave_id, manifest=manifest)["recorded"])
+            checkpoint_id = ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="head", proof_fingerprint="proofs", status="accepted")
+            bridge = ledger.problem_record_provisional_from_eocl(run_id=run_id, wave_id=wave_id, checkpoint_id=checkpoint_id, now=NOW)
+            self.assertTrue(bridge["recorded"])
+            replay = ledger.problem_record_provisional_from_eocl(run_id=run_id, wave_id=wave_id, checkpoint_id=checkpoint_id, now=NOW)
+            self.assertFalse(replay["recorded"])
+            thread = ledger.problem_get(problem_id)
+            assert thread is not None
+            self.assertEqual(thread["thread"]["resolution_state"], "PROVISIONALLY_RESOLVED")
+            self.assertTrue(bridge["event"]["eligible_for_policy"])
+        finally:
+            temporary.cleanup()
+
+    def test_v10_migration_preserves_hashes_as_legacy_and_ineligible(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             ledger = OrchestrationLedger(Path(temp))
-            ledger.migrate_problem_lineage_schema()
-            opened = ledger.problem_record_event({
-                **self.open_event(identifier="diagnosis-open", task_id="task-diagnosis"),
-                "task_class": "diagnose", "engineering_floor": "NOT_APPLICABLE",
-            }, now="2026-08-23T00:00:00Z")
-            problem_id = opened["thread"]["thread"]["problem_id"]
-            provisional = ledger.problem_record_event({
-                "operation": "resolution", "event_id": "diagnosis-provisional", "problem_id": problem_id,
-                "task_id": "task-diagnosis", "relation_type": "PROVISIONAL_RESOLUTION",
-                "link_status": "EXACT", "link_role": "SECONDARY", "provenance": "DETERMINISTIC_EVIDENCE",
-                "evidence_level": "OBSERVED", "eligible_for_policy": False, "state": "PROVISIONALLY_RESOLVED",
-            }, now="2026-08-23T00:01:00Z")
-            self.assertEqual(provisional["thread"]["thread"]["resolution_state"], "PROVISIONALLY_RESOLVED")
-            confirmed = ledger.problem_record_event({
-                "operation": "feedback", "event_id": "diagnosis-confirm", "problem_id": problem_id,
-                "task_id": "task-diagnosis", "relation_type": "USER_FEEDBACK", "link_status": "EXACT",
-                "link_role": "SECONDARY", "feedback_intent": "CONFIRM_RESOLVED",
-                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
-                "eligible_for_policy": True, "reason_code": "user_confirmation",
-            }, now="2026-08-23T00:02:00Z")
-            self.assertEqual(confirmed["thread"]["thread"]["resolution_state"], "RESOLVED_CONFIRMED")
-            stored = ledger.problem_get(problem_id)
-            assert stored is not None
-            self.assertTrue(all(not item["run_id"] and not item["wave_id"] for item in stored["events"]))
-
-            growth = ledger.problem_record_event({
-                **self.open_event(identifier="growth-open", task_id="task-growth"),
-                "task_class": "diagnose", "engineering_floor": "NOT_APPLICABLE",
-            }, now="2026-08-23T00:03:00Z")
-            growth_problem_id = growth["thread"]["thread"]["problem_id"]
-            classified = ledger.problem_record_event({
-                "operation": "feedback", "event_id": "growth-feedback", "problem_id": growth_problem_id,
-                "task_id": "task-growth", "relation_type": "USER_FEEDBACK", "link_status": "EXACT",
-                "link_role": "SECONDARY", "feedback_intent": "ADD_CONSTRAINT_OR_REQUIREMENT",
-                "causal_mechanism": "REQUIREMENT_EVOLUTION", "economic_class": "LEGITIMATE_REQUIREMENT_GROWTH",
-                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
-                "eligible_for_policy": True,
-            }, now="2026-08-23T00:04:00Z")
-            self.assertEqual(classified["event"]["economic_class"], "LEGITIMATE_REQUIREMENT_GROWTH")
-            self.assertEqual(classified["event"]["causal_mechanism"], "REQUIREMENT_EVOLUTION")
-
-    def test_primary_run_conflict_and_event_replay_conflict_fail_closed(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            ledger = OrchestrationLedger(Path(temp))
-            ledger.migrate_problem_lineage_schema()
-            first = ledger.problem_record_event(self.open_event(identifier="first-open"), now="2026-08-23T00:00:00Z")
-            second = ledger.problem_record_event(self.open_event(identifier="second-open"), now="2026-08-23T00:00:01Z")
-            first_problem = first["thread"]["thread"]["problem_id"]
-            second_problem = second["thread"]["thread"]["problem_id"]
-            run_id = ledger.create_run(objective="single primary", task_id="task-1")
-            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
-            base = {
-                "operation": "link", "event_id": "first-primary", "problem_id": first_problem, "task_id": "task-1",
-                "run_id": run_id, "wave_id": wave_id, "relation_type": "LINK", "link_status": "EXACT", "link_role": "PRIMARY",
-                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED", "eligible_for_policy": True,
+            legacy = {
+                "event_id": "legacy-event", "problem_id": "legacy-problem", "task_id": "task", "turn_id": "", "trace_id": "",
+                "run_id": "", "wave_id": "", "capsule_id": "", "conversation_epoch": 0, "relation_type": "OPEN",
+                "link_status": "EXACT", "link_role": "PRIMARY", "feedback_intent": "UNKNOWN", "causal_mechanism": "UNKNOWN",
+                "economic_class": "UNKNOWN", "provenance": "HOST_OBSERVED", "evidence_level": "OBSERVED", "eligible_for_policy": True,
+                "reason_code": "none", "criteria_count": 0, "criteria_fingerprint": "", "event_time": NOW,
             }
-            ledger.problem_record_event(base, now="2026-08-23T00:01:00Z")
-            with self.assertRaises(ProblemLineageError):
-                ledger.problem_record_event({**base, "event_id": "duplicate-primary"}, now="2026-08-23T00:01:00Z")
-            with self.assertRaises(ProblemLineageError):
-                ledger.problem_record_event({**base, "event_id": "second-primary", "problem_id": second_problem}, now="2026-08-23T00:01:01Z")
-            with self.assertRaises(ProblemLineageError):
-                ledger.problem_record_event({**base, "economic_class": "AVOIDABLE_CORRECTION"}, now="2026-08-23T00:01:02Z")
+            old_hash = hashlib.sha256(json.dumps(problem_event_hash_material(legacy, state_before="", state_after="OPEN", prev_hash=""), ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            request_hash = hashlib.sha256(b"legacy").hexdigest()
+            with ledger._lock, ledger._connect() as connection:
+                connection.executescript("""
+                    CREATE TABLE problem_threads (problem_id TEXT PRIMARY KEY,current_revision INTEGER NOT NULL,resolution_state TEXT NOT NULL,task_class TEXT NOT NULL,engineering_floor TEXT NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,closed_at TEXT,latest_problem_event_seq INTEGER NOT NULL DEFAULT 0,latest_problem_event_hash TEXT NOT NULL DEFAULT '');
+                    CREATE TABLE problem_events (seq INTEGER PRIMARY KEY AUTOINCREMENT,event_id TEXT NOT NULL UNIQUE,problem_id TEXT,task_id TEXT NOT NULL DEFAULT '',turn_id TEXT NOT NULL DEFAULT '',trace_id TEXT NOT NULL DEFAULT '',run_id TEXT NOT NULL DEFAULT '',wave_id TEXT NOT NULL DEFAULT '',capsule_id TEXT NOT NULL DEFAULT '',conversation_epoch INTEGER NOT NULL DEFAULT 0,relation_type TEXT NOT NULL,link_status TEXT NOT NULL,link_role TEXT NOT NULL,feedback_intent TEXT NOT NULL,causal_mechanism TEXT NOT NULL,economic_class TEXT NOT NULL,provenance TEXT NOT NULL,evidence_level TEXT NOT NULL,eligible_for_policy INTEGER NOT NULL DEFAULT 0,state_before TEXT NOT NULL DEFAULT '',state_after TEXT NOT NULL DEFAULT '',reason_code TEXT NOT NULL DEFAULT 'none',criteria_count INTEGER NOT NULL DEFAULT 0,criteria_fingerprint TEXT NOT NULL DEFAULT '',request_hash TEXT NOT NULL,event_time TEXT NOT NULL,prev_hash TEXT NOT NULL DEFAULT '',event_hash TEXT NOT NULL);
+                    PRAGMA user_version=10;
+                """)
+                connection.execute("INSERT INTO problem_threads VALUES(?,?,?,?,?,?,?,?,?,?)", ("legacy-problem", 1, "OPEN", "unknown", "UNKNOWN", NOW, NOW, None, 1, old_hash))
+                connection.execute("""INSERT INTO problem_events(seq,event_id,problem_id,task_id,turn_id,trace_id,run_id,wave_id,capsule_id,conversation_epoch,relation_type,link_status,link_role,feedback_intent,causal_mechanism,economic_class,provenance,evidence_level,eligible_for_policy,state_before,state_after,reason_code,criteria_count,criteria_fingerprint,request_hash,event_time,prev_hash,event_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (1, legacy["event_id"], legacy["problem_id"], legacy["task_id"], "", "", "", "", "", 0, "OPEN", "EXACT", "PRIMARY", "UNKNOWN", "UNKNOWN", "UNKNOWN", "HOST_OBSERVED", "OBSERVED", 1, "", "OPEN", "none", 0, "", request_hash, NOW, "", old_hash))
+            self.assertTrue(ledger.migrate_problem_lineage_schema(expected_schema_version=10)["migrated"])
+            problem = ledger.problem_get("legacy-problem")
+            assert problem is not None
+            self.assertTrue(problem["legacy_or_missing_contract"])
+            self.assertEqual(problem["events"][0]["event_schema_version"], 1)
+            self.assertFalse(problem["events"][0]["eligible_for_policy"])
+            self.assertTrue(ledger.problem_verify_chain("legacy-problem")["ok"])
 
-    def test_task_control_problem_schema_keeps_eight_tools_and_requires_explicit_activation(self) -> None:
-        schema = input_schemas()["task_control"]
-        self.assertIn("problem", schema["properties"]["action"]["enum"])
-        self.assertIn("problem_event", schema["properties"])
-        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
-            runtime = Runtime(Path(temp), permission_mode="safe")
-            try:
-                self.assertEqual(runtime.tool_contract["tool_count"], 8)
-                with self.assertRaises(ToolFailure) as denied:
-                    runtime.task_control({"action": "problem", "problem_event": self.open_event()})
-                self.assertEqual(denied.exception.code, "PRL_SCHEMA_NOT_ACTIVATED")
-                runtime.orchestration_ledger.migrate_problem_lineage_schema()
-                opened = runtime.task_control({"action": "problem", "problem_event": self.open_event(identifier="runtime-open")})
-                problem_id = opened["problem"]["thread"]["thread"]["problem_id"]
-                got = runtime.task_control({"action": "problem", "problem_event": {"operation": "get", "problem_id": problem_id}})
-                self.assertEqual(got["problem"]["thread"]["problem_id"], problem_id)
-                with self.assertRaises(ToolFailure) as invalid:
-                    runtime.task_control({"action": "problem", "problem_event": {**self.open_event(identifier="bad-runtime"), "payload_json": {}}})
-                self.assertEqual(invalid.exception.code, "PRL_EVENT_INVALID")
-                with self.assertRaises(JsonRpcError):
-                    validate_arguments("task_control", {"action": "problem", "problem_event": {"operation": "open", "event_id": "schema-extra", "payload_json": {}}})
-            finally:
-                runtime.close()
-
-    def test_host_observed_event_peeks_exact_identity_without_consuming_it(self) -> None:
-        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
-            root = Path(temp)
-            runtime = Runtime(root, permission_mode="safe")
-            try:
-                runtime.orchestration_ledger.migrate_problem_lineage_schema()
-                pending = root / ".coding-tools" / "evaluation" / "chatweb-host-turn-pending.json"
-                pending.parent.mkdir(parents=True, exist_ok=True)
-                pending.write_text(json.dumps({
-                    "schema_version": 1, "turn_id": "turn-host-1", "trace_id": "trace-host-1", "staged_at_unix_ms": int(time.time() * 1000),
-                }), encoding="utf-8")
-                opened = runtime.task_control({"action": "problem", "problem_event": {
-                    **self.open_event(identifier="host-open"),
-                    "turn_id": "turn-host-1", "trace_id": "trace-host-1", "provenance": "HOST_OBSERVED",
-                }})
-                self.assertTrue(opened["problem"]["recorded"])
-                self.assertTrue(pending.exists())
-                with self.assertRaises(ToolFailure) as mismatch:
-                    runtime.task_control({"action": "problem", "problem_event": {
-                        **self.open_event(identifier="host-mismatch"),
-                        "turn_id": "turn-other", "trace_id": "trace-host-1", "provenance": "HOST_OBSERVED",
-                    }})
-                self.assertEqual(mismatch.exception.code, "PRL_HOST_IDENTITY_MISMATCH")
-            finally:
-                runtime.close()
-
-    def test_claimed_host_turn_creates_exact_engineering_attempt_and_derived_handoff(self) -> None:
+    def test_runtime_autofills_host_identity_and_pins_declared_revision_before_run(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(temp)
             runtime = Runtime(root, permission_mode="safe")
             runtime._orchestration_workspace_identity = lambda _path: {"branch": "test", "base_head": "head", "worktree_fp": "worktree"}
             try:
                 runtime.orchestration_ledger.migrate_problem_lineage_schema()
+                opened = runtime.task_control({"action": "problem", "problem_event": open_event("runtime-open")})
+                event = opened["problem"]["event"]
+                problem_id, fingerprint = str(event["problem_id"]), str(event["contract_fingerprint"])
                 pending = root / ".coding-tools" / "evaluation" / "chatweb-host-turn-pending.json"
                 pending.parent.mkdir(parents=True, exist_ok=True)
-                pending.write_text(json.dumps({
-                    "schema_version": 1, "turn_id": "turn-bind-1", "trace_id": "trace-bind-1", "staged_at_unix_ms": 1,
-                }), encoding="utf-8")
-                with patch("coding_tools_mcp.host_correlation.time.time", return_value=0.001):
-                    opened = runtime.task_control({"action": "problem", "problem_event": {
-                        **self.open_event(identifier="bind-open", task_id="task-bind"),
-                        "turn_id": "turn-bind-1", "trace_id": "trace-bind-1", "provenance": "HOST_OBSERVED",
-                    }})
-                    problem_id = opened["problem"]["thread"]["thread"]["problem_id"]
-                    ctx, _ = runtime._agent_orchestration_context(
-                        {"workflow": "diagnose", "phase": "prepare", "execution_mode": "mcp_only"},
-                        objective="bind the exact host turn",
-                    )
-                problem = runtime.orchestration_ledger.problem_get(problem_id)
-                assert problem is not None
-                binding = [item for item in problem["events"] if item["relation_type"] == "ENGINEERING_ATTEMPT_BOUND"]
-                self.assertEqual(len(binding), 1)
-                self.assertEqual(binding[0]["run_id"], ctx.run_id)
-                self.assertEqual(binding[0]["wave_id"], ctx.wave_id)
-                self.assertEqual(binding[0]["turn_id"], "turn-bind-1")
-                self.assertEqual(binding[0]["trace_id"], "trace-bind-1")
-                self.assertEqual(binding[0]["link_status"], "EXACT")
-                self.assertEqual(binding[0]["link_role"], "PRIMARY")
-                self.assertFalse(pending.exists())
-                recorded = runtime.task_control({
-                    "action": "handoff", "handoff_action": "record", "payload": {"next_action": "continue exact proof"},
+                pending.write_text(json.dumps({"schema_version": 1, "turn_id": "turn-1", "trace_id": "trace-1", "staged_at_unix_ms": int(time.time() * 1000)}), encoding="utf-8")
+                observed = runtime.task_control({"action": "problem", "problem_event": {"operation": "observe_feedback", "event_id": "host-observed", "problem_id": problem_id, "problem_revision": 1, "provenance": "HOST_OBSERVED", "evidence_level": "OBSERVED"}})
+                self.assertEqual(observed["problem"]["event"]["turn_id"], "turn-1")
+                ctx, _ = runtime._agent_orchestration_context({"workflow": "bugfix", "phase": "prepare", "execution_mode": "mcp_only", "problem_context": {"work_origin": "problem", "problem_id": problem_id, "problem_revision": 1, "contract_fingerprint": fingerprint, "resolution_claim": "none"}}, objective="pin revision before run")
+                run = runtime.orchestration_ledger.get_run(ctx.run_id)
+                assert run is not None
+                self.assertEqual(run["metadata"]["problem_resolution"]["problem_revision"], 1)
+                handoff = runtime.orchestration_ledger.problem_handoff_for_run(ctx.run_id)
+                assert handoff is not None
+                self.assertEqual(handoff["problem_revision"], 1)
+            finally:
+                runtime.close()
+
+    def test_task_acceptance_bridges_only_a_covered_exact_full_problem_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                runtime.orchestration_ledger.migrate_problem_lineage_schema()
+                opened = runtime.task_control({"action": "problem", "problem_event": open_event("runtime-c3-open")})
+                event = opened["problem"]["event"]
+                problem_id = str(event["problem_id"])
+                fingerprint = str(event["contract_fingerprint"])
+                workflow = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "execution_mode": "mcp_only",
+                    "objective": "Set the bounded fixture value",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "include_diff": False,
+                    "problem_context": {
+                        "work_origin": "problem",
+                        "problem_id": problem_id,
+                        "problem_revision": 1,
+                        "contract_fingerprint": fingerprint,
+                        "resolution_claim": "full_problem",
+                    },
                 })
-                capsule = recorded["capsule"]["payload"]["problem_lineage"]
-                self.assertEqual(capsule["active_problem_id"], problem_id)
-                self.assertEqual(capsule["problem_state"], "OPEN")
-                self.assertNotIn("prompt", json.dumps(capsule))
+                run_id = str(workflow["orchestration"]["run_id"])
+                wave_id = str(workflow["orchestration"]["wave_id"])
+                proof_id = runtime.orchestration_ledger.record_proof(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    stage_id="focused",
+                    stage_version="1",
+                    input_fingerprint="runtime-c3-proof",
+                    status="passed",
+                )
+                with self.assertRaises(ToolFailure) as missing_manifest:
+                    runtime.task_control({"action": "accept", "run_id": run_id, "reason": "manifest is intentionally absent"})
+                self.assertEqual(missing_manifest.exception.code, "PRL_COVERAGE_MANIFEST_REQUIRED")
+                with self.assertRaises(ToolFailure) as invalid_manifest:
+                    runtime.task_control({
+                        "action": "accept", "run_id": run_id,
+                        "reason": "manifest has no exact passed proof",
+                        "problem_coverage_manifest": {"criterion-1": ["not-a-proof"]},
+                    })
+                self.assertEqual(invalid_manifest.exception.code, "PRL_COVERAGE_MANIFEST_INVALID")
+
+                accepted = runtime.task_control({
+                    "action": "accept",
+                    "run_id": run_id,
+                    "reason": "exact full-problem claim has passed proof coverage",
+                    "problem_coverage_manifest": {"criterion-1": [proof_id]},
+                })
+                self.assertTrue(accepted["accepted"])
+                self.assertTrue(accepted["problem_outcome_bridge"]["recorded"])
+                self.assertEqual(runtime.orchestration_ledger.problem_get(problem_id)["thread"]["resolution_state"], "PROVISIONALLY_RESOLVED")
+
+                confirmed = runtime.task_control({"action": "problem", "problem_event": {
+                    "operation": "confirm", "event_id": "runtime-c3-confirm", "problem_id": problem_id,
+                    "problem_revision": 1, "feedback_intent": "CONFIRM_RESOLVED",
+                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+                }})
+                self.assertEqual(confirmed["problem"]["event"]["reason_code"], "user_confirmation")
+                reopened = runtime.task_control({"action": "problem", "problem_event": {
+                    "operation": "reopen", "event_id": "runtime-c3-reopen", "problem_id": problem_id,
+                    "problem_revision": 1, "feedback_intent": "SAME_PROBLEM_STILL_FAILING",
+                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+                }})
+                self.assertEqual(reopened["problem"]["event"]["problem_revision"], 1)
+                self.assertEqual(reopened["problem"]["event"]["reason_code"], "explicit_same_problem_correction")
+                self.assertEqual(reopened["problem"]["thread"]["thread"]["current_revision"], 1)
             finally:
                 runtime.close()
 
-    def test_ambiguous_host_identity_records_missingness_without_merging_problem_threads(self) -> None:
-        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+    def test_schema_inactive_acceptance_remains_available_without_problem_closure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            runtime = Runtime(root, permission_mode="safe")
-            runtime._orchestration_workspace_identity = lambda _path: {"branch": "test", "base_head": "head", "worktree_fp": "worktree"}
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
             try:
-                runtime.orchestration_ledger.migrate_problem_lineage_schema()
-                pending = root / ".coding-tools" / "evaluation" / "chatweb-host-turn-pending.json"
-                pending.parent.mkdir(parents=True, exist_ok=True)
-                pending.write_text(json.dumps({
-                    "schema_version": 1, "turn_id": "turn-ambiguous-1", "trace_id": "trace-ambiguous-1", "staged_at_unix_ms": 1,
-                }), encoding="utf-8")
-                with patch("coding_tools_mcp.host_correlation.time.time", return_value=0.001):
-                    for identifier in ("ambiguous-open-a", "ambiguous-open-b"):
-                        runtime.task_control({"action": "problem", "problem_event": {
-                            **self.open_event(identifier=identifier, task_id="task-ambiguous"),
-                            "turn_id": "turn-ambiguous-1", "trace_id": "trace-ambiguous-1", "provenance": "HOST_OBSERVED",
-                        }})
-                    ctx, _ = runtime._agent_orchestration_context(
-                        {"workflow": "diagnose", "phase": "prepare", "execution_mode": "mcp_only"},
-                        objective="retain ambiguous host relation",
+                workflow = runtime.agent_workflow({
+                    "workflow": "bugfix", "phase": "execute", "execution_mode": "mcp_only",
+                    "objective": "Accept without an activated PRL schema",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none", "include_diff": False,
+                })
+                accepted = runtime.task_control({
+                    "action": "accept", "run_id": workflow["orchestration"]["run_id"],
+                    "reason": "ordinary EOCL acceptance remains available",
+                })
+                self.assertTrue(accepted["accepted"])
+                self.assertEqual(accepted["problem_outcome_bridge"], {"recorded": False, "reason": "schema_inactive"})
+            finally:
+                runtime.close()
+
+    def test_non_full_problem_origins_accept_without_a_provisional_closure(self) -> None:
+        for origin in ("unknown", "non_problem", "problem"):
+            with self.subTest(origin=origin), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+                runtime = Runtime(root, permission_mode="dangerous")
+                try:
+                    runtime.orchestration_ledger.migrate_problem_lineage_schema()
+                    request: dict[str, object] = {
+                        "workflow": "bugfix", "phase": "execute", "execution_mode": "mcp_only",
+                        "objective": f"Accept a {origin} attempt without full closure",
+                        "evaluation": {"provenance": "benchmark"},
+                        "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                        "verification": "none", "include_diff": False,
+                    }
+                    if origin == "non_problem":
+                        request["problem_context"] = {"work_origin": "non_problem"}
+                    elif origin == "problem":
+                        opened = runtime.task_control({"action": "problem", "problem_event": open_event(f"{origin}-none-open")})
+                        event = opened["problem"]["event"]
+                        request["problem_context"] = {
+                            "work_origin": "problem", "problem_id": str(event["problem_id"]),
+                            "problem_revision": 1, "contract_fingerprint": str(event["contract_fingerprint"]),
+                            "resolution_claim": "none",
+                        }
+                    workflow = runtime.agent_workflow(request)
+                    accepted = runtime.task_control({
+                        "action": "accept", "run_id": workflow["orchestration"]["run_id"],
+                        "reason": "this is not a full-problem resolution claim",
+                    })
+                    self.assertTrue(accepted["accepted"])
+                    self.assertEqual(
+                        accepted["problem_outcome_bridge"],
+                        {"recorded": False, "reason": "not_exact_full_problem_claim"},
                     )
-                with runtime.orchestration_ledger._connect() as connection:
-                    row = connection.execute(
-                        "SELECT problem_id,link_status,link_role,reason_code FROM problem_events WHERE run_id=?",
-                        (ctx.run_id,),
-                    ).fetchone()
-                assert row is not None
-                self.assertIsNone(row["problem_id"])
-                self.assertEqual(row["link_status"], "AMBIGUOUS")
-                self.assertEqual(row["link_role"], "SECONDARY")
-                self.assertEqual(row["reason_code"], "ambiguous_relation")
-            finally:
-                runtime.close()
+                finally:
+                    runtime.close()
 
-    def test_expired_pending_host_identity_is_not_accepted_for_problem_lineage(self) -> None:
-        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
-            root = Path(temp)
-            runtime = Runtime(root, permission_mode="safe")
-            try:
-                runtime.orchestration_ledger.migrate_problem_lineage_schema()
-                pending = root / ".coding-tools" / "evaluation" / "chatweb-host-turn-pending.json"
-                pending.parent.mkdir(parents=True, exist_ok=True)
-                pending.write_text(json.dumps({
-                    "schema_version": 1, "turn_id": "turn-expired", "trace_id": "trace-expired", "staged_at_unix_ms": 1,
-                }), encoding="utf-8")
-                with self.assertRaises(ToolFailure) as unavailable:
-                    runtime.task_control({"action": "problem", "problem_event": {
-                        **self.open_event(identifier="expired-open"),
-                        "turn_id": "turn-expired", "trace_id": "trace-expired", "provenance": "HOST_OBSERVED",
-                    }})
-                self.assertEqual(unavailable.exception.code, "PRL_HOST_IDENTITY_UNAVAILABLE")
-            finally:
-                runtime.close()
+    def test_public_schema_has_no_caller_state_or_policy_grant(self) -> None:
+        schema = input_schemas()["task_control"]
+        event_schema = schema["properties"]["problem_event"]
+        self.assertEqual(schema["properties"]["action"]["enum"].count("problem"), 1)
+        self.assertNotIn("eligible_for_policy", event_schema["properties"])
+        self.assertNotIn("state", event_schema["properties"])
+        with self.assertRaises(Exception):
+            validate_arguments("task_control", {"action": "problem", "problem_event": {"operation": "open", "event_id": "bad", "eligible_for_policy": True}})
 
 
 if __name__ == "__main__":

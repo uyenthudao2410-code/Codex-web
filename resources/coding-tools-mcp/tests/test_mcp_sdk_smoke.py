@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import sys
 import tempfile
 import threading
@@ -26,6 +27,19 @@ EXPECTED_SMART_TOOLS = {
     "view_image",
 }
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+
+
+def assert_smart_task_control_schema(tools: list[object]) -> None:
+    task_control = next(tool for tool in tools if str(getattr(tool, "name", "")) == "task_control")
+    schema = getattr(task_control, "inputSchema")
+    assert isinstance(schema, dict)
+    action = schema["properties"]["action"]
+    assert isinstance(action, dict)
+    actions = action["enum"]
+    assert isinstance(actions, list)
+    assert actions.count("problem") == 1
+    assert actions.count("p5") == 1
+    assert "allOf" not in json.dumps(schema, ensure_ascii=False, sort_keys=True)
 
 
 class OfficialMcpSdkSmokeTests(unittest.IsolatedAsyncioTestCase):
@@ -54,6 +68,7 @@ class OfficialMcpSdkSmokeTests(unittest.IsolatedAsyncioTestCase):
                     self.assertTrue(initialized.protocolVersion)
                     tools = await session.list_tools()
                     self.assertEqual({tool.name for tool in tools.tools}, EXPECTED_SMART_TOOLS)
+                    assert_smart_task_control_schema(list(tools.tools))
                     result = await session.call_tool(
                         "workspace_context", {"detail": "compact", "path": "."}
                     )
@@ -64,6 +79,7 @@ class OfficialMcpSdkSmokeTests(unittest.IsolatedAsyncioTestCase):
             os.environ, {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
         ):
             runtime = Runtime(Path(temp), transport="http")
+            runtime.orchestration_ledger.migrate_problem_lineage_schema()
             server = RuntimeHTTPServer(
                 ("127.0.0.1", 0),
                 MCPHandler,
@@ -83,6 +99,13 @@ class OfficialMcpSdkSmokeTests(unittest.IsolatedAsyncioTestCase):
                         self.assertTrue(get_session_id())
                         tools = await session.list_tools()
                         self.assertEqual({tool.name for tool in tools.tools}, EXPECTED_SMART_TOOLS)
+                        assert_smart_task_control_schema(list(tools.tools))
+                        missing_problem = await session.call_tool(
+                            "task_control",
+                            {"action": "problem", "problem_event": {"operation": "get", "problem_id": "missing-problem"}},
+                        )
+                        self.assertTrue(missing_problem.isError)
+                        self.assertEqual(missing_problem.structuredContent["error"]["code"], "PRL_PROBLEM_NOT_FOUND")
                         result = await session.call_tool(
                             "workspace_context", {"detail": "compact", "path": "."}
                         )
