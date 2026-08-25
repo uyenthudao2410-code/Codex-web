@@ -1,0 +1,234 @@
+{
+  "version": 2,
+  "task_id": "f2354fb2572a4bda8318a5ceb4b9e75e",
+  "orchestration": {
+    "run_id": "8c7b54f158cf4a558d9011d8cce45ce9",
+    "wave_id": "65af85dfa69e4bc9bbf273051bf6b8d3",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "4a79af617bfa6ed1768f390da6c4f73c16aa86a2",
+    "worktree_fp": "02527c25cc4880788ba95159983c4a13bb90cf2f55b2d7dd6813f2a9a04ec61a",
+    "contract_fp": ""
+  },
+  "objective": "Fix the Coding-VP connector freshness deadlock in E:\\DEV\\Codex-web without weakening fail-closed semantics. Current condition: ChatGPT can successfully invoke real tools/call such as workspace_context against the target workspace, but platform schema caching may not emit tools/list/server/discover after a contract change, so Recovery Host remains connectorRediscovered=false and blocks acknowledgement forever. Preserve the invariant that ordinary tool success alone is NOT rediscovery. Design the smallest supported bridge/receipt mechanism that can prove the ChatGPT connector has observed the exact current tool contract, bound at minimum to client_type=chatweb, current process/server instance, and tool_contract_sha256, or otherwise provide a supported force-rediscovery path at the connector/bridge layer. Do not expose a new public business MCP tool unless absolutely required. Keep C4/natural-evidence gates separate. Preserve unrelated dirty worktree changes and .coding-tools evidence. Inspect both producer and consumer sides of the freshness contract, current tests/docs, and current runtime contract before proposing mutation.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Ul0-Z_OBYhqF953BHkULABjL",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 622,
+    "finished_at": "2026-08-25T14:18:35.016Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T14:16:40.981Z",
+  "updated_at": "2026-08-25T14:18:35.016Z",
+  "events": [
+    {
+      "time": "2026-08-25T14:16:40.981Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fix the Coding-VP connector freshness deadlock in E:\\DEV\\Codex-web without weakening fail-closed semantics. Current condition: ChatGPT can successfully invoke real tools/call such as workspace_context against the target workspace, but platform schema caching may not emit tools/list/server/discover after a contract change, so Recovery Host remains connectorRediscovered=false and blocks acknowledgement forever. Preserve the invariant that ordinary tool success alone is NOT rediscovery. Design the smallest supported bridge/receipt mechanism that can prove the ChatGPT connector has observed the exact current tool contract, bound at minimum to client_type=chatweb, current process/server instance, and tool_contract_sha256, or otherwise provide a supported force-rediscovery path at the connector/bridge layer. Do not expose a new public business MCP tool unless absolutely required. Keep C4/natural-evidence gates separate. Preserve unrelated dirty worktree changes and .coding-tools evidence. Inspect both producer and consumer sides of the freshness contract, current tests/docs, and current runtime contract before proposing mutation."
+      }
+    },
+    {
+      "time": "2026-08-25T14:16:42.274Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T14:16:44.024Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T14:16:44.031Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:11.936Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -S \"current_contract_observed|connector_tool_discovery|record.*discover|client_type|process_instance_id|server_instance_id|server/discover|def list_tools|list_tools\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron/services/tunnelService.js",
+        "session_id": "X5djoBnFJmAm-2aCPWLdhkDn"
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:12.484Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -S \"current_contract_observed|connector_tool_discovery|record.*discover|client_type|process_instance_id|server_instance_id|server/discover|def list_tools|list_tools\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron/services/tunnelService.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:25.933Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 18 current_contract_observed resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "session_id": "NCLsK9kNzLwVr-qRm_iTmnqo"
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:26.300Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 18 current_contract_observed resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:34.720Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 16 _record_tool_discovery resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "session_id": "BdQPTQoIPEgeH7dWDGRLeBig"
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:35.093Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 16 _record_tool_discovery resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:41.102Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 tool_discovery_receipts resources/coding-tools-mcp/coding_tools_mcp/server.py",
+        "session_id": "81vg1mAlRho2ZUHPiPZyJqiq"
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:41.506Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 tool_discovery_receipts resources/coding-tools-mcp/coding_tools_mcp/server.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:17:59.698Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 20 \"tunnel-client|health|probe|discover|refresh|mcp\" electron/services/tunnelService.js electron/services/environmentService.js electron/paths.js package.json",
+        "session_id": "x5jHROdXb0U0DBZZcMBf67kF"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:00.059Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 20 \"tunnel-client|health|probe|discover|refresh|mcp\" electron/services/tunnelService.js electron/services/environmentService.js electron/paths.js package.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:07.008Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 10 tunnelExecutable electron resources scripts",
+        "session_id": "t1k4tI7f_h9wRN-tRQJPx0cu"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:07.366Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 10 tunnelExecutable electron resources scripts",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:13.449Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\tools\\tunnel-client.exe --help",
+        "session_id": "10CFBdHo61TKYnJGLAWxRMFo"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:13.808Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\tools\\tunnel-client.exe --help",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:19.400Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\tools\\tunnel-client.exe help plugin",
+        "session_id": "tfNx2t454lVD_xxsDykQVEwV"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:19.783Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\tools\\tunnel-client.exe help plugin",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:25.632Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\tools\\tunnel-client.exe codex plugin --help",
+        "session_id": "3qRAdIrAwLt16GaLEycme9cZ"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:26.000Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\tools\\tunnel-client.exe codex plugin --help",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:34.650Z",
+      "event": "command_started",
+      "details": {
+        "command": "resources\\tools\\tunnel-client.exe runtimes --help",
+        "session_id": "Ul0-Z_OBYhqF953BHkULABjL"
+      }
+    },
+    {
+      "time": "2026-08-25T14:18:35.016Z",
+      "event": "command_finished",
+      "details": {
+        "command": "resources\\tools\\tunnel-client.exe runtimes --help",
+        "status": "passed"
+      }
+    }
+  ]
+}

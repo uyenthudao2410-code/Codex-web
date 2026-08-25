@@ -40,7 +40,7 @@ Before collecting a C4 cohort, record these versions in its receipt:
 | Identity codebook | `1.0.0` | Semantic change starts a new cohort or is explicitly stratified. |
 | Action-kind codebook | `1.0.0` | Semantic change starts a new cohort or is explicitly stratified. |
 | Cohort rules | `1.0.0` | Semantic change starts a new cohort or is explicitly stratified. |
-| C4 receipt schema | `1` | Additive reporting must preserve prior receipt interpretation. |
+| C4 receipt schema | `2` | A semantic measurement fix: a full-problem unit is now independently rebuilt from exact revision, criterion manifest/disposition, passed proof, accepted checkpoint, and provisional bridge evidence. |
 
 Only a privacy, integrity, or measurement-defect hotfix may occur within a
 cohort. Record the defect, the affected interval, test proof, and whether the
@@ -100,8 +100,9 @@ attribution; action kind; and timestamp authority. `false_split` and
    writes no problem event.
 4. Require `status=C4_SOURCE_READY_AWAITING_NATURAL_CANARY` before enrolling a
    natural canary. `PRL_SCHEMA_INACTIVE` requires supported activation;
-   `C4_INTEGRITY_BLOCKED` requires diagnosis/reconciliation. Neither is
-   repairable by editing a report.
+   `C4_INTEGRITY_BLOCKED` requires diagnosis/reconciliation; and
+   `C4_MECHANICS_BLOCKED` requires repair of the exact source/proof/checkpoint
+   bridge. Neither is repairable by editing a report.
 5. Collect only authorized real problem events. `30–50` is a mechanics
    calibration range, never an efficacy threshold. Freeze versions before
    review, then calculate raw agreement, class prevalence, Cohen's kappa or
@@ -113,10 +114,12 @@ attribution; action kind; and timestamp authority. `false_split` and
 ## 5. Receipt interpretation and stop conditions
 
 Wilson intervals in this receipt describe mechanics coverage only; they are not
-treatment effects and do not replace a preregistered error bound. The receipt
-must report integrity, FK result, event chain, typed-capsule validity, exact
-revision binding, structural criterion-to-proof coverage, authoritative
-confirmation, and trusted occurrence-clock coverage.
+treatment effects and do not replace a preregistered error bound. Receipt v2
+must report the immutable Backup-API copy's capture timestamp plus physical and
+logical SHA-256 values, integrity/FK result, event chain, typed-capsule privacy
+and revision-projection validity, exact revision binding, and independently
+verified criterion-to-proof/checkpoint/bridge coverage. A nonempty manifest,
+persisted fingerprint, or aggregate event alone is not completion evidence.
 
 Stop or demote the protocol and write a typed blocker when a secret, personal
 data, raw transcript, source payload, or private reasoning is proposed for

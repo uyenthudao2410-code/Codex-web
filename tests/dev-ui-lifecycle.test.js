@@ -169,6 +169,15 @@ test('dev focuses an exact current UI and reports process plus revision postflig
   assert.match(fixture.lines.at(-1), new RegExp(`running_revision=${REVISION} disk_revision=${REVISION}`));
 });
 
+test('dev:status only reports the Recovery Host observation and never signals or activates the UI', async () => {
+  const fixture = harness(observation('STALE'));
+  const result = await runLifecycle('status', fixture.deps);
+  assert.equal(result.ui.state, 'STALE');
+  assert.deepEqual(fixture.calls, []);
+  assert.match(fixture.lines.at(-1), /DEV_UI STATUS state=STALE host=available installation=current/);
+  assert.match(fixture.lines.at(-1), /running_revision=b+ disk_revision=a+/);
+});
+
 test('dev routes a stale same-checkout UI through component activation before focus', async () => {
   const fixture = harness(observation('STALE'));
   const result = await runLifecycle('start', fixture.deps);
@@ -396,6 +405,22 @@ test('Electron main makes duplicate start actionable and accepts only exact UI l
   assert.match(source, /orchestrator\.snapshot\(\{ force: true, reason: 'manual-code-activation-authority' \}\)/);
   assert.match(source, /activationSourceCheckpoint\(snapshot\?\.recoveryHost, component\)/);
   assert.equal((source.match(/await codeActivationRequest\(component, allowAcceptancePending\)/g) || []).length, 2);
+});
+
+test('Electron task list reads and controls canonical orchestration state instead of task-state files', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '..', 'electron', 'main.js'), 'utf8');
+  const start = source.indexOf("secureHandle('task-state:read'");
+  const end = source.indexOf("secureHandle('performance:read'", start);
+  assert.ok(start >= 0 && end > start);
+  const handlers = source.slice(start, end);
+  assert.match(handlers, /readOrchestrationControlSnapshot\(\)/);
+  assert.match(handlers, /taskList\?\.source !== 'orchestration_ledger'/);
+  assert.match(handlers, /taskList\.current/);
+  assert.match(handlers, /Array\.isArray\(taskList\.history\)/);
+  for (const action of ['clear', 'pause', 'resume', 'stop']) {
+    assert.match(handlers, new RegExp(`panelTaskControl\\('${action}'\\)`));
+  }
+  assert.doesNotMatch(handlers, /workspaceStatePaths|archiveTask|readJson|writeJsonAtomic/);
 });
 
 test('Command Center renders loaded-source status and connector enum semantics', () => {

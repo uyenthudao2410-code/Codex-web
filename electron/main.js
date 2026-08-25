@@ -263,8 +263,21 @@ function httpRequestJson({ port, path: requestPath, method, token, body, headers
   });
 }
 
+async function readOrchestrationControlSnapshot() {
+  const current = settings.load();
+  const token = secrets.get('mcpAuthToken');
+  if (!token) throw new Error('MCP chưa sẵn sàng để đọc trạng thái điều phối canonical.');
+  return httpRequestJson({
+    port: current.mcpPort,
+    path: '/__control/orchestration',
+    method: 'GET',
+    token,
+    timeout: PANEL_ORCHESTRATION_TIMEOUT_MS
+  });
+}
+
 async function panelTaskControl(action) {
-  const allowed = new Set(['pause', 'resume', 'stop']);
+  const allowed = new Set(['pause', 'resume', 'stop', 'clear']);
   if (!allowed.has(action)) throw new Error('Thao tác nhiệm vụ từ bảng điều khiển không hợp lệ.');
   const current = settings.load();
   const token = secrets.get('mcpAuthToken');
@@ -663,49 +676,38 @@ function registerIpc() {
     return { selected, snapshot };
   }));
   secureHandle('task-state:read', () => invokeSafely(async () => {
-    let statePath;
-    try { ({ statePath } = workspaceStatePaths()); } catch { return { exists: false, state: null }; }
-    try {
-      const state = JSON.parse(await fs.readFile(statePath, 'utf8'));
-      return { exists: true, statePath, state };
-    } catch (error) {
-      if (error?.code === 'ENOENT') return { exists: false, statePath, state: null };
-      throw new Error(`Đọc trạng thái nhiệm vụ thất bại: ${safeMessage(error)}`);
+    const control = await readOrchestrationControlSnapshot();
+    const taskList = control?.task_list;
+    if (taskList?.source !== 'orchestration_ledger') {
+      throw new Error('MCP không trả task list canonical từ orchestration ledger.');
     }
+    const canonical = taskList.current;
+    if (!canonical) return { exists: false, state: null, source: taskList.source };
+    const projection = control?.task && typeof control.task === 'object' ? control.task : {};
+    return {
+      exists: true,
+      source: taskList.source,
+      state: {
+        ...projection,
+        task_id: canonical.task_id || projection.task_id || '',
+        objective: canonical.objective || projection.objective || '',
+        status: canonical.status || projection.status || 'unknown',
+        updated_at: canonical.finished_at || canonical.started_at || projection.updated_at || null,
+        orchestration: { run_id: canonical.run_id || '', source: taskList.source }
+      }
+    };
   }));
-  secureHandle('task-state:clear', () => invokeSafely(async () => {
-    let paths;
-    try { paths = workspaceStatePaths(); } catch { return false; }
-    const { statePath, historyPath } = paths;
-    archiveTask(readJson(statePath, null), historyPath, 'cleared-from-assistant');
-    await fs.unlink(statePath).catch((error) => { if (error?.code !== 'ENOENT') throw error; });
-    return true;
-  }));
-  secureHandle('task-state:pause', () => invokeSafely(async () => {
-    const { statePath } = workspaceStatePaths();
-    const state = readJson(statePath, null); if (!state) throw new Error('Hiện không có nhiệm vụ nào có thể tạm dừng.');
-    state.status = 'paused'; state.pause_reason = 'Người dùng tạm dừng từ trợ lý'; state.updated_at = new Date().toISOString();
-    writeJsonAtomic(statePath, state); return state;
-  }));
-  secureHandle('task-state:resume', () => invokeSafely(async () => {
-    const { statePath } = workspaceStatePaths();
-    const state = readJson(statePath, null); if (!state) throw new Error('Hiện không có nhiệm vụ nào có thể tiếp tục.');
-    state.status = 'active'; state.pause_reason = ''; state.updated_at = new Date().toISOString();
-    writeJsonAtomic(statePath, state); return state;
-  }));
-  secureHandle('task-state:stop', () => invokeSafely(async () => {
-    const { statePath } = workspaceStatePaths();
-    const state = readJson(statePath, null); if (!state) throw new Error('Hiện không có nhiệm vụ nào có thể dừng.');
-    state.status = 'stopped'; state.failure = 'Người dùng dừng nhiệm vụ từ trợ lý';
-    state.next_step = state.next_step || 'Tiếp tục nhiệm vụ hiện tại sau khi xác nhận, hoặc bắt đầu nhiệm vụ mới.';
-    state.updated_at = new Date().toISOString();
-    writeJsonAtomic(statePath, state); return state;
-  }));
+  secureHandle('task-state:clear', () => invokeSafely(() => panelTaskControl('clear')));
+  secureHandle('task-state:pause', () => invokeSafely(() => panelTaskControl('pause')));
+  secureHandle('task-state:resume', () => invokeSafely(() => panelTaskControl('resume')));
+  secureHandle('task-state:stop', () => invokeSafely(() => panelTaskControl('stop')));
   secureHandle('task-state:history', () => invokeSafely(async () => {
-    let historyPath;
-    try { ({ historyPath } = workspaceStatePaths()); } catch { return []; }
-    try { const value = JSON.parse(await fs.readFile(historyPath, 'utf8')); return Array.isArray(value) ? value.slice(-50).reverse() : []; }
-    catch (error) { if (error?.code === 'ENOENT') return []; throw error; }
+    const control = await readOrchestrationControlSnapshot();
+    const taskList = control?.task_list;
+    if (taskList?.source !== 'orchestration_ledger') {
+      throw new Error('MCP không trả task history canonical từ orchestration ledger.');
+    }
+    return Array.isArray(taskList.history) ? taskList.history : [];
   }));
   secureHandle('performance:read', () => invokeSafely(async () => {
     let performancePath;
@@ -749,16 +751,7 @@ function registerIpc() {
     });
   }));
   secureHandle('panel:orchestration', () => invokeSafely(async () => {
-    const current = settings.load();
-    const token = secrets.get('mcpAuthToken');
-    if (!token) throw new Error('MCP chưa sẵn sàng để đọc trạng thái điều phối.');
-    return httpRequestJson({
-      port: current.mcpPort,
-      path: '/__control/orchestration',
-      method: 'GET',
-      token,
-      timeout: PANEL_ORCHESTRATION_TIMEOUT_MS
-    });
+    return readOrchestrationControlSnapshot();
   }));
   secureHandle('panel:task-control', (_event, action) => invokeSafely(() => panelTaskControl(String(action || ''))));
   secureHandle('p5-a0:control', (_event, action) => invokeSafely(() => panelP5A0Control(String(action || ''))));

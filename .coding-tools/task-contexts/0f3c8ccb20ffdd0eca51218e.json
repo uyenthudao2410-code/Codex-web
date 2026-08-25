@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "task_id": "56c444168fad45ca863bc50b57ddb764",
+  "orchestration": {
+    "run_id": "3911cdc3e641412ea07175eb21ea12a2",
+    "wave_id": "3f93cd3791fb4cc88c661fcc60c4b51b",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "4a79af617bfa6ed1768f390da6c4f73c16aa86a2",
+    "worktree_fp": "02527c25cc4880788ba95159983c4a13bb90cf2f55b2d7dd6813f2a9a04ec61a",
+    "contract_fp": ""
+  },
+  "objective": "Read-only diagnose the connector rediscovery receipt path for E:\\DEV\\Codex-web. Determine exactly what inbound MCP events set connectorRediscovered/connectorRediscoveredAt/connectorRefreshRequired, whether a normal tools/call such as workspace_context can ever satisfy the receipt gate, and identify the safest concrete closure path. Do not modify files, do not restart, do not ACK, do not mutate ledger/task state, and do not run write-capable commands.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T14:13:28.984Z",
+  "updated_at": "2026-08-25T14:13:31.724Z",
+  "events": [
+    {
+      "time": "2026-08-25T14:13:28.984Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only diagnose the connector rediscovery receipt path for E:\\DEV\\Codex-web. Determine exactly what inbound MCP events set connectorRediscovered/connectorRediscoveredAt/connectorRefreshRequired, whether a normal tools/call such as workspace_context can ever satisfy the receipt gate, and identify the safest concrete closure path. Do not modify files, do not restart, do not ACK, do not mutate ledger/task state, and do not run write-capable commands."
+      }
+    },
+    {
+      "time": "2026-08-25T14:13:30.072Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T14:13:31.717Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    }
+  ]
+}

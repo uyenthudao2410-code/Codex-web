@@ -12,7 +12,7 @@ const {
 } = require('../electron/services/recoveryHostLauncher');
 const { activationSourceCheckpoint: sourceCheckpointForActivation } = require('../electron/services/activationClosure');
 
-const ACTIONS = new Set(['start', 'stop', 'replace']);
+const ACTIONS = new Set(['start', 'stop', 'replace', 'status']);
 const INSTANCE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 const DEFAULT_TIMEOUT_MS = 35_000;
 const DEFAULT_POLL_MS = 250;
@@ -24,7 +24,7 @@ function lifecycleError(code, message, details = {}) {
 function normalizeAction(value) {
   const action = String(value || 'start').trim().toLowerCase();
   if (!ACTIONS.has(action)) {
-    throw lifecycleError('DEV_UI_ACTION_INVALID', 'Usage: npm run dev | npm run dev:stop | npm run dev:replace');
+    throw lifecycleError('DEV_UI_ACTION_INVALID', 'Usage: npm run dev | npm run dev:status | npm run dev:stop | npm run dev:replace');
   }
   return action;
 }
@@ -346,6 +346,28 @@ function reportCurrent(deps, observation, action) {
   return observation;
 }
 
+async function statusLifecycle(deps) {
+  const observation = await deps.inspect();
+  const ui = observation?.ui || uiObservation();
+  const host = observation?.hostAvailable === true ? 'available' : 'unavailable';
+  const installation = observation?.installationMatches === true ? 'current'
+    : observation?.installationMatches === false ? 'mismatch' : 'unknown';
+  deps.output([
+    'DEV_UI STATUS',
+    `state=${ui.state || 'UNKNOWN'}`,
+    `host=${host}`,
+    `installation=${installation}`,
+    `pid=${ui.pid || 'none'}`,
+    `instance=${ui.instanceId || 'none'}`,
+    `mode=${ui.runtimeMode || 'none'}`,
+    `running_revision=${ui.runningRevision || 'none'}`,
+    `disk_revision=${ui.diskRevision || 'none'}`,
+    `update_pending=${ui.updatePending === true ? 'true' : 'false'}`,
+    `error_code=${observation?.errorCode || 'none'}`
+  ].join(' '));
+  return observation;
+}
+
 async function startLifecycle(deps) {
   const observation = await ensureCurrent(deps);
   if (observation.ui.instanceId) await deps.signal('focus', observation.ui.instanceId);
@@ -426,6 +448,7 @@ async function replaceLifecycle(deps) {
 async function runLifecycle(action, dependencies = null) {
   const normalized = normalizeAction(action);
   const deps = dependencies || createRuntimeDependencies();
+  if (normalized === 'status') return statusLifecycle(deps);
   if (normalized === 'stop') return stopLifecycle(deps);
   if (normalized === 'replace') return replaceLifecycle(deps);
   return startLifecycle(deps);
@@ -454,6 +477,7 @@ module.exports = {
   activationSourceCheckpoint,
   assertCurrentReceipt,
   exactUiStopped,
+  statusLifecycle,
   ensureCurrent,
   startLifecycle,
   stopLifecycle,

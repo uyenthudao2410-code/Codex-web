@@ -21,6 +21,13 @@
       "updated_at": "2026-08-25T05:00:51.500Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_027fdac67d9f517e0bcd357fef2c0adf": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:13:28.795Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:13:28.795Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_02a91f0b8c1a72293508e2731bad2f65": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T04:45:51.307Z",
@@ -159,6 +166,27 @@
       "created_at": "2026-08-25T09:03:53.317Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T09:03:53.317Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_094296dd2bf37a9c2d0564288845bb3b": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:17:57.596Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:17:57.596Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_0962f10ff1dd2528e6942176ac80e4b6": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:16:40.765Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:16:40.765Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_0995fc8de13f1a6d5d2a86dd33a207c9": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:51:57.375Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:51:57.375Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_099fa8d90a108d6bde13d1ddd091ca4a": {
@@ -371,6 +399,13 @@
       "updated_at": "2026-08-25T04:20:51.141Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_155025eef065da51fc281fe2f46ada48": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:13:57.571Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:13:57.571Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_1557ffe81789dfa840cdf0a50abc18a1": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T07:55:52.726Z",
@@ -567,6 +602,13 @@
       "updated_at": "2026-08-24T17:28:05.563Z",
       "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
     },
+    "ctx_1fbd723b8562f982721431fcf00be625": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:59:57.443Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:59:57.443Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_1ff8c6e106d1cb22d59f0aa333c70281": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T05:48:51.936Z",
@@ -686,6 +728,20 @@
       "updated_at": "2026-08-25T09:37:53.581Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_24acd4a3894f6d220e2926cee16e9756": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:52:57.384Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:52:57.384Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_24b9fcab177cbea2ee0287cc6c77a1d8": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:03:57.479Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:03:57.479Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_258a67caa2cff75a14487b102fec7209": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T09:32:53.531Z",
@@ -777,6 +833,13 @@
       "updated_at": "2026-08-25T05:05:51.557Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_2d3f5523aa13818c10738ae20f3ec1d8": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:10:57.540Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:10:57.540Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_2decd957e8737ab41c10d0c720e29ed7": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T09:13:21.800Z",
@@ -804,6 +867,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-25T06:46:52.661Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_2f2d7fe5459ece8ee6d59e42fa6bbe07": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T13:37:53.360Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:37:53.360Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
     },
     "ctx_2f789a9d7f0dbfcf1722f5644d40e656": {
       "canonical_root": "E:\\Github\\Tools-Codex-web",
@@ -887,6 +957,13 @@
       "created_at": "2026-08-25T07:39:52.584Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T07:39:52.584Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_31d7c22e4a392aa14e1cf24dd20c19f7": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:12:49.704Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:12:49.704Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_32526928f511d7583f8d52cbe51de9bf": {
@@ -1134,6 +1211,13 @@
       "updated_at": "2026-08-25T05:41:51.880Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_3e26e63869f5ea714cd3a8c564c6acb7": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:45:57.338Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:45:57.338Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_3ea6805d0f523e130797054931203a8c": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T04:56:51.448Z",
@@ -1253,6 +1337,20 @@
       "updated_at": "2026-08-25T03:06:50.581Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_4324481af07113e25f4c894f97a807fe": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:06:57.494Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:06:57.494Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_433af33e9e60161184ffc6f7808d4bd4": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:50:57.362Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:50:57.362Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_43a3c3939d9afe43d76d25cebfeb264d": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T09:17:53.437Z",
@@ -1266,6 +1364,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-24T17:38:05.622Z",
       "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
+    },
+    "ctx_448b6e27c7ac3bc9b7804e4dbaa9cbed": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:42:57.328Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:42:57.328Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_44992b7e37e67d699654477bb0f365bf": {
       "canonical_root": "E:\\DEV\\Codex-web",
@@ -1421,6 +1526,13 @@
       "updated_at": "2026-08-25T05:35:51.807Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_4d62e04aa1234abfba3ce5a30c94a764": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:01:57.460Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:01:57.460Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_4dd60eb53585f5758f58fe66df2a8cbd": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T07:17:05.510Z",
@@ -1496,6 +1608,20 @@
       "created_at": "2026-08-25T02:26:50.282Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T02:26:50.282Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_5159f65a771ff79df6211a3d67b85ae6": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:39:57.284Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:39:57.284Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_51713c7325ee938ff127bc57bcdfba0e": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:14:57.574Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:14:57.574Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_517ad8bbd7f5687d29293549d82c16a8": {
@@ -1608,6 +1734,13 @@
       "created_at": "2026-08-25T10:02:53.763Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T10:02:53.763Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_56145516f19686c5a919e153699d74b8": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:55:57.417Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:55:57.417Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_5687cc71663e520b77c2aa8a457dab44": {
@@ -1729,6 +1862,13 @@
       "updated_at": "2026-08-25T07:09:31.431Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_5b53bfbe4c4633bbba594b51762def52": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:47:57.350Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:47:57.350Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_5b5a96b1411d328122b410bf16b56d5c": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T07:57:52.748Z",
@@ -1770,6 +1910,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-25T09:07:59.253Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_5d974c282f0a6042498ebeb704f3b8f0": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T13:38:49.161Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:38:49.161Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
     },
     "ctx_5dee0bf5081f79a525a2e7313b18ef63": {
       "canonical_root": "E:\\DEV\\Codex-web",
@@ -1868,6 +2015,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-25T10:00:29.348Z",
       "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
+    },
+    "ctx_61a1ad9d9b23328bb8772523b80c7b64": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:40:57.295Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:40:57.295Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_61e63520b83f721011bb662a8266f52e": {
       "canonical_root": "E:\\DEV\\Codex-web",
@@ -2058,11 +2212,32 @@
       "updated_at": "2026-08-24T16:55:31.021Z",
       "workspace_id": "76c3757453324ca760af7135cc76864027068a11a3bd65ec2777caeceda2b46f"
     },
+    "ctx_6ae082da27ea9cc9519857b4c93f4f10": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:48:57.354Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:48:57.354Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_6ae6b3ab53889d2fdfdb6b9fb1b50ab7": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:18:57.597Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:18:57.597Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_6b11a6a841abeddee4175663644dd22c": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T03:30:50.764Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T03:30:50.764Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_6bb0c987565bbb5782e4e19152bcaac0": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:09:57.522Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:09:57.522Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_6c1d3135efa50a9fe17382be41d973fb": {
@@ -2163,6 +2338,13 @@
       "updated_at": "2026-08-25T06:01:51.993Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_7084f0fbb099d499553efc48e3cd4b8d": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T13:39:14.117Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:39:14.117Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
+    },
     "ctx_7126b40280f7e18b195a395e011ac2b3": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T06:08:52.042Z",
@@ -2182,6 +2364,13 @@
       "created_at": "2026-08-25T03:50:50.911Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T03:50:50.911Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_7290f08d352cfaf9ef77d52dc8e8eab4": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:02:57.469Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:02:57.469Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_72a38bf00b7bd441b0205e158e801fda": {
@@ -2352,6 +2541,20 @@
       "updated_at": "2026-08-25T03:34:50.785Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_7ae571720843aa2342a89e8f7bb9cf2f": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:54:57.405Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:54:57.405Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_7b9c71785e485a9bd8c2cbfdf8fd6b7b": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:53:57.398Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:53:57.398Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_7bc4182a7a8eed34b5bde584c7668292": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T07:49:52.671Z",
@@ -2394,6 +2597,13 @@
       "updated_at": "2026-08-24T16:49:41.299Z",
       "workspace_id": "76c3757453324ca760af7135cc76864027068a11a3bd65ec2777caeceda2b46f"
     },
+    "ctx_7da899ffc57df46253a69ea58c246810": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:11:57.554Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:11:57.554Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_7daf4ac2c8b14c30ca793c3ba76e26b7": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T03:05:50.577Z",
@@ -2406,6 +2616,13 @@
       "created_at": "2026-08-25T08:50:53.177Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T08:50:53.177Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_7dea6ac24a9d8350f038e58286c0f6ec": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:38:57.273Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:38:57.273Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_7eb9c101c36484e4abe4d6af3bbf5aa5": {
@@ -2695,6 +2912,13 @@
       "updated_at": "2026-08-24T17:04:05.406Z",
       "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
     },
+    "ctx_8cfee9db458d8e4c058b30c4d794251e": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:49:57.359Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:49:57.359Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_8d2d3b8f78877181a5698935e6fda624": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T02:54:50.493Z",
@@ -2716,6 +2940,13 @@
       "updated_at": "2026-08-24T17:15:05.486Z",
       "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
     },
+    "ctx_8dad13f156e8bbed9db7feee68c57dbd": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:04:57.482Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:04:57.482Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_8dc7c00fd18eb120b82aef6a9f18a9a9": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T02:36:50.356Z",
@@ -2736,6 +2967,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-25T10:00:53.747Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_8ee3f4d9b6c561d9fdd9efadfb3c3be2": {
+      "canonical_root": "E:\\DEV",
+      "created_at": "2026-08-25T14:12:55.548Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:12:55.550Z",
+      "workspace_id": "3d7ab42c869b51550e056b9ad27e99f72e974ff67cb4dc8a62403d4b6442f4e9"
     },
     "ctx_8ef5ea3febbd3f8b4d746a1768187af1": {
       "canonical_root": "E:\\DEV\\Codex-web",
@@ -2835,6 +3073,13 @@
       "updated_at": "2026-08-24T16:39:05.136Z",
       "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
     },
+    "ctx_93a8f97ffdf7474f7eaa5e0459ddb941": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:08:57.524Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:08:57.524Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_93c0f75c5644323d9de8aa0b2a140909": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T05:19:51.670Z",
@@ -2883,6 +3128,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-25T03:41:50.828Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_9503bda36fb8337fa3119ebad80b9777": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T14:15:45.240Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:15:45.240Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
     },
     "ctx_9558a803f704ed11a77dd8693f87f31b": {
       "canonical_root": "E:\\DEV\\Codex-web",
@@ -3045,6 +3297,13 @@
       "updated_at": "2026-08-25T05:09:51.580Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_9d8fea94a93e481f77691a9619ccf6df": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T13:39:23.573Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:39:23.573Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
+    },
     "ctx_9d9b2fa05385c61c9140d90f36f4195f": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T08:26:52.987Z",
@@ -3113,6 +3372,13 @@
       "created_at": "2026-08-25T02:22:50.255Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T02:22:50.255Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_a029696e8470ba85be6712b74e8026c9": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:41:57.307Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:41:57.307Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_a03120c1fb34a432ac25e70f187cbfdf": {
@@ -3198,6 +3464,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-24T16:49:34.388Z",
       "workspace_id": "76c3757453324ca760af7135cc76864027068a11a3bd65ec2777caeceda2b46f"
+    },
+    "ctx_a6d2fdf6916b5d8efc713544fa434d13": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T13:39:39.422Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:39:39.422Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
     },
     "ctx_a6d3709db7b3e394e94b0ef278519860": {
       "canonical_root": "E:\\DEV\\Codex-web",
@@ -3351,6 +3624,13 @@
       "created_at": "2026-08-25T05:22:51.699Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T05:22:51.699Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_ace89216c4dbe5493e897f4bbafb4329": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:57:57.431Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:57:57.431Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_ad1e93e716df484c8c6ccdd9da2bbc16": {
@@ -3527,6 +3807,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-25T04:42:51.286Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_b35826ca8d96315a9be64c6d29ade612": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T13:38:15.893Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:38:15.894Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
     },
     "ctx_b370d9b43d64fd4e78424acb5b995f2d": {
       "canonical_root": "E:\\Github\\Tools-Codex-web",
@@ -3710,6 +3997,13 @@
       "updated_at": "2026-08-24T17:16:05.486Z",
       "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
     },
+    "ctx_bb85e23c5d143036ddac78256454ba12": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T13:39:56.324Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:39:56.324Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
+    },
     "ctx_bbbb884adcc6f331d652d9de72779847": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T06:51:52.670Z",
@@ -3786,6 +4080,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-24T16:49:14.128Z",
       "workspace_id": "76c3757453324ca760af7135cc76864027068a11a3bd65ec2777caeceda2b46f"
+    },
+    "ctx_be4615f09e705e673c3de16bbcec117b": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:37:57.274Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:37:57.274Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_bed63c78f3a4e5aec2ab613ece84a249": {
       "canonical_root": "E:\\DEV\\Codex-web",
@@ -3913,6 +4214,13 @@
       "updated_at": "2026-08-25T09:44:53.666Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_c42861382c5c37fd411cf058957538a2": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:46:57.342Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:46:57.342Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_c4ccc6e35acd50a50bc71b1bf89664ff": {
       "canonical_root": "E:\\Github\\Tools-Codex-web",
       "created_at": "2026-08-24T17:12:05.469Z",
@@ -3939,6 +4247,13 @@
       "created_at": "2026-08-25T04:17:51.115Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T04:17:51.115Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_c61ef42c8c84070ff7934d36ec6ee896": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:15:57.581Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:15:57.581Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_c6cf44bc60c24ceaebabbea8e9a68781": {
@@ -4025,6 +4340,20 @@
       "updated_at": "2026-08-25T04:22:51.152Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_cc09ae5d55e0afe28dd7cbd4eac21e2b": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:44:57.338Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:44:57.338Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_cc4b91d84255e17b152bb943a0f87fa2": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:43:57.323Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:43:57.323Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_cc9353d468d81240ce72947b4f952f2d": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T04:19:51.127Z",
@@ -4058,6 +4387,13 @@
       "created_at": "2026-08-25T10:21:11.083Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T10:21:11.083Z",
+      "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
+    },
+    "ctx_cd55007dc16a1dd9e3fc4fa548016f02": {
+      "canonical_root": "E:\\DEV\\HR STA\\HR",
+      "created_at": "2026-08-25T13:39:01.565Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:39:01.565Z",
       "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
     },
     "ctx_cdae61903a943215385d31a64442080c": {
@@ -4109,6 +4445,13 @@
       "updated_at": "2026-08-25T10:03:53.776Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_cf558a97c2e88b79e3494589f5e9cfb9": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:07:57.510Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:07:57.510Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_cfe8511a73324bc7a4427b50af9f7483": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T09:36:53.576Z",
@@ -4158,6 +4501,13 @@
       "updated_at": "2026-08-24T14:32:04.297Z",
       "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
     },
+    "ctx_d0cc3db9bea709efc402b61e8f6afd0f": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:13:17.291Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:13:17.292Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_d1377cebd6a9677b4d2a9da802fec7e1": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T03:39:50.814Z",
@@ -4170,6 +4520,13 @@
       "created_at": "2026-08-25T09:23:53.483Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T09:23:53.483Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_d18d0a0d08ec013aff1bf90b8e7c116d": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:00:57.452Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:00:57.452Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_d1b9bee8bcd53d073f0946b35e175952": {
@@ -4240,6 +4597,13 @@
       "created_at": "2026-08-25T03:25:50.729Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T03:25:50.729Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_d8f3725cfe76dbca1fb6286045fddd91": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:56:57.420Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:56:57.420Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_d909a75191c3fc646c025cb8af48f7f0": {
@@ -4375,6 +4739,13 @@
       "updated_at": "2026-08-25T08:16:52.921Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_e2044ae5d8ae30fd077d6d2641b6ea26": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:12:57.564Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:12:57.564Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_e2905013edded09b3bec8c322c927e5b": {
       "canonical_root": "E:\\Github\\Tools-Codex-web",
       "created_at": "2026-08-24T17:34:50.794Z",
@@ -4487,6 +4858,13 @@
       "updated_at": "2026-08-25T07:42:52.616Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_e87f5a16c24b0002b8e3d9cb0a50759e": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:05:57.484Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:05:57.484Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_ea5f5f6010c27bc5982279c871b1e657": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-08-25T06:52:52.671Z",
@@ -4513,6 +4891,13 @@
       "created_at": "2026-08-25T03:46:50.886Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T03:46:50.886Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_ecc3c0771ba57de35ab6414e4e17c0ed": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:58:57.435Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:58:57.435Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_eccf7942bb43e45e04589a5aca01cb1c": {
@@ -4569,6 +4954,13 @@
       "created_at": "2026-08-25T02:25:50.266Z",
       "schema_version": 1,
       "updated_at": "2026-08-25T02:25:50.266Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_ef4da3f84e4131c5d7528fa011ff0f8f": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T13:55:31.620Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T13:55:31.620Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_ef8fbc98a11965c567a843a19a7802b9": {
@@ -4892,6 +5284,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-25T04:09:39.017Z",
       "workspace_id": "68b82d1213b9cb187789a13d588a3274b7b23b453226ea5011b2cd77df2ed7df"
+    },
+    "ctx_fca7e4a2c8c3190fedec9cda0ddc76dd": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-08-25T14:16:57.589Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-25T14:16:57.589Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
     "ctx_fcbfac8e7a173317723ea444f6e36ec9": {
       "canonical_root": "E:\\Github\\HR",

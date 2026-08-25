@@ -143,6 +143,25 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         finally:
             connection.close()
 
+    def test_task_list_uses_the_canonical_orchestration_ledger_not_task_state_projection(self) -> None:
+        self.runtime.task_state.update({
+            "objective": "projection-only stale objective",
+            "status": "paused",
+        })
+
+        status, body = self.get_snapshot()
+
+        self.assertEqual(status, 200, body)
+        task_list = body["task_list"]
+        expected = self.runtime.orchestration_ledger.get_run(self.ctx.run_id)
+        self.assertEqual(task_list["schema_version"], 1)
+        self.assertEqual(task_list["source"], "orchestration_ledger")
+        self.assertEqual(task_list["current"]["run_id"], self.ctx.run_id)
+        self.assertEqual(task_list["current"]["task_id"], expected["task_id"])
+        self.assertEqual(task_list["current"]["objective"], expected["objective"])
+        self.assertNotEqual(task_list["current"]["objective"], "projection-only stale objective")
+        self.assertIn(self.ctx.run_id, [item["run_id"] for item in task_list["history"]])
+
     def test_live_snapshot_skips_heavy_analytics_but_preserves_control_state(self) -> None:
         def unexpected_heavy_call(*_args, **_kwargs):
             raise AssertionError("live control snapshot must not execute heavyweight analytics")

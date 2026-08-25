@@ -65,10 +65,14 @@ WebCodex serves the existing tools surface over two MCP protocol eras:
   self-describing; WebCodex validates the 2026 protocol metadata and standard
   `MCP-Protocol-Version`, `Mcp-Method`, and, for named requests, `Mcp-Name`
   headers. It does not mint, consume, or echo `Mcp-Session-Id` on this path.
-- **MCP 2025-06-18 compatibility:** legacy clients continue to use
-  `initialize` / `notifications/initialized` and may retain the server-issued
-  `Mcp-Session-Id`. This path is kept for existing clients and is not silently
-  converted into the 2026 lifecycle.
+- **MCP 2025-11-25, 2025-06-18, and 2025-03-26 compatibility:** legacy clients
+  continue to use `initialize` / `notifications/initialized` and may retain the
+  server-issued `Mcp-Session-Id`. The 2025-03-26 variant is retained for
+  tunnel-client probes. A legacy `notifications/initialized` no-op may carry a
+  transport-default protocol header that differs from the version negotiated by
+  `initialize`; WebCodex accepts that notification only, while stateful
+  requests remain strict. This path is kept for existing clients and is not
+  silently converted into the 2026 lifecycle.
 
 Both paths expose the same selected WebCodex tool surface and authorization
 rules. MCP transport state is not WebCodex application state: durable work is

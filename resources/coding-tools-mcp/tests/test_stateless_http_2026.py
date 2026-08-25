@@ -478,6 +478,68 @@ class StatelessHttp2026Tests(unittest.TestCase):
 
         self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
 
+    def test_initialized_notification_allows_legacy_transport_protocol_header(self) -> None:
+        """A stateful tunnel probe may reuse a transport-default protocol header.
+
+        ``notifications/initialized`` is a no-op.  It must not fail the whole
+        channel merely because its header differs from the version negotiated
+        by ``initialize``; stateful requests remain strict.
+        """
+        with patch.dict(os.environ):
+            os.environ.pop("CODING_TOOLS_MCP_STATELESS_HTTP_2026", None)
+            initialize = json.dumps({
+                "jsonrpc": "2.0",
+                "id": 11,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "tunnel-probe", "version": "1"},
+                },
+            }).encode("utf-8")
+            connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                connection.request(
+                    "POST",
+                    "/mcp",
+                    body=initialize,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Accept": "application/json, text/event-stream",
+                    },
+                )
+                initialized = connection.getresponse()
+                self.assertEqual(initialized.status, 200)
+                session_id = initialized.getheader("Mcp-Session-Id")
+                self.assertTrue(session_id)
+                initialized.read()
+            finally:
+                connection.close()
+
+            notification = json.dumps({
+                "jsonrpc": "2.0",
+                "method": "notifications/initialized",
+                "params": {},
+            }).encode("utf-8")
+            connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            try:
+                connection.request(
+                    "POST",
+                    "/mcp",
+                    body=notification,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Accept": "application/json, text/event-stream",
+                        "Mcp-Session-Id": session_id,
+                        "MCP-Protocol-Version": "2025-03-26",
+                    },
+                )
+                response = connection.getresponse()
+                self.assertEqual(response.status, 202)
+                self.assertEqual(response.read(), b"")
+            finally:
+                connection.close()
+
 
 if __name__ == "__main__":
     unittest.main()

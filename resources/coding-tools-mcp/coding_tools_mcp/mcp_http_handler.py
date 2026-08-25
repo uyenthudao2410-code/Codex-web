@@ -59,6 +59,7 @@ from .transport_http import (
     _safe_external_host,
     stateless_http_2026_enabled,
 )
+from .http_hub_identity import HTTPHubIdentityMixin
 
 if TYPE_CHECKING:
     from .server import Runtime
@@ -87,7 +88,7 @@ def is_loopback_bind_host(host: str) -> bool:
     return host in {"localhost", "127.0.0.1", "::1", ""}
 
 
-class MCPHandler(http.server.BaseHTTPRequestHandler):
+class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
     server_version = f"CodingToolsMCP/{__version__}"
 
     @property
@@ -432,6 +433,29 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             checkpoint=latest_checkpoint,
             package=None,
         )
+        task_history = [
+            {
+                "run_id": item.get("run_id"),
+                "task_id": item.get("task_id"),
+                "objective": str(item.get("objective") or "")[:400],
+                "status": item.get("status"),
+                "started_at": item.get("started_at"),
+                "finished_at": item.get("finished_at"),
+            }
+            for item in ledger.list_runs(limit=12)
+        ]
+        current_task = (
+            {
+                "run_id": run.get("run_id"),
+                "task_id": run.get("task_id"),
+                "objective": str(run.get("objective") or "")[:400],
+                "status": run.get("status"),
+                "started_at": run.get("started_at"),
+                "finished_at": run.get("finished_at"),
+            }
+            if isinstance(run, dict) and str(run.get("run_id") or "")
+            else None
+        )
         return {
             "schema_version": 2,
             "task": {
@@ -464,15 +488,13 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
             },
             "provider_traffic": runtime.provider_traffic_snapshot(),
             "flight_recorder": flight_recorder,
-            "history": {"runs": [
-                {
-                    "run_id": item.get("run_id"),
-                    "status": item.get("status"),
-                    "started_at": item.get("started_at"),
-                    "finished_at": item.get("finished_at"),
-                }
-                for item in ledger.list_runs(limit=12)
-            ]},
+            "task_list": {
+                "schema_version": 1,
+                "source": "orchestration_ledger",
+                "current": current_task,
+                "history": task_history,
+            },
+            "history": {"runs": task_history},
             "capsule": summary.get("latest_handoff_capsule"),
             "background_operations": ledger.list_background_operations(limit=8),
             "runtime_activity": runtime.runtime_activity_snapshot(write_active=bool(write_lease), delegations=summary.get("delegations") or []),
@@ -970,7 +992,7 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                     # reconnect does not fail as "Server not initialized".
                     runtime.initialized = True
                     runtime.protocol_version = protocol_version or PROTOCOL_VERSION
-            if protocol_version and protocol_version != runtime.protocol_version:
+            if protocol_version and protocol_version != runtime.protocol_version and method != "notifications/initialized":
                 self.send_rpc_error(
                     -32600,
                     "MCP-Protocol-Version does not match the initialized session",
@@ -1166,53 +1188,6 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
                 error["data"] = data
             data.setdefault("task_context_id", task_context_id)
 
-    def _hub_identity_from_values(
-        self,
-        *,
-        client_id: str,
-        client_type: str,
-        client_name: str = "",
-        client_version: str = "",
-        session_instance: str = "",
-        execution_context_id: str = "",
-    ) -> dict[str, Any]:
-        client_id = client_id.strip()
-        client_type = client_type.strip().lower().replace("-", "_") or "client"
-        if not HUB_CLIENT_ID_RE.fullmatch(client_id):
-            raise ValueError("Execution Hub client id must match [A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
-        if not re.fullmatch(r"[a-z][a-z0-9_]{0,31}", client_type):
-            raise ValueError("invalid Execution Hub client type")
-        role = "controller" if client_type == "chatweb" else "worker" if client_type in {"codex_desktop", "opencode"} else "supervisor" if client_type == "electron" else "client"
-        return {
-            "client_id": client_id,
-            "client_type": client_type,
-            "role": role,
-            "session_instance": session_instance,
-            "execution_context_id": str(execution_context_id or "")[:64],
-            "capabilities": {"client_name": client_name[:100], "client_version": client_version[:50]},
-        }
-
-    def _hub_identity_from_request(self, request: dict[str, Any]) -> dict[str, Any]:
-        raw_client_id = str(self.headers.get("X-Coding-Tools-Client-Id") or "").strip()
-        raw_client_type = str(self.headers.get("X-Coding-Tools-Client-Type") or "").strip()
-        client_id = raw_client_id or "chatweb"
-        client_type = raw_client_type or ("chatweb" if not raw_client_id else "client")
-        params = request.get("params") if isinstance(request.get("params"), dict) else {}
-        meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
-        client_info = meta.get("io.modelcontextprotocol/clientInfo") if isinstance(meta.get("io.modelcontextprotocol/clientInfo"), dict) else {}
-        if request.get("method") == "initialize" and isinstance(params.get("clientInfo"), dict):
-            client_info = params.get("clientInfo")
-        raw_session = str(self.headers.get("Mcp-Session-Id") or "")
-        logical_session = raw_session or str(getattr(self.runtime, "http_session_id", "") or "")
-        session_instance = hashlib.sha256(logical_session.encode("utf-8")).hexdigest()[:16] if logical_session else ""
-        return self._hub_identity_from_values(
-            client_id=client_id,
-            client_type=client_type,
-            client_name=str(client_info.get("name") or ""),
-            client_version=str(client_info.get("version") or ""),
-            session_instance=session_instance,
-            execution_context_id=str(getattr(self.runtime, "execution_context_id", "") or ""),
-        )
 
     def is_authorized(self) -> bool:
         if not self.runtime.auth_enabled():
@@ -1601,9 +1576,6 @@ class MCPHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         if not head_only:
             self.wfile.write(body)
-
-
-
 
 class RuntimeHTTPServer(http.server.ThreadingHTTPServer):
     daemon_threads = True
