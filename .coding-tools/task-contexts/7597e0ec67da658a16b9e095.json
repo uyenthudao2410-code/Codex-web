@@ -1,0 +1,106 @@
+{
+  "version": 2,
+  "task_id": "3a9df088b8ae48b6a846addcbeb196bb",
+  "orchestration": {
+    "run_id": "e432adab178248498272d52bad60c39f",
+    "wave_id": "c10709b05fa346f6bca2cd3e0f8651ff",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "0557afa6c3aa3e02c2664d312b860973f28d3fc5",
+    "worktree_fp": "c5c05fbe85f1b9aefec2bbecc213c6f9d19c5f43b81c675bcc7cfbf68b617807",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "_bnEB8-YMiTEI8vvDTmlIukR",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 6118,
+    "finished_at": "2026-08-26T03:11:39.799Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T03:11:10.018Z",
+  "updated_at": "2026-08-26T03:18:10.775Z",
+  "events": [
+    {
+      "time": "2026-08-26T03:11:10.018Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T03:11:18.163Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"Source fix\" .coding-tools\\task-contexts\\7597e0ec67da658a16b9e095-history.json",
+        "session_id": "YgmRr6GEJBeb30-xaszBQKwe"
+      }
+    },
+    {
+      "time": "2026-08-26T03:11:20.467Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"Source fix\" .coding-tools\\task-contexts\\7597e0ec67da658a16b9e095-history.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T03:11:37.409Z",
+      "event": "command_started",
+      "details": {
+        "command": "more +1 .coding-tools\\task-contexts\\7597e0ec67da658a16b9e095-history.json",
+        "session_id": "_bnEB8-YMiTEI8vvDTmlIukR"
+      }
+    },
+    {
+      "time": "2026-08-26T03:11:39.799Z",
+      "event": "command_finished",
+      "details": {
+        "command": "more +1 .coding-tools\\task-contexts\\7597e0ec67da658a16b9e095-history.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T03:18:07.561Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T03:18:10.708Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T03:18:10.775Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

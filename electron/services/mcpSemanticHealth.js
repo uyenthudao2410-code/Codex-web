@@ -3,7 +3,12 @@ const { normalizeWorkspacePath, workspaceKey } = require('./config');
 
 const DEFAULT_INTERVAL_MS = 60_000;
 const DEFAULT_FAILURE_THRESHOLD = 2;
-const DEFAULT_TIMEOUT_MS = 2_500;
+// workspace_context is a semantic probe, not a loopback liveness check. On a
+// dirty Windows checkout the first request can legitimately spend several
+// seconds reading Git and the canonical ledger. A 2.5s deadline caused the
+// watchdog to abort a healthy response and then restart the MCP process. Keep
+// the probe bounded, but leave enough budget for one complete read-only call.
+const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_RESTART_COOLDOWN_MS = 120_000;
 
 function probeMcpSemanticHealth({ port, token, expectedWorkspace = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {

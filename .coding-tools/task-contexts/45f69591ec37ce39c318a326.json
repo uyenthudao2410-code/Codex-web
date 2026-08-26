@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "task_id": "2052f37a14984b01ab99e7b5f91cdac2",
+  "orchestration": {
+    "run_id": "c67c806e8b554b49aa785284a2eceb20",
+    "wave_id": "bf886997820141a89460c55f5085e553",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "0557afa6c3aa3e02c2664d312b860973f28d3fc5",
+    "worktree_fp": "2dbc102ba8fd6b3bb74a1076a28ed7dee062e8a69230d71c245a48b94aa81a44",
+    "contract_fp": ""
+  },
+  "objective": "Remove the now-unreachable retired COMPATIBLE_ACKNOWLEDGED presentation branch from renderer/app.js. Preserve the normalization that maps any stale persisted retired state to UNAVAILABLE. No other behavior change.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "solution shadow is limited to feature and bugfix workflows",
+  "next_step": "",
+  "created_at": "2026-08-25T15:08:25.626Z",
+  "updated_at": "2026-08-25T15:08:27.149Z",
+  "events": [
+    {
+      "time": "2026-08-25T15:08:25.626Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Remove the now-unreachable retired COMPATIBLE_ACKNOWLEDGED presentation branch from renderer/app.js. Preserve the normalization that maps any stale persisted retired state to UNAVAILABLE. No other behavior change."
+      }
+    },
+    {
+      "time": "2026-08-25T15:08:26.862Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-25T15:08:27.149Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_INVALID"
+      }
+    }
+  ]
+}

@@ -164,15 +164,15 @@ test('LIVE_CLOSED requires one exact accepted checkpoint plus canonical accepted
   assert.equal(closure.production_state, 'NOT_CLAIMED');
 });
 
-test('backward-compatible acknowledged connector snapshot can close without fake rediscovery or exact SHA equality', () => {
+test('different connector SHA cannot close through the retired compatibility state', () => {
   const closure = computeActivationClosure(liveArgs({
     connectorContractState: 'COMPATIBLE_ACKNOWLEDGED',
     connectorRediscoveredAt: null,
     connectorCurrentSha256: 'b'.repeat(64),
     connectorAcknowledgedSha256: 'a'.repeat(64)
   }));
-  assert.equal(closure.connector_contract_current, true);
-  assert.equal(closure.closure_state, 'LIVE_CLOSED');
+  assert.equal(closure.connector_contract_current, false);
+  assert.equal(closure.closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
   assert.equal(closure.connector_rediscovered_at, null);
   assert.notEqual(closure.connector_current_sha256, closure.connector_acknowledged_sha256);
 });

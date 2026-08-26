@@ -12,6 +12,7 @@ from unittest.mock import patch
 from coding_tools_mcp.controller_usage_ingress import CONTROLLER_USAGE_META_KEY, CONTROLLER_USAGE_STATUS_META_KEY
 from coding_tools_mcp.protocol import STATELESS_PROTOCOL_VERSION
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
+from coding_tools_mcp.task_state import TaskStateStore
 
 
 EXPECTED_SMART_TOOLS = {
@@ -211,6 +212,90 @@ class StatelessHttp2026Tests(unittest.TestCase):
             self.assertEqual(result["state"]["objective"], objective)
             self.assertEqual(result["state"]["orchestration"]["run_id"], run_id)
         self.assertEqual(self.runtime.task_state.get()["objective"], "global-sentinel")
+
+    def test_task_control_recovers_exact_run_context_when_connector_omits_handle(self) -> None:
+        context_id = "continuity-context"
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "stateless-continuity",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=120,
+        )
+        self.assertEqual(status, 200)
+        prepared_result = prepared["result"]["structuredContent"]
+        run_id = prepared_result["orchestration"]["run_id"]
+        wave_id = prepared_result["orchestration"]["wave_id"]
+
+        status, _, fetched = self.tool_call(
+            "task_control",
+            {"action": "get", "run_id": run_id},
+            request_id=121,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(fetched["result"]["isError"], fetched)
+        self.assertEqual(fetched["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
+        fetched_state = fetched["result"]["structuredContent"]["state"]
+        self.assertEqual(fetched_state["orchestration"]["run_id"], run_id)
+
+        store = TaskStateStore(Path(self.temp.name), scope_id=f"mcp2026:{context_id}")
+        store.set_completion_report({
+            "schema_version": 1,
+            "operator_visible_required": True,
+            "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+            "current_state": {"orchestration_state": "REPLAN"},
+            "source_run_wave": {"run_id": run_id, "wave_id": wave_id},
+            "next_critical_action": "continue with changed evidence",
+        })
+        report_id = store.get()["completion_report_id"]
+        status, _, acknowledged = self.tool_call(
+            "task_control",
+            {"action": "ack", "run_id": run_id, "wave_id": wave_id, "message_id": report_id},
+            request_id=122,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(acknowledged["result"]["isError"], acknowledged)
+        self.assertEqual(acknowledged["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
+        self.assertEqual(store.get()["completion_report_acknowledged_id"], report_id)
+
+        status, _, fresh = self.tool_call("task_control", {"action": "get"}, request_id=123)
+        self.assertEqual(status, 200)
+        self.assertNotEqual(fresh["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
+
+        controller = self.runtime.orchestration_ledger.get_controller_lease(run_id)
+        self.assertIsNotNone(controller)
+        self.assertTrue(self.runtime.orchestration_ledger.release_controller_lease(
+            run_id=run_id,
+            owner_client_id=controller["owner_client_id"],
+            lease_id=controller["lease_id"],
+            fencing_token=controller["fencing_token"],
+        ))
+        self.runtime.orchestration_ledger.upsert_hub_client(
+            client_id="codex-desktop",
+            client_type="codex_desktop",
+            role="worker",
+        )
+        claimed = self.runtime.orchestration_ledger.acquire_controller_lease(
+            run_id=run_id,
+            owner_client_id="codex-desktop",
+            lease_id="desktop-controller",
+            ttl_seconds=60,
+        )
+        self.assertTrue(claimed["acquired"], claimed)
+        status, _, foreign_owned = self.tool_call(
+            "task_control",
+            {"action": "get", "run_id": run_id},
+            request_id=124,
+        )
+        self.assertEqual(status, 200)
+        self.assertNotEqual(foreign_owned["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
 
     def test_workspace_context_returns_the_minted_task_context_id(self) -> None:
         status, _, response = self.tool_call(

@@ -1,0 +1,103 @@
+{
+  "version": 2,
+  "task_id": "d5da692d68b14f08a2b7fb2fa2ad0a27",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "36z4V2TUGZ27jiLNPJhyoMcv",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 17009,
+    "finished_at": "2026-08-25T15:11:47.179Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "node --test tests/runtime-lifecycle.test.js tests/activation-closure.test.js tests/dev-ui-lifecycle.test.js && python resources/coding-tools-mcp/scripts/check_module_size.py && cd resources/coding-tools-mcp && python -m pytest -q tests/test_stateless_http_2026.py tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_workspace_context_exposes_non_secret_runtime_activation_identity tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_tool_contract_runtime_preserves_smart_surface_and_owns_presentation && python -m py_compile coding_tools_mcp/stateless_context.py coding_tools_mcp/runtime_stateless_context.py coding_tools_mcp/mcp_http_handler.py coding_tools_mcp/server.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 17009,
+      "summary": "exit 0 | 17.0s | 99 lines | tail: '17 passed in 13.85s'",
+      "finished_at": "2026-08-25T15:11:47.179Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "36z4V2TUGZ27jiLNPJhyoMcv"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "size_bytes": 8633,
+        "command_id": "36z4V2TUGZ27jiLNPJhyoMcv",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:36z4V2TUGZ27jiLNPJhyoMcv:stdout",
+            "total_stream_bytes": 8633,
+            "total_retained_bytes": 8633,
+            "head_retained_bytes": 8633,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:36z4V2TUGZ27jiLNPJhyoMcv:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T15:11:29.882Z",
+  "updated_at": "2026-08-25T15:11:47.179Z",
+  "events": [
+    {
+      "time": "2026-08-25T15:11:29.882Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T15:11:30.207Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/runtime-lifecycle.test.js tests/activation-closure.test.js tests/dev-ui-lifecycle.test.js && python resources/coding-tools-mcp/scripts/check_module_size.py && cd resources/coding-tools-mcp && python -m pytest -q tests/test_stateless_http_2026.py tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_workspace_context_exposes_non_secret_runtime_activation_identity tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_tool_contract_runtime_preserves_smart_surface",
+        "session_id": "36z4V2TUGZ27jiLNPJhyoMcv"
+      }
+    },
+    {
+      "time": "2026-08-25T15:11:47.179Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/runtime-lifecycle.test.js tests/activation-closure.test.js tests/dev-ui-lifecycle.test.js && python resources/coding-tools-mcp/scripts/check_module_size.py && cd resources/coding-tools-mcp && python -m pytest -q tests/test_stateless_http_2026.py tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_workspace_context_exposes_non_secret_runtime_activation_identity tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_tool_contract_runtime_preserves_smart_surface",
+        "status": "passed"
+      }
+    }
+  ]
+}

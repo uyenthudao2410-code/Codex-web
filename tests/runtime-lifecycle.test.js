@@ -469,6 +469,60 @@ test('connector contract stays pending until current tools/list rediscovery is o
   assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
 });
 
+test('runtime snapshots expose rediscovery without implicitly acknowledging a changed contract', async () => {
+  const acknowledgedSha = 'b'.repeat(64);
+  const currentSha = 'c'.repeat(64);
+  const contract = { schema_version: 1, profile: 'smart-v3', sha256: currentSha };
+  const discovery = {
+    current_contract_observed: true,
+    contract_sha256: currentSha,
+    observed_at: '2026-08-26T00:00:00.000Z'
+  };
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: acknowledgedSha,
+    chatgptToolContractAcknowledgedAt: '2026-08-25T00:00:00.000Z'
+  }), 'utf8');
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => 'token', status: () => ({}) },
+    environment: { inspect: async () => ({}) },
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.currentMcpHealth = async () => ({
+    ready: true,
+    tool_contract: contract,
+    connector_tool_discovery: discovery
+  });
+  orchestrator.native = {
+    status: async () => true,
+    revisionStatus: () => ({ running_revision: 'r', disk_revision: 'r', update_pending: false, state: 'current' })
+  };
+  orchestrator.tunnel = { status: async () => true };
+  orchestrator.gitStatus = async () => ({ available: true, branch: 'main', head: null, head_short: null, dirty: true });
+
+  const lightweight = await orchestrator.lightweightSnapshot();
+  assert.equal(lightweight.connectorContractState, 'CHANGED_DISCOVERED_NEEDS_ACK');
+  assert.equal(lightweight.connectorRediscovered, true);
+  assert.equal(lightweight.connectorRefreshRequired, false);
+  assert.equal(lightweight.connectorAcknowledgementPending, true);
+  assert.equal(lightweight.connectorContractAcknowledgedSha256, acknowledgedSha);
+  assert.equal(lightweight.toolContract.sha256, currentSha);
+
+  const snapshot = await orchestrator.snapshot({ force: true, reason: 'test-read-only-connector-receipt' });
+  assert.equal(snapshot.status.connectorContractState, 'CHANGED_DISCOVERED_NEEDS_ACK');
+  assert.equal(snapshot.status.connectorRediscovered, true);
+  assert.equal(snapshot.status.connectorAcknowledgementPending, true);
+  assert.equal(snapshot.status.connectorContractAcknowledgedSha256, acknowledgedSha);
+  assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, acknowledgedSha);
+
+  const acknowledged = orchestrator.acknowledgeConnectorContractHash(contract, discovery);
+  assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
+  assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, currentSha);
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
+});
+
 test('connector contract state is unavailable without a current contract fingerprint', () => {
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
@@ -530,7 +584,7 @@ test('persisted matching connector SHA survives process restart without forcing 
   assert.equal(orchestrator.connectorContractStatus(changedContract, discovery).contractState, 'CURRENT_ACKNOWLEDGED');
 });
 
-test('backward-compatible tool contract rollover preserves the exact acknowledged snapshot without fake rediscovery', () => {
+test('every changed exact tool contract SHA requires real rediscovery before acknowledgement', () => {
   const acknowledgedSha = '34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c';
   const currentSha = 'fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585';
   fs.writeFileSync(runtimeStatePath, JSON.stringify({
@@ -552,23 +606,19 @@ test('backward-compatible tool contract rollover preserves the exact acknowledge
     compatible_predecessor_sha256: [acknowledgedSha]
   };
 
-  const legacyCompatible = orchestrator.connectorContractStatus(contract);
-  assert.equal(legacyCompatible.contractState, 'COMPATIBLE_ACKNOWLEDGED');
-  assert.equal(legacyCompatible.refreshRequired, false);
-  assert.equal(legacyCompatible.rediscovered, false);
-  assert.equal(legacyCompatible.backwardCompatible, true);
-  assert.equal(legacyCompatible.compatibilitySource, 'declared_predecessor');
-  assert.equal(legacyCompatible.acknowledgedSha256, acknowledgedSha);
+  const changed = orchestrator.connectorContractStatus(contract);
+  assert.equal(changed.contractState, 'CHANGED_NEEDS_DISCOVERY');
+  assert.equal(changed.refreshRequired, true);
+  assert.equal(changed.rediscovered, false);
+  assert.equal(changed.backwardCompatible, false);
+  assert.equal(changed.compatibilitySource, null);
+  assert.equal(changed.acknowledgedSha256, acknowledgedSha);
 
   const synchronized = orchestrator.synchronizeConnectorContract(contract);
-  assert.equal(synchronized.contractState, 'COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(synchronized.contractState, 'CHANGED_NEEDS_DISCOVERY');
   assert.equal(synchronized.acknowledgedSha256, acknowledgedSha);
-  assert.equal(synchronized.acknowledgedSchemaVersion, 1);
-  assert.equal(synchronized.acknowledgedProfile, 'smart-v3');
   const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
   assert.equal(persisted.chatgptToolContractSha256, acknowledgedSha);
-  assert.equal(persisted.chatgptToolContractSchemaVersion, 1);
-  assert.equal(persisted.chatgptToolContractProfile, 'smart-v3');
   assert.equal(Object.hasOwn(persisted, 'chatgptToolContractRediscoveredAt'), false);
 
   const nextCompatible = {
@@ -577,9 +627,9 @@ test('backward-compatible tool contract rollover preserves the exact acknowledge
     compatible_predecessor_sha256: []
   };
   const sameEpoch = orchestrator.connectorContractStatus(nextCompatible);
-  assert.equal(sameEpoch.contractState, 'COMPATIBLE_ACKNOWLEDGED');
-  assert.equal(sameEpoch.compatibilitySource, 'schema_profile_epoch');
-  assert.equal(sameEpoch.refreshRequired, false);
+  assert.equal(sameEpoch.contractState, 'CHANGED_NEEDS_DISCOVERY');
+  assert.equal(sameEpoch.compatibilitySource, null);
+  assert.equal(sameEpoch.refreshRequired, true);
 
   const breaking = { ...nextCompatible, schema_version: 2, sha256: 'e'.repeat(64) };
   const blocked = orchestrator.connectorContractStatus(breaking);

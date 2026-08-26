@@ -169,13 +169,40 @@ test('dev focuses an exact current UI and reports process plus revision postflig
   assert.match(fixture.lines.at(-1), new RegExp(`running_revision=${REVISION} disk_revision=${REVISION}`));
 });
 
-test('dev:status only reports the Recovery Host observation and never signals or activates the UI', async () => {
+test('dev:status reports lifecycle state without signaling or activating the UI', async () => {
   const fixture = harness(observation('STALE'));
   const result = await runLifecycle('status', fixture.deps);
   assert.equal(result.ui.state, 'STALE');
   assert.deepEqual(fixture.calls, []);
   assert.match(fixture.lines.at(-1), /DEV_UI STATUS state=STALE host=available installation=current/);
   assert.match(fixture.lines.at(-1), /running_revision=b+ disk_revision=a+/);
+});
+
+test('dev:status exposes connector receipt and acknowledgement gate from a read-only runtime snapshot', async () => {
+  const fixture = harness(observation('CURRENT'));
+  let reads = 0;
+  fixture.deps.runtimeSnapshot = async () => {
+    reads += 1;
+    return {
+      toolContract: { sha256: 'f'.repeat(64) },
+      connectorContractAcknowledgedSha256: 'e'.repeat(64),
+      connectorContractState: 'CHANGED_DISCOVERED_NEEDS_ACK',
+      connectorRefreshRequired: false,
+      connectorAcknowledgementPending: true,
+      connectorRediscovered: true,
+      connectorRediscoveredAt: '2026-08-26T01:23:45.000Z'
+    };
+  };
+  await runLifecycle('status', fixture.deps);
+  assert.equal(reads, 1);
+  assert.deepEqual(fixture.calls, []);
+  const line = fixture.lines.at(-1);
+  assert.match(line, /connector_state=CHANGED_DISCOVERED_NEEDS_ACK/);
+  assert.match(line, /connector_rediscovered=true/);
+  assert.match(line, /connector_refresh_required=false/);
+  assert.match(line, /connector_ack_pending=true/);
+  assert.match(line, new RegExp(`connector_current_sha=${'f'.repeat(64)}`));
+  assert.match(line, new RegExp(`connector_ack_sha=${'e'.repeat(64)}`));
 });
 
 test('dev routes a stale same-checkout UI through component activation before focus', async () => {
@@ -479,12 +506,11 @@ test('connector fallback refuses to invent acknowledgement when both enum and le
   assert.equal(fixture.connector({ connectorContractState: 'UNKNOWN_STATE', connectorRefreshRequired: false }).state, 'UNAVAILABLE');
 });
 
-test('connector presentation distinguishes compatible snapshot continuity from a fresh rediscovery acknowledgement', () => {
+test('connector presentation no longer promotes retired compatible-snapshot state', () => {
   const fixture = runtimeStatusHarness();
   const compatible = fixture.connector({ connectorContractState: 'COMPATIBLE_ACKNOWLEDGED', connectorRefreshRequired: false });
-  assert.equal(compatible.state, 'COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(compatible.state, 'UNAVAILABLE');
   assert.equal(compatible.notice, false);
-  assert.match(compatible.message, /compatibility epoch/i);
 });
 
 test('Command Center exposes the machine closure state without promoting source health to LIVE_CLOSED', () => {

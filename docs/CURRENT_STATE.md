@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-25
+> **Status date:** 2026-08-26
 > **Desktop package:** `coding-tools-mcp 1.0.0`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
@@ -37,6 +37,10 @@ The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLE
 - P5 anchors remain terminal and the earlier A0 source-drift epoch retains its truthful zero funnel. Volatile ordinary-RUN, managed-job, and residue counts are not frozen in this maintained source document: recapture them from one immutable `report_lifecycle_census.py` snapshot before activation or stale-run reconciliation, and use only the official exact-ID path for a genuinely eligible stale RUN.
 - PRL-D and A2 remain `HOLD_NATURAL_EVIDENCE`; missing natural observations, TTPR, stage coverage, and measured money remain unknown rather than zero.
 - The isolated P0.3 packaged Recovery lane is source/package-local evidence, not an exact-frozen release candidate, installed-session, reboot/logon, connector, or production claim.
+
+### Live reconciliation — 2026-08-26
+
+The current Recovery Host receipt (captured `2026-08-26T02:06:12Z`) for `E:\DEV\Codex-web` is authoritative over pasted ChatGPT summaries. It reports `fullyReady=true`, Coding MCP `running_revision == disk_revision == cbcab4d0e5382431d1193724c7e13c128de319bceea7baae2e617a05decc3db5`, and the exact eight-tool `smart-v3` contract SHA `fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585`. The local `task_control` schema includes the source-gated `problem` and `p5` actions; a report claiming that the Coding MCP exposes an older contract is therefore stale for this process unless a newer authoritative snapshot contradicts it. Focused transport/stateless/fault validation is green (`22/22`), the SDK contract/exception boundary is green (`8/8`), and an HTTP-level `tools/call` regression confirms raw `ExceptionGroup` text cannot escape the JSON-RPC boundary (`6/6`). One transient semantic-probe timeout did trigger an automatic MCP restart; the health probe deadline is now 10 seconds so a slow dirty-checkout read does not masquerade as a broken execution plane. The connector freshness receipt is still fail-closed: `connectorRediscovered=false`, `connectorRediscoveredAt=null`, `connectorRefreshRequired=true`, with acknowledged SHA `34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c`; a model-text inventory or ordinary `tools/call` cannot replace real current-process `tools/list`/`server/discover`, official acknowledgement, or C4 natural evidence.
 
 ## 2. Current product boundary
 

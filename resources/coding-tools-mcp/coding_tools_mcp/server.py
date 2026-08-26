@@ -114,7 +114,6 @@ from .trace_context import trace_context_metadata  # noqa: F401  # composition-r
 from .tool_contract import (  # noqa: F401  # composition-root namespace
     AGENT_EXECUTION_ROUTES,
     SMART_COMPAT_TOOL_NAMES,
-    SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS,
     SMART_TOOL_PROFILE,
     TOOL_CONTRACT_RUNTIME,
     TOOL_CONTRACT_SCHEMA_VERSION,
@@ -131,6 +130,7 @@ from .workspace_scope import Workspace, _PrimaryLedgerCompatibilityView, configu
 from .runtime_background import BACKGROUND_BUDGET_POLL_SECONDS, BACKGROUND_BUDGET_TERMINAL_GRACE_SECONDS, MAX_BACKGROUND_OPERATIONS, BackgroundOperationsMixin  # noqa: F401  # compatibility re-export
 from .runtime_cache import RuntimeCacheMixin  # noqa: F401  # composition-root namespace
 from .runtime_behavior_identity import RuntimeBehaviorIdentityMixin  # noqa: F401  # composition-root namespace
+from .runtime_stateless_context import RuntimeStatelessContextMixin  # noqa: F401  # composition-root namespace
 
 from .transport_stdio import serve_stdio  # noqa: F401  # composition-root namespace
 from .file_tools import FileToolsMixin  # noqa: F401  # composition-root namespace
@@ -227,7 +227,7 @@ _WORKSPACE_PREHEAT_STARTED: set[str] = set()
 class Runtime(
     FileToolsMixin, ExecToolsMixin, GitToolsMixin, SessionControlMixin, DocumentToolsMixin, TaskStateToolsMixin,
     AgentCandidateMixin, ContextToolsMixin, AgentWorkflowMixin, CoordinationMixin, RuntimeActivityMixin,
-    BackgroundOperationsMixin, RuntimeCacheMixin, RuntimeBehaviorIdentityMixin,
+    BackgroundOperationsMixin, RuntimeCacheMixin, RuntimeBehaviorIdentityMixin, RuntimeStatelessContextMixin,
 ):
     def __init__(
         self,
@@ -322,11 +322,6 @@ class Runtime(
             "profile": SMART_TOOL_PROFILE if self.tool_mode == "smart" else self.tool_mode,
             "sha256": hashlib.sha256(contract_bytes).hexdigest(),
             "tool_count": len(self._exposed_tool_names),
-            "compatible_predecessor_sha256": (
-                list(SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS)
-                if self.tool_mode == "smart"
-                else []
-            ),
             "evaluation": {
                 "supported": isinstance(evaluation_schema, dict),
                 "schema_version": EVALUATION_SCHEMA_VERSION,

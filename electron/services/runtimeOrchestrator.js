@@ -619,13 +619,6 @@ class RuntimeOrchestrator {
     const currentSha256 = String(toolContract?.sha256 || '').trim();
     const schemaVersion = Number(toolContract?.schema_version || 0);
     const profile = String(toolContract?.profile || '').trim();
-    const compatiblePredecessors = new Set(
-      (Array.isArray(toolContract?.compatible_predecessor_sha256)
-        ? toolContract.compatible_predecessor_sha256
-        : [])
-        .map((value) => String(value || '').trim())
-        .filter((value) => /^[a-f0-9]{64}$/i.test(value))
-    );
     const runtimeState = readJson(this.paths.stateFile(), {});
     const acknowledgedSha256 = String(runtimeState.chatgptToolContractSha256 || '').trim();
     const acknowledgedSchemaVersion = Number(runtimeState.chatgptToolContractSchemaVersion || 0);
@@ -639,50 +632,13 @@ class RuntimeOrchestrator {
       && rediscoveredSha256 === currentSha256
       && observedAtValid
     );
-    const exactShaAcknowledged = Boolean(currentSha256 && currentSha256 === acknowledgedSha256);
-    const acknowledgedBoundaryKnown = acknowledgedSchemaVersion > 0 && Boolean(acknowledgedProfile);
-    const sameCompatibilityBoundary = Boolean(
-      acknowledgedBoundaryKnown
-      && schemaVersion > 0
-      && profile
-      && acknowledgedSchemaVersion === schemaVersion
-      && acknowledgedProfile === profile
-    );
-    const legacyCompatiblePredecessor = Boolean(
-      currentSha256
-      && acknowledgedSha256
-      && currentSha256 !== acknowledgedSha256
-      && schemaVersion > 0
-      && profile
-      && compatiblePredecessors.has(acknowledgedSha256)
-    );
-    const compatibilityMetadataBackfillPending = Boolean(
-      !acknowledgedBoundaryKnown
-      && acknowledgedSha256
-      && (exactShaAcknowledged || legacyCompatiblePredecessor)
-      && schemaVersion > 0
-      && profile
-    );
-    const boundaryChanged = Boolean(
-      exactShaAcknowledged
-      && acknowledgedBoundaryKnown
-      && !sameCompatibilityBoundary
-    );
-    const rawShaChanged = Boolean(currentSha256 && currentSha256 !== acknowledgedSha256);
-    const contractChanged = Boolean(rawShaChanged || boundaryChanged);
-    const backwardCompatible = Boolean(
-      rawShaChanged
-      && (sameCompatibilityBoundary || legacyCompatiblePredecessor)
-    );
-    const breakingContractChange = Boolean(contractChanged && !backwardCompatible);
+    const contractChanged = Boolean(currentSha256 && currentSha256 !== acknowledgedSha256);
     let contractState = 'UNAVAILABLE';
     if (currentSha256) {
       if (!contractChanged) {
         contractState = rediscovered ? 'CURRENT_ACKNOWLEDGED' : 'UNCHANGED_ACKNOWLEDGED';
       } else if (rediscovered) {
         contractState = 'CHANGED_DISCOVERED_NEEDS_ACK';
-      } else if (backwardCompatible) {
-        contractState = 'COMPATIBLE_ACKNOWLEDGED';
       } else {
         contractState = 'CHANGED_NEEDS_DISCOVERY';
       }
@@ -700,18 +656,12 @@ class RuntimeOrchestrator {
       rediscoveredAt: rediscovered ? observedAt : null,
       contractState,
       contractChanged,
-      backwardCompatible,
-      compatibilitySource: legacyCompatiblePredecessor
-        ? 'declared_predecessor'
-        : backwardCompatible && sameCompatibilityBoundary
-          ? 'schema_profile_epoch'
-          : null,
-      compatibilityMetadataBackfillPending,
-      // Exact SHA remains audit evidence. Connector freshness follows the
-      // declared compatibility epoch because ChatGPT may retain an approved
-      // tool-definition snapshot across backward-compatible MCP updates.
-      // Breaking changes still require a real current tools/list receipt.
-      refreshRequired: Boolean(breakingContractChange && !rediscovered),
+      backwardCompatible: false,
+      compatibilitySource: null,
+      compatibilityMetadataBackfillPending: false,
+      // Any changed exact tools/list SHA requires a real current discovery.
+      // Ordinary tools/call success is not connector freshness evidence.
+      refreshRequired: Boolean(contractChanged && !rediscovered),
       acknowledgementPending: Boolean(contractChanged && rediscovered)
     };
   }
@@ -738,20 +688,7 @@ class RuntimeOrchestrator {
   }
 
   synchronizeConnectorContract(toolContract, discovery = null) {
-    let status = this.connectorContractStatus(toolContract, discovery);
-    if (status.compatibilityMetadataBackfillPending) {
-      updateJsonAtomic(this.paths.stateFile(), (state) => ({
-        ...state,
-        // This does not move the acknowledged SHA. It records only the
-        // compatibility epoch proven by exact-SHA equality or by the current
-        // contract's explicit predecessor declaration.
-        chatgptToolContractSchemaVersion: status.schemaVersion,
-        chatgptToolContractProfile: status.profile,
-        chatgptToolContractCompatibilityBackfilledAt: new Date().toISOString(),
-        chatgptToolContractCompatibilityBaseSha256: status.acknowledgedSha256
-      }));
-      status = this.connectorContractStatus(toolContract, discovery);
-    }
+    const status = this.connectorContractStatus(toolContract, discovery);
     if (!status.acknowledgementPending) return status;
     return this.acknowledgeConnectorContractHash(toolContract, discovery);
   }
@@ -1037,14 +974,17 @@ class RuntimeOrchestrator {
 
   async lightweightSnapshot() {
     const settings = this.settingsStore.load();
-    const token = this.secrets.get('mcpAuthToken');
     const [mcpHealth, nativeAlive, tunnelRunning, git] = await Promise.all([
-      token ? readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '') : Promise.resolve(null),
+      this.currentMcpHealth(),
       this.native.status().catch(() => false),
       this.tunnel.status(settings).catch(() => false),
       this.gitStatus(settings.workspace)
     ]);
     const mcpRunning = Boolean(mcpHealth);
+    const connectorContract = this.connectorContractStatus(
+      mcpHealth?.tool_contract || null,
+      mcpHealth?.connector_tool_discovery || null
+    );
     return {
       workspace: settings.workspace,
       mcpRunning,
@@ -1052,6 +992,17 @@ class RuntimeOrchestrator {
       tunnelRunning,
       fullyReady: mcpRunning && tunnelRunning,
       device: this.deviceProjection(settings, { mcpHealth, nativeAlive, tunnelRunning, git }),
+      toolContract: connectorContract.available ? {
+        schemaVersion: connectorContract.schemaVersion,
+        profile: connectorContract.profile,
+        sha256: connectorContract.currentSha256
+      } : null,
+      connectorContractAcknowledgedSha256: connectorContract.acknowledgedSha256,
+      connectorContractState: connectorContract.contractState,
+      connectorRefreshRequired: connectorContract.refreshRequired,
+      connectorAcknowledgementPending: connectorContract.acknowledgementPending,
+      connectorRediscovered: connectorContract.rediscovered,
+      connectorRediscoveredAt: connectorContract.rediscoveredAt,
       codeRevision: { codingMcp: this.codingMcpRevisionStatus() },
       ...this.recoveryStatus()
     };
@@ -1252,14 +1203,13 @@ class RuntimeOrchestrator {
   async _collectSnapshot(reason) {
     const settings = this.settingsStore.load();
     const environment = await this.environment.inspect(settings);
-    const token = this.secrets.get('mcpAuthToken');
     const [health, tunnelRunning, git] = await Promise.all([
-      token ? readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '') : Promise.resolve(null),
+      this.currentMcpHealth(),
       this.tunnel.status(settings).catch(() => false),
       this.gitStatus(settings.workspace)
     ]);
     const runtimeRunning = Boolean(health);
-    const connectorContract = this.synchronizeConnectorContract(
+    const connectorContract = this.connectorContractStatus(
       health?.tool_contract || null,
       health?.connector_tool_discovery || null
     );

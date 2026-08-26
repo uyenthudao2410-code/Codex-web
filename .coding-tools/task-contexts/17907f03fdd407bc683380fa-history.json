@@ -1,0 +1,83 @@
+[
+  {
+    "version": 2,
+    "task_id": "2c69b1c45a8547f2b93b90216e4df808",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T03:57:45.885Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-08-26T03:56:27.519Z",
+    "updated_at": "2026-08-26T03:57:45.885Z",
+    "events": [
+      {
+        "time": "2026-08-26T03:56:27.519Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-26T03:56:27.544Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T03:57:35.113Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 5 \"acceptance_files|tool_schema|task_control\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "VCHAsb8LAswvThTzyJ3QVAqg"
+        }
+      },
+      {
+        "time": "2026-08-26T03:57:35.784Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 5 \"acceptance_files|tool_schema|task_control\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T03:57:45.885Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"def input_schemas|def tool_definition|input_schemas\\(|acceptance_files\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T03:57:45.885Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T03:57:55.655Z",
+    "archive_reason": "finished"
+  }
+]

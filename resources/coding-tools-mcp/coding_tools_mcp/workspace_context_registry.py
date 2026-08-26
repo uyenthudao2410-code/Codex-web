@@ -48,6 +48,20 @@ class WorkspaceContextRegistry:
             entry = self._contexts.get(key)
             return dict(entry) if isinstance(entry, dict) else None
 
+    def context_ids_for_workspace(self, canonical_root: Path) -> list[str]:
+        """Return opaque execution contexts already bound to one exact root."""
+        root = str(canonical_root.resolve(strict=False))
+        with self._lock:
+            if self._load_error:
+                return []
+            return sorted(
+                context_id
+                for context_id, entry in self._contexts.items()
+                if isinstance(entry, dict)
+                and entry.get("legacy") is not True
+                and str(entry.get("canonical_root") or "") == root
+            )
+
     def bind(self, execution_context_id: object, *, workspace_id: object, canonical_root: Path) -> dict[str, Any]:
         context = str(execution_context_id or "").strip()
         workspace = str(workspace_id or "").strip()

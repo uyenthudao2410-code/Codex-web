@@ -3,78 +3,85 @@
   "task_id": "e69c119437484fb188e292ca92f78a3e",
   "orchestration": {},
   "objective": "Complete a workspace task",
-  "status": "waiting",
+  "status": "failed",
   "steps": [],
-  "current_step": "Waiting for model",
-  "current_command": {
-    "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace \"E:\\DEV\\Codex-web\"",
-    "kind": "command",
-    "session_id": "twAP2U9GXLTaa0HtOtPs2c03",
-    "workdir": ".",
-    "status": "running",
-    "started_at": "2026-08-25T14:44:08.001Z",
-    "exit_code": null,
-    "elapsed_ms": 10016,
-    "artifact_ref": {
-      "schema_version": 1,
-      "kind": "command_output",
-      "scope": "runtime_retained",
-      "source": "command",
-      "locator": {
-        "command_id": "twAP2U9GXLTaa0HtOtPs2c03"
-      },
-      "durability": "process_runtime",
-      "restart_safe": false,
-      "content_addressed": false,
-      "retrieval": {
-        "tool": "command_control",
-        "action": "read"
-      },
-      "size_bytes": 0,
-      "command_id": "twAP2U9GXLTaa0HtOtPs2c03",
-      "streams": {
-        "stdout": {
-          "output_ref": "command:twAP2U9GXLTaa0HtOtPs2c03:stdout",
-          "total_stream_bytes": 0,
-          "total_retained_bytes": 0,
-          "head_retained_bytes": 0,
-          "tail_retained_bytes": 0,
-          "evicted_gap_bytes": 0,
-          "evicted_bytes_total": 0
-        },
-        "stderr": {
-          "output_ref": "command:twAP2U9GXLTaa0HtOtPs2c03:stderr",
-          "total_stream_bytes": 0,
-          "total_retained_bytes": 0,
-          "head_retained_bytes": 0,
-          "tail_retained_bytes": 0,
-          "evicted_gap_bytes": 0,
-          "evicted_bytes_total": 0
-        }
-      }
-    }
-  },
+  "current_step": "Command failed",
+  "current_command": null,
   "last_command_result": {
-    "command_id": "qvq4444Rs_aS7cen-4Qj59Lq",
+    "command_id": "",
     "kind": "command",
-    "status": "exited",
-    "result_status": "passed",
-    "exit_code": 0,
-    "duration_ms": 671,
-    "finished_at": "2026-08-25T14:43:41.767Z"
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-08-25T14:45:50.827Z"
   },
-  "completion_report": null,
-  "completion_report_id": "",
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "twAP2U9GXLTaa0HtOtPs2c03",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "failed",
+      "command": {
+        "command_id": "twAP2U9GXLTaa0HtOtPs2c03",
+        "kind": "command",
+        "status": "timeout",
+        "result_status": "failed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "0557afa6c3aa3e02c2664d312b860973f28d3fc5",
+        "branch": "main",
+        "worktree_fp": "3fbf962c53eac447a0172c6c6b2e125b18d567f4040d3dd85a4598d75ecbe76c",
+        "dirty_paths": []
+      }
+    },
+    "source_run_wave": {
+      "task_id": "e69c119437484fb188e292ca92f78a3e",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_TERMINATED",
+    "blocker_or_failure": {
+      "failure_class": "COMMAND_TERMINATED",
+      "reason": "The command reached a terminal non-success state.",
+      "exit_code": 0
+    },
+    "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+  },
+  "completion_report_id": "ddcdeaa791836698a8016b7ba96cb7aac1e17c46aa708c07ec6672a3b974fc3d",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
-  "failure": null,
-  "next_step": "Generate the result from the inspected content, then save it once.",
+  "failure": "operator completion report ddcdeaa791836698a8016b7ba96cb7aac1e17c46aa708c07ec6672a3b974fc3d must be acknowledged before starting a replacement task",
+  "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
   "created_at": "2026-08-25T14:42:21.883Z",
-  "updated_at": "2026-08-25T14:44:17.757Z",
+  "updated_at": "2026-08-25T14:45:50.827Z",
   "events": [
     {
       "time": "2026-08-25T14:42:21.883Z",
@@ -167,6 +174,39 @@
       "details": {
         "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace \"E:\\DEV\\Codex-web\"",
         "session_id": "twAP2U9GXLTaa0HtOtPs2c03"
+      }
+    },
+    {
+      "time": "2026-08-25T14:44:47.480Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace \"E:\\DEV\\Codex-web\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:44:48.408Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "twAP2U9GXLTaa0HtOtPs2c03",
+        "accepted_or_not": "COMMAND_TERMINATED",
+        "report_id": "ddcdeaa791836698a8016b7ba96cb7aac1e17c46aa708c07ec6672a3b974fc3d"
+      }
+    },
+    {
+      "time": "2026-08-25T14:45:50.827Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace \"E:\\DEV\\Codex-web\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-25T14:45:50.827Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
       }
     }
   ]

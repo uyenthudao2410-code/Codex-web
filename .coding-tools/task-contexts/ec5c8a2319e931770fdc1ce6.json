@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "5eeced9206fd49fd9cb719f2e86905be",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-08-26T03:52:33.891Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+  "next_step": "",
+  "created_at": "2026-08-26T03:52:33.891Z",
+  "updated_at": "2026-08-26T03:52:33.891Z",
+  "events": [
+    {
+      "time": "2026-08-26T03:52:33.891Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T03:52:33.891Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-26T03:52:33.891Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "PERMISSION_REQUIRED"
+      }
+    }
+  ]
+}

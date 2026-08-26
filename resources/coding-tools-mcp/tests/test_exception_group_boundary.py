@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import http.client
+import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -9,7 +12,7 @@ from unittest.mock import patch
 from coding_tools_mcp.errors import ToolFailure, normalize_exception_group
 from coding_tools_mcp.http_exception_boundary import ExceptionSafeMCPHandler
 from coding_tools_mcp.protocol import dispatch_rpc
-from coding_tools_mcp.server import Runtime
+from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 
 
 class ExceptionGroupBoundaryTests(unittest.TestCase):
@@ -163,6 +166,64 @@ class ExceptionGroupBoundaryTests(unittest.TestCase):
         self.assertEqual(data["details"]["leaf_count"], 1)
         self.assertEqual(data["details"]["children"][0]["type"], "RuntimeError")
         self.assertFalse(hasattr(runtime.request_context, "hub_client"))
+
+    def test_http_tools_call_returns_typed_exception_group_error(self) -> None:
+        """The live HTTP dispatch path must never expose a raw TaskGroup error."""
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), transport="http", permission_mode="safe")
+            server = RuntimeHTTPServer(("127.0.0.1", 0), MCPHandler, runtime, runtime_factory=None)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                grouped = ExceptionGroup(
+                    "unhandled errors in a TaskGroup",
+                    [RuntimeError("live tool child failed")],
+                )
+                request = {
+                    "jsonrpc": "2.0",
+                    "id": 17,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "workspace_context",
+                        "arguments": {"detail": "compact"},
+                    },
+                }
+                body = json.dumps(request).encode("utf-8")
+                with patch.object(runtime, "call_tool", side_effect=grouped):
+                    connection = http.client.HTTPConnection(
+                        "127.0.0.1", server.server_address[1], timeout=5
+                    )
+                    try:
+                        connection.request(
+                            "POST",
+                            "/mcp",
+                            body=body,
+                            headers={
+                                "Content-Type": "application/json",
+                                "Content-Length": str(len(body)),
+                            },
+                        )
+                        response = connection.getresponse()
+                        payload = json.loads(response.read().decode("utf-8"))
+                    finally:
+                        connection.close()
+
+                self.assertEqual(response.status, 200)
+                error = payload["error"]
+                self.assertEqual(error["code"], -32603)
+                self.assertEqual(
+                    error["message"],
+                    "Concurrent runtime tasks failed; inspect the structured child failures.",
+                )
+                self.assertNotIn("ExceptionGroup", error["message"])
+                self.assertEqual(error["data"]["code"], "ASYNC_TASK_GROUP_FAILED")
+                self.assertEqual(error["data"]["details"]["leaf_count"], 1)
+                self.assertEqual(error["data"]["details"]["children"][0]["type"], "RuntimeError")
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+                runtime.close()
 
 
 if __name__ == "__main__":

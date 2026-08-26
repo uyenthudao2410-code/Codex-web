@@ -1,0 +1,319 @@
+[
+  {
+    "version": 2,
+    "task_id": "c08dba7ec6484d2a88f7b105a5617f35",
+    "orchestration": {
+      "run_id": "09a8b9c6d39f443597c2ac3e99e2e615",
+      "wave_id": "6349629a59dc4bca837b4030bb40bccd",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "0557afa6c3aa3e02c2664d312b860973f28d3fc5",
+      "worktree_fp": "3fbf962c53eac447a0172c6c6b2e125b18d567f4040d3dd85a4598d75ecbe76c",
+      "contract_fp": ""
+    },
+    "objective": "Read-only evidence collection only. Inspect today's 2026-08-25 ICT orchestration metrics for both E:\\DEV\\Codex-web and E:\\DEV\\HR STA\\HR using existing immutable/read-only reporters; do not modify source, ledger, task/run/problem/P5 state, and do not create synthetic evidence.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "fgVTlEGFan4xl1fJ4_VzFzSU",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 524,
+      "finished_at": "2026-08-25T14:50:20.993Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-25T14:46:00.386Z",
+    "updated_at": "2026-08-25T14:50:20.993Z",
+    "events": [
+      {
+        "time": "2026-08-25T14:46:00.386Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only evidence collection only. Inspect today's 2026-08-25 ICT orchestration metrics for both E:\\DEV\\Codex-web and E:\\DEV\\HR STA\\HR using existing immutable/read-only reporters; do not modify source, ledger, task/run/problem/P5 state, and do not create synthetic evidence."
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:01.404Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:02.558Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:13.124Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace \"E:\\DEV\\Codex-web\"",
+          "session_id": "BDXV85TJbS0RwEViXup7DfUN"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:16.006Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace \"E:\\DEV\\Codex-web\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:27.370Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "6bCP3z9c-I2P5omqQOR9qdSM"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:28.178Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:38.782Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_stage_latency_attribution.py --workspace \"E:\\DEV\\Codex-web\"",
+          "session_id": "7YnuCTYbmdX89yvdctKkmg_l"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:40.125Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_stage_latency_attribution.py --workspace \"E:\\DEV\\Codex-web\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:47.249Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_stage_latency_attribution.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "uQjDhc8rfnKzrzDGE9ez6riW"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:47.842Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_stage_latency_attribution.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:55.526Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_evaluation_plane.py --workspace \"E:\\DEV\\Codex-web\"",
+          "session_id": "HpwxOouw2cDppmtiT9r5KTVg"
+        }
+      },
+      {
+        "time": "2026-08-25T14:46:55.902Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_evaluation_plane.py --workspace \"E:\\DEV\\Codex-web\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:03.050Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_evaluation_plane.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "0g8zJRXwQahSfe1X9fvxtfER"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:03.385Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_evaluation_plane.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:23.925Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace \"E:\\DEV\\Codex-web\"",
+          "session_id": "zBXFSyCshni0e8Qgs86nIuje"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:25.344Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace \"E:\\DEV\\Codex-web\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:35.633Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --help",
+          "session_id": "0HxQ7fbpUPn1dacvau1orrFT"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:36.001Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:45.467Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace \"E:\\DEV\\Codex-web\" --since 2026-08-24T17:00:00Z --until 2026-08-25T14:45:00Z",
+          "session_id": "DB_3eHIAHYnlFIevHOqZx0Ns"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:46.758Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace \"E:\\DEV\\Codex-web\" --since 2026-08-24T17:00:00Z --until 2026-08-25T14:45:00Z",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:59.283Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace \"E:\\DEV\\HR STA\\HR\" --since 2026-08-24T17:00:00Z --until 2026-08-25T14:45:00Z",
+          "session_id": "0cAuctw4WrQLGXpdwwI_JteI"
+        }
+      },
+      {
+        "time": "2026-08-25T14:47:59.833Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_rework_baseline.py --workspace \"E:\\DEV\\HR STA\\HR\" --since 2026-08-24T17:00:00Z --until 2026-08-25T14:45:00Z",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:48:12.538Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace \"E:\\DEV\\Codex-web\"",
+          "session_id": "pEZVI_tRSTAyF_0sWw8auJu5"
+        }
+      },
+      {
+        "time": "2026-08-25T14:48:14.909Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace \"E:\\DEV\\Codex-web\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:48:25.408Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "vle8-mOQ_w_LW1tsF0GJ9hi-"
+        }
+      },
+      {
+        "time": "2026-08-25T14:48:26.284Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:48:40.358Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --help",
+          "session_id": "ZXnAo1dZBzr97i_GpKcNXVl3"
+        }
+      },
+      {
+        "time": "2026-08-25T14:48:40.709Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:48:52.533Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "m8T2XnEU_dqWkQKDJfg22UDy"
+        }
+      },
+      {
+        "time": "2026-08-25T14:49:26.643Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_current_ledger_baseline.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-25T14:50:10.158Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "WORKFLOW_BUDGET_EXCEEDED"
+        }
+      },
+      {
+        "time": "2026-08-25T14:50:20.649Z",
+        "event": "command_started",
+        "details": {
+          "command": "echo diagnostic cleanup will use task_control, no source command",
+          "session_id": "fgVTlEGFan4xl1fJ4_VzFzSU"
+        }
+      },
+      {
+        "time": "2026-08-25T14:50:20.993Z",
+        "event": "command_finished",
+        "details": {
+          "command": "echo diagnostic cleanup will use task_control, no source command",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-25T14:50:30.146Z",
+    "archive_reason": "superseded"
+  }
+]

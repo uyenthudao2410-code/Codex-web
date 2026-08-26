@@ -235,6 +235,14 @@ function createRuntimeDependencies(options = {}) {
     inspect,
     activate,
     suppress,
+    runtimeSnapshot: (observation) => {
+      if (!observation?.client || !observation?.descriptor) return Promise.resolve(null);
+      return observation.client.call(
+        'runtime.lightweight_snapshot',
+        [],
+        descriptorRequestOptions(observation.descriptor)
+      );
+    },
     launch: () => spawnElectron(executable, appRoot, [], { spawnProcess, detached: true, windowsHide: false }),
     signal: (action, instanceId) => {
       if (!['focus', 'stop'].includes(action) || !INSTANCE_ID_PATTERN.test(String(instanceId || ''))) {
@@ -352,6 +360,23 @@ async function statusLifecycle(deps) {
   const host = observation?.hostAvailable === true ? 'available' : 'unavailable';
   const installation = observation?.installationMatches === true ? 'current'
     : observation?.installationMatches === false ? 'mismatch' : 'unknown';
+  let runtime = null;
+  if (observation?.hostAvailable === true
+    && observation?.installationMatches === true
+    && typeof deps.runtimeSnapshot === 'function') {
+    runtime = await deps.runtimeSnapshot(observation);
+  }
+  const connectorState = String(runtime?.connectorContractState || 'UNAVAILABLE');
+  const connectorRediscovered = runtime?.connectorRediscovered === true;
+  const connectorRefreshRequired = typeof runtime?.connectorRefreshRequired === 'boolean'
+    ? String(runtime.connectorRefreshRequired)
+    : 'unknown';
+  const connectorAckPending = typeof runtime?.connectorAcknowledgementPending === 'boolean'
+    ? String(runtime.connectorAcknowledgementPending)
+    : 'unknown';
+  const connectorCurrentSha = String(runtime?.toolContract?.sha256 || '') || 'none';
+  const connectorAckSha = String(runtime?.connectorContractAcknowledgedSha256 || '') || 'none';
+  const connectorRediscoveredAt = String(runtime?.connectorRediscoveredAt || '') || 'none';
   deps.output([
     'DEV_UI STATUS',
     `state=${ui.state || 'UNKNOWN'}`,
@@ -363,6 +388,13 @@ async function statusLifecycle(deps) {
     `running_revision=${ui.runningRevision || 'none'}`,
     `disk_revision=${ui.diskRevision || 'none'}`,
     `update_pending=${ui.updatePending === true ? 'true' : 'false'}`,
+    `connector_state=${connectorState}`,
+    `connector_rediscovered=${connectorRediscovered ? 'true' : 'false'}`,
+    `connector_rediscovered_at=${connectorRediscoveredAt}`,
+    `connector_refresh_required=${connectorRefreshRequired}`,
+    `connector_ack_pending=${connectorAckPending}`,
+    `connector_current_sha=${connectorCurrentSha}`,
+    `connector_ack_sha=${connectorAckSha}`,
     `error_code=${observation?.errorCode || 'none'}`
   ].join(' '));
   return observation;

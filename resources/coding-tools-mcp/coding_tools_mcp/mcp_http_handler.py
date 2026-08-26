@@ -60,6 +60,7 @@ from .transport_http import (
     stateless_http_2026_enabled,
 )
 from .http_hub_identity import HTTPHubIdentityMixin
+from .stateless_context import STATELESS_TASK_CONTEXT_META_KEY, resolve_stateless_task_context
 
 if TYPE_CHECKING:
     from .server import Runtime
@@ -69,10 +70,6 @@ HUB_CLIENT_ONLINE_SECONDS = 45.0
 HUB_CONTROLLER_LEASE_SECONDS = 60.0
 
 HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
-
-STATELESS_TASK_CONTEXT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
-
-STATELESS_TASK_CONTEXT_META_KEY = "io.coding-tools/taskContextId"
 
 MAX_HTTP_REQUEST_BYTES = 1_048_576
 
@@ -1135,31 +1132,13 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
 
     def _stateless_task_context(self, request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         """Return a request copy plus an isolated MCP-2026 application-state context."""
-        task_context_id = ""
-        dispatch_request = request
-        if request.get("method") == "tools/call":
-            params = request.get("params") if isinstance(request.get("params"), dict) else {}
-            arguments = params.get("arguments") if isinstance(params.get("arguments"), dict) else None
-            if arguments is not None:
-                supplied = arguments.get("task_context_id")
-                if supplied is not None:
-                    if not isinstance(supplied, str) or not STATELESS_TASK_CONTEXT_ID_RE.fullmatch(supplied):
-                        raise ValueError(
-                            "task_context_id must match [A-Za-z0-9][A-Za-z0-9._:-]{0,127}"
-                        )
-                    task_context_id = supplied
-                if "task_context_id" in arguments:
-                    clean_arguments = dict(arguments)
-                    clean_arguments.pop("task_context_id", None)
-                    clean_params = dict(params)
-                    clean_params["arguments"] = clean_arguments
-                    dispatch_request = dict(request)
-                    dispatch_request["params"] = clean_params
-        if not task_context_id:
-            task_context_id = f"ctx_{secrets.token_hex(16)}"
-        execution_context_id = "mcp2026:" + hashlib.sha256(
-            f"mcp2026-task:{task_context_id}".encode("utf-8")
-        ).hexdigest()[:56]
+        dispatch_request, task_context_id, execution_context_id = resolve_stateless_task_context(
+            request,
+            identity_from_request=self._hub_identity_from_request,
+            recover_exact_run_context=lambda run_id, client_id: self.runtime.stateless_task_context_for_run(
+                run_id, logical_client_id=client_id
+            ),
+        )
         self._stateless_task_context_id = task_context_id
         return dispatch_request, task_context_id, execution_context_id
 
@@ -1575,7 +1554,15 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             self.send_header(name, value)
         self.end_headers()
         if not head_only:
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+                # A client-side timeout/cancel may close the socket after the
+                # handler has completed the tool call. The response is no
+                # longer deliverable, but this transport condition must not
+                # produce an unhandled traceback or contaminate the MCP
+                # process health signal.
+                return
 
 class RuntimeHTTPServer(http.server.ThreadingHTTPServer):
     daemon_threads = True

@@ -1,0 +1,90 @@
+{
+  "version": 2,
+  "task_id": "679f4c7b2d624f599bc2180643e27f9a",
+  "orchestration": {
+    "run_id": "3534ee6f368141ff8137e5d215961356",
+    "wave_id": "4b9fdabaeec942f89c42926a375c6c12",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "0557afa6c3aa3e02c2664d312b860973f28d3fc5",
+    "worktree_fp": "256e776b0ee0c2f17340ee64a568c78bf93e9ad0a2e65bd37cb6185812e5803d",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "R9ECRMMoCEIQukI8yONpp-nN",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 343,
+    "finished_at": "2026-08-26T04:16:49.570Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T04:16:48.973Z",
+  "updated_at": "2026-08-26T04:17:08.912Z",
+  "events": [
+    {
+      "time": "2026-08-26T04:16:48.973Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T04:16:49.286Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests && rg -l \"acceptance_files|ACCEPTANCE_FILE_ATTESTATION_REQUIRED|controller_explicit\" resources/coding-tools-mcp/tests",
+        "session_id": "R9ECRMMoCEIQukI8yONpp-nN"
+      }
+    },
+    {
+      "time": "2026-08-26T04:16:49.570Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests && rg -l \"acceptance_files|ACCEPTANCE_FILE_ATTESTATION_REQUIRED|controller_explicit\" resources/coding-tools-mcp/tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T04:17:07.037Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T04:17:08.902Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T04:17:08.912Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

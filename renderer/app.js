@@ -322,7 +322,8 @@ function componentSourcePresentation(revision, { running = true, label = 'compon
 }
 
 function connectorContractPresentation(status = {}) {
-  const explicit = String(status.connectorContractState || '').toUpperCase();
+  const reported = String(status.connectorContractState || '').toUpperCase();
+  const explicit = reported === 'COMPATIBLE_ACKNOWLEDGED' ? 'UNAVAILABLE' : reported;
   if (explicit === 'UNCHANGED_ACKNOWLEDGED') {
     return {
       state: explicit,
@@ -337,14 +338,6 @@ function connectorContractPresentation(status = {}) {
       notice: false,
       message: 'Tool contract hiện tại đã được discovery và acknowledge.',
       toast: 'Tool contract hiện tại đã được discovery và acknowledge.'
-    };
-  }
-  if (explicit === 'COMPATIBLE_ACKNOWLEDGED') {
-    return {
-      state: explicit,
-      notice: false,
-      message: 'Tool contract SHA hiện tại khác snapshot đã acknowledge nhưng vẫn thuộc cùng compatibility epoch; không tạo rediscovery hoặc ACK giả.',
-      toast: 'Tool contract hiện tại tương thích với snapshot ChatGPT đã acknowledge.'
     };
   }
   if (explicit === 'CHANGED_DISCOVERED_NEEDS_ACK') {

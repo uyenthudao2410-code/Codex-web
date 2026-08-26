@@ -10,21 +10,10 @@ from .code_mode import (
 )
 
 
-# This is the breaking-compatibility epoch for the public MCP contract, not a
-# hash of one exact tools/list payload. Bump it whenever an existing approved
-# client snapshot could become invalid (for example: remove/rename a public
-# tool, add a required argument, narrow an accepted type/enum, or change public
-# authority semantics). Backward-compatible optional additions stay in the
-# same epoch and retain their exact SHA only as an audit identity.
+# Public contract metadata. Connector freshness is intentionally keyed to the
+# exact tools/list SHA; schema/profile metadata must never bypass rediscovery.
 TOOL_CONTRACT_SCHEMA_VERSION = 1
 SMART_TOOL_PROFILE = "smart-v3"
-# Legacy Recovery Host state persisted only the exact tools/list SHA. Declare
-# the one reviewed predecessor that belongs to the current smart-v3/v1
-# compatibility epoch so that existing approved ChatGPT snapshots can be
-# recognized without fabricating a new tools/list receipt.
-SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS = (
-    "34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c",
-)
 TOOL_RISK_CLASSES = ("read_only", "project_write", "job_run", "account_manage", "unknown")
 TOOL_MUTATION_CLASSES = ("none", "project", "job", "control", "unknown")
 TOOL_CONCURRENCY_CLASSES = ("runtime_managed", "session_managed", "serialized", "unknown")

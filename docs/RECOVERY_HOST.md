@@ -218,17 +218,35 @@ phải bằng 0; cờ `clean=true` riêng lẻ không đủ. Quy tắc này cũn
 checkpoint không có component cần restart.
 
 Closure cuối còn yêu cầu component running/disk revision khớp, Runtime + Tunnel
-fully ready và connector contract current. Exact `tools/list` SHA là audit
-identity; `schema_version + profile` là breaking-compatibility epoch.
-`UNCHANGED_ACKNOWLEDGED` không cần tạo rediscovery giả khi exact SHA không đổi.
-`COMPATIBLE_ACKNOWLEDGED` cho phép SHA mới tiếp tục dùng snapshot đã acknowledge
-chỉ khi current contract cùng epoch hoặc khai báo exact predecessor tương thích;
-acknowledged SHA không bị ghi đè và không tạo rediscovery timestamp giả. Khi
-compatibility epoch thay đổi, target process vẫn phải thực hiện `tools/list` hoặc
-`server/discover`, sau đó mới được acknowledgement qua Recovery Host; một
-`tools/call` thông thường không thay thế discovery. `LIVE_CLOSED` chỉ là local
-runtime closure; projection luôn ghi `release_state=NOT_RELEASED` và
-`production_state=NOT_CLAIMED`.
+fully ready và connector contract current. Exact `tools/list` SHA vừa là audit
+identity vừa là freshness identity bắt buộc. `UNCHANGED_ACKNOWLEDGED` chỉ hợp lệ
+khi exact current SHA bằng acknowledged SHA; không cần tạo rediscovery giả nếu
+contract không đổi. Khi exact SHA thay đổi, connector phải giữ
+`CHANGED_NEEDS_DISCOVERY` cho tới khi target process hiện tại thật sự nhận
+`tools/list` hoặc `server/discover`. Receipt đó phải bind current contract SHA,
+process instance và server instance; sau receipt trạng thái mới được chuyển sang
+`CHANGED_DISCOVERED_NEEDS_ACK`. Chỉ lúc đó Recovery Host mới được ACK exact current
+SHA. Post-ACK yêu cầu `acknowledged_sha256 == tool_contract_sha256` và
+`connectorRefreshRequired == false`. `schema_version` và `profile` là metadata mô
+tả contract, không phải đường bypass exact-SHA freshness. Một `tools/call` thông
+thường, kể cả gọi thành công `workspace_context`, không thay thế discovery và
+không được tạo rediscovery timestamp. Không còn trạng thái
+`COMPATIBLE_ACKNOWLEDGED`. `LIVE_CLOSED` chỉ là local runtime closure; projection
+luôn ghi `release_state=NOT_RELEASED` và `production_state=NOT_CLAIMED`.
+
+Với MCP 2026 stateless, `task_context_id` vẫn là application-state handle ưu tiên.
+Nếu connector wrapper không echo handle này, chỉ `task_control` với exact `run_id`
+được phép khôi phục context đã persist cho một tập continuation hẹp: các thao tác
+read-only inspection và `ack/accept/reject` có selector đầy đủ. Recovery chỉ hợp
+lệ khi exact RUN map duy nhất tới một context trong đúng authorized workspace và
+không có active controller thuộc logical/execution principal khác. Không có exact
+RUN, mapping mơ hồ hoặc có foreign active controller thì hệ thống không merge
+context hay transfer authority; request tiếp tục dùng context stateless mới và
+các authority guard phía sau vẫn fail-closed.
+
+C4/measurement không được nhập vào connector activation gate. Connector closure
+có thể đóng trước trong khi C4 vẫn `HOLD_NATURAL_EVIDENCE`; không tạo synthetic
+PRL/C4 event chỉ để hoàn tất activation.
 
 For the ordinary development UI path, `npm run dev` automates only that supported
 Electron component flow: `CURRENT` is focused, `STALE` goes through

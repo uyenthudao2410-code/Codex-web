@@ -1,0 +1,103 @@
+{
+  "version": 2,
+  "task_id": "ede5413f45634333b2ad05c90d4c0f50",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "MuTVn5aZfdfdttSrKsNSrkbB",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 15147,
+    "finished_at": "2026-08-25T15:04:31.041Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest -q tests/test_stateless_http_2026.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 15147,
+      "summary": "exit 0 | 15.1s | 3 lines | tail: '15 passed in 13.60s'",
+      "finished_at": "2026-08-25T15:04:31.041Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "MuTVn5aZfdfdttSrKsNSrkbB"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "size_bytes": 102,
+        "command_id": "MuTVn5aZfdfdttSrKsNSrkbB",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:MuTVn5aZfdfdttSrKsNSrkbB:stdout",
+            "total_stream_bytes": 102,
+            "total_retained_bytes": 102,
+            "head_retained_bytes": 102,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:MuTVn5aZfdfdttSrKsNSrkbB:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-25T15:04:15.608Z",
+  "updated_at": "2026-08-25T15:04:31.041Z",
+  "events": [
+    {
+      "time": "2026-08-25T15:04:15.608Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-25T15:04:15.866Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_stateless_http_2026.py",
+        "session_id": "MuTVn5aZfdfdttSrKsNSrkbB"
+      }
+    },
+    {
+      "time": "2026-08-25T15:04:31.041Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest -q tests/test_stateless_http_2026.py",
+        "status": "passed"
+      }
+    }
+  ]
+}
