@@ -178,6 +178,56 @@ class FullCleanActivation {
     }
   }
 
+  /**
+   * Once a durable full-clean epoch exists, the previous component set is no
+   * longer an admissible runtime.  If the transaction fails before the normal
+   * STOPPING boundary (for example a fence race or replacement-launch error),
+   * stop only the components owned by this Recovery Host before publishing a
+   * terminal FAILED epoch.  This prevents a healthy-looking old MCP/Tunnel/UI
+   * from continuing under the retired activation epoch while the durable
+   * supervisor projection says admission is closed.  Never terminate the
+   * Recovery Host itself here; it must remain available to accept the next
+   * explicit operator activation.
+   */
+  async _failClosedOwnedRuntime(epochId) {
+    const ui = this.getUiPresence?.() || {};
+    if (ui.alive && typeof this.terminateUi === 'function') {
+      try { await this.terminateUi(ui); }
+      catch (error) {
+        this.log?.error?.(error.message, {
+          stage: 'full-clean-failure-ui-stop',
+          activationEpochId: text(epochId),
+          code: error?.code || ''
+        });
+      }
+    }
+    if (typeof this.orchestrator?.stop === 'function') {
+      try {
+        await this.orchestrator.stop({
+          manual: false,
+          fullClean: true,
+          activationEpochId: text(epochId)
+        });
+      } catch (error) {
+        this.log?.error?.(error.message, {
+          stage: 'full-clean-failure-runtime-stop',
+          activationEpochId: text(epochId),
+          code: error?.code || ''
+        });
+      }
+    }
+    if (typeof this.recoveryPlane?.stop === 'function') {
+      try { await this.recoveryPlane.stop(); }
+      catch (error) {
+        this.log?.error?.(error.message, {
+          stage: 'full-clean-failure-recovery-plane-stop',
+          activationEpochId: text(epochId),
+          code: error?.code || ''
+        });
+      }
+    }
+  }
+
   _settings() {
     const value = this.settings?.load?.() || {};
     if (!value || typeof value !== 'object') throw epochError('FULL_CLEAN_SETTINGS_UNAVAILABLE', 'Runtime settings could not be loaded.');
@@ -577,6 +627,7 @@ class FullCleanActivation {
       });
       return pending || { accepted: true, state: 'HANDOFF', activation_epoch_id: epochId, operation_id, admission_open: false, fully_ready: false };
     } catch (error) {
+      await this._failClosedOwnedRuntime(epochId);
       this._failEpoch(epochId, error);
       this.log?.error?.(error.message, { stage: 'full-clean-activation', activationEpochId: epochId, code: error?.code || '' });
       throw error;
@@ -641,6 +692,7 @@ class FullCleanActivation {
       }
       return this.finalize(epochId, census);
     } catch (error) {
+      await this._failClosedOwnedRuntime(epochId);
       this._failEpoch(epochId, error);
       throw error;
     }

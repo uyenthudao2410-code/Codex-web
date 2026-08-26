@@ -654,10 +654,15 @@ class RecoveryHost {
     let replacementEpochId = String(this.replacement?.activationEpochId || '').trim();
     let fullCleanReplacement = Boolean(replacementEpochId);
     let recoveredFromDurableEpoch = false;
-    if (!fullCleanReplacement && durableEpoch && durableEpoch.state === 'FAILED') {
-      throw Object.assign(new Error('A previous full-clean activation failed; admission remains closed until an explicit new activation.'), {
-        code: 'UPDATE_INCOMPLETE',
-        details: { activation_epoch_id: durableEpoch.activation_epoch_id, state: durableEpoch.state }
+    // A FAILED epoch is terminal and keeps admission closed, but it must not
+    // brick the Recovery Host itself.  Keep the control plane alive so the
+    // operator can submit a new explicit full-clean activation.  Component
+    // startup/recovery remains suppressed below until that new epoch reaches
+    // READY; a failed transaction must never be auto-healed by the watchdog.
+    const failedEpochBlocked = Boolean(!fullCleanReplacement && durableEpoch && durableEpoch.state === 'FAILED');
+    if (failedEpochBlocked) {
+      this.log?.warn?.('Recovery Host is serving control-plane IPC with a failed activation epoch; explicit full-clean activation is required.', {
+        activationEpochId: durableEpoch.activation_epoch_id
       });
     }
     if (!fullCleanReplacement && durableEpoch && ACTIVE_STATES.has(durableEpoch.state)) {
@@ -852,7 +857,9 @@ class RecoveryHost {
           this.log.error(error.message, { stage: 'legacy-primary-device-migration', code: error?.code || '' });
         }
       }
-      if (!fullCleanReplacement) await this.ensureRecoveryPlane({ legacyMigrationPlan: recoveryLegacyMigration });
+      if (!fullCleanReplacement && !failedEpochBlocked) {
+        await this.ensureRecoveryPlane({ legacyMigrationPlan: recoveryLegacyMigration });
+      }
       this.supervisionTimer = setInterval(() => { this.superviseOnce(); }, SUPERVISION_INTERVAL_MS);
       this.supervisionTimer.unref();
       this.log.info('Recovery Host đã sở hữu Coding runtime, watchdog và local gateway', {
@@ -860,7 +867,7 @@ class RecoveryHost {
         hostInstanceId: this.instanceId
       });
       const current = this.settings.load();
-      if (!fullCleanReplacement && !recoveredFromDurableEpoch && !primaryMigrationFailed && current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
+      if (!fullCleanReplacement && !failedEpochBlocked && !recoveredFromDurableEpoch && !primaryMigrationFailed && current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
         const observed = await this.orchestrator.lightweightSnapshot().catch(() => null);
         this.lastSupervisionStatus = observed;
         if (!observed?.nativeAlive && !observed?.tunnelRunning) {
