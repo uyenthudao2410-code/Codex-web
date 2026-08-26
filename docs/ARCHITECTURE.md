@@ -63,6 +63,17 @@ freshness; only then does the epoch become `READY` and reopen admission. The
 watchdog keeps `soft_recovery` for local faults only, and refuses to load newer
 disk bytes under an older epoch.
 
+The stopped-runtime retry boundary is deliberately independent of the MCP
+process: Recovery Host invokes the read-only `activation_ledger_census.py`
+helper, which uses one SQLite Backup-API copy with `immutable` and
+`query_only` evidence. It rejects active managed/background/lane work,
+unresolved acceptance, projection drift, integrity/FK failures, live runtime
+state residue, workspace/source-checkpoint drift, and any change between the
+first and second census. The resulting snapshot and census fingerprint are
+bound to the new epoch request while the existing application ledger gate is
+held exclusively across the second census and epoch-store create; no supported
+writer or caller-supplied hash can enter that commit gap.
+
 ## 1. Client / Server / Agent / Codebase
 
 ```mermaid

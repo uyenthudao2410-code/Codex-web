@@ -54,6 +54,14 @@ fresh connector discovery/ACK before `fullyReady=true` can return. Automatic
 fault recovery remains `soft_recovery`; it must refuse any newer disk revision
 under an older epoch and may not be used as code-update proof.
 
+If the previous activation failed after Coding MCP stopped, verify that an
+explicit retry first records a fresh independent Backup-API/query-only ledger
+census, rejects active mutation/managed-process or dangerous acceptance state,
+and compares a second census while the application ledger gate remains
+exclusive through durable epoch creation. A changed ledger hash,
+workspace/source checkpoint, or runtime-state PID must fail closed without
+stopping a new component set.
+
 For development Electron changes, exercise the deterministic lifecycle with mocked tests first, then—only when local service operation is authorized—use `npm run dev` or `npm run dev:replace`. A stale UI must carry the exact checkpoint/run/wave/proof/accepted-HEAD identity from an eligible `auto_activation.closure_input`; capture the typed refusal if that durable authority is absent, incomplete, invalid, or does not own `electron_ui`. Record the exact development installation, old/new UI instance where replacement is expected, PID, runtime mode, and `running_revision == disk_revision`. `npm start` focusing an existing window is not activation evidence. Use `npm run dev:stop` for a graceful UI-only stop; require an observable exact Recovery Host at entry and either its `MISSING` UI receipt or proof that the prior exact PID exited. Confirm Recovery Host/MCP/Tunnel preservation and watchdog suppression rather than killing `electron.exe` by name.
 
 In the Command Center, capture the three loaded-source receipts for Electron UI, Recovery Host, and Coding MCP, the separate Tunnel `READY`/`STOPPED` health state, and any source-update notice. Service availability, Tunnel readiness, and `fullyReady` do not override a `STALE` component receipt. Connector status should be interpreted from `connectorContractState` when available; when both that enum and the legacy `connectorRefreshRequired` boolean are absent, the truthful state is `UNAVAILABLE`, not acknowledged. An unchanged acknowledged SHA survives process restart, while a changed SHA requires the discovery/acknowledgement sequence.

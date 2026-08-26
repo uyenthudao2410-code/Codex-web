@@ -1,6 +1,11 @@
 const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFile, spawn } = require('node:child_process');
+const { promisify } = require('node:util');
 const { ActivationEpochStore } = require('./activationEpoch');
 const { readJson } = require('./jsonStore');
+const { pythonStatus } = require('./environmentService');
 const { isAlive: isAlivePid } = require('./nativeService');
 const { tunnelFingerprint } = require('./tunnelService');
 const { recoveryMcpHealth, recoveryTunnelReady: probeRecoveryTunnelReady } = require('./recoveryPlaneService');
@@ -13,6 +18,9 @@ const {
 
 const COMPONENTS = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
 const DEFAULT_TTL_MS = 120_000;
+const execFileAsync = promisify(execFile);
+const HEX64 = /^[a-f0-9]{64}$/;
+const TERMINAL_P5_LIFECYCLES = new Set(['EPOCH_CLOSED', 'EPOCH_HARD_STOPPED']);
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -25,6 +33,319 @@ function epochError(code, message, details = {}) {
 }
 
 function text(value) { return String(value || '').trim(); }
+
+function canonicalWorkspace(value) {
+  const resolved = path.resolve(String(value || ''));
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+function canonicalSnapshot(snapshot) {
+  return Boolean(snapshot
+    && snapshot.backup_api_copy === true
+    && snapshot.immutable === true
+    && snapshot.query_only === true
+    && Array.isArray(snapshot.integrity_check)
+    && snapshot.integrity_check.length === 1
+    && snapshot.integrity_check[0] === 'ok'
+    && Number(snapshot.foreign_key_check_rows) === 0
+    && HEX64.test(text(snapshot.sha256).toLowerCase())
+    && HEX64.test(text(snapshot.logical_sha256).toLowerCase()));
+}
+
+function summarizeCensus(raw, { workspace, allowAcceptancePending = false } = {}) {
+  const snapshot = raw?.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : {};
+  const runs = Array.isArray(raw?.runs) ? raw.runs.filter((item) => item && typeof item === 'object') : [];
+  const managedJobs = Array.isArray(raw?.managed_jobs)
+    ? raw.managed_jobs.filter((item) => item && typeof item === 'object')
+    : [];
+  const summary = raw?.summary && typeof raw.summary === 'object' ? raw.summary : {};
+  const classifications = (name) => runs.filter((item) => String(item.classification || '') === name);
+  const liveOwned = classifications('LIVE_OWNED');
+  const accepting = classifications('AWAITING_ACCEPTANCE');
+  const unexplained = classifications('UNEXPLAINED_ACTIVE');
+  const terminalContradictions = classifications('TERMINAL_PARENT_CONTRADICTION');
+  const activeP5 = runs.filter((item) => String(item.classification || '') === 'P5_EXPERIMENT_ANCHOR'
+    && !TERMINAL_P5_LIFECYCLES.has(String(item.p5_epoch_lifecycle || '')));
+  const liveManagedJobs = managedJobs.filter((item) => String(item.classification || '') === 'LIVE_OWNED');
+  const orphanedManagedJobs = managedJobs.filter((item) => String(item.classification || '') === 'ORPHANED_OR_FOREIGN_MANAGED_JOB');
+  const unbound = Array.isArray(raw?.unbound_live_resources) ? raw.unbound_live_resources : [];
+  const projectionDrift = summary.projection_drift === true
+    || String(raw?.projection?.classification || '') === 'PROJECTION_DRIFT';
+  const snapshotOk = canonicalSnapshot(snapshot);
+  const workspaceMatches = canonicalWorkspace(raw?.workspace || workspace) === canonicalWorkspace(workspace);
+  const sourceCheckpointVerified = raw?.source_checkpoint_verified !== false;
+  const dangerousAcceptance = accepting.length > 0 && allowAcceptancePending !== true;
+  const counts = {
+    active_tool_calls: 0,
+    active_commands: 0,
+    starting_commands: 0,
+    active_background_operations: runs.reduce((sum, item) => sum + Number(item.ownership?.running_background_operations || 0), 0),
+    active_managed_processes: liveManagedJobs.length,
+    foreign_heavy_processes: 0,
+    active_agent_lanes: runs.reduce((sum, item) => sum + Number(item.ownership?.live_agent_lanes || 0), 0),
+    threshold_sensitive_stale_candidates: Number(summary.run_classification_counts?.THRESHOLD_SENSITIVE_STALE_CANDIDATE || 0),
+    owned_codex_sidecar_residues: 0
+  };
+  const blockers = [];
+  if (!snapshotOk) blockers.push('ledger_snapshot_integrity_failed');
+  if (!workspaceMatches) blockers.push('workspace_mismatch');
+  if (!sourceCheckpointVerified) blockers.push('source_checkpoint_mismatch');
+  if (counts.active_background_operations || counts.active_managed_processes || counts.active_agent_lanes) blockers.push('active_runtime_work');
+  if (liveOwned.length) blockers.push('lifecycle_live_owned');
+  if (orphanedManagedJobs.length) blockers.push('managed_process_residue');
+  if (unexplained.length || unbound.length) blockers.push('lifecycle_unexplained_or_unbound');
+  if (terminalContradictions.length) blockers.push('terminal_parent_contradiction');
+  if (projectionDrift) blockers.push('projection_drift');
+  if (activeP5.length) blockers.push('p5_epoch_not_terminal');
+  if (dangerousAcceptance) blockers.push('acceptance_pending');
+  const safe = blockers.length === 0;
+  return {
+    schema_version: 1,
+    safe,
+    code: safe ? 'READY' : (dangerousAcceptance ? 'ACCEPTANCE_PENDING' : 'ORCHESTRATION_STATE_UNCERTAIN'),
+    reason: safe ? 'canonical_ledger_quiescent' : blockers[0],
+    workspace: text(raw?.workspace || workspace),
+    ledger_path: text(raw?.ledger_path || path.join(workspace, '.coding-tools', 'orchestration', 'ledger.sqlite3')),
+    snapshot,
+    counts,
+    lifecycle: {
+      unexplained_active_runs: Number(summary.unexplained_active_runs || 0),
+      unbound_live_resource_residues: Number(summary.unbound_live_resource_residues || unbound.length),
+      projection_drift: projectionDrift,
+      ordinary_active_runs: Number(summary.ordinary_active_runs || 0),
+      awaiting_acceptance_runs: accepting.map((item) => text(item.run_id)).filter(Boolean),
+      live_owned_runs: liveOwned.map((item) => text(item.run_id)).filter(Boolean),
+      active_p5_runs: activeP5.map((item) => text(item.run_id)).filter(Boolean),
+      blockers
+    },
+    source_checkpoint_verified: sourceCheckpointVerified,
+    content_free: raw?.content_free === true,
+    mutated_canonical_ledger: raw?.mutated_canonical_ledger === true,
+    observed_at_unix_seconds: raw?.observed_at_unix_seconds ?? null
+  };
+}
+
+function runtimeStateHasLiveManagedProcess(paths) {
+  let state;
+  try { state = readJson(paths.stateFile(), {}); } catch { state = {}; }
+  const pids = [Number(state.nativePid || 0), Number(state.tunnelPid || 0)].filter((pid) => Number.isSafeInteger(pid) && pid > 0);
+  for (const pid of pids) {
+    try { process.kill(pid, 0); return true; } catch { /* stale PID */ }
+  }
+  return false;
+}
+
+function heldCensus(command, args, options) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    const timeout = setTimeout(() => {
+      child.kill();
+      reject(Object.assign(new Error('Canonical ledger census exclusive gate timed out.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
+    }, 15_000);
+    timeout.unref?.();
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', (chunk) => { if (stderr.length < 64 * 1024) stderr += chunk; });
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      if (settled) return;
+      stdout += chunk;
+      if (stdout.length > 8 * 1024 * 1024) {
+        settled = true;
+        clearTimeout(timeout);
+        child.kill();
+        reject(Object.assign(new Error('Canonical ledger census exceeded its output bound.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
+        return;
+      }
+      const newline = stdout.indexOf('\n');
+      if (newline < 0) return;
+      settled = true;
+      clearTimeout(timeout);
+      const line = stdout.slice(0, newline).trim();
+      let raw;
+      try { raw = JSON.parse(line); }
+      catch (error) {
+        child.kill();
+        reject(Object.assign(new Error('Canonical ledger census returned invalid held evidence.'), {
+          code: 'ORCHESTRATION_STATE_UNCERTAIN', cause: error
+        }));
+        return;
+      }
+      let released = false;
+      const release = () => new Promise((releaseResolve, releaseReject) => {
+        if (released) { releaseResolve(true); return; }
+        released = true;
+        const releaseTimeout = setTimeout(() => {
+          child.kill();
+          releaseReject(Object.assign(new Error('Canonical ledger census gate release timed out.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
+        }, 5000);
+        releaseTimeout.unref?.();
+        child.once('error', (error) => { clearTimeout(releaseTimeout); releaseReject(error); });
+        child.once('exit', (code) => {
+          clearTimeout(releaseTimeout);
+          if (code === 0) releaseResolve(true);
+          else releaseReject(Object.assign(new Error('Canonical ledger census gate holder exited abnormally.'), {
+            code: 'ORCHESTRATION_STATE_UNCERTAIN', details: { exit_code: code, stderr: stderr.slice(0, 1000) }
+          }));
+        });
+        child.stdin.end('release\n');
+      });
+      resolve({ raw, release });
+    });
+    child.once('error', (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.once('exit', (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      reject(Object.assign(new Error('Canonical ledger census gate holder exited before publishing evidence.'), {
+        code: 'ORCHESTRATION_STATE_UNCERTAIN', details: { exit_code: code, stderr: stderr.slice(0, 1000) }
+      }));
+    });
+  });
+}
+
+async function canonicalLedgerCensus({ paths, workspace, allowAcceptancePending = false, sourceCheckpoint = null, holdExclusive = false } = {}) {
+  const rawWorkspace = text(workspace);
+  if (!rawWorkspace || !path.isAbsolute(rawWorkspace)) {
+    throw Object.assign(new Error('Canonical ledger census requires an absolute workspace.'), {
+      code: 'WORKSPACE_MISMATCH'
+    });
+  }
+  const root = path.resolve(rawWorkspace);
+  const ledgerPath = path.join(root, '.coding-tools', 'orchestration', 'ledger.sqlite3');
+  if (!paths || !root || !fs.existsSync(ledgerPath)) {
+    throw Object.assign(new Error('Canonical orchestration ledger is unavailable for stopped-runtime preflight.'), {
+      code: 'ORCHESTRATION_STATE_UNCERTAIN'
+    });
+  }
+  const moduleRoot = path.join(paths.resourcesRoot(), 'coding-tools-mcp');
+  const helper = path.join(moduleRoot, 'coding_tools_mcp', 'activation_ledger_census.py');
+  if (!fs.existsSync(helper)) {
+    throw Object.assign(new Error('Canonical ledger census helper is unavailable.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
+  }
+  const python = await pythonStatus(paths);
+  if (!python.installed) {
+    throw Object.assign(new Error('Python runtime is unavailable for canonical ledger census.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
+  }
+  const env = {
+    ...process.env,
+    PYTHONPATH: [moduleRoot, path.join(moduleRoot, 'python_vendor'), process.env.PYTHONPATH || '']
+      .filter(Boolean).join(path.delimiter)
+  };
+  const args = [
+    ...(python.prefixArgs || []),
+    '-u', '-m', 'coding_tools_mcp.activation_ledger_census',
+    '--workspace', root
+  ];
+  if (sourceCheckpoint && typeof sourceCheckpoint === 'object') {
+    args.push('--source-checkpoint-json', JSON.stringify(sourceCheckpoint));
+  }
+  if (holdExclusive) args.push('--hold-exclusive');
+  let raw;
+  let releaseExclusive = null;
+  try {
+    if (holdExclusive) {
+      const held = await heldCensus(python.command, args, { cwd: root, env });
+      raw = held.raw;
+      releaseExclusive = held.release;
+    } else {
+      const output = await execFileAsync(python.command, args, {
+        cwd: root,
+        env,
+        windowsHide: true,
+        maxBuffer: 8 * 1024 * 1024,
+        timeout: 15_000
+      });
+      raw = JSON.parse(String(output.stdout || '').trim());
+    }
+  } catch (error) {
+    if (releaseExclusive) await releaseExclusive().catch(() => false);
+    throw Object.assign(new Error('Canonical ledger census could not be completed.'), {
+      code: 'ORCHESTRATION_STATE_UNCERTAIN',
+      cause: error
+    });
+  }
+  const result = summarizeCensus({ ...raw, workspace: root, ledger_path: ledgerPath }, {
+    workspace: root,
+    allowAcceptancePending
+  });
+  if (sourceCheckpoint && typeof sourceCheckpoint === 'object' && text(sourceCheckpoint.git_head)) {
+    try {
+      const git = await execFileAsync('git', ['-C', root, 'rev-parse', 'HEAD'], {
+        cwd: root,
+        env,
+        windowsHide: true,
+        maxBuffer: 64 * 1024,
+        timeout: 5000
+      });
+      const currentHead = text(git.stdout).toLowerCase();
+      if (currentHead !== text(sourceCheckpoint.git_head).toLowerCase()) {
+        result.safe = false;
+        result.code = 'REVISION_CHANGED';
+        result.reason = 'source_checkpoint_git_head_mismatch';
+        result.lifecycle.blockers = [...new Set([...result.lifecycle.blockers, 'source_checkpoint_git_head_mismatch'])];
+      }
+    } catch {
+      result.safe = false;
+      result.code = 'ORCHESTRATION_STATE_UNCERTAIN';
+      result.reason = 'source_git_identity_unavailable';
+      result.lifecycle.blockers = [...new Set([...result.lifecycle.blockers, 'source_git_identity_unavailable'])];
+    }
+  }
+  if (runtimeStateHasLiveManagedProcess(paths)) {
+    result.safe = false;
+    result.code = 'RUNTIME_BUSY';
+    result.reason = 'live_runtime_state_process';
+    result.lifecycle.blockers = [...new Set([...result.lifecycle.blockers, 'live_runtime_state_process'])];
+  }
+  if (result.mutated_canonical_ledger === true || result.content_free !== true) {
+    result.safe = false;
+    result.code = 'ORCHESTRATION_STATE_UNCERTAIN';
+    result.reason = 'canonical_census_contract_invalid';
+  }
+  result.census_fingerprint = crypto.createHash('sha256').update(JSON.stringify({
+    snapshot: {
+      sha256: result.snapshot.sha256,
+      logical_sha256: result.snapshot.logical_sha256,
+      size_bytes: result.snapshot.size_bytes,
+      schema_version: result.snapshot.schema_version,
+      integrity_check: result.snapshot.integrity_check,
+      foreign_key_check_rows: result.snapshot.foreign_key_check_rows,
+      backup_api_copy: result.snapshot.backup_api_copy,
+      immutable: result.snapshot.immutable,
+      query_only: result.snapshot.query_only
+    },
+    counts: result.counts,
+    lifecycle: result.lifecycle,
+    workspace: result.workspace,
+    ledger_path: result.ledger_path
+  })).digest('hex');
+  if (holdExclusive) {
+    if (raw?.exclusive_gate_held !== true || typeof releaseExclusive !== 'function') {
+      if (releaseExclusive) await releaseExclusive().catch(() => false);
+      throw Object.assign(new Error('Canonical ledger census did not prove its exclusive gate.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
+    }
+    Object.defineProperty(result, 'release_exclusive_gate', {
+      value: releaseExclusive,
+      configurable: false,
+      enumerable: false,
+      writable: false
+    });
+  }
+  return result;
+}
 
 /**
  * Recovery Host-owned transaction for an operator/revision restart.
@@ -54,6 +375,7 @@ class FullCleanActivation {
     getUiRevision = null,
     terminateUi = null,
     getRecoveryPlaneStatus = null,
+    canonicalLedgerCensus = null,
     scheduleHandoff = null,
     setActivationEpoch = null,
     recoveryHostRunningRevision = '',
@@ -79,6 +401,7 @@ class FullCleanActivation {
     this.getUiRevision = getUiRevision;
     this.terminateUi = terminateUi;
     this.getRecoveryPlaneStatus = getRecoveryPlaneStatus;
+    this.canonicalLedgerCensus = canonicalLedgerCensus;
     this.scheduleHandoff = scheduleHandoff;
     this.setActivationEpochCallback = setActivationEpoch;
     this.recoveryHostRunningRevision = text(recoveryHostRunningRevision);
@@ -311,6 +634,37 @@ class FullCleanActivation {
         || runtime?.safe === true
         || (runtime?.code === 'ACCEPTANCE_PENDING' && allowAcceptancePending === true);
       if (!allowed) throw epochError(runtime?.code || 'ORCHESTRATION_STATE_UNCERTAIN', 'Canonical runtime lifecycle preflight refused full clean activation.', runtime);
+    }
+    // When Coding MCP is stopped there is no process left to answer the
+    // normal activation preflight endpoint.  Read the canonical ledger through
+    // the independent Backup-API/query-only census helper before admitting a
+    // replacement.  The resulting receipt is carried in the immutable epoch
+    // request and is rechecked immediately before any stop/spawn mutation.
+    if (runtime?.code === 'COMPONENT_STOPPED') {
+      if (typeof this.canonicalLedgerCensus !== 'function') {
+        throw epochError('ORCHESTRATION_STATE_UNCERTAIN', 'Full clean activation cannot admit a stopped runtime without an independent canonical ledger census.');
+      }
+      let census;
+      try {
+        census = await this.canonicalLedgerCensus({
+          workspace: this._settings().workspace,
+          sourceCheckpoint,
+          allowAcceptancePending: allowAcceptancePending === true
+        });
+      } catch (error) {
+        throw epochError(String(error?.code || 'ORCHESTRATION_STATE_UNCERTAIN'), 'Canonical ledger census was unavailable for stopped-runtime activation.', {
+          message: String(error?.message || ''),
+          cause_code: String(error?.cause?.code || '') || null
+        });
+      }
+      if (!census || census.safe !== true) {
+        throw epochError(census?.code || 'ORCHESTRATION_STATE_UNCERTAIN', 'Canonical ledger census refused stopped-runtime activation.', census || {});
+      }
+      runtime = {
+        ...runtime,
+        lifecycle: census,
+        canonical_ledger_census: census
+      };
     }
     return {
       safe: true,
@@ -568,28 +922,87 @@ class FullCleanActivation {
         });
       }
     }
-    if (preflight.runtime?.code === 'COMPONENT_STOPPED'
-      && !(options.ledgerSnapshot && options.ledgerSnapshot.immutable === true && options.ledgerSnapshot.query_only === true)) {
-      throw epochError('ORCHESTRATION_STATE_UNCERTAIN', 'Full clean activation refuses to stop/relaunch while the Coding MCP ledger census is unavailable.');
+    if (preflight.runtime?.code === 'COMPONENT_STOPPED') {
+      const census = preflight.runtime?.canonical_ledger_census;
+      const snapshot = census?.snapshot;
+      if (!census || census.safe !== true || !snapshot || snapshot.immutable !== true || snapshot.query_only !== true) {
+        throw epochError('ORCHESTRATION_STATE_UNCERTAIN', 'Full clean activation refuses to stop/relaunch without a verified canonical ledger census.');
+      }
+      // A second independent read closes the race between the first census and
+      // epoch creation.  If the canonical ledger moved, the operation is
+      // refused before any owned process is stopped.
+      if (typeof this.canonicalLedgerCensus !== 'function') {
+        throw epochError('ORCHESTRATION_STATE_UNCERTAIN', 'Canonical ledger census cannot be refreshed before stopped-runtime activation.');
+      }
+      let refreshed;
+      try {
+        refreshed = await this.canonicalLedgerCensus({
+          workspace: this._settings().workspace,
+          sourceCheckpoint: options.sourceCheckpoint || null,
+          allowAcceptancePending: options.allowAcceptancePending === true,
+          holdExclusive: true
+        });
+      } catch (error) {
+        throw epochError(String(error?.code || 'ORCHESTRATION_STATE_UNCERTAIN'), 'Canonical ledger census could not be refreshed before stopped-runtime activation.', {
+          message: String(error?.message || ''),
+          cause_code: String(error?.cause?.code || '') || null
+        });
+      }
+      const sameSnapshot = refreshed?.safe === true
+        && typeof refreshed.release_exclusive_gate === 'function'
+        && refreshed.workspace === census.workspace
+        && refreshed.ledger_path === census.ledger_path
+        && refreshed.snapshot?.sha256 === snapshot.sha256
+        && refreshed.snapshot?.logical_sha256 === snapshot.logical_sha256
+        && refreshed.census_fingerprint === census.census_fingerprint;
+      if (!sameSnapshot) {
+        if (typeof refreshed?.release_exclusive_gate === 'function') {
+          await refreshed.release_exclusive_gate().catch(() => false);
+        }
+        throw epochError('ORCHESTRATION_STATE_UNCERTAIN', 'Canonical ledger changed between stopped-runtime census and activation admission.', {
+          initial_census_fingerprint: census.census_fingerprint || null,
+          refreshed_census_fingerprint: refreshed?.census_fingerprint || null,
+          initial_sha256: snapshot.sha256 || null,
+          refreshed_sha256: refreshed?.snapshot?.sha256 || null
+        });
+      }
+      preflight.runtime.canonical_ledger_census = refreshed;
+      preflight.runtime.lifecycle = refreshed;
     }
     // Capture old process identities before any stop/mutation.  The evidence is
     // bound to this epoch and is later used to prove that every replacement is
     // fresh rather than merely reporting a non-empty persisted id.
-    const componentEvidence = await this._captureIdentityEvidence();
-    const record = this._beginRecord({
-      operation_id,
-      source_checkpoint: options.sourceCheckpoint || null,
-      preflight,
-      component_evidence: componentEvidence,
-      metadata: {
-        reason: options.reason || 'operator_restart',
-        requested_at_unix_ms: this.now(),
-        expires_at_unix_ms: expiresAtUnixMs
-      },
-      activation_epoch_id: options.activationEpochId
-    });
+    const heldCensus = preflight?.runtime?.canonical_ledger_census;
+    const releaseExclusiveGate = typeof heldCensus?.release_exclusive_gate === 'function'
+      ? heldCensus.release_exclusive_gate : null;
+    let record = null;
+    try {
+      const componentEvidence = await this._captureIdentityEvidence();
+      record = this._beginRecord({
+        operation_id,
+        source_checkpoint: options.sourceCheckpoint || null,
+        preflight,
+        component_evidence: componentEvidence,
+        metadata: {
+          reason: options.reason || 'operator_restart',
+          requested_at_unix_ms: this.now(),
+          expires_at_unix_ms: expiresAtUnixMs,
+          ...(text(heldCensus?.census_fingerprint)
+            ? { ledger_census_fingerprint: text(heldCensus.census_fingerprint) }
+            : {})
+        },
+        activation_epoch_id: options.activationEpochId
+      });
+    } catch (error) {
+      if (releaseExclusiveGate) await releaseExclusiveGate().catch(() => false);
+      throw error;
+    }
     const epochId = record.activation_epoch_id;
     try {
+      // The exclusive application ledger gate spans the second census and the
+      // durable epoch create. Releasing it is the commit boundary: supported
+      // writers cannot append between the verified snapshot and epoch binding.
+      if (releaseExclusiveGate) await releaseExclusiveGate();
       this.setActivationEpoch(epochId);
       this.store.update(epochId, { state: 'ADMISSION_CLOSED', reason: 'new-admission-closed' });
       const fence = await this._prepareFence(operation_id, expiresAtUnixMs, options.sourceCheckpoint || null, options.allowAcceptancePending);
@@ -990,4 +1403,12 @@ class FullCleanActivation {
   }
 }
 
-module.exports = { FullCleanActivation, COMPONENTS, DEFAULT_TTL_MS, operationId };
+module.exports = {
+  FullCleanActivation,
+  COMPONENTS,
+  DEFAULT_TTL_MS,
+  operationId,
+  canonicalLedgerCensus,
+  canonicalSnapshot,
+  summarizeCensus
+};

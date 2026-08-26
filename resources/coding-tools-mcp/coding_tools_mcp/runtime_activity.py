@@ -103,6 +103,15 @@ class RuntimeActivityMixin:
     hub_client_activity_state = staticmethod(hub_client_activity_state)
     runtime_activity_snapshot = runtime_activity_snapshot
 
+    def _record_successful_rpc_contact(
+        self,
+        request: dict[str, Any],
+        response: dict[str, Any] | None,
+        identity: dict[str, Any],
+    ) -> None:
+        if request.get("method") == "tools/call" and isinstance(response, dict) and "error" not in response:
+            self._record_client_contact(identity, method="tools/call")
+
     def _record_client_contact(self, identity: dict[str, Any], *, method: str) -> None:
         if str(method or "").strip() != "tools/call":
             return

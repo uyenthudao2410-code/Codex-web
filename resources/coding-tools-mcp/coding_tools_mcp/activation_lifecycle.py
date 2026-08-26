@@ -40,6 +40,13 @@ class ActivationLifecycleMixin:
                 "configured_gate": str(getattr(self, "activation_gate_config", "open") or "open"),
             }
 
+    def activation_preflight_snapshot(self) -> dict[str, Any]:
+        return {
+            **self.activation_preflight(),
+            **self.activation_admission_snapshot(),
+            "workspace": str(self.workspace.root),
+        }
+
     def complete_activation_epoch(self, activation_epoch_id: object) -> dict[str, Any]:
         """Open admission only when the supervisor supplies the exact epoch."""
         supplied = str(activation_epoch_id or "").strip()
@@ -78,6 +85,28 @@ class ActivationLifecycleMixin:
                 )
             self.activation_admission = "closed"
             return {"ok": True, "action": "close_epoch", **self.activation_admission_snapshot()}
+
+    def activation_epoch_control(self, action: str, activation_epoch_id: object) -> dict[str, Any]:
+        if action == "complete_epoch":
+            return self.complete_activation_epoch(activation_epoch_id)
+        if action == "close_epoch":
+            return self.close_activation_epoch(activation_epoch_id)
+        raise ToolFailure(
+            "INVALID_ARGUMENT",
+            "Unsupported activation epoch control action.",
+            category="validation",
+        )
+
+    def _activation_orchestration_result(self, result: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not isinstance(result, dict):
+            return result
+        result["activation"] = self.activation_admission_snapshot()
+        runtime_payload = result.get("runtime")
+        if isinstance(runtime_payload, dict):
+            runtime_payload.update(self.activation_admission_snapshot())
+        else:
+            result["runtime"] = self.activation_admission_snapshot()
+        return result
 
     def _activation_owned_codex_sidecar_rows(self, managed: dict[str, Any]) -> list[dict[str, Any]]:
         bridge_job_id = str(getattr(self._codex_bridge, "_managed_job_id", "") or "")

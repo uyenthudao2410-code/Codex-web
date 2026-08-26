@@ -11,7 +11,7 @@ const { ComponentRevisionTracker } = require('./componentRevision');
 const { RecoveryActivation } = require('./recoveryActivation');
 const { AcceptedCodeActivationController } = require('./recoveryActionStore');
 const { computeActivationClosure } = require('./activationClosure');
-const { FullCleanActivation } = require('./fullCleanActivation');
+const { FullCleanActivation, canonicalLedgerCensus } = require('./fullCleanActivation');
 const { ActivationEpochStore, ACTIVE_STATES } = require('./activationEpoch');
 const { run } = require('./commandRunner');
 
@@ -233,6 +233,7 @@ class RecoveryHost {
       getUiPresence: () => this.activation.uiPresence(),
       getUiRevision: (options) => this.activation.uiRevisionStatus(options),
       getRecoveryPlaneStatus: () => this.lastRecoveryPlaneStatus,
+      canonicalLedgerCensus: (options) => canonicalLedgerCensus({ paths: this.paths, ...options }),
       recoveryHostRunningRevision: this.recoveryHostRunningRevision,
       setActivationEpoch: (epochId) => {
         if (this.ipcServer && typeof this.ipcServer.updateActivationEpoch === 'function') {

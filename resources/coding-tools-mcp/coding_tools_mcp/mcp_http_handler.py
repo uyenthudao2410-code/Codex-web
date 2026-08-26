@@ -236,15 +236,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             if not self.is_authorized():
                 self.send_unauthorized(head_only=head_only)
                 return
-            result = self.runtime.activation_preflight()
-            self.send_json(
-                {
-                    **result,
-                    **self.runtime.activation_admission_snapshot(),
-                    "workspace": str(self.runtime.workspace.root),
-                },
-                head_only=head_only,
-            )
+            self.send_json(self.runtime.activation_preflight_snapshot(), head_only=head_only)
             return
         if normalized == "/__control/orchestration/live":
             if not self.is_authorized():
@@ -661,15 +653,9 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             self.send_json({"error": "Invalid activation control request", "code": "INVALID_ARGUMENT"}, status=400)
             return
         try:
-            if action == "complete_epoch":
-                result = self.server.control_runtime.complete_activation_epoch(  # type: ignore[attr-defined]
-                    payload.get("activation_epoch_id")
-                )
-                self.send_json(result)
-                return
-            if action == "close_epoch":
-                result = self.server.control_runtime.close_activation_epoch(  # type: ignore[attr-defined]
-                    payload.get("activation_epoch_id")
+            if action in {"complete_epoch", "close_epoch"}:
+                result = self.server.control_runtime.activation_epoch_control(  # type: ignore[attr-defined]
+                    action, payload.get("activation_epoch_id")
                 )
                 self.send_json(result)
                 return
@@ -1119,18 +1105,9 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 else:
                     raise ValueError("controller usage requires a scoped active orchestration run and wave")
             response = dispatch_rpc(runtime, dispatch_request, stateless_2026=stateless_2026)
-            if (
-                dispatch_request.get("method") == "tools/call"
-                and isinstance(response, dict)
-                and "error" not in response
-            ):
-                # A successful public tools/call proves that ChatWeb's cached
-                # schema can still speak to this exact process/contract. It is
-                # deliberately recorded separately from tools/list discovery.
-                self.server.control_runtime._record_client_contact(  # type: ignore[attr-defined]
-                    identity,
-                    method="tools/call",
-                )
+            self.server.control_runtime._record_successful_rpc_contact(  # type: ignore[attr-defined]
+                dispatch_request, response, identity
+            )
             if controller_usage is not None and deferred_controller_usage:
                 usage_context = active_controller_usage_context(runtime)
                 if usage_context is not None:

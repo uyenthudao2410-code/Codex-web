@@ -196,10 +196,24 @@ durable epoch ở `FAILED`/closed, đồng thời process thay thế chưa verif
 bị dừng fail-closed. Watchdog/auto-recovery vẫn dùng `soft_recovery` cho lỗi cục
 bộ, nhưng revision-continuity guard chặn soft path nếu source trên disk đã đổi.
 
+Nếu MCP đã dừng trước khi operator retry, Recovery Host không nhận một
+`ledgerSnapshot` do caller tự cung cấp. Host chạy helper
+`activation_ledger_census.py` độc lập với MCP; helper tạo một SQLite
+Backup-API copy immutable/query-only, kiểm tra integrity/FK, active
+background/managed/lane resources, unresolved acceptance, projection drift,
+và runtime-state PID residue. Census được chụp lại lần hai ngay trước khi
+epoch mới được tạo, đồng thời helper giữ application ledger gate ở chế độ
+exclusive cho tới khi durable epoch-store create hoàn tất; khác `sha256`, `logical_sha256`, fingerprint, workspace
+hoặc ledger path sẽ bị từ chối `ORCHESTRATION_STATE_UNCERTAIN` trước khi dừng
+bất kỳ process nào. Nếu census không chứng minh quiescence thì epoch FAILED cũ
+vẫn giữ nguyên và operator phải xử lý đúng lifecycle/acceptance authority;
+không có đường tắt bằng cách xóa hoặc sửa ledger.
+
 Electron UI tự relaunch bằng launcher argv cố định sau khi host trả lệnh qua UI
-registration; registration revision mới complete action. Recovery Host update
-spawn host mới bằng argv nội bộ cố định, host cũ nhả IPC/gateway/owner lock nhưng
-giữ Coding MCP/Tunnel, host mới acquire + verify revision rồi complete action.
+registration; registration revision mới complete action. Full-clean Recovery
+Host update dừng Coding MCP/Tunnel và Recovery Plane trước khi host cũ nhả
+IPC/gateway/owner lock; host mới được spawn bằng argv nội bộ cố định, acquire
+ownership, load lại durable state và verify cùng epoch rồi mới complete action.
 Nếu host mới không healthy trong thời hạn, host cũ reacquire ownership và ghi
 failure thay vì để control plane mất chủ.
 

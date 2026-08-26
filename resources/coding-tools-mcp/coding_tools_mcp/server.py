@@ -2621,18 +2621,9 @@ class Runtime(
             pass
 
     def _orchestration_result(self, ctx: RunContext | None, *, write_reports: bool = True) -> dict[str, Any] | None:
-        result = build_orchestration_runtime_result(self, ctx, write_reports=write_reports)
-        if isinstance(result, dict):
-            # Keep activation admission visible beside every orchestration
-            # result; source/run proof must never be mistaken for live runtime
-            # admission proof.
-            result["activation"] = self.activation_admission_snapshot()
-            runtime_payload = result.get("runtime")
-            if isinstance(runtime_payload, dict):
-                runtime_payload.update(self.activation_admission_snapshot())
-            else:
-                result["runtime"] = self.activation_admission_snapshot()
-        return result
+        return self._activation_orchestration_result(
+            build_orchestration_runtime_result(self, ctx, write_reports=write_reports)
+        )
 
     def codex_bridge(self, args: dict[str, Any]) -> dict[str, Any]:
         try:

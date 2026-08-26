@@ -126,6 +126,15 @@ verified `READY` epoch with `admission_open=true` may report `fullyReady=true`.
 The ledger, task history, acceptance state, settings, secrets handles,
 authorized roots, and device identity are never deleted by this transaction.
 
+When a failed activation left Coding MCP stopped, an explicit retry is admitted
+only after Recovery Host obtains an independent immutable/query-only
+Backup-API ledger census, validates quiescence and unresolved-acceptance gates,
+and confirms the same census fingerprint on a second read immediately before
+epoch creation while holding the application ledger gate exclusively through
+the durable epoch-store create. A ledger hash, workspace, source-checkpoint, or runtime-state
+identity change fails closed before any process stop; the durable ledger and
+the failed epoch remain untouched.
+
 Low-level/legacy tools may still exist in compatibility or non-smart modes, but new agent workflows should prefer the compact smart surface.
 
 ## 4. Authority, EOCL, routing, and handoff
