@@ -155,6 +155,38 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertTrue(health["connector_tool_discovery"]["current_contract_observed"])
 
+    def test_tools_call_records_current_contact_without_fabricating_discovery(self) -> None:
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        self.assertFalse(self.runtime.connector_client_contact()["observed"])
+
+        status, _, body = self.tool_call(
+            "workspace_context",
+            {"detail": "compact", "max_entries": 1},
+            request_id=3,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(body["result"]["isError"])
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+
+        contact = self.runtime.connector_client_contact()
+        self.assertTrue(contact["current_contract_contact"])
+        self.assertEqual(contact["contract_sha256"], self.runtime.tool_contract["sha256"])
+        self.assertEqual(contact["method"], "tools/call")
+        self.assertEqual(contact["client_id"], "chatweb")
+        self.assertEqual(contact["process_instance_id"], self.runtime.process_instance_id)
+        self.assertEqual(contact["server_instance_id"], self.runtime.server_instance_id)
+
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("GET", "/__control/health")
+            response = connection.getresponse()
+            health = json.loads(response.read().decode("utf-8"))
+        finally:
+            connection.close()
+        self.assertEqual(response.status, 200)
+        self.assertFalse(health["connector_tool_discovery"]["observed"])
+        self.assertTrue(health["connector_client_contact"]["current_contract_contact"])
+
     def test_stateless_task_contexts_isolate_global_and_parallel_runs(self) -> None:
         global_state = self.runtime.task_state.ensure_started("global-sentinel")
         self.assertEqual(global_state["objective"], "global-sentinel")
@@ -308,6 +340,43 @@ class StatelessHttp2026Tests(unittest.TestCase):
         result = response["result"]
         minted = result["_meta"][TASK_CONTEXT_META_KEY]
         self.assertEqual(result["structuredContent"]["task_context_id"], minted)
+
+    def test_task_control_stop_recovers_exact_run_context_when_connector_omits_handle(self) -> None:
+        context_id = "stop-continuity-context"
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "stateless-stop-continuity",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=125,
+        )
+        self.assertEqual(status, 200)
+        prepared_result = prepared["result"]["structuredContent"]
+        run_id = prepared_result["orchestration"]["run_id"]
+        self.assertEqual(self.runtime.orchestration_ledger.get_run(run_id)["status"], "active")
+
+        status, _, stopped = self.tool_call(
+            "task_control",
+            {"action": "stop", "run_id": run_id, "reason": "superseded exact run"},
+            request_id=126,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(stopped["result"]["isError"], stopped)
+        self.assertEqual(stopped["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
+        stopped_result = stopped["result"]["structuredContent"]
+        self.assertTrue(stopped_result["stopped"])
+        self.assertEqual(stopped_result["target_run_id"], run_id)
+        self.assertFalse(stopped_result["detached"])
+        self.assertEqual(stopped_result["orchestration"]["run_id"], run_id)
+        self.assertEqual(stopped_result["orchestration"]["orchestration_state"], "ABORTED")
+        self.assertEqual(self.runtime.orchestration_ledger.get_run(run_id)["status"], "aborted")
 
     def test_controller_usage_binds_to_scoped_run_and_deduplicates_before_dispatch(self) -> None:
         context_id = "usage-context"

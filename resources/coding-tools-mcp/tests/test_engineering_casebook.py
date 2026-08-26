@@ -188,6 +188,16 @@ class ExecutableEngineeringCasebookTests(unittest.TestCase):
                     })
                 self.assertEqual(wrong_wave.exception.code, "ORCHESTRATION_WAVE_MISMATCH")
 
+                runtime.orchestration_ledger.record_proof(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    stage_id="casebook-acceptance",
+                    stage_version="1",
+                    input_fingerprint="casebook-acceptance-proof",
+                    status="passed",
+                    duration_ms=1,
+                )
+
                 accepted = runtime.task_control({
                     "action": "accept",
                     "run_id": run_id,

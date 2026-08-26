@@ -1,0 +1,108 @@
+[
+  {
+    "version": 2,
+    "task_id": "aa91aeeb7dda487aa47f139bd25bbeef",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T08:26:30.913Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-26T08:25:55.889Z",
+    "updated_at": "2026-08-26T08:26:30.913Z",
+    "events": [
+      {
+        "time": "2026-08-26T08:25:55.889Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T08:25:56.488Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "8BLcCLPdCt8ffnxmf55Sy_Cd"
+        }
+      },
+      {
+        "time": "2026-08-26T08:25:58.887Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:26:09.722Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"acknowledgeConnectorContract|CHANGED_COMPATIBLE_NEEDS_ACK|connector_state|connector_ack_pending|connectorCurrentSha|connectorAck\" scripts electron resources package.json",
+          "session_id": "E7hqYZh4LAtR5EldivmSyXXb"
+        }
+      },
+      {
+        "time": "2026-08-26T08:26:10.497Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"acknowledgeConnectorContract|CHANGED_COMPATIBLE_NEEDS_ACK|connector_state|connector_ack_pending|connectorCurrentSha|connectorAck\" scripts electron resources package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:26:20.485Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"RecoveryIpcClient|acknowledgeConnectorContract\\(\\)|runtime\\.acknowledge_connector_contract\" scripts tests electron resources package.json",
+          "session_id": "IKnAS3uJBHfRE18Nm0VO6EkD"
+        }
+      },
+      {
+        "time": "2026-08-26T08:26:21.185Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"RecoveryIpcClient|acknowledgeConnectorContract\\(\\)|runtime\\.acknowledge_connector_contract\" scripts tests electron resources package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:26:30.913Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"new RecoveryIpcClient|function .*status|async function.*status|loadRecoveryDescriptor\" scripts/dev-ui-lifecycle.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:26:30.913Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T08:26:40.634Z",
+    "archive_reason": "finished"
+  }
+]

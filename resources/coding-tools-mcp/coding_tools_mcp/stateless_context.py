@@ -10,7 +10,7 @@ from typing import Any
 STATELESS_TASK_CONTEXT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 STATELESS_TASK_CONTEXT_META_KEY = "io.coding-tools/taskContextId"
 TASK_CONTROL_CONTINUATION_ACTIONS = frozenset({
-    "get", "history", "audit", "events", "messages", "ack", "accept", "reject",
+    "get", "history", "audit", "events", "messages", "ack", "accept", "reject", "stop",
 })
 
 

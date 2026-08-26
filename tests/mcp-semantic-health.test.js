@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const {
   probeMcpSemanticHealth,
+  semanticFailurePolicy,
   SemanticMcpHealthWatchdog
 } = require('../electron/services/mcpSemanticHealth');
 
@@ -124,7 +125,7 @@ test('watchdog restarts through the existing orchestrator only after repeated se
   assert.equal(watchdog.failures, 0);
 });
 
-test('watchdog immediately recovers a deterministic configured-workspace mismatch', async () => {
+test('watchdog fail-closes a deterministic configured-workspace mismatch without restarting', async () => {
   const calls = { restart: 0 };
   const orchestrator = {
     busy: false,
@@ -153,10 +154,25 @@ test('watchdog immediately recovers a deterministic configured-workspace mismatc
     restartCooldownMs: 1000
   });
   const result = await watchdog.checkOnce();
-  assert.equal(result.recovered, true);
+  assert.equal(result.recovered, undefined);
   assert.equal(result.failures, 1);
-  assert.equal(calls.restart, 1);
-  assert.equal(watchdog.failures, 0);
+  assert.equal(result.recoveryBlocked, true);
+  assert.equal(result.deterministicFailure, true);
+  assert.equal(calls.restart, 0);
+  assert.equal(watchdog.failures, 1);
+  const second = await watchdog.checkOnce();
+  assert.equal(second.recoveryBlocked, true);
+  assert.equal(calls.restart, 0);
+});
+
+test('semantic recovery policy distinguishes deterministic protocol failures from transient failures', () => {
+  assert.deepEqual(semanticFailurePolicy({ reason: 'workspace_mismatch' }), { deterministic: true, restartable: false });
+  assert.deepEqual(semanticFailurePolicy({ reason: 'invalid_json' }), { deterministic: true, restartable: false });
+  assert.deepEqual(semanticFailurePolicy({ reason: 'http_status', statusCode: 401 }), { deterministic: true, restartable: false });
+  assert.deepEqual(semanticFailurePolicy({ reason: 'jsonrpc_error', errorCode: -32601 }), { deterministic: true, restartable: false });
+  assert.deepEqual(semanticFailurePolicy({ reason: 'jsonrpc_error', errorCode: -32603 }), { deterministic: false, restartable: true });
+  assert.deepEqual(semanticFailurePolicy({ reason: 'timeout' }), { deterministic: false, restartable: true });
+  assert.deepEqual(semanticFailurePolicy({ reason: 'transport_error' }), { deterministic: false, restartable: true });
 });
 
 test('watchdog skips semantic probing until a workspace is configured', async () => {

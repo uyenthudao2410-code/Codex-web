@@ -1,0 +1,75 @@
+{
+  "version": 2,
+  "task_id": "b7b6c034ce334ee89d1b029d871c0662",
+  "orchestration": {
+    "run_id": "b48b6520b8fe4c38b16ce3a19c094f8e",
+    "wave_id": "7496b7e093884a668276271fa2b84a8d",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "2a64db4d88399387c6bf6c1b86b052877412c814a9aa1cc8088dce121f8a2576",
+    "contract_fp": ""
+  },
+  "objective": "Fix MCP-2026 exact-run continuation so task_control(action=stop, run_id=...) recovers the durable stateless task context instead of minting a new context. Add focused regression proving omitted task_context handle still binds stop to the original context and terminalizes only that exact run.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "solution shadow is limited to feature and bugfix workflows",
+  "next_step": "",
+  "created_at": "2026-08-26T07:24:45.742Z",
+  "updated_at": "2026-08-26T07:27:32.531Z",
+  "events": [
+    {
+      "time": "2026-08-26T07:24:45.742Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fix MCP-2026 exact-run continuation so task_control(action=stop, run_id=...) recovers the durable stateless task context instead of minting a new context. Add focused regression proving omitted task_context handle still binds stop to the original context and terminalizes only that exact run."
+      }
+    },
+    {
+      "time": "2026-08-26T07:27:14.994Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T07:27:15.481Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_INVALID"
+      }
+    },
+    {
+      "time": "2026-08-26T07:27:32.498Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T07:27:32.531Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_INVALID"
+      }
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+[
+  {
+    "version": 2,
+    "task_id": "22d5024e14674210a89fd02fdcb4e7dc",
+    "orchestration": {
+      "run_id": "6016075e46134fe6b6fafbeb330b2492",
+      "wave_id": "766cc1046d144d95b36a4fab2a61d18d",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "6ac959ad44c9ddd559bae9d7cab6a3d78966b18af26157db4a0eb7e7148a30d2",
+      "contract_fp": ""
+    },
+    "objective": "Resolve the current Codex-web runtime/control-plane issue in one coherent batch: (1) replace null-only MCP health with typed health outcomes so workspace/device/auth/protocol mismatches fail closed without destructive restart while genuine hung/timeout/transport failures may recover; align the semantic health watchdog to the same policy; (2) make user-requested update restart a full clean activation transaction with a new activation_epoch_id across Recovery Host/Coding MCP/Tunnel/Electron UI, preserving durable data while rejecting mixed old/new runtime components and reopening admission only after verification; (3) eliminate UI freeze/lag while execution is busy by locating expensive polling/snapshot/Git/process checks on the renderer/control path and introducing bounded cached/coalesced/adaptive refresh that does not contend with active work; (4) diagnose and fix the task_control stop/receipt path that can return raw ExceptionGroup after apparent state transition, ensuring durable idempotent receipt/read-after-write semantics. Preserve all unrelated dirty work and existing connector compatibility changes.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Patch context matched 31 locations in renderer/panel.js; add more context.",
+    "next_step": "",
+    "created_at": "2026-08-26T09:28:27.882Z",
+    "updated_at": "2026-08-26T09:42:20.495Z",
+    "events": [
+      {
+        "time": "2026-08-26T09:28:27.882Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Resolve the current Codex-web runtime/control-plane issue in one coherent batch: (1) replace null-only MCP health with typed health outcomes so workspace/device/auth/protocol mismatches fail closed without destructive restart while genuine hung/timeout/transport failures may recover; align the semantic health watchdog to the same policy; (2) make user-requested update restart a full clean activation transaction with a new activation_epoch_id across Recovery Host/Coding MCP/Tunnel/Electron UI, preserving durable data while rejecting mixed old/new runtime components and reopening admission only after verification; (3) eliminate UI freeze/lag while execution is busy by locating expensive polling/snapshot/Git/process checks on the renderer/control path and introducing bounded cached/coalesced/adaptive refresh that does not contend with active work; (4) diagnose and fix the task_control stop/receipt path that can return raw ExceptionGroup after apparent state transition, ensuring durable idempotent receipt/read-after-write semantics. Preserve all unrelated dirty work and existing connector compatibility changes."
+        }
+      },
+      {
+        "time": "2026-08-26T09:28:31.769Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:28:42.172Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:28:43.489Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:31:32.305Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:32:40.268Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:34:54.227Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:35:13.390Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:37:43.380Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:38:20.826Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:39:46.420Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:39:59.640Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:40:59.959Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:41:46.688Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-26T09:42:20.495Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T09:42:43.722Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "08ba392ef57240b7a7ee38bb7025c72e",
+    "orchestration": {
+      "run_id": "b4985ad91d654b88b4d52e163b9abb31",
+      "wave_id": "62fbed4ba0bc4e67b937dc62ad679892",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "6ac959ad44c9ddd559bae9d7cab6a3d78966b18af26157db4a0eb7e7148a30d2",
+      "contract_fp": ""
+    },
+    "objective": "Continue the same bugfix wave. Apply only the deterministic semantic-health policy and its focused regression tests; no other files in this step.",
+    "status": "active",
+    "steps": [],
+    "current_step": "Orchestration preflight",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+    "next_step": "",
+    "created_at": "2026-08-26T09:42:43.724Z",
+    "updated_at": "2026-08-26T09:42:48.989Z",
+    "events": [
+      {
+        "time": "2026-08-26T09:42:43.724Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T09:42:46.940Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:42:48.989Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T09:43:13.202Z",
+    "archive_reason": "superseded"
+  }
+]

@@ -1,0 +1,135 @@
+{
+  "version": 2,
+  "task_id": "1c32394d7505446ba0fd03b222dd1466",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": {
+    "command": "node",
+    "kind": "command",
+    "session_id": "ehnctWZaJfgGAS2MxjPI24_p",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-26T08:38:47.739Z"
+  },
+  "last_command_result": {
+    "command_id": "CXJ-gTUu_hIv4iZt8WdPxdN1",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 8715,
+    "finished_at": "2026-08-26T08:38:15.010Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T08:36:27.892Z",
+  "updated_at": "2026-08-26T08:38:47.739Z",
+  "events": [
+    {
+      "time": "2026-08-26T08:36:27.892Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T08:36:33.645Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo permission-check",
+        "session_id": "OxTOIogZWeh3hiR3dHn6dchB"
+      }
+    },
+    {
+      "time": "2026-08-26T08:36:35.142Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo permission-check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T08:36:57.657Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo no-inline-grant-yet",
+        "session_id": "X14ayDmpqxfpuVcQMDUN_zcS"
+      }
+    },
+    {
+      "time": "2026-08-26T08:36:59.160Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo no-inline-grant-yet",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T08:37:22.411Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo still-safe",
+        "session_id": "bC4VlCP1_b9oni3uAGYHOQc1"
+      }
+    },
+    {
+      "time": "2026-08-26T08:37:24.210Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo still-safe",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T08:37:44.686Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo stop-probing",
+        "session_id": "Y-jXZS4s1TAU49fAS4U6Uv-L"
+      }
+    },
+    {
+      "time": "2026-08-26T08:37:46.477Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo stop-probing",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T08:38:13.086Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo current-context-ok",
+        "session_id": "CXJ-gTUu_hIv4iZt8WdPxdN1"
+      }
+    },
+    {
+      "time": "2026-08-26T08:38:15.010Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo current-context-ok",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T08:38:47.739Z",
+      "event": "command_started",
+      "details": {
+        "command": "node",
+        "session_id": "ehnctWZaJfgGAS2MxjPI24_p"
+      }
+    }
+  ]
+}

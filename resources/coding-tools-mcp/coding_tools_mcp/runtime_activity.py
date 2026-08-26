@@ -102,3 +102,50 @@ def runtime_activity_snapshot(
 class RuntimeActivityMixin:
     hub_client_activity_state = staticmethod(hub_client_activity_state)
     runtime_activity_snapshot = runtime_activity_snapshot
+
+    def _record_client_contact(self, identity: dict[str, Any], *, method: str) -> None:
+        if str(method or "").strip() != "tools/call":
+            return
+        client_id = str(identity.get("client_id") or "").strip()
+        client_type = str(identity.get("client_type") or "client").strip()
+        if not client_id or client_type != "chatweb":
+            return
+        capabilities = identity.get("capabilities") if isinstance(identity.get("capabilities"), dict) else {}
+        receipt = {
+            "client_id": client_id,
+            "client_type": client_type,
+            "client_name": str(capabilities.get("client_name") or "")[:100],
+            "client_version": str(capabilities.get("client_version") or "")[:50],
+            "method": "tools/call",
+            "contract_sha256": str(self.tool_contract.get("sha256") or ""),
+            "process_instance_id": self.process_instance_id,
+            "server_instance_id": self.server_instance_id,
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+        }
+        with self.tool_contact_lock:
+            self.tool_contact_receipts[self._hub_client_record_id(identity)] = receipt
+
+    def connector_client_contact(self) -> dict[str, Any]:
+        with self.tool_contact_lock:
+            candidates = [dict(receipt) for receipt in self.tool_contact_receipts.values()]
+        latest = max(candidates, key=lambda item: str(item.get("observed_at") or ""), default=None)
+        current_sha = str(self.tool_contract.get("sha256") or "")
+        current = bool(
+            latest
+            and str(latest.get("client_type") or "") == "chatweb"
+            and str(latest.get("method") or "") == "tools/call"
+            and str(latest.get("contract_sha256") or "") == current_sha
+            and str(latest.get("process_instance_id") or "") == self.process_instance_id
+            and str(latest.get("server_instance_id") or "") == self.server_instance_id
+        )
+        return {
+            "observed": latest is not None,
+            "current_contract_contact": current,
+            "method": str((latest or {}).get("method") or "") or None,
+            "contract_sha256": str((latest or {}).get("contract_sha256") or "") or None,
+            "observed_at": str((latest or {}).get("observed_at") or "") or None,
+            "client_id": str((latest or {}).get("client_id") or "") or None,
+            "client_name": str((latest or {}).get("client_name") or "") or None,
+            "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
+            "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
+        }

@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "0ca7f60e56544df9aadb9fb89f7df48f",
     "wave_id": "e3f93399444a47ed9fec9042b83bfce6",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "ABORTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Strengthen the stateless exact-run continuation regression so it proves a run whose controller has been explicitly transferred to another active principal is not auto-recovered into the old ChatWeb application context. This is a test-only hardening change; do not change production behavior.",
-  "status": "waiting",
+  "status": "stopped",
   "steps": [
     {
       "id": "apply",
@@ -37,7 +37,7 @@
       "updated_at": "2026-08-25T15:03:11.291Z"
     }
   ],
-  "current_step": "Awaiting acceptance",
+  "current_step": "Aborted - operator report required",
   "current_command": {
     "command": "cd resources/coding-tools-mcp && python -m pytest -q tests/test_stateless_http_2026.py",
     "kind": "test",
@@ -62,19 +62,24 @@
       "NEXT CRITICAL ACTION"
     ],
     "what_changed": {
-      "files": [],
-      "source": "no_durable_file_receipts",
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
-      "run_status": "active",
-      "wave_status": "active",
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
       "task_status": "waiting",
       "integrity": {
         "ok": true,
-        "checked": 23,
-        "head_hash": "2ab77d4c7fda9564e1cfbe607269f385fc80f2bea10b021e3f8c6f0edaefff39"
+        "checked": 25,
+        "head_hash": "b76dffb085cf733a1593e774264c461dc372476a72640c3a06a5f2647b083419"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0ca7f60e56544df9aadb9fb89f7df48f\\run-summary.md",
@@ -113,12 +118,12 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
     "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
   },
-  "completion_report_id": "8fcba5360b685e283b67ad455ede23477e30d746026c515b9bc3068ef1b592a1",
+  "completion_report_id": "7d7758589a95129f75087896d6d591e34c2829d34b236f2365d3b9d4cb13fb0d",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -11959,9 +11964,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-08-25T15:02:42.098Z",
-  "updated_at": "2026-08-26T03:12:04.119Z",
+  "updated_at": "2026-08-26T08:22:22.760Z",
   "events": [
     {
       "time": "2026-08-25T15:02:42.098Z",
@@ -12097,6 +12102,28 @@
     },
     {
       "time": "2026-08-26T03:12:04.119Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T08:21:40.741Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "7d7758589a95129f75087896d6d591e34c2829d34b236f2365d3b9d4cb13fb0d"
+      }
+    },
+    {
+      "time": "2026-08-26T08:22:22.760Z",
       "event": "orchestration_projection_reconciled",
       "details": {
         "fields": [

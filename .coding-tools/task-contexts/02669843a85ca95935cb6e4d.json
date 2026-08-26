@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "task_id": "0ca8f50f9f044fa3a948fe785786cc30",
+  "orchestration": {},
+  "objective": "Complete an end-to-end workspace workflow",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T06:23:54.555Z",
+  "updated_at": "2026-08-26T06:23:55.408Z",
+  "events": [
+    {
+      "time": "2026-08-26T06:23:54.555Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete an end-to-end workspace workflow"
+      }
+    },
+    {
+      "time": "2026-08-26T06:23:55.408Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

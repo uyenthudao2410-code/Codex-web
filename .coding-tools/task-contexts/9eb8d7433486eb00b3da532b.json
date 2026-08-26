@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "535b3aaaa77247f78abfe58b01a8f5e1",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "d7FXoUARRBYZkA6zfHjHTBDl",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2121,
+    "finished_at": "2026-08-26T07:23:55.234Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T07:23:52.283Z",
+  "updated_at": "2026-08-26T07:23:55.234Z",
+  "events": [
+    {
+      "time": "2026-08-26T07:23:52.283Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T07:23:54.392Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 25 \"recover.*run\\|task_context_id.*run\\|continuation\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "session_id": "d7FXoUARRBYZkA6zfHjHTBDl"
+      }
+    },
+    {
+      "time": "2026-08-26T07:23:55.234Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 25 \"recover.*run\\|task_context_id.*run\\|continuation\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "status": "passed"
+      }
+    }
+  ]
+}

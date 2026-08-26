@@ -1,0 +1,298 @@
+[
+  {
+    "version": 2,
+    "task_id": "679f4c7b2d624f599bc2180643e27f9a",
+    "orchestration": {
+      "run_id": "3534ee6f368141ff8137e5d215961356",
+      "wave_id": "4b9fdabaeec942f89c42926a375c6c12",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "0557afa6c3aa3e02c2664d312b860973f28d3fc5",
+      "worktree_fp": "256e776b0ee0c2f17340ee64a568c78bf93e9ad0a2e65bd37cb6185812e5803d",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "FrV2ovFscF-b463T2ZLjSdQH",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 6777,
+      "finished_at": "2026-08-26T04:28:40.057Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Patch context matched 3 locations in resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py; add more context.",
+    "next_step": "",
+    "created_at": "2026-08-26T04:16:48.973Z",
+    "updated_at": "2026-08-26T04:31:37.719Z",
+    "events": [
+      {
+        "time": "2026-08-26T04:16:48.973Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T04:16:49.286Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests && rg -l \"acceptance_files|ACCEPTANCE_FILE_ATTESTATION_REQUIRED|controller_explicit\" resources/coding-tools-mcp/tests",
+          "session_id": "R9ECRMMoCEIQukI8yONpp-nN"
+        }
+      },
+      {
+        "time": "2026-08-26T04:16:49.570Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests && rg -l \"acceptance_files|ACCEPTANCE_FILE_ATTESTATION_REQUIRED|controller_explicit\" resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T04:17:07.037Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:17:08.902Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:17:08.912Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T04:17:55.762Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "session_id": "VsHEuCk82ttTSUnR7RA0-XN2"
+        }
+      },
+      {
+        "time": "2026-08-26T04:17:56.454Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T04:18:58.284Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-26T04:19:16.053Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "session_id": "df_wVaH2avqk9LKFm61Ui5F6"
+        }
+      },
+      {
+        "time": "2026-08-26T04:19:17.102Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T04:19:48.154Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-26T04:20:04.478Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"__main__\" resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "session_id": "WenqZdwU9bUc5WXYH2aLjLx5"
+        }
+      },
+      {
+        "time": "2026-08-26T04:20:05.540Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"__main__\" resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T04:28:38.363Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --oneline --decorate -6 && git diff --name-status 0557afa6c3aa3e02c2664d312b860973f28d3fc5..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py && git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_accept",
+          "session_id": "FrV2ovFscF-b463T2ZLjSdQH"
+        }
+      },
+      {
+        "time": "2026-08-26T04:28:40.057Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline --decorate -6 && git diff --name-status 0557afa6c3aa3e02c2664d312b860973f28d3fc5..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py && git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_accept",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T04:29:58.472Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T04:31:37.719Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T04:32:28.539Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "a9cbea22dc654b0fb7ce0119262f2015",
+    "orchestration": {
+      "run_id": "7ca47bf4247146fbae310ef4d92c311f",
+      "wave_id": "4a5d5e767d8243d38afccde2d03df300",
+      "orchestration_state": "READY",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "c018c4b51dce7536ed808871c65aa9d70ec7c7cf3949a6f4662c707aa1aec7be",
+      "contract_fp": ""
+    },
+    "objective": "Implement the smallest fail-closed acceptance fix: allow cached clients to transport acceptance_files only as payload.acceptance_files for action=accept, reject ambiguous/extra payload fields, and allow explicitly SHA-attested pre-existing dirty files only when they are inside the write lease and durable patch_surface_observed. Preserve ordinary acceptance exclusion of pre-existing dirty files and all protected/reparse/path guards. Update focused tests only.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "HW0EoA-zqt0xkyhhKvfsrDw3",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 554,
+      "finished_at": "2026-08-26T04:36:40.510Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T04:32:28.540Z",
+    "updated_at": "2026-08-26T04:36:40.510Z",
+    "events": [
+      {
+        "time": "2026-08-26T04:32:28.540Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T04:32:41.505Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:32:53.243Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T04:34:23.473Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:36:33.702Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "orchestration"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T04:36:40.176Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "session_id": "HW0EoA-zqt0xkyhhKvfsrDw3"
+        }
+      },
+      {
+        "time": "2026-08-26T04:36:40.510Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T04:37:17.405Z",
+    "archive_reason": "superseded"
+  }
+]

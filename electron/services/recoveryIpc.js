@@ -10,6 +10,7 @@ const MAX_REQUEST_BYTES = 64 * 1024;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MUTATION_TIMEOUT_MS = 90_000;
+const ACTIVATION_EPOCH_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 
 const RPC_ACTIONS = Object.freeze([
   'recovery.ping',
@@ -24,6 +25,8 @@ const RPC_ACTIONS = Object.freeze([
   'runtime.start',
   'runtime.stop',
   'runtime.restart',
+  'runtime.activation_epoch_status',
+  'runtime.complete_activation_epoch',
   'runtime.switch_workspace',
   'runtime.update_authorized_roots',
   'runtime.acknowledge_connector_contract',
@@ -40,6 +43,7 @@ const MUTATING_ACTIONS = new Set([
   'runtime.start',
   'runtime.stop',
   'runtime.restart',
+  'runtime.complete_activation_epoch',
   'runtime.switch_workspace',
   'runtime.update_authorized_roots',
   'runtime.acknowledge_connector_contract',
@@ -72,7 +76,7 @@ function isProcessAlive(pid) {
 }
 
 class RecoveryIpcServer {
-  constructor({ paths, handlers, log, instanceId, startedAt, deviceIdentity = null, deviceInstanceId = '' }) {
+  constructor({ paths, handlers, log, instanceId, startedAt, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '' }) {
     this.paths = paths;
     this.handlers = handlers;
     this.log = log;
@@ -81,6 +85,7 @@ class RecoveryIpcServer {
     this.device = (deviceIdentity || deviceInstanceId)
       ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId)
       : null;
+    this.activationEpochId = String(activationEpochId || '').trim() || null;
     this.server = null;
     this.port = 0;
     this.token = '';
@@ -107,8 +112,28 @@ class RecoveryIpcServer {
         device_instance_id: this.device.deviceInstanceId,
         device_display_name: this.device.displayName
       } : {}),
-      started_at: this.startedAt
+      started_at: this.startedAt,
+      ...(this.activationEpochId ? { activation_epoch_id: this.activationEpochId } : {})
     };
+  }
+
+  updateActivationEpoch(activationEpochId = '') {
+    const id = String(activationEpochId || '').trim();
+    if (id && !ACTIVATION_EPOCH_ID_PATTERN.test(id)) {
+      throw Object.assign(new Error('Recovery Host activation epoch identity is invalid.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
+    }
+    if (!this.server) return null;
+    const file = this.paths.recoveryHostDescriptorFile();
+    const current = readJson(file, null);
+    if (!current || current.instance_id !== this.instanceId || Number(current.owner_pid) !== Number(process.pid)) {
+      throw Object.assign(new Error('Recovery Host descriptor owner changed before epoch update.'), { code: 'RECOVERY_DESCRIPTOR_CHANGED' });
+    }
+    this.activationEpochId = id || null;
+    const next = { ...current, ...(this.activationEpochId ? { activation_epoch_id: this.activationEpochId } : {}) };
+    if (!this.activationEpochId) delete next.activation_epoch_id;
+    writeJsonAtomic(file, next);
+    try { fs.chmodSync(file, 0o600); } catch { /* best effort on Windows */ }
+    return next;
   }
 
   async start() {
@@ -241,6 +266,11 @@ function loadRecoveryDescriptor(paths) {
     && (!INSTALLATION_ID_PATTERN.test(installationId) || !['development', 'packaged'].includes(runtimeMode))) {
     throw Object.assign(new Error('Recovery Host installation identity is invalid.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
   }
+  if (descriptor?.activation_epoch_id !== undefined
+    && descriptor.activation_epoch_id !== null
+    && !ACTIVATION_EPOCH_ID_PATTERN.test(String(descriptor.activation_epoch_id))) {
+    throw Object.assign(new Error('Recovery Host activation epoch identity is invalid.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
+  }
   if (!Number.isInteger(ownerPid) || !isProcessAlive(ownerPid)) {
     throw Object.assign(new Error('Recovery Host descriptor owner is not alive.'), { code: 'RECOVERY_DESCRIPTOR_STALE' });
   }
@@ -346,6 +376,8 @@ class RecoveryIpcClient {
   start(options = {}, callOptions = {}) { return this.call('runtime.start', [options], callOptions); }
   stop(options = {}, callOptions = {}) { return this.call('runtime.stop', [options], callOptions); }
   restart(options = {}, callOptions = {}) { return this.call('runtime.restart', [options], callOptions); }
+  activationEpochStatus() { return this.call('runtime.activation_epoch_status'); }
+  completeActivationEpoch(epochId) { return this.call('runtime.complete_activation_epoch', [epochId]); }
   switchWorkspace(workspace) { return this.call('runtime.switch_workspace', [workspace]); }
   updateAuthorizedRoots(roots) { return this.call('runtime.update_authorized_roots', [roots]); }
   acknowledgeConnectorContract() { return this.call('runtime.acknowledge_connector_contract'); }

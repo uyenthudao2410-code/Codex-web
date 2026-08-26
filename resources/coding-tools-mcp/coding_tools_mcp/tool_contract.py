@@ -10,10 +10,33 @@ from .code_mode import (
 )
 
 
-# Public contract metadata. Connector freshness is intentionally keyed to the
-# exact tools/list SHA; schema/profile metadata must never bypass rediscovery.
+# Public contract metadata. The exact tools/list SHA remains the audit identity.
+# Breaking changes still require a real current tools/list/server/discover
+# receipt. A reviewed cached-client rollover may only use the exact compatibility
+# relation below together with separate current-process ChatWeb tools/call
+# contact evidence; metadata by itself never grants connector freshness.
 TOOL_CONTRACT_SCHEMA_VERSION = 1
 SMART_TOOL_PROFILE = "smart-v3"
+SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA: dict[str, tuple[str, ...]] = {
+    # Reviewed 2026-08-26: this exact smart-v3/v1 tools/list contract is
+    # additive relative to the previously approved ChatGPT snapshot. Keying the
+    # relation by the exact current SHA makes any later schema drift fail closed
+    # until it is separately reviewed and declared.
+    "57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053": (
+        "34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c",
+    ),
+}
+
+
+def smart_tool_contract_compatible_predecessors(current_sha256: str) -> list[str]:
+    return list(
+        SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA.get(
+            str(current_sha256 or "").strip().lower(),
+            (),
+        )
+    )
+
+
 TOOL_RISK_CLASSES = ("read_only", "project_write", "job_run", "account_manage", "unknown")
 TOOL_MUTATION_CLASSES = ("none", "project", "job", "control", "unknown")
 TOOL_CONCURRENCY_CLASSES = ("runtime_managed", "session_managed", "serialized", "unknown")

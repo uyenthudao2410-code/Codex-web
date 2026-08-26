@@ -1,0 +1,207 @@
+{
+  "version": 2,
+  "task_id": "f614be4f5b024d62aea0376d355cb3fd",
+  "orchestration": {
+    "run_id": "7c058ceb89e144679b70f5c3ee45273a",
+    "wave_id": "59830d83d4b344d2856e18efa6477882",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "2afdb0edb116c1265a6cf11a818a52a515bce9a14d41eeb04b095beaaba6a155",
+    "contract_fp": ""
+  },
+  "objective": "Read-only forensic reconciliation for exactly three AWAITING_ACCEPTANCE runs: 0ca7f60e56544df9aadb9fb89f7df48f, 9489bcc986594ae998b247a39fd9007a, d0900c558b4b4c67a7e13acb8f443d26. Find their persisted objectives/task contexts/reports and any later run/checkpoint that explicitly supersedes the same source changes. For each run report: objective, exact wave, changed paths, proof id/fingerprint, whether current worktree still contains those candidate changes, whether a later CHECKPOINTED run covers/replaces the same change, and the safe EOCL disposition: ACCEPT with exact current file attestation, STOP as demonstrably superseded, or KEEP pending. Do not mutate files/runs/runtime. Do not infer supersession merely from age.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "MmfW1bjxR6fSXSNIfwW8eR35",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 6708,
+    "finished_at": "2026-08-26T07:08:27.218Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T06:55:44.387Z",
+  "updated_at": "2026-08-26T07:08:27.218Z",
+  "events": [
+    {
+      "time": "2026-08-26T06:55:44.387Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only forensic reconciliation for exactly three AWAITING_ACCEPTANCE runs: 0ca7f60e56544df9aadb9fb89f7df48f, 9489bcc986594ae998b247a39fd9007a, d0900c558b4b4c67a7e13acb8f443d26. Find their persisted objectives/task contexts/reports and any later run/checkpoint that explicitly supersedes the same source changes. For each run report: objective, exact wave, changed paths, proof id/fingerprint, whether current worktree still contains those candidate changes, whether a later CHECKPOINTED run covers/replaces the same change, and the safe EOCL disposition: ACCEPT with exact current file attestation, STOP as demonstrably superseded, or KEEP pending. Do not mutate files/runs/runtime. Do not infer supersession merely from age."
+      }
+    },
+    {
+      "time": "2026-08-26T06:55:45.399Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T06:55:46.921Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T06:55:46.929Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T06:56:12.399Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T06:57:13.601Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$paths=@('resources/coding-tools-mcp/tests/test_stateless_http_2026.py','resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py','resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py','resources/coding-tools-mcp/coding_tools_mcp/server.py','resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py','renderer/app.js'); Get-FileHash -Algorithm SHA256 $paths | ForEach-Object { '{0} {1}' -f $_.Hash.ToLower(), $_.Path }\"",
+        "session_id": "NRWt42Ls4PqvwsTYUyFW1PW2"
+      }
+    },
+    {
+      "time": "2026-08-26T06:57:14.253Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$paths=@('resources/coding-tools-mcp/tests/test_stateless_http_2026.py','resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py','resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py','resources/coding-tools-mcp/coding_tools_mcp/server.py','resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py','renderer/app.js'); Get-FileHash -Algorithm SHA256 $paths | ForEach-Object { '{0} {1}' -f $_.Hash.ToLower(), $_.Path }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T06:57:37.278Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T06:58:51.012Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T07:00:44.460Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --numstat -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py renderer/app.js",
+        "session_id": "El_8YH2K4fwZbVAXq0EOA3xm"
+      }
+    },
+    {
+      "time": "2026-08-26T07:00:45.723Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --numstat -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py renderer/app.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T07:01:21.095Z",
+      "event": "command_started",
+      "details": {
+        "command": "git log --oneline --decorate --date=iso-strict --format=\"%H %ad %s\" 0557afa6c3aa3e02c2664d312b860973f28d3fc5..HEAD -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py renderer/app.js",
+        "session_id": "29Ng7JLpPzSmCymIWI8YMr_u"
+      }
+    },
+    {
+      "time": "2026-08-26T07:01:22.740Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git log --oneline --decorate --date=iso-strict --format=\"%H %ad %s\" 0557afa6c3aa3e02c2664d312b860973f28d3fc5..HEAD -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py renderer/app.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T07:01:52.089Z",
+      "event": "command_started",
+      "details": {
+        "command": "git show --format=\"%H %P %s\" --numstat b408d985e1097d738dcf4cf2cebe2cbcfd840353 -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py renderer/app.js",
+        "session_id": "YKri6UTzsZ9Lbdw_z1NbMtuX"
+      }
+    },
+    {
+      "time": "2026-08-26T07:01:53.943Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git show --format=\"%H %P %s\" --numstat b408d985e1097d738dcf4cf2cebe2cbcfd840353 -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py renderer/app.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T07:07:15.369Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -E \"(action == ['\\\"]reject['\\\"]|action == ['\\\"]stop['\\\"]|def .*reject|controller_reject|stale.*reconcil|ACCEPTING.*reject|supersed)\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+        "session_id": "4JmnPvrE9AGescQuRP_wAKDZ"
+      }
+    },
+    {
+      "time": "2026-08-26T07:07:16.101Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -E \"(action == ['\\\"]reject['\\\"]|action == ['\\\"]stop['\\\"]|def .*reject|controller_reject|stale.*reconcil|ACCEPTING.*reject|supersed)\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T07:07:45.841Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -E \"reject|controller_acceptance|controller_rejection|rejected|state_after.*REJECT\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+        "session_id": "TxcaXDLuZKSOHIZssJ5Zx-bs"
+      }
+    },
+    {
+      "time": "2026-08-26T07:07:48.885Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -E \"reject|controller_acceptance|controller_rejection|rejected|state_after.*REJECT\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T07:08:25.016Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py' | Select-Object -Skip 1220 -First 230\"",
+        "session_id": "MmfW1bjxR6fSXSNIfwW8eR35"
+      }
+    },
+    {
+      "time": "2026-08-26T07:08:27.218Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py' | Select-Object -Skip 1220 -First 230\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ const { RecoveryIpcClient, loadRecoveryDescriptor, isProcessAlive } = require('.
 const { sameInstallationIdentity } = require('./runtimeIdentity');
 
 const MAX_SUPERVISOR_MANIFEST_BYTES = 64 * 1024;
+const ACTIVATION_EPOCH_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -18,6 +19,24 @@ function assertActivationDeadline(options = {}, boundary = 'before_process_spawn
   }
 }
 
+function activationEpochId(options = {}) {
+  const value = String(options?.activationEpochId || '').trim();
+  if (!value) return '';
+  if (!ACTIVATION_EPOCH_ID_PATTERN.test(value)) {
+    throw Object.assign(new Error('Activation epoch identity is invalid.'), {
+      code: 'INVALID_ACTIVATION_EPOCH_ID'
+    });
+  }
+  return value;
+}
+
+function processEnvironment(role, options = {}) {
+  const env = { ...process.env, WEBCODEX_PROCESS_ROLE: role };
+  const epoch = activationEpochId(options);
+  if (epoch) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = epoch;
+  return env;
+}
+
 function recoveryHostArguments(app, options = {}) {
   const args = app.isPackaged
     ? ['--recovery-host']
@@ -26,6 +45,8 @@ function recoveryHostArguments(app, options = {}) {
     args.push(`--replace-recovery-host=${options.expectedOldInstanceId}`);
     args.push(`--activation-operation=${options.operationId}`);
   }
+  const epoch = activationEpochId(options);
+  if (epoch) args.push(`--activation-epoch-id=${epoch}`);
   return args;
 }
 
@@ -43,7 +64,7 @@ async function spawnRecoveryHost(app, spawnProcess = spawn, options = {}) {
     detached: true,
     windowsHide: true,
     stdio: 'ignore',
-    env: { ...process.env, WEBCODEX_PROCESS_ROLE: 'recovery-host' }
+    env: processEnvironment('recovery-host', options)
   });
   await new Promise((resolve, reject) => {
     child.once('spawn', resolve);
@@ -53,17 +74,20 @@ async function spawnRecoveryHost(app, spawnProcess = spawn, options = {}) {
   return child.pid;
 }
 
-function electronUiArguments(app) {
-  return app.isPackaged ? [] : [app.getAppPath()];
+function electronUiArguments(app, options = {}) {
+  const args = app.isPackaged ? [] : [app.getAppPath()];
+  const epoch = activationEpochId(options);
+  if (epoch) args.push(`--activation-epoch-id=${epoch}`);
+  return args;
 }
 
 async function spawnElectronUi(app, spawnProcess = spawn, options = {}) {
   assertActivationDeadline(options);
-  const child = spawnProcess(process.execPath, electronUiArguments(app), {
+  const child = spawnProcess(process.execPath, electronUiArguments(app, options), {
     detached: true,
     windowsHide: true,
     stdio: 'ignore',
-    env: { ...process.env, WEBCODEX_PROCESS_ROLE: 'electron-ui' }
+    env: processEnvironment('electron-ui', options)
   });
   await new Promise((resolve, reject) => {
     child.once('spawn', resolve);

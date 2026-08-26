@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "d0900c558b4b4c67a7e13acb8f443d26",
     "wave_id": "8760c4efe69c4de9ac5063d2e0a860e1",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "ABORTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Remove the now-unreachable retired COMPATIBLE_ACKNOWLEDGED presentation branch from renderer/app.js. Preserve the normalization that maps any stale persisted retired state to UNAVAILABLE. No other behavior change.",
-  "status": "waiting",
+  "status": "stopped",
   "steps": [
     {
       "id": "apply",
@@ -37,7 +37,7 @@
       "updated_at": "2026-08-25T15:08:45.453Z"
     }
   ],
-  "current_step": "Awaiting acceptance",
+  "current_step": "Aborted - operator report required",
   "current_command": {
     "command": "node --test tests/dev-ui-lifecycle.test.js tests/runtime-lifecycle.test.js tests/activation-closure.test.js",
     "kind": "command",
@@ -62,19 +62,24 @@
       "NEXT CRITICAL ACTION"
     ],
     "what_changed": {
-      "files": [],
-      "source": "no_durable_file_receipts",
+      "files": [
+        {
+          "path": "renderer/app.js",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
-      "run_status": "active",
-      "wave_status": "active",
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
       "task_status": "waiting",
       "integrity": {
         "ok": true,
-        "checked": 23,
-        "head_hash": "a0683f666aa88a6512b997e2a0445d54d42d46b196e2852621e5cd19e967de8d"
+        "checked": 25,
+        "head_hash": "b032075e9b9f249f599374de0f77d0b697ad3157fdfaecd78a9c86a5e9edacdc"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d0900c558b4b4c67a7e13acb8f443d26\\run-summary.md",
@@ -113,12 +118,12 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
     "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
   },
-  "completion_report_id": "2ffa05ff50cbe2fe95e663cdc1d44fa7dd5ab93e00872bd4b1568de992220ef5",
+  "completion_report_id": "1d8ade3a52849d0da95bdf3a324388a6a77c15d5faedbdae7d4723687b3092de",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -11959,9 +11964,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-08-25T15:08:35.880Z",
-  "updated_at": "2026-08-26T03:16:52.253Z",
+  "updated_at": "2026-08-26T08:24:12.399Z",
   "events": [
     {
       "time": "2026-08-25T15:08:35.880Z",
@@ -12097,6 +12102,28 @@
     },
     {
       "time": "2026-08-26T03:16:52.253Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T08:23:21.205Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "1d8ade3a52849d0da95bdf3a324388a6a77c15d5faedbdae7d4723687b3092de"
+      }
+    },
+    {
+      "time": "2026-08-26T08:24:12.399Z",
       "event": "orchestration_projection_reconciled",
       "details": {
         "fields": [

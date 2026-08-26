@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "8448f219ed954b6096b87a83b72efed2",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "q8h9de2MP365wVvaq3QZsxBE",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 307,
+    "finished_at": "2026-08-26T05:05:16.007Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T05:05:15.316Z",
+  "updated_at": "2026-08-26T05:05:16.007Z",
+  "events": [
+    {
+      "time": "2026-08-26T05:05:15.316Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T05:05:15.609Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 18 \"lifecycle_live_owned|stale_run_reconciliation|THRESHOLD_SENSITIVE_STALE_CANDIDATE|reconcile\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py resources\\coding-tools-mcp\\coding_tools_mcp\\stale_run_reconciliation.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+        "session_id": "q8h9de2MP365wVvaq3QZsxBE"
+      }
+    },
+    {
+      "time": "2026-08-26T05:05:16.007Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 18 \"lifecycle_live_owned|stale_run_reconciliation|THRESHOLD_SENSITIVE_STALE_CANDIDATE|reconcile\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py resources\\coding-tools-mcp\\coding_tools_mcp\\stale_run_reconciliation.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+        "status": "passed"
+      }
+    }
+  ]
+}

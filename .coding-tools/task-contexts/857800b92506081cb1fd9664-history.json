@@ -1,0 +1,426 @@
+[
+  {
+    "version": 2,
+    "task_id": "0271507a72da4e9b8f2e7d3fc63ff8fd",
+    "orchestration": {
+      "run_id": "0b60695b5b9f4f61aadbc97af02fd794",
+      "wave_id": "19b0bdb1809e4c2ab2d2fa7f8603c05b",
+      "orchestration_state": "PROVING",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "3d5ffa0d515a206ceb984dfe65a78295ab4c9d599104c52fa3ea58f58dea2b13",
+      "contract_fp": ""
+    },
+    "objective": "Fix MCP-2026 exact-run continuation so task_control(action=stop, run_id=...) recovers the durable stateless task context instead of minting a new context. Add focused regression proving omitted task_context handle still binds stop to the original context and terminalizes only that exact run.",
+    "status": "failed",
+    "steps": [
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "failed",
+        "updated_at": "2026-08-26T07:30:45.505Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-08-26T07:30:45.505Z"
+      }
+    ],
+    "current_step": "Verification failed",
+    "current_command": {
+      "command": "python -m unittest discover -s tests -p test_stateless_http_2026.py",
+      "kind": "command",
+      "session_id": "IgAPbW9uRs91vOQXEEhQHIXH",
+      "workdir": "resources/coding-tools-mcp",
+      "status": "running",
+      "started_at": "2026-08-26T07:30:24.122Z",
+      "owner_run": "0b60695b5b9f4f61aadbc97af02fd794",
+      "owner_wave": "19b0bdb1809e4c2ab2d2fa7f8603c05b"
+    },
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 25,
+          "head_hash": "3fa1fc81ddaf3df6e4bbe52ddc74a1a03b13781a1e02da4634c7ed023f96fc7f"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0b60695b5b9f4f61aadbc97af02fd794\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0b60695b5b9f4f61aadbc97af02fd794\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "0b60695b5b9f4f61aadbc97af02fd794",
+        "wave_id": "142d361882e94cdf9b1dfea93aece1b3",
+        "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+        "worktree_fp": "2a64db4d88399387c6bf6c1b86b052877412c814a9aa1cc8088dce121f8a2576",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Fix MCP-2026 exact-run continuation so task_control(action=stop, run_id=...) recovers the durable stateless task context instead of minting a new context. Add focused regression proving omitted task_context handle still binds stop to the original context and terminalizes only that exact run.",
+          "objective_revision": 1,
+          "objective_sha256": "1276760ba8aaae0dc7a333759fb58dc9c3d4fb34bb79e455ffd52eab70c956a5",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": false,
+        "proofs": [
+          {
+            "proof_id": "259d483b575b4c6f8d3427096c1009c1",
+            "stage_id": "verify:tests",
+            "status": "failed",
+            "duration_ms": 1328,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "BUILD_VERIFICATION_FAILED",
+        "reason": null,
+        "event_seq": 30326
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "31e8ca5bcb689083e0982ea72b837d72010d1f3f53e99c1af0b10ffd26ccffc9",
+    "completion_report_acknowledged_id": "31e8ca5bcb689083e0982ea72b837d72010d1f3f53e99c1af0b10ffd26ccffc9",
+    "completion_report_acknowledged_at": "2026-08-26T07:28:46.073Z",
+    "test_results": [
+      {
+        "command": "python -m unittest discover -s resources/coding-tools-mcp/tests -p test_stateless_http_2026.py",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 1324,
+        "summary": "exit 1 | 0.8s | 21 lines | tail: 'FAILED (errors=1)'"
+      },
+      {
+        "command": "python -m unittest discover -s tests -p test_stateless_http_2026.py",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 25134,
+        "summary": "exit 1 | 23.1s | 54 lines | tail: 'FAILED (failures=1)'"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "electron",
+        "name": "coding-tools-mcp",
+        "version": "1.0.0",
+        "package_manager": "npm",
+        "test_command": "npm run test",
+        "build_command": "npm run dist",
+        "artifact_paths": [
+          "dist",
+          "build"
+        ]
+      },
+      "commands": {
+        "test": "python -m unittest discover -s tests -p test_stateless_http_2026.py",
+        "build": "npm run dist"
+      },
+      "test_result": {
+        "command": "python -m unittest discover -s tests -p test_stateless_http_2026.py",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 25134,
+        "summary": "exit 1 | 23.1s | 54 lines | tail: 'FAILED (failures=1)'"
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "failed",
+      "failure": "Tests failed.",
+      "report_generated_at": "2026-08-26T07:30:43.626Z"
+    },
+    "modified_files": [
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+        "operation": "update",
+        "updated_at": "2026-08-26T07:28:29.859Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "operation": "update",
+        "updated_at": "2026-08-26T07:28:29.859Z"
+      }
+    ],
+    "failure": "Tests failed.",
+    "next_step": "Fix the failed test/build step, then run verify_build again.",
+    "created_at": "2026-08-26T07:28:17.422Z",
+    "updated_at": "2026-08-26T07:30:45.505Z",
+    "events": [
+      {
+        "time": "2026-08-26T07:28:17.422Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Fix MCP-2026 exact-run continuation so task_control(action=stop, run_id=...) recovers the durable stateless task context instead of minting a new context. Add focused regression proving omitted task_context handle still binds stop to the original context and terminalizes only that exact run."
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:18.718Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:21.295Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:22.868Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:22.894Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:24.706Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:25.431Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:26.485Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest discover -s resources/coding-tools-mcp/tests -p test_stateless_http_2026.py",
+          "session_id": "zDKKVkpmBr6aL_KfRPfgfT4m"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:26.995Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:27.428Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:28.453Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:28.478Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:28.481Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:29.853Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "31e8ca5bcb689083e0982ea72b837d72010d1f3f53e99c1af0b10ffd26ccffc9"
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:29.859Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:44.347Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:28:46.073Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "31e8ca5bcb689083e0982ea72b837d72010d1f3f53e99c1af0b10ffd26ccffc9"
+        }
+      },
+      {
+        "time": "2026-08-26T07:29:41.479Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:29:57.321Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T07:30:03.245Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-26T07:30:09.962Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-26T07:30:10.459Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:30:16.104Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-26T07:30:17.109Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:30:24.122Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest discover -s tests -p test_stateless_http_2026.py",
+          "session_id": "IgAPbW9uRs91vOQXEEhQHIXH"
+        }
+      },
+      {
+        "time": "2026-08-26T07:30:43.628Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T07:30:45.505Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T07:34:23.646Z",
+    "archive_reason": "finished"
+  }
+]

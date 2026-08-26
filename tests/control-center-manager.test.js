@@ -63,7 +63,12 @@ test('manager router treats OpenCode connectivity and DeepSeek model activity as
   assert.match(js, /const opencodeState = opencode\?\.online \? 'connected' : 'offline'/);
   assert.match(js, /DeepSeek activity requires explicit delegation evidence/);
   assert.doesNotMatch(js, /opencode\?\.online\s*\?\s*'active'/);
-  assert.match(js, /setInterval\(\(\) => refresh\(false\), 2500\)/);
+  assert.match(js, /api\.lightweightSnapshot\(\)/);
+  assert.match(js, /api\.liveOrchestration\(\)/);
+  assert.match(js, /force \? api\.snapshot\(\) : api\.lightweightSnapshot\(\)/);
+  assert.match(js, /force \? api\.orchestration\(\) : api\.liveOrchestration\(\)/);
+  assert.match(js, /setTimeout\(pollControlCenter, controlCenterPollDelay\(\)\)/);
+  assert.doesNotMatch(js, /setInterval\(\(\) => refresh\(false\), 2500\)/);
   assert.match(js, /\['overview', 'task'\]\.includes\(activePage\(\)\)/);
 });
 

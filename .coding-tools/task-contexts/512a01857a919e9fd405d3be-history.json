@@ -1,0 +1,301 @@
+[
+  {
+    "version": 2,
+    "task_id": "f2c5897265a0453489103093ba25966a",
+    "orchestration": {
+      "run_id": "f7e4926bed4f43fc9125ef316cb3aa76",
+      "wave_id": "190f47b197d74ad49fa2aa7e4aabbed1",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "a81db9d86707398fa12003ae7b4ec879a8b8238cca7494195c49679df789e84e",
+      "contract_fp": ""
+    },
+    "objective": "Close the Recovery Host health-null/restart-churn boundary, activate the corrected runtime, complete connector ACK, regressions, delivery guards, commit and push only when all gates are green.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Patch context matched 47 locations in tests/runtime-lifecycle.test.js; add more context.",
+    "next_step": "Run focused proof, activate live Recovery Host/MCP, observe exact health class, finish connector closure and delivery.",
+    "created_at": "2026-08-26T09:06:29.709Z",
+    "updated_at": "2026-08-26T09:08:57.505Z",
+    "events": [
+      {
+        "time": "2026-08-26T09:06:29.710Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T09:06:53.548Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:06:56.298Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:06:56.309Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:08:57.505Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T09:09:58.070Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "317348f0800d475e9865a75f96bf9840",
+    "orchestration": {
+      "run_id": "d229d575bc7d4b2b99f44e27e8c53d52",
+      "wave_id": "994e90aa4c4c4871b0b23db793d49da1",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "2388d65276fa7ce205760ccd60405e27b351692eeac032d0ff6cbff7b1284cd3",
+      "contract_fp": ""
+    },
+    "objective": "Fix the live Recovery Host health-null/restart-churn boundary without weakening identity or auth checks. Preserve readMcpHealth compatibility, classify safe health failures, expose classification in runtime/dev status, prevent destructive restart escalation for deterministic auth/identity/protocol mismatches, and retain existing escalation for genuinely hung timeout/transport failures. Do not change the 8-tool public contract or connector SHA semantics.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T09:09:58.072Z",
+    "updated_at": "2026-08-26T09:12:44.008Z",
+    "events": [
+      {
+        "time": "2026-08-26T09:09:58.072Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T09:10:02.612Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:10:05.856Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T09:11:19.657Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:11:34.936Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:11:35.619Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T09:12:44.008Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T09:15:00.382Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "bc45cc11b72c400ab2f0a2dff99d5914",
+    "orchestration": {
+      "run_id": "5ef432bf62f94a10afa2ec4d54c308d5",
+      "wave_id": "b30ab9d92e46418db4eda7080c69e96b",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "91ca932d6b408adf17ffda37ea02b75040bf717e5dda1dcbe8ac1987214f8d19",
+      "contract_fp": ""
+    },
+    "objective": "Stabilize the live Recovery Host health-null/restart-churn boundary first. Classify safe MCP health failures in RuntimeOrchestrator, expose the classification in lightweight recovery status, fail closed without restart escalation for deterministic auth/identity/protocol mismatches, and retain existing escalation for timeout/hung failures. Preserve readMcpHealth compatibility and the 8-tool public contract. CLI projection will be handled only after the live runtime stops churning.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-26T09:15:00.383Z",
+    "updated_at": "2026-08-26T09:15:54.927Z",
+    "events": [
+      {
+        "time": "2026-08-26T09:15:00.383Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T09:15:02.596Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:15:05.386Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T09:15:24.904Z",
+        "event": "orchestration_drift_detected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T09:15:24.904Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T09:15:37.901Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T09:15:45.847Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:15:54.482Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:15:54.927Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T09:24:22.672Z",
+    "archive_reason": "superseded"
+  }
+]

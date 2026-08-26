@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "task_id": "30ace59de8e34358a7a9a80cc553e60f",
+  "orchestration": {
+    "run_id": "167d23370d1e4c66bd64a1ae95a24012",
+    "wave_id": "5351272613c54a97b72782136b1b0747",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "6038532bd992a708d933076332339c49350ba85f5dfdac84f640cb89db6824ae",
+    "contract_fp": ""
+  },
+  "objective": "Read-only inspect the persisted Recovery Host descriptor/status and activation-state contract so final closure can observe recovery_host running/disk revision without launching commands that are interrupted by MCP restarts. Do not modify files or runtime state.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T08:09:25.642Z",
+  "updated_at": "2026-08-26T08:09:34.379Z",
+  "events": [
+    {
+      "time": "2026-08-26T08:09:25.642Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only inspect the persisted Recovery Host descriptor/status and activation-state contract so final closure can observe recovery_host running/disk revision without launching commands that are interrupted by MCP restarts. Do not modify files or runtime state."
+      }
+    },
+    {
+      "time": "2026-08-26T08:09:34.379Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    }
+  ]
+}

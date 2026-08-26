@@ -1,0 +1,147 @@
+[
+  {
+    "version": 2,
+    "task_id": "37dbee081d6f497db75ca63d25c65d8c",
+    "orchestration": {
+      "run_id": "d53159c523674744a4cce251eae756ef",
+      "wave_id": "1e363eb50f3f42a78dba8153e81e681b",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "11fcfa6614f9379b15f4d354742f68ca286ee7dc32bd733dbdd2da02593b8d6d",
+      "contract_fp": ""
+    },
+    "objective": "Locate the canonical Safe Code Activation mechanism for activating the running recovery_host/Electron supervisor from an accepted EOCL source checkpoint. Return the exact repository entrypoint/API/command and required checkpoint/run/wave arguments. Read-only only; do not mutate files, do not restart anything, do not create a new activation request. Focus on how the Recovery Host consumes accepted source checkpoints and performs handoff/restart while preserving pending acceptance runs.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Fa2Tas4hhxXESv9c1AtnMuap",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 909,
+      "finished_at": "2026-08-26T06:49:16.864Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T06:42:40.757Z",
+    "updated_at": "2026-08-26T06:49:16.864Z",
+    "events": [
+      {
+        "time": "2026-08-26T06:42:40.757Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Locate the canonical Safe Code Activation mechanism for activating the running recovery_host/Electron supervisor from an accepted EOCL source checkpoint. Return the exact repository entrypoint/API/command and required checkpoint/run/wave arguments. Read-only only; do not mutate files, do not restart anything, do not create a new activation request. Focus on how the Recovery Host consumes accepted source checkpoints and performs handoff/restart while preserving pending acceptance runs."
+        }
+      },
+      {
+        "time": "2026-08-26T06:42:41.824Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T06:42:46.985Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T06:42:46.996Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T06:43:05.115Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T06:44:28.503Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T06:45:02.618Z",
+        "event": "command_started",
+        "details": {
+          "command": "node -",
+          "session_id": "SsRkU8szmGyMfEvq6QKpe8Xv"
+        }
+      },
+      {
+        "time": "2026-08-26T06:45:03.678Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T06:45:24.320Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "Fh6ZRFf4qAqj2aKUsJmsn6Y5"
+        }
+      },
+      {
+        "time": "2026-08-26T06:45:25.653Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T06:46:40.865Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T06:49:16.080Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run recovery:status",
+          "session_id": "Fa2Tas4hhxXESv9c1AtnMuap"
+        }
+      },
+      {
+        "time": "2026-08-26T06:49:16.864Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run recovery:status",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T06:49:26.335Z",
+    "archive_reason": "finished"
+  }
+]

@@ -1,0 +1,997 @@
+[
+  {
+    "version": 2,
+    "task_id": "f1cd032dd6754f849fba0123e1644a29",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T05:09:46.463Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-26T05:09:11.466Z",
+    "updated_at": "2026-08-26T05:09:46.463Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:09:11.467Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:11.767Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "7SOjFJ5z6X3p8OPYacvHdvHM"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:12.840Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:28.648Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "qcmenjpTWSE4az3lEPlytDxt"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:29.471Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:38.066Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"restart_ticket|restart_runtime|restart ticket|not_before|expected_disconnect|one-shot|one shot\" electron scripts resources tests",
+          "session_id": "K90hqiLgqSe9csAHyDk0MvB9"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:38.541Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"restart_ticket|restart_runtime|restart ticket|not_before|expected_disconnect|one-shot|one shot\" electron scripts resources tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:46.463Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"serviceSupervisorRestartRequest\\(|pendingSupervisorRestartRequest\\(\" electron\\services\\runtimeOrchestrator.js electron\\main.js electron\\*.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:46.463Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:09:53.592Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "ebea98aa77a346fea7504f904b21356c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T05:09:59.943Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path escapes the workspace and is blocked.",
+    "next_step": "",
+    "created_at": "2026-08-26T05:09:53.594Z",
+    "updated_at": "2026-08-26T05:09:59.943Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:09:53.594Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:53.800Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 \"serviceSupervisorRestartRequest\\(|pendingSupervisorRestartRequest\\(\" electron\\services\\runtimeOrchestrator.js electron\\main.js",
+          "session_id": "vOSRRNf_Q2mTAIx5GYoEQOwq"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:54.076Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"serviceSupervisorRestartRequest\\(|pendingSupervisorRestartRequest\\(\" electron\\services\\runtimeOrchestrator.js electron\\main.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:59.943Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"\\.supervise\\(|supervise\\(\\)|setInterval.*supervis|heartbeat\" electron | head -n 220",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:59.943Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:10:05.528Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "86b8d47745dc4a3ca00a15fd161cb016",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "F8QVz4he3vqU9BgDqt_PNEZ3",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 210,
+      "finished_at": "2026-08-26T05:10:18.386Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:10:05.529Z",
+    "updated_at": "2026-08-26T05:10:18.386Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:10:05.529Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:05.742Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"supervise\\(\\)\" electron",
+          "session_id": "DljeSRljVRTFCucGBTIuAE6Y"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:06.035Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"supervise\\(\\)\" electron",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:12.111Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"setInterval|superviseOnce|supervision\" electron\\services\\recoveryHost.js",
+          "session_id": "k2xT8lBqEnWx9W5gWbTST9yQ"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:12.401Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"setInterval|superviseOnce|supervision\" electron\\services\\recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:18.169Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"SUPERVISION_INTERVAL_MS\" electron\\services\\recoveryHost.js electron\\services\\constants.js electron",
+          "session_id": "F8QVz4he3vqU9BgDqt_PNEZ3"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:18.386Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"SUPERVISION_INTERVAL_MS\" electron\\services\\recoveryHost.js electron\\services\\constants.js electron",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:10:25.804Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8ab3c05c77c5499fa3c496dd223e3b51",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T05:10:49.766Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-26T05:10:25.806Z",
+    "updated_at": "2026-08-26T05:10:49.766Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:10:25.806Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:26.003Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"SUPERVISOR_RESTART_RESPONSE_GRACE_MS|SUPERVISOR_RESTART_TICKET_TTL_MS\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "-E0pwg_D9c-TOPFS0v4UfqQd"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:26.286Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"SUPERVISOR_RESTART_RESPONSE_GRACE_MS|SUPERVISOR_RESTART_TICKET_TTL_MS\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:34.878Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 6 \"supervisorRequestFile\" electron resources scripts",
+          "session_id": "lBLB7OaicbtVzwTfmJ02gixV"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:35.138Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 6 \"supervisorRequestFile\" electron resources scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:44.105Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"dataRootPath|class RuntimePaths|new RuntimePaths\" electron\\services\\runtimePaths.js electron\\paths.js scripts\\dev-ui-lifecycle.js",
+          "session_id": "qp15gRinE0FZPmvIkFwflcty"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:44.372Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"dataRootPath|class RuntimePaths|new RuntimePaths\" electron\\services\\runtimePaths.js electron\\paths.js scripts\\dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:49.766Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 4 \"dev:status|dev:logs|recovery.status|logs.read|runtime-supervisor-request\" package.json scripts",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:49.766Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:10:56.349Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "7cdea15b02f94afabe22b1cabd82040d",
+    "orchestration": {
+      "run_id": "add3b7e94f154e45aefea0ef46398b4a",
+      "wave_id": "24b2ea4ffd46408bb23780a58b028bc2",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "IHTb75rNyQSVFRWwXIeU6dxf",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 243,
+      "finished_at": "2026-08-26T05:11:11.775Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:10:56.352Z",
+    "updated_at": "2026-08-26T05:11:22.308Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:10:56.352Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:56.806Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 4 \"dev:status\" package.json scripts",
+          "session_id": "ZW27A9JK3HmAhHU0-9HYCzxy"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:57.097Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 4 \"dev:status\" package.json scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:03.365Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 5 \"runtime.lightweight_snapshot\" scripts electron tests",
+          "session_id": "uHmTMGM_UZzPCVE-y7QcAvim"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:03.529Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 5 \"runtime.lightweight_snapshot\" scripts electron tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:11.541Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"RecoveryIpcClient\" scripts tests electron | rg \"scripts|module.exports|require\"",
+          "session_id": "IHTb75rNyQSVFRWwXIeU6dxf"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:11.775Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"RecoveryIpcClient\" scripts tests electron | rg \"scripts|module.exports|require\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:20.650Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:22.300Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:22.308Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:12:09.162Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "86f4883c027f40f69a7140ccd56236d1",
+    "orchestration": {
+      "run_id": "31c922bdc6d04cbcaa0f097f3ab243ba",
+      "wave_id": "7bc77fb71ae1409fa404cb48dd2b7fdc",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+      "contract_fp": ""
+    },
+    "objective": "Read-only only. Determine and execute the smallest repository-supported way to retrieve the live Recovery Host `runtime.lightweight_snapshot` plus at most 120 bounded/redacted `logs.read` records, without exposing descriptor tokens or secrets. The output must include only sanitized runtime fields relevant to connector/restart recovery and log entries containing supervisor restart, recovery, semantic canary, connector, TaskGroup/ASYNC_TASK_GROUP_FAILED, or invalid/expired ticket signals. Do not mutate source, runtime, connector acknowledgement, tasks, workspaces, or external systems.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:12:09.162Z",
+    "updated_at": "2026-08-26T05:12:11.429Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:12:09.162Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:09.595Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:11.340Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:11.429Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:12:32.440Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "af18848ab4c94ab09e4630e3367ae436",
+    "orchestration": {
+      "run_id": "0f534056f3854568bdf05637a9b80569",
+      "wave_id": "f318b3a62a8b43dbb91816c6f2f29343",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+      "contract_fp": ""
+    },
+    "objective": "Execute one bounded read-only Recovery IPC inspection using existing repository modules only. Retrieve `runtime.lightweight_snapshot` and at most 120 `logs.read` records from the exact live Recovery Host descriptor. Do not print descriptor/token/auth material. Sanitize keys containing token/secret/password/authorization/credential/private_key. Filter logs to entries mentioning supervisor restart, restart ticket, recovery, semantic canary, connector, TaskGroup, ASYNC_TASK_GROUP_FAILED, invalid, expired, busy, or recovering. No file/source/runtime/task/workspace/external mutation.",
+    "status": "waiting",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "in_progress",
+        "updated_at": "2026-08-26T05:12:36.177Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-08-26T05:12:36.177Z"
+      }
+    ],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-26T05:12:32.442Z",
+    "updated_at": "2026-08-26T05:13:02.042Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:12:32.442Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:32.964Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:33.655Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:34.714Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:34.720Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:35.677Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:36.177Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:36.737Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:36.737Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:36.811Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PERMISSION_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:44.992Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:46.542Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "WORKFLOW_BUDGET_EXCEEDED"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:52.793Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:00.802Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:02.034Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:02.042Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:13:21.566Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "89bb8bceecde479689c5810cb8b7ea62",
+    "orchestration": {
+      "run_id": "4bffb5093ff14b8d9e1e7fae212bc525",
+      "wave_id": "44fd2d1c5b134deba5f53cfa140dac96",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+      "contract_fp": ""
+    },
+    "objective": "No-op read-only preflight only; do not execute commands or mutate anything. Keep the durable run context available for a one-time permission-granted Recovery IPC check.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:13:21.566Z",
+    "updated_at": "2026-08-26T05:13:24.023Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:13:21.566Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:22.143Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:23.969Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:24.023Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:13:33.031Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "af8f90c0093b48229eecbdfe0d00f169",
+    "orchestration": {
+      "run_id": "479005ef300049e983182e17386244bc",
+      "wave_id": "9000085c421043a8b49974c578424b13",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+      "contract_fp": ""
+    },
+    "objective": "No source/runtime mutation. Keep recovery diagnosis context stable. The only next operation is a one-time permission-scoped inline read of Recovery IPC snapshot/logs.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:13:33.034Z",
+    "updated_at": "2026-08-26T05:13:36.425Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:13:33.034Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:34.095Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:36.329Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:36.425Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:14:15.217Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "ea3fc4d12adb458989a5cb3a7f3c3404",
+    "orchestration": {
+      "run_id": "096ad394c8d24514b1ebcdbb659ed252",
+      "wave_id": "71ce04e624be4bd9b7030ec29cce8d14",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+      "contract_fp": ""
+    },
+    "objective": "Read-only root-cause localization after inline Recovery IPC inspection was impossible under current safe policy. Inspect exact RuntimeOrchestrator control flow for `busy`, `recovering`, `supervise()`, `serviceSupervisorRestartRequest()`, `pendingSupervisorRestartRequest()`, semantic tool-plane canary/recovery, and automatic restart. Determine whether a stuck/continuous recovering or busy state can starve a valid supervisor restart ticket indefinitely, and whether source has a deterministic defect or only an unobservable runtime-state condition. Also inspect focused tests for this interaction/gap. Do not mutate files/runtime/tasks/workspaces or external systems.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:14:15.219Z",
+    "updated_at": "2026-08-26T05:14:24.485Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:14:15.219Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:14:17.616Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:14:24.232Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:14:24.485Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:15:31.999Z",
+    "archive_reason": "superseded"
+  }
+]

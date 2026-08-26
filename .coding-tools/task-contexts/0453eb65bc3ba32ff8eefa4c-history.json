@@ -1,0 +1,527 @@
+[
+  {
+    "version": 2,
+    "task_id": "609e544b8df440a2b07565c45eff07b1",
+    "orchestration": {
+      "run_id": "4f64dff7a85241bd850ad50dc8651bff",
+      "wave_id": "787c0e359c9045dea5441a3bd44537cc",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "b9f6b699a8da292cda515bc346aa3673e10217d34f4f946402ca6ba861983e73",
+      "contract_fp": ""
+    },
+    "objective": "Read-only final closure diagnostics: capture current dev lifecycle status, Recovery Host revision state, connector current/ack contract state, and Git HEAD/upstream identity. Do not modify files, tasks beyond diagnostic bookkeeping, staging, or runtime state.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T07:50:58.766Z",
+    "updated_at": "2026-08-26T07:51:01.025Z",
+    "events": [
+      {
+        "time": "2026-08-26T07:50:58.766Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only final closure diagnostics: capture current dev lifecycle status, Recovery Host revision state, connector current/ack contract state, and Git HEAD/upstream identity. Do not modify files, tasks beyond diagnostic bookkeeping, staging, or runtime state."
+        }
+      },
+      {
+        "time": "2026-08-26T07:50:59.931Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:01.025Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:01.025Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T07:51:11.134Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "629ca42440fd454d8b2efbce14705e9a",
+    "orchestration": {
+      "run_id": "2a15ca7155e045cdbfefdeda5bdb67f3",
+      "wave_id": "eec36a42fedc4ba0b68e2612ed7b88a6",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "b9f6b699a8da292cda515bc346aa3673e10217d34f4f946402ca6ba861983e73",
+      "contract_fp": ""
+    },
+    "objective": "Read-only final closure diagnostics: capture current dev lifecycle status, Recovery Host revision state, connector current/ack contract state, and Git HEAD/upstream identity. Do not modify files, staging, or runtime state.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-26T07:51:21.169Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-26T07:51:21.169Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "2Nxd5r4xruBf9EoFcHT-qOy-",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 806,
+      "finished_at": "2026-08-26T07:51:20.903Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 38,
+          "head_hash": "8de665719e9c100303dc147acc1fde77ed318dcbad9fd366002815d1a0802b99"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2a15ca7155e045cdbfefdeda5bdb67f3\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2a15ca7155e045cdbfefdeda5bdb67f3\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "2a15ca7155e045cdbfefdeda5bdb67f3",
+        "wave_id": "eec36a42fedc4ba0b68e2612ed7b88a6",
+        "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+        "worktree_fp": "b9f6b699a8da292cda515bc346aa3673e10217d34f4f946402ca6ba861983e73",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Read-only final closure diagnostics: capture current dev lifecycle status, Recovery Host revision state, connector current/ack contract state, and Git HEAD/upstream identity. Do not modify files, staging, or runtime state.",
+          "objective_revision": 1,
+          "objective_sha256": "f17e194677b5cc97228f737339f66e514f8bea6f470394dbc2c9629f093504e9",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 4,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "f4a5b48b937b468d84f402966383062c",
+            "stage_id": "check:385f51573288f6e6",
+            "status": "passed",
+            "duration_ms": 1364,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "99d94f241b9b4322b6f85c6bc4630171",
+            "stage_id": "check:8fbf345c88368916",
+            "status": "passed",
+            "duration_ms": 962,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "f207ff7c11aa48a5b28a55d30fedac91",
+            "stage_id": "check:357e746bf0bc0223",
+            "status": "passed",
+            "duration_ms": 1045,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "3947950aa3af44e1818d5176f9a6f9fd",
+            "stage_id": "check:c96885f0a85f64c6",
+            "status": "passed",
+            "duration_ms": 1171,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "3f755d421d9d737405e5b8e2920dfee8f397c42c84cdd2d47afa9fccf49f8e78",
+    "completion_report_acknowledged_id": "3f755d421d9d737405e5b8e2920dfee8f397c42c84cdd2d47afa9fccf49f8e78",
+    "completion_report_acknowledged_at": "2026-08-26T07:52:38.125Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-26T07:51:11.138Z",
+    "updated_at": "2026-08-26T07:52:46.810Z",
+    "events": [
+      {
+        "time": "2026-08-26T07:51:11.138Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:11.733Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:12.449Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:13.408Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:13.413Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:14.450Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:15.038Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:15.675Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "86SbQ5xt2SSf1ASSNc--1vRn"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:16.558Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:17.461Z",
+        "event": "command_started",
+        "details": {
+          "command": "git rev-parse HEAD",
+          "session_id": "9jmoec8lfcbKfFnjJyJrnxks"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:17.872Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-parse HEAD",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:18.930Z",
+        "event": "command_started",
+        "details": {
+          "command": "git rev-parse origin/main",
+          "session_id": "bQZta3D8aR491yEgEOu24v1L"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:19.341Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-parse origin/main",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:20.325Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short",
+          "session_id": "2Nxd5r4xruBf9EoFcHT-qOy-"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:20.903Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:21.166Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:21.169Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:21.429Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:21.437Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:21.552Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "0f67acbf3aa0e34419d2acbdea395590ca1fed22ad937089ef28c68899a7909b"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:21.701Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:31.737Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:32.309Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:39.986Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:51:59.951Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "0f67acbf3aa0e34419d2acbdea395590ca1fed22ad937089ef28c68899a7909b"
+        }
+      },
+      {
+        "time": "2026-08-26T07:52:12.645Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:52:14.941Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-26T07:52:14.945Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:52:15.049Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "3f755d421d9d737405e5b8e2920dfee8f397c42c84cdd2d47afa9fccf49f8e78"
+        }
+      },
+      {
+        "time": "2026-08-26T07:52:27.904Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T07:52:38.125Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "3f755d421d9d737405e5b8e2920dfee8f397c42c84cdd2d47afa9fccf49f8e78"
+        }
+      },
+      {
+        "time": "2026-08-26T07:52:46.810Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T07:52:46.952Z",
+    "archive_reason": "finished"
+  }
+]

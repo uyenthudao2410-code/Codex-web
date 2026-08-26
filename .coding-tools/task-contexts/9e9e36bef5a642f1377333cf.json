@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "task_id": "fbf459e2863f418982a382f73a3c3224",
+  "orchestration": {
+    "run_id": "1b96d0bdc2ac4f3da4233882ea3b3362",
+    "wave_id": "195ff61c3d404b0fbd1d773fc34fcb23",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "e17ef107153400dbad96ff0050e2c429a233f9f3eaee97e3e0ff2f239c949e51",
+    "contract_fp": ""
+  },
+  "objective": "Close the UI freeze/lag P0 first, without touching electron/main.js. Freshly localize the exact current renderer/preload polling implementations after concurrent source drift, identify any parts of the adaptive lightweight/live scheduling repair that are already present, and produce the smallest remaining causal patch. Preserve all unrelated concurrent work.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T10:15:31.115Z",
+  "updated_at": "2026-08-26T10:15:39.896Z",
+  "events": [
+    {
+      "time": "2026-08-26T10:15:31.115Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Close the UI freeze/lag P0 first, without touching electron/main.js. Freshly localize the exact current renderer/preload polling implementations after concurrent source drift, identify any parts of the adaptive lightweight/live scheduling repair that are already present, and produce the smallest remaining causal patch. Preserve all unrelated concurrent work."
+      }
+    },
+    {
+      "time": "2026-08-26T10:15:39.896Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    }
+  ]
+}

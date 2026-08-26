@@ -39,6 +39,11 @@ class RuntimePaths {
   recoveryHostDescriptorFile() { return path.join(this.dataRootPath, 'recovery-host.json'); }
   recoveryHostLockFile() { return path.join(this.dataRootPath, 'recovery-host.lock'); }
   recoveryActionsFile() { return path.join(this.dataRootPath, 'recovery-actions.json'); }
+  // Activation epochs are durable control-plane state.  Keep this separate
+  // from runtime-state.json and, critically, from the workspace's canonical
+  // orchestration ledger: a clean activation rotates process identity without
+  // deleting or rewriting durable task truth.
+  activationEpochFile() { return path.join(this.dataRootPath, 'activation-epoch.json'); }
   acceptedCodeActivationFile() { return path.join(this.dataRootPath, 'accepted-code-activation.json'); }
   // Keep break-glass process identity outside primary runtime-state.json so host adoption cannot erase it.
   recoveryPlaneStateFile() { return path.join(this.dataRootPath, 'recovery-plane-state.json'); }

@@ -18,6 +18,9 @@
   let performance = null;
   let refreshInFlight = false;
   let lastPerformanceRead = 0;
+  const CONTROL_CENTER_BUSY_POLL_MS = 4000;
+  const CONTROL_CENTER_IDLE_POLL_MS = 6000;
+  const CONTROL_CENTER_HIDDEN_POLL_MS = 15000;
   const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   let reducedMotion = motionQuery?.matches === true;
 
@@ -510,9 +513,14 @@
     if (refreshInFlight || (!force && !shouldPoll())) return;
     refreshInFlight = true;
     try {
-      const [snapshotResult, orchestrationResult] = await Promise.allSettled([api.snapshot(), api.orchestration()]);
+      const snapshotRequest = force ? api.snapshot() : api.lightweightSnapshot();
+      const orchestrationRequest = force ? api.orchestration() : api.liveOrchestration();
+      const [snapshotResult, orchestrationResult] = await Promise.allSettled([snapshotRequest, orchestrationRequest]);
       if (snapshotResult.status === 'fulfilled') {
-        try { snapshot = unwrap(snapshotResult.value); } catch { snapshot = null; }
+        try {
+          const payload = unwrap(snapshotResult.value);
+          snapshot = force ? payload : { ...(snapshot || {}), status: payload };
+        } catch { snapshot = null; }
       }
       if (orchestrationResult.status === 'fulfilled') {
         try { orchestration = unwrap(orchestrationResult.value); } catch { orchestration = null; }
@@ -523,6 +531,16 @@
     } finally {
       refreshInFlight = false;
     }
+  }
+
+  function controlCenterPollDelay() {
+    if (!shouldPoll()) return CONTROL_CENTER_HIDDEN_POLL_MS;
+    return executionActivity(orchestration || {}).busy ? CONTROL_CENTER_BUSY_POLL_MS : CONTROL_CENTER_IDLE_POLL_MS;
+  }
+
+  async function pollControlCenter() {
+    await refresh(false);
+    setTimeout(pollControlCenter, controlCenterPollDelay());
   }
 
   async function restartRuntime() {
@@ -573,9 +591,8 @@
     snapshot.status.recoveryBlocked = Boolean(health?.recoveryBlocked);
     snapshot.status.lastStartFailure = String(health?.lastStartFailure || '');
     snapshot.status.deferredRecoveryCount = Number(health?.deferredRecoveryCount || 0);
-    renderAll();
+    if (shouldPoll() && !refreshInFlight) renderAll();
   });
 
-  refresh(true);
-  setInterval(() => refresh(false), 2500);
+  refresh(true).finally(() => setTimeout(pollControlCenter, controlCenterPollDelay()));
 })();

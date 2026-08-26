@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "cb992bdfca6b477fba88f052d28c6a27",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "77qXld-0nikWDWgTK0h3OKqR",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2394,
+    "finished_at": "2026-08-26T07:23:22.901Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T07:23:19.818Z",
+  "updated_at": "2026-08-26T07:23:22.901Z",
+  "events": [
+    {
+      "time": "2026-08-26T07:23:19.818Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T07:23:22.225Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 70 \"def resolve_stateless_task_context\" -- resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "77qXld-0nikWDWgTK0h3OKqR"
+      }
+    },
+    {
+      "time": "2026-08-26T07:23:22.901Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 70 \"def resolve_stateless_task_context\" -- resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    }
+  ]
+}

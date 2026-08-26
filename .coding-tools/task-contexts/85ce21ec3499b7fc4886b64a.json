@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "task_id": "a07976be271641e99d2db572c23f5de1",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "active",
+  "steps": [],
+  "current_step": "Execute command",
+  "current_command": {
+    "command": "git grep -l \"class .*Controller.*Lease\\|def acquire_controller_lease\\|def require_controller\" -- resources/coding-tools-mcp/coding_tools_mcp | sort",
+    "kind": "command",
+    "session_id": "31clxhfhtJszCSYPy27WnhDa",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-26T07:20:46.262Z"
+  },
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T07:20:41.340Z",
+  "updated_at": "2026-08-26T07:20:46.262Z",
+  "events": [
+    {
+      "time": "2026-08-26T07:20:41.340Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T07:20:46.262Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -l \"class .*Controller.*Lease\\|def acquire_controller_lease\\|def require_controller\" -- resources/coding-tools-mcp/coding_tools_mcp | sort",
+        "session_id": "31clxhfhtJszCSYPy27WnhDa"
+      }
+    }
+  ]
+}

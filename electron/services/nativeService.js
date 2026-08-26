@@ -36,7 +36,7 @@ function coreNativeEnvironment(sourceEnv = process.env) {
   return env;
 }
 
-function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, diskRevision, supervisorRequestFile, device = null, p5Seed = '' }) {
+function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, diskRevision, supervisorRequestFile, device = null, p5Seed = '', activationEpochId = '', activationGate = '' }) {
   const env = coreNativeEnvironment(sourceEnv);
   const broker = { [MCP_AUTH_HANDLE]: String(token || '') };
   if (String(sourceEnv.OPENAI_API_KEY || '')) broker[OPENAI_API_KEY_HANDLE] = String(sourceEnv.OPENAI_API_KEY);
@@ -58,6 +58,8 @@ function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, d
     CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: supervisorRequestFile,
     CODING_TOOLS_MCP_CODE_REVISION: diskRevision
   });
+  if (String(activationEpochId || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = String(activationEpochId).trim();
+  if (String(activationGate || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_GATE = String(activationGate).trim().toLowerCase();
   if (device) {
     env.CODING_TOOLS_MCP_DEVICE_ID = device.deviceId;
     env.CODING_TOOLS_MCP_DEVICE_INSTANCE_ID = device.deviceInstanceId;
@@ -149,9 +151,9 @@ function resolveNativeLaunchContract(paths, python) {
 function currentRuntimeState(input = {}) {
   const allowed = new Set([
     'manualStop', 'tunnelPid', 'tunnelStartedAt', 'tunnelId', 'tunnelFingerprint',
-    'tunnelDeviceId', 'tunnelDeviceInstanceId',
+    'tunnelDeviceId', 'tunnelDeviceInstanceId', 'tunnelInstanceId', 'tunnelActivationEpochId',
     'nativePid', 'nativeFingerprint', 'nativeWorkspace', 'nativePort',
-    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId',
+    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId', 'nativeActivationEpochId',
     'nativeRuntimeMode', 'nativeModuleRoot',
     'nativeDeviceId', 'nativeDeviceInstanceId', 'startedAt',
     'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt', 'chatgptToolContractRediscoveredAt'
@@ -193,9 +195,11 @@ class NativeService {
       });
     }
     this.assertOwnedLive(current);
+    const requestedEpoch = String(options.activationEpochId || '').trim();
     const launchAuthorityMatches = current.nativeRuntimeMode === launch.runtimeMode
       && pathKey(current.nativeModuleRoot) === pathKey(launch.moduleRoot);
-    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint && launchAuthorityMatches) {
+    const epochMatches = !requestedEpoch || String(current.nativeActivationEpochId || '').trim() === requestedEpoch;
+    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint && launchAuthorityMatches && epochMatches) {
       const updatePending = Boolean(current.nativeCodeRevision && current.nativeCodeRevision !== diskRevision);
       this.log.info('MCP Portable đã chạy trong thư mục làm việc mục tiêu', { pid: current.nativePid, workspace: settings.workspace });
       if (updatePending) {
@@ -207,11 +211,13 @@ class NativeService {
       }
       return { reused: true, pid: current.nativePid, codeRevision: current.nativeCodeRevision || null, updatePending };
     }
-    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint && !launchAuthorityMatches) {
+    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint && (!launchAuthorityMatches || !epochMatches)) {
       this.log.warn('Coding MCP đang chạy không có launch authority khớp checkout hiện tại; sẽ tạo lại thay vì reuse', {
         pid: current.nativePid,
         runtimeMode: launch.runtimeMode,
-        moduleRoot: launch.moduleRoot
+        moduleRoot: launch.moduleRoot,
+        requestedActivationEpochId: requestedEpoch || null,
+        runningActivationEpochId: String(current.nativeActivationEpochId || '') || null
       });
     }
     if (isAlive(current.nativePid)) {
@@ -231,7 +237,9 @@ class NativeService {
       diskRevision,
       supervisorRequestFile: this.paths.supervisorRequestFile(),
       p5Seed: options.p5Seed,
-      device: this.device
+      device: this.device,
+      activationEpochId: requestedEpoch,
+      activationGate: options.activationGate
     });
     const args = [
       ...python.prefixArgs,
@@ -276,14 +284,16 @@ class NativeService {
       nativeDeviceId: this.device?.deviceId || '',
       nativeDeviceInstanceId: this.device?.deviceInstanceId || '',
       startedAt: new Date().toISOString(),
-      nativeInstanceId: instanceId
+      nativeInstanceId: instanceId,
+      nativeActivationEpochId: requestedEpoch || null
     }));
     this.log.info('Môi trường runtime MCP Portable đã khởi động', {
       pid: child.pid,
       workspace: settings.workspace,
       command,
       runtimeMode: launch.runtimeMode,
-      moduleRoot: launch.moduleRoot
+      moduleRoot: launch.moduleRoot,
+      activationEpochId: requestedEpoch || null
     });
     return {
       reused: false,
@@ -319,7 +329,8 @@ class NativeService {
         nativeRuntimeMode: '',
         nativeModuleRoot: '',
         nativeDeviceId: '',
-        nativeDeviceInstanceId: ''
+        nativeDeviceInstanceId: '',
+        nativeActivationEpochId: null
       }));
     }
   }
@@ -336,11 +347,13 @@ class NativeService {
     return true;
   }
 
-  async status(settings = null) {
+  async status(settings = null, options = {}) {
     const state = readJson(this.paths.stateFile(), {});
     if (!isAlive(state.nativePid)) return false;
     if (this.device && classifyStoredDeviceOwner(state.nativeDeviceId, this.device.deviceId) !== 'owned') return false;
-    return !settings || state.nativeFingerprint === runtimeFingerprint(settings);
+    if (settings && state.nativeFingerprint !== runtimeFingerprint(settings)) return false;
+    const expectedEpoch = String(options.activationEpochId || '').trim();
+    return !expectedEpoch || String(state.nativeActivationEpochId || '').trim() === expectedEpoch;
   }
 
   revisionStatus(options = {}) {
@@ -348,7 +361,8 @@ class NativeService {
     const alive = isAlive(state.nativePid);
     try {
       const status = this.revisions.status('coding_mcp', alive ? state.nativeCodeRevision : null, options);
-      if (!alive) return { ...status, update_pending: false, state: 'stopped' };
+      if (!alive) return { ...status, update_pending: false, state: 'stopped', activation_epoch_id: null };
+      status.activation_epoch_id = String(state.nativeActivationEpochId || '') || null;
       return status;
     } catch (error) {
       return {

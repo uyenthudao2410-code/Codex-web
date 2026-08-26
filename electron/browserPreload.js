@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('browserAssistant', {
   navigate: (action) => ipcRenderer.invoke('chat:navigate', action),
   chatStatus: () => ipcRenderer.invoke('chat:status'),
   lightweightStatus: () => ipcRenderer.invoke('app:lightweight-snapshot'),
+  liveOrchestration: () => ipcRenderer.invoke('panel:live-control'),
   workspaceHub: () => ipcRenderer.invoke('workspace:hub'),
   switchWorkspace: (workspace) => ipcRenderer.invoke('workspace:switch', workspace),
   chooseAndSwitchWorkspace: () => ipcRenderer.invoke('workspace:choose-and-switch'),

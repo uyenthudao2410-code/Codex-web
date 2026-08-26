@@ -111,6 +111,21 @@ and task projection are restored.
 
 `restart_runtime` is an action of `task_control`, not a ninth public tool. The runtime publishes a deterministic contract fingerprint and tool count so Electron can detect a stale ChatGPT connector schema.
 
+Runtime activation has two explicit modes. `soft_recovery` remains component-scoped
+for automatic local fault recovery (for example, a dead Tunnel or a crashed MCP)
+and is revision-continuity guarded. Operator `restart`, accepted code/revision
+activation, and controlled updates use `full_clean_activation`: a durable
+`activation_epoch_id` is created, admission closes, durable state is checkpointed,
+Electron UI/Coding Tunnel/Coding MCP and configured Recovery MCP/Tunnel are stopped,
+and a replacement Recovery Host starts fresh processes with the same epoch. The
+epoch remains `UPDATE_INCOMPLETE` until a final current-process census verifies
+workspace, persistent device identity plus fresh lifecycle instance identity,
+disk/runtime revisions, process/server/supervisor identities, real tunnel health,
+UI and Recovery Plane identities, and a fresh connector discovery/ACK. Only a
+verified `READY` epoch with `admission_open=true` may report `fullyReady=true`.
+The ledger, task history, acceptance state, settings, secrets handles,
+authorized roots, and device identity are never deleted by this transaction.
+
 Low-level/legacy tools may still exist in compatibility or non-smart modes, but new agent workflows should prefer the compact smart surface.
 
 ## 4. Authority, EOCL, routing, and handoff

@@ -368,6 +368,123 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
             )
         self.assertEqual(incomplete.exception.code, "ACCEPTANCE_FILE_ATTESTATION_REQUIRED")
 
+    def test_accept_payload_compat_transport_attests_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "app.py"
+            source.write_bytes(b"VALUE = 1\n")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(runtime, proof_statuses=["passed"])
+                expected_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+                args = {
+                    "action": "accept",
+                    "run_id": ctx.run_id,
+                    "wave_id": ctx.wave_id,
+                    "payload": {
+                        "acceptance_files": [{"path": "app.py", "sha256": expected_sha256}],
+                    },
+                }
+                validate_arguments("task_control", args)
+                accepted = runtime.task_control(args)
+                self.assertTrue(accepted["accepted"])
+                receipt = runtime.orchestration_ledger.list_checkpoints(ctx.run_id)[-1]["metadata"]["accepted_files"]["files"][0]
+                self.assertEqual(receipt["path"], "app.py")
+                self.assertEqual(receipt["sha256"], expected_sha256)
+                self.assertEqual(receipt["receipt_kind"], "explicit_existing_file")
+            finally:
+                runtime.close()
+
+    def test_accept_payload_compat_rejects_dual_transport_and_extra_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "app.py"
+            source.write_bytes(b"VALUE = 1\n")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(runtime, proof_statuses=["passed"])
+                attestation = [{"path": "app.py", "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}]
+                with self.assertRaises(ToolFailure) as ambiguous:
+                    runtime.task_control({
+                        "action": "accept",
+                        "run_id": ctx.run_id,
+                        "wave_id": ctx.wave_id,
+                        "acceptance_files": attestation,
+                        "payload": {"acceptance_files": attestation},
+                    })
+                self.assertEqual(ambiguous.exception.code, "ACCEPTANCE_TRANSPORT_AMBIGUOUS")
+                with self.assertRaises(ToolFailure) as extra:
+                    runtime.task_control({
+                        "action": "accept",
+                        "run_id": ctx.run_id,
+                        "wave_id": ctx.wave_id,
+                        "payload": {"acceptance_files": attestation, "extra": True},
+                    })
+                self.assertEqual(extra.exception.code, "ACCEPTANCE_PAYLOAD_INVALID")
+                self.assertEqual(runtime.orchestration_control.snapshot(ctx.run_id).state, "ACCEPTING")
+                self.assertEqual(runtime.orchestration_ledger.list_checkpoints(ctx.run_id), [])
+            finally:
+                runtime.close()
+
+    def test_explicit_attestation_can_cover_touched_preexisting_dirty_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            dirty = root / "dirty.py"
+            dirty.write_text("DIRTY = 'after-wave'\n", encoding="utf-8")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["dirty.py"],
+                    existing_dirty_source_paths=["dirty.py"],
+                    patch_paths=["dirty.py"],
+                )
+                expected_sha256 = hashlib.sha256(dirty.read_bytes()).hexdigest()
+                accepted = runtime.task_control({
+                    "action": "accept",
+                    "run_id": ctx.run_id,
+                    "wave_id": ctx.wave_id,
+                    "acceptance_files": [{"path": "dirty.py", "sha256": expected_sha256}],
+                })
+                self.assertTrue(accepted["accepted"])
+                receipts = runtime.orchestration_ledger.list_checkpoints(ctx.run_id)[-1]["metadata"]["accepted_files"]
+                self.assertEqual(receipts["source"], "explicit_acceptance_attestations")
+                self.assertEqual([item["path"] for item in receipts["files"]], ["dirty.py"])
+                self.assertEqual(receipts["files"][0]["sha256"], expected_sha256)
+            finally:
+                runtime.close()
+
+    def test_explicit_preexisting_dirty_path_requires_durable_patch_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            app = root / "app.py"
+            dirty = root / "dirty.py"
+            app.write_text("VALUE = 2\n", encoding="utf-8")
+            dirty.write_text("DIRTY = True\n", encoding="utf-8")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["app.py", "dirty.py"],
+                    existing_dirty_source_paths=["dirty.py"],
+                    patch_paths=["app.py"],
+                )
+                with self.assertRaises(ToolFailure) as incomplete:
+                    runtime.task_control({
+                        "action": "accept",
+                        "run_id": ctx.run_id,
+                        "wave_id": ctx.wave_id,
+                        "acceptance_files": [
+                            {"path": "app.py", "sha256": hashlib.sha256(app.read_bytes()).hexdigest()},
+                            {"path": "dirty.py", "sha256": hashlib.sha256(dirty.read_bytes()).hexdigest()},
+                        ],
+                    })
+                self.assertEqual(incomplete.exception.code, "ACCEPTANCE_FILE_ATTESTATION_REQUIRED")
+                self.assertEqual(runtime.orchestration_control.snapshot(ctx.run_id).state, "ACCEPTING")
+                self.assertEqual(runtime.orchestration_ledger.list_checkpoints(ctx.run_id), [])
+            finally:
+                runtime.close()
+
 
     def test_stateless_accept_recovers_exact_touched_files_from_durable_wave(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

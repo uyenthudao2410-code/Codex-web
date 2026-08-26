@@ -1,0 +1,370 @@
+[
+  {
+    "version": 2,
+    "task_id": "7edc8abfb8ea4c239d84f1c04e9ccb48",
+    "orchestration": {
+      "run_id": "89c5b6dcf1174d548d741a908e20cf3e",
+      "wave_id": "b014ab8efe774ba3bbe6d3445cb3e20d",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "f9e4dfc2b5504c91bed8b1e1319788644b0d0b58f138ea23a24838412e77edb6",
+      "contract_fp": ""
+    },
+    "objective": "Diagnose the live Coding MCP connector failure that currently causes every Coding_MCP workspace_context, task_control, agent_workflow and exec_command call from ChatWeb to fail immediately with `ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)`. This blocks authorized work on E:\\DEV\\HR STA\\HR. Identify the exact root cause in the Codex-web/Coding Tools runtime, connector, bridge, supervisor, or request handling path. Do not mutate source in this call. Return the smallest causal fix, exact affected files/symbols, authoritative regression proof, and any safe runtime activation step required. Preserve other workspace/runtime state and do not touch HR source or SharePoint.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T04:50:32.634Z",
+    "updated_at": "2026-08-26T04:50:48.636Z",
+    "events": [
+      {
+        "time": "2026-08-26T04:50:32.634Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Diagnose the live Coding MCP connector failure that currently causes every Coding_MCP workspace_context, task_control, agent_workflow and exec_command call from ChatWeb to fail immediately with `ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)`. This blocks authorized work on E:\\DEV\\HR STA\\HR. Identify the exact root cause in the Codex-web/Coding Tools runtime, connector, bridge, supervisor, or request handling path. Do not mutate source in this call. Return the smallest causal fix, exact affected files/symbols, authoritative regression proof, and any safe runtime activation step required. Preserve other workspace/runtime state and do not touch HR source or SharePoint."
+        }
+      },
+      {
+        "time": "2026-08-26T04:50:39.803Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:50:47.935Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:50:48.636Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T04:51:10.165Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "cf172881feee467995a434b1ce179c62",
+    "orchestration": {
+      "run_id": "3e013ae5c08844d19b77dcb6f95d8d90",
+      "wave_id": "3b9b35636ceb4c6da5afdec60d643f4d",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "f9e4dfc2b5504c91bed8b1e1319788644b0d0b58f138ea23a24838412e77edb6",
+      "contract_fp": ""
+    },
+    "objective": "Continue diagnosis of the separate live Coding_MCP connector immediate ExceptionGroup failure. Localize by implementation symbols rather than the wrapped error string. Inspect the source paths implementing public MCP tools and request/transport lifecycle, especially workspace_context, agent_workflow, task_control, command execution, MCP stdio/HTTP server startup/serve loops, AnyIO/asyncio TaskGroup usage, multi-workspace routing, and per-request task context. Determine a concrete source-level or runtime-state root cause that could make *all* public calls fail before handler execution. Read only; do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T04:51:10.167Z",
+    "updated_at": "2026-08-26T04:51:27.893Z",
+    "events": [
+      {
+        "time": "2026-08-26T04:51:10.167Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T04:51:15.486Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:51:27.101Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:51:27.893Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T04:52:30.550Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "28ee8303b650413fa652826a40491d20",
+    "orchestration": {
+      "run_id": "f0eecba0800640dc8250f7fb8b845bd0",
+      "wave_id": "92d0f2859ed940ac8b2a2a29eafcd817",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "f9e4dfc2b5504c91bed8b1e1319788644b0d0b58f138ea23a24838412e77edb6",
+      "contract_fp": ""
+    },
+    "objective": "Precisely localize the current ChatWeb Coding_MCP raw ExceptionGroup failure by inspecting only the protocol/error normalization and Recovery Host runtime/connector freshness implementation. Determine whether current source can still leak raw BaseExceptionGroup/ExceptionGroup, whether an old live runtime could explain it, and what supported controlled recovery/activation action can restore the broken Coding_MCP plane without corrupting other workspaces. Read only. Do not edit files, restart services, acknowledge connector contracts, or mutate any workspace yet.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T04:52:30.563Z",
+    "updated_at": "2026-08-26T04:52:46.225Z",
+    "events": [
+      {
+        "time": "2026-08-26T04:52:30.563Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T04:52:35.547Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:52:45.622Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:52:46.225Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T04:53:10.617Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "4d1708bdc6e2461989dabd80eba423b8",
+    "orchestration": {
+      "run_id": "0aa2f09c5ce14bc48044415f23627130",
+      "wave_id": "6b0ca9ea392a4153a9dc8053aa2e87dc",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "f9e4dfc2b5504c91bed8b1e1319788644b0d0b58f138ea23a24838412e77edb6",
+      "contract_fp": ""
+    },
+    "objective": "Locate the existing supported operator command/script that reads the live authenticated Recovery Host snapshot for this exact development installation, including Coding MCP running/disk revision, process/server identity, fullyReady, connector contract state/rediscovery/refresh-required, active runtime work, and workspace/authorized roots. Also locate the supported controlled Coding-MCP-only restart or component activation entry point if the snapshot proves it is needed. Read only; do not execute the restart or acknowledge connector contract in this call.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T04:53:10.618Z",
+    "updated_at": "2026-08-26T04:53:25.730Z",
+    "events": [
+      {
+        "time": "2026-08-26T04:53:10.618Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T04:53:13.972Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:53:24.318Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:53:25.730Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T04:54:25.478Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "ba56492b20ae4978938765da2502b54a",
+    "orchestration": {
+      "run_id": "ece8c0697bbf4dc8b15f2bec57e5857a",
+      "wave_id": "acfb07d446a04e9ebec3c0fcea89ca99",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "f9e4dfc2b5504c91bed8b1e1319788644b0d0b58f138ea23a24838412e77edb6",
+      "contract_fp": ""
+    },
+    "objective": "Read only: capture the live sanitized development Recovery Host/runtime status using the repository-supported dev:status path. I need the current workspace, runtime/coding_mcp/tunnel readiness, Coding MCP running vs disk revision/update_pending, connector rediscovered timestamp/refresh-required/ack state, and any lifecycle/acceptance/busy condition relevant to whether a controlled restart is safe. Do not mutate source, runtime, connector acknowledgement, workspace, or tasks.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T04:54:25.479Z",
+    "updated_at": "2026-08-26T04:54:39.602Z",
+    "events": [
+      {
+        "time": "2026-08-26T04:54:25.479Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T04:54:30.735Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:54:38.440Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T04:54:39.602Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T04:55:01.277Z",
+    "archive_reason": "superseded"
+  }
+]

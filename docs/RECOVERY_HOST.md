@@ -183,11 +183,18 @@ process.
 Coding MCP expose authenticated `__control/activation`. Prepare preflight kiểm
 tra canonical ledger/integrity cùng active tool/command/background/managed
 process/agent lane, rồi atomically dựng activation fence để chặn tool call mới.
-Recovery Host restart riêng Coding MCP, giữ tunnel, và chỉ complete khi health
-trả đúng workspace, process/server identity mới và expected code revision. Disk
-revision được kiểm tra lại ngay trước stop và ngay trong spawn path; activation
-failure sau khi dựng fence sẽ hủy fence, đồng thời process thay thế chưa verify
-được sẽ bị dừng fail-closed.
+Mọi operator `restart`, accepted code/revision activation và controlled update
+đều đi qua `full_clean_activation`: đóng admission, checkpoint durable state,
+dừng Electron UI, Coding Tunnel, Coding MCP và Recovery MCP/Tunnel, handoff
+Recovery Host sang process mới, rồi khởi động lại toàn bộ bằng cùng một
+`activation_epoch_id`. Epoch chỉ được mở khi final census xác minh exact
+workspace/device/revision/process identities, tunnel thật, UI, Recovery Plane
+và connector receipt mới; nếu thiếu bất kỳ gate nào, trạng thái là
+`UPDATE_INCOMPLETE` và admission vẫn đóng. Disk revision được kiểm tra lại ngay
+trước stop và trong spawn path; activation failure sau khi dựng fence sẽ giữ
+durable epoch ở `FAILED`/closed, đồng thời process thay thế chưa verify được sẽ
+bị dừng fail-closed. Watchdog/auto-recovery vẫn dùng `soft_recovery` cho lỗi cục
+bộ, nhưng revision-continuity guard chặn soft path nếu source trên disk đã đổi.
 
 Electron UI tự relaunch bằng launcher argv cố định sau khi host trả lệnh qua UI
 registration; registration revision mới complete action. Recovery Host update
@@ -197,8 +204,12 @@ Nếu host mới không healthy trong thời hạn, host cũ reacquire ownership
 failure thay vì để control plane mất chủ.
 
 Workflow là: sửa source, chạy test, xem `update_pending`, gọi explicit preflight
-và `activate_update` đúng component, rồi đọc operation status cùng
-`running_revision == disk_revision`. Không có watcher hoặc `restart-all`.
+và `activate_update`; request sẽ tạo full-clean epoch và trả operation status
+`accepted/HANDOFF` cho tới khi Recovery Host replacement hoàn tất. Chỉ receipt
+`READY` có `fully_ready=true`, `admission_open=true`, cùng
+`running_revision == disk_revision` và connector ACK mới là activation hoàn tất.
+Không có watcher tự restart; soft restart chỉ thuộc watchdog khi xử lý lỗi cục
+bộ và không được nạp revision mới dưới epoch cũ.
 
 ### Activation Closure Contract
 

@@ -521,7 +521,14 @@ function renderSnapshot(snapshot, options = {}) {
   renderDevice(snapshot);
   renderRuntimeSourceStatus(snapshot);
 
-  $('#sideRuntimeText').textContent = ready ? 'Dịch vụ sẵn sàng' : status.runtimeRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
+  const activationIncomplete = status.updateIncomplete === true
+    || status.activationEpoch?.update_incomplete === true
+    || status.activationEpoch?.state === 'UPDATE_INCOMPLETE';
+  $('#sideRuntimeText').textContent = ready
+    ? 'Dịch vụ sẵn sàng'
+    : activationIncomplete
+      ? 'Đang hoàn tất activation epoch'
+      : status.runtimeRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
   setDot($('#sideRuntimeDot'), ready ? 'ready' : status.runtimeRunning ? 'warn' : 'error');
   $('#sideWorkspace').textContent = settings.workspace || 'Chưa chọn thư mục làm việc';
   $('#sideMcp').textContent = status.runtimeRunning ? 'ON' : 'OFF';
@@ -543,7 +550,9 @@ function renderSnapshot(snapshot, options = {}) {
   $('#selectedWorkspace').textContent = settings.workspace || 'Chưa chọn thư mục';
   renderAuthorizedRoots(settings.authorizedRoots || []);
 
-  $('#heroBadge').textContent = ready ? 'Tất cả dịch vụ đang hoạt động bình thường' : 'Chưa hoàn tất triển khai';
+  $('#heroBadge').textContent = ready
+    ? 'Tất cả dịch vụ đang hoạt động bình thường'
+    : activationIncomplete ? 'UPDATE_INCOMPLETE · đang đồng bộ runtime' : 'Chưa hoàn tất triển khai';
   $('#heroTitle').textContent = ready ? 'Workspace lập trình web đã sẵn sàng' : 'Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn';
   $('#heroText').textContent = ready
     ? 'Hiện đang chạy qua môi trường portable tích hợp, trang web chỉ có thể truy cập thư mục làm việc đã chọn.'
@@ -875,13 +884,13 @@ function applyHeartbeat(status) {
   if (!state.snapshot || !status) return;
   // Heartbeats are authoritative point-in-time projections. Never retain a
   // previous green closure/connector receipt when the current host omits it.
-  for (const key of ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure']) {
+  for (const key of ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure', 'activationEpoch', 'updateIncomplete']) {
     if (!Object.hasOwn(status, key)) delete state.snapshot.status[key];
   }
   state.snapshot.status.runtimeRunning = Boolean(status.mcpRunning);
   state.snapshot.status.tunnelRunning = Boolean(status.tunnelRunning);
   state.snapshot.status.fullyReady = Boolean(status.fullyReady);
-  ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure'].forEach((key) => {
+  ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure', 'activationEpoch', 'updateIncomplete'].forEach((key) => {
     if (Object.hasOwn(status, key)) state.snapshot.status[key] = status[key];
   });
   if (status.recoveryHost) state.snapshot.recoveryHost = status.recoveryHost;
@@ -897,7 +906,14 @@ function applyHeartbeat(status) {
   $('#tunnelStatus').textContent = status.tunnelRunning ? 'Đã kết nối' : 'Chưa kết nối';
   setDot($('#mcpDot'), status.mcpRunning ? 'ready' : 'error');
   setDot($('#tunnelDot'), status.tunnelRunning ? 'ready' : 'error');
-  $('#sideRuntimeText').textContent = ready ? 'Dịch vụ sẵn sàng' : status.mcpRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
+  const activationIncomplete = status.updateIncomplete === true
+    || status.activationEpoch?.update_incomplete === true
+    || status.activationEpoch?.state === 'UPDATE_INCOMPLETE';
+  $('#sideRuntimeText').textContent = ready
+    ? 'Dịch vụ sẵn sàng'
+    : activationIncomplete
+      ? 'Đang hoàn tất activation epoch'
+      : status.mcpRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
   setDot($('#sideRuntimeDot'), ready ? 'ready' : status.mcpRunning ? 'warn' : 'error');
 }
 

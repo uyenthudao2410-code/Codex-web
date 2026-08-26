@@ -46,7 +46,9 @@
 
     window.mcpAssistant = {
       snapshot: () => ok(snapshot),
+      lightweightSnapshot: () => ok(snapshot.status),
       orchestration: fail,
+      liveOrchestration: fail,
       chooseWorkspace: fail,
       switchWorkspace: fail,
       updateAuthorizedRoots: fail,

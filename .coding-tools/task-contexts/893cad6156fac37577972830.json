@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "7cdf32a7a2ca4e05a4029468015518b0",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "fcPEfu-_mlp5rqRJcw3-vke6",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1822,
+    "finished_at": "2026-08-26T07:23:43.836Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T07:23:41.168Z",
+  "updated_at": "2026-08-26T07:23:43.836Z",
+  "events": [
+    {
+      "time": "2026-08-26T07:23:41.168Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T07:23:42.976Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 35 \"TASK_CONTROL_CONTINUATION_ACTIONS\\|recover_exact_run_context\\|task_control.*stop\" -- resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+        "session_id": "fcPEfu-_mlp5rqRJcw3-vke6"
+      }
+    },
+    {
+      "time": "2026-08-26T07:23:43.836Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 35 \"TASK_CONTROL_CONTINUATION_ACTIONS\\|recover_exact_run_context\\|task_control.*stop\" -- resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+        "status": "passed"
+      }
+    }
+  ]
+}

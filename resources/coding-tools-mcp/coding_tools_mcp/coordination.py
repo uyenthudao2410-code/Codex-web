@@ -963,6 +963,30 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
 
     def task_control(self, args: dict[str, Any]) -> dict[str, Any]:
         action = str(args.get("action", "get")).lower()
+        acceptance_files = args.get("acceptance_files") if "acceptance_files" in args else None
+        if action == "accept" and "payload" in args:
+            payload = args.get("payload")
+            if not isinstance(payload, dict):
+                raise ToolFailure(
+                    "ACCEPTANCE_PAYLOAD_INVALID",
+                    "Final-acceptance compatibility payload must be an object.",
+                    category="validation",
+                )
+            unexpected = sorted(set(payload) - {"acceptance_files"})
+            if unexpected or "acceptance_files" not in payload:
+                raise ToolFailure(
+                    "ACCEPTANCE_PAYLOAD_INVALID",
+                    "Final-acceptance compatibility payload may contain only acceptance_files.",
+                    category="validation",
+                    details={"unsupported": unexpected},
+                )
+            if "acceptance_files" in args:
+                raise ToolFailure(
+                    "ACCEPTANCE_TRANSPORT_AMBIGUOUS",
+                    "Supply acceptance_files through exactly one transport.",
+                    category="validation",
+                )
+            acceptance_files = payload.get("acceptance_files")
         if action == "restart_runtime":
             return self._enqueue_runtime_restart(args)
         requested_run = str(args.get("run_id") or "").strip()
@@ -1281,15 +1305,27 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                     scope_root,
                     self.orchestration_ledger,
                     state.get("modified_files"),
-                    acceptance_files=args.get("acceptance_files") if "acceptance_files" in args else None,
+                    acceptance_files=acceptance_files,
                     run_id=run_id,
                     wave_id=ctx.wave_id,
+                )
+                explicit_acceptance_paths = (
+                    [
+                        str(item.get("path") or "")
+                        for item in accepted_files.get("files", [])
+                        if isinstance(item, dict)
+                        and str(item.get("receipt_kind") or "") == "explicit_existing_file"
+                        and str(item.get("path") or "")
+                    ]
+                    if accepted_files.get("source") == "explicit_acceptance_attestations"
+                    else None
                 )
                 durable_mutation, _durable_paths = _durable_wave_acceptance_paths(
                     self.orchestration_ledger,
                     run_id,
                     ctx.wave_id,
                     workspace=scope_root,
+                    explicit_attested_paths=explicit_acceptance_paths,
                 )
                 receipt_mutation = any(
                     isinstance(item, dict)
@@ -1308,8 +1344,8 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                         retryable=False,
                         details={"run_id": run_id, "wave_id": ctx.wave_id},
                     )
-                coverage_manifest = args.get("problem_coverage_manifest")
-                criterion_dispositions = args.get("problem_criterion_dispositions")
+                coverage_manifest, criterion_dispositions = args.get("problem_coverage_manifest"), args.get("problem_criterion_dispositions")
+                resolution_envelope = self._problem_resolution_envelope(args.get("problem_resolution_envelope"))
                 controller_authority = self._problem_chatweb_controller_authority(run_id, controller=controller) if criterion_dispositions is not None else None
                 try:
                     problem_outcome = self.orchestration_ledger.problem_prepare_eocl_outcome_claim(
@@ -1317,12 +1353,15 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                         git_head=str(identity.get("base_head") or ""), worktree_fp=str(identity.get("worktree_fp") or ""),
                         proof_fingerprint=proof_fp, accepted_files=accepted_files, durable_mutation=durable_mutation,
                         coverage_manifest=coverage_manifest, criterion_dispositions=criterion_dispositions,
+                        resolution_envelope=resolution_envelope,
                         controller_authority=controller_authority,
                     )
                 except ProblemLineageError as exc:
                     missing = coverage_manifest is None and "coverage manifest" in str(exc)
                     missing_dispositions = criterion_dispositions is None and "dispositions must map" in str(exc)
                     code = "PRL_COVERAGE_MANIFEST_REQUIRED" if missing else "PRL_CRITERION_DISPOSITIONS_REQUIRED" if missing_dispositions else "PRL_OUTCOME_CLAIM_INVALID"
+                    if resolution_envelope is None and "resolution envelope is required" in str(exc):
+                        code = "PRL_RESOLUTION_ENVELOPE_REQUIRED"
                     raise ToolFailure(code, str(exc), category="validation") from exc
                 if proofs and any(str(item.get("status") or "") == "passed" for item in proofs):
                     if self.orchestration_ledger.latest_quality_outcome(run_id) is None:

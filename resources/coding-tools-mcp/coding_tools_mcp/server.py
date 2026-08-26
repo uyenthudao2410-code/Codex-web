@@ -120,6 +120,7 @@ from .tool_contract import (  # noqa: F401  # composition-root namespace
     TOOL_MODE_ALLOWLISTS,
     TOOL_REGISTRY,
     ToolSpec,
+    smart_tool_contract_compatible_predecessors,
     tool_metadata_contract,
 )
 from .usage_events import usage_event_from_provider_delegation  # noqa: F401  # composition-root namespace
@@ -317,11 +318,17 @@ class Runtime(
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8")
+        contract_sha256 = hashlib.sha256(contract_bytes).hexdigest()
         self.tool_contract = {
             "schema_version": TOOL_CONTRACT_SCHEMA_VERSION,
             "profile": SMART_TOOL_PROFILE if self.tool_mode == "smart" else self.tool_mode,
-            "sha256": hashlib.sha256(contract_bytes).hexdigest(),
+            "sha256": contract_sha256,
             "tool_count": len(self._exposed_tool_names),
+            "compatible_predecessor_sha256": (
+                smart_tool_contract_compatible_predecessors(contract_sha256)
+                if self.tool_mode == "smart"
+                else []
+            ),
             "evaluation": {
                 "supported": isinstance(evaluation_schema, dict),
                 "schema_version": EVALUATION_SCHEMA_VERSION,
@@ -350,6 +357,7 @@ class Runtime(
         self.sessions_lock = threading.Lock()
         self.supervisor_request_lock = threading.Lock()
         self.activation_lock = threading.RLock()
+        self._initialize_activation_admission()
         self.activation_fence: dict[str, Any] | None = None
         self.active_tool_calls = 0
         self.session_principals: dict[str, str] = {}
@@ -384,6 +392,8 @@ class Runtime(
         self.request_context = threading.local()
         self.tool_discovery_lock = threading.Lock()
         self.tool_discovery_receipts: dict[str, dict[str, Any]] = {}
+        self.tool_contact_lock = threading.Lock()
+        self.tool_contact_receipts: dict[str, dict[str, Any]] = {}
         # Background operations are process-scoped rather than HTTP-session-scoped.
         # A reconnect in the same MCP process must be able to poll the original
         # Event/result instead of falsely declaring it orphaned.
@@ -2012,6 +2022,8 @@ class Runtime(
             "shell_env_include_only": list(self.shell_env_policy.include_only),
             "shell_env_exclude": list(self.shell_env_policy.exclude),
             "endpoint_path": MCP_ENDPOINT_PATH,
+            "activation": self.activation_admission_snapshot(),
+            **self.activation_admission_snapshot(),
             "project_context": {
                 "root_instruction_files": [item.path for item in self.project_context.root_files],
                 "nested_instruction_files": list(self.project_context.nested_files),
@@ -2609,7 +2621,18 @@ class Runtime(
             pass
 
     def _orchestration_result(self, ctx: RunContext | None, *, write_reports: bool = True) -> dict[str, Any] | None:
-        return build_orchestration_runtime_result(self, ctx, write_reports=write_reports)
+        result = build_orchestration_runtime_result(self, ctx, write_reports=write_reports)
+        if isinstance(result, dict):
+            # Keep activation admission visible beside every orchestration
+            # result; source/run proof must never be mistaken for live runtime
+            # admission proof.
+            result["activation"] = self.activation_admission_snapshot()
+            runtime_payload = result.get("runtime")
+            if isinstance(runtime_payload, dict):
+                runtime_payload.update(self.activation_admission_snapshot())
+            else:
+                result["runtime"] = self.activation_admission_snapshot()
+        return result
 
     def codex_bridge(self, args: dict[str, Any]) -> dict[str, Any]:
         try:

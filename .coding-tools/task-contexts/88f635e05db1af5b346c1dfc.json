@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "afa0093352574bb3b84e5b942eef075b",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "tYYOeOZxNIpeKE1EfzfYVlmn",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 2511,
+    "finished_at": "2026-08-26T07:18:06.855Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T07:18:03.366Z",
+  "updated_at": "2026-08-26T07:18:06.855Z",
+  "events": [
+    {
+      "time": "2026-08-26T07:18:03.366Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T07:18:05.888Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 35 \"def _require_hub_controller\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "session_id": "tYYOeOZxNIpeKE1EfzfYVlmn"
+      }
+    },
+    {
+      "time": "2026-08-26T07:18:06.855Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 35 \"def _require_hub_controller\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "status": "failed"
+      }
+    }
+  ]
+}

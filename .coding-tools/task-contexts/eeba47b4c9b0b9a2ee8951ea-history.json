@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "1f5317e0ec154666b8fd5b65dea7d848",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T05:02:52.217Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-08-26T05:02:44.773Z",
+    "updated_at": "2026-08-26T05:02:52.217Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:02:44.773Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:02:45.017Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "session_id": "5GR5_bO_gGp1-iN0rQ6fimhV"
+        }
+      },
+      {
+        "time": "2026-08-26T05:02:45.543Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:02:52.217Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"from pathlib import Path; import hashlib; paths=['resources/coding-tools-mcp/coding_tools_mcp/coordination.py','resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py','resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py']; [print(f'{p}\\t{hashlib.sha256(Path(p).read_bytes()).hexdigest()}') for p in paths]\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:02:52.217Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:03:00.378Z",
+    "archive_reason": "finished"
+  }
+]

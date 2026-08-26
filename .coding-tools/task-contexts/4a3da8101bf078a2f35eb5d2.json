@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "task_id": "640142da41164186aabeb1091302171f",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "active",
+  "steps": [],
+  "current_step": "Control command session",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Output session not found.",
+  "next_step": "",
+  "created_at": "2026-08-26T09:22:07.004Z",
+  "updated_at": "2026-08-26T09:22:07.005Z",
+  "events": [
+    {
+      "time": "2026-08-26T09:22:07.004Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-08-26T09:22:07.005Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "SESSION_NOT_FOUND"
+      }
+    }
+  ]
+}

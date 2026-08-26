@@ -195,6 +195,11 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                     "problem_revision": {**integer, "minimum": 1, "maximum": 1000000},
                     "contract_fingerprint": {**string, "minLength": 64, "maxLength": 64},
                     "resolution_claim": {**string, "enum": ["none", "full_problem"], "default": "none"},
+                    "frame": {
+                        "type": "object",
+                        "additionalProperties": True,
+                        "description": "Optional typed shadow Problem Frame packet. It is normalized and hashed by runtime; it never grants authority or changes routing/mutation policy.",
+                    },
                 },
                 "description": "Optional v11 PRL capture declaration. problem requires an exact immutable revision binding; non_problem creates no fake lineage; unknown stays policy-ineligible. Reserved workspace/base/trace authority is runtime-derived.",
             },
@@ -396,6 +401,11 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 "type": "object",
                 "additionalProperties": {**string, "enum": ["SATISFIED_NON_CODE"]},
                 "description": "For a NOT_APPLICABLE full_problem v11 wave only: maps every and only current criterion ID to SATISFIED_NON_CODE. It requires zero mutation/source receipts and current ChatWeb controller authority.",
+            },
+            "problem_resolution_envelope": {
+                "type": "object",
+                "additionalProperties": True,
+                "description": "Required for a full_problem acceptance claim: bounded direct outcomes, relevant invariants/truth domains, evidence provenance, excluded scope, and an executed/passed closure-falsification probe.",
             },
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
             "after_seq": {**integer, "minimum": 0, "default": 0, "description": "Durable orchestration event sequence cursor for action=events."},

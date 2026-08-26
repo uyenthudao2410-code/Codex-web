@@ -19,6 +19,8 @@ from datetime import datetime
 from typing import Any
 from urllib.parse import unquote
 
+from .resolution_contract import ResolutionContractError, contract_sha256, normalize_resolution_envelope
+
 
 PROBLEM_SCHEMA_VERSION = 11
 PROBLEM_EVENT_SCHEMA_LEGACY = 1
@@ -720,6 +722,7 @@ class ProblemLineageLedgerMixin:
         durable_mutation: bool,
         coverage_manifest: Any = None,
         criterion_dispositions: Any = None,
+        resolution_envelope: Any = None,
         controller_authority: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         with self._lock, self._connect() as connection:
@@ -792,6 +795,12 @@ class ProblemLineageLedgerMixin:
                 }
             else:
                 raise ProblemLineageError("engineering_floor_unknown")
+            if resolution_envelope is None:
+                raise ProblemLineageError("resolution envelope is required for a full_problem claim")
+            try:
+                normalized_envelope = normalize_resolution_envelope(resolution_envelope)
+            except ResolutionContractError as exc:
+                raise ProblemLineageError(str(exc)) from exc
             claim = {
                 "schema_version": 1,
                 "resolution_claim": "full_problem",
@@ -810,6 +819,8 @@ class ProblemLineageLedgerMixin:
                     "accepted_files_sha256": accepted_files_sha256,
                 },
                 "evidence": evidence,
+                "resolution_envelope": normalized_envelope,
+                "resolution_envelope_sha256": contract_sha256(normalized_envelope),
             }
             encoded = _json(claim).encode("utf-8")
             if len(encoded) > PROBLEM_OUTCOME_CLAIM_MAX_BYTES:
@@ -829,6 +840,8 @@ class ProblemLineageLedgerMixin:
             else:
                 context["criterion_dispositions"] = evidence["criterion_dispositions"]
                 context["criterion_dispositions_sha256"] = evidence["criterion_dispositions_sha256"]
+            context["resolution_envelope"] = normalized_envelope
+            context["resolution_envelope_sha256"] = contract_sha256(normalized_envelope)
             metadata["problem_resolution"] = context
             connection.execute("UPDATE waves SET metadata_json=? WHERE wave_id=? AND run_id=?", (_json(metadata), wave_id, run_id))
         return {"required": True, "recorded": True, "idempotent": False, "claim": claim, "claim_sha256": claim_sha256}
@@ -903,6 +916,12 @@ class ProblemLineageLedgerMixin:
             or str(claim.get("wave_id") or "") != wave_id
         ):
             raise ProblemLineageError("frozen problem outcome claim identity is invalid")
+        try:
+            envelope = normalize_resolution_envelope(claim.get("resolution_envelope"))
+        except ResolutionContractError as exc:
+            raise ProblemLineageError(str(exc)) from exc
+        if str(claim.get("resolution_envelope_sha256") or "") != contract_sha256(envelope):
+            raise ProblemLineageError("frozen resolution envelope changed")
         source = claim.get("source") if isinstance(claim.get("source"), dict) else {}
         accepted_files = metadata.get("accepted_files")
         if (

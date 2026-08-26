@@ -1,0 +1,60 @@
+[
+  {
+    "version": 2,
+    "task_id": "00061a9bb45e4a53ac6ea8e2537eb232",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T10:17:49.913Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-26T10:17:49.907Z",
+    "updated_at": "2026-08-26T10:17:49.913Z",
+    "events": [
+      {
+        "time": "2026-08-26T10:17:49.907Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T10:17:49.913Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"async function refreshTask|setInterval\\(refreshTask|async function refreshHealth|let orchestrationInFlight|setInterval\\(refreshOrchestration|async function refresh\\(force|setInterval\\(\\(\\) => refresh\\(false\\)|loadCostSettings\\(\\)\" electron/browserPreload.js electron/preload.js renderer/theme-bootstrap.js renderer/browser.js renderer/panel.js renderer/control-center.js renderer/dashboard.js tests/control-panel.test.js tests/control-center-manager.test.js tests/dashboard-analytics.tes",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T10:17:49.913Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T10:17:56.736Z",
+    "archive_reason": "finished"
+  }
+]

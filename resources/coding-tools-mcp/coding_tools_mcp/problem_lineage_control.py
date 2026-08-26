@@ -12,6 +12,7 @@ from .host_correlation import (
     restore_pending_host_turn,
 )
 from .problem_lineage import ProblemLineageError
+from .resolution_contract import ResolutionContractError, normalize_resolution_envelope
 
 
 def _utc_now() -> str:
@@ -19,6 +20,15 @@ def _utc_now() -> str:
 
 
 class ProblemLineageControlMixin:
+    @staticmethod
+    def _problem_resolution_envelope(value: Any) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        try:
+            return normalize_resolution_envelope(value)
+        except ResolutionContractError as exc:
+            raise ToolFailure("PRL_RESOLUTION_ENVELOPE_INVALID", str(exc), category="validation") from exc
+
     """The parent supplies task state, workspace, and the canonical ledger."""
 
     _PROBLEM_EXPLICIT_TRANSITIONS = frozenset({"open", "confirm", "reopen", "revise", "block", "abandon"})

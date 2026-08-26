@@ -24,6 +24,7 @@ from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
 from .p5_experiment import P5ExperimentError
 from .problem_lineage import ProblemLineageError
+from .resolution_contract import ResolutionContractError, contract_sha256, normalize_problem_frame
 from .solution_economics import ELIGIBLE_WORKFLOWS, SOLUTION_SHADOW_EVENT, record_solution_shadow
 from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
@@ -72,7 +73,7 @@ class AgentWorkflowMixin:
         revision = requested.get("problem_revision")
         contract_fp = str(requested.get("contract_fingerprint") or "").strip().lower()
         if origin != "problem":
-            if problem_id or revision or contract_fp or claim != "none":
+            if problem_id or revision or contract_fp or claim != "none" or requested.get("frame") is not None:
                 raise ToolFailure("PRL_CONTEXT_INVALID", "Only work_origin=problem may carry exact binding or full_problem claim.", category="validation")
             return {"schema_version": 1, "work_origin": origin, "resolution_claim": "none", "policy_eligible": False}
         if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1 or len(contract_fp) != 64:
@@ -85,13 +86,21 @@ class AgentWorkflowMixin:
         if host_identity and str(host_identity.get("status") or "") == "exact":
             if str(host_identity.get("problem_id") or "") != problem_id or int(host_identity.get("problem_revision") or 0) != revision:
                 raise ToolFailure("PRL_HOST_BINDING_MISMATCH", "Declared problem revision conflicts with the exact pending host identity.", category="validation")
-        return {
+        normalized_context = {
             "schema_version": 1, "work_origin": "problem", "resolution_claim": claim,
             "problem_id": problem_id, "problem_revision": revision,
             "contract_fingerprint": resolved["contract_fingerprint"],
             "engineering_floor": resolved["engineering_floor"],
             "policy_eligible": False,
         }
+        if requested.get("frame") is not None:
+            try:
+                frame = normalize_problem_frame(requested.get("frame"))
+            except ResolutionContractError as exc:
+                raise ToolFailure("PRL_FRAME_INVALID", str(exc), category="validation") from exc
+            normalized_context["problem_frame"] = frame
+            normalized_context["problem_frame_sha256"] = contract_sha256(frame)
+        return normalized_context
 
     def _record_claimed_host_problem_relation(
         self,
@@ -461,10 +470,15 @@ class AgentWorkflowMixin:
                         turn_id=str(claimed_host_turn["turn_id"]),
                         trace_id=str(claimed_host_turn["trace_id"]),
                     )
-            problem_resolution = self._problem_resolution_context_for_run(
-                args,
-                host_identity=host_problem_identity,
-            )
+            try:
+                problem_resolution = self._problem_resolution_context_for_run(
+                    args,
+                    host_identity=host_problem_identity,
+                )
+            except Exception:
+                if claimed_host_turn:
+                    self._restore_pending_host_turn(claimed_host_turn)
+                raise
             run_metadata["problem_resolution"] = problem_resolution
             if evaluation:
                 environment_id = str(evaluation.pop("environment_id", "") or "").strip()
@@ -510,6 +524,28 @@ class AgentWorkflowMixin:
                     current_ctx,
                     task_id=str(current_task.get("task_id") or ""),
                     problem_context=problem_resolution,
+                )
+            frame = problem_resolution.get("problem_frame") if isinstance(problem_resolution, dict) else None
+            if isinstance(frame, dict):
+                # Shadow-only evidence: the durable event carries identity and
+                # hashes, never the frame prose or private reasoning.
+                self.orchestration_ledger.append_event(
+                    current_ctx.run_id,
+                    wave_id=current_ctx.wave_id,
+                    event_type="problem_frame_shadow",
+                    state_before=current_ctx.state,
+                    state_after=current_ctx.state,
+                    payload={
+                        "schema_version": int(frame.get("schema_version") or 0),
+                        "frame_id": str(frame.get("frame_id") or ""),
+                        "frame_revision": int(frame.get("frame_revision") or 0),
+                        "frame_sha256": str(problem_resolution.get("problem_frame_sha256") or contract_sha256(frame)),
+                        "problem_id": str(problem_resolution.get("problem_id") or ""),
+                        "problem_revision": int(problem_resolution.get("problem_revision") or 0),
+                        "decision_changed": bool(((frame.get("decision_delta") or {}).get("changed_decision"))),
+                        "counterevidence_count": len(frame.get("counterevidence") or []),
+                        "authority_side_effects": False,
+                    },
                 )
 
         self._project_orchestration(current_ctx, event="orchestration_context_ready")

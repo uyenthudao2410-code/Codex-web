@@ -36,7 +36,7 @@ test.beforeEach(() => {
   fs.rmSync(supervisorRequestPath, { force: true });
   fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
 });
-const { RuntimeOrchestrator, readMcpHealth, readMcpActivationPreflight, parseGitStatusPorcelainV2, parseLoopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
+const { RuntimeOrchestrator, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, parseGitStatusPorcelainV2, parseLoopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
 const { classifyStoredDeviceOwner } = require('../electron/services/deviceIdentity');
 
 test('process liveness rejects missing and non-positive PIDs before OS probing', () => {
@@ -128,6 +128,61 @@ test('Coding MCP health is trusted only when workspace and device_id both match'
   assert.ok(await readMcpHealth(port, token, 'C:\\work\\one', 'device-a'));
   assert.equal(await readMcpHealth(port, token, 'C:\\work\\one', 'device-b'), null);
   assert.equal(await readMcpHealth(port, token, 'C:\\work\\other', 'device-a'), null);
+});
+
+test('Coding MCP health classifies deterministic mismatches separately from transient timeout or not-ready state', async (t) => {
+  const token = 'token';
+  let mode = 'healthy';
+  const server = http.createServer((request, response) => {
+    if (mode === 'timeout') return;
+    if (mode === 'unauthorized') {
+      response.writeHead(401);
+      response.end();
+      return;
+    }
+    if (mode === 'invalid-json') {
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end('{invalid');
+      return;
+    }
+    const payload = mode === 'not-ready'
+      ? { ready: false, workspace: 'C:\\work\\one', device_id: 'device-a' }
+      : { ready: true, workspace: 'C:\\work\\one', device_id: 'device-a' };
+    const body = JSON.stringify(payload);
+    response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
+    response.end(body);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const port = server.address().port;
+
+  let observed = await readMcpHealthObservation(port, token, 'C:\\work\\other', 'device-a');
+  assert.equal(observed.failure.kind, 'workspace_mismatch');
+  assert.equal(observed.failure.deterministic, true);
+
+  observed = await readMcpHealthObservation(port, token, 'C:\\work\\one', 'device-b');
+  assert.equal(observed.failure.kind, 'device_mismatch');
+  assert.equal(observed.failure.deterministic, true);
+
+  mode = 'unauthorized';
+  observed = await readMcpHealthObservation(port, token, 'C:\\work\\one', 'device-a');
+  assert.equal(observed.failure.kind, 'http_unauthorized');
+  assert.equal(observed.failure.deterministic, true);
+
+  mode = 'invalid-json';
+  observed = await readMcpHealthObservation(port, token, 'C:\\work\\one', 'device-a');
+  assert.equal(observed.failure.kind, 'invalid_json');
+  assert.equal(observed.failure.deterministic, true);
+
+  mode = 'not-ready';
+  observed = await readMcpHealthObservation(port, token, 'C:\\work\\one', 'device-a');
+  assert.equal(observed.failure.kind, 'not_ready');
+  assert.equal(observed.failure.deterministic, false);
+
+  mode = 'timeout';
+  observed = await readMcpHealthObservation(port, token, 'C:\\work\\one', 'device-a');
+  assert.equal(observed.failure.kind, 'timeout');
+  assert.equal(observed.failure.deterministic, false);
 });
 
 test('Coding MCP activation preflight requires workspace identity even for a refusal', async (t) => {
@@ -375,7 +430,9 @@ test('runtime recovery projection exposes only local typed supervisor evidence',
     lastRecoveryAt: null,
     lastHealthyAt: null,
     downtimeMs: 0,
-    failureElapsedMs: 0
+    failureElapsedMs: 0,
+    mcpHealthFailureKind: null,
+    mcpHealthFailureDeterministic: false
   });
 });
 
@@ -584,9 +641,9 @@ test('persisted matching connector SHA survives process restart without forcing 
   assert.equal(orchestrator.connectorContractStatus(changedContract, discovery).contractState, 'CURRENT_ACKNOWLEDGED');
 });
 
-test('every changed exact tool contract SHA requires real rediscovery before acknowledgement', () => {
+test('reviewed exact predecessor requires live current-process ChatWeb contact before compatibility acknowledgement', () => {
   const acknowledgedSha = '34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c';
-  const currentSha = 'fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585';
+  const currentSha = '57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053';
   fs.writeFileSync(runtimeStatePath, JSON.stringify({
     manualStop: false,
     chatgptToolContractSha256: acknowledgedSha,
@@ -614,30 +671,88 @@ test('every changed exact tool contract SHA requires real rediscovery before ack
   assert.equal(changed.compatibilitySource, null);
   assert.equal(changed.acknowledgedSha256, acknowledgedSha);
 
-  const synchronized = orchestrator.synchronizeConnectorContract(contract);
-  assert.equal(synchronized.contractState, 'CHANGED_NEEDS_DISCOVERY');
-  assert.equal(synchronized.acknowledgedSha256, acknowledgedSha);
-  const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
-  assert.equal(persisted.chatgptToolContractSha256, acknowledgedSha);
-  assert.equal(Object.hasOwn(persisted, 'chatgptToolContractRediscoveredAt'), false);
-
-  const nextCompatible = {
-    ...contract,
-    sha256: 'd'.repeat(64),
-    compatible_predecessor_sha256: []
+  const wrongContact = {
+    current_contract_contact: true,
+    method: 'tools/call',
+    contract_sha256: 'f'.repeat(64),
+    observed_at: '2026-08-26T06:00:00.000Z',
+    process_instance_id: 'process-current',
+    server_instance_id: 'server-current'
   };
-  const sameEpoch = orchestrator.connectorContractStatus(nextCompatible);
-  assert.equal(sameEpoch.contractState, 'CHANGED_NEEDS_DISCOVERY');
-  assert.equal(sameEpoch.compatibilitySource, null);
-  assert.equal(sameEpoch.refreshRequired, true);
+  assert.equal(orchestrator.connectorContractStatus(contract, null, wrongContact).contractState, 'CHANGED_NEEDS_DISCOVERY');
 
-  const breaking = { ...nextCompatible, schema_version: 2, sha256: 'e'.repeat(64) };
-  const blocked = orchestrator.connectorContractStatus(breaking);
+  const contact = {
+    current_contract_contact: true,
+    method: 'tools/call',
+    contract_sha256: currentSha,
+    observed_at: '2026-08-26T06:01:00.000Z',
+    process_instance_id: 'process-current',
+    server_instance_id: 'server-current'
+  };
+  const compatible = orchestrator.connectorContractStatus(contract, null, contact);
+  assert.equal(compatible.contractState, 'CHANGED_COMPATIBLE_NEEDS_ACK');
+  assert.equal(compatible.refreshRequired, false);
+  assert.equal(compatible.acknowledgementPending, true);
+  assert.equal(compatible.rediscovered, false);
+  assert.equal(compatible.backwardCompatible, true);
+  assert.equal(compatible.compatibilitySource, 'declared_exact_predecessor_live_contact');
+  assert.equal(compatible.compatibilityMetadataBackfillPending, true);
+
+  const synchronized = orchestrator.synchronizeConnectorContract(contract, null, contact);
+  assert.equal(synchronized.contractState, 'UNCHANGED_ACKNOWLEDGED');
+  assert.equal(synchronized.acknowledgedSha256, currentSha);
+  assert.equal(synchronized.rediscovered, false);
+  const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+  assert.equal(persisted.chatgptToolContractSha256, currentSha);
+  assert.equal(persisted.chatgptToolContractSchemaVersion, 1);
+  assert.equal(persisted.chatgptToolContractProfile, 'smart-v3');
+  assert.equal(Object.hasOwn(persisted, 'chatgptToolContractRediscoveredAt'), false);
+  assert.equal(Object.hasOwn(persisted, 'chatgptToolContractRediscoveredSha256'), false);
+  assert.equal(persisted.chatgptToolContractCompatibilitySource, 'declared_exact_predecessor_live_contact');
+  assert.equal(persisted.chatgptToolContractCompatibilityPredecessorSha256, acknowledgedSha);
+  assert.equal(persisted.chatgptToolContractCompatibilityContactSha256, currentSha);
+  assert.equal(persisted.chatgptToolContractCompatibilityProcessInstanceId, 'process-current');
+  assert.equal(persisted.chatgptToolContractCompatibilityServerInstanceId, 'server-current');
+});
+
+test('compatibility route stays fail closed for undeclared or boundary-changing contracts', () => {
+  const acknowledgedSha = 'a'.repeat(64);
+  const currentSha = 'b'.repeat(64);
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: acknowledgedSha,
+    chatgptToolContractSchemaVersion: 1,
+    chatgptToolContractProfile: 'smart-v3'
+  }), 'utf8');
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  const contact = {
+    current_contract_contact: true,
+    method: 'tools/call',
+    contract_sha256: currentSha,
+    observed_at: '2026-08-26T06:02:00.000Z',
+    process_instance_id: 'process-current',
+    server_instance_id: 'server-current'
+  };
+
+  const undeclared = { schema_version: 1, profile: 'smart-v3', sha256: currentSha, compatible_predecessor_sha256: [] };
+  const undeclaredStatus = orchestrator.connectorContractStatus(undeclared, null, contact);
+  assert.equal(undeclaredStatus.contractState, 'CHANGED_NEEDS_DISCOVERY');
+  assert.equal(undeclaredStatus.refreshRequired, true);
+  assert.equal(undeclaredStatus.backwardCompatible, false);
+
+  const breaking = { schema_version: 2, profile: 'smart-v3', sha256: currentSha, compatible_predecessor_sha256: [acknowledgedSha] };
+  const blocked = orchestrator.connectorContractStatus(breaking, null, contact);
   assert.equal(blocked.contractState, 'CHANGED_NEEDS_DISCOVERY');
   assert.equal(blocked.refreshRequired, true);
   assert.equal(blocked.backwardCompatible, false);
   assert.throws(
-    () => orchestrator.acknowledgeConnectorContractHash(breaking),
+    () => orchestrator.acknowledgeConnectorContractHash(breaking, null, contact),
     (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
   );
 });
@@ -720,6 +835,8 @@ test('supervisor consumes a fresh workspace-bound restart ticket exactly once', 
   assert.equal(result.supervisorRequest.status, 'completed');
   assert.equal(result.supervisorRequest.component, 'coding_mcp');
   assert.equal(activationOptions.expiresAtUnixMs, now + 30000);
+  assert.equal(activationOptions.automatic, true);
+  assert.equal(activationOptions.mode, 'soft_recovery');
 });
 
 test('Coding MCP activation verifies revision and a new process identity without touching the tunnel', async (t) => {
@@ -967,6 +1084,31 @@ test('supervisor does not kill a live MCP process after transient health failure
   assert.equal(result.recoveryReason, 'mcp_process_alive_health_unavailable');
 });
 
+test('supervisor never escalates deterministic MCP health mismatch into a destructive restart', async () => {
+  const { orchestrator, calls } = recoveryHarness({
+    fullyReady: false,
+    mcpRunning: false,
+    nativeAlive: true,
+    tunnelRunning: true,
+    mcpHealthFailureKind: 'workspace_mismatch',
+    mcpHealthFailureDeterministic: true
+  });
+  let result = null;
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    orchestrator.nextRecoveryAt = 0;
+    result = await orchestrator.supervise();
+  }
+  assert.equal(calls.restart, 0);
+  assert.equal(calls.mcp, 0);
+  assert.equal(calls.tunnel, 0);
+  assert.equal(result.recoveryBlocked, true);
+  assert.equal(result.recoveryDeferred, true);
+  assert.equal(result.recoveryReason, 'mcp_health_deterministic_mismatch');
+  assert.equal(result.failureKind, 'mcp_health_workspace_mismatch');
+  assert.equal(result.mcpHealthFailureKind, 'workspace_mismatch');
+  assert.equal(result.mcpHealthFailureDeterministic, true);
+});
+
 test('supervisor fail-closes before replacement when the recorded owned PID is still alive but MCP health is unavailable', async (t) => {
   const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
     windowsHide: true,
@@ -1082,7 +1224,9 @@ test('supervisor escalates to a full restart after repeated deferrals of a hung 
     fullyReady: false,
     mcpRunning: false,
     nativeAlive: true,
-    tunnelRunning: false
+    tunnelRunning: false,
+    mcpHealthFailureKind: 'timeout',
+    mcpHealthFailureDeterministic: false
   });
   const maxDeferred = 6;
   for (let attempt = 1; attempt < maxDeferred; attempt += 1) {

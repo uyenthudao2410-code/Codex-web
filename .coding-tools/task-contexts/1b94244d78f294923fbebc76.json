@@ -1,0 +1,123 @@
+{
+  "version": 2,
+  "task_id": "736b56be1afa4745b9ac67889ee6977f",
+  "orchestration": {
+    "run_id": "41584c36353445aebc16f187427ffa70",
+    "wave_id": "4a62000ef1e1413a826d19970fc5c7e4",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "4552b8dd4fc67917607c7fa28a6066c2cd5071c6618649f26b1daa88ad210d1f",
+    "contract_fp": ""
+  },
+  "objective": "Finish the connector contract cache/rediscovery liveness repair on the current replan wave with exact-current-SHA compatibility mapping, separate live ChatWeb tools/call contact evidence, explicit supervisor acknowledgement, and no fabricated discovery evidence.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "w5dSVwgyv7qrWtiBzlh02Y7d",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 606,
+    "finished_at": "2026-08-26T06:26:04.456Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T06:23:24.154Z",
+  "updated_at": "2026-08-26T06:26:04.456Z",
+  "events": [
+    {
+      "time": "2026-08-26T06:23:24.154Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T06:23:24.785Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T06:23:25.268Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-26T06:25:09.804Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 35 -e \"stateless_task_context_for_run\" -e \"recover_exact_run_context\" -e \"action == \\\"resume\\\"\" -e \"action in {\\\"resume\\\"\" -e \"def task_control\" -- resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "_npmrZbjM-MYVgQLIrPXulk0"
+      }
+    },
+    {
+      "time": "2026-08-26T06:25:10.188Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 35 -e \"stateless_task_context_for_run\" -e \"recover_exact_run_context\" -e \"action == \\\"resume\\\"\" -e \"action in {\\\"resume\\\"\" -e \"def task_control\" -- resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T06:25:23.688Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -A 90 -B 5 -e \"def stateless_task_context_for_run\" -- resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py && git grep -n -A 120 -B 8 -e \"if action == \\\"get\\\"\" -e \"if action == \\\"events\\\"\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "session_id": "bupnLcouKiBoSwVbeJr_GzKw"
+      }
+    },
+    {
+      "time": "2026-08-26T06:25:24.172Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -A 90 -B 5 -e \"def stateless_task_context_for_run\" -- resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py && git grep -n -A 120 -B 8 -e \"if action == \\\"get\\\"\" -e \"if action == \\\"events\\\"\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T06:26:04.047Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 6 -e \"synchronizeConnectorContract(\" -e \"acknowledgeConnectorContract(\" -- electron tests scripts renderer",
+        "session_id": "w5dSVwgyv7qrWtiBzlh02Y7d"
+      }
+    },
+    {
+      "time": "2026-08-26T06:26:04.456Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 6 -e \"synchronizeConnectorContract(\" -e \"acknowledgeConnectorContract(\" -- electron tests scripts renderer",
+        "status": "passed"
+      }
+    }
+  ]
+}

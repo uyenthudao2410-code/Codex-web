@@ -1,0 +1,501 @@
+[
+  {
+    "version": 2,
+    "task_id": "bbd12a14d2244f2f8892c9b44d0fdc00",
+    "orchestration": {
+      "run_id": "0b4014a2d0ef4c90825a35ffc9804806",
+      "wave_id": "c22b7ecb00b344fabd61749e4e68753b",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "41f8cccf6346e94f7d312ab603c1cf89b5455546c72f44fb1109e454d506a6d7",
+      "contract_fp": ""
+    },
+    "objective": "Eliminate UI freezes and lag while execution tasks are running. Localize all renderer/main-process polling loops and expensive IPC/snapshot paths that continue during busy execution, determine the smallest coherent fix that prevents overlapping polls, sheds heavy work when hidden or busy, and preserves timely state updates.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T10:03:08.548Z",
+    "updated_at": "2026-08-26T10:03:22.826Z",
+    "events": [
+      {
+        "time": "2026-08-26T10:03:08.548Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Eliminate UI freezes and lag while execution tasks are running. Localize all renderer/main-process polling loops and expensive IPC/snapshot paths that continue during busy execution, determine the smallest coherent fix that prevents overlapping polls, sheds heavy work when hidden or busy, and preserves timely state updates."
+        }
+      },
+      {
+        "time": "2026-08-26T10:03:12.694Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:03:22.343Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:03:22.826Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T10:03:42.649Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "60c178d20aa5454dab86472b3b1f3645",
+    "orchestration": {
+      "run_id": "10ca812aaf4045d69c596a2023d98ee8",
+      "wave_id": "8c9a11e7597644319ce065fe4a2b08ce",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "97a69e53b06a50af62ff02cfe6fca902d071faa93b80ec983160753940663ae3",
+      "contract_fp": ""
+    },
+    "objective": "Continue localization for the active UI-lag run. Read the exact refresh/polling implementations and their IPC backends so the execute patch can be complete and preserve existing UI semantics.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T10:03:42.650Z",
+    "updated_at": "2026-08-26T10:03:53.624Z",
+    "events": [
+      {
+        "time": "2026-08-26T10:03:42.650Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T10:03:45.551Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:03:53.156Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:03:53.624Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T10:05:29.737Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "184d7a3970104e3fabe93839d6d8c49c",
+    "orchestration": {
+      "run_id": "e58dc57d22dd4f04884d65821dc963c7",
+      "wave_id": "d4b93da29e2e48eb9ae77c92c089380c",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "762faeba8a713d66172557a7b1ef7ec2b7ba2db573c012f98bd991e3dc4a86dc",
+      "contract_fp": ""
+    },
+    "objective": "Finish localization for the active UI-lag P0 run before first write. Confirm the lightweight/live control endpoint shape, renderer preload mappings, and focused test expectations so the patch can remove heavy/overlapping polling without breaking canonical task state or manager analytics.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T10:05:29.740Z",
+    "updated_at": "2026-08-26T10:05:42.767Z",
+    "events": [
+      {
+        "time": "2026-08-26T10:05:29.740Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T10:05:33.328Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:05:42.203Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:05:42.767Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T10:06:12.094Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "5db49cf0ee564b53b9fe1e87227e37d9",
+    "orchestration": {
+      "run_id": "d755f877b1ee45be917d6ee00f99bbb1",
+      "wave_id": "139f6f44b8284827a2b6a856231946c3",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "9a6ef1f0b36ea5a49e162e44df6894930e46656525058708ff95071dbaca4005",
+      "contract_fp": ""
+    },
+    "objective": "Read only the exact UI scheduling and IPC blocks needed for the UI-lag repair, preserving concurrent work. Capture current text around browser task-state read, main heartbeat, panel pollers, manager refresh, dashboard refresh/render cadence, and their focused source-contract tests.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Patch context matched 34 locations in electron/main.js; add more context.",
+    "next_step": "",
+    "created_at": "2026-08-26T10:06:12.095Z",
+    "updated_at": "2026-08-26T10:08:52.527Z",
+    "events": [
+      {
+        "time": "2026-08-26T10:06:12.095Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T10:06:15.111Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:06:23.055Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:06:23.521Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T10:08:52.527Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T10:09:43.355Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "d31f3ae879194ea5a500efa94d94e8b4",
+    "orchestration": {
+      "run_id": "318217dcb9954480a6c97a3d803f7b5b",
+      "wave_id": "c999f374fa6c43bda80a45c2fc6d510f",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "07e215af2a9e2121a28f9991b7a6471540029c61d67fa8fb53acffa749d99dac",
+      "contract_fp": ""
+    },
+    "objective": "Eliminate UI freezes and lag while execution tasks are running. Replace overlapping fixed-interval polling with non-overlapping adaptive scheduling, move task/control surfaces to the existing lightweight live-control projection, coalesce heavy dashboard renders, suppress heavy analytics refresh while execution remains busy, and remove periodic UI revision re-registration from the heartbeat. Preserve all existing control-plane truth and fail-closed behavior.",
+    "status": "waiting",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "in_progress",
+        "updated_at": "2026-08-26T10:10:02.402Z"
+      },
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "pending",
+        "updated_at": "2026-08-26T10:10:02.402Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-08-26T10:10:02.402Z"
+      }
+    ],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-26T10:09:43.357Z",
+    "updated_at": "2026-08-26T10:11:31.940Z",
+    "events": [
+      {
+        "time": "2026-08-26T10:09:43.357Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T10:09:47.201Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:09:56.608Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-26T10:10:01.820Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-26T10:10:02.402Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T10:10:10.624Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T10:10:10.627Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T10:10:10.630Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T10:10:11.303Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOURCE_DRIFT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:10:32.788Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T10:10:39.098Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T10:11:04.687Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:11:09.594Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_INVALID"
+        }
+      },
+      {
+        "time": "2026-08-26T10:11:25.138Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:11:31.401Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T10:11:31.940Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T10:12:34.334Z",
+    "archive_reason": "superseded"
+  }
+]

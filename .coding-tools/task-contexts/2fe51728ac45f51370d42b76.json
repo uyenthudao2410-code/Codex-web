@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "task_id": "cb72849299ab4abf8fcc55127bd9a76d",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "active",
+  "steps": [],
+  "current_step": "Control command session",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Command handle was not found.",
+  "next_step": "",
+  "created_at": "2026-08-26T07:31:59.665Z",
+  "updated_at": "2026-08-26T07:31:59.666Z",
+  "events": [
+    {
+      "time": "2026-08-26T07:31:59.665Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-08-26T07:31:59.666Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "COMMAND_NOT_FOUND"
+      }
+    }
+  ]
+}

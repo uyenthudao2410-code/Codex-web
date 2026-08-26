@@ -22,6 +22,16 @@ CAPSULE = {
     "unresolved_conditions": [],
 }
 
+ENVELOPE = {
+    "schema_version": 1,
+    "direct_outcomes": [{"outcome_id": "outcome-1", "summary": "The bounded user outcome is observable"}],
+    "relevant_invariants": ["Preserve the existing public contract"],
+    "truth_domains": ["source", "runtime"],
+    "adjacent_risks": [], "excluded_scope": ["Unrelated modules"],
+    "required_evidence": [{"evidence_id": "evidence-1", "kind": "focused_proof", "provenance": "exact accepted wave", "status": "observed"}],
+    "closure_falsification_probe": {"probe_id": "probe-1", "method": "Run the focused closure check", "expected_failure_signal": "The bounded outcome remains contradicted", "executed": True, "result": "passed"},
+}
+
 
 class ProblemLineageCanaryTests(unittest.TestCase):
     @staticmethod
@@ -166,9 +176,9 @@ class ProblemLineageCanaryTests(unittest.TestCase):
             proofs = ledger.list_proofs(run_id, wave_id=wave_id)
             proof_fp = passed_proof_fingerprint(proofs)
             files = self._accepted_files(run_id, wave_id)
-            outcome = ledger.problem_prepare_eocl_outcome_claim(run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree", proof_fingerprint=proof_fp, accepted_files=files, durable_mutation=False, coverage_manifest={"criterion-1": [proof_id]})
+            outcome = ledger.problem_prepare_eocl_outcome_claim(run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree", proof_fingerprint=proof_fp, accepted_files=files, durable_mutation=False, coverage_manifest={"criterion-1": [proof_id]}, resolution_envelope=ENVELOPE)
             checkpoint = ledger.accept_checkpoint_atomic(run_id=run_id, wave_id=wave_id, git_head="head", proof_fingerprint=proof_fp, metadata={"worktree_fp": "worktree", "accepted_files": files, "problem_outcome_claim": outcome["claim"], "problem_outcome_claim_sha256": outcome["claim_sha256"]})
-            ledger.problem_record_provisional_from_eocl(run_id=run_id, wave_id=wave_id, checkpoint_id=checkpoint["checkpoint_id"], now="2026-08-25T23:59:59Z")
+            ledger.problem_record_provisional_from_eocl(run_id=run_id, wave_id=wave_id, checkpoint_id=checkpoint["checkpoint_id"], now="2026-08-26T23:59:59Z")
             with open_ledger_analysis_snapshot(root) as snapshot:
                 report = problem_lineage_canary_report(snapshot.ledger, ProblemLineageFacts.load(snapshot.reader), integrity_check="ok", foreign_key_violations=0)
             coverage = report["mechanics"]["criterion_to_proof_structural_coverage"]

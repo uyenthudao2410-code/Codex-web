@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from coding_tools_mcp.acceptance_receipts import passed_proof_fingerprint
 from coding_tools_mcp.ledger_analysis import open_ledger_analysis_snapshot
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.problem_resolution_economics import ProblemLineageFacts, problem_resolution_economics_report
@@ -15,6 +16,16 @@ CAPSULE = {
     "protected_invariants": [], "constraints": [], "unresolved_conditions": [],
 }
 
+ENVELOPE = {
+    "schema_version": 1,
+    "direct_outcomes": [{"outcome_id": "outcome-1", "summary": "The bounded outcome is observable"}],
+    "relevant_invariants": ["Preserve the existing public contract"],
+    "truth_domains": ["source", "runtime"],
+    "adjacent_risks": [],
+    "excluded_scope": ["Unrelated modules"],
+    "required_evidence": [{"evidence_id": "evidence-1", "kind": "runtime_read", "provenance": "exact accepted wave", "status": "observed"}],
+    "closure_falsification_probe": {"probe_id": "probe-1", "method": "Read the bounded outcome again", "expected_failure_signal": "The outcome remains contradicted", "executed": True, "result": "passed"},
+}
 
 class ProblemResolutionEconomicsTests(unittest.TestCase):
     def _fixture(self, root: Path) -> None:
@@ -57,6 +68,7 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
                 facts = ProblemLineageFacts.load(snapshot.reader)
                 report = problem_resolution_economics_report(snapshot.ledger, facts)
             self.assertEqual(report["status"], "DESCRIPTIVE_ONLY")
+            self.assertEqual(report["schema_version"], 3)
             self.assertEqual(report["denominators"]["problem_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["confirmed_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["trusted_resolution"]["true"], 1)
@@ -110,6 +122,145 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
             self.assertEqual(metric["observed"], 0)
             self.assertEqual(metric["ordered_exact_values_ms_when_n_le_20"], None)
             self.assertEqual(metric["missing_or_invalid_reason_counts"]["attested_clock_authority_mismatch"], 1)
+
+    def test_revision_4_metrics_use_revision_denominators_and_reopen_invalidates_first_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self._fixture(root)
+            ledger = OrchestrationLedger(root)
+            problem = ledger.problem_get("problem-fixture")
+            exact_link = next(
+                event for event in problem["events"]
+                if event["relation_type"] == "ENGINEERING_ATTEMPT_BOUND"
+            )
+            run_id, wave_id = exact_link["run_id"], exact_link["wave_id"]
+            ledger.append_event(
+                run_id,
+                wave_id=wave_id,
+                event_type="problem_frame_shadow",
+                payload={
+                    "problem_id": "problem-fixture",
+                    "problem_revision": 1,
+                    "frame_id": "frame-1",
+                    "frame_revision": 1,
+                    "decision_changed": True,
+                },
+            )
+            ledger.append_event(
+                run_id,
+                wave_id=wave_id,
+                event_type="wave_replanned",
+                payload={"reason": "authority_recovery"},
+            )
+            proofs = ledger.list_proofs(run_id, wave_id=wave_id)
+            ledger.problem_prepare_eocl_outcome_claim(
+                run_id=run_id,
+                wave_id=wave_id,
+                git_head="head",
+                worktree_fp="worktree",
+                proof_fingerprint=passed_proof_fingerprint(proofs),
+                accepted_files={
+                    "schema_version": 2,
+                    "source": "task_modified_files",
+                    "complete": True,
+                    "count": 0,
+                    "total_bytes": 0,
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                    "files": [],
+                    "incomplete_reasons": [],
+                },
+                durable_mutation=False,
+                coverage_manifest={"criterion-1": [proofs[0]["proof_id"]]},
+                resolution_envelope=ENVELOPE,
+            )
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                before_reopen = problem_resolution_economics_report(
+                    snapshot.ledger,
+                    ProblemLineageFacts.load(snapshot.reader),
+                )["revision_4_metrics"]
+            self.assertEqual(before_reopen["first_pass_trusted_resolution"]["numerator"], 1)
+            self.assertEqual(before_reopen["first_pass_trusted_resolution"]["denominator"], 1)
+            self.assertEqual(before_reopen["false_closure"]["numerator"], 0)
+            self.assertEqual(before_reopen["frame_revisions"]["distinct_frame_revisions"], 1)
+            self.assertEqual(before_reopen["decision_delta_shadow_attestation_rate"]["rate"], 1.0)
+            self.assertEqual(
+                before_reopen["decision_delta_shadow_attestation_rate"]["classification"],
+                "shadow_attested",
+            )
+            self.assertFalse(before_reopen["decision_delta_shadow_attestation_rate"]["causal_value_proven"])
+            self.assertEqual(before_reopen["resolution_envelope_evidence_attestation_coverage"]["coverage"], 1.0)
+            self.assertEqual(
+                before_reopen["resolution_envelope_evidence_attestation_coverage"]["classification"],
+                "descriptive_attested_not_independent_confirmation",
+            )
+            self.assertFalse(before_reopen["resolution_envelope_evidence_attestation_coverage"]["receipt_bound"])
+            self.assertEqual(
+                before_reopen["multi_primary_run_revision_rate"]["revisions_with_multiple_primary_runs"],
+                0,
+            )
+            self.assertEqual(
+                before_reopen["multi_primary_run_revision_rate"]["classification"],
+                "descriptive_multiple_attempt_proxy",
+            )
+            self.assertFalse(before_reopen["multi_primary_run_revision_rate"]["semantic_sibling_linkage_proven"])
+            self.assertNotIn("decision_changing_observation_rate", before_reopen)
+            self.assertNotIn("outcome_evidence_coverage", before_reopen)
+            self.assertNotIn("sibling_recurrence", before_reopen)
+            self.assertEqual(
+                before_reopen["control_friction_decomposition"]["counts"],
+                {"authority_recovery": 1},
+            )
+
+            ledger.problem_record_event({
+                "operation": "reopen",
+                "event_id": "reopen-after-confirmation",
+                "problem_id": "problem-fixture",
+                "problem_revision": 1,
+                "feedback_intent": "SAME_PROBLEM_STILL_FAILING",
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
+                "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:02:00Z", authority_context="RUNTIME_EXPLICIT_USER")
+            sibling_context = {
+                "schema_version": 1,
+                "work_origin": "problem",
+                "resolution_claim": "none",
+                "problem_id": "problem-fixture",
+                "problem_revision": 1,
+                "contract_fingerprint": problem["current_revision"]["contract_fingerprint"],
+                "engineering_floor": "REQUIRED",
+                "policy_eligible": False,
+            }
+            sibling_run = ledger.create_run(
+                objective="sibling repair",
+                metadata={"problem_resolution": sibling_context},
+            )
+            sibling_wave = ledger.create_wave(
+                sibling_run,
+                execution_mode="mcp_only",
+                metadata={"problem_resolution": sibling_context},
+            )
+            ledger.problem_record_event({
+                "operation": "link",
+                "event_id": "sibling-link",
+                "problem_id": "problem-fixture",
+                "problem_revision": 1,
+                "run_id": sibling_run,
+                "wave_id": sibling_wave,
+                "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE",
+                "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:02:01Z", authority_context="RUNTIME_BINDING")
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                after_reopen = problem_resolution_economics_report(
+                    snapshot.ledger,
+                    ProblemLineageFacts.load(snapshot.reader),
+                )["revision_4_metrics"]
+            self.assertEqual(after_reopen["first_pass_trusted_resolution"]["numerator"], 0)
+            self.assertEqual(after_reopen["false_closure"]["numerator"], 1)
+            self.assertEqual(
+                after_reopen["multi_primary_run_revision_rate"]["revisions_with_multiple_primary_runs"],
+                1,
+            )
 
 
 if __name__ == "__main__":

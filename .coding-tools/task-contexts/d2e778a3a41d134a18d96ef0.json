@@ -1,0 +1,172 @@
+{
+  "version": 2,
+  "task_id": "c37911e396714031948c431daea984f2",
+  "orchestration": {
+    "run_id": "74a9920ba5e748f2a4676e843ebe2339",
+    "wave_id": "794337daf81a43a39d5b890b2faf7c98",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "68082c08320b276a5b2761ba9550c805fd6974597f3ab7e782a121a794a2cd28",
+    "contract_fp": ""
+  },
+  "objective": "Read-only post-quiescence lifecycle check. Capture current dev status only to determine whether Recovery Host auto-activation/handoff occurred and whether connector contract state is now visible. Do not modify files or runtime state.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-08-26T08:06:28.301Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 15,
+        "head_hash": "859742806c5487cbf6f7d146e4b38c01e06a05b18035ae39239ffbc21196ec16"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-74a9920ba5e748f2a4676e843ebe2339\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-74a9920ba5e748f2a4676e843ebe2339\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "74a9920ba5e748f2a4676e843ebe2339",
+      "wave_id": "794337daf81a43a39d5b890b2faf7c98",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "68082c08320b276a5b2761ba9550c805fd6974597f3ab7e782a121a794a2cd28",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only post-quiescence lifecycle check. Capture current dev status only to determine whether Recovery Host auto-activation/handoff occurred and whether connector contract state is now visible. Do not modify files or runtime state.",
+        "objective_revision": 1,
+        "objective_sha256": "663564527662419587be9fb82ad0af993610898045096ab018300d10cd5d9c59",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "0f20dae232210acda00c1a2ad7fea4e71613efd6853a53cf8ed78ab3eee8294f",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-08-26T08:01:24.364Z",
+  "updated_at": "2026-08-26T08:06:28.301Z",
+  "events": [
+    {
+      "time": "2026-08-26T08:01:24.364Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only post-quiescence lifecycle check. Capture current dev status only to determine whether Recovery Host auto-activation/handoff occurred and whether connector contract state is now visible. Do not modify files or runtime state."
+      }
+    },
+    {
+      "time": "2026-08-26T08:01:28.325Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T08:01:40.887Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-26T08:01:47.453Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-26T08:05:39.820Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "orchestration"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T08:06:14.871Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "0f20dae232210acda00c1a2ad7fea4e71613efd6853a53cf8ed78ab3eee8294f"
+      }
+    },
+    {
+      "time": "2026-08-26T08:06:26.361Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T08:06:28.301Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "failed"
+      }
+    }
+  ]
+}

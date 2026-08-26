@@ -11,14 +11,25 @@ const { spawnRecoveryHost, spawnElectronUi } = require('./services/recoveryHostL
 function replacementArguments(argv = process.argv) {
   const old = argv.find((item) => String(item).startsWith('--replace-recovery-host='));
   const operation = argv.find((item) => String(item).startsWith('--activation-operation='));
-  if (!old && !operation) return null;
+  const epoch = argv.find((item) => String(item).startsWith('--activation-epoch-id='));
+  if (!old && !operation && !epoch) return null;
   const expectedOldInstanceId = String(old || '').slice('--replace-recovery-host='.length);
   const operationId = String(operation || '').slice('--activation-operation='.length);
+  const activationEpochId = String(epoch || '').slice('--activation-epoch-id='.length);
   const valid = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
-  if (!valid.test(expectedOldInstanceId) || !valid.test(operationId)) {
+  const validEpoch = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+  if ((old && !valid.test(expectedOldInstanceId))
+    || (operation && !valid.test(operationId))
+    || (!old && operation)
+    || (old && !operation)
+    || (epoch && !validEpoch.test(activationEpochId))) {
     throw Object.assign(new Error('Invalid Recovery Host replacement arguments.'), { code: 'RECOVERY_REPLACEMENT_ARGUMENTS_INVALID' });
   }
-  return { expectedOldInstanceId, operationId };
+  return {
+    ...(old ? { expectedOldInstanceId } : {}),
+    ...(operation ? { operationId } : {}),
+    ...(epoch ? { activationEpochId } : {})
+  };
 }
 
 async function startRecoveryHostApplication(app) {

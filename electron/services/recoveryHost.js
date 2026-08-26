@@ -11,6 +11,9 @@ const { ComponentRevisionTracker } = require('./componentRevision');
 const { RecoveryActivation } = require('./recoveryActivation');
 const { AcceptedCodeActivationController } = require('./recoveryActionStore');
 const { computeActivationClosure } = require('./activationClosure');
+const { FullCleanActivation } = require('./fullCleanActivation');
+const { ActivationEpochStore, ACTIVE_STATES } = require('./activationEpoch');
+const { run } = require('./commandRunner');
 
 const SUPERVISION_INTERVAL_MS = 5000;
 const REPLACEMENT_WAIT_MS = 15_000;
@@ -153,6 +156,7 @@ class RecoveryHost {
       log,
       deviceIdentity: this.deviceIdentity,
       deviceInstanceId: this.deviceInstanceId,
+      activationEpochId: replacement?.activationEpochId || '',
       revisionTracker: this.revisions,
       emitProgress: (payload) => { this.lastProgress = payload; },
       emitStatus: (payload) => { this.lastPublishedStatus = payload; }
@@ -205,8 +209,70 @@ class RecoveryHost {
       paths,
       log,
       deviceIdentity: this.deviceIdentity,
-      deviceInstanceId: this.deviceInstanceId
+      deviceInstanceId: this.deviceInstanceId,
+      activationEpochId: replacement?.activationEpochId || ''
     });
+    // Bind the interprocess epoch-store lock descriptor to this Recovery Host
+    // lifecycle identity so lock evidence and the durable epoch owner cannot
+    // silently refer to unrelated random identities in the same process.
+    this.activationEpochStore = new ActivationEpochStore({ paths, ownerInstanceId: this.instanceId });
+    this.fullCleanActivation = new FullCleanActivation({
+      paths,
+      settings,
+      secrets,
+      orchestrator: this.orchestrator,
+      recoveryPlane: this.recoveryPlane,
+      revisions: this.revisions,
+      deviceIdentity: this.deviceIdentity,
+      recoveryInstanceId: this.instanceId,
+      actionStore: this.activation.actions,
+      log,
+      spawnRecoveryReplacement,
+      spawnElectronUi,
+      getUiRegistration: () => this.activation.uiRegistration,
+      getUiPresence: () => this.activation.uiPresence(),
+      getUiRevision: (options) => this.activation.uiRevisionStatus(options),
+      getRecoveryPlaneStatus: () => this.lastRecoveryPlaneStatus,
+      recoveryHostRunningRevision: this.recoveryHostRunningRevision,
+      setActivationEpoch: (epochId) => {
+        if (this.ipcServer && typeof this.ipcServer.updateActivationEpoch === 'function') {
+          this.ipcServer.updateActivationEpoch(epochId);
+        } else if (this.ipcServer) {
+          this.ipcServer.activationEpochId = String(epochId || '').trim() || null;
+        }
+      },
+      terminateUi: async (presence) => {
+        const pid = Number(presence?.pid || 0);
+        if (!pid || pid === process.pid) throw Object.assign(new Error('Refused to terminate an unverified Electron UI owner.'), { code: 'UI_RECOVERY_INSTANCE_MISMATCH' });
+        if (process.platform === 'win32') {
+          const result = await run('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { allowFailure: true });
+          if (Number(result?.code) !== 0) {
+            throw Object.assign(new Error('Electron UI termination command failed.'), {
+              code: 'UI_TERMINATION_FAILED',
+              details: { pid, exit_code: result?.code ?? null }
+            });
+          }
+        } else {
+          try { process.kill(pid, 'SIGTERM'); } catch (error) {
+            if (error?.code !== 'ESRCH') throw Object.assign(error, { code: 'UI_TERMINATION_FAILED' });
+          }
+        }
+        const deadline = Date.now() + 5000;
+        while (isProcessAlive(pid) && Date.now() < deadline) await wait(50);
+        if (isProcessAlive(pid)) {
+          throw Object.assign(new Error('Electron UI process remained alive after termination request.'), {
+            code: 'UI_TERMINATION_FAILED',
+            details: { pid }
+          });
+        }
+        return true;
+      },
+      scheduleHandoff: (epochId, details) => this.scheduleFullCleanHandoff(epochId, details),
+      epochStore: this.activationEpochStore
+    });
+    this.activation.fullCleanActivation = this.fullCleanActivation;
+    this.orchestrator.setFullCleanActivation?.(this.fullCleanActivation);
+    if (replacement?.activationEpochId) this.orchestrator.setActivationEpoch?.(replacement.activationEpochId);
   }
 
   resetUiRecoveryTracking(state = 'healthy') {
@@ -344,6 +410,16 @@ class RecoveryHost {
     const autoActivation = this.autoActivation?.status?.() || null;
     let codingMcpRevision = {};
     try { codingMcpRevision = this.orchestrator.codingMcpRevisionStatus?.({ force: true }) || {}; } catch {}
+    let activationEpoch = null;
+    try { activationEpoch = this.fullCleanActivation?.current?.() || null; } catch (error) {
+      activationEpoch = { state: 'UPDATE_INCOMPLETE', admission_state: 'CLOSED', error: { code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID'), message: String(error?.message || error) } };
+    }
+    const epochStatus = this.orchestrator.activationEpochStatus?.() || {
+      activation_epoch_id: activationEpoch?.activation_epoch_id || null,
+      state: activationEpoch?.state || 'NONE',
+      admission_open: !activationEpoch || activationEpoch.state === 'READY',
+      update_incomplete: Boolean(activationEpoch && activationEpoch.state !== 'READY')
+    };
     const activationClosure = activationClosureProjection({
       autoActivation,
       recoveryHostRevision: codeRevision,
@@ -370,13 +446,16 @@ class RecoveryHost {
       electron_ui_recovery: this.uiRecoveryStatus(),
       auto_activation: autoActivation,
       activation_closure: activationClosure,
+      activation_epoch: epochStatus,
       recovery_plane_mode: 'independent_mcp_tunnel_v1',
       recovery_plane: this.lastRecoveryPlaneStatus,
       last_progress: this.lastProgress,
       runtime: this.lastSupervisionStatus ? {
         mcp: Boolean(this.lastSupervisionStatus.mcpRunning),
         tunnel: Boolean(this.lastSupervisionStatus.tunnelRunning),
-        fully_ready: Boolean(this.lastSupervisionStatus.fullyReady),
+        fully_ready: Boolean(this.lastSupervisionStatus.fullyReady && epochStatus.admission_open !== false),
+        update_incomplete: Boolean(epochStatus.update_incomplete),
+        activation_epoch_id: epochStatus.activation_epoch_id || null,
         recovering: Boolean(this.lastSupervisionStatus.recovering),
         recovery_blocked: Boolean(this.lastSupervisionStatus.recoveryBlocked)
       } : null
@@ -404,7 +483,16 @@ class RecoveryHost {
     const status = value.status && typeof value.status === 'object'
       ? { ...value.status, activationClosure }
       : value.status;
-    return { ...value, ...(status ? { status } : {}), activationClosure, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost };
+    let epochStatus = null;
+    try {
+      epochStatus = this.orchestrator.activationEpochStatus?.() || this.fullCleanActivation?.current?.() || null;
+    } catch (error) {
+      epochStatus = { state: 'UPDATE_INCOMPLETE', admission_open: false, update_incomplete: true, error_code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID') };
+    }
+    const incomplete = Boolean(epochStatus && (epochStatus.update_incomplete === true || (epochStatus.state && epochStatus.state !== 'READY')));
+    if (status && incomplete) status.fullyReady = false;
+    if (value && incomplete) value.fullyReady = false;
+    return { ...value, ...(status ? { status } : {}), activationClosure, activationEpoch: epochStatus, updateIncomplete: incomplete, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost };
   }
 
   handlers() {
@@ -426,9 +514,24 @@ class RecoveryHost {
       },
       'runtime.snapshot': async (options = {}) => this.decorate(await this.orchestrator.snapshot(options)),
       'runtime.lightweight_snapshot': async () => this.decorate(await this.orchestrator.lightweightSnapshot()),
+      'runtime.activation_epoch_status': async () => this.orchestrator.activationEpochStatus?.() || { state: 'NONE', admission_open: true, update_incomplete: false },
+      'runtime.complete_activation_epoch': async (activationEpochId) => {
+        if (!this.fullCleanActivation || typeof this.orchestrator?.completeActivationEpoch !== 'function') {
+          throw Object.assign(new Error('Full clean activation is unavailable for this runtime owner.'), { code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE' });
+        }
+        const id = String(activationEpochId || '');
+        return this.decorate(await this.fullCleanActivation.finalize(id, await this.fullCleanActivation.finalCensus(id)));
+      },
       'runtime.start': async (options = {}) => this.decorate(await this.orchestrator.start(options)),
       'runtime.stop': async (options = {}) => this.decorate(await this.orchestrator.stop(options)),
-      'runtime.restart': async (options = {}) => this.decorate(await this.orchestrator.restart(options)),
+      'runtime.restart': async (options = {}) => {
+        const result = options?.automatic === true || options?.mode === 'soft_recovery'
+          ? await this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' })
+          : (this.fullCleanActivation?.restart && typeof this.orchestrator?.completeActivationEpoch === 'function'
+            ? await this.fullCleanActivation.restart({ ...options, reason: options.reason || 'operator_restart' })
+            : await this.orchestrator.restart(options));
+        return this.decorate(result);
+      },
       'runtime.switch_workspace': async (workspace) => this.decorate(await this.orchestrator.switchWorkspace(workspace)),
       'runtime.update_authorized_roots': async (roots) => this.decorate(await this.orchestrator.updateAuthorizedRoots(roots)),
       'runtime.acknowledge_connector_contract': async () => this.decorate(await this.orchestrator.acknowledgeConnectorContract()),
@@ -444,14 +547,49 @@ class RecoveryHost {
     if (this.supervisionInFlight) return this.supervisionInFlight;
     const operation = (async () => {
       let runtime = null;
+      let epoch = null;
       try {
-        runtime = await this.orchestrator.supervise();
+        epoch = this.fullCleanActivation.current?.();
+      } catch (error) {
+        this.log.error(error.message, { stage: 'recovery-host-activation-epoch-read', code: error?.code || '' });
+        return this.lastSupervisionStatus;
+      }
+      const admissionBlocked = Boolean(epoch && epoch.state !== 'READY');
+      try {
+        // During a full-clean transaction the coordinator is the sole owner of
+        // component mutation.  The normal watchdog must not restart MCP/Tunnel
+        // (or consume a supervisor ticket) while the epoch is assembling.
+        // Any non-READY durable epoch (including FAILED/expired epochs) keeps
+        // admission closed.  The ordinary watchdog must not mutate MCP,
+        // Tunnel, Recovery Plane, or consume restart tickets in that state;
+        // only the explicit activation coordinator may advance it.
+        runtime = admissionBlocked
+          ? await this.orchestrator.lightweightSnapshot()
+          : await this.orchestrator.supervise();
         this.lastSupervisionStatus = runtime;
       } catch (error) {
         this.log.error(error.message, { stage: 'recovery-host-supervise' });
       }
-      await this.ensureRecoveryPlane();
-      await this.superviseElectronUi();
+      if (epoch && ['STARTING', 'VERIFYING', 'HANDOFF', 'FROZEN', 'STOPPING', 'ADMISSION_CLOSED', 'PREPARING'].includes(epoch.state)) {
+        try {
+          const census = await this.fullCleanActivation.finalCensus(epoch.activation_epoch_id, {
+            expectedOldInstanceId: this.replacement?.expectedOldInstanceId || ''
+          });
+          if (census.pass) {
+            const completed = await this.fullCleanActivation.finalize(epoch.activation_epoch_id, census);
+            this.lastSupervisionStatus = { ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed };
+          }
+        } catch (error) {
+          this.log.warn(error.message, { stage: 'full-clean-activation-census', code: error?.code || '' });
+        }
+      }
+      // Recovery plane and UI repair are also component mutations.  They are
+      // intentionally suppressed while admission is blocked; the replacement
+      // coordinator performs the one required start/observation sequence.
+      if (!admissionBlocked) {
+        await this.ensureRecoveryPlane();
+        await this.superviseElectronUi();
+      }
       return runtime;
     })();
     this.supervisionInFlight = operation;
@@ -489,7 +627,11 @@ class RecoveryHost {
       if (options.legacyMigrationPlan?.required && typeof this.recoveryPlane.applyLegacyOwnershipMigration === 'function') {
         await this.recoveryPlane.applyLegacyOwnershipMigration(options.legacyMigrationPlan);
       }
-      this.lastRecoveryPlaneStatus = await this.recoveryPlane.ensure(current, { authToken, runtimeApiKey });
+      this.lastRecoveryPlaneStatus = await this.recoveryPlane.ensure(current, {
+        authToken,
+        runtimeApiKey,
+        activationEpochId: this.orchestrator.activationEpochId || undefined
+      });
     } catch (error) {
       this.lastRecoveryPlaneStatus = { state: 'unavailable', error_code: String(error?.code || 'RECOVERY_PLANE_UNAVAILABLE'), checked_at: new Date().toISOString() };
       this.log.error(error.message, { stage: 'recovery-plane-supervise', code: this.lastRecoveryPlaneStatus.error_code });
@@ -499,10 +641,159 @@ class RecoveryHost {
 
   async start() {
     if (this.running) return this.hostStatus();
-    if (this.replacement?.expectedOldInstanceId) {
-      await waitForReplacementLockRelease(this.paths, this.replacement.expectedOldInstanceId);
+    // A durable non-terminal activation is authoritative even when a process
+    // replacement was launched without argv (crash, login/startup, or manual
+    // service restart).  Never silently enter normal runtime ownership while
+    // such an epoch is active: resume that exact epoch or fail closed.
+    let durableEpoch = null;
+    try { durableEpoch = this.activationEpochStore.current(); }
+    catch (error) {
+      this.log?.error?.(error.message, { stage: 'recovery-host-activation-epoch-load', code: error?.code || '' });
+      throw error;
     }
-    acquireRecoveryHostLock(this.paths, this.instanceId);
+    let replacementEpochId = String(this.replacement?.activationEpochId || '').trim();
+    let fullCleanReplacement = Boolean(replacementEpochId);
+    let recoveredFromDurableEpoch = false;
+    if (!fullCleanReplacement && durableEpoch && durableEpoch.state === 'FAILED') {
+      throw Object.assign(new Error('A previous full-clean activation failed; admission remains closed until an explicit new activation.'), {
+        code: 'UPDATE_INCOMPLETE',
+        details: { activation_epoch_id: durableEpoch.activation_epoch_id, state: durableEpoch.state }
+      });
+    }
+    if (!fullCleanReplacement && durableEpoch && ACTIVE_STATES.has(durableEpoch.state)) {
+      const durableExpiry = Number(durableEpoch.expires_at_unix_ms || durableEpoch.metadata?.expires_at_unix_ms || 0);
+      if (durableExpiry > 0 && Date.now() >= durableExpiry) {
+        const error = Object.assign(new Error('Activation request expired before Recovery Host recovery.'), {
+          code: 'ACTIVATION_REQUEST_EXPIRED',
+          details: { activation_epoch_id: durableEpoch.activation_epoch_id, expires_at_unix_ms: durableExpiry, process_mutated: false }
+        });
+        try { this.activationEpochStore.fail(durableEpoch.activation_epoch_id, error); } catch (persistError) {
+          this.log?.error?.(persistError.message, { stage: 'recovery-host-expired-epoch-persist', code: persistError?.code || '' });
+        }
+        throw error;
+      }
+      const boundOldHostId = String(durableEpoch.component_evidence?.recovery_host?.instance_id || '').trim();
+      if (!boundOldHostId) {
+        throw Object.assign(new Error('Active activation epoch has no bound old Recovery Host identity.'), {
+          code: 'ACTIVATION_EPOCH_OLD_INSTANCE_REQUIRED',
+          details: { activation_epoch_id: durableEpoch.activation_epoch_id }
+        });
+      }
+      this.replacement = {
+        ...(this.replacement || {}),
+        activationEpochId: durableEpoch.activation_epoch_id,
+        expectedOldInstanceId: boundOldHostId,
+        operationId: durableEpoch.operation_id || undefined,
+        expiresAtUnixMs: Number(durableEpoch.expires_at_unix_ms || durableEpoch.metadata?.expires_at_unix_ms || 0) || 0
+      };
+      replacementEpochId = durableEpoch.activation_epoch_id;
+      fullCleanReplacement = true;
+      recoveredFromDurableEpoch = true;
+      this.orchestrator.setActivationEpoch?.(replacementEpochId);
+      this.recoveryPlane?.setActivationEpoch?.(replacementEpochId);
+      this.log?.warn?.('Resuming an active full-clean activation from the durable epoch store.', {
+        activationEpochId: replacementEpochId,
+        previousHostInstanceId: boundOldHostId
+      });
+    } else if (!fullCleanReplacement && durableEpoch && durableEpoch.state === 'READY') {
+      // A READY epoch remains the current activation identity across an
+      // ordinary host process restart; child services must use that epoch.
+      this.orchestrator.setActivationEpoch?.(durableEpoch.activation_epoch_id);
+      this.recoveryPlane?.setActivationEpoch?.(durableEpoch.activation_epoch_id);
+    }
+    const persistReplacementFailure = (error) => {
+      if (!replacementEpochId) return;
+      try {
+        // Keep the durable activation gate closed whenever replacement startup
+        // cannot complete.  The operation may already have been terminalized
+        // by FullCleanActivation; store.fail() is idempotent for that case.
+        this.activationEpochStore.fail(replacementEpochId, error);
+      } catch (persistError) {
+        if (String(persistError?.code || '') !== 'ACTIVATION_EPOCH_TERMINAL') {
+          this.log?.error?.(persistError.message, {
+            stage: 'recovery-host-replacement-failure-persist',
+            activationEpochId: replacementEpochId,
+            code: persistError?.code || ''
+          });
+        }
+      }
+    };
+    if (fullCleanReplacement) {
+      // Replacement argv is untrusted routing metadata.  Bind it to the
+      // current durable record before acquiring ownership or starting any
+      // child process, and recover the authoritative expiry from disk (the
+      // launcher intentionally does not put secrets/deadlines in argv).
+      if (!durableEpoch || String(durableEpoch.activation_epoch_id || '') !== replacementEpochId) {
+        const error = Object.assign(new Error('Replacement activation epoch is not the current durable activation.'), {
+          code: 'ACTIVATION_EPOCH_NOT_CURRENT',
+          details: { activation_epoch_id: replacementEpochId, durable_activation_epoch_id: durableEpoch?.activation_epoch_id || null }
+        });
+        persistReplacementFailure(error);
+        throw error;
+      }
+      if (durableEpoch.state === 'FAILED') {
+        const error = Object.assign(new Error('Replacement activation epoch is failed and remains admission-closed.'), {
+          code: 'UPDATE_INCOMPLETE',
+          details: { activation_epoch_id: replacementEpochId, state: durableEpoch.state, error_code: durableEpoch.error?.code || null }
+        });
+        persistReplacementFailure(error);
+        throw error;
+      }
+      const durableOperationId = String(durableEpoch.operation_id || '').trim();
+      const suppliedOperationId = String(this.replacement?.operationId || '').trim();
+      if (suppliedOperationId && durableOperationId && suppliedOperationId !== durableOperationId) {
+        const error = Object.assign(new Error('Replacement operation does not match the durable activation.'), {
+          code: 'ACTIVATION_OPERATION_MISMATCH',
+          details: { activation_epoch_id: replacementEpochId, supplied_operation_id: suppliedOperationId, durable_operation_id: durableOperationId }
+        });
+        persistReplacementFailure(error);
+        throw error;
+      }
+      const boundOldHostId = String(durableEpoch.component_evidence?.recovery_host?.instance_id || '').trim();
+      const suppliedOldHostId = String(this.replacement?.expectedOldInstanceId || '').trim();
+      if (boundOldHostId && suppliedOldHostId && boundOldHostId !== suppliedOldHostId) {
+        const error = Object.assign(new Error('Replacement target does not match the durable old Recovery Host identity.'), {
+          code: 'RECOVERY_REPLACEMENT_TARGET_CHANGED',
+          details: { activation_epoch_id: replacementEpochId, supplied_old_instance_id: suppliedOldHostId, durable_old_instance_id: boundOldHostId }
+        });
+        persistReplacementFailure(error);
+        throw error;
+      }
+      const hasBoundEvidence = durableEpoch.component_evidence && typeof durableEpoch.component_evidence === 'object';
+      if (ACTIVE_STATES.has(durableEpoch.state) && hasBoundEvidence && !boundOldHostId && !suppliedOldHostId) {
+        const error = Object.assign(new Error('Active replacement has no bound old Recovery Host identity.'), {
+          code: 'ACTIVATION_EPOCH_OLD_INSTANCE_REQUIRED',
+          details: { activation_epoch_id: replacementEpochId }
+        });
+        persistReplacementFailure(error);
+        throw error;
+      }
+      this.replacement = {
+        ...(this.replacement || {}),
+        activationEpochId: replacementEpochId,
+        operationId: suppliedOperationId || durableOperationId || undefined,
+        expectedOldInstanceId: suppliedOldHostId || boundOldHostId || undefined,
+        expiresAtUnixMs: Number(durableEpoch.expires_at_unix_ms || durableEpoch.metadata?.expires_at_unix_ms || 0) || 0
+      };
+      const replacementExpiry = Number(this.replacement.expiresAtUnixMs || 0);
+      if (ACTIVE_STATES.has(durableEpoch.state) && replacementExpiry > 0 && Date.now() >= replacementExpiry) {
+        const error = Object.assign(new Error('Replacement activation request expired before Recovery Host ownership handoff.'), {
+          code: 'ACTIVATION_REQUEST_EXPIRED',
+          details: { activation_epoch_id: replacementEpochId, expires_at_unix_ms: replacementExpiry, process_mutated: false }
+        });
+        persistReplacementFailure(error);
+        throw error;
+      }
+    }
+    try {
+      if (this.replacement?.expectedOldInstanceId) {
+        await waitForReplacementLockRelease(this.paths, this.replacement.expectedOldInstanceId);
+      }
+      acquireRecoveryHostLock(this.paths, this.instanceId);
+    } catch (error) {
+      persistReplacementFailure(error);
+      throw error;
+    }
     this.ownsLock = true;
     try {
       await this.gateway.start();
@@ -513,13 +804,22 @@ class RecoveryHost {
         instanceId: this.instanceId,
         startedAt: this.startedAt,
         deviceIdentity: this.deviceIdentity,
-        deviceInstanceId: this.deviceInstanceId
+        deviceInstanceId: this.deviceInstanceId,
+        activationEpochId: this.orchestrator.activationEpochId || this.fullCleanActivation.current?.()?.activation_epoch_id || ''
       });
       await this.ipcServer.start();
       this.running = true;
+      if (fullCleanReplacement) {
+        await this.fullCleanActivation.continueReplacement({
+          activationEpochId: this.replacement.activationEpochId,
+          expectedOldInstanceId: this.replacement.expectedOldInstanceId,
+          expiresAtUnixMs: this.replacement.expiresAtUnixMs
+        });
+        this.lastRecoveryPlaneStatus = this.recoveryPlane?.lastStatus || this.lastRecoveryPlaneStatus;
+      }
       let primaryLegacyMigration = { required: false };
       let recoveryLegacyMigration = { required: false };
-      if (this.replacement?.operationId) {
+      if (!fullCleanReplacement && this.replacement?.operationId) {
         this.activation.verifyRecoveryReplacement(this.replacement.operationId);
         const current = this.settings.load();
         const recoveryMigrationSupported = typeof this.recoveryPlane.preflightLegacyOwnershipMigration === 'function'
@@ -552,7 +852,7 @@ class RecoveryHost {
           this.log.error(error.message, { stage: 'legacy-primary-device-migration', code: error?.code || '' });
         }
       }
-      await this.ensureRecoveryPlane({ legacyMigrationPlan: recoveryLegacyMigration });
+      if (!fullCleanReplacement) await this.ensureRecoveryPlane({ legacyMigrationPlan: recoveryLegacyMigration });
       this.supervisionTimer = setInterval(() => { this.superviseOnce(); }, SUPERVISION_INTERVAL_MS);
       this.supervisionTimer.unref();
       this.log.info('Recovery Host đã sở hữu Coding runtime, watchdog và local gateway', {
@@ -560,7 +860,7 @@ class RecoveryHost {
         hostInstanceId: this.instanceId
       });
       const current = this.settings.load();
-      if (!primaryMigrationFailed && current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
+      if (!fullCleanReplacement && !recoveredFromDurableEpoch && !primaryMigrationFailed && current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
         const observed = await this.orchestrator.lightweightSnapshot().catch(() => null);
         this.lastSupervisionStatus = observed;
         if (!observed?.nativeAlive && !observed?.tunnelRunning) {
@@ -569,7 +869,8 @@ class RecoveryHost {
           });
         }
       }
-      this.autoActivation?.start?.();
+      const postStartEpoch = this.fullCleanActivation.current?.();
+      if (!postStartEpoch || postStartEpoch.state === 'READY') this.autoActivation?.start?.();
       return this.hostStatus();
     } catch (error) {
       this.autoActivation?.stop?.();
@@ -577,6 +878,7 @@ class RecoveryHost {
       await this.gateway?.stop().catch(() => false);
       if (this.ownsLock) releaseRecoveryHostLock(this.paths, this.instanceId);
       this.ownsLock = false;
+      persistReplacementFailure(error);
       throw error;
     }
   }
@@ -591,6 +893,39 @@ class RecoveryHost {
       });
     }, 100);
     timer.unref();
+  }
+
+  scheduleFullCleanHandoff(activationEpochId, details = {}) {
+    if (this.handoffStarted) return;
+    this.handoffStarted = true;
+    const timer = setTimeout(() => {
+      this.performFullCleanHandoff(activationEpochId, details).catch((error) => {
+        this.log.error(error.message, { stage: 'full-clean-handoff-unhandled', activationEpochId, code: error?.code || '' });
+        try { this.activationEpochStore.fail(activationEpochId, error); } catch {}
+        this.exitProcess(1);
+      });
+    }, 100);
+    timer.unref?.();
+  }
+
+  async performFullCleanHandoff(activationEpochId, details = {}) {
+    try {
+      await this.drainSupervisionForHandoff();
+      // The coordinator already fenced and stopped primary/recovery children;
+      // stop again defensively (idempotently) before releasing host ownership.
+      await this.orchestrator.stop({ manual: false, fullClean: true, activationEpochId }).catch(() => false);
+      if (typeof this.recoveryPlane?.stop === 'function') await this.recoveryPlane.stop().catch(() => false);
+      await this.stop();
+      this.log.info('Recovery Host released ownership for a full clean activation replacement', {
+        activationEpochId,
+        operationId: details.operationId || null
+      });
+      this.exitProcess(0);
+    } catch (error) {
+      try { this.activationEpochStore.fail(activationEpochId, error); } catch {}
+      this.log.error(error.message, { stage: 'full-clean-handoff', activationEpochId, code: error?.code || '' });
+      this.exitProcess(1);
+    }
   }
 
   async performRecoveryHandoff(operationId) {

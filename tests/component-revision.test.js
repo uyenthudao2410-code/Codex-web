@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const {
+  COMPONENT_SPECS,
   ComponentRevisionTracker,
   hashComponentRevision,
   recoveryHostLegacyV1Revision,
@@ -99,6 +100,13 @@ test('Coding MCP revision resolves from resourcesRoot independently of packaged 
   assert.equal(disk.file_count, 2);
   assert.equal(disk.missing_files, 0);
   assert.ok(disk.total_bytes > 0);
+});
+
+test('Recovery Host revision owns the semantic watchdog implementation it loads', () => {
+  assert.equal(
+    COMPONENT_SPECS.recovery_host.files.includes('electron/services/mcpSemanticHealth.js'),
+    true
+  );
 });
 
 test('Recovery Host legacy revision bridge pins added device identity bytes', (t) => {

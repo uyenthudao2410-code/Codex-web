@@ -55,6 +55,12 @@
   const NON_TOKEN_TOOLS = new Set(['view_image']);
   const REALTIME_WINDOW_MS = 5 * 60 * 1000;
   const DASHBOARD_WINDOW_HOURS = 7 * 24;
+  const DASHBOARD_SNAPSHOT_REFRESH_MS = 30000;
+  const DASHBOARD_PERFORMANCE_REFRESH_MS = 10000;
+  const DASHBOARD_ORCHESTRATION_REFRESH_MS = 5000;
+  const DASHBOARD_BUSY_POLL_MS = 10000;
+  const DASHBOARD_IDLE_POLL_MS = 5000;
+  const DASHBOARD_HIDDEN_POLL_MS = 15000;
 
   const STATE_RANK = { offline: 0, connected: 1, waiting: 2, blocked: 3, active: 4 };
 
@@ -87,6 +93,20 @@
 
   function shouldPoll() {
     return document.visibilityState !== 'hidden' && activePage() === 'overview';
+  }
+
+  function orchestrationIsBusy(data = orchestration) {
+    const rawState = String(
+      data?.resume_packet?.orchestration_state
+      || data?.task?.orchestration?.orchestration_state
+      || data?.orchestration_state
+      || ''
+    ).trim().toUpperCase();
+    const taskStatus = String(data?.task?.status || '').toLowerCase();
+    const writeStatus = String(data?.authority?.write?.status || '').toLowerCase();
+    return ['PREFLIGHT', 'ROUTED', 'EXECUTING', 'PROVING', 'REPLAN'].includes(rawState)
+      || taskStatus === 'active'
+      || writeStatus === 'active';
   }
 
   function compact(value) {
@@ -562,7 +582,7 @@
   // ---- 9router-style animations -------------------------------------------
 
   function animateText(element, formatter, next) {
-    if (!element || reducedMotion) {
+    if (!element || reducedMotion || orchestrationIsBusy()) {
       if (element) element.textContent = formatter(next);
       return;
     }
@@ -1746,27 +1766,38 @@
   }
 
   async function refreshSnapshot(force = false) {
-    if (!force && Date.now() - lastSnapshotReadAt < 10000) return;
+    if (!force && Date.now() - lastSnapshotReadAt < DASHBOARD_SNAPSHOT_REFRESH_MS) return;
     lastSnapshotReadAt = Date.now();
-    try { snapshot = unwrap(await api.snapshot()); }
+    try {
+      if (!force && orchestrationIsBusy()) {
+        const health = unwrap(await api.lightweightSnapshot());
+        snapshot = { ...(snapshot || {}), status: health };
+      } else {
+        snapshot = unwrap(await api.snapshot());
+      }
+    }
     catch { snapshot = null; }
     updateHeaderContext();
   }
 
   async function refreshPerformance(force = false) {
-    if (!force && Date.now() - lastPerfReadAt < 10000) return;
+    if (!force && Date.now() - lastPerfReadAt < DASHBOARD_PERFORMANCE_REFRESH_MS) return;
     lastPerfReadAt = Date.now();
     try { perf = unwrap(await api.performanceTrace()); }
     catch { perf = null; }
-    renderAll();
   }
 
   async function refreshOrchestration(force = false) {
-    if (!force && Date.now() - lastOrchestrationReadAt < 4000) return;
+    if (!force && Date.now() - lastOrchestrationReadAt < DASHBOARD_ORCHESTRATION_REFRESH_MS) return;
     lastOrchestrationReadAt = Date.now();
+    if (!force && orchestrationIsBusy()) {
+      try {
+        const live = unwrap(await api.liveOrchestration());
+        if (orchestrationIsBusy(live)) return;
+      } catch { return; }
+    }
     try { orchestration = unwrap(await api.orchestration()); }
     catch { orchestration = null; }
-    renderAll();
   }
 
   async function refresh(force = false) {
@@ -1774,9 +1805,20 @@
     refreshInFlight = true;
     try {
       await Promise.all([refreshSnapshot(force), refreshPerformance(force), refreshOrchestration(force)]);
+      renderAll();
     } finally {
       refreshInFlight = false;
     }
+  }
+
+  function dashboardPollDelay() {
+    if (!shouldPoll()) return DASHBOARD_HIDDEN_POLL_MS;
+    return orchestrationIsBusy() ? DASHBOARD_BUSY_POLL_MS : DASHBOARD_IDLE_POLL_MS;
+  }
+
+  async function pollDashboard() {
+    await refresh(false);
+    setTimeout(pollDashboard, dashboardPollDelay());
   }
 
   byId('daRefreshButton')?.addEventListener('click', () => refresh(true));
@@ -1810,6 +1852,7 @@
 
   reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
 
-  loadCostSettings().then(() => refresh(true));
-  setInterval(() => refresh(false), 3000);
+  loadCostSettings()
+    .then(() => refresh(true))
+    .finally(() => setTimeout(pollDashboard, dashboardPollDelay()));
 })();

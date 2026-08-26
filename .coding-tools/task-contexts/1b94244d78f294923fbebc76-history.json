@@ -1,0 +1,1439 @@
+[
+  {
+    "version": 2,
+    "task_id": "23eb45b345894bfcac7ce66797a9b917",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T05:10:38.387Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-26T05:09:36.387Z",
+    "updated_at": "2026-08-26T05:10:38.387Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:09:36.387Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:36.664Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"connectorRefreshRequired|connectorRediscovered|acknowledge_connector_contract|activation_preflight|source_checkpoint\" electron resources scripts tests",
+          "session_id": "iieHGglWlLfiwVojD9YGTLLW"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:37.041Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"connectorRefreshRequired|connectorRediscovered|acknowledge_connector_contract|activation_preflight|source_checkpoint\" electron resources scripts tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:51.417Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"dev-ui-lifecycle|activation_preflight|activate|acknowledge_connector_contract|process\\.argv|--\" package.json scripts/dev-ui-lifecycle.js electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js",
+          "session_id": "gitGP7cwovJRqJ5xCV3iMEEI"
+        }
+      },
+      {
+        "time": "2026-08-26T05:09:51.659Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"dev-ui-lifecycle|activation_preflight|activate|acknowledge_connector_contract|process\\.argv|--\" package.json scripts/dev-ui-lifecycle.js electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:00.142Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 \"async function activate\\(observation\\)|async function main\\(argv\" scripts/dev-ui-lifecycle.js",
+          "session_id": "jr5apHBV7BOpOInt50zzvwk_"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:00.401Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"async function activate\\(observation\\)|async function main\\(argv\" scripts/dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:11.894Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "iMAu4jktpVgeIKR6lylR6rfr"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:12.560Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:23.261Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "WD-tv-0jdESwM3WazUHJffCA"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:24.420Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:38.387Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"connectorRediscovered|mark.*rediscover|rediscover.*connector|server/discover|tools/list|acknowledgeConnectorContract\" electron resources/coding-tools-mcp tests",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:38.387Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:10:46.507Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c2720f1e0bf64ec3984c8522910ea1e7",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "SG3e7Eugvom-XCqptOr5Us19",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 526,
+      "finished_at": "2026-08-26T05:11:04.057Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:10:46.507Z",
+    "updated_at": "2026-08-26T05:11:04.057Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:10:46.507Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:46.727Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 16 -e connectorRediscovered -e server/discover -e tools/list -e acknowledgeConnectorContract electron resources/coding-tools-mcp tests",
+          "session_id": "8dDX69LZXjf-rH85vc4Iasgt"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:46.953Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 16 -e connectorRediscovered -e server/discover -e tools/list -e acknowledgeConnectorContract electron resources/coding-tools-mcp tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:56.731Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 -e connectorRediscovered -e acknowledgeConnectorContract electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "JfSWAXXONj2kircrTgJ9ZoUF"
+        }
+      },
+      {
+        "time": "2026-08-26T05:10:56.988Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 -e connectorRediscovered -e acknowledgeConnectorContract electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:03.829Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 16 -e connector_tool_discovery -e tool_discovery -e rediscovered resources/coding-tools-mcp/coding_tools_mcp | head -n 260",
+          "session_id": "SG3e7Eugvom-XCqptOr5Us19"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:04.057Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 16 -e connector_tool_discovery -e tool_discovery -e rediscovered resources/coding-tools-mcp/coding_tools_mcp | head -n 260",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:11:12.758Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "95ad55f1f56c47e5915669cb204516bb",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "03urP4epMFfB_3dnaXrhsGhV",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 238,
+      "finished_at": "2026-08-26T05:11:43.827Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:11:12.765Z",
+    "updated_at": "2026-08-26T05:11:43.827Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:11:12.765Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:13.074Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 -e connector_tool_discovery -e tool_discovery -e rediscovered resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "qHYqhapXBMELS5xqodEGlhPD"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:13.329Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 -e connector_tool_discovery -e tool_discovery -e rediscovered resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:25.825Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -e hub_client -e execution_context_id -e client_type -e request_context resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "-lhz5ml71LAGR5hGaiRQ6Jn3"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:26.050Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -e hub_client -e execution_context_id -e client_type -e request_context resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:34.700Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 -e \"request_context.hub_client\" -e \"hub_client =\" -e \"execution_context_id\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "fYy6b8iBJa0oTrdOUc7Ahsp2"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:34.966Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 -e \"request_context.hub_client\" -e \"hub_client =\" -e \"execution_context_id\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:43.609Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 \"def _hub_identity_from_request\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "03urP4epMFfB_3dnaXrhsGhV"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:43.827Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"def _hub_identity_from_request\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:11:50.556Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "4828901629744839bbe40d33db2b4a2e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T05:12:59.717Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-26T05:11:50.556Z",
+    "updated_at": "2026-08-26T05:12:59.717Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:11:50.556Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:50.778Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"_hub_identity_from_request\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "CQwfFFwvzAZE9JvYVSXT0Lg7"
+        }
+      },
+      {
+        "time": "2026-08-26T05:11:51.038Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"_hub_identity_from_request\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:05.004Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -e backwardCompatible -e compatibilitySource -e compatibilityMetadataBackfillPending -e backward_compatible -e compatible electron tests resources/coding-tools-mcp/coding_tools_mcp | findstr /I \"connector contract compat\"",
+          "session_id": "vfVLPAl0lDnKmxvi6nRk0dVZ"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:05.290Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -e backwardCompatible -e compatibilitySource -e compatibilityMetadataBackfillPending -e backward_compatible -e compatible electron tests resources/coding-tools-mcp/coding_tools_mcp | findstr /I \"connector contract compat\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:22.938Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 22 \"server/discover\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron tests",
+          "session_id": "mfs_WsdgO9YGOrEtrb9kdAVI"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:23.189Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 22 \"server/discover\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:38.639Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 -e runtime.lightweight_snapshot -e runtime.snapshot -e RecoveryIpcClient scripts package.json electron | findstr /I \"scripts package lightweight snapshot status\"",
+          "session_id": "zygtVXJwco1-aK7kwN_Bw_Fk"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:38.812Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 -e runtime.lightweight_snapshot -e runtime.snapshot -e RecoveryIpcClient scripts package.json electron | findstr /I \"scripts package lightweight snapshot status\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:46.757Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"async function statusLifecycle|runtimeSnapshot\" scripts/dev-ui-lifecycle.js",
+          "session_id": "iRnY3TLlg9RpFbNtOH-6-FwA"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:46.965Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"async function statusLifecycle|runtimeSnapshot\" scripts/dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:59.717Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 22 \"compatible_predecessor_sha256|tool_contract =|tool_contract\\[\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:12:59.717Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:13:06.799Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "030f96af0dfd403ebfd2423695b4e88e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "lLb5XhCeAQzeLwCijs_9glBD",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 249,
+      "finished_at": "2026-08-26T05:13:07.317Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:13:06.801Z",
+    "updated_at": "2026-08-26T05:13:07.318Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:13:06.801Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:07.059Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 22 -e compatible_predecessor_sha256 -e \"tool_contract =\" -e \"tool_contract[\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "lLb5XhCeAQzeLwCijs_9glBD"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:07.318Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 22 -e compatible_predecessor_sha256 -e \"tool_contract =\" -e \"tool_contract[\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:13:20.232Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "189be293afff4d158638717a6ba17ba1",
+    "orchestration": {
+      "run_id": "5810451e30eb4e7d94e4f67a9e15416b",
+      "wave_id": "a5fcc77e50044573830e0acd1f9753f9",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "2591928b17ef4c1b8a202a2cc3a67f66044b5ea887c63c6f73eda0e93ff93bdb",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": {
+      "command": "rg -n -A 35 \"response = dispatch_rpc\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py && rg -n -A 28 \"self.tool_contract =\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -C 6 \"assertNotIn\\(\\\"compatible_predecessor_sha256\\\"\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+      "kind": "command",
+      "session_id": "yxI-Tbt7OKICqidjCbILZa89",
+      "workdir": ".",
+      "status": "running",
+      "started_at": "2026-08-26T05:45:43.663Z",
+      "owner_run": "5810451e30eb4e7d94e4f67a9e15416b",
+      "owner_wave": "a5fcc77e50044573830e0acd1f9753f9",
+      "exit_code": null,
+      "elapsed_ms": 10168,
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "yxI-Tbt7OKICqidjCbILZa89"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "5810451e30eb4e7d94e4f67a9e15416b",
+        "owner_wave": "a5fcc77e50044573830e0acd1f9753f9",
+        "size_bytes": 4914,
+        "command_id": "yxI-Tbt7OKICqidjCbILZa89",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:yxI-Tbt7OKICqidjCbILZa89:stdout",
+            "total_stream_bytes": 4914,
+            "total_retained_bytes": 4914,
+            "head_retained_bytes": 4914,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:yxI-Tbt7OKICqidjCbILZa89:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    "last_command_result": {
+      "command_id": "lXW50_VWc64jWhz74CcgLDw6",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 6379,
+      "finished_at": "2026-08-26T05:44:33.970Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:13:20.232Z",
+    "updated_at": "2026-08-26T05:45:43.670Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:13:20.232Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:20.785Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 compatible_predecessor_sha256 resources/coding-tools-mcp/coding_tools_mcp tests/runtime-lifecycle.test.js resources/coding-tools-mcp/tests",
+          "session_id": "bJuedeSCaaSLXX78NF2cYDDH"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:21.253Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 compatible_predecessor_sha256 resources/coding-tools-mcp/coding_tools_mcp tests/runtime-lifecycle.test.js resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:35.554Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 acceptance_files resources/coding-tools-mcp/coding_tools_mcp/tool_specs.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests tests | findstr /I \"ToolSpec task_control properties acceptance_files payload\"",
+          "session_id": "UX2EDvvHUzyx1Hij0LIg2S15"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:36.137Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 acceptance_files resources/coding-tools-mcp/coding_tools_mcp/tool_specs.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests tests | findstr /I \"ToolSpec task_control properties acceptance_files payload\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:46.012Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l acceptance_files resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "rRv7qijl8PkAtOff6D503DRE"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:46.448Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l acceptance_files resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:56.606Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 acceptance_files resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "2uA7QA6Ky78t87MSR0YtNcYr"
+        }
+      },
+      {
+        "time": "2026-08-26T05:13:57.132Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 acceptance_files resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:14:06.364Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --oneline --decorate -S \"acceptance_files\" -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "E-5EaQbqHTzkVixCCQ-Xbj-P"
+        }
+      },
+      {
+        "time": "2026-08-26T05:14:09.916Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline --decorate -S \"acceptance_files\" -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:14:23.756Z",
+        "event": "command_started",
+        "details": {
+          "command": "git show --stat --oneline 0415538 && git show --format=fuller --no-ext-diff 0415538 -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py tests/runtime-lifecycle.test.js",
+          "session_id": "8Rv03f4dV1QIdVhajo4vqp_M"
+        }
+      },
+      {
+        "time": "2026-08-26T05:14:25.451Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git show --stat --oneline 0415538 && git show --format=fuller --no-ext-diff 0415538 -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py tests/runtime-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:15:23.352Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 -e \"tool_contract\" -e \"sha256\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py | findstr /I \"contract sha tool input schema fingerprint\"",
+          "session_id": "HQuRErc11MKg9Qkj6OFMgtkz"
+        }
+      },
+      {
+        "time": "2026-08-26T05:15:23.998Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 -e \"tool_contract\" -e \"sha256\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py | findstr /I \"contract sha tool input schema fingerprint\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:15:33.906Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 16 -e \"def .*contract\" -e \"tool_contract =\" -e \"TOOL_CONTRACT\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp | findstr /I \"tool_contract tool contract\"",
+          "session_id": "MzAOX8bk3pLfQCa31rnaKxST"
+        }
+      },
+      {
+        "time": "2026-08-26T05:15:34.566Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 16 -e \"def .*contract\" -e \"tool_contract =\" -e \"TOOL_CONTRACT\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp | findstr /I \"tool_contract tool contract\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:15:52.454Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F \"self.tool_contract\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "yCtFH3JrjYRF67uOm9Qmff7t"
+        }
+      },
+      {
+        "time": "2026-08-26T05:15:53.108Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F \"self.tool_contract\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:16:04.348Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 -F \"self.tool_contract =\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "2LSe7fr9QNYMOunE3tSxABec"
+        }
+      },
+      {
+        "time": "2026-08-26T05:16:05.125Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 -F \"self.tool_contract =\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:16:28.101Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff 0415538^..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "2yJ0bn_yAW3fLHG_HYay2zSn"
+        }
+      },
+      {
+        "time": "2026-08-26T05:16:28.677Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff 0415538^..HEAD -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:16:54.954Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F \"34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c\" .coding-tools electron resources tests",
+          "session_id": "svDY2ERUDJx4RU_PXaK4Wpzb"
+        }
+      },
+      {
+        "time": "2026-08-26T05:16:56.948Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F \"34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c\" .coding-tools electron resources tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:17:08.100Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 -e \"run_id\" -e \"wave_id\" -e \"checkpoint\" -e \"status\" -e \"failure\" -e \"proof\" .coding-tools/task-contexts/d52b2d4f4b8441050660f1fa-history.json",
+          "session_id": "90snloHGPv02Ce13oJoGUuL7"
+        }
+      },
+      {
+        "time": "2026-08-26T05:17:08.638Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 -e \"run_id\" -e \"wave_id\" -e \"checkpoint\" -e \"status\" -e \"failure\" -e \"proof\" .coding-tools/task-contexts/d52b2d4f4b8441050660f1fa-history.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:17:29.206Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --oneline --all -S \"COMPATIBLE_ACKNOWLEDGED\" -- electron/services/runtimeOrchestrator.js electron/services/activationClosure.js tests/runtime-lifecycle.test.js tests/activation-closure.test.js tests/dev-ui-lifecycle.test.js",
+          "session_id": "q2JshGYy2eV51QgorL7J5Cz7"
+        }
+      },
+      {
+        "time": "2026-08-26T05:17:30.613Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline --all -S \"COMPATIBLE_ACKNOWLEDGED\" -- electron/services/runtimeOrchestrator.js electron/services/activationClosure.js tests/runtime-lifecycle.test.js tests/activation-closure.test.js tests/dev-ui-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:38:52.133Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:38:58.130Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:38:58.651Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T05:39:26.619Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -e \"_touch_hub_client\\(\" -e \"connector_tool_discovery\" -e \"__control/health\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py && git log --all --oneline -S\"SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS\" -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js && git log --all --oneline -S\"COMPATIBLE_ACKNOWLEDGED\" -- electron/services/runti",
+          "session_id": "ELNlhnx-RkiP0R7b-LoIxG1R"
+        }
+      },
+      {
+        "time": "2026-08-26T05:39:28.564Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -e \"_touch_hub_client\\(\" -e \"connector_tool_discovery\" -e \"__control/health\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py && git log --all --oneline -S\"SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS\" -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js && git log --all --oneline -S\"COMPATIBLE_ACKNOWLEDGED\" -- electron/services/runti",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:40:39.315Z",
+        "event": "command_started",
+        "details": {
+          "command": "git show b408d98:resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "session_id": "EAQnLpxuo7HvBQEP8N8XylF1"
+        }
+      },
+      {
+        "time": "2026-08-26T05:40:40.449Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git show b408d98:resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:42:57.190Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 45 COMPATIBLE_ACKNOWLEDGED 0557afa^ -- electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js && git grep -n -C 12 SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS 0557afa^ -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "sQL3gkEcx-YbVCcM2AmWzL8c"
+        }
+      },
+      {
+        "time": "2026-08-26T05:42:58.041Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 45 COMPATIBLE_ACKNOWLEDGED 0557afa^ -- electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js && git grep -n -C 12 SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS 0557afa^ -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:43:14.170Z",
+        "event": "command_started",
+        "details": {
+          "command": "git show --stat --format=fuller 0557afa && git diff 0557afa^ 0557afa -- electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/server.py tests/runtime-lifecycle.test.js tests/activation-closure.test.js docs/RECOVERY_HOST.md",
+          "session_id": "Y_d2VWl4cy1Anm2RdxNUo2w_"
+        }
+      },
+      {
+        "time": "2026-08-26T05:43:16.501Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git show --stat --format=fuller 0557afa && git diff 0557afa^ 0557afa -- electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/server.py tests/runtime-lifecycle.test.js tests/activation-closure.test.js docs/RECOVERY_HOST.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:43:31.777Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 -e \"TOOL_CONTRACT_SCHEMA_VERSION\" -e \"SMART_TOOL_PROFILE\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py && rg -n -C 10 -e \"from .tool_contract import\" -e \"tool_discovery_receipts\" -e \"def _record_tool_discovery\" -e \"def connector_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -C 10 -e \"connector_tool_discovery\" -e \"runtime._touch_hub_client\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py && rg -n -C 22 -e \"test_discover_",
+          "session_id": "RKaJcn4mgajdLee_yBfzU3lA"
+        }
+      },
+      {
+        "time": "2026-08-26T05:43:32.856Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 -e \"TOOL_CONTRACT_SCHEMA_VERSION\" -e \"SMART_TOOL_PROFILE\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py && rg -n -C 10 -e \"from .tool_contract import\" -e \"tool_discovery_receipts\" -e \"def _record_tool_discovery\" -e \"def connector_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -C 10 -e \"connector_tool_discovery\" -e \"runtime._touch_hub_client\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py && rg -n -C 22 -e \"test_discover_",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:43:47.576Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 -e \"connectorContractStatus\" -e \"acknowledgeConnectorContractHash\" -e \"synchronizeConnectorContract\" -e \"connector_tool_discovery\" electron/services/runtimeOrchestrator.js",
+          "session_id": "bFLNnkA_LOgqLCAl-WyU8App"
+        }
+      },
+      {
+        "time": "2026-08-26T05:43:48.959Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 -e \"connectorContractStatus\" -e \"acknowledgeConnectorContractHash\" -e \"synchronizeConnectorContract\" -e \"connector_tool_discovery\" electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:44:05.178Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"synchronizeConnectorContract\\(\" electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js && rg -n -C 15 -e \"chatgptToolContractSha256\" -e \"connectorContractAcknowledgedSha256\" electron/services/runtimeOrchestrator.js",
+          "session_id": "17dTlR9PaQRYsuyCMTT9wdKl"
+        }
+      },
+      {
+        "time": "2026-08-26T05:44:06.504Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"synchronizeConnectorContract\\(\" electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js && rg -n -C 15 -e \"chatgptToolContractSha256\" -e \"connectorContractAcknowledgedSha256\" electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:44:31.697Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 52 \"def _record_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -A 40 \"def connector_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -A 55 \"test\\('every changed exact tool contract SHA requires real rediscovery before acknowledgement'\" tests/runtime-lifecycle.test.js",
+          "session_id": "lXW50_VWc64jWhz74CcgLDw6"
+        }
+      },
+      {
+        "time": "2026-08-26T05:44:33.970Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 52 \"def _record_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -A 40 \"def connector_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -A 55 \"test\\('every changed exact tool contract SHA requires real rediscovery before acknowledgement'\" tests/runtime-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:45:43.663Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 35 \"response = dispatch_rpc\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py && rg -n -A 28 \"self.tool_contract =\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -C 6 \"assertNotIn\\(\\\"compatible_predecessor_sha256\\\"\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "session_id": "yxI-Tbt7OKICqidjCbILZa89"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:48:22.384Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "c080bc5e7cec44e7bd3e757b70f86884",
+    "orchestration": {
+      "run_id": "ae97f44dc678442db058a404459c70ad",
+      "wave_id": "1b5a1181bdd040a78ecf989e4e5099ee",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "ce84b74ec6c8670709aa99ef06153df13efa36e88acffc1f949f7ed6efb932dc",
+      "contract_fp": ""
+    },
+    "objective": "Implement the settled connector contract liveness fix: exact tools/list SHA remains audit identity; real tools/list/server/discover remains mandatory for breaking changes; a raw-SHA rollover is compatibility-eligible only when the current contract explicitly declares the acknowledged SHA as predecessor and a successful public MCP request from client_type=chatweb is observed on the current process/server under the current contract. Keep contact evidence separate from discovery evidence. Compatibility must require explicit supervisor acknowledgement, persist the new exact SHA/schema/profile, never fabricate rediscovery fields, and leave activation closure exact-SHA based. Keep smart-v3 at exactly 8 public tools and preserve the checkpointed acceptance repair.",
+    "status": "active",
+    "steps": [],
+    "current_step": "Orchestration preflight",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+    "next_step": "",
+    "created_at": "2026-08-26T05:48:22.387Z",
+    "updated_at": "2026-08-26T05:48:31.098Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:48:22.387Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:48:26.448Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:48:31.098Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:49:04.401Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "2860d589991d427496f5c10253d267b9",
+    "orchestration": {
+      "run_id": "2e5dc121214b4341b4ba63f3c7b2b1b7",
+      "wave_id": "35ca4573d93141a48b8f21efdc63dc77",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "053edca7cf67e4f70c5dc7d5c20b9c213021d2b75b8235a5943666593f8916e0",
+      "contract_fp": ""
+    },
+    "objective": "Close the connector contract cache/rediscovery liveness deadlock without weakening fail-closed guarantees. Preserve exact tools/list SHA as audit identity. Breaking schema/profile changes must still require real tools/list/server/discover. For a proven backward-compatible raw-SHA rollover, support compatibility closure only with explicit predecessor identity and successful public MCP ChatWeb contact on the current process/server under the current exact contract; keep contact separate from discovery and require explicit supervisor acknowledgement. Keep smart-v3 at exactly 8 public tools and preserve the accepted checkpoint repair.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:49:04.403Z",
+    "updated_at": "2026-08-26T05:49:29.803Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:49:04.403Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:49:10.100Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:49:28.535Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:49:29.803Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:51:25.996Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "f8d384ab400344508518fce8e6f1e99e",
+    "orchestration": {
+      "run_id": "04d30822d96947cc9d114b57fac4102c",
+      "wave_id": "9179016c934143abb04cb10f2ffb12f8",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "3f64ac0cee3f3e548b1c7b441414516de205a89f8eba2bdf39e818f115cb573a",
+      "contract_fp": ""
+    },
+    "objective": "Implement the prepared connector contract liveness repair on the current prepared lineage. Exact tools/list SHA remains audit identity. Real tools/list/server/discover remains mandatory for breaking changes. A raw-SHA rollover is compatibility-eligible only when the current contract explicitly declares the acknowledged SHA as predecessor and a successful public MCP request from client_type=chatweb is observed on the current process/server under the current exact contract. Keep contact evidence separate from discovery evidence. Compatibility requires explicit supervisor acknowledgement, persists the new exact SHA/schema/profile, never fabricates rediscovery fields, and leaves activation closure exact-SHA based. Keep smart-v3 at exactly 8 public tools and preserve the already-checkpointed acceptance repair.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "3a6oleHY2VVogAuuvsAKEPJr",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 759,
+      "finished_at": "2026-08-26T06:21:15.822Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 11,
+          "head_hash": "cfe650020765ad2c3e45ba650a517db414db5d023baf2c5b24e3d82bb4fa8f3c"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-04d30822d96947cc9d114b57fac4102c\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-04d30822d96947cc9d114b57fac4102c\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "04d30822d96947cc9d114b57fac4102c",
+        "wave_id": "1a0e5793067c4b20ae822276c3193c73",
+        "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+        "worktree_fp": "c43039c901fab66f22ef6926572d3f0cbebeb9a2278693a68a26a1403ee6f92a",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Implement the prepared connector contract liveness repair on the current prepared lineage. Exact tools/list SHA remains audit identity. Real tools/list/server/discover remains mandatory for breaking changes. A raw-SHA rollover is compatibility-eligible only when the current contract explicitly declares the acknowledged SHA as predecessor and a successful public MCP request from client_type=chatweb is observed on the current process/server under the current exact contract. Keep contact evidence separate from discovery evidence. Compatibility requires explicit supervisor acknowledgement, persists the new exact SHA/schema/profile, never fabricates rediscovery fields, and leaves activation closure exact-SHA based. Keep smart-v3 at exactly 8 public tools and preserve the already-checkpointed acceptance repair.",
+          "objective_revision": 1,
+          "objective_sha256": "ca1e6a0a52b4fb883168ec8bdd02d34fa9f62779eca8a1b5445ee63dc6863f1f",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "BASE_DRIFT",
+        "reason": null,
+        "event_seq": 30186
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "5d2551e9c8cdf4d1a514014d9e4a989b26cfd3078036639bbdec425860f32b68",
+    "completion_report_acknowledged_id": "5d2551e9c8cdf4d1a514014d9e4a989b26cfd3078036639bbdec425860f32b68",
+    "completion_report_acknowledged_at": "2026-08-26T06:15:36.527Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-26T05:51:26.001Z",
+    "updated_at": "2026-08-26T06:21:15.822Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:51:26.001Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:51:29.204Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:51:36.965Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-26T05:51:44.863Z",
+        "event": "base_drift_before_write",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T05:51:44.863Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:51:59.768Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "5d2551e9c8cdf4d1a514014d9e4a989b26cfd3078036639bbdec425860f32b68"
+        }
+      },
+      {
+        "time": "2026-08-26T05:52:00.514Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T05:52:27.866Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T05:52:37.836Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T05:53:05.003Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T06:15:36.527Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "5d2551e9c8cdf4d1a514014d9e4a989b26cfd3078036639bbdec425860f32b68"
+        }
+      },
+      {
+        "time": "2026-08-26T06:15:44.534Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T06:16:29.740Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T06:16:32.561Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_INVALID"
+        }
+      },
+      {
+        "time": "2026-08-26T06:19:02.229Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T06:20:44.206Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status && git diff -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py && git grep -n -C 28 -e \"every changed exact tool contract SHA requires real rediscovery\" -e \"runtime snapshots expose rediscovery\" -- tests/runtime-lifecycle.test.js && git grep -n -C 30 -e \"test_discover_and_tools_list_are_stateless_and_self_describing\" -e \"def tool_call\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "R2W7-E6A2yfBZav5dgAlBES_"
+        }
+      },
+      {
+        "time": "2026-08-26T06:20:45.140Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status && git diff -- resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py && git grep -n -C 28 -e \"every changed exact tool contract SHA requires real rediscovery\" -e \"runtime snapshots expose rediscovery\" -- tests/runtime-lifecycle.test.js && git grep -n -C 30 -e \"test_discover_and_tools_list_are_stateless_and_self_describing\" -e \"def tool_call\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T06:21:15.299Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 75 -B 4 -e \"every changed exact tool contract SHA requires real rediscovery before acknowledgement\" -- tests/runtime-lifecycle.test.js && git grep -n -A 45 -B 3 -e \"connector_tool_discovery\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py && git grep -n -C 8 -e \"stateFile\" -- electron/paths.js electron/paths.*",
+          "session_id": "3a6oleHY2VVogAuuvsAKEPJr"
+        }
+      },
+      {
+        "time": "2026-08-26T06:21:15.822Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 75 -B 4 -e \"every changed exact tool contract SHA requires real rediscovery before acknowledgement\" -- tests/runtime-lifecycle.test.js && git grep -n -A 45 -B 3 -e \"connector_tool_discovery\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py && git grep -n -C 8 -e \"stateFile\" -- electron/paths.js electron/paths.*",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T06:23:24.145Z",
+    "archive_reason": "superseded"
+  }
+]

@@ -29,6 +29,19 @@ def capsule(summary: str = "Resolve the bounded defect", criterion: str = "The f
     }
 
 
+def resolution_envelope() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "direct_outcomes": [{"outcome_id": "outcome-1", "summary": "The bounded user outcome is observable"}],
+        "relevant_invariants": ["Preserve the existing public contract"],
+        "truth_domains": ["source", "runtime"],
+        "adjacent_risks": [],
+        "excluded_scope": ["Unrelated modules"],
+        "required_evidence": [{"evidence_id": "evidence-1", "kind": "focused_proof", "provenance": "exact accepted wave", "status": "observed"}],
+        "closure_falsification_probe": {"probe_id": "probe-1", "method": "Run the focused closure check", "expected_failure_signal": "The bounded outcome remains contradicted", "executed": True, "result": "passed"},
+    }
+
+
 def open_event(identifier: str = "open-1", **overrides: object) -> dict[str, object]:
     event: dict[str, object] = {
         "operation": "open", "event_id": identifier, "task_id": "task-1",
@@ -193,7 +206,7 @@ class ProblemLineageTests(unittest.TestCase):
             outcome = ledger.problem_prepare_eocl_outcome_claim(
                 run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
                 proof_fingerprint=proof_fingerprint, accepted_files=files, durable_mutation=False,
-                coverage_manifest=manifest,
+                coverage_manifest=manifest, resolution_envelope=resolution_envelope(),
             )
             checkpoint = ledger.accept_checkpoint_atomic(
                 run_id=run_id, wave_id=wave_id, git_head="head", proof_fingerprint=proof_fingerprint,
@@ -273,6 +286,68 @@ class ProblemLineageTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_invalid_shadow_frame_restores_pending_host_turn_before_run_creation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = Runtime(root, permission_mode="safe")
+            runtime._orchestration_workspace_identity = lambda _path: {
+                "branch": "test",
+                "base_head": "head",
+                "worktree_fp": "worktree",
+            }
+            try:
+                runtime.orchestration_ledger.migrate_problem_lineage_schema()
+                attach_chatweb(runtime, "invalid-frame")
+                stage_host_turn(root, "invalid-frame-open")
+                opened = runtime.task_control({
+                    "action": "problem",
+                    "problem_event": public_event(open_event("invalid-frame-open")),
+                })
+                event = opened["problem"]["event"]
+                pending = stage_host_turn(root, "invalid-frame-run")
+                with self.assertRaises(ToolFailure) as invalid:
+                    runtime._agent_orchestration_context({
+                        "workflow": "bugfix",
+                        "phase": "prepare",
+                        "execution_mode": "mcp_only",
+                        "problem_context": {
+                            "work_origin": "problem",
+                            "problem_id": str(event["problem_id"]),
+                            "problem_revision": 1,
+                            "contract_fingerprint": str(event["contract_fingerprint"]),
+                            "resolution_claim": "none",
+                            "frame": {
+                                "schema_version": 1,
+                                "frame_id": "frame-invalid",
+                                "frame_revision": 1,
+                                "observation": "The bounded fixture is stale",
+                                "a_star": {
+                                    "domains": ["source"],
+                                    "phenomena": ["stale fixture"],
+                                    "ownership_boundaries": [],
+                                    "relations": [],
+                                },
+                                "governing_invariants": [],
+                                "ownership": [],
+                                "hypotheses": [],
+                                "counterevidence": [],
+                                "decision_delta": {
+                                    "tested_observation": "Focused fixture read",
+                                    "changed_decision": False,
+                                    "next_action": "Keep the run shadow-only",
+                                    "rationale": "No bounded intervention is authorized",
+                                },
+                                "closure_falsifier": "A fresh read still reports stale state",
+                                "authority_side_effects": True,
+                            },
+                        },
+                    }, objective="reject an authority-bearing shadow frame")
+                self.assertEqual(invalid.exception.code, "PRL_FRAME_INVALID")
+                self.assertTrue(pending.exists())
+                self.assertEqual(runtime.orchestration_ledger.list_runs(limit=10), [])
+            finally:
+                runtime.close()
+
     def test_task_acceptance_bridges_only_a_covered_exact_full_problem_claim(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -302,10 +377,22 @@ class ProblemLineageTests(unittest.TestCase):
                         "problem_revision": 1,
                         "contract_fingerprint": fingerprint,
                         "resolution_claim": "full_problem",
+                        "frame": {
+                            "schema_version": 1, "frame_id": "frame-runtime-c3", "frame_revision": 1,
+                            "observation": "The bounded fixture value is incorrect",
+                            "a_star": {"domains": ["source"], "phenomena": ["incorrect value"], "ownership_boundaries": [], "relations": []},
+                            "governing_invariants": [{"invariant_id": "invariant-1", "summary": "Preserve the existing public contract"}],
+                            "ownership": [], "hypotheses": [], "counterevidence": [],
+                            "decision_delta": {"tested_observation": "Focused fixture read", "changed_decision": True, "next_action": "Apply the bounded patch", "rationale": "The exact value is the selected cause"},
+                            "closure_falsifier": "A focused read still shows the old value",
+                        },
                     },
                 })
                 run_id = str(workflow["orchestration"]["run_id"])
                 wave_id = str(workflow["orchestration"]["wave_id"])
+                wave_metadata = runtime.orchestration_ledger.list_waves(run_id)[0]["metadata"]
+                self.assertEqual(wave_metadata["problem_resolution"]["problem_frame"]["frame_id"], "frame-runtime-c3")
+                self.assertTrue(any(item["event_type"] == "problem_frame_shadow" for item in runtime.orchestration_ledger.list_events(run_id, wave_id=wave_id)))
                 proof_id = runtime.orchestration_ledger.record_proof(
                     run_id=run_id,
                     wave_id=wave_id,
@@ -324,6 +411,33 @@ class ProblemLineageTests(unittest.TestCase):
                         "problem_coverage_manifest": {"criterion-1": ["not-a-proof"]},
                     })
                 self.assertEqual(invalid_manifest.exception.code, "PRL_OUTCOME_CLAIM_INVALID")
+                with self.assertRaises(ToolFailure) as missing_envelope:
+                    runtime.task_control({
+                        "action": "accept", "run_id": run_id,
+                        "reason": "full-problem closure omits its bounded envelope",
+                        "problem_coverage_manifest": {"criterion-1": [proof_id]},
+                    })
+                self.assertEqual(
+                    missing_envelope.exception.code,
+                    "PRL_RESOLUTION_ENVELOPE_REQUIRED",
+                )
+                with self.assertRaises(ToolFailure) as invalid_envelope:
+                    runtime.task_control({
+                        "action": "accept", "run_id": run_id,
+                        "reason": "the closure falsifier has not run",
+                        "problem_coverage_manifest": {"criterion-1": [proof_id]},
+                        "problem_resolution_envelope": {
+                            **resolution_envelope(),
+                            "closure_falsification_probe": {
+                                **resolution_envelope()["closure_falsification_probe"],
+                                "executed": False,
+                            },
+                        },
+                    })
+                self.assertEqual(
+                    invalid_envelope.exception.code,
+                    "PRL_RESOLUTION_ENVELOPE_INVALID",
+                )
 
                 with patch.object(
                     runtime.orchestration_ledger,
@@ -335,6 +449,7 @@ class ProblemLineageTests(unittest.TestCase):
                         "run_id": run_id,
                         "reason": "exact full-problem claim has passed proof coverage",
                         "problem_coverage_manifest": {"criterion-1": [proof_id]},
+                        "problem_resolution_envelope": resolution_envelope(),
                     })
                 self.assertTrue(accepted["accepted"])
                 self.assertEqual(accepted["problem_outcome_bridge"]["status"], "RECONCILIATION_REQUIRED")
@@ -520,13 +635,13 @@ class ProblemLineageTests(unittest.TestCase):
             outcome = ledger.problem_prepare_eocl_outcome_claim(
                 run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
                 proof_fingerprint="", accepted_files=files, durable_mutation=False,
-                criterion_dispositions={"criterion-1": "SATISFIED_NON_CODE"}, controller_authority=authority,
+                criterion_dispositions={"criterion-1": "SATISFIED_NON_CODE"}, resolution_envelope=resolution_envelope(), controller_authority=authority,
             )
             self.assertTrue(outcome["recorded"])
             replay = ledger.problem_prepare_eocl_outcome_claim(
                 run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
                 proof_fingerprint="", accepted_files=files, durable_mutation=False,
-                criterion_dispositions={"criterion-1": "SATISFIED_NON_CODE"}, controller_authority=authority,
+                criterion_dispositions={"criterion-1": "SATISFIED_NON_CODE"}, resolution_envelope=resolution_envelope(), controller_authority=authority,
             )
             self.assertTrue(replay["idempotent"])
             self.assertEqual(replay["claim_sha256"], outcome["claim_sha256"])
@@ -590,7 +705,7 @@ class ProblemLineageTests(unittest.TestCase):
             outcome = ledger.problem_prepare_eocl_outcome_claim(
                 run_id=run_id, wave_id=wave_id, git_head="head", worktree_fp="worktree",
                 proof_fingerprint=proof_fingerprint, accepted_files=files, durable_mutation=False,
-                coverage_manifest=manifest,
+                coverage_manifest=manifest, resolution_envelope=resolution_envelope(),
             )
             checkpoint = ledger.accept_checkpoint_atomic(
                 run_id=run_id, wave_id=wave_id, git_head="head", proof_fingerprint=proof_fingerprint,
@@ -612,8 +727,16 @@ class ProblemLineageTests(unittest.TestCase):
             temporary.cleanup()
 
     def test_public_schema_has_no_caller_state_or_policy_grant(self) -> None:
+        workflow_schema = input_schemas()["agent_workflow"]
         schema = input_schemas()["task_control"]
         event_schema = schema["properties"]["problem_event"]
+        self.assertIn("problem_context", workflow_schema["properties"])
+        for property_name in (
+            "problem_resolution_envelope",
+            "problem_coverage_manifest",
+            "problem_criterion_dispositions",
+        ):
+            self.assertIn(property_name, schema["properties"])
         self.assertEqual(schema["properties"]["action"]["enum"].count("problem"), 1)
         self.assertNotIn("eligible_for_policy", event_schema["properties"])
         self.assertNotIn("state", event_schema["properties"])

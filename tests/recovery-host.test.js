@@ -24,6 +24,7 @@ const {
 const {
   recoveryHostArguments,
   recoveryLoginItemArguments,
+  electronUiArguments,
   spawnRecoveryHost,
   spawnElectronUi,
   assertActivationDeadline
@@ -766,24 +767,67 @@ test('Recovery Host resumes ownership and releases the fence when replacement do
 test('Recovery Host launch arguments preserve the app root in development', () => {
   assert.deepEqual(recoveryHostArguments({ isPackaged: true, getAppPath: () => 'ignored' }), ['--recovery-host']);
   assert.deepEqual(recoveryHostArguments({ isPackaged: false, getAppPath: () => 'E:\\app' }), ['E:\\app', '--recovery-host']);
+  assert.deepEqual(electronUiArguments({ isPackaged: true, getAppPath: () => 'ignored' }), []);
+  assert.deepEqual(electronUiArguments({ isPackaged: false, getAppPath: () => 'E:\\app' }), ['E:\\app']);
   assert.deepEqual(recoveryLoginItemArguments({ isPackaged: false, getAppPath: () => 'E:\\app path' }), ['"E:\\app path"', '--recovery-host']);
   assert.deepEqual(recoveryHostArguments({ isPackaged: false, getAppPath: () => 'E:\\app' }, {
     expectedOldInstanceId: 'old-instance-0000001',
-    operationId: 'operation-000000001'
+    operationId: 'operation-000000001',
+    activationEpochId: 'epoch-activation-0001'
   }), [
     'E:\\app',
     '--recovery-host',
     '--replace-recovery-host=old-instance-0000001',
-    '--activation-operation=operation-000000001'
+    '--activation-operation=operation-000000001',
+    '--activation-epoch-id=epoch-activation-0001'
   ]);
+  assert.deepEqual(electronUiArguments({ isPackaged: false, getAppPath: () => 'E:\\app' }, {
+    activationEpochId: 'epoch-activation-0001'
+  }), ['E:\\app', '--activation-epoch-id=epoch-activation-0001']);
   assert.deepEqual(replacementArguments([
     'electron.exe',
     '--replace-recovery-host=old-instance-0000001',
-    '--activation-operation=operation-000000001'
+    '--activation-operation=operation-000000001',
+    '--activation-epoch-id=epoch-activation-0001'
   ]), {
     expectedOldInstanceId: 'old-instance-0000001',
-    operationId: 'operation-000000001'
+    operationId: 'operation-000000001',
+    activationEpochId: 'epoch-activation-0001'
   });
+  assert.deepEqual(replacementArguments(['electron.exe', '--activation-epoch-id=epoch-activation-0001']), {
+    activationEpochId: 'epoch-activation-0001'
+  });
+  assert.throws(() => recoveryHostArguments({ isPackaged: true }, { activationEpochId: 'bad epoch' }), {
+    code: 'INVALID_ACTIVATION_EPOCH_ID'
+  });
+  assert.throws(() => replacementArguments(['electron.exe', '--activation-epoch-id=bad epoch']), {
+    code: 'RECOVERY_REPLACEMENT_ARGUMENTS_INVALID'
+  });
+});
+
+test('activation launchers propagate the epoch through argv and child environment', async () => {
+  const app = { isPackaged: true, getAppPath: () => 'ignored' };
+  const launches = [];
+  const spawnProcess = (command, args, options) => {
+    const child = {
+      pid: 42001 + launches.length,
+      once(event, listener) { if (event === 'spawn') queueMicrotask(listener); return this; },
+      unref() {}
+    };
+    launches.push({ command, args, options });
+    return child;
+  };
+  const options = { activationEpochId: 'epoch-activation-0001' };
+  await spawnRecoveryHost(app, spawnProcess, options);
+  await spawnElectronUi(app, spawnProcess, options);
+  assert.deepEqual(launches.map((item) => item.args), [
+    ['--recovery-host', '--activation-epoch-id=epoch-activation-0001'],
+    ['--activation-epoch-id=epoch-activation-0001']
+  ]);
+  assert.equal(launches[0].options.env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID, 'epoch-activation-0001');
+  assert.equal(launches[1].options.env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID, 'epoch-activation-0001');
+  assert.equal(launches[0].options.env.WEBCODEX_PROCESS_ROLE, 'recovery-host');
+  assert.equal(launches[1].options.env.WEBCODEX_PROCESS_ROLE, 'electron-ui');
 });
 
 test('activation launchers reject expired requests before invoking the process spawn boundary', async () => {

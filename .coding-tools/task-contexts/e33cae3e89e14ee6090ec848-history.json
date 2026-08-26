@@ -1,0 +1,94 @@
+[
+  {
+    "version": 2,
+    "task_id": "bb43e8b06e4546d98dfb0813b2faa2fe",
+    "orchestration": {
+      "run_id": "5104699650ec48bea1fa8457d1c80a7a",
+      "wave_id": "4c0a88e6dbee4ed3ab13c32b843291d5",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "fJAs_Hi_LdEQF5VEN1eslwXu",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1687,
+      "finished_at": "2026-08-26T05:02:45.280Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T05:02:43.263Z",
+    "updated_at": "2026-08-26T05:03:13.632Z",
+    "events": [
+      {
+        "time": "2026-08-26T05:02:43.263Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T05:02:43.548Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "fJAs_Hi_LdEQF5VEN1eslwXu"
+        }
+      },
+      {
+        "time": "2026-08-26T05:02:45.280Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T05:03:12.143Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:03:13.625Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T05:03:13.632Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T05:03:56.177Z",
+    "archive_reason": "superseded"
+  }
+]

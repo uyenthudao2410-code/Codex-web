@@ -59,6 +59,25 @@ const uiRevisionTracker = new ComponentRevisionTracker({ paths: runtimePaths });
 const uiInstanceId = crypto.randomBytes(16).toString('hex');
 const uiStartedAtUnixMs = Date.now();
 const uiRunningRevision = recoveryHostMode ? null : uiRevisionTracker.captureRunning('electron_ui');
+const uiActivationEpochId = (() => {
+  const arg = process.argv.find((item) => String(item).startsWith('--activation-epoch-id='));
+  const value = String(arg || '').slice('--activation-epoch-id='.length).trim();
+  if (/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value)) return value;
+  try {
+    const persisted = readJson(runtimePaths.activationEpochFile(), {});
+    const current = persisted?.current;
+    // A persisted epoch is safe to inherit only after it is durably READY and
+    // admission is OPEN.  During HANDOFF/VERIFYING an unlaunched UI must not
+    // present itself as the replacement merely because it can read the JSON
+    // projection; the coordinator's argv-bound epoch is the authority then.
+    const persistedId = String(current?.activation_epoch_id || '').trim();
+    return current?.state === 'READY'
+      && current?.admission_state === 'OPEN'
+      && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(persistedId)
+      ? persistedId
+      : '';
+  } catch { return ''; }
+})();
 let uiRestartScheduled = false;
 let uiExitInFlight = false;
 let preparedP5A0Manifest = null;
@@ -128,7 +147,8 @@ async function registerUiRevision() {
     instance_id: uiInstanceId,
     pid: process.pid,
     revision: uiRunningRevision,
-    started_at_unix_ms: uiStartedAtUnixMs
+    started_at_unix_ms: uiStartedAtUnixMs,
+    ...(uiActivationEpochId ? { activation_epoch_id: uiActivationEpochId } : {})
   });
   if (result?.restart_required) {
     try {
@@ -140,7 +160,7 @@ async function registerUiRevision() {
     }
     uiRestartScheduled = true;
     forceQuit = true;
-    app.relaunch({ execPath: process.execPath, args: electronUiArguments(app) });
+    app.relaunch({ execPath: process.execPath, args: electronUiArguments(app, { activationEpochId: result.activation_epoch_id || uiActivationEpochId }) });
     app.exit(0);
   }
   return result;

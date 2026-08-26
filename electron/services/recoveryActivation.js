@@ -224,6 +224,7 @@ class RecoveryActivation {
     spawnRecoveryReplacement = null,
     spawnElectronUi = null,
     beginRecoveryHandoff = null,
+    fullCleanActivation = null,
     now = () => Date.now()
   }) {
     this.paths = paths;
@@ -236,6 +237,7 @@ class RecoveryActivation {
     this.spawnRecoveryReplacement = spawnRecoveryReplacement;
     this.spawnElectronUi = spawnElectronUi;
     this.beginRecoveryHandoff = beginRecoveryHandoff;
+    this.fullCleanActivation = fullCleanActivation;
     this.now = now;
     this.uiRegistration = null;
     this.uiRecoveryStateFile = path.join(paths.dataRoot(), 'electron-ui-recovery.json');
@@ -292,6 +294,7 @@ class RecoveryActivation {
       tracked: Boolean(registration),
       alive: Boolean(registration && isProcessAlive(registration.pid)),
       instance_id: registration?.instance_id || null,
+      activation_epoch_id: registration?.activation_epoch_id || null,
       pid: registration?.pid || null,
       registered_at_unix_ms: registration?.registered_at_unix_ms || null
     };
@@ -500,6 +503,68 @@ class RecoveryActivation {
     return this.verifyFreshLifecycle(request);
   }
 
+  hasFullCleanCoordinator() {
+    return Boolean(this.fullCleanActivation?.restart
+      && typeof this.orchestrator?.completeActivationEpoch === 'function');
+  }
+
+  coordinatorFailureState(operationId, error) {
+    const linked = this.actions.get(operationId);
+    const linkedEpoch = String(linked?.activation_epoch_id || linked?.result?.activation_epoch_id || '').trim();
+    const retryable = new Set([
+      'RUNTIME_BUSY', 'ORCHESTRATION_STATE_UNCERTAIN', 'ACCEPTANCE_PENDING',
+      'ACTIVATION_CONFLICT', 'ACTIVATION_REQUEST_EXPIRED'
+    ]).has(String(error?.code || ''));
+    // Once an epoch exists, the coordinator may already have stopped or
+    // fenced the old runtime.  That boundary is a failed activation, never a
+    // retryable refusal, and admission must remain closed until a new request.
+    return linkedEpoch && !['READY'].includes(String(linked?.activation_state || ''))
+      ? 'failed'
+      : (retryable ? 'refused' : 'failed');
+  }
+
+  finishCoordinatorFailure(operationId, error) {
+    const current = this.actions.get(operationId);
+    if (!current || ['completed', 'failed', 'refused'].includes(current.state)) return current;
+    const linkedEpoch = String(current.activation_epoch_id || current.result?.activation_epoch_id || '').trim() || null;
+    const state = this.coordinatorFailureState(operationId, error);
+    return this.actions.finish(operationId, state, linkedEpoch ? {
+      full_clean_activation: true,
+      activation_epoch_id: linkedEpoch,
+      state: 'FAILED',
+      admission_open: false,
+      fully_ready: false
+    } : null, error);
+  }
+
+  async activateFullClean(request, { replay = false } = {}) {
+    const operationId = request.operation_id;
+    try {
+      const result = await this.fullCleanActivation.restart({
+        operationId,
+        component: request.component,
+        expectedDiskRevision: request.expected_disk_revision,
+        sourceCheckpoint: request.source_checkpoint,
+        allowAcceptancePending: request.allow_acceptance_pending,
+        expiresAtUnixMs: request.expires_at_unix_ms,
+        // A replay carries the already-linked epoch; the coordinator must
+        // reconcile it instead of creating a second activation transaction.
+        ...(replay ? {
+          activationEpochId: String(this.actions.get(operationId)?.activation_epoch_id
+            || this.actions.get(operationId)?.result?.activation_epoch_id || '').trim() || undefined
+        } : {}),
+        reason: `component_revision:${request.component}`
+      });
+      const record = this.actions.get(operationId);
+      if (record) return { ...record, ...(replay ? { deduplicated: true } : {}) };
+      return result;
+    } catch (error) {
+      const record = this.finishCoordinatorFailure(operationId, error);
+      if (record) return record;
+      throw error;
+    }
+  }
+
   async activate(input) {
     const now = this.now();
     const replayRequest = normalizeActivationRequest(input, now, { allowExpiredReplay: true });
@@ -507,8 +572,22 @@ class RecoveryActivation {
     const resumableStopped = replay?.state === 'accepted'
       && replay?.component === 'coding_mcp'
       && replay?.result?.component_stopped === true;
-    if (replay && !resumableStopped) return { ...replay, deduplicated: true };
+    if (replay && !resumableStopped) {
+      if (this.hasFullCleanCoordinator() && replay.state === 'accepted') {
+        return this.activateFullClean(replayRequest, { replay: true });
+      }
+      return { ...replay, deduplicated: true };
+    }
     const request = normalizeActivationRequest(input, now);
+    // A revision activation is a system transaction when the Recovery Host
+    // has the full-clean coordinator.  Keep the component-scoped path as a
+    // compatibility fallback for isolated/unit hosts and legacy callers.
+    // Production RecoveryHost instances expose the epoch completion control
+    // method on RuntimeOrchestrator.  Keep isolated/unit hosts that provide a
+    // deliberately minimal orchestrator on the historical component-scoped
+    // path; otherwise merely constructing a coordinator would silently change
+    // their activation contract and make a replacement handoff impossible to
+    // exercise without the full runtime authority surface.
     let claim;
     if (resumableStopped) {
       this.actions.resume(request.operation_id);
@@ -516,6 +595,9 @@ class RecoveryActivation {
     } else {
       claim = this.actions.begin(request);
       if (!claim.created) return { ...claim.record, deduplicated: true };
+    }
+    if (this.hasFullCleanCoordinator()) {
+      return this.activateFullClean(request);
     }
     let revision;
     let lifecycle = null;
@@ -687,16 +769,33 @@ class RecoveryActivation {
     if (!OPERATION_ID_PATTERN.test(String(operationId || ''))) throw activationError('INVALID_OPERATION_ID', 'Invalid activation operation_id.');
     const record = this.actions.get(operationId);
     if (!record) throw activationError('ACTIVATION_OPERATION_NOT_FOUND', 'Activation operation was not found.');
-    return record;
+    const epochId = String(record.activation_epoch_id || record.result?.activation_epoch_id || '').trim();
+    if (!epochId || !this.fullCleanActivation?.current) return record;
+    try {
+      const epoch = this.fullCleanActivation.current();
+      if (!epoch || epoch.activation_epoch_id !== epochId) return record;
+      return { ...record, activation_epoch: epoch };
+    } catch (error) {
+      return {
+        ...record,
+        activation_epoch: {
+          activation_epoch_id: epochId,
+          state: 'UPDATE_INCOMPLETE',
+          admission_state: 'CLOSED',
+          error: { code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID'), message: String(error?.message || error) }
+        }
+      };
+    }
   }
 
   async registerUi(input) {
-    const value = exactObject(input, new Set(['instance_id', 'pid', 'revision', 'started_at_unix_ms']), 'UI registration');
+    const value = exactObject(input, new Set(['instance_id', 'pid', 'revision', 'started_at_unix_ms', 'activation_epoch_id']), 'UI registration');
     const registration = {
       instance_id: String(value.instance_id || ''),
       pid: Number(value.pid || 0),
       revision: String(value.revision || '').toLowerCase(),
       started_at_unix_ms: Number(value.started_at_unix_ms || 0),
+      activation_epoch_id: String(value.activation_epoch_id || '').trim() || null,
       registered_at_unix_ms: this.now()
     };
     if (!INSTANCE_ID_PATTERN.test(registration.instance_id) || !Number.isSafeInteger(registration.pid) || registration.pid <= 0
@@ -705,6 +804,29 @@ class RecoveryActivation {
       throw activationError('INVALID_UI_REGISTRATION', 'Electron UI registration is invalid or the process is not alive.');
     }
     this.uiRegistration = registration;
+    const epoch = this.fullCleanActivation?.current?.();
+    if (epoch) {
+      const epochMatches = registration.activation_epoch_id && registration.activation_epoch_id === epoch.activation_epoch_id;
+      if (!epochMatches) {
+        return {
+          registered: true,
+          restart_required: true,
+          activation_epoch_id: epoch.activation_epoch_id,
+          expected_activation_epoch_id: epoch.activation_epoch_id,
+          code: 'UPDATE_INCOMPLETE',
+          code_revision: this.uiRevisionStatus()
+        };
+      }
+      this.fullCleanActivation.uiRegistration = registration;
+      if (epoch.state !== 'READY') {
+        return {
+          registered: true,
+          restart_required: false,
+          activation_epoch_id: epoch.activation_epoch_id,
+          code_revision: this.uiRevisionStatus()
+        };
+      }
+    }
     if (this.uiRecoveryPreference?.suppressed || this.uiRecoveryPreference?.error_code) {
       this.writeUiRecoveryPreference(false, '');
     }

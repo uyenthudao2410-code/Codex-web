@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "9489bcc986594ae998b247a39fd9007a",
     "wave_id": "50f3cfd4771843fd8a64b62f2f5fdbb1",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "ABORTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Refactor the proven stateless exact-run continuation fix so module-size budgets pass without behavior change. Extract HTTP stateless task-context selection into a leaf transport helper and exact-run recovery into a Runtime mixin. Preserve unique exact-run mapping, workspace authorization, foreign active-controller denial, random isolated context when no exact selector exists, exact-SHA connector freshness, and the 8-tool smart-v3 surface.",
-  "status": "waiting",
+  "status": "stopped",
   "steps": [
     {
       "id": "apply",
@@ -37,7 +37,7 @@
       "updated_at": "2026-08-25T15:06:07.373Z"
     }
   ],
-  "current_step": "Awaiting acceptance",
+  "current_step": "Aborted - operator report required",
   "current_command": {
     "command": "python resources/coding-tools-mcp/scripts/check_module_size.py && cd resources/coding-tools-mcp && python -m pytest -q tests/test_stateless_http_2026.py && python -m py_compile coding_tools_mcp/stateless_context.py coding_tools_mcp/runtime_stateless_context.py coding_tools_mcp/mcp_http_handler.py coding_tools_mcp/server.py",
     "kind": "test",
@@ -62,19 +62,40 @@
       "NEXT CRITICAL ACTION"
     ],
     "what_changed": {
-      "files": [],
-      "source": "no_durable_file_receipts",
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+          "operation": "add"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+          "operation": "add"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "operation": "update"
+        },
+        {
+          "path": "docs/RECOVERY_HOST.md",
+          "operation": "create"
+        }
+      ],
+      "source": "aligned_task_modified_files",
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
-      "run_status": "active",
-      "wave_status": "active",
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
       "task_status": "waiting",
       "integrity": {
         "ok": true,
-        "checked": 20,
-        "head_hash": "906c3bb2f6e49ef70eaa2a08c5995c263170d68766cabd136999e7fa8a143079"
+        "checked": 22,
+        "head_hash": "728c17a4ebbe74357ee9a71b0cb8b08001841e7471cc9cf195a8fdd66e1aa85f"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-9489bcc986594ae998b247a39fd9007a\\run-summary.md",
@@ -113,12 +134,12 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
     "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
   },
-  "completion_report_id": "8851fa73e68d40a22b538f9a16a80c12c982d7ad984e0870da44aa137ce173d0",
+  "completion_report_id": "940eacea1d728d4c72248547efcc1823ec343ac92d44c049f85a124894ecd21e",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -11979,9 +12000,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-08-25T15:05:45.963Z",
-  "updated_at": "2026-08-26T03:14:24.191Z",
+  "updated_at": "2026-08-26T08:23:06.736Z",
   "events": [
     {
       "time": "2026-08-25T15:05:45.963Z",
@@ -12144,6 +12165,28 @@
     },
     {
       "time": "2026-08-26T03:14:24.191Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T08:22:33.177Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "940eacea1d728d4c72248547efcc1823ec343ac92d44c049f85a124894ecd21e"
+      }
+    },
+    {
+      "time": "2026-08-26T08:23:06.736Z",
       "event": "orchestration_projection_reconciled",
       "details": {
         "fields": [

@@ -1,0 +1,154 @@
+{
+  "version": 2,
+  "task_id": "a4e448fcd9b44567acc001cc0f30eb49",
+  "orchestration": {
+    "run_id": "a50fadc7387f459bbdacfa5ad93c3c6e",
+    "wave_id": "e09353d3363a41588ad21b45669118b7",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "a81db9d86707398fa12003ae7b4ec879a8b8238cca7494195c49679df789e84e",
+    "contract_fp": ""
+  },
+  "objective": "Continue the same health-null diagnosis by tracing how Recovery Host constructs and persists deviceIdentity/deviceInstanceId across host replacement and how RuntimeOrchestrator/runtimeDeviceIdentity compares it with the MCP child device_id. Determine whether host handoff can change expected device_id while the live MCP retains the prior device_id. Read-only only; no file or runtime mutation.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "d10d87d927748ea9ad47129dbab801fbee5b9b0613e9283100aac79958973ea8"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a50fadc7387f459bbdacfa5ad93c3c6e\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a50fadc7387f459bbdacfa5ad93c3c6e\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "a50fadc7387f459bbdacfa5ad93c3c6e",
+      "wave_id": "e09353d3363a41588ad21b45669118b7",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "a81db9d86707398fa12003ae7b4ec879a8b8238cca7494195c49679df789e84e",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Continue the same health-null diagnosis by tracing how Recovery Host constructs and persists deviceIdentity/deviceInstanceId across host replacement and how RuntimeOrchestrator/runtimeDeviceIdentity compares it with the MCP child device_id. Determine whether host handoff can change expected device_id while the live MCP retains the prior device_id. Read-only only; no file or runtime mutation.",
+        "objective_revision": 1,
+        "objective_sha256": "acd7d5707e15534ab2e0eef0d7aeb8ee07c175a74b7762e40628731c2ebcd09f",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "4e031fbe95eb2a862eba43d1191d88831c0715f59c8a4ec410213bc16c839189",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-08-26T09:01:56.225Z",
+  "updated_at": "2026-08-26T09:06:02.900Z",
+  "events": [
+    {
+      "time": "2026-08-26T09:01:56.225Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T09:02:02.890Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T09:02:24.600Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T09:02:25.855Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T09:05:44.733Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "4e031fbe95eb2a862eba43d1191d88831c0715f59c8a4ec410213bc16c839189"
+      }
+    },
+    {
+      "time": "2026-08-26T09:06:02.718Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

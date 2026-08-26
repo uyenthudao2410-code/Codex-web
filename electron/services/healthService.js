@@ -20,7 +20,9 @@ class HealthService {
 
   async ownership(current) {
     const runtimeOwned = await this.orchestrator.native.status(current).catch(() => false);
-    const tunnelOwned = await this.orchestrator.tunnel.status(current).catch(() => false);
+    const tunnelOwned = await this.orchestrator.tunnel.status(current, {
+      activationEpochId: this.orchestrator.activationEpochId || ''
+    }).catch(() => false);
     return { runtimeOwned, tunnelOwned };
   }
 

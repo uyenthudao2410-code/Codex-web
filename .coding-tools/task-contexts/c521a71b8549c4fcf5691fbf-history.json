@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "b804e4d20b814bc686af2713c5209d0f",
+    "orchestration": {
+      "run_id": "bffd0df248874d28bb34b3d5620882db",
+      "wave_id": "85c1983b85cb48e7a14e9b36366697ae",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "2afdb0edb116c1265a6cf11a818a52a515bce9a14d41eeb04b095beaaba6a155",
+      "contract_fp": ""
+    },
+    "objective": "Read-only engineering evaluation of the current uncommitted Revision 4 implementation. Verify whether the implementation semantics match the methodology and identify any material design gaps, over-hardening, false claims, or readiness blockers. Do not mutate files, do not run broad tests, do not accept/reject/terminalize runs, and do not modify concurrent work. Focus on Problem Frame shadow-only contract, Resolution Envelope/full_problem acceptance semantics, provisional vs trusted problem resolution, problem-level descriptive metrics, public 8-tool surface, and interactions with concurrent dirty acceptance/runtime changes.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T06:50:13.303Z",
+    "updated_at": "2026-08-26T06:50:45.132Z",
+    "events": [
+      {
+        "time": "2026-08-26T06:50:13.303Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only engineering evaluation of the current uncommitted Revision 4 implementation. Verify whether the implementation semantics match the methodology and identify any material design gaps, over-hardening, false claims, or readiness blockers. Do not mutate files, do not run broad tests, do not accept/reject/terminalize runs, and do not modify concurrent work. Focus on Problem Frame shadow-only contract, Resolution Envelope/full_problem acceptance semantics, provisional vs trusted problem resolution, problem-level descriptive metrics, public 8-tool surface, and interactions with concurrent dirty acceptance/runtime changes."
+        }
+      },
+      {
+        "time": "2026-08-26T06:50:14.773Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T06:50:17.189Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T06:50:17.196Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T06:51:45.442Z",
+    "archive_reason": "superseded"
+  }
+]

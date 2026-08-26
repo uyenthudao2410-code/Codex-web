@@ -11,6 +11,20 @@ const DEFAULT_FAILURE_THRESHOLD = 2;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_RESTART_COOLDOWN_MS = 120_000;
 
+function semanticFailurePolicy(result) {
+  const reason = String(result?.reason || 'unknown');
+  if (['workspace_mismatch', 'invalid_json', 'unexpected_result'].includes(reason)) {
+    return { deterministic: true, restartable: false };
+  }
+  if (reason === 'http_status' && [400, 401, 403, 404, 405].includes(Number(result?.statusCode || 0))) {
+    return { deterministic: true, restartable: false };
+  }
+  if (reason === 'jsonrpc_error' && [-32600, -32601, -32602].includes(Number(result?.errorCode))) {
+    return { deterministic: true, restartable: false };
+  }
+  return { deterministic: false, restartable: true };
+}
+
 function probeMcpSemanticHealth({ port, token, expectedWorkspace = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {
   return new Promise((resolve) => {
     const body = JSON.stringify({
@@ -163,17 +177,18 @@ class SemanticMcpHealthWatchdog {
       }
 
       this.failures += 1;
-      // A workspace mismatch is an identity/safety failure, not a transient
-      // semantic-plane blip. Recover it on the first observation so an old or
-      // deleted checkout cannot remain the live target. Other failures (for
-      // example a raw TaskGroup/JSON-RPC failure) retain the normal debounce.
-      const failureThreshold = result?.reason === 'workspace_mismatch' ? 1 : this.failureThreshold;
+      const policy = semanticFailurePolicy(result);
+      const failureThreshold = this.failureThreshold;
       this.log?.warn?.('Coding MCP HTTP health is reachable but semantic tool-plane probe failed', {
         failures: this.failures,
         threshold: failureThreshold,
         reason: String(result?.reason || 'unknown'),
-        errorCode: result?.errorCode ?? null
+        errorCode: result?.errorCode ?? null,
+        deterministic: policy.deterministic
       });
+      if (!policy.restartable) {
+        return { ...result, failures: this.failures, recoveryBlocked: true, recoveryDeferred: true, deterministicFailure: true };
+      }
       if (this.failures < failureThreshold) return { ...result, failures: this.failures };
       if (Date.now() < this.nextRestartAt || this.suppressed()) {
         return { ...result, failures: this.failures, recoveryDeferred: true };
@@ -228,6 +243,7 @@ class SemanticMcpHealthWatchdog {
 
 module.exports = {
   probeMcpSemanticHealth,
+  semanticFailurePolicy,
   SemanticMcpHealthWatchdog,
   DEFAULT_INTERVAL_MS,
   DEFAULT_FAILURE_THRESHOLD,

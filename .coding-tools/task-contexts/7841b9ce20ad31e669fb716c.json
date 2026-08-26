@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "task_id": "e28ff26dcea24254a6921b9111eeae99",
+  "orchestration": {
+    "run_id": "af03e116a03343cea0841d9b36c73931",
+    "wave_id": "57cedaef8adf43fda187968eb50889da",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+    "contract_fp": ""
+  },
+  "objective": "Read-only: inspect the exact Recovery Host supervision ordering and semantic watchdog integration to explain why a fresh valid supervisor restart ticket can remain unconsumed while the host status endpoint still responds. Determine whether `superviseOnce()` awaits any potentially hanging operation before `RuntimeOrchestrator.supervise()`, whether `mcpSemanticHealth` can block the tick, whether `running` or `handoffStarted` can keep the host responsive but suppress supervision, and whether focused tests cover eventual restart-ticket service after a transient busy/recovering or semantic-probe stall. Return the smallest causal fix only if source proves one. Do not mutate source/runtime/tasks/workspaces/external systems.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T05:15:32.003Z",
+  "updated_at": "2026-08-26T05:15:40.421Z",
+  "events": [
+    {
+      "time": "2026-08-26T05:15:32.003Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:15:34.396Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T05:15:40.089Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T05:15:40.421Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

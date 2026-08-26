@@ -1,0 +1,453 @@
+{
+  "version": 2,
+  "task_id": "a04ebcb0538348ea801ab68eac5ab22a",
+  "orchestration": {
+    "run_id": "37e37c39fc2f430383749ac7caad14de",
+    "wave_id": "27cf74dfb700459888adcd8ad6d2a442",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "f9e4dfc2b5504c91bed8b1e1319788644b0d0b58f138ea23a24838412e77edb6",
+    "contract_fp": ""
+  },
+  "objective": "Execute only the read-only supported live status command `npm run dev:status` and return its sanitized status. No file/runtime/task/connector mutation.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-26T04:55:44.327Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-26T04:55:44.327Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Sz9pKLA1M_ynvN4ZcB49Nv3b",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 8475,
+    "finished_at": "2026-08-26T04:55:42.300Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 23,
+        "head_hash": "3b2574bf36d4974fe04637a73a9444ca838f7e6e004637ca1e13905924d19479"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-37e37c39fc2f430383749ac7caad14de\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-37e37c39fc2f430383749ac7caad14de\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "37e37c39fc2f430383749ac7caad14de",
+      "wave_id": "27cf74dfb700459888adcd8ad6d2a442",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "f9e4dfc2b5504c91bed8b1e1319788644b0d0b58f138ea23a24838412e77edb6",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Execute only the read-only supported live status command `npm run dev:status` and return its sanitized status. No file/runtime/task/connector mutation.",
+        "objective_revision": 1,
+        "objective_sha256": "fd89863028bfc93c6197038722b1e0b8c5c944513a97307a8e489f6490793e93",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "b383df74730e495ab1287b98bdac98b4",
+          "stage_id": "check:385f51573288f6e6",
+          "status": "passed",
+          "duration_ms": 10323,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "14b0b49b405f4514fdf5ae8769c1bbfda399d7c5a2025df74ce24d87d2be9aee",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-26T04:55:01.277Z",
+  "updated_at": "2026-08-26T05:00:21.315Z",
+  "events": [
+    {
+      "time": "2026-08-26T04:55:01.277Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:04.734Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:12.209Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:20.385Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:21.369Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:30.025Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:30.546Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:40.460Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "Sz9pKLA1M_ynvN4ZcB49Nv3b"
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:42.300Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:44.327Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:44.327Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:47.851Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-26T04:55:47.854Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:56:01.279Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:56:09.371Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "eae446cece228bc8bad39b686f4e2b5d42ab65d8a7db77f3f0f31b76ae9532ce"
+      }
+    },
+    {
+      "time": "2026-08-26T04:56:10.373Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T04:56:24.475Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T04:56:33.541Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:56:42.973Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-26T04:56:50.267Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:57:13.168Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T04:57:29.091Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-26T04:57:35.864Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:57:44.764Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "WORKFLOW_BUDGET_EXCEEDED"
+      }
+    },
+    {
+      "time": "2026-08-26T04:57:53.918Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:58:02.257Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-26T04:58:14.886Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:58:28.294Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "eae446cece228bc8bad39b686f4e2b5d42ab65d8a7db77f3f0f31b76ae9532ce"
+      }
+    },
+    {
+      "time": "2026-08-26T04:58:43.472Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T04:59:30.750Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-26T04:59:30.750Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:00:02.688Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "14b0b49b405f4514fdf5ae8769c1bbfda399d7c5a2025df74ce24d87d2be9aee"
+      }
+    },
+    {
+      "time": "2026-08-26T05:00:14.404Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

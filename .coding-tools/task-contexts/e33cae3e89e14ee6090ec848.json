@@ -1,0 +1,342 @@
+{
+  "version": 2,
+  "task_id": "5d1aad68c1c34e70a44b9cbeee348c36",
+  "orchestration": {
+    "run_id": "c30253f03f45476fb9bccc9bfe11fd2a",
+    "wave_id": "4ad05f0f350841989dbca689ffd36fbe",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+    "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+    "contract_fp": ""
+  },
+  "objective": "Complete the existing workspace-bound recovery-preflight RUN without source or runtime mutation. Run only `npm run dev:status` as a read-only lifecycle check, then enter normal proof/acceptance. This run exists only to establish a clean checkpoint before controlled restart recovery.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-26T05:04:03.243Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-26T05:04:03.243Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "gKe0I97S4Z7OQhv483EoYT7t",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 933,
+    "finished_at": "2026-08-26T05:04:02.999Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 23,
+        "head_hash": "5a01b9c9922136d1cd6b519351d3520cdfb8ebcb9a025c42624e2587e19c7a8f"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-c30253f03f45476fb9bccc9bfe11fd2a\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-c30253f03f45476fb9bccc9bfe11fd2a\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "c30253f03f45476fb9bccc9bfe11fd2a",
+      "wave_id": "4ad05f0f350841989dbca689ffd36fbe",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "afcaa3ab74ab03e75c0d9ee93d6bd41e694606609bfa3a80bf93a9083e6726d4",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Complete the existing workspace-bound recovery-preflight RUN without source or runtime mutation. Run only `npm run dev:status` as a read-only lifecycle check, then enter normal proof/acceptance. This run exists only to establish a clean checkpoint before controlled restart recovery.",
+        "objective_revision": 1,
+        "objective_sha256": "d5736ef20b71e3033b0475bdcab0753da89c3700fe1d51cea74e3741b2b4855c",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "c4d00db4f30042b3b2a2f4ccb82a9fe6",
+          "stage_id": "check:385f51573288f6e6",
+          "status": "passed",
+          "duration_ms": 1340,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "f1ae4ce4476efbb7a3beeb9a1d8558b7c0ebbe6572e39bb4748e4280a7cddc17",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-26T05:03:56.178Z",
+  "updated_at": "2026-08-26T06:29:38.782Z",
+  "events": [
+    {
+      "time": "2026-08-26T05:03:56.179Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:03:56.659Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T05:03:57.457Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-26T05:03:58.809Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-26T05:03:58.820Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:00.239Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:01.038Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:02.194Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "gKe0I97S4Z7OQhv483EoYT7t"
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:02.999Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:03.240Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:03.243Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:03.517Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:03.520Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:03.767Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "41e79e5ea99ec3bb01abfec73035ca5b4ab3f51742fd7f0cb307d0a35d967bf3"
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:03.898Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:13.636Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:14.430Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "41e79e5ea99ec3bb01abfec73035ca5b4ab3f51742fd7f0cb307d0a35d967bf3"
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:23.685Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:26.424Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:26.428Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T05:04:26.599Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "f1ae4ce4476efbb7a3beeb9a1d8558b7c0ebbe6572e39bb4748e4280a7cddc17"
+      }
+    },
+    {
+      "time": "2026-08-26T06:29:38.782Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

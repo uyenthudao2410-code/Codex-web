@@ -6,8 +6,13 @@ let lastHealth = null;
 let lastCommandStartedAt = 0;
 let lastSyncAt = 0;
 let orchestrationInFlight = null;
+let healthInFlight = null;
 let orchestrationError = '';
 let controlPlaneState = 'unknown';
+const ORCHESTRATION_POLL_BUSY_MS = 2500;
+const ORCHESTRATION_POLL_IDLE_MS = 5000;
+const PANEL_POLL_HIDDEN_MS = 15000;
+const HEALTH_POLL_MS = 5000;
 
 const CONTROL_PLANE_ACTION_IDS = [
   'pauseTask',
@@ -558,16 +563,43 @@ async function refreshOrchestration(force = false) {
 
 async function refreshHealth(force = false) {
   if (document.hidden && !force) return;
-  try { renderHealth(unwrap(await api.health())); }
-  catch {
-    lastHealth = null;
-    ['#mcpDot', '#tunnelDot'].forEach((selector) => {
-      const element = $(selector);
-      element.classList.remove('ready');
-      element.title = 'Không đọc được trạng thái dịch vụ';
-    });
-    renderSyncState();
-  }
+  if (healthInFlight) return healthInFlight;
+  healthInFlight = (async () => {
+    try { renderHealth(unwrap(await api.health())); }
+    catch {
+      lastHealth = null;
+      ['#mcpDot', '#tunnelDot'].forEach((selector) => {
+        const element = $(selector);
+        element.classList.remove('ready');
+        element.title = 'Không đọc được trạng thái dịch vụ';
+      });
+      renderSyncState();
+    } finally {
+      healthInFlight = null;
+    }
+  })();
+  return healthInFlight;
+}
+
+function orchestrationBusy() {
+  const taskStatus = String(lastOrchestration?.task?.status || '').toLowerCase();
+  const runtimeState = String(lastOrchestration?.runtime_activity?.state || '').toUpperCase();
+  return taskStatus === 'active' || ['ACTIVE', 'WRITING', 'DELEGATING'].includes(runtimeState);
+}
+
+function orchestrationPollDelay() {
+  if (document.hidden) return PANEL_POLL_HIDDEN_MS;
+  return orchestrationBusy() ? ORCHESTRATION_POLL_BUSY_MS : ORCHESTRATION_POLL_IDLE_MS;
+}
+
+async function pollOrchestration() {
+  await refreshOrchestration(false);
+  setTimeout(pollOrchestration, orchestrationPollDelay());
+}
+
+async function pollHealth() {
+  await refreshHealth(false);
+  setTimeout(pollHealth, document.hidden ? PANEL_POLL_HIDDEN_MS : HEALTH_POLL_MS);
 }
 
 async function taskAction(action) {
@@ -657,12 +689,9 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// Polling interval
-setInterval(refreshOrchestration, 2000);
-setInterval(refreshHealth, 3000);
 setInterval(updateClock, 1000);
 
 // Initial call
-refreshOrchestration(true);
-refreshHealth(true);
+refreshOrchestration(true).finally(() => setTimeout(pollOrchestration, orchestrationPollDelay()));
+refreshHealth(true).finally(() => setTimeout(pollHealth, document.hidden ? PANEL_POLL_HIDDEN_MS : HEALTH_POLL_MS));
 updateClock();

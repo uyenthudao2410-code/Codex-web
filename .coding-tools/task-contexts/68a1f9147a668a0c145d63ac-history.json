@@ -1,0 +1,847 @@
+[
+  {
+    "version": 2,
+    "task_id": "fe986d6af5d54d22abed6e936eefdd09",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "mAlJje9NcC4PjtIKr7Uj_jzJ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1416,
+      "finished_at": "2026-08-26T08:40:50.264Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T08:40:48.248Z",
+    "updated_at": "2026-08-26T08:40:50.264Z",
+    "events": [
+      {
+        "time": "2026-08-26T08:40:48.248Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T08:40:49.666Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 currentHealth electron/services/runtimeOrchestrator.js",
+          "session_id": "mAlJje9NcC4PjtIKr7Uj_jzJ"
+        }
+      },
+      {
+        "time": "2026-08-26T08:40:50.264Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 currentHealth electron/services/runtimeOrchestrator.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T08:41:00.846Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "15d4487e4b4542e38629b8f91f76a3b4",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T08:44:12.124Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path escapes the workspace and is blocked.",
+    "next_step": "",
+    "created_at": "2026-08-26T08:41:00.848Z",
+    "updated_at": "2026-08-26T08:44:12.124Z",
+    "events": [
+      {
+        "time": "2026-08-26T08:41:00.848Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T08:41:03.289Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 mcpHealth electron/services/runtimeOrchestrator.js",
+          "session_id": "WU3KMrnHI0mmXf7D4MAqOlLa"
+        }
+      },
+      {
+        "time": "2026-08-26T08:41:04.052Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 mcpHealth electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:41:23.291Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 currentMcpHealth electron/services/runtimeOrchestrator.js",
+          "session_id": "yJ8kotUyCyhjVFh3TI5TweFI"
+        }
+      },
+      {
+        "time": "2026-08-26T08:41:24.440Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 currentMcpHealth electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:41:41.660Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"function readMcpHealth|async function readMcpHealth\" electron/services/runtimeOrchestrator.js",
+          "session_id": "MTD9HXW9Ms8BsUj0Xjuv8Kzf"
+        }
+      },
+      {
+        "time": "2026-08-26T08:41:42.448Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"function readMcpHealth|async function readMcpHealth\" electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:42:01.050Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"__control/health\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "mY5nkyLv2x-YacalRrA6VJZ8"
+        }
+      },
+      {
+        "time": "2026-08-26T08:42:02.286Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"__control/health\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:42:27.805Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 90 connectorContractStatus electron/services/runtimeOrchestrator.js",
+          "session_id": "ms7af0i9YYwclb5EQpdNE-aX"
+        }
+      },
+      {
+        "time": "2026-08-26T08:42:28.829Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 90 connectorContractStatus electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:42:54.548Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"function uiObservation|async function statusLifecycle|connectorContractState|connector_state\" scripts/dev-ui-lifecycle.js",
+          "session_id": "Fe0me12rsfTxab6lotxczquS"
+        }
+      },
+      {
+        "time": "2026-08-26T08:42:56.154Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"function uiObservation|async function statusLifecycle|connectorContractState|connector_state\" scripts/dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:43:12.081Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"runtimeSnapshot\" scripts/dev-ui-lifecycle.js",
+          "session_id": "ONeKixE1iPmJLCKlJuAni12K"
+        }
+      },
+      {
+        "time": "2026-08-26T08:43:13.603Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"runtimeSnapshot\" scripts/dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:43:34.016Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run",
+          "session_id": "7dEMtvpiYnuwjnZcwa2IFch-"
+        }
+      },
+      {
+        "time": "2026-08-26T08:43:35.052Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:43:53.661Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"settingsFile|stateFile|dataRoot\" electron/services/runtimePaths.js electron/services/settingsStore.js",
+          "session_id": "86WcIsoVdXEkn4r3lVFuV82z"
+        }
+      },
+      {
+        "time": "2026-08-26T08:43:55.127Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"settingsFile|stateFile|dataRoot\" electron/services/runtimePaths.js electron/services/settingsStore.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:44:12.124Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i \"health|connector|restart|activation|device|workspace|unavailable|recovery\" \"C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\logs\\assistant.log\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:44:12.124Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T08:50:32.414Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "9f9604e661404dc8b02f23dc8791ce8d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-26T08:50:32.435Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-26T08:50:32.415Z",
+    "updated_at": "2026-08-26T08:50:32.435Z",
+    "events": [
+      {
+        "time": "2026-08-26T08:50:32.415Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T08:50:32.435Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"class RecoveryIpcClient|constructor\\(|lightweight_snapshot|acknowledge_connector_contract\" electron/services/recoveryIpc.js scripts/dev-ui-lifecycle.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:50:32.435Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T08:50:43.245Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "cb0f06915b354a358cff2ab6fb506011",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "G53YmPaglwGLrK0OB7OZorjM",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 1903,
+      "finished_at": "2026-08-26T08:53:22.248Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T08:50:43.247Z",
+    "updated_at": "2026-08-26T08:53:22.248Z",
+    "events": [
+      {
+        "time": "2026-08-26T08:50:43.247Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T08:50:44.873Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"class RecoveryIpcClient\" electron/services/recoveryIpc.js",
+          "session_id": "V6JMMUhL1NhjOEdmZ3SOiWn1"
+        }
+      },
+      {
+        "time": "2026-08-26T08:50:45.676Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"class RecoveryIpcClient\" electron/services/recoveryIpc.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:50:55.057Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"runtime.lightweight_snapshot\" electron/services/recoveryIpc.js electron/services/recoveryHost.js scripts/dev-ui-lifecycle.js",
+          "session_id": "_tU1rD2cynXi6Wa1aIEsvqO3"
+        }
+      },
+      {
+        "time": "2026-08-26T08:50:55.727Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"runtime.lightweight_snapshot\" electron/services/recoveryIpc.js electron/services/recoveryHost.js scripts/dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:51:19.144Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"DEVICE_ID\" electron/services/nativeService.js electron/services/runtimeOrchestrator.js electron/services/deviceIdentity.js resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "c6cBZvqD4xWREX3q44YbgWQG"
+        }
+      },
+      {
+        "time": "2026-08-26T08:51:19.915Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"DEVICE_ID\" electron/services/nativeService.js electron/services/runtimeOrchestrator.js electron/services/deviceIdentity.js resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:51:34.874Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"def connector_client_contact\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "_bDGaORTfYn1Ltx0YiTHb1xS"
+        }
+      },
+      {
+        "time": "2026-08-26T08:51:35.536Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"def connector_client_contact\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:51:45.340Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"def connector_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "U3uXBw9hVrPmQQSiLbyLBwF0"
+        }
+      },
+      {
+        "time": "2026-08-26T08:51:46.027Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"def connector_tool_discovery\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:52:03.615Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 \"sessions_lock\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "L6-TFb4zT5D-OJ6HYNKH9K4r"
+        }
+      },
+      {
+        "time": "2026-08-26T08:52:04.222Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"sessions_lock\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:52:24.775Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"health_unavailable\" tests electron/services",
+          "session_id": "5WerMehMw8ocjjvDG4EpU2f6"
+        }
+      },
+      {
+        "time": "2026-08-26T08:52:25.444Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"health_unavailable\" tests electron/services",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:52:41.272Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"productName\" package.json electron scripts tests",
+          "session_id": "3Lq049ZHjn07xXOnk1z2afQv"
+        }
+      },
+      {
+        "time": "2026-08-26T08:52:41.869Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"productName\" package.json electron scripts tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:52:57.272Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"setPath\\('userData'\" electron scripts tests",
+          "session_id": "gi_TJTHkQ0uUbYgPg3u24RIp"
+        }
+      },
+      {
+        "time": "2026-08-26T08:52:57.845Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"setPath\\('userData'\" electron scripts tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:53:21.598Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 3 \"mcp_health_unavailable\" .coding-tools",
+          "session_id": "G53YmPaglwGLrK0OB7OZorjM"
+        }
+      },
+      {
+        "time": "2026-08-26T08:53:22.248Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 3 \"mcp_health_unavailable\" .coding-tools",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T08:53:31.530Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "59fde84125234bc0bcff8167196d6b60",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "EBQpIqW5PDZDJIRQiu5QOir7",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1247,
+      "finished_at": "2026-08-26T08:53:33.377Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T08:53:31.533Z",
+    "updated_at": "2026-08-26T08:53:33.377Z",
+    "events": [
+      {
+        "time": "2026-08-26T08:53:31.533Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T08:53:32.781Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 4 \"mcp_health_unavailable\" .coding-tools/evaluation/chatweb-host-observations.jsonl",
+          "session_id": "EBQpIqW5PDZDJIRQiu5QOir7"
+        }
+      },
+      {
+        "time": "2026-08-26T08:53:33.377Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 4 \"mcp_health_unavailable\" .coding-tools/evaluation/chatweb-host-observations.jsonl",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T08:53:41.550Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "0a45538c9dd045528b65534c5fcb9434",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "TbxfTMdSSkoU6lki7sIXkatD",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1411,
+      "finished_at": "2026-08-26T08:54:23.731Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T08:53:41.553Z",
+    "updated_at": "2026-08-26T08:54:23.731Z",
+    "events": [
+      {
+        "time": "2026-08-26T08:53:41.553Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T08:53:43.115Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"health.inspect\" .",
+          "session_id": "pSpZUZn2vI79JVa04PbSSccN"
+        }
+      },
+      {
+        "time": "2026-08-26T08:53:43.738Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"health.inspect\" .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:53:55.673Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 6 \"connector_state=UNAVAILABLE\" .coding-tools/task-contexts",
+          "session_id": "UNYc3-p16XlG3aA4_OewvlD7"
+        }
+      },
+      {
+        "time": "2026-08-26T08:53:56.273Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 6 \"connector_state=UNAVAILABLE\" .coding-tools/task-contexts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:54:06.610Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content -Path '.coding-tools/task-contexts/0453eb65bc3ba32ff8eefa4c.json' -TotalCount 135\"",
+          "session_id": "d1C87Ecc94Gsa9IBxsfBY2Kx"
+        }
+      },
+      {
+        "time": "2026-08-26T08:54:07.535Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content -Path '.coding-tools/task-contexts/0453eb65bc3ba32ff8eefa4c.json' -TotalCount 135\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:54:23.106Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 \"buildRuntimeEnv\" electron/services/nativeService.js",
+          "session_id": "TbxfTMdSSkoU6lki7sIXkatD"
+        }
+      },
+      {
+        "time": "2026-08-26T08:54:23.731Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 \"buildRuntimeEnv\" electron/services/nativeService.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T08:54:34.710Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c0ba99b776424fcb8b8154e2373e1885",
+    "orchestration": {
+      "run_id": "dc4016aa44184da3a41dc1e0fc127796",
+      "wave_id": "4099df3f0ef84b7485fa1c0212482c1b",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "52faa0e9cfacf582fcf5bc6f40ed230cea7602e9",
+      "worktree_fp": "f4877dfa0cf6c942b68e3c3681efa3ed9fa705c24e72034216eb49f522f98d0c",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "2XEvM9Ka480FZhKzSXAcWuUy",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1845,
+      "finished_at": "2026-08-26T08:54:37.202Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-26T08:54:34.715Z",
+    "updated_at": "2026-08-26T09:00:19.819Z",
+    "events": [
+      {
+        "time": "2026-08-26T08:54:34.715Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T08:54:36.564Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"async start\" electron/services/nativeService.js",
+          "session_id": "2XEvM9Ka480FZhKzSXAcWuUy"
+        }
+      },
+      {
+        "time": "2026-08-26T08:54:37.202Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"async start\" electron/services/nativeService.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T08:55:32.565Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T08:55:49.617Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-26T08:55:57.525Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-26T08:56:08.951Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T08:56:08.955Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T08:56:09.901Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-08-26T08:56:22.886Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T08:56:38.011Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T09:00:06.587Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:00:18.955Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T09:00:19.819Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T09:01:56.222Z",
+    "archive_reason": "superseded"
+  }
+]

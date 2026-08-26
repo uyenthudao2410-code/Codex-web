@@ -4,6 +4,11 @@ let switching = false;
 let activeWorkspace = '';
 let lastRuntimeState = null;
 let lastRuntimeCheckAt = 0;
+let taskRefreshInFlight = null;
+let taskBusy = false;
+const TASK_POLL_BUSY_MS = 2000;
+const TASK_POLL_IDLE_MS = 5000;
+const TASK_POLL_HIDDEN_MS = 15000;
 
 function unwrap(result) {
   if (!result?.ok) throw new Error(result?.error || 'Thao tác thất bại');
@@ -109,11 +114,15 @@ async function refreshStatus() {
   catch { renderServiceState(null); }
 }
 
-async function refreshTask() {
-  try {
-    const payload = unwrap(await api.taskState());
-    const task = payload?.state;
+async function refreshTask(force = false) {
+  if (!force && document.visibilityState === 'hidden') return;
+  if (taskRefreshInFlight) return taskRefreshInFlight;
+  taskRefreshInFlight = (async () => {
+    try {
+    const control = unwrap(await api.liveOrchestration());
+    const task = control?.task || null;
     const status = String(task?.status || 'idle');
+    taskBusy = status === 'active';
     const strip = $('#taskStrip');
     strip.className = `task-strip ${status}`;
     $('#taskTitle').textContent = task?.objective || 'Chưa có nhiệm vụ';
@@ -144,7 +153,20 @@ async function refreshTask() {
     $('#taskProgressBar').style.width = progress === null ? '0%' : `${progress}%`;
     $('#taskProgressText').textContent = progress === null ? '—' : `${progress}%`;
     strip.title = `Trạng thái: ${status}; Tiến độ giai đoạn: ${progress === null ? 'chưa rõ' : `${progress}%`}; Cập nhật lần cuối: ${new Date(updatedAt).toLocaleString('vi-VN')}`;
-  } catch { /* no active workspace/task yet */ }
+    } catch { /* no active workspace/task yet */ }
+  })();
+  try { await taskRefreshInFlight; }
+  finally { taskRefreshInFlight = null; }
+}
+
+function taskPollDelay() {
+  if (document.visibilityState === 'hidden') return TASK_POLL_HIDDEN_MS;
+  return taskBusy ? TASK_POLL_BUSY_MS : TASK_POLL_IDLE_MS;
+}
+
+async function pollTask() {
+  await refreshTask(false);
+  setTimeout(pollTask, taskPollDelay());
 }
 
 function renderWorkspace(hub) {
@@ -291,9 +313,11 @@ api.onDownload((item) => {
   else if (item.status === 'progressing') node.textContent = `Tệp đính kèm ${item.totalBytes ? Math.round((item.receivedBytes / item.totalBytes) * 100) : 0}%`;
   else if (item.error) node.textContent = item.error;
 });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'hidden') void refreshTask(true);
+});
 api.chatStatus().then((result) => renderChatState(unwrap(result))).catch(() => {});
 refreshStatus();
 refreshWorkspace();
-refreshTask();
+refreshTask(true).finally(() => setTimeout(pollTask, taskPollDelay()));
 setInterval(refreshWorkspace, 15000);
-setInterval(refreshTask, 1200);

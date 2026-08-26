@@ -160,6 +160,13 @@ class RecoveryActionStore {
       old_instance_state: null,
       old_instance_id: null,
       new_instance_id: null,
+      // A component activation can be backed by a full-system activation
+      // epoch.  Keep the link on the action record itself so status/replay
+      // remains authoritative even after the Recovery Host hands ownership
+      // to its replacement process.
+      activation_epoch_id: null,
+      activation_mode: null,
+      activation_state: null,
       lifecycle_decision: null,
       postflight: null,
       result: null,
@@ -199,6 +206,17 @@ class RecoveryActionStore {
       ...(Object.prototype.hasOwnProperty.call(patch, 'old_instance_state') && !current.old_instance_state
         ? { old_instance_state: ['ABSENT', 'RUNNING'].includes(String(patch.old_instance_state || '')) ? String(patch.old_instance_state) : null }
         : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'activation_epoch_id')
+        && !current.activation_epoch_id
+        ? { activation_epoch_id: String(patch.activation_epoch_id || '').trim() || null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'activation_mode')
+        && !current.activation_mode
+        ? { activation_mode: String(patch.activation_mode || '').trim().slice(0, 80) || null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'activation_state')
+        ? { activation_state: String(patch.activation_state || '').trim().slice(0, 80) || null }
+        : {}),
       ...(Object.prototype.hasOwnProperty.call(patch, 'lifecycle_decision') && patch.lifecycle_decision && typeof patch.lifecycle_decision === 'object'
         ? { lifecycle_decision: stableValue(patch.lifecycle_decision) }
         : {}),
@@ -226,6 +244,9 @@ class RecoveryActionStore {
       finished_at: new Date(now).toISOString(),
       old_instance_state: String(result?.postflight?.old_instance_state || current.old_instance_state || '') || null,
       new_instance_id: String(result?.postflight?.new_instance_id || current.new_instance_id || '') || null,
+      activation_epoch_id: String(result?.activation_epoch_id || current.activation_epoch_id || '').trim() || null,
+      activation_mode: String(result?.activation_mode || current.activation_mode || '').trim().slice(0, 80) || null,
+      activation_state: String(result?.state || result?.activation_state || current.activation_state || '').trim().slice(0, 80) || null,
       postflight: result?.postflight && typeof result.postflight === 'object' ? stableValue(result.postflight) : null,
       result: result && typeof result === 'object' ? result : null,
       error: error && typeof error === 'object' ? {
@@ -249,6 +270,9 @@ class RecoveryActionStore {
       ...current,
       state: 'accepted',
       updated_at: new Date(now).toISOString(),
+      activation_epoch_id: String(result?.activation_epoch_id || current.activation_epoch_id || '').trim() || null,
+      activation_mode: String(result?.activation_mode || current.activation_mode || '').trim().slice(0, 80) || null,
+      activation_state: String(result?.state || result?.activation_state || current.activation_state || '').trim().slice(0, 80) || null,
       result: result && typeof result === 'object' ? result : null,
       postflight: result?.postflight && typeof result.postflight === 'object' ? stableValue(result.postflight) : null,
       error: error && typeof error === 'object' ? {
@@ -740,6 +764,34 @@ function postflightRevisionVerified(postflight) {
 function postflightMatchesIntent(postflight, intent, operationId = '') {
   const expectedOperationId = String(operationId || intent?.current_operation_id || intent?.activation_operation_id || '').trim();
   return verifyPostflightMatchesIntent(postflight, intent, { operationId: expectedOperationId });
+}
+
+function fullCleanActivationProof(record, intent) {
+  const result = record?.result;
+  const census = result?.census;
+  const epochId = String(result?.activation_epoch_id || '').trim();
+  if (result?.full_clean_activation !== true
+    || !epochId
+    || result?.fully_ready !== true
+    || result?.admission_open !== true
+    || !census
+    || census.pass !== true
+    || census.verified !== true
+    || String(census.activation_epoch_id || '') !== epochId
+    || census.epoch_matches !== true
+    || census.workspace_matches !== true
+    || census.device_matches !== true
+    || census.revision_matches !== true
+    || census.process_identity_verified !== true
+    || census.recovery_host_epoch_matches !== true
+    || census.connector_acknowledged !== true
+    || census.ui_verified !== true
+    || census.recovery_plane_verified !== true) return null;
+  const candidate = result.postflight_by_component?.[intent?.component]
+    || census.component_postflights?.[intent?.component];
+  const postflight = normalizePostflightReceipt(candidate);
+  if (!postflight || !postflightMatchesIntent(postflight, intent, record.operation_id)) return null;
+  return postflight;
 }
 
 function normalizeClosureInput(value) {
@@ -1236,7 +1288,8 @@ class AcceptedCodeActivationController {
   applyRecord(state, intent, record) {
     const recordState = String(record?.state || '');
     if (recordState === 'completed') {
-      const postflight = normalizePostflightReceipt(record?.result?.postflight || record?.postflight);
+      const postflight = normalizePostflightReceipt(record?.result?.postflight || record?.postflight)
+        || fullCleanActivationProof(record, intent);
       const operationMatches = String(record?.operation_id || '') === String(intent?.current_operation_id || intent?.activation_operation_id || '');
       if (!operationMatches || !postflightMatchesIntent(postflight, intent, record?.operation_id)) {
         this.updateIntent(state, intent, {
@@ -1392,6 +1445,7 @@ module.exports = {
   readAcceptedCheckpoints,
   acceptedReceipts,
   evaluateActivationEligibility,
+  fullCleanActivationProof,
   OPERATION_ID_PATTERN,
   MAX_ACTIONS
 };

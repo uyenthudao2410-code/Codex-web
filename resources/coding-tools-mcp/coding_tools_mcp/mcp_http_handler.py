@@ -204,8 +204,11 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             with runtime.sessions_lock:
                 active_commands = len(runtime.sessions)
                 retained_outputs = len(runtime.output_sessions)
+            activation = runtime.activation_admission_snapshot()
             self.send_json({
                 "ready": not runtime._closed,
+                "activation": activation,
+                **activation,
                 "version": __version__,
                 "instance_id": runtime.server_instance_id,
                 "process_instance_id": runtime.process_instance_id,
@@ -217,6 +220,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 "tool_count": len(runtime.exposed_tool_names()),
                 "tool_contract": dict(runtime.tool_contract),
                 "connector_tool_discovery": runtime.connector_tool_discovery(),
+                "connector_client_contact": runtime.connector_client_contact(),
                 "workspace_generation": runtime.workspace_generation,
                 "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
                 "device_id": str(os.environ.get(f"{ENV_PREFIX}_DEVICE_ID", "")).strip() or None,
@@ -234,7 +238,11 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 return
             result = self.runtime.activation_preflight()
             self.send_json(
-                {**result, "workspace": str(self.runtime.workspace.root)},
+                {
+                    **result,
+                    **self.runtime.activation_admission_snapshot(),
+                    "workspace": str(self.runtime.workspace.root),
+                },
                 head_only=head_only,
             )
             return
@@ -455,6 +463,8 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
         )
         return {
             "schema_version": 2,
+            "activation": runtime.activation_admission_snapshot(),
+            **runtime.activation_admission_snapshot(),
             "task": {
                 "task_id": state.get("task_id"),
                 "objective": str(state.get("objective") or "")[:400],
@@ -505,6 +515,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 "process_instance_id": runtime.process_instance_id,
                 "server_instance_id": runtime.server_instance_id,
                 "tool_contract": runtime.tool_contract,
+                **runtime.activation_admission_snapshot(),
             },
             "truth_snapshot": truth_snapshot,
             "clients": client_view,
@@ -643,11 +654,25 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             "prepare": {"action", "operation_id", "expires_at_unix_ms", "workspace", "allow_acceptance_pending", "source_checkpoint"},
             "cancel": {"action", "operation_id"},
             "verify": {"action", "operation_id", "workspace", "source_checkpoint"},
+            "complete_epoch": {"action", "activation_epoch_id"},
+            "close_epoch": {"action", "activation_epoch_id"},
         }
         if action not in allowed or set(payload) - allowed[action]:
             self.send_json({"error": "Invalid activation control request", "code": "INVALID_ARGUMENT"}, status=400)
             return
         try:
+            if action == "complete_epoch":
+                result = self.server.control_runtime.complete_activation_epoch(  # type: ignore[attr-defined]
+                    payload.get("activation_epoch_id")
+                )
+                self.send_json(result)
+                return
+            if action == "close_epoch":
+                result = self.server.control_runtime.close_activation_epoch(  # type: ignore[attr-defined]
+                    payload.get("activation_epoch_id")
+                )
+                self.send_json(result)
+                return
             if action == "prepare":
                 workspace = str(payload.get("workspace") or "")
                 if os.path.normcase(os.path.abspath(workspace)) != os.path.normcase(str(self.runtime.workspace.root)):
@@ -1094,6 +1119,18 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 else:
                     raise ValueError("controller usage requires a scoped active orchestration run and wave")
             response = dispatch_rpc(runtime, dispatch_request, stateless_2026=stateless_2026)
+            if (
+                dispatch_request.get("method") == "tools/call"
+                and isinstance(response, dict)
+                and "error" not in response
+            ):
+                # A successful public tools/call proves that ChatWeb's cached
+                # schema can still speak to this exact process/contract. It is
+                # deliberately recorded separately from tools/list discovery.
+                self.server.control_runtime._record_client_contact(  # type: ignore[attr-defined]
+                    identity,
+                    method="tools/call",
+                )
             if controller_usage is not None and deferred_controller_usage:
                 usage_context = active_controller_usage_context(runtime)
                 if usage_context is not None:

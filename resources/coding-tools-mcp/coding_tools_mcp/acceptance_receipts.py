@@ -423,6 +423,7 @@ def _durable_wave_acceptance_paths(
     wave_id: str,
     *,
     workspace: Path | None = None,
+    explicit_attested_paths: Any = None,
 ) -> tuple[bool, list[str]]:
     """Recover exact touched paths from the canonical run/wave event stream."""
     events = [
@@ -461,7 +462,32 @@ def _durable_wave_acceptance_paths(
         if file_count > 0:
             mutation_observed = True
             observed_file_ids.update(file_ids)
+    lease_payloads = [
+        event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        for event in events
+        if str(event.get("event_type") or "") == "write_lease_acquired"
+    ]
+    explicit_attested_keys = {
+        _portable_path_key(item)
+        for item in explicit_attested_paths
+        if _portable_path(item)
+    } if isinstance(explicit_attested_paths, (list, tuple, set, frozenset)) else set()
     if not mutation_observed:
+        if explicit_attested_keys and lease_payloads:
+            existing_dirty_keys = {
+                _portable_path_key(item)
+                for payload in lease_payloads
+                for item in payload.get("existing_dirty_source_paths", [])
+                if _portable_path(item)
+            }
+            if explicit_attested_keys.intersection(existing_dirty_keys):
+                raise ToolFailure(
+                    "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                    "A pre-existing dirty acceptance path must be present in the durable mutation surface.",
+                    category="runtime",
+                    retryable=False,
+                    details={"run_id": run_id, "wave_id": wave_id},
+                )
         return False, []
     if not observed_file_ids:
         raise ToolFailure(
@@ -471,12 +497,6 @@ def _durable_wave_acceptance_paths(
             retryable=False,
             details={"run_id": run_id, "wave_id": wave_id},
         )
-
-    lease_payloads = [
-        event.get("payload") if isinstance(event.get("payload"), dict) else {}
-        for event in events
-        if str(event.get("event_type") or "") == "write_lease_acquired"
-    ]
     if not lease_payloads:
         raise ToolFailure(
             "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
@@ -507,7 +527,12 @@ def _durable_wave_acceptance_paths(
     for portable in sorted(allowed_paths):
         relative = Path(portable)
         portable_key = _portable_path_key(portable)
-        if relative.is_absolute() or ".." in relative.parts or portable_key in existing_dirty_paths:
+        preexisting_dirty = portable_key in existing_dirty_paths
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or (preexisting_dirty and portable_key not in explicit_attested_keys)
+        ):
             continue
         if any(portable_key == protected or portable_key.startswith(f"{protected}/") for protected in protected_paths):
             continue
@@ -536,6 +561,22 @@ def _durable_wave_acceptance_paths(
         file_id = hashlib.sha256(portable.encode("utf-8")).hexdigest()
         if file_id in observed_file_ids:
             matched[file_id] = portable
+    matched_keys = {_portable_path_key(portable) for portable in matched.values()}
+    unmatched_explicit_dirty = sorted(
+        explicit_attested_keys.intersection(existing_dirty_paths).difference(matched_keys)
+    )
+    if unmatched_explicit_dirty:
+        raise ToolFailure(
+            "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+            "A pre-existing dirty acceptance path was not proven inside the durable mutation surface and write lease.",
+            category="runtime",
+            retryable=False,
+            details={
+                "run_id": run_id,
+                "wave_id": wave_id,
+                "unmatched_preexisting_dirty_count": len(unmatched_explicit_dirty),
+            },
+        )
     if observed_file_ids.difference(matched):
         raise ToolFailure(
             "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
@@ -568,13 +609,19 @@ def _accepted_checkpoint_file_receipts(
             "Final acceptance receipts require an exact run_id and wave_id.",
             category="runtime",
         )
+    explicit = acceptance_files is not None
+    explicit_paths = [
+        _portable_path(item.get("path"))
+        for item in acceptance_files
+        if isinstance(item, dict) and _portable_path(item.get("path"))
+    ] if explicit and isinstance(acceptance_files, list) else []
     durable_mutation, durable_paths = _durable_wave_acceptance_paths(
         ledger,
         run_id,
         wave_id,
         workspace=workspace,
+        explicit_attested_paths=explicit_paths if explicit else None,
     )
-    explicit = acceptance_files is not None
     task_items = list(modified_files) if isinstance(modified_files, list) else []
     source_items: list[Any]
     receipt_kinds: dict[str, str] = {}
@@ -822,6 +869,7 @@ def _verify_activation_source_checkpoint(
             run_id,
             wave_id,
             workspace=workspace,
+            explicit_attested_paths=sorted(seen) if receipt_source == "explicit_acceptance_attestations" else None,
         )
         current = _accepted_file_receipts(
             workspace,

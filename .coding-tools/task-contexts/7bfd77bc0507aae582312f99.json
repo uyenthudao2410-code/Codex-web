@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "864b9971704243c0bfa00e9c4ae660c3",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "qy1pJ95BMeq79WYuGu6_sQHY",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 5948,
+    "finished_at": "2026-08-26T07:32:38.495Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-26T07:32:31.105Z",
+  "updated_at": "2026-08-26T07:32:38.495Z",
+  "events": [
+    {
+      "time": "2026-08-26T07:32:31.105Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-26T07:32:36.549Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest -v tests.test_stateless_http_2026.StatelessHttp2026Tests.test_task_control_stop_recovers_exact_run_context_when_connector_omits_handle",
+        "session_id": "qy1pJ95BMeq79WYuGu6_sQHY"
+      }
+    },
+    {
+      "time": "2026-08-26T07:32:38.495Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest -v tests.test_stateless_http_2026.StatelessHttp2026Tests.test_task_control_stop_recovers_exact_run_context_when_connector_omits_handle",
+        "status": "failed"
+      }
+    }
+  ]
+}

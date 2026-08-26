@@ -10,7 +10,7 @@
 - Base HEAD: `0557afa6c3aa3e02c2664d312b860973f28d3fc5`
 - Worktree fingerprint: `282c65bf4297ce18b1ac250839b6970df403f16c6a7c9430953177976272cdf4`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **aborted**
 
 ## Delegations
 
@@ -45,6 +45,8 @@
 | 29726 | 2026-08-25T15:03:10.442Z | proof_recorded |  |  | stage_id=verify:tests; status=passed; cache_hit=False; input_fingerprint=eb12462a3ed941d4c3ce162e59df4405ad7f6002fe29e9c04dc6e2bb60f78627 |
 | 29727 | 2026-08-25T15:03:11.328Z | observation_span_recorded |  |  |  |
 | 29728 | 2026-08-25T15:03:11.476Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 30499 | 2026-08-26T08:21:40.131Z | state_transition | ACCEPTING | ABORTED | reason=Superseded by later source commit b408d985e1097d738dcf4cf2cebe2cbcfd840353; old proof no longer attests current bytes, so terminalize exact run without acceptance. |
+| 30500 | 2026-08-26T08:21:40.461Z | wave_processes_quiesced |  |  | reason=orchestration_state:aborted |
 
 ## Proof
 
@@ -61,5 +63,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `23`
-- Chain head: `2ab77d4c7fda9564e1cfbe607269f385fc80f2bea10b021e3f8c6f0edaefff39`
+- Events checked: `25`
+- Chain head: `b76dffb085cf733a1593e774264c461dc372476a72640c3a06a5f2647b083419`

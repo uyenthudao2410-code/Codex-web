@@ -67,7 +67,12 @@ test('dashboard analytics derive context estimates from measured model-visible b
   assert.match(js, /Transport request\/response bytes are payload telemetry, not token truth/);
   assert.doesNotMatch(js, /tokensFromBytes\(record\.requestBytes\)/);
   assert.doesNotMatch(js, /tokensFromBytes\(record\.responseBytes\)/);
-  assert.match(js, /setInterval\(\(\) => refresh\(false\), 3000\)/);
+  assert.match(js, /function dashboardPollDelay\(\)/);
+  assert.match(js, /setTimeout\(pollDashboard, dashboardPollDelay\(\)\)/);
+  assert.match(js, /api\.liveOrchestration\(\)/);
+  assert.match(js, /api\.lightweightSnapshot\(\)/);
+  assert.match(js, /!force && orchestrationIsBusy\(\)/);
+  assert.doesNotMatch(js, /setInterval\(\(\) => refresh\(false\), 3000\)/);
   assert.doesNotMatch(js, /fetch\(/);
   assert.doesNotMatch(js, /localStorage/);
 });

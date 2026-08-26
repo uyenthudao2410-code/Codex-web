@@ -53,10 +53,15 @@ hashes expose the revision loaded by Recovery Host/Coding MCP, the current disk
 revision, and whether activation is pending. The tracker is cached and bounded;
 it does not hash the whole repository on every watchdog tick and it never
 restarts a process because a file changed. Explicit `activate_update` requests
-are limited to one component, expire within 60 seconds, and verify the new
-running revision before completion. Coding MCP restarts without restarting the
-tunnel; Electron UI self-relaunches after host registration; Recovery Host uses
-a replacement/lock handoff with bounded rollback.
+and operator `restart` now use one `full_clean_activation` transaction: admission
+closes, durable state is checkpointed, Electron UI/Coding Tunnel/Coding MCP and
+the independent Recovery MCP/Tunnel are stopped, a new Recovery Host takes the
+lock, and every replacement reports one fresh `activation_epoch_id`. The new
+runtime stays `UPDATE_INCOMPLETE` until the final census proves workspace,
+device, revision, process identity, tunnel, UI, recovery plane, and connector
+freshness; only then does the epoch become `READY` and reopen admission. The
+watchdog keeps `soft_recovery` for local faults only, and refuses to load newer
+disk bytes under an older epoch.
 
 ## 1. Client / Server / Agent / Codebase
 

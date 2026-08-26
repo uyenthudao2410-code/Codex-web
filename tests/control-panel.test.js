@@ -143,8 +143,11 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.match(html, /id="advancedOperations"/);
   const js = read('renderer/panel.js');
   assert.match(js, /refreshOrchestration/);
-  assert.match(js, /setInterval\(refreshOrchestration, 2000\)/);
+  assert.doesNotMatch(js, /setInterval\(refreshOrchestration/);
+  assert.doesNotMatch(js, /setInterval\(refreshHealth/);
+  assert.match(js, /setTimeout\(pollOrchestration, orchestrationPollDelay\(\)\)/);
   assert.match(js, /let orchestrationInFlight = null;/);
+  assert.match(js, /let healthInFlight = null;/);
   assert.match(js, /let orchestrationError = '';/);
   assert.match(js, /let controlPlaneState = 'unknown';/);
   assert.match(js, /const CONTROL_PLANE_ACTION_IDS = \[/);
@@ -217,8 +220,9 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.doesNotMatch(preload, /task-state:stop/);
   const managerPreload = read('electron/preload.js');
   assert.match(managerPreload, /orchestration: \(\) => ipcRenderer\.invoke\('panel:orchestration'\)/);
+  assert.match(managerPreload, /liveOrchestration: \(\) => ipcRenderer\.invoke\('panel:live-control'\)/);
+  assert.match(managerPreload, /lightweightSnapshot: \(\) => ipcRenderer\.invoke\('app:lightweight-snapshot'\)/);
   assert.match(managerPreload, /p5A0: \(action\) => ipcRenderer\.invoke\('p5-a0:control', action\)/);
-  assert.doesNotMatch(managerPreload, /panel:live-control/);
   const managerHtml = read('renderer/index.html');
   for (const id of ['p5A0Card', 'p5A0Status', 'p5A0Source', 'p5A0Environment', 'p5A0Seed', 'p5A0Manifest', 'p5A0Refresh', 'p5A0Prepare', 'p5A0Open', 'p5A0Analyze', 'p5A0Pause', 'p5A0Resume', 'p5A0Close', 'p5A0HardStop', 'p5A0Detail']) assert.match(managerHtml, new RegExp(`id=\"${id}\"`), `manager UI thiếu ${id}`);
   assert.match(managerHtml, /<script src=\"p5-a0\.js\"><\/script>/);
@@ -283,9 +287,14 @@ test('browser toolbar offers the control panel toggle', () => {
   const browser = read('renderer/browser.js');
   assert.match(browser, /togglePanel/);
   assert.match(browser, /renderPanelVisibility/);
+  assert.match(browser, /api\.liveOrchestration\(\)/);
+  assert.match(browser, /let taskRefreshInFlight = null;/);
+  assert.match(browser, /setTimeout\(pollTask, taskPollDelay\(\)\)/);
+  assert.doesNotMatch(browser, /setInterval\(refreshTask/);
   const preload = read('electron/browserPreload.js');
   assert.match(preload, /togglePanel/);
   assert.match(preload, /onPanelVisibility/);
+  assert.match(preload, /liveOrchestration: \(\) => ipcRenderer\.invoke\('panel:live-control'\)/);
   const css = read('renderer/browser.css');
   assert.match(css, /manager-button\.active/);
 });
