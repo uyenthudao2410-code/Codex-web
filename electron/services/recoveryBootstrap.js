@@ -44,7 +44,16 @@ const REVISION = /^[a-f0-9]{64}$/;
 const EPOCH_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const MAX_ENVELOPE_BYTES = 128 * 1024;
 const MAX_RESULT_BYTES = 256 * 1024;
-const DEFAULT_TTL_MS = 120_000;
+// A bootstrap envelope spans a real Electron cold start plus the subsequent
+// full-clean MCP/Tunnel/UI replacement.  The former 120-second cap was
+// shorter than the observed Windows startup path, so a valid replacement
+// could expire after its children had already been stopped.  Keep the bound
+// finite (and separately bounded from the connector discovery gate), while
+// allowing enough time for the authenticated handoff to complete.
+// The bootstrap envelope carries the same bounded transaction deadline as the
+// full-clean epoch. It must cover the five-minute cold-start/operator poll plus
+// a real external connector round trip after exact process replacement.
+const DEFAULT_TTL_MS = 600_000;
 const RESULT_STATE_ORDER = Object.freeze({ pending: 0, started: 1, completed: 2, failed: 2, expired: 2 });
 const TERMINAL_RESULT_STATES = new Set(['completed', 'failed', 'expired']);
 const RESULT_LOCK_TIMEOUT_MS = 2_000;

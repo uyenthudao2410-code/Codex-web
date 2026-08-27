@@ -80,6 +80,7 @@ const uiActivationEpochId = (() => {
 })();
 let uiRestartScheduled = false;
 let uiExitInFlight = false;
+let uiWindowReady = false;
 let preparedP5A0Manifest = null;
 let latestP5A0EpochId = '';
 const P5_A0_SEED_HANDLE = 'secret://experiment/p5/a';
@@ -152,7 +153,15 @@ async function fullCleanRestartOptions() {
 }
 
 async function registerUiRevision() {
-  if (recoveryHostMode || uiRestartScheduled || !orchestrator || !uiRunningRevision) return null;
+  if (recoveryHostMode
+    || uiRestartScheduled
+    || !orchestrator
+    || !uiRunningRevision
+    || !uiWindowReady
+    || !chatWindow
+    || chatWindow.isDestroyed()
+    || !chatWindow.webContents
+    || chatWindow.webContents.isDestroyed()) return null;
   const result = await orchestrator.registerUiRevision({
     instance_id: uiInstanceId,
     pid: process.pid,
@@ -555,6 +564,7 @@ function createChatWindow() {
     return chatWindow;
   }
 
+  uiWindowReady = false;
   chatWindow = new BrowserWindow({
     width: 1360,
     height: 900,
@@ -572,6 +582,28 @@ function createChatWindow() {
     }
   });
   chatWindow.removeMenu();
+  const openingWindow = chatWindow;
+  const revealOpeningWindow = (attemptsRemaining = 20) => {
+    if (openingWindow.isDestroyed()) return;
+    openingWindow.show();
+    openingWindow.focus();
+    if (!openingWindow.isVisible()) {
+      if (attemptsRemaining > 1) {
+        setTimeout(() => revealOpeningWindow(attemptsRemaining - 1), 50);
+      } else {
+        log.error('Electron UI window did not become visible after ready-to-show', {
+          stage: 'ui-window-ready'
+        });
+      }
+      return;
+    }
+    uiWindowReady = true;
+    void registerUiRevision().catch((error) => log.warn(error.message, {
+      stage: 'ui-revision-registration',
+      code: error?.code || ''
+    }));
+  };
+  openingWindow.once('ready-to-show', () => revealOpeningWindow());
   chatWindow.loadFile(path.join(__dirname, '..', 'renderer', 'browser.html'));
 
   chatController = new ChatViewController({
@@ -611,12 +643,12 @@ function createChatWindow() {
   chatController.mount();
   chatWindow.on('resize', () => layoutViews());
 
-  chatWindow.once('ready-to-show', () => chatWindow.show());
   chatWindow.on('closed', () => {
     if (chatController) chatController.dispose();
     chatController = null;
     destroyPanelView();
     panelVisible = false;
+    uiWindowReady = false;
     chatWindow = null;
     if (managerWindow && !managerWindow.isDestroyed()) managerWindow.destroy();
   });
@@ -673,8 +705,8 @@ function openManagerWindow() {
   });
   managerWindow.removeMenu();
   const initialTheme = settings.load().theme === 'light' ? 'light' : 'dark';
-  managerWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), { query: { theme: initialTheme } });
   managerWindow.once('ready-to-show', () => managerWindow.show());
+  managerWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), { query: { theme: initialTheme } });
   managerWindow.on('close', (event) => {
     if (forceQuit) return;
     event.preventDefault();
@@ -963,7 +995,6 @@ if (recoveryHostMode) {
       orchestrator = new RecoveryIpcClient({ paths: runtimePaths });
       log.error(error.message, { stage: 'recovery-host-connect', code: error?.code || '' });
     }
-    await registerUiRevision().catch((error) => log.warn(error.message, { stage: 'ui-revision-registration', code: error?.code || '' }));
     buildVerification = new BuildVerificationService(log, (payload) => sendManager('build:progress', payload));
     log.on('entry', (payload) => sendManager('logs:entry', payload));
     registerIpc();

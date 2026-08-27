@@ -18,13 +18,28 @@ const {
 const { normalizeSourceCheckpoint } = require('./recoveryActivation');
 
 const COMPONENTS = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
-const DEFAULT_TTL_MS = 120_000;
+// Full-clean activation includes Recovery Host handoff, cold Electron
+// startup, MCP/Tunnel readiness and an exact postflight census.  This deadline
+// is intentionally bounded but must exceed the cold-start path; otherwise the
+// coordinator tears down the fresh runtime solely because the host took a
+// while to become ready.
+// Keep the durable transaction alive beyond the five-minute operator poll.
+// A cold replacement plus canonical projection census can consume several
+// minutes before the external ChatGPT connector gets its first opportunity to
+// contact the new MCP process. The store still rejects every mutation at or
+// after this bounded expiry; this only gives the connector phase its intended
+// post-start window instead of racing the startup deadline.
+const DEFAULT_TTL_MS = 600_000;
 const execFileAsync = promisify(execFile);
 const HEX64 = /^[a-f0-9]{64}$/;
 const TERMINAL_P5_LIFECYCLES = new Set(['EPOCH_CLOSED', 'EPOCH_HARD_STOPPED']);
 const PROJECTION_REBUILD_KIND = 'coding_tools_mcp_projection_rebuild';
 const PROJECTION_REBUILD_MAX_AGE_MS = 5 * 60 * 1000;
 const PROJECTION_REBUILD_FUTURE_SKEW_MS = 1000;
+const PROJECTION_REBUILD_STALE_GATE_REASONS = new Set([
+  'PREFLIGHT_RECEIPT_STALE',
+  'HEALTH_RECEIPT_STALE'
+]);
 const PROJECTION_REBUILD_ALLOWED_CLASSIFICATIONS = new Set([
   'NO_ACTIVE_PROJECTION', 'CONTEXTUAL_PROJECTIONS', 'PROJECTION_CONSISTENT', 'CHECKPOINTED', 'BLOCKED', 'ABORTED'
 ]);
@@ -262,30 +277,37 @@ function validateProjectionRebuildGate({ preflight, health, expected, nowUnixMs 
   };
 }
 
+function projectionRebuildFailedOnlyForStaleness(validation) {
+  const reasons = Array.isArray(validation?.reasons) ? validation.reasons : [];
+  return reasons.length > 0
+    && reasons.every((reason) => PROJECTION_REBUILD_STALE_GATE_REASONS.has(String(reason || '')));
+}
+
 function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) {
   const reasons = [];
   const add = (reason) => { if (!reasons.includes(reason)) reasons.push(reason); };
   const processInstanceId = text(health?.process_instance_id);
   const serverInstanceId = text(health?.instance_id || health?.server_instance_id);
+  const activationEpochId = text(health?.activation_epoch_id);
   const currentSha256 = text(health?.tool_contract?.sha256);
   const discovery = health?.connector_tool_discovery;
-  const observedAt = text(discovery?.observed_at);
-  const observedAtUnixMs = Date.parse(observedAt);
+  const discoveryObservedAt = text(discovery?.observed_at);
+  const discoveryObservedAtUnixMs = Date.parse(discoveryObservedAt);
+  const activationBootstrap = health?.connector_activation_bootstrap;
+  const bootstrapObservedAt = text(activationBootstrap?.observed_at);
+  const bootstrapObservedAtUnixMs = Date.parse(bootstrapObservedAt);
+  const contractState = text(contractStatus?.contractState);
+  const discoveryMode = contractState === 'CURRENT_ACKNOWLEDGED';
+  const compatibilityMode = contractState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED';
+  const validateDiscoveryReceipt = discoveryMode || contractState === 'CHANGED_DISCOVERED_NEEDS_ACK';
+  const validateCompatibilityReceipt = compatibilityMode
+    || ['CHANGED_COMPATIBLE_NEEDS_ACK', 'UNCHANGED_COMPATIBLE_NEEDS_ACK'].includes(contractState);
 
   if (!HEX64.test(currentSha256)) add('CURRENT_CONTRACT_SHA256_INVALID');
   if (!processInstanceId) add('PROCESS_INSTANCE_ID_MISSING');
   if (!serverInstanceId) add('SERVER_INSTANCE_ID_MISSING');
-  if (!discovery || typeof discovery !== 'object' || Array.isArray(discovery)) {
-    add('DISCOVERY_RECEIPT_MISSING');
-  } else {
-    if (discovery.current_contract_observed !== true) add('CURRENT_CONTRACT_NOT_REDISCOVERED');
-    if (text(discovery.contract_sha256) !== currentSha256) add('DISCOVERY_CONTRACT_SHA256_MISMATCH');
-    if (text(discovery.process_instance_id) !== processInstanceId) add('DISCOVERY_PROCESS_INSTANCE_ID_MISMATCH');
-    if (text(discovery.server_instance_id) !== serverInstanceId) add('DISCOVERY_SERVER_INSTANCE_ID_MISMATCH');
-    if (!observedAt || !Number.isFinite(observedAtUnixMs)) add('DISCOVERY_TIMESTAMP_INVALID');
-    else if (!Number.isSafeInteger(nowUnixMs) || nowUnixMs <= 0) add('VALIDATION_TIMESTAMP_INVALID');
-    else if (observedAtUnixMs > nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) add('DISCOVERY_FROM_FUTURE');
-  }
+  if (!activationEpochId) add('ACTIVATION_EPOCH_ID_MISSING');
+  if (!Number.isSafeInteger(nowUnixMs) || nowUnixMs <= 0) add('VALIDATION_TIMESTAMP_INVALID');
 
   if (!contractStatus || typeof contractStatus !== 'object' || Array.isArray(contractStatus)) {
     add('CONNECTOR_CONTRACT_STATUS_UNAVAILABLE');
@@ -293,13 +315,55 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
     if (contractStatus.available !== true) add('CONNECTOR_CONTRACT_UNAVAILABLE');
     if (text(contractStatus.currentSha256) !== currentSha256) add('STATUS_CURRENT_SHA256_MISMATCH');
     if (text(contractStatus.acknowledgedSha256) !== currentSha256) add('ACKNOWLEDGED_SHA256_MISMATCH');
-    if (contractStatus.rediscovered !== true) add('STATUS_NOT_REDISCOVERED');
-    if (text(contractStatus.rediscoveredSha256) !== currentSha256) add('STATUS_REDISCOVERED_SHA256_MISMATCH');
-    if (text(contractStatus.rediscoveredAt) !== observedAt) add('STATUS_REDISCOVERY_TIMESTAMP_MISMATCH');
     if (contractStatus.refreshRequired !== false) add('CONNECTOR_REFRESH_REQUIRED');
     if (contractStatus.acknowledgementPending !== false) add('CONNECTOR_ACKNOWLEDGEMENT_PENDING');
     if (contractStatus.contractChanged !== false) add('CONNECTOR_CONTRACT_CHANGED');
-    if (text(contractStatus.contractState) !== 'CURRENT_ACKNOWLEDGED') add('CONNECTOR_CONTRACT_STATE_INVALID');
+    if (!discoveryMode && !compatibilityMode) add('CONNECTOR_CONTRACT_STATE_INVALID');
+  }
+
+  if (validateDiscoveryReceipt) {
+    if (!discovery || typeof discovery !== 'object' || Array.isArray(discovery)) {
+      add('DISCOVERY_RECEIPT_MISSING');
+    } else {
+      if (discovery.current_contract_observed !== true) add('CURRENT_CONTRACT_NOT_REDISCOVERED');
+      if (text(discovery.contract_sha256) !== currentSha256) add('DISCOVERY_CONTRACT_SHA256_MISMATCH');
+      if (text(discovery.process_instance_id) !== processInstanceId) add('DISCOVERY_PROCESS_INSTANCE_ID_MISMATCH');
+      if (text(discovery.server_instance_id) !== serverInstanceId) add('DISCOVERY_SERVER_INSTANCE_ID_MISMATCH');
+      if (!discoveryObservedAt || !Number.isFinite(discoveryObservedAtUnixMs)) add('DISCOVERY_TIMESTAMP_INVALID');
+      else if (Number.isSafeInteger(nowUnixMs)
+        && discoveryObservedAtUnixMs > nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) add('DISCOVERY_FROM_FUTURE');
+    }
+    if (contractStatus?.rediscovered !== true) add('STATUS_NOT_REDISCOVERED');
+    if (text(contractStatus?.rediscoveredSha256) !== currentSha256) add('STATUS_REDISCOVERED_SHA256_MISMATCH');
+    if (text(contractStatus?.rediscoveredAt) !== discoveryObservedAt) add('STATUS_REDISCOVERY_TIMESTAMP_MISMATCH');
+  }
+
+  if (validateCompatibilityReceipt) {
+    if (!activationBootstrap || typeof activationBootstrap !== 'object' || Array.isArray(activationBootstrap)) {
+      add('COMPATIBILITY_BOOTSTRAP_RECEIPT_MISSING');
+    } else {
+      if (activationBootstrap.current_contract_contact !== true) add('COMPATIBILITY_BOOTSTRAP_NOT_CURRENT');
+      if (text(activationBootstrap.client_type) !== 'chatweb') add('COMPATIBILITY_BOOTSTRAP_CLIENT_TYPE_INVALID');
+      if (!text(activationBootstrap.client_id)) add('COMPATIBILITY_BOOTSTRAP_CLIENT_ID_MISSING');
+      if (text(activationBootstrap.method) !== 'tools/call') add('COMPATIBILITY_BOOTSTRAP_METHOD_INVALID');
+      if (text(activationBootstrap.tool_name) !== 'workspace_context') add('COMPATIBILITY_BOOTSTRAP_TOOL_INVALID');
+      if (activationBootstrap.workspace_accessed !== false) add('COMPATIBILITY_BOOTSTRAP_WORKSPACE_ACCESSED');
+      if (text(activationBootstrap.contract_sha256) !== currentSha256) add('COMPATIBILITY_BOOTSTRAP_CONTRACT_SHA256_MISMATCH');
+      if (text(activationBootstrap.process_instance_id) !== processInstanceId) add('COMPATIBILITY_BOOTSTRAP_PROCESS_INSTANCE_ID_MISMATCH');
+      if (text(activationBootstrap.server_instance_id) !== serverInstanceId) add('COMPATIBILITY_BOOTSTRAP_SERVER_INSTANCE_ID_MISMATCH');
+      if (text(activationBootstrap.activation_epoch_id) !== activationEpochId) add('COMPATIBILITY_BOOTSTRAP_ACTIVATION_EPOCH_ID_MISMATCH');
+      if (!bootstrapObservedAt || !Number.isFinite(bootstrapObservedAtUnixMs)) add('COMPATIBILITY_BOOTSTRAP_TIMESTAMP_INVALID');
+      else if (Number.isSafeInteger(nowUnixMs)
+        && bootstrapObservedAtUnixMs > nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) add('COMPATIBILITY_BOOTSTRAP_FROM_FUTURE');
+    }
+    if (contractStatus?.rediscovered === true) add('COMPATIBILITY_MODE_MUST_NOT_CLAIM_REDISCOVERY');
+    if (compatibilityMode && contractStatus?.compatibilityAcknowledged !== true) add('STATUS_COMPATIBILITY_NOT_ACKNOWLEDGED');
+    if (contractStatus?.bootstrapCurrent !== true) add('STATUS_COMPATIBILITY_BOOTSTRAP_NOT_CURRENT');
+    if (!['declared_exact_predecessor_activation_bootstrap', 'exact_current_contract_activation_bootstrap']
+      .includes(text(contractStatus?.compatibilitySource))) add('STATUS_COMPATIBILITY_SOURCE_INVALID');
+    if (compatibilityMode && text(contractStatus?.compatibilityAcknowledgedAt) !== bootstrapObservedAt) {
+      add('STATUS_COMPATIBILITY_TIMESTAMP_MISMATCH');
+    }
   }
 
   return {
@@ -309,9 +373,69 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
     current_sha256: HEX64.test(currentSha256) ? currentSha256 : null,
     acknowledged_sha256: HEX64.test(text(contractStatus?.acknowledgedSha256))
       ? text(contractStatus.acknowledgedSha256) : null,
-    rediscovered_at: Number.isFinite(observedAtUnixMs) ? observedAt : null,
+    freshness_mode: discoveryMode ? 'current_process_discovery'
+      : compatibilityMode ? 'compatible_activation_bootstrap' : null,
+    rediscovered_at: discoveryMode && Number.isFinite(discoveryObservedAtUnixMs) ? discoveryObservedAt : null,
+    compatibility_acknowledged_at: compatibilityMode && Number.isFinite(bootstrapObservedAtUnixMs)
+      ? bootstrapObservedAt : null,
+    activation_epoch_id: activationEpochId || null,
     process_instance_id: processInstanceId || null,
     server_instance_id: serverInstanceId || null
+  };
+}
+
+function reusablePendingProjectionObservation(record) {
+  const verification = record?.verification;
+  const receipt = verification?.projection_rebuild_receipt;
+  const reusable = Boolean(
+    record
+    && record.state === 'VERIFYING'
+    && record.admission_state === 'CLOSED'
+    && verification && typeof verification === 'object' && !Array.isArray(verification)
+    && verification.projection_rebuild_verified === true
+    && verification.connector_validation?.valid === false
+    && verification.process_identity_verified === true
+    && verification.workspace_matches === true
+    && verification.device_matches === true
+    && verification.revision_matches === true
+    && verification.recovery_host_revision_matches === true
+    && verification.recovery_host_epoch_matches === true
+    && verification.ui_verified === true
+    && verification.recovery_plane_verified === true
+    && verification.epoch_matches === true
+    && receipt && typeof receipt === 'object' && !Array.isArray(receipt)
+    && text(receipt.activation_epoch_id) === text(record.activation_epoch_id)
+  );
+  if (!reusable) return null;
+  const integrity = receipt.ledger_integrity;
+  const snapshot = {
+    backup_api_copy: integrity?.backup_api_copy,
+    immutable: integrity?.immutable,
+    query_only: integrity?.query_only,
+    integrity_check: integrity?.integrity_check,
+    foreign_key_check_rows: integrity?.foreign_key_check_rows,
+    sha256: receipt.ledger_snapshot_sha256,
+    logical_sha256: receipt.ledger_logical_sha256
+  };
+  if (!canonicalSnapshot(snapshot)) return null;
+  const wrapper = {
+    current: true,
+    validation: {
+      valid: true,
+      code: 'READY',
+      reasons: [],
+      projection_classification: receipt.projection_classification
+    },
+    receipt
+  };
+  return {
+    projection_rebuild: wrapper,
+    projection_rebuild_receipt: receipt,
+    projection_classification: receipt.projection_classification,
+    projection: receipt.projection,
+    snapshot,
+    lifecycle_decision: verification.lifecycle_decision || null,
+    reused_pending_projection: true
   };
 }
 
@@ -704,6 +828,46 @@ class FullCleanActivation {
   }
 
   current() { return this.store.current(); }
+
+  /**
+   * Persist the latest non-terminal census while a replacement activation is
+   * waiting for one of its external gates (normally connector discovery).
+   *
+   * A replacement host can observe a better Tunnel/Recovery-Plane result than
+   * the one captured during its first cold-start census.  Keeping that result
+   * only in memory leaves the durable epoch stale forever and makes every
+   * status reader report the old blocker.  This method deliberately records
+   * evidence only; it never opens admission or changes a terminal epoch.
+   */
+  recordPendingCensus(activationEpochId, census) {
+    const epochId = text(activationEpochId);
+    if (!epochId || !census || typeof census !== 'object' || Array.isArray(census)) {
+      throw epochError('ACTIVATION_CENSUS_INVALID', 'A pending activation census is required.');
+    }
+    const current = this.store.current();
+    if (!current || String(current.activation_epoch_id || '') !== epochId) {
+      throw epochError('ACTIVATION_EPOCH_NOT_CURRENT', 'Pending activation census must target the current durable epoch.');
+    }
+    if (!['STARTING', 'VERIFYING', 'HANDOFF', 'FROZEN', 'STOPPING', 'ADMISSION_CLOSED', 'PREPARING'].includes(String(current.state || ''))) {
+      throw epochError('ACTIVATION_EPOCH_TERMINAL', 'Pending activation census cannot mutate a terminal epoch.', {
+        activation_epoch_id: epochId,
+        state: current.state || null
+      });
+    }
+    if (String(census.activation_epoch_id || '') !== epochId) {
+      throw epochError('ACTIVATION_EPOCH_ID_MISMATCH', 'Pending activation census belongs to another activation epoch.', {
+        activation_epoch_id: epochId,
+        census_activation_epoch_id: String(census.activation_epoch_id || '') || null
+      });
+    }
+    const next = this.store.update(epochId, {
+      state: 'VERIFYING',
+      reason: String(census.reason || 'waiting-for-connector-or-component'),
+      verification: census
+    });
+    this._linkActionPending(next, { census, activation_state: 'VERIFYING' });
+    return next;
+  }
 
   // Device identity is durable at the install level, while
   // device_instance_id is the current Recovery Host lifecycle identity.  The
@@ -1459,8 +1623,7 @@ class FullCleanActivation {
       this.store.update(epochId, { state: 'VERIFYING', reason: 'replacement-census' });
       const census = await this.finalCensus(epochId, { expectedOldInstanceId });
       if (!census.pass) {
-        this.store.update(epochId, { state: 'VERIFYING', reason: census.reason || 'waiting-for-connector-or-component' , verification: census });
-        this._linkActionPending(this.store.current(), { census, activation_state: 'VERIFYING' });
+        this.recordPendingCensus(epochId, census);
         return { activation_epoch_id: epochId, state: 'VERIFYING', admission_open: false, fully_ready: false, census };
       }
       return this.finalize(epochId, census);
@@ -1471,7 +1634,7 @@ class FullCleanActivation {
     }
   }
 
-  async finalCensus(activationEpochId, { expectedOldInstanceId = '' } = {}) {
+  async finalCensus(activationEpochId, { expectedOldInstanceId = '', reusePendingProjection = false } = {}) {
     const epochId = text(activationEpochId);
     if (!epochId) throw epochError('ACTIVATION_EPOCH_ID_REQUIRED', 'Activation epoch is required for final census.');
     const record = this.store.current();
@@ -1481,30 +1644,83 @@ class FullCleanActivation {
     const settings = this._settings();
     let activationObservation = null;
     let activationObservationFailure = null;
-    try {
-      // This call must precede health.  The MCP preflight reconciles the compact
-      // projection and binds its receipt to one immutable ledger snapshot;
-      // health must then expose that exact same process-local receipt.
-      activationObservation = await this._freshActivationObservation(record);
-    } catch (error) {
-      activationObservationFailure = {
-        code: text(error?.code) || 'LIFECYCLE_VERIFICATION_FAILED',
-        message: text(error?.message) || 'Fresh activation observation failed.'
-      };
+    let projectionObservationReused = false;
+    if (reusePendingProjection === true) {
+      activationObservation = reusablePendingProjectionObservation(record);
+      projectionObservationReused = Boolean(activationObservation);
+    }
+    if (!activationObservation) {
+      try {
+        // This call must precede health.  The MCP preflight reconciles the compact
+        // projection and binds its receipt to one immutable ledger snapshot;
+        // health must then expose that exact same process-local receipt.
+        activationObservation = await this._freshActivationObservation(record);
+      } catch (error) {
+        activationObservationFailure = {
+          code: text(error?.code) || 'LIFECYCLE_VERIFICATION_FAILED',
+          message: text(error?.message) || 'Fresh activation observation failed.'
+        };
+      }
     }
     // The projection receipt is created by the preflight above. Capture one
     // bounded post-preflight health observation and reuse it for the runtime
     // snapshot so final census cannot contradict itself through a second short
     // liveness probe while the freshly launched UI is polling control state.
-    const health = await this.orchestrator?.currentMcpHealth?.({
+    let health = await this.orchestrator?.currentMcpHealth?.({
       timeoutMs: 15_000
     }).catch?.(() => null) || null;
+    let censusNowUnixMs = this.now();
+    const validateProjection = () => validateProjectionRebuildGate({
+      preflight: activationObservation,
+      health,
+      expected: {
+        activationEpochId: epochId,
+        processInstanceId: text(health?.process_instance_id),
+        serverInstanceId: text(health?.instance_id || health?.server_instance_id),
+        workspace: settings.workspace,
+        ledgerSnapshot: activationObservation?.snapshot
+      },
+      nowUnixMs: censusNowUnixMs
+    });
+    let projectionRebuild = validateProjection();
+    let projectionObservationRefreshedAfterStaleReuse = false;
+    if (projectionObservationReused && projectionRebuildFailedOnlyForStaleness(projectionRebuild)) {
+      // A connector may arrive near the five-minute projection-receipt TTL.
+      // Reusing that exact durable receipt is safe until it expires, but a
+      // second independent finalize census can cross the TTL boundary. Refresh
+      // only this time-based evidence. Any workspace/ledger/process/epoch or
+      // receipt-integrity mismatch remains fail-closed and never reaches this
+      // fallback.
+      projectionObservationRefreshedAfterStaleReuse = true;
+      projectionObservationReused = false;
+      try {
+        activationObservation = await this._freshActivationObservation(record);
+        activationObservationFailure = null;
+      } catch (error) {
+        activationObservation = null;
+        activationObservationFailure = {
+          code: text(error?.code) || 'LIFECYCLE_VERIFICATION_FAILED',
+          message: text(error?.message) || 'Fresh activation observation failed.'
+        };
+      }
+      // The fresh preflight must precede the authoritative health receipt. The
+      // first health read above only diagnosed the stale cached pair.
+      health = await this.orchestrator?.currentMcpHealth?.({
+        timeoutMs: 15_000
+      }).catch?.(() => null) || null;
+      censusNowUnixMs = this.now();
+      projectionRebuild = validateProjection();
+    }
     const runtime = await this.orchestrator?.lightweightSnapshot?.({ mcpHealth: health }) || {};
     let tunnelStatusVerified = runtime.tunnelRunning === true;
     if (typeof this.orchestrator?.tunnel?.status === 'function') {
-      try {
-        tunnelStatusVerified = await this.orchestrator.tunnel.status(settings, { activationEpochId: epochId }) === true;
-      } catch { tunnelStatusVerified = false; }
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          tunnelStatusVerified = await this.orchestrator.tunnel.status(settings, { activationEpochId: epochId }) === true;
+        } catch { tunnelStatusVerified = false; }
+        if (tunnelStatusVerified) break;
+        if (attempt < 2) await this.wait(250);
+      }
     }
     const state = readJson(this.paths.stateFile?.() || '', {});
     const evidence = record.component_evidence && typeof record.component_evidence === 'object'
@@ -1521,25 +1737,13 @@ class FullCleanActivation {
     const currentTunnelId = text(state.tunnelInstanceId);
     const currentTunnelPid = numeric(state.tunnelPid);
     const expectedDeviceInstanceId = this._deviceInstanceId();
-    const censusNowUnixMs = this.now();
-    const projectionRebuild = validateProjectionRebuildGate({
-      preflight: activationObservation,
-      health,
-      expected: {
-        activationEpochId: epochId,
-        processInstanceId: currentMcpProcessId,
-        serverInstanceId: currentMcpServerId,
-        workspace: settings.workspace,
-        ledgerSnapshot: activationObservation?.snapshot
-      },
-      nowUnixMs: censusNowUnixMs
-    });
     let connectorContractStatus = null;
     try {
       connectorContractStatus = this.orchestrator?.connectorContractStatus?.(
         health?.tool_contract || null,
         health?.connector_tool_discovery || null,
-        health?.connector_client_contact || null
+        health?.connector_client_contact || null,
+        health?.connector_activation_bootstrap || null
       ) || null;
     } catch { connectorContractStatus = null; }
     const identityChanged = (current, previous) => Boolean(current && (!text(previous) || current !== text(previous)));
@@ -1695,11 +1899,12 @@ class FullCleanActivation {
       && uiReady && recoveryMcpReady && recoveryTunnelReady && projectionRebuild.valid);
     let connectorAcknowledgement = { attempted: false, completed: false, error: null };
     if (componentsReadyForConnector
-      && connectorContractStatus?.contractState === 'CHANGED_DISCOVERED_NEEDS_ACK') {
+      && ['CHANGED_DISCOVERED_NEEDS_ACK', 'CHANGED_COMPATIBLE_NEEDS_ACK', 'UNCHANGED_COMPATIBLE_NEEDS_ACK']
+        .includes(connectorContractStatus?.contractState)) {
       connectorAcknowledgement = { attempted: true, completed: false, error: null };
       try {
         if (typeof this.orchestrator?.acknowledgeExactConnectorDiscovery !== 'function') {
-          throw epochError('CONNECTOR_ACKNOWLEDGEMENT_UNAVAILABLE', 'Exact current-process connector acknowledgement is unavailable.');
+          throw epochError('CONNECTOR_ACKNOWLEDGEMENT_UNAVAILABLE', 'Exact current-process connector discovery/bootstrap acknowledgement is unavailable.');
         }
         connectorContractStatus = await this.orchestrator.acknowledgeExactConnectorDiscovery(health, {
           activationEpochId: epochId,
@@ -1765,6 +1970,8 @@ class FullCleanActivation {
       ui_verified: uiReady,
       recovery_plane_verified: recoveryMcpReady && recoveryTunnelReady,
       projection_rebuild_verified: projectionRebuild.valid,
+      projection_rebuild_reused: projectionObservationReused,
+      projection_rebuild_refreshed_after_stale_reuse: projectionObservationRefreshedAfterStaleReuse,
       projection_rebuild_validation: {
         code: projectionRebuild.code,
         reasons: projectionRebuild.reasons,
@@ -1785,13 +1992,18 @@ class FullCleanActivation {
     let committed = null;
     let opened = false;
     try {
-      // Never trust a caller-supplied boolean/projection as final proof.  A
-      // fresh census is mandatory at this boundary; the optional argument is
-      // retained only for backwards-compatible call signatures.  Keep this
-      // read inside the transaction catch so a transport/store/census
+      // Never trust a caller-supplied boolean/projection as final proof. A
+      // fresh live census is mandatory at this boundary; the optional argument
+      // is retained only for backwards-compatible call signatures. When the
+      // durable epoch still contains a strict admission-closed pending census,
+      // finalCensus may reuse only its exact immutable projection receipt while
+      // revalidating every live process/component/connector identity. This
+      // avoids a second multi-minute ledger rebuild between the watchdog census
+      // and the READY commit without weakening the transaction boundary. Keep
+      // this read inside the transaction catch so a transport/store/census
       // exception is durably terminalized as FAILED rather than leaving an
       // active epoch that merely appears stuck.
-      const finalProof = await this.finalCensus(epochId);
+      const finalProof = await this.finalCensus(epochId, { reusePendingProjection: true });
       if (!finalProof.pass) throw epochError('UPDATE_INCOMPLETE', 'Full clean activation final census is incomplete.', finalProof);
       record = this.store.current();
       if (!record || record.activation_epoch_id !== epochId) {
@@ -1933,5 +2145,6 @@ module.exports = {
   summarizeCensus,
   canonicalProjectionRebuildSha256,
   validateProjectionRebuildGate,
-  validateConnectorReadyGate
+  validateConnectorReadyGate,
+  reusablePendingProjectionObservation
 };

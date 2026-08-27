@@ -26,7 +26,7 @@ The supported development closure is `ACCEPTED/CHECKPOINTED -> ACTIVATABLE -> co
 
 A schema-v2 postflight is accepted only when its operation, component, checkpoint lineage, expected/running/disk revision, instance transition, timestamps, health result, and fresh post-cancel lifecycle decision all verify. That final lifecycle decision must come from a new immutable, query-only SQLite Backup-API snapshot with `integrity_check=["ok"]`, zero foreign-key rows, valid physical/logical SHA-256 values, the exact operation/checkpoint, no fence, and zero blocking lifecycle counts, unexplained active RUNs, or unbound live residues. A contradictory `clean=true` flag cannot override those facts; the same lifecycle rule applies when an accepted checkpoint affects zero runtime components.
 
-`LIVE_CLOSED` means only that this exact accepted local source is loaded and locally ready under the verified lifecycle and connector contract. Its projection deliberately remains `release_state=NOT_RELEASED` and `production_state=NOT_CLAIMED`. Connector continuity is separate: `UNCHANGED_ACKNOWLEDGED` is current only when the current and acknowledged contract SHA-256 values are identical and `connector_refresh_required=false`; a changed contract SHA requires current-process `tools/list` or `server/discover` followed by official Recovery Host acknowledgement. A normal `tools/call` or `workspace_context` call is not connector rediscovery.
+`LIVE_CLOSED` means only that this exact accepted local source is loaded and locally ready under the verified lifecycle and connector contract. Its projection deliberately remains `release_state=NOT_RELEASED` and `production_state=NOT_CLAIMED`. Connector continuity is separate: persisted SHA equality alone is not process-freshness proof for a new full-clean epoch. Freshness is satisfied either by current-process `tools/list` / `server/discover` followed by official Recovery Host acknowledgement, or by the admission-closed, no-workspace compatibility bootstrap for an exact declared predecessor/current SHA. That bootstrap is accepted only from the real ChatWeb `workspace_context` call, is bound to the current contract/process/server/activation epoch, returns `completed=false`, `retryable=true`, and `workspace_accessed=false`, and is recorded separately from discovery and ordinary successful tool contact. The first exact bootstrap receipt is immutable for that process/server/epoch boundary, so connector retries cannot advance its timestamp after Recovery Host has durably acknowledged it. Its acknowledged state is `CURRENT_COMPATIBLE_ACKNOWLEDGED`; it never sets `connectorRediscovered=true` or invents a rediscovery timestamp.
 
 ### Operational recency override — 2026-08-27
 
@@ -159,7 +159,12 @@ the completed process refresh as a startup failure. While only this external
 connector gate remains, Recovery Host serves a bounded cached read-only runtime
 snapshot and polls the MCP discovery receipt without repeating OS-identity and
 Tunnel census probes every five seconds. Exact current-process discovery is the
-event that re-enters the authoritative final census/ACK/READY transaction.
+event that re-enters the authoritative final census/ACK/READY transaction. The
+watchdog persists that exact passing census while admission is still closed
+before `finalize()` performs its independent census. If the otherwise valid
+cached projection receipt crosses its five-minute TTL at this boundary, the
+coordinator rebuilds the projection and captures a new health receipt; workspace,
+ledger, process, server, epoch or receipt-integrity mismatch still fails closed.
 
 When a failed activation left Coding MCP stopped, an explicit retry is admitted
 only after Recovery Host obtains an independent immutable/query-only
@@ -314,9 +319,9 @@ During an earlier 2026-08-18 closure check, every ChatWeb Coding MCP action atte
 Two source-side gaps are now addressed:
 
 1. The MCP protocol boundary normalizes an `ExceptionGroup` into typed `ASYNC_TASK_GROUP_FAILED` JSON-RPC evidence instead of stringifying the raw group.
-2. Recovery Host now has a throttled **semantic tool-plane watchdog**. It performs a read-only local `workspace_context` canary, distinguishes "HTTP health is green" from "tools/call is usable", and delegates recovery only through the existing `RuntimeOrchestrator.restart({ automatic: true })` lifecycle authority. It is suppressed while the lifecycle controller is busy, recovering, handing off, or manually stopped. The canary does not create a second writer or recovery authority.
+2. Recovery Host now has a throttled **semantic tool-plane watchdog**. It first performs a bounded five-second HTTP health preflight, then performs a read-only local `workspace_context` canary only when that health receipt is ready and reports no active command or snapshot contention. A transiently unavailable HTTP health response, or an MCP that is already serving work, skips the semantic canary and clears its semantic-failure streak instead of converting liveness uncertainty into a restart. Three consecutive eligible semantic failures are required before component-scoped MCP replacement. Recovery still delegates only through the existing `RuntimeOrchestrator.restart({ automatic: true })` lifecycle authority, and the watchdog is suppressed while the lifecycle controller is busy, recovering, handing off, or manually stopped. The canary does not create a second writer or recovery authority.
 
-Focused source regression proves the semantic canary accepts a real `workspace_context` response, rejects an HTTP-200 raw TaskGroup JSON-RPC failure, restarts only after the configured repeated-failure threshold, and does not restart while the lifecycle controller is busy.
+Focused source regression proves the semantic canary accepts a real `workspace_context` response, rejects an HTTP-200 raw TaskGroup JSON-RPC failure, skips while HTTP health is temporarily unavailable or the runtime is busy, restarts only after the three-failure threshold, and does not restart while the lifecycle controller is busy.
 
 **Historical live acceptance (`VERIFIED_SNAPSHOT`).** On 2026-08-18 the then-connected instance demonstrated the accepted behavior on the real tool path:
 

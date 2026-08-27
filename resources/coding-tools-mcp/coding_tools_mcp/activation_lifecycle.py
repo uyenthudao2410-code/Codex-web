@@ -434,6 +434,44 @@ class ActivationLifecycleMixin:
         projection = lifecycle.get("projection") if isinstance(lifecycle.get("projection"), dict) else {}
         return str(lifecycle.get("projection_classification") or projection.get("classification") or "")
 
+    def activation_connector_bootstrap_allowed(self, name: str) -> bool:
+        """Allow one no-workspace compatibility handshake while admission is closed.
+
+        A cached ChatWeb connector can legitimately know the additive
+        ``workspace_context`` schema without issuing a fresh ``tools/list``
+        after process replacement.  Ordinary tool execution must remain
+        blocked, but returning only a bootstrap receipt gives Recovery Host an
+        exact current-process contact it can compare with the declared
+        predecessor relation.  No workspace lookup, ledger access, or tool
+        dispatch occurs on this path.
+        """
+        with self.activation_lock:
+            return bool(
+                str(name or "").strip() == "workspace_context"
+                and str(getattr(self, "activation_admission", "open") or "open").lower() != "open"
+                and str(getattr(self, "activation_gate_config", "open") or "open").lower() == "closed"
+                and str(getattr(self, "activation_epoch_id", None) or "").strip()
+                and list((getattr(self, "tool_contract", {}) or {}).get("compatible_predecessor_sha256") or [])
+                and not bool(getattr(self, "activation_completion_closed", False))
+            )
+
+    def activation_connector_bootstrap_result(self, name: str) -> dict[str, Any] | None:
+        if not self.activation_connector_bootstrap_allowed(name):
+            return None
+        return {
+            "ok": True,
+            "completed": False,
+            "retryable": True,
+            "workspace_accessed": False,
+            "activation_bootstrap": {
+                "schema_version": 1,
+                "kind": "connector_compatibility_bootstrap",
+                "accepted": True,
+                "retry_required": True,
+                "activation_epoch_id": str(getattr(self, "activation_epoch_id", None) or ""),
+            },
+        }
+
     def _activation_enter_tool_call(self, name: str = "", args: dict[str, Any] | None = None) -> None:
         with self.activation_lock:
             if str(getattr(self, "activation_admission", "open") or "open").lower() != "open":

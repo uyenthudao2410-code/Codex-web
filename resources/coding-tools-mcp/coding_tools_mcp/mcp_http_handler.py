@@ -217,6 +217,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             # their ordinary blocking locks.
             connector_discovery = runtime.connector_tool_discovery(blocking=False)
             connector_contact = runtime.connector_client_contact(blocking=False)
+            connector_activation_bootstrap = runtime.connector_activation_bootstrap(blocking=False)
             http_sessions = self.server.sessions.stats(blocking=False)
             activation = runtime.activation_admission_snapshot(blocking=False)
             health_snapshot_busy = bool(
@@ -224,6 +225,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 or activation.get("snapshot_busy") is True
                 or connector_discovery.get("snapshot_busy") is True
                 or connector_contact.get("snapshot_busy") is True
+                or connector_activation_bootstrap.get("snapshot_busy") is True
                 or http_sessions.get("snapshot_busy") is True
             )
             self.send_json({
@@ -245,6 +247,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 "tool_contract": dict(runtime.tool_contract),
                 "connector_tool_discovery": connector_discovery,
                 "connector_client_contact": connector_contact,
+                "connector_activation_bootstrap": connector_activation_bootstrap,
                 "projection_rebuild": runtime.projection_rebuild_snapshot(),
                 "workspace_generation": runtime.workspace_generation,
                 "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
@@ -1109,13 +1112,14 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 params = dispatch_request.get("params") if isinstance(dispatch_request.get("params"), dict) else {}
                 tool_name = str(params.get("name") or "")
                 tool_args = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
-                try:
-                    runtime._set_request_workspace_scope(tool_name, tool_args)
-                except Exception:
-                    # The normal tool dispatch remains the typed error boundary;
-                    # this pre-registration hint must never turn it into a raw
-                    # HTTP/JSON-RPC failure.
-                    pass
+                if not runtime.activation_connector_bootstrap_allowed(tool_name):
+                    try:
+                        runtime._set_request_workspace_scope(tool_name, tool_args)
+                    except Exception:
+                        # The normal tool dispatch remains the typed error boundary;
+                        # this pre-registration hint must never turn it into a raw
+                        # HTTP/JSON-RPC failure.
+                        pass
             runtime._touch_hub_client(identity)
             usage_receipt = None
             deferred_controller_usage = False
@@ -1129,6 +1133,9 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                     raise ValueError("controller usage requires a scoped active orchestration run and wave")
             response = dispatch_rpc(runtime, dispatch_request, stateless_2026=stateless_2026)
             self.server.control_runtime._record_successful_rpc_contact(  # type: ignore[attr-defined]
+                dispatch_request, response, identity
+            )
+            self.server.control_runtime._record_activation_bootstrap_rpc_contact(  # type: ignore[attr-defined]
                 dispatch_request, response, identity
             )
             if controller_usage is not None and deferred_controller_usage:

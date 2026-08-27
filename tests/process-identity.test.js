@@ -207,6 +207,9 @@ test('Windows observation uses fixed PowerShell command, structured argv, and bo
     '-Command'
   ]);
   assert.equal(args[6], POWERSHELL_OBSERVE_SCRIPT);
+  assert.match(POWERSHELL_OBSERVE_SCRIPT, /Get-Process -Id \$processId/);
+  assert.match(POWERSHELL_OBSERVE_SCRIPT, /\$creation % 10/);
+  assert.doesNotMatch(POWERSHELL_OBSERVE_SCRIPT, /Get-CimInstance|Win32_Process/);
   assert.equal(args[7], String(PID));
   assert.equal(args.length, 8);
   assert.equal(options.shell, false);

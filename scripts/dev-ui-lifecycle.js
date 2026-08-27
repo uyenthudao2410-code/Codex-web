@@ -23,7 +23,23 @@ const { activationSourceCheckpoint: sourceCheckpointForActivation } = require('.
 
 const ACTIONS = new Set(['start', 'stop', 'replace', 'refresh', 'status']);
 const INSTANCE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
-const DEFAULT_TIMEOUT_MS = 120_000;
+// Electron can take tens of seconds to become ready on a cold Windows
+// profile.  A full refresh also has to start MCP, prove its health, start the
+// tunnel, register the replacement UI, and run the exact identity census.  A
+// two-minute window was shorter than the observed cold-start path and caused
+// npm start to expire a perfectly valid handoff while its children were being
+// replaced.  Keep the operator poll and authenticated activation deadline
+// separate, but give both enough bounded room for that real startup path.
+const DEFAULT_TIMEOUT_MS = 300_000;
+// The CLI waits at most five minutes for process replacement, but a successful
+// refresh can truthfully return VERIFYING while the real ChatGPT connector is
+// still about to contact the new MCP process. Keep the durable activation
+// transaction alive for a second bounded five-minute phase instead of making
+// connector ACK race the process-start timeout.
+const DEFAULT_REFRESH_ACTIVATION_TTL_MS = 600_000;
+const MAX_REFRESH_ACTIVATION_TTL_MS = 600_000;
+const DEFAULT_REFRESH_HOST_TIMEOUT_MS = 90_000;
+const MAX_REFRESH_HOST_TIMEOUT_MS = 120_000;
 const DEFAULT_POLL_MS = 250;
 const REFRESH_OPERATION_ID_PATTERN = /^full-clean-refresh-[A-Za-z0-9_-]{15,127}$/;
 
@@ -451,8 +467,20 @@ function createRuntimeDependencies(options = {}) {
         refresh: true,
         forceRefresh: true,
         requestedAtUnixMs,
-        expiresAtUnixMs: requestedAtUnixMs + Math.min(120_000, Math.max(60_000, Number(options.timeoutMs || DEFAULT_TIMEOUT_MS))),
-        timeoutMs: 15_000,
+        // This is a full-system process refresh, not the short 55-second
+        // component activation request.  The deadline must cover a cold
+        // Electron bootstrap plus the replacement MCP/Tunnel/UI census.
+        expiresAtUnixMs: requestedAtUnixMs + Math.min(
+          MAX_REFRESH_ACTIVATION_TTL_MS,
+          Math.max(
+            180_000,
+            Number(options.refreshActivationTtlMs || DEFAULT_REFRESH_ACTIVATION_TTL_MS)
+          )
+        ),
+        timeoutMs: Math.min(
+          MAX_REFRESH_HOST_TIMEOUT_MS,
+          Math.max(5_000, Number(options.refreshHostTimeoutMs || DEFAULT_REFRESH_HOST_TIMEOUT_MS))
+        ),
         spawnProcess
       });
       return { operationId, result, expectedDiskRevision };
@@ -473,7 +501,10 @@ function createRuntimeDependencies(options = {}) {
         app: { isPackaged: false, getAppPath: () => appRoot },
         paths,
         log: options.log || { warn() {}, error() {} },
-        timeoutMs: Math.min(20_000, Math.max(5_000, Number(options.refreshHostTimeoutMs || 15_000))),
+        timeoutMs: Math.min(
+          MAX_REFRESH_HOST_TIMEOUT_MS,
+          Math.max(5_000, Number(options.refreshHostTimeoutMs || DEFAULT_REFRESH_HOST_TIMEOUT_MS))
+        ),
         spawnProcess,
         sleep,
         suppressDevelopmentSupervisor
@@ -625,7 +656,19 @@ async function statusLifecycle(deps) {
   if (observation?.hostAvailable === true
     && observation?.installationMatches === true
     && typeof deps.runtimeSnapshot === 'function') {
-    runtime = await deps.runtimeSnapshot(observation);
+    try {
+      runtime = await deps.runtimeSnapshot(observation);
+    } catch (error) {
+      if (String(error?.code || '') !== 'RECOVERY_REQUEST_TIMEOUT'
+        || typeof deps.activationRecord !== 'function') throw error;
+      // A cold activation census can keep the Recovery Host event loop busy
+      // longer than the ordinary IPC read timeout.  Status is read-only, so
+      // fall back to the durable epoch's most recent verified runtime
+      // projection instead of reporting the whole host as unavailable.
+      const census = activationCensus(deps.activationRecord());
+      runtime = census?.runtime && typeof census.runtime === 'object'
+        ? census.runtime : null;
+    }
   }
   const connectorState = String(runtime?.connectorContractState || 'UNAVAILABLE');
   const connectorRediscovered = runtime?.connectorRediscovered === true;
@@ -638,6 +681,8 @@ async function statusLifecycle(deps) {
   const connectorCurrentSha = String(runtime?.toolContract?.sha256 || '') || 'none';
   const connectorAckSha = String(runtime?.connectorContractAcknowledgedSha256 || '') || 'none';
   const connectorRediscoveredAt = String(runtime?.connectorRediscoveredAt || '') || 'none';
+  const connectorFreshnessMode = String(runtime?.connectorFreshnessMode || '') || 'none';
+  const connectorCompatibilityAcknowledgedAt = String(runtime?.connectorCompatibilityAcknowledgedAt || '') || 'none';
   deps.output([
     'DEV_UI STATUS',
     `state=${ui.state || 'UNKNOWN'}`,
@@ -652,6 +697,8 @@ async function statusLifecycle(deps) {
     `connector_state=${connectorState}`,
     `connector_rediscovered=${connectorRediscovered ? 'true' : 'false'}`,
     `connector_rediscovered_at=${connectorRediscoveredAt}`,
+    `connector_freshness_mode=${connectorFreshnessMode}`,
+    `connector_compatibility_acknowledged_at=${connectorCompatibilityAcknowledgedAt}`,
     `connector_refresh_required=${connectorRefreshRequired}`,
     `connector_ack_pending=${connectorAckPending}`,
     `connector_current_sha=${connectorCurrentSha}`,

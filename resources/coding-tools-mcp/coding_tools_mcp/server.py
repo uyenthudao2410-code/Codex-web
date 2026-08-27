@@ -396,6 +396,8 @@ class Runtime(
         self.tool_discovery_receipts: dict[str, dict[str, Any]] = {}
         self.tool_contact_lock = threading.Lock()
         self.tool_contact_receipts: dict[str, dict[str, Any]] = {}
+        self.activation_bootstrap_lock = threading.Lock()
+        self.activation_bootstrap_receipts: dict[str, dict[str, Any]] = {}
         # Background operations are process-scoped rather than HTTP-session-scoped.
         # A reconnect in the same MCP process must be able to poll the original
         # Event/result instead of falsely declaring it orphaned.
@@ -1984,6 +1986,9 @@ class Runtime(
         args = dict(arguments or {})
         dispatch_started_wall_utc = utc_now()
         dispatch_started_at = time.monotonic()
+        activation_bootstrap = self.activation_connector_bootstrap_result(name)
+        if activation_bootstrap is not None:
+            return make_tool_result(name, activation_bootstrap, is_error=False)
         had_workspace_root = hasattr(self.request_context, "workspace_root")
         previous_workspace_root = getattr(self.request_context, "workspace_root", None)
         try:

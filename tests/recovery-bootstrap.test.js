@@ -437,6 +437,7 @@ test('host status exposes durable operation binding and fails closed on incomple
     connectorRefreshRequired: false,
     connectorRediscovered: true,
     connectorAcknowledgementPending: false,
+    connectorContractState: 'CURRENT_ACKNOWLEDGED',
     toolContract: { sha256: 'd'.repeat(64) },
     connectorContractAcknowledgedSha256: null
   };

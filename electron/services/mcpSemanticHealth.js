@@ -2,7 +2,11 @@ const http = require('node:http');
 const { normalizeWorkspacePath, workspaceKey } = require('./config');
 
 const DEFAULT_INTERVAL_MS = 60_000;
-const DEFAULT_FAILURE_THRESHOLD = 2;
+// A semantic canary is deliberately slower than the HTTP liveness check.  Two
+// delayed workspace reads were enough to replace a healthy MCP while a real
+// connector was using it.  Require three independent failures by default;
+// callers/tests can still choose a tighter threshold explicitly.
+const DEFAULT_FAILURE_THRESHOLD = 3;
 // workspace_context is a semantic probe, not a loopback liveness check. On a
 // dirty Windows checkout the first request can legitimately spend several
 // seconds reading Git and the canonical ledger. A 2.5s deadline caused the
@@ -10,6 +14,7 @@ const DEFAULT_FAILURE_THRESHOLD = 2;
 // the probe bounded, but leave enough budget for one complete read-only call.
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_RESTART_COOLDOWN_MS = 120_000;
+const DEFAULT_HTTP_HEALTH_TIMEOUT_MS = 5_000;
 
 function semanticFailurePolicy(result) {
   const reason = String(result?.reason || 'unknown');
@@ -124,6 +129,8 @@ class SemanticMcpHealthWatchdog {
     orchestrator,
     log,
     probe = probeMcpSemanticHealth,
+    healthProbe = null,
+    healthTimeoutMs = DEFAULT_HTTP_HEALTH_TIMEOUT_MS,
     isSuppressed = () => false,
     intervalMs = DEFAULT_INTERVAL_MS,
     failureThreshold = DEFAULT_FAILURE_THRESHOLD,
@@ -134,6 +141,12 @@ class SemanticMcpHealthWatchdog {
     this.orchestrator = orchestrator;
     this.log = log;
     this.probe = probe;
+    this.healthProbe = typeof healthProbe === 'function'
+      ? healthProbe
+      : (typeof orchestrator?.currentMcpHealth === 'function'
+        ? (options = {}) => orchestrator.currentMcpHealth(options)
+        : null);
+    this.healthTimeoutMs = Math.max(1_000, Number(healthTimeoutMs) || DEFAULT_HTTP_HEALTH_TIMEOUT_MS);
     this.isSuppressed = isSuppressed;
     this.intervalMs = Math.max(1000, Number(intervalMs) || DEFAULT_INTERVAL_MS);
     this.failureThreshold = Math.max(1, Number(failureThreshold) || DEFAULT_FAILURE_THRESHOLD);
@@ -165,6 +178,33 @@ class SemanticMcpHealthWatchdog {
       const expectedWorkspace = normalizeWorkspacePath(current.workspace);
       if (!Number.isInteger(port) || port <= 0 || !token || !expectedWorkspace) {
         return { ok: true, skipped: true, reason: 'not_configured' };
+      }
+
+      // Do not run the expensive workspace_context canary while the MCP is
+      // already serving work.  The control health snapshot is read-only and
+      // explicitly reports lock contention/active commands; a transient health
+      // miss is also not evidence that the tool plane is hung.  The primary
+      // lifecycle watchdog remains responsible for process/tunnel recovery.
+      if (this.healthProbe) {
+        let health = null;
+        try {
+          health = await this.healthProbe({ timeoutMs: this.healthTimeoutMs });
+        } catch {
+          health = null;
+        }
+        if (!health || health.ready !== true) {
+          this.failures = 0;
+          return { ok: true, skipped: true, reason: 'http_health_unavailable' };
+        }
+        const activeCommands = Number(health.active_commands);
+        const runtimeBusy = health.snapshot_busy === true
+          || health.health_snapshot_busy === true
+          || health.sessions_snapshot_busy === true
+          || (Number.isFinite(activeCommands) && activeCommands > 0);
+        if (runtimeBusy) {
+          this.failures = 0;
+          return { ok: true, skipped: true, reason: 'runtime_busy' };
+        }
       }
 
       const result = await this.probe({ port, token, expectedWorkspace });
@@ -255,5 +295,6 @@ module.exports = {
   SemanticMcpHealthWatchdog,
   DEFAULT_INTERVAL_MS,
   DEFAULT_FAILURE_THRESHOLD,
-  DEFAULT_RESTART_COOLDOWN_MS
+  DEFAULT_RESTART_COOLDOWN_MS,
+  DEFAULT_HTTP_HEALTH_TIMEOUT_MS
 };

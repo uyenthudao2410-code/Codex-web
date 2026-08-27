@@ -109,8 +109,156 @@ class RuntimeActivityMixin:
         response: dict[str, Any] | None,
         identity: dict[str, Any],
     ) -> None:
-        if request.get("method") == "tools/call" and isinstance(response, dict) and "error" not in response:
-            self._record_client_contact(identity, method="tools/call")
+        # A JSON-RPC response can be transport-successful while the MCP tool
+        # itself failed (for example RUNTIME_ACTIVATION_PENDING is represented
+        # as result.isError=true).  Only a genuinely successful tool call may
+        # produce a current-process contact receipt; otherwise a closed
+        # activation gate could be mistaken for a live connector contact and
+        # incorrectly satisfy the compatibility ACK path.
+        if request.get("method") != "tools/call" or not isinstance(response, dict):
+            return
+        if "error" in response:
+            return
+        result = response.get("result")
+        if not isinstance(result, dict) or result.get("isError") is True:
+            return
+        structured = result.get("structuredContent")
+        if isinstance(structured, dict) and structured.get("ok") is False:
+            return
+        if isinstance(structured, dict) and isinstance(structured.get("activation_bootstrap"), dict):
+            # The admission-closed compatibility bootstrap is deliberately not
+            # an ordinary successful tool call. It gets its own process/epoch
+            # bound receipt below and must never satisfy the legacy live-contact
+            # compatibility path as a side effect.
+            return
+        self._record_client_contact(identity, method="tools/call")
+
+    def _record_activation_bootstrap_rpc_contact(
+        self,
+        request: dict[str, Any],
+        response: dict[str, Any] | None,
+        identity: dict[str, Any],
+    ) -> None:
+        """Record a no-workspace cached-connector bootstrap separately.
+
+        This receipt is not tool discovery and is not a successful workspace
+        operation. Recovery Host may consume it only when the exact persisted
+        predecessor SHA is explicitly declared compatible by the current tool
+        contract and every process/server/epoch identity matches.
+        """
+        if request.get("method") != "tools/call" or not isinstance(response, dict):
+            return
+        params = request.get("params") if isinstance(request.get("params"), dict) else {}
+        if str(params.get("name") or "") != "workspace_context" or "error" in response:
+            return
+        result = response.get("result")
+        structured = result.get("structuredContent") if isinstance(result, dict) else None
+        bootstrap = structured.get("activation_bootstrap") if isinstance(structured, dict) else None
+        if (
+            not isinstance(bootstrap, dict)
+            or bootstrap.get("schema_version") != 1
+            or bootstrap.get("kind") != "connector_compatibility_bootstrap"
+            or bootstrap.get("accepted") is not True
+            or bootstrap.get("retry_required") is not True
+            or structured.get("workspace_accessed") is not False
+        ):
+            return
+        client_id = str(identity.get("client_id") or "").strip()
+        client_type = str(identity.get("client_type") or "client").strip()
+        epoch_id = str(getattr(self, "activation_epoch_id", None) or "").strip()
+        if not client_id or client_type != "chatweb" or not epoch_id:
+            return
+        if str(bootstrap.get("activation_epoch_id") or "").strip() != epoch_id:
+            return
+        capabilities = identity.get("capabilities") if isinstance(identity.get("capabilities"), dict) else {}
+        receipt = {
+            "client_id": client_id,
+            "client_type": client_type,
+            "client_name": str(capabilities.get("client_name") or "")[:100],
+            "client_version": str(capabilities.get("client_version") or "")[:50],
+            "method": "tools/call",
+            "tool_name": "workspace_context",
+            "contract_sha256": str(self.tool_contract.get("sha256") or ""),
+            "process_instance_id": self.process_instance_id,
+            "server_instance_id": self.server_instance_id,
+            "activation_epoch_id": epoch_id,
+            "workspace_accessed": False,
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+        }
+        with self.activation_bootstrap_lock:
+            # The activation coordinator binds its durable ACK to the exact
+            # receipt timestamp. ChatWeb can retry workspace_context while
+            # admission is still closed, including through a fresh connector
+            # client identity. Replacing the receipt on any of those retries
+            # would invalidate an ACK that was already committed for this
+            # process/server/epoch and make status regress to NEEDS_ACK after
+            # the system became READY. Preserve the first exact receipt for
+            # this activation boundary; a replacement process/epoch receives
+            # a fresh in-memory receipt collection.
+            current_boundary_exists = any(
+                str(existing.get("client_type") or "") == "chatweb"
+                and existing.get("workspace_accessed") is False
+                and str(existing.get("contract_sha256") or "") == receipt["contract_sha256"]
+                and str(existing.get("process_instance_id") or "") == receipt["process_instance_id"]
+                and str(existing.get("server_instance_id") or "") == receipt["server_instance_id"]
+                and str(existing.get("activation_epoch_id") or "") == receipt["activation_epoch_id"]
+                for existing in self.activation_bootstrap_receipts.values()
+            )
+            if current_boundary_exists:
+                return
+            self.activation_bootstrap_receipts[self._hub_client_record_id(identity)] = receipt
+
+    def connector_activation_bootstrap(self, *, blocking: bool = True) -> dict[str, Any]:
+        acquired = self.activation_bootstrap_lock.acquire(blocking=blocking)
+        if not acquired:
+            return {
+                "observed": False,
+                "current_contract_contact": False,
+                "method": None,
+                "tool_name": None,
+                "contract_sha256": None,
+                "activation_epoch_id": None,
+                "observed_at": None,
+                "client_id": None,
+                "client_type": None,
+                "process_instance_id": None,
+                "server_instance_id": None,
+                "workspace_accessed": None,
+                "snapshot_busy": True,
+            }
+        try:
+            candidates = [dict(receipt) for receipt in self.activation_bootstrap_receipts.values()]
+        finally:
+            self.activation_bootstrap_lock.release()
+        latest = max(candidates, key=lambda item: str(item.get("observed_at") or ""), default=None)
+        current_sha = str(self.tool_contract.get("sha256") or "")
+        epoch_id = str(getattr(self, "activation_epoch_id", None) or "")
+        current = bool(
+            latest
+            and str(latest.get("client_type") or "") == "chatweb"
+            and str(latest.get("method") or "") == "tools/call"
+            and str(latest.get("tool_name") or "") == "workspace_context"
+            and latest.get("workspace_accessed") is False
+            and str(latest.get("contract_sha256") or "") == current_sha
+            and str(latest.get("process_instance_id") or "") == self.process_instance_id
+            and str(latest.get("server_instance_id") or "") == self.server_instance_id
+            and str(latest.get("activation_epoch_id") or "") == epoch_id
+        )
+        return {
+            "observed": latest is not None,
+            "current_contract_contact": current,
+            "method": str((latest or {}).get("method") or "") or None,
+            "tool_name": str((latest or {}).get("tool_name") or "") or None,
+            "contract_sha256": str((latest or {}).get("contract_sha256") or "") or None,
+            "activation_epoch_id": str((latest or {}).get("activation_epoch_id") or "") or None,
+            "observed_at": str((latest or {}).get("observed_at") or "") or None,
+            "client_id": str((latest or {}).get("client_id") or "") or None,
+            "client_type": str((latest or {}).get("client_type") or "") or None,
+            "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
+            "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
+            "workspace_accessed": (latest or {}).get("workspace_accessed"),
+            "snapshot_busy": False,
+        }
 
     def _record_client_contact(self, identity: dict[str, Any], *, method: str) -> None:
         if str(method or "").strip() != "tools/call":

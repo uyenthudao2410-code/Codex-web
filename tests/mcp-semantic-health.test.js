@@ -217,3 +217,55 @@ test('watchdog never restarts while the existing lifecycle controller is busy', 
   assert.equal(calls.probe, 0);
   assert.equal(calls.restart, 0);
 });
+
+test('watchdog skips the semantic canary while MCP reports active work', async () => {
+  const calls = { health: 0, probe: 0, restart: 0 };
+  const watchdog = new SemanticMcpHealthWatchdog({
+    settings: { load: () => ({ mcpPort: 18766, workspace: 'C:\\work\\current' }) },
+    secrets: { get: () => 'token' },
+    orchestrator: {
+      busy: false,
+      recovering: false,
+      isManuallyStopped: () => false,
+      currentMcpHealth: async () => {
+        calls.health += 1;
+        return { ready: true, snapshot_busy: true, active_commands: null };
+      },
+      recoverMcpOnly: async () => { calls.restart += 1; }
+    },
+    log: { info() {}, warn() {}, error() {} },
+    probe: async () => { calls.probe += 1; return { ok: false, reason: 'timeout' }; },
+    failureThreshold: 1
+  });
+
+  const result = await watchdog.checkOnce();
+  assert.deepEqual(result, { ok: true, skipped: true, reason: 'runtime_busy' });
+  assert.equal(calls.health, 1);
+  assert.equal(calls.probe, 0);
+  assert.equal(calls.restart, 0);
+  assert.equal(watchdog.failures, 0);
+});
+
+test('watchdog does not turn a transient HTTP health miss into semantic MCP restart', async () => {
+  const calls = { probe: 0, restart: 0 };
+  const watchdog = new SemanticMcpHealthWatchdog({
+    settings: { load: () => ({ mcpPort: 18766, workspace: 'C:\\work\\current' }) },
+    secrets: { get: () => 'token' },
+    orchestrator: {
+      busy: false,
+      recovering: false,
+      isManuallyStopped: () => false,
+      currentMcpHealth: async () => null,
+      recoverMcpOnly: async () => { calls.restart += 1; }
+    },
+    log: { info() {}, warn() {}, error() {} },
+    probe: async () => { calls.probe += 1; return { ok: false, reason: 'timeout' }; },
+    failureThreshold: 1
+  });
+
+  const result = await watchdog.checkOnce();
+  assert.deepEqual(result, { ok: true, skipped: true, reason: 'http_health_unavailable' });
+  assert.equal(calls.probe, 0);
+  assert.equal(calls.restart, 0);
+  assert.equal(watchdog.failures, 0);
+});

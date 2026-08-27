@@ -211,6 +211,39 @@ test('dev:status exposes connector receipt and acknowledgement gate from a read-
   assert.match(line, new RegExp(`connector_ack_sha=${'e'.repeat(64)}`));
 });
 
+test('dev:status falls back to the durable activation census when the live snapshot times out', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const epoch = 'status-timeout-activation-epoch-0001';
+  fixture.deps.runtimeSnapshot = async () => {
+    throw Object.assign(new Error('busy census'), { code: 'RECOVERY_REQUEST_TIMEOUT' });
+  };
+  fixture.deps.activationRecord = () => ({
+    activation_epoch_id: epoch,
+    state: 'VERIFYING',
+    verification: {
+      activation_epoch_id: epoch,
+      runtime: {
+        toolContract: { sha256: 'f'.repeat(64) },
+        connectorContractAcknowledgedSha256: 'e'.repeat(64),
+        connectorContractState: 'CHANGED_NEEDS_DISCOVERY',
+        connectorRefreshRequired: true,
+        connectorAcknowledgementPending: false,
+        connectorRediscovered: false,
+        connectorRediscoveredAt: null
+      }
+    }
+  });
+
+  await runLifecycle('status', fixture.deps);
+
+  const line = fixture.lines.at(-1);
+  assert.match(line, /DEV_UI STATUS state=CURRENT host=available installation=current/);
+  assert.match(line, /connector_state=CHANGED_NEEDS_DISCOVERY/);
+  assert.match(line, /connector_rediscovered=false/);
+  assert.match(line, /connector_refresh_required=true/);
+  assert.match(line, /connector_ack_pending=false/);
+});
+
 test('dev routes a stale same-checkout UI through component activation before focus', async () => {
   const fixture = harness(observation('STALE'));
   const result = await runLifecycle('start', fixture.deps);
@@ -584,6 +617,9 @@ test('refresh dependency suppresses the persisted development supervisor before 
       assert.equal(options.refresh, true);
       assert.equal(options.forceRefresh, true);
       assert.equal(options.sourceCheckpoint, null);
+      assert.equal(options.expiresAtUnixMs - options.requestedAtUnixMs, 600_000,
+        'the durable epoch must retain a bounded connector phase after the five-minute process-refresh poll');
+      assert.ok(options.timeoutMs >= 90_000);
       return { activation_epoch_id: 'full-clean-refresh-dependency-0001' };
     }
   });
@@ -697,6 +733,8 @@ test('Command Center renders loaded-source status and connector enum semantics',
   assert.match(app, /function renderRuntimeSourceStatus\(snapshot\)/);
   assert.match(app, /UNCHANGED_ACKNOWLEDGED/);
   assert.match(app, /CURRENT_ACKNOWLEDGED/);
+  assert.match(app, /CURRENT_COMPATIBLE_ACKNOWLEDGED/);
+  assert.match(app, /CHANGED_COMPATIBLE_NEEDS_ACK/);
   assert.match(app, /CHANGED_NEEDS_DISCOVERY/);
   assert.match(app, /CHANGED_DISCOVERED_NEEDS_ACK/);
   assert.match(app, /function connectorContractPresentation\(status = \{\}\)/);
@@ -746,6 +784,18 @@ test('connector presentation no longer promotes retired compatible-snapshot stat
   const compatible = fixture.connector({ connectorContractState: 'COMPATIBLE_ACKNOWLEDGED', connectorRefreshRequired: false });
   assert.equal(compatible.state, 'UNAVAILABLE');
   assert.equal(compatible.notice, false);
+});
+
+test('connector presentation distinguishes exact activation compatibility ACK from rediscovery', () => {
+  const fixture = runtimeStatusHarness();
+  const acknowledged = fixture.connector({
+    connectorContractState: 'CURRENT_COMPATIBLE_ACKNOWLEDGED',
+    connectorRefreshRequired: false,
+    connectorRediscovered: false
+  });
+  assert.equal(acknowledged.state, 'CURRENT_COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(acknowledged.notice, false);
+  assert.match(acknowledged.message, /no-workspace bootstrap/);
 });
 
 test('Command Center exposes the machine closure state without promoting source health to LIVE_CLOSED', () => {

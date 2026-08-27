@@ -353,6 +353,10 @@ test('unchanged acknowledgement needs matching SHA and no refresh, while changed
     connectorContractState: 'CURRENT_ACKNOWLEDGED',
     connectorRediscoveredAt: '2026-08-25T08:00:00.000Z'
   })).closure_state, 'LIVE_CLOSED');
+  assert.equal(computeActivationClosure(liveArgs({
+    connectorContractState: 'CURRENT_COMPATIBLE_ACKNOWLEDGED',
+    connectorRediscoveredAt: null
+  })).closure_state, 'LIVE_CLOSED');
 });
 
 test('unknown, duplicate, or unordered affected components fail closed', () => {

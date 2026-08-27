@@ -102,7 +102,15 @@ const DETERMINISTIC_MCP_HEALTH_FAILURES = new Set([
 // activation observation bounded without turning a valid census into a false
 // MCP timeout. The separate health probe remains short and independently live.
 const MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS = 15_000;
-const MCP_HEALTH_TIMEOUT_MS = 1_200;
+// The MCP health endpoint is intentionally lock-light, but it still runs in
+// the same Python process as workspace tools.  Under a real connector load the
+// interpreter may not get scheduled within a 1.2s probe window even though the
+// endpoint is healthy (the access log then shows a delayed HTTP 200).  A short
+// false-negative here makes the Recovery Host start a destructive soft
+// recovery, which is precisely the failure mode this watchdog is meant to
+// avoid.  Keep the probe bounded while allowing normal Windows/Python
+// scheduling jitter and one in-flight read-only tool call to drain.
+const MCP_HEALTH_TIMEOUT_MS = 5_000;
 
 function mcpHealthFailure(kind, details = {}) {
   return {
@@ -1083,8 +1091,9 @@ class RuntimeOrchestrator {
     }));
   }
 
-  connectorContractStatus(toolContract, discovery = null, contact = null) {
+  connectorContractStatus(toolContract, discovery = null, contact = null, activationBootstrap = null) {
     const currentSha256 = String(toolContract?.sha256 || '').trim();
+    const activationEpochId = String(this.activationEpochId || '').trim();
     const schemaVersion = Number(toolContract?.schema_version || 0);
     const profile = String(toolContract?.profile || '').trim();
     const compatiblePredecessors = new Set(
@@ -1118,6 +1127,24 @@ class RuntimeOrchestrator {
       && String(contact?.process_instance_id || '').trim()
       && String(contact?.server_instance_id || '').trim()
     );
+    const bootstrapObservedAt = String(activationBootstrap?.observed_at || '').trim();
+    const bootstrapObservedAtValid = Boolean(bootstrapObservedAt && Number.isFinite(Date.parse(bootstrapObservedAt)));
+    const bootstrapCurrent = Boolean(
+      currentSha256
+      && activationEpochId
+      && activationBootstrap?.current_contract_contact === true
+      && String(activationBootstrap?.method || '') === 'tools/call'
+      && String(activationBootstrap?.tool_name || '') === 'workspace_context'
+      && String(activationBootstrap?.client_type || '') === 'chatweb'
+      && String(activationBootstrap?.client_id || '').trim()
+      && activationBootstrap?.workspace_accessed === false
+      && String(activationBootstrap?.contract_sha256 || '').trim() === currentSha256
+      && String(activationBootstrap?.activation_epoch_id || '').trim()
+        === activationEpochId
+      && bootstrapObservedAtValid
+      && String(activationBootstrap?.process_instance_id || '').trim()
+      && String(activationBootstrap?.server_instance_id || '').trim()
+    );
     const acknowledgedBoundaryKnown = acknowledgedSchemaVersion > 0 && Boolean(acknowledgedProfile);
     const sameCompatibilityBoundary = Boolean(
       !acknowledgedBoundaryKnown
@@ -1138,12 +1165,45 @@ class RuntimeOrchestrator {
       && !rediscovered
       && declaredCompatiblePredecessor
       && sameCompatibilityBoundary
-      && contactCurrent
+      && (contactCurrent || bootstrapCurrent)
+    );
+    const sameContractBootstrapEligible = Boolean(
+      !contractChanged
+      && currentSha256
+      && acknowledgedSha256 === currentSha256
+      && sameCompatibilityBoundary
+      && bootstrapCurrent
+    );
+    const storedCompatibilityPredecessor = String(
+      runtimeState.chatgptToolContractCompatibilityPredecessorSha256 || ''
+    ).trim().toLowerCase();
+    const storedCompatibilitySource = String(runtimeState.chatgptToolContractCompatibilitySource || '').trim();
+    const storedCompatibilityAt = String(runtimeState.chatgptToolContractCompatibilityAt || '').trim();
+    const storedCompatibilityPredecessorValid = storedCompatibilitySource === 'exact_current_contract_activation_bootstrap'
+      ? storedCompatibilityPredecessor === currentSha256.toLowerCase()
+      : (storedCompatibilitySource === 'declared_exact_predecessor_activation_bootstrap'
+        && compatiblePredecessors.has(storedCompatibilityPredecessor));
+    const compatibilityAcknowledged = Boolean(
+      !contractChanged
+      && !rediscovered
+      && bootstrapCurrent
+      && storedCompatibilityPredecessorValid
+      && storedCompatibilityAt === bootstrapObservedAt
+      && String(runtimeState.chatgptToolContractCompatibilityContactSha256 || '').trim() === currentSha256
+      && String(runtimeState.chatgptToolContractCompatibilityProcessInstanceId || '').trim()
+        === String(activationBootstrap?.process_instance_id || '').trim()
+      && String(runtimeState.chatgptToolContractCompatibilityServerInstanceId || '').trim()
+        === String(activationBootstrap?.server_instance_id || '').trim()
+      && String(runtimeState.chatgptToolContractCompatibilityActivationEpochId || '').trim()
+        === activationEpochId
     );
     let contractState = 'UNAVAILABLE';
     if (currentSha256) {
       if (!contractChanged) {
-        contractState = rediscovered ? 'CURRENT_ACKNOWLEDGED' : 'UNCHANGED_ACKNOWLEDGED';
+        contractState = rediscovered ? 'CURRENT_ACKNOWLEDGED'
+          : compatibilityAcknowledged ? 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
+            : sameContractBootstrapEligible ? 'UNCHANGED_COMPATIBLE_NEEDS_ACK'
+              : 'UNCHANGED_ACKNOWLEDGED';
       } else if (rediscovered) {
         contractState = 'CHANGED_DISCOVERED_NEEDS_ACK';
       } else if (compatibilityEligible) {
@@ -1167,25 +1227,41 @@ class RuntimeOrchestrator {
       contractChanged,
       backwardCompatible: compatibilityEligible,
       compatibilityEligible,
-      compatibilitySource: compatibilityEligible ? 'declared_exact_predecessor_live_contact' : null,
+      sameContractBootstrapEligible,
+      compatibilityAcknowledged,
+      compatibilitySource: compatibilityEligible
+        ? (bootstrapCurrent
+          ? 'declared_exact_predecessor_activation_bootstrap'
+          : 'declared_exact_predecessor_live_contact')
+        : sameContractBootstrapEligible ? 'exact_current_contract_activation_bootstrap'
+        : compatibilityAcknowledged ? storedCompatibilitySource : null,
+      compatibilityAcknowledgedAt: compatibilityAcknowledged ? storedCompatibilityAt : null,
       compatibilityMetadataBackfillPending: Boolean(compatibilityEligible && !acknowledgedBoundaryKnown),
       contactCurrent,
       contactSha256,
       contactObservedAt: contactCurrent ? contactObservedAt : null,
       contactProcessInstanceId: contactCurrent ? String(contact?.process_instance_id || '') : null,
       contactServerInstanceId: contactCurrent ? String(contact?.server_instance_id || '') : null,
+      bootstrapCurrent,
+      bootstrapObservedAt: bootstrapCurrent ? bootstrapObservedAt : null,
+      bootstrapProcessInstanceId: bootstrapCurrent ? String(activationBootstrap?.process_instance_id || '') : null,
+      bootstrapServerInstanceId: bootstrapCurrent ? String(activationBootstrap?.server_instance_id || '') : null,
+      bootstrapActivationEpochId: bootstrapCurrent ? String(activationBootstrap?.activation_epoch_id || '') : null,
       // A changed exact SHA still requires real discovery unless this exact
       // server-declared predecessor has separate current-process ChatWeb contact.
       refreshRequired: Boolean(contractChanged && !rediscovered && !compatibilityEligible),
-      acknowledgementPending: Boolean(contractChanged && (rediscovered || compatibilityEligible))
+      acknowledgementPending: Boolean(
+        (contractChanged && (rediscovered || compatibilityEligible))
+        || (sameContractBootstrapEligible && !compatibilityAcknowledged)
+      )
     };
   }
 
-  acknowledgeConnectorContractHash(toolContract, discovery = null, contact = null) {
-    const status = this.connectorContractStatus(toolContract, discovery, contact);
+  acknowledgeConnectorContractHash(toolContract, discovery = null, contact = null, activationBootstrap = null) {
+    const status = this.connectorContractStatus(toolContract, discovery, contact, activationBootstrap);
     if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
-    if (!status.contractChanged) return status;
-    if (!status.rediscovered && !status.compatibilityEligible) {
+    if (!status.contractChanged && (!status.sameContractBootstrapEligible || status.compatibilityAcknowledged)) return status;
+    if (!status.rediscovered && !status.compatibilityEligible && !status.sameContractBootstrapEligible) {
       throw Object.assign(new Error('ChatGPT chưa đọc lại tools/list và chưa có compatible cached-client receipt hợp lệ cho tool contract hiện tại.'), {
         code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
       });
@@ -1207,19 +1283,87 @@ class RuntimeOrchestrator {
         delete next.chatgptToolContractCompatibilityContactSha256;
         delete next.chatgptToolContractCompatibilityProcessInstanceId;
         delete next.chatgptToolContractCompatibilityServerInstanceId;
+        delete next.chatgptToolContractCompatibilityActivationEpochId;
       } else {
         delete next.chatgptToolContractRediscoveredAt;
         delete next.chatgptToolContractRediscoveredSha256;
-        next.chatgptToolContractCompatibilityAt = status.contactObservedAt;
+        next.chatgptToolContractCompatibilityAt = status.bootstrapCurrent
+          ? status.bootstrapObservedAt : status.contactObservedAt;
         next.chatgptToolContractCompatibilitySource = status.compatibilitySource;
-        next.chatgptToolContractCompatibilityPredecessorSha256 = status.acknowledgedSha256;
+        next.chatgptToolContractCompatibilityPredecessorSha256 = status.contractChanged
+          ? status.acknowledgedSha256 : status.currentSha256;
         next.chatgptToolContractCompatibilityContactSha256 = status.currentSha256;
-        next.chatgptToolContractCompatibilityProcessInstanceId = status.contactProcessInstanceId;
-        next.chatgptToolContractCompatibilityServerInstanceId = status.contactServerInstanceId;
+        next.chatgptToolContractCompatibilityProcessInstanceId = status.bootstrapCurrent
+          ? status.bootstrapProcessInstanceId : status.contactProcessInstanceId;
+        next.chatgptToolContractCompatibilityServerInstanceId = status.bootstrapCurrent
+          ? status.bootstrapServerInstanceId : status.contactServerInstanceId;
+        if (status.bootstrapCurrent) {
+          next.chatgptToolContractCompatibilityActivationEpochId = status.bootstrapActivationEpochId;
+        } else {
+          delete next.chatgptToolContractCompatibilityActivationEpochId;
+        }
       }
       return next;
     });
-    return this.connectorContractStatus(toolContract, discovery, contact);
+    return this.connectorContractStatus(toolContract, discovery, contact, activationBootstrap);
+  }
+
+  connectorContractFreshness(health, contractStatus) {
+    const currentSha256 = String(health?.tool_contract?.sha256 || '').trim();
+    const processInstanceId = String(health?.process_instance_id || '').trim();
+    const serverInstanceId = String(health?.instance_id || health?.server_instance_id || '').trim();
+    const activationEpochId = String(health?.activation_epoch_id || '').trim();
+    const baseReady = Boolean(
+      health?.ready === true
+      && READY_COMMIT_DIGEST_PATTERN.test(currentSha256.toLowerCase())
+      && processInstanceId
+      && serverInstanceId
+      && activationEpochId
+      && activationEpochId === String(this.activationEpochId || '').trim()
+      && contractStatus?.available === true
+      && contractStatus.currentSha256 === currentSha256
+      && contractStatus.acknowledgedSha256 === currentSha256
+      && contractStatus.refreshRequired === false
+      && contractStatus.acknowledgementPending === false
+      && contractStatus.contractChanged === false
+    );
+    if (!baseReady) return { ready: false, mode: null };
+
+    const discovery = health.connector_tool_discovery;
+    const rediscoveredAt = String(discovery?.observed_at || '').trim();
+    if (contractStatus.contractState === 'CURRENT_ACKNOWLEDGED'
+      && contractStatus.rediscovered === true
+      && discovery?.current_contract_observed === true
+      && String(discovery.contract_sha256 || '').trim() === currentSha256
+      && String(discovery.process_instance_id || '').trim() === processInstanceId
+      && String(discovery.server_instance_id || '').trim() === serverInstanceId
+      && rediscoveredAt
+      && rediscoveredAt === String(contractStatus.rediscoveredAt || '').trim()
+      && Number.isFinite(Date.parse(rediscoveredAt))) {
+      return { ready: true, mode: 'current_process_discovery', observedAt: rediscoveredAt };
+    }
+
+    const bootstrap = health.connector_activation_bootstrap;
+    const compatibilityAt = String(bootstrap?.observed_at || '').trim();
+    if (contractStatus.contractState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
+      && contractStatus.compatibilityAcknowledged === true
+      && contractStatus.bootstrapCurrent === true
+      && bootstrap?.current_contract_contact === true
+      && String(bootstrap.client_type || '') === 'chatweb'
+      && String(bootstrap.client_id || '').trim()
+      && String(bootstrap.method || '') === 'tools/call'
+      && String(bootstrap.tool_name || '') === 'workspace_context'
+      && bootstrap.workspace_accessed === false
+      && String(bootstrap.contract_sha256 || '').trim() === currentSha256
+      && String(bootstrap.process_instance_id || '').trim() === processInstanceId
+      && String(bootstrap.server_instance_id || '').trim() === serverInstanceId
+      && String(bootstrap.activation_epoch_id || '').trim() === activationEpochId
+      && compatibilityAt
+      && compatibilityAt === String(contractStatus.compatibilityAcknowledgedAt || '').trim()
+      && Number.isFinite(Date.parse(compatibilityAt))) {
+      return { ready: true, mode: 'compatible_activation_bootstrap', observedAt: compatibilityAt };
+    }
+    return { ready: false, mode: null };
   }
 
   acknowledgeExactConnectorDiscovery(health, { activationEpochId = '', nowUnixMs = Date.now() } = {}) {
@@ -1229,52 +1373,89 @@ class RuntimeOrchestrator {
     const serverInstanceId = String(health?.instance_id || health?.server_instance_id || '').trim();
     const contractSha256 = String(health?.tool_contract?.sha256 || '').trim().toLowerCase();
     const discovery = health?.connector_tool_discovery;
-    const observedAt = String(discovery?.observed_at || '').trim();
-    const observedAtUnixMs = Date.parse(observedAt);
-    const exact = Boolean(
+    const discoveryObservedAt = String(discovery?.observed_at || '').trim();
+    const discoveryObservedAtUnixMs = Date.parse(discoveryObservedAt);
+    const activationBootstrap = health?.connector_activation_bootstrap;
+    const bootstrapObservedAt = String(activationBootstrap?.observed_at || '').trim();
+    const bootstrapObservedAtUnixMs = Date.parse(bootstrapObservedAt);
+    const baseExact = Boolean(
       health?.ready === true
       && expectedEpochId
       && observedEpochId === expectedEpochId
       && processInstanceId
       && serverInstanceId
       && READY_COMMIT_DIGEST_PATTERN.test(contractSha256)
+      && Number.isSafeInteger(nowUnixMs) && nowUnixMs > 0
+    );
+    const exactDiscovery = Boolean(
+      baseExact
       && discovery && typeof discovery === 'object' && !Array.isArray(discovery)
       && discovery.current_contract_observed === true
       && String(discovery.contract_sha256 || '').trim().toLowerCase() === contractSha256
       && String(discovery.process_instance_id || '').trim() === processInstanceId
       && String(discovery.server_instance_id || '').trim() === serverInstanceId
-      && Number.isFinite(observedAtUnixMs)
-      && Number.isSafeInteger(nowUnixMs) && nowUnixMs > 0
-      && observedAtUnixMs <= nowUnixMs + 5000
+      && Number.isFinite(discoveryObservedAtUnixMs)
+      && discoveryObservedAtUnixMs <= nowUnixMs + 5000
     );
-    if (!exact) {
-      throw Object.assign(new Error('Connector acknowledgement requires an exact current-process tools/list or server/discover receipt for this activation epoch.'), {
+    const exactCompatibilityBootstrap = Boolean(
+      baseExact
+      && activationBootstrap && typeof activationBootstrap === 'object' && !Array.isArray(activationBootstrap)
+      && activationBootstrap.current_contract_contact === true
+      && String(activationBootstrap.client_type || '') === 'chatweb'
+      && String(activationBootstrap.client_id || '').trim()
+      && String(activationBootstrap.method || '') === 'tools/call'
+      && String(activationBootstrap.tool_name || '') === 'workspace_context'
+      && activationBootstrap.workspace_accessed === false
+      && String(activationBootstrap.contract_sha256 || '').trim().toLowerCase() === contractSha256
+      && String(activationBootstrap.process_instance_id || '').trim() === processInstanceId
+      && String(activationBootstrap.server_instance_id || '').trim() === serverInstanceId
+      && String(activationBootstrap.activation_epoch_id || '').trim() === expectedEpochId
+      && Number.isFinite(bootstrapObservedAtUnixMs)
+      && bootstrapObservedAtUnixMs <= nowUnixMs + 5000
+    );
+    if (!exactDiscovery && !exactCompatibilityBootstrap) {
+      throw Object.assign(new Error('Connector acknowledgement requires exact current-process discovery or a no-workspace compatibility bootstrap for this activation epoch.'), {
         code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
       });
     }
     const before = this.connectorContractStatus(
       health.tool_contract,
       discovery,
-      health.connector_client_contact
+      health.connector_client_contact,
+      activationBootstrap
     );
-    if (!before.contractChanged) return before;
-    if (before.contractState !== 'CHANGED_DISCOVERED_NEEDS_ACK'
-      || before.rediscovered !== true
+    const alreadyCurrent = exactDiscovery
+      ? before.contractState === 'CURRENT_ACKNOWLEDGED' && before.rediscovered === true
+      : before.contractState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
+        && before.compatibilityAcknowledged === true;
+    if (!before.acknowledgementPending && alreadyCurrent) return before;
+    const eligibleState = exactDiscovery
+      ? before.contractState === 'CHANGED_DISCOVERED_NEEDS_ACK' && before.rediscovered === true
+      : ['CHANGED_COMPATIBLE_NEEDS_ACK', 'UNCHANGED_COMPATIBLE_NEEDS_ACK'].includes(before.contractState)
+        && before.bootstrapCurrent === true;
+    if (!eligibleState
       || before.refreshRequired !== false
       || before.acknowledgementPending !== true) {
-      throw Object.assign(new Error('Connector contract is not eligible for exact current-process acknowledgement.'), {
+      throw Object.assign(new Error('Connector contract is not eligible for exact current-process discovery/bootstrap acknowledgement.'), {
         code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
       });
     }
     const acknowledged = this.acknowledgeConnectorContractHash(
       health.tool_contract,
       discovery,
-      health.connector_client_contact
+      health.connector_client_contact,
+      activationBootstrap
     );
-    if (acknowledged.contractState !== 'CURRENT_ACKNOWLEDGED'
+    const expectedState = exactDiscovery ? 'CURRENT_ACKNOWLEDGED' : 'CURRENT_COMPATIBLE_ACKNOWLEDGED';
+    const freshnessCommitted = exactDiscovery
+      ? acknowledged.rediscovered === true
+      : acknowledged.compatibilityAcknowledged === true
+        && acknowledged.bootstrapCurrent === true
+        && acknowledged.compatibilityAcknowledgedAt === bootstrapObservedAt;
+    if (acknowledged.contractState !== expectedState
       || acknowledged.currentSha256 !== contractSha256
       || acknowledged.acknowledgedSha256 !== contractSha256
-      || acknowledged.rediscovered !== true
+      || !freshnessCommitted
       || acknowledged.refreshRequired !== false
       || acknowledged.acknowledgementPending !== false) {
       throw Object.assign(new Error('Connector acknowledgement did not commit the exact current contract receipt.'), {
@@ -1285,10 +1466,10 @@ class RuntimeOrchestrator {
     return acknowledged;
   }
 
-  synchronizeConnectorContract(toolContract, discovery = null, contact = null) {
-    const status = this.connectorContractStatus(toolContract, discovery, contact);
+  synchronizeConnectorContract(toolContract, discovery = null, contact = null, activationBootstrap = null) {
+    const status = this.connectorContractStatus(toolContract, discovery, contact, activationBootstrap);
     if (!status.acknowledgementPending) return status;
-    return this.acknowledgeConnectorContractHash(toolContract, discovery, contact);
+    return this.acknowledgeConnectorContractHash(toolContract, discovery, contact, activationBootstrap);
   }
 
   async acknowledgeConnectorContract() {
@@ -1311,7 +1492,8 @@ class RuntimeOrchestrator {
     this.acknowledgeConnectorContractHash(
       health.tool_contract,
       health.connector_tool_discovery,
-      health.connector_client_contact
+      health.connector_client_contact,
+      health.connector_activation_bootstrap
     );
     this.invalidateSnapshot();
     return this.snapshot({ force: true, reason: 'connector-contract-acknowledged' });
@@ -1752,8 +1934,10 @@ class RuntimeOrchestrator {
     const connectorContract = this.connectorContractStatus(
       mcpHealth?.tool_contract || null,
       mcpHealth?.connector_tool_discovery || null,
-      mcpHealth?.connector_client_contact || null
+      mcpHealth?.connector_client_contact || null,
+      mcpHealth?.connector_activation_bootstrap || null
     );
+    const connectorFreshness = this.connectorContractFreshness(mcpHealth, connectorContract);
     const activationEpoch = this.activationEpochStatus();
     const epochReady = activationEpoch.admission_open === true;
     const codeRevision = this.codingMcpRevisionStatus();
@@ -1764,16 +1948,7 @@ class RuntimeOrchestrator {
     );
     const revisionReady = codeRevision.state !== 'unavailable' && !revisionDrift;
     const componentsReady = Boolean(mcpRunning && tunnelRunning && epochReady && revisionReady);
-    const connectorReady = Boolean(
-      connectorContract.available === true
-      && connectorContract.rediscovered === true
-      && connectorContract.currentSha256
-      && connectorContract.acknowledgedSha256 === connectorContract.currentSha256
-      && connectorContract.refreshRequired === false
-      && connectorContract.acknowledgementPending === false
-      && connectorContract.contractChanged === false
-      && connectorContract.contractState === 'CURRENT_ACKNOWLEDGED'
-    );
+    const connectorReady = connectorFreshness.ready === true;
     return {
       workspace: settings.workspace,
       mcpRunning,
@@ -1796,6 +1971,9 @@ class RuntimeOrchestrator {
       connectorAcknowledgementPending: connectorContract.acknowledgementPending,
       connectorRediscovered: connectorContract.rediscovered,
       connectorRediscoveredAt: connectorContract.rediscoveredAt,
+      connectorCompatibilityAcknowledged: connectorContract.compatibilityAcknowledged,
+      connectorCompatibilityAcknowledgedAt: connectorContract.compatibilityAcknowledgedAt,
+      connectorFreshnessMode: connectorFreshness.mode,
       codeRevision: { codingMcp: codeRevision },
       ...this.recoveryStatus()
     };
@@ -2071,8 +2249,10 @@ class RuntimeOrchestrator {
     const connectorContract = this.connectorContractStatus(
       health?.tool_contract || null,
       health?.connector_tool_discovery || null,
-      health?.connector_client_contact || null
+      health?.connector_client_contact || null,
+      health?.connector_activation_bootstrap || null
     );
+    const connectorFreshness = this.connectorContractFreshness(health, connectorContract);
     const nativeAlive = await this.native.status().catch(() => false);
     const activationEpoch = this.activationEpochStatus();
     const epochReady = activationEpoch.admission_open === true;
@@ -2083,6 +2263,8 @@ class RuntimeOrchestrator {
         && codeRevision.running_revision !== codeRevision.disk_revision)
     );
     const revisionReady = codeRevision.state !== 'unavailable' && !revisionDrift;
+    const componentsReady = Boolean(runtimeRunning && nativeAlive && tunnelRunning && epochReady && revisionReady);
+    const connectorReady = connectorFreshness.ready === true;
     return this.publishSnapshot({
       settings,
       secrets: this.secrets.status(),
@@ -2092,8 +2274,10 @@ class RuntimeOrchestrator {
         busy: this.busy,
         runtimeRunning,
         tunnelRunning,
-        fullyReady: runtimeRunning && tunnelRunning && epochReady && revisionReady,
-        updateIncomplete: activationEpoch.update_incomplete === true || revisionDrift,
+        componentsReady,
+        connectorReady,
+        fullyReady: componentsReady && connectorReady,
+        updateIncomplete: activationEpoch.update_incomplete === true || revisionDrift || !connectorReady,
         activationEpoch,
         localMcpUrl: `http://127.0.0.1:${settings.mcpPort}/mcp`,
         tunnelUiUrl: `http://127.0.0.1:${settings.healthPort}/ui`,
@@ -2109,6 +2293,9 @@ class RuntimeOrchestrator {
         connectorAcknowledgementPending: connectorContract.acknowledgementPending,
         connectorRediscovered: connectorContract.rediscovered,
         connectorRediscoveredAt: connectorContract.rediscoveredAt,
+        connectorCompatibilityAcknowledged: connectorContract.compatibilityAcknowledged,
+        connectorCompatibilityAcknowledgedAt: connectorContract.compatibilityAcknowledgedAt,
+        connectorFreshnessMode: connectorFreshness.mode,
         codeRevision: { codingMcp: codeRevision },
         ...this.recoveryStatus()
       }

@@ -135,7 +135,10 @@ async function spawnElectronUi(app, spawnProcess = spawn, options = {}) {
   assertActivationDeadline(options);
   const child = spawnProcess(executableForLaunch(options), electronUiArguments(app, options), {
     detached: true,
-    windowsHide: true,
+    // Recovery/runtime processes stay hidden, but this process owns the
+    // operator-facing BrowserWindow. SW_HIDE can consume the first Windows
+    // show request and leave a healthy Electron process with no visible UI.
+    windowsHide: false,
     stdio: 'ignore',
     env: processEnvironment('electron-ui', options)
   });

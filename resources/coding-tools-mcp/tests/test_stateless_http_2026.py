@@ -187,6 +187,108 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertFalse(health["connector_tool_discovery"]["observed"])
         self.assertTrue(health["connector_client_contact"]["current_contract_contact"])
 
+    def test_activation_pending_tool_error_does_not_record_connector_contact(self) -> None:
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        self.assertFalse(self.runtime.connector_client_contact()["observed"])
+        self.runtime.activation_epoch_id = "activation-pending-contact-0001"
+        self.runtime.activation_gate_config = "closed"
+        self.runtime.activation_admission = "closed"
+
+        status, _, body = self.tool_call(
+            "task_control",
+            {"action": "get"},
+            request_id=4,
+        )
+
+        self.assertEqual(status, 200)
+        self.assertTrue(body["result"]["isError"])
+        self.assertEqual(
+            body["result"]["structuredContent"]["error"]["code"],
+            "RUNTIME_ACTIVATION_PENDING",
+        )
+        self.assertFalse(
+            self.runtime.connector_client_contact()["observed"],
+            "a tool-level activation error is not a successful connector contact",
+        )
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        self.assertFalse(self.runtime.connector_activation_bootstrap()["observed"])
+
+    def test_closed_epoch_workspace_context_keeps_first_bootstrap_across_retries_and_open_retry(self) -> None:
+        self.assertTrue(self.runtime.tool_contract["compatible_predecessor_sha256"])
+        self.runtime.activation_epoch_id = "activation-bootstrap-connector-0001"
+        self.runtime.activation_gate_config = "closed"
+        self.runtime.activation_admission = "closed"
+
+        status, _, body = self.tool_call(
+            "workspace_context",
+            {"path": "definitely-not-an-authorized-or-existing-workspace", "detail": "compact"},
+            request_id=5,
+            extra_headers={
+                "X-Coding-Tools-Client-Id": "chatweb-bootstrap-first",
+                "X-Coding-Tools-Client-Type": "chatweb",
+            },
+        )
+
+        self.assertEqual(status, 200)
+        self.assertFalse(body["result"]["isError"])
+        structured = body["result"]["structuredContent"]
+        self.assertTrue(structured["ok"])
+        self.assertFalse(structured["completed"])
+        self.assertFalse(structured["workspace_accessed"])
+        self.assertTrue(structured["activation_bootstrap"]["accepted"])
+        self.assertTrue(structured["activation_bootstrap"]["retry_required"])
+        self.assertEqual(
+            structured["activation_bootstrap"]["activation_epoch_id"],
+            "activation-bootstrap-connector-0001",
+        )
+        self.assertFalse(self.runtime.connector_client_contact()["observed"])
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        bootstrap = self.runtime.connector_activation_bootstrap()
+        self.assertTrue(bootstrap["current_contract_contact"])
+        self.assertEqual(bootstrap["tool_name"], "workspace_context")
+        self.assertEqual(bootstrap["activation_epoch_id"], "activation-bootstrap-connector-0001")
+        self.assertEqual(bootstrap["client_type"], "chatweb")
+        self.assertFalse(bootstrap["workspace_accessed"])
+        self.assertFalse(self.runtime.connector_client_contact()["observed"])
+
+        first_observed_at = bootstrap["observed_at"]
+        first_client_id = bootstrap["client_id"]
+        status, _, retry_body = self.tool_call(
+            "workspace_context",
+            {"path": "still-not-an-authorized-or-existing-workspace", "detail": "compact"},
+            request_id=6,
+            extra_headers={
+                "X-Coding-Tools-Client-Id": "chatweb-bootstrap-retry",
+                "X-Coding-Tools-Client-Type": "chatweb",
+            },
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(retry_body["result"]["structuredContent"]["activation_bootstrap"]["retry_required"])
+        after_closed_retry = self.runtime.connector_activation_bootstrap()
+        self.assertEqual(after_closed_retry["observed_at"], first_observed_at)
+        self.assertEqual(after_closed_retry["client_id"], first_client_id)
+        self.assertEqual(len(self.runtime.activation_bootstrap_receipts), 1)
+
+        self.runtime.activation_admission = "open"
+        status, _, open_body = self.tool_call(
+            "workspace_context",
+            {"path": self.temp.name, "detail": "compact", "max_entries": 1},
+            request_id=7,
+            extra_headers={
+                "X-Coding-Tools-Client-Id": "chatweb-bootstrap-retry",
+                "X-Coding-Tools-Client-Type": "chatweb",
+            },
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(open_body["result"]["isError"])
+        opened = open_body["result"]["structuredContent"]
+        self.assertTrue(opened["ok"])
+        self.assertEqual(Path(opened["workspace"]).resolve(), Path(self.temp.name).resolve())
+        self.assertNotIn("activation_bootstrap", opened)
+        after_open_retry = self.runtime.connector_activation_bootstrap()
+        self.assertEqual(after_open_retry["observed_at"], first_observed_at)
+        self.assertEqual(after_open_retry["client_id"], first_client_id)
+
     def test_stateless_task_contexts_isolate_global_and_parallel_runs(self) -> None:
         global_state = self.runtime.task_state.ensure_started("global-sentinel")
         self.assertEqual(global_state["objective"], "global-sentinel")

@@ -10,7 +10,8 @@ const {
   FullCleanActivation,
   canonicalProjectionRebuildSha256,
   validateProjectionRebuildGate,
-  validateConnectorReadyGate
+  validateConnectorReadyGate,
+  reusablePendingProjectionObservation
 } = require('../electron/services/fullCleanActivation');
 const { RecoveryHost } = require('../electron/services/recoveryHost');
 const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
@@ -52,6 +53,58 @@ function epochStore(paths) {
 function codedError(code, message = code) {
   return Object.assign(new Error(message), { code });
 }
+
+test('pending activation census replaces stale durable component evidence without opening admission', (t) => {
+  const { paths } = fixture(t);
+  const store = epochStore(paths);
+  const activationEpochId = id('activation-pending-census', '0001');
+  const operationId = id('operation-pending-census', '0001');
+  store.create({
+    activation_epoch_id: activationEpochId,
+    operation_id: operationId,
+    expiresAtUnixMs: 1_700_000_120_000
+  });
+  store.update(activationEpochId, { state: 'VERIFYING', reason: 'initial-census' });
+  const activation = new FullCleanActivation({
+    paths,
+    settings: { load: () => ({}) },
+    secrets: { get: () => '' },
+    orchestrator: {},
+    recoveryPlane: {},
+    revisions: {},
+    deviceIdentity: {},
+    epochStore: store
+  });
+  const census = {
+    pass: false,
+    verified: false,
+    activation_epoch_id: activationEpochId,
+    tunnel_health_verified: true,
+    recovery_plane_verified: true,
+    connector_validation: { valid: false, reasons: ['CURRENT_CONTRACT_NOT_REDISCOVERED'] },
+    reason: 'UPDATE_INCOMPLETE'
+  };
+
+  const pending = activation.recordPendingCensus(activationEpochId, census);
+
+  assert.equal(pending.state, 'VERIFYING');
+  assert.equal(pending.admission_state, 'CLOSED');
+  assert.equal(pending.ready_commit_digest, null);
+  assert.deepEqual(pending.verification, census);
+
+  const passingCandidate = activation.recordPendingCensus(activationEpochId, {
+    ...census,
+    pass: true,
+    verified: true,
+    connector_validation: { valid: true, reasons: [] },
+    reason: null
+  });
+  assert.equal(passingCandidate.state, 'VERIFYING');
+  assert.equal(passingCandidate.admission_state, 'CLOSED');
+  assert.equal(passingCandidate.ready_commit_digest, null);
+  assert.equal(passingCandidate.verification.pass, true,
+    'a passing candidate remains evidence-only until finalize independently commits it');
+});
 
 function projectionSnapshot() {
   return {
@@ -125,6 +178,68 @@ function projectionWrapper(receipt, overrides = {}) {
     ...overrides
   };
 }
+
+test('pending projection reuse requires every admission-closed identity and immutable-ledger gate', () => {
+  const root = path.resolve('pending-projection-reuse-workspace');
+  const receipt = projectionReceipt(root);
+  const record = {
+    activation_epoch_id: receipt.activation_epoch_id,
+    state: 'VERIFYING',
+    admission_state: 'CLOSED',
+    verification: {
+      projection_rebuild_verified: true,
+      projection_rebuild_receipt: receipt,
+      connector_validation: { valid: false, reasons: ['CURRENT_CONTRACT_NOT_REDISCOVERED'] },
+      process_identity_verified: true,
+      workspace_matches: true,
+      device_matches: true,
+      revision_matches: true,
+      recovery_host_revision_matches: true,
+      recovery_host_epoch_matches: true,
+      ui_verified: true,
+      recovery_plane_verified: true,
+      epoch_matches: true,
+      lifecycle_decision: { safe: true, code: 'READY' }
+    }
+  };
+
+  const reusable = reusablePendingProjectionObservation(record);
+  assert.ok(reusable);
+  assert.equal(reusable.reused_pending_projection, true);
+  assert.equal(reusable.projection_rebuild_receipt, receipt);
+  assert.equal(reusable.snapshot.sha256, receipt.ledger_snapshot_sha256);
+  assert.equal(reusable.snapshot.logical_sha256, receipt.ledger_logical_sha256);
+
+  const rejected = [
+    ['admission is open', (value) => { value.admission_state = 'OPEN'; }],
+    ['epoch is not verifying', (value) => { value.state = 'READY_COMMITTED'; }],
+    ['projection was not verified', (value) => { value.verification.projection_rebuild_verified = false; }],
+    ['connector is already valid', (value) => { value.verification.connector_validation.valid = true; }],
+    ['MCP identity changed', (value) => { value.verification.process_identity_verified = false; }],
+    ['workspace changed', (value) => { value.verification.workspace_matches = false; }],
+    ['device changed', (value) => { value.verification.device_matches = false; }],
+    ['revision changed', (value) => { value.verification.revision_matches = false; }],
+    ['Recovery Host revision changed', (value) => { value.verification.recovery_host_revision_matches = false; }],
+    ['Recovery Host epoch changed', (value) => { value.verification.recovery_host_epoch_matches = false; }],
+    ['UI is not verified', (value) => { value.verification.ui_verified = false; }],
+    ['Recovery Plane is not verified', (value) => { value.verification.recovery_plane_verified = false; }],
+    ['component epoch changed', (value) => { value.verification.epoch_matches = false; }],
+    ['receipt belongs to another epoch', (value) => {
+      value.verification.projection_rebuild_receipt.activation_epoch_id = id('activation-projection-retired', '1001');
+    }],
+    ['ledger snapshot is not immutable', (value) => {
+      value.verification.projection_rebuild_receipt.ledger_integrity.immutable = false;
+    }],
+    ['ledger snapshot hash is invalid', (value) => {
+      value.verification.projection_rebuild_receipt.ledger_snapshot_sha256 = 'not-a-sha256';
+    }]
+  ];
+  for (const [name, mutate] of rejected) {
+    const candidate = structuredClone(record);
+    mutate(candidate);
+    assert.equal(reusablePendingProjectionObservation(candidate), null, name);
+  }
+});
 
 function projectionGateInput(root, {
   preflightReceipt = projectionReceipt(root),
@@ -267,8 +382,8 @@ function finalizeTransactionFixture(t, {
     log: { error() {} },
     now: () => 1_700_000_000_000
   });
-  coordinator.finalCensus = async (epochIdValue) => {
-    calls.push(['finalCensus', epochIdValue]);
+  coordinator.finalCensus = async (epochIdValue, options = {}) => {
+    calls.push(['finalCensus', epochIdValue, options]);
     return { pass: true, activation_epoch_id: epochIdValue };
   };
   return {
@@ -427,6 +542,7 @@ test('connector gate binds ACK and rediscovery to the exact post-preflight healt
   const serverInstanceId = id('mcp-server-connector', '1001');
   const observedAt = new Date(nowUnixMs - 1000).toISOString();
   const health = {
+    activation_epoch_id: id('activation-connector-gate', '1001'),
     process_instance_id: processInstanceId,
     instance_id: serverInstanceId,
     tool_contract: { sha256: contractSha256 },
@@ -474,6 +590,75 @@ test('connector gate binds ACK and rediscovery to the exact post-preflight healt
   assert.ok(staleAcknowledgement.reasons.includes('ACKNOWLEDGED_SHA256_MISMATCH'));
 });
 
+test('connector gate accepts only an exact acknowledged no-workspace compatibility bootstrap', () => {
+  const nowUnixMs = 1_700_000_000_000;
+  const activationEpochId = id('activation-compatible-gate', '1001');
+  const contractSha256 = 'e'.repeat(64);
+  const processInstanceId = id('mcp-process-compatible', '1001');
+  const serverInstanceId = id('mcp-server-compatible', '1001');
+  const observedAt = new Date(nowUnixMs - 1000).toISOString();
+  const bootstrap = {
+    observed: true,
+    current_contract_contact: true,
+    client_id: 'chatweb-compatible-client',
+    client_type: 'chatweb',
+    method: 'tools/call',
+    tool_name: 'workspace_context',
+    workspace_accessed: false,
+    contract_sha256: contractSha256,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    server_instance_id: serverInstanceId,
+    observed_at: observedAt
+  };
+  const health = {
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    instance_id: serverInstanceId,
+    tool_contract: { sha256: contractSha256 },
+    connector_tool_discovery: null,
+    connector_activation_bootstrap: bootstrap
+  };
+  const contractStatus = {
+    available: true,
+    currentSha256: contractSha256,
+    acknowledgedSha256: contractSha256,
+    rediscovered: false,
+    rediscoveredSha256: '',
+    rediscoveredAt: null,
+    compatibilityAcknowledged: true,
+    compatibilityAcknowledgedAt: observedAt,
+    compatibilitySource: 'declared_exact_predecessor_activation_bootstrap',
+    bootstrapCurrent: true,
+    refreshRequired: false,
+    acknowledgementPending: false,
+    contractChanged: false,
+    contractState: 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
+  };
+
+  const ready = validateConnectorReadyGate({ health, contractStatus, nowUnixMs });
+  assert.equal(ready.valid, true);
+  assert.equal(ready.freshness_mode, 'compatible_activation_bootstrap');
+  assert.equal(ready.rediscovered_at, null);
+  assert.equal(ready.compatibility_acknowledged_at, observedAt);
+
+  for (const [field, value, reason] of [
+    ['process_instance_id', id('retired-compatible-process', '1001'), 'COMPATIBILITY_BOOTSTRAP_PROCESS_INSTANCE_ID_MISMATCH'],
+    ['server_instance_id', id('retired-compatible-server', '1001'), 'COMPATIBILITY_BOOTSTRAP_SERVER_INSTANCE_ID_MISMATCH'],
+    ['activation_epoch_id', id('activation-compatible-retired', '1001'), 'COMPATIBILITY_BOOTSTRAP_ACTIVATION_EPOCH_ID_MISMATCH'],
+    ['workspace_accessed', true, 'COMPATIBILITY_BOOTSTRAP_WORKSPACE_ACCESSED'],
+    ['contract_sha256', 'f'.repeat(64), 'COMPATIBILITY_BOOTSTRAP_CONTRACT_SHA256_MISMATCH']
+  ]) {
+    const invalid = validateConnectorReadyGate({
+      health: { ...health, connector_activation_bootstrap: { ...bootstrap, [field]: value } },
+      contractStatus,
+      nowUnixMs
+    });
+    assert.equal(invalid.valid, false, field);
+    assert.ok(invalid.reasons.includes(reason), `${field}: ${invalid.reasons.join(', ')}`);
+  }
+});
+
 test('final census rebuilds an ordinary no-checkpoint projection before health and gates READY on the exact receipt', async (t) => {
   const { root, paths } = fixture(t);
   const activationEpochId = id('activation-projection', '1001');
@@ -487,14 +672,15 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   const uiInstanceId = id('electron-ui', '1001');
   const deviceId = id('device', '1001');
   const revision = 'a'.repeat(64);
-  const nowUnixMs = 1_700_000_000_000;
+  let nowUnixMs = 1_700_000_000_000;
   const contractSha256 = 'c'.repeat(64);
-  const connectorRediscoveredAt = new Date(nowUnixMs - 1000).toISOString();
-  const receipt = projectionReceipt(root, {
+  let connectorRediscoveredAt = new Date(nowUnixMs - 1000).toISOString();
+  let receipt = projectionReceipt(root, {
     projection_classification: 'NO_ACTIVE_PROJECTION',
     projection: { run_id: '', wave_id: '', orchestration_state: '', mode: 'global' }
   });
-  const wrapper = projectionWrapper(receipt);
+  let preflightWrapperCurrent = true;
+  let wrapper = projectionWrapper(receipt, { current: preflightWrapperCurrent });
   const processStartToken = observeProcessIdentity(process.pid).process_start_token || '1';
   const recoveryServer = http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'application/json' });
@@ -569,6 +755,8 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   });
   const calls = [];
   let connectorAcknowledged = false;
+  let tunnelStatusCalls = 0;
+  const tunnelWaits = [];
   const orchestrator = {
     async lightweightSnapshot() {
       return {
@@ -585,6 +773,12 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
     },
     async inspectCodeActivation() {
       calls.push('preflight');
+      receipt = projectionReceipt(root, {
+        projection_classification: 'NO_ACTIVE_PROJECTION',
+        projection: { run_id: '', wave_id: '', orchestration_state: '', mode: 'global' },
+        completed_at_unix_ms: nowUnixMs
+      });
+      wrapper = projectionWrapper(receipt, { current: preflightWrapperCurrent });
       return {
         safe: true,
         code: 'READY',
@@ -671,7 +865,12 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
       connectorAcknowledged = true;
       return this.connectorContractStatus(health.tool_contract, health.connector_tool_discovery);
     },
-    tunnel: { status: async () => true }
+    tunnel: {
+      status: async () => {
+        tunnelStatusCalls += 1;
+        return tunnelStatusCalls >= 3;
+      }
+    }
   };
   const recoveryPlaneStatus = {
     activation_epoch_id: activationEpochId,
@@ -715,7 +914,8 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
     getUiRevision: () => ({ disk_revision: revision, running_revision: revision }),
     getRecoveryPlaneStatus: () => recoveryPlaneStatus,
     recoveryHostRunningRevision: revision,
-    now: () => nowUnixMs
+    now: () => nowUnixMs,
+    waitFn: async (delayMs) => { tunnelWaits.push(delayMs); }
   });
 
   const census = await coordinator.finalCensus(activationEpochId);
@@ -729,9 +929,75 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   assert.equal(census.pass, true);
   assert.equal(census.verified, true);
   assert.equal(census.reason, null);
+  assert.equal(tunnelStatusCalls, 3, 'one transient Tunnel observation is retried within the same bounded census');
+  assert.deepEqual(tunnelWaits, [250, 250]);
 
   connectorAcknowledged = false;
-  wrapper.current = false;
+  coordinator.recordPendingCensus(activationEpochId, {
+    ...census,
+    verified: false,
+    pass: false,
+    connector_acknowledged: false,
+    connector_validation: {
+      valid: false,
+      code: 'UPDATE_INCOMPLETE',
+      reasons: ['CONNECTOR_ACKNOWLEDGEMENT_PENDING']
+    },
+    reason: 'UPDATE_INCOMPLETE'
+  });
+  const callsBeforeReuse = calls.length;
+  const reused = await coordinator.finalCensus(activationEpochId, { reusePendingProjection: true });
+  assert.deepEqual(calls.slice(callsBeforeReuse), ['health', 'connector-ack'],
+    'projection reuse must skip only the expensive preflight while keeping live health and connector ACK');
+  assert.equal(reused.projection_rebuild_reused, true);
+  assert.equal(reused.projection_rebuild_verified, true);
+  assert.equal(reused.connector_acknowledged, true);
+  assert.equal(reused.pass, true);
+
+  connectorAcknowledged = false;
+  nowUnixMs += (5 * 60 * 1000) + 1;
+  connectorRediscoveredAt = new Date(nowUnixMs - 1000).toISOString();
+  const callsBeforeStaleRefresh = calls.length;
+  const refreshed = await coordinator.finalCensus(activationEpochId, { reusePendingProjection: true });
+  assert.deepEqual(calls.slice(callsBeforeStaleRefresh), ['health', 'preflight', 'health', 'connector-ack'],
+    'a cached receipt that expires at finalize time must be rebuilt before the authoritative health read');
+  assert.equal(refreshed.projection_rebuild_reused, false);
+  assert.equal(refreshed.projection_rebuild_refreshed_after_stale_reuse, true);
+  assert.equal(refreshed.projection_rebuild_verified, true);
+  assert.equal(refreshed.pass, true);
+
+  const wrongWorkspaceReceipt = projectionReceipt(path.join(root, 'other-workspace'), {
+    projection_classification: 'NO_ACTIVE_PROJECTION',
+    projection: { run_id: '', wave_id: '', orchestration_state: '', mode: 'global' },
+    completed_at_unix_ms: nowUnixMs
+  });
+  wrapper = projectionWrapper(wrongWorkspaceReceipt);
+  coordinator.recordPendingCensus(activationEpochId, {
+    ...refreshed,
+    verified: false,
+    pass: false,
+    connector_acknowledged: false,
+    connector_validation: {
+      valid: false,
+      code: 'UPDATE_INCOMPLETE',
+      reasons: ['CONNECTOR_ACKNOWLEDGEMENT_PENDING']
+    },
+    projection_rebuild_verified: true,
+    projection_rebuild_receipt: wrongWorkspaceReceipt,
+    reason: 'UPDATE_INCOMPLETE'
+  });
+  connectorAcknowledged = false;
+  const callsBeforeWorkspaceMismatch = calls.length;
+  const workspaceMismatch = await coordinator.finalCensus(activationEpochId, { reusePendingProjection: true });
+  assert.deepEqual(calls.slice(callsBeforeWorkspaceMismatch), ['health'],
+    'workspace mismatch must fail closed instead of triggering the staleness-only rebuild fallback');
+  assert.equal(workspaceMismatch.projection_rebuild_refreshed_after_stale_reuse, false);
+  assert.equal(workspaceMismatch.pass, false);
+  assert.ok(workspaceMismatch.projection_rebuild_validation.reasons.includes('PREFLIGHT_WORKSPACE_MISMATCH'));
+  assert.ok(workspaceMismatch.projection_rebuild_validation.reasons.includes('HEALTH_WORKSPACE_MISMATCH'));
+
+  connectorAcknowledged = false;
+  preflightWrapperCurrent = false;
   const incomplete = await coordinator.finalCensus(activationEpochId);
   assert.deepEqual(calls.slice(-2), ['preflight', 'health']);
   assert.equal(incomplete.connector_acknowledgement.attempted, false);
@@ -743,7 +1009,7 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   // A green connector projection from lightweightSnapshot must not be mixed
   // with a later MCP health observation whose discovery receipt belongs to a
   // retired process.  The exact post-preflight health receipt is authoritative.
-  wrapper.current = true;
+  preflightWrapperCurrent = true;
   const originalHealth = orchestrator.currentMcpHealth;
   orchestrator.currentMcpHealth = async () => {
     const value = await originalHealth();
@@ -1022,6 +1288,64 @@ test('Recovery Host remains available for an explicit retry after a FAILED epoch
   assert.equal(status.activation_epoch.admission_open, false);
   assert.equal(status.runtime, null);
   assert.equal(recoveryEnsureCalls, 0);
+  await host.stop();
+});
+
+test('Recovery Host terminalizes an expired resumable epoch and publishes control-plane readiness', async (t) => {
+  const { root, paths } = fixture(t);
+  const store = epochStore(paths);
+  const created = store.create({
+    activation_epoch_id: id('activation-expired', '0007'),
+    operation_id: id('operation-expired', '0007'),
+    expiresAtUnixMs: 1_700_000_001_000
+  });
+  store.update(created.activation_epoch_id, { state: 'HANDOFF', reason: 'replacement-requested' });
+  let recoveryEnsureCalls = 0;
+  let ipcStartCalls = 0;
+  const gateway = { start: async () => {}, stop: async () => {} };
+  const ipc = {
+    start: async () => { ipcStartCalls += 1; },
+    stop: async () => {}
+  };
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ workspace: root, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    gateway,
+    ipcServerFactory: () => ipc,
+    healthService: {},
+    revisionTracker: {
+      captureRunning: () => 'a'.repeat(64),
+      status: () => ({ running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false, state: 'current' })
+    },
+    orchestrator: {
+      activationEpochId: '',
+      setActivationEpoch() {},
+      codingMcpRevisionStatus: () => ({ running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64), update_pending: false, state: 'current' }),
+      lightweightSnapshot: async () => ({ mcpRunning: false, tunnelRunning: false, fullyReady: false }),
+      isManuallyStopped: () => false
+    },
+    recoveryPlaneService: {
+      setActivationEpoch() {},
+      stop: async () => {},
+      ensure: async () => { recoveryEnsureCalls += 1; return { state: 'healthy' }; }
+    },
+    exitProcess: () => {}
+  });
+
+  const status = await host.start();
+  const terminal = new ActivationEpochStore({ paths }).current();
+  assert.equal(host.running, true);
+  assert.equal(ipcStartCalls, 1, 'the authenticated Recovery control plane must become ready during cold start');
+  assert.equal(terminal.state, 'FAILED');
+  assert.equal(terminal.admission_state, 'CLOSED');
+  assert.equal(terminal.error.code, 'ACTIVATION_REQUEST_EXPIRED');
+  assert.equal(status.activation_epoch.state, 'FAILED');
+  assert.equal(status.activation_epoch.admission_open, false);
+  assert.equal(status.runtime, null);
+  assert.equal(recoveryEnsureCalls, 0, 'an expired transaction must not recover child runtimes outside an explicit refresh');
   await host.stop();
 });
 
@@ -1347,6 +1671,9 @@ test('finalize commits proof before opening admission and performs no post-open 
     'ready'
   ]);
   assert.equal(harness.calls.filter(([name]) => name === 'finalCensus').length, 1);
+  assert.deepEqual(harness.calls.find(([name]) => name === 'finalCensus')[2], {
+    reusePendingProjection: true
+  });
   assert.deepEqual(harness.calls.find(([name]) => name === 'completeActivationEpoch').slice(1), [
     harness.activationEpochId,
     harness.readyCommitDigest

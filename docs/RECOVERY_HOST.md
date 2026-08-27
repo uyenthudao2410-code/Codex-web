@@ -77,6 +77,14 @@ giữ nguyên Tunnel PID. MCP replacement mang expected code revision qua spawn 
 được dừng fail-closed nếu disk revision đổi trước postflight, thay vì âm thầm tải
 source mới dưới activation epoch cũ.
 
+Semantic watchdog không dùng `workspace_context` như một liveness probe. Trước
+canary, nó lấy HTTP control-health trong cửa sổ tối đa 5 giây; nếu health tạm thời
+không sẵn sàng, hoặc receipt báo snapshot/command đang bận, tick đó được skip và
+failure streak được reset. Chỉ ba semantic canary failures liên tiếp, trong lúc
+HTTP health xanh và runtime idle, mới đủ điều kiện soft-restart riêng Coding MCP.
+Primary lifecycle watchdog vẫn là authority cho process/Tunnel liveness; vì vậy
+tool call dài không bị biến thành semantic failure rồi tự cắt MCP đang phục vụ.
+
 ## Phase 3B independent Recovery MCP/Tunnel
 
 Recovery Host supervise một break-glass data plane riêng: Python
@@ -123,15 +131,54 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
   ledger/history/configuration/identity files are retained. A missing census,
   foreign process or incomplete postflight remains `UPDATE_INCOMPLETE`; no
   process-name kill or false `fullyReady` result is allowed.
-- `npm start` returns success when the exact component-refresh census is
-  complete; it does not require the external connector client to have completed
-  discovery in the same CLI lifetime. The truthful pending receipt is
-  `activation=VERIFYING admission=closed fully_ready=false connector=pending`.
-  Recovery Host keeps the epoch closed and automatically re-enters final census
-  only after a real current-process `tools/list`/`server/discover` receipt is
-  observed. While only that gate is pending, lightweight status uses the last
-  exact component receipt plus bounded live MCP/PID observations, avoiding a
-  second heavy OS-identity/Tunnel census on every watchdog tick.
+- The CLI process-refresh poll remains bounded at five minutes, while the
+  durable refresh bootstrap/activation transaction is bounded at ten minutes.
+  The second five-minute phase gives the real external ChatGPT connector time
+  to contact the newly verified MCP after a cold replacement/canonical census;
+  it is not a late-commit bypass. Every store mutation, READY commit and
+  admission-open boundary still rejects the epoch at or after the exact expiry.
+  A cold Recovery Host bootstrap may take up to 90 seconds (120 seconds
+  maximum). These bounds do not extend component-scoped activation requests.
+- After exact process replacement, `npm start` may report the truthful pending
+  receipt `activation=VERIFYING admission=closed fully_ready=false
+  connector=pending` while the external connector has not contacted the new MCP
+  process yet. Recovery Host keeps the epoch closed and automatically re-enters
+  final census after either an exact current-process `tools/list` /
+  `server/discover` receipt or the activation-only compatibility bootstrap
+  described below. While only that gate is pending, lightweight status uses the
+  last exact component receipt plus bounded live MCP/PID observations, avoiding
+  a second heavy OS-identity/Tunnel census on every watchdog tick. The first
+  cached-client `workspace_context` call can therefore return a retryable
+  bootstrap envelope; after the watchdog commits the ACK and opens admission,
+  the retry performs the real workspace read.
+- A watchdog census may reuse the exact durable projection-rebuild receipt only
+  while the epoch remains `VERIFYING`, admission remains `CLOSED`, the connector
+  is the sole incomplete gate, and all recorded process, workspace, device,
+  revision, UI, Recovery Plane, epoch and immutable-ledger gates still pass.
+  Both the watchdog census and the final READY-commit census still re-read MCP,
+  Tunnel, Recovery Plane, Electron UI, connector and activation identities. The
+  reuse therefore removes duplicate multi-minute ledger reconstruction without
+  treating a stale component observation as current readiness.
+- Khi watchdog thu được census `pass=true`, census đó được persist ở
+  `VERIFYING/CLOSED` trước khi `finalize()` chạy census độc lập. Nếu exact
+  projection receipt hết TTL năm phút ngay tại ranh giới này, coordinator chỉ
+  fresh-rebuild cặp preflight/health khi hai lỗi duy nhất là
+  `PREFLIGHT_RECEIPT_STALE` và `HEALTH_RECEIPT_STALE`. Sai workspace, ledger,
+  process/server identity, activation epoch hoặc receipt integrity vẫn fail-closed
+  và không được phép đi qua fallback.
+- The Electron UI launcher is intentionally the one visible child: Recovery
+  Host, MCP, Tunnel and recovery-plane processes remain hidden, while the UI is
+  started without the Windows `SW_HIDE` flag. The UI subscribes to
+  `ready-to-show`, retries the bounded `show/focus` reveal if Windows reports
+  it is still hidden, and registers its revision only after the window is
+  actually visible. A live Electron PID without a visible window is therefore
+  not a valid UI receipt and keeps the activation `UPDATE_INCOMPLETE`.
+- If a Recovery Host starts while a resumable activation epoch has already
+  expired, it terminalizes that epoch as `FAILED` with admission closed but
+  keeps authenticated control-plane IPC available. This is a recoverable
+  startup state: the next explicit `npm start` creates a new full-clean epoch;
+  the host does not auto-start child runtimes or report a late successful
+  bootstrap for the expired operation.
 - `dev:stop` persists watchdog suppression before dispatching an Electron
   single-instance stop signal containing the exact registered UI instance ID.
   The primary UI accepts that signal only when it matches its in-memory identity,
@@ -294,23 +341,36 @@ phải bằng 0; cờ `clean=true` riêng lẻ không đủ. Quy tắc này cũn
 checkpoint không có component cần restart.
 
 Closure cuối còn yêu cầu component running/disk revision khớp, Runtime + Tunnel
-fully ready và connector contract current. Exact `tools/list` SHA vừa là audit
-identity vừa là freshness identity bắt buộc. Sau bất kỳ process replacement hoặc
-full-clean epoch nào, kể cả contract SHA không đổi, phải có discovery receipt mới
-bound exact current process/server/epoch; persisted SHA không phải process-freshness
-proof. Nếu exact current SHA đã bằng acknowledged SHA thì không cần ghi một ACK mới,
-nhưng final readiness vẫn chờ discovery mới. Khi exact SHA thay đổi, connector phải giữ
-`CHANGED_NEEDS_DISCOVERY` cho tới khi target process hiện tại thật sự nhận
-`tools/list` hoặc `server/discover`. Receipt đó phải bind current contract SHA,
-process instance và server instance; sau receipt trạng thái mới được chuyển sang
-`CHANGED_DISCOVERED_NEEDS_ACK`. Chỉ lúc đó Recovery Host mới được ACK exact current
-SHA. Post-ACK yêu cầu `acknowledged_sha256 == tool_contract_sha256` và
-`connectorRefreshRequired == false`. `schema_version` và `profile` là metadata mô
-tả contract, không phải đường bypass exact-SHA freshness. Một `tools/call` thông
-thường, kể cả gọi thành công `workspace_context`, không thay thế discovery và
-không được tạo rediscovery timestamp. Không còn trạng thái
-`COMPATIBLE_ACKNOWLEDGED`. `LIVE_CLOSED` chỉ là local runtime closure; projection
-luôn ghi `release_state=NOT_RELEASED` và `production_state=NOT_CLAIMED`.
+fully ready và connector contract current. Exact `tools/list` SHA vẫn là audit
+identity; persisted SHA một mình không phải process-freshness proof. Sau process
+replacement hoặc full-clean epoch, connector freshness phải đi qua một trong hai
+đường exact:
+
+1. Target process nhận `tools/list` hoặc `server/discover`, tạo receipt bind đúng
+   current contract SHA, process instance và server instance; trạng thái đổi từ
+   `CHANGED_NEEDS_DISCOVERY` sang `CHANGED_DISCOVERED_NEEDS_ACK`, rồi Recovery
+   Host ACK exact current SHA thành `CURRENT_ACKNOWLEDGED`.
+2. Khi admission của activation đang đóng và current contract khai báo exact
+   predecessor tương thích (hoặc SHA đã acknowledge chính là current SHA), cached
+   ChatWeb connector được phép gọi duy nhất `workspace_context` qua no-workspace
+   bootstrap. Đường này không resolve path, không đọc workspace/ledger, không chạy
+   tool implementation và trả `completed=false`, `retryable=true`,
+   `workspace_accessed=false`. Receipt được lưu riêng, bind `client_type=chatweb`,
+   current contract/process/server/activation epoch/timestamp. Receipt exact đầu
+   tiên của cùng boundary này là immutable; các retry tiếp theo, kể cả qua client
+   identity mới, không được đổi timestamp sau khi Recovery Host đã ghi ACK. Recovery Host chỉ
+   ACK khi mọi field exact và predecessor/boundary hợp lệ; trạng thái cuối là
+   `CURRENT_COMPATIBLE_ACKNOWLEDGED`.
+
+Compatibility bootstrap không ghi `connectorRediscovered=true`, không tạo
+rediscovery timestamp và không được ghi thành ordinary successful tool contact.
+Một `tools/call` bình thường sau khi admission mở vẫn không thay thế discovery.
+Post-ACK của cả hai đường yêu cầu `acknowledged_sha256 == tool_contract_sha256`,
+`connectorRefreshRequired == false`, không còn acknowledgement pending, và final
+census phải bind lại đúng process/server/epoch trước khi mở admission. Trạng thái
+legacy `COMPATIBLE_ACKNOWLEDGED` vẫn bị từ chối. `LIVE_CLOSED` chỉ là local runtime
+closure; projection luôn ghi `release_state=NOT_RELEASED` và
+`production_state=NOT_CLAIMED`.
 
 Với MCP 2026 stateless, `task_context_id` vẫn là application-state handle ưu tiên.
 Nếu connector wrapper không echo handle này, chỉ `task_control` với exact `run_id`

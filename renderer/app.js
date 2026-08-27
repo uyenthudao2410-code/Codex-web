@@ -325,11 +325,16 @@ function connectorContractPresentation(status = {}) {
   const reported = String(status.connectorContractState || '').toUpperCase();
   const explicit = reported === 'COMPATIBLE_ACKNOWLEDGED' ? 'UNAVAILABLE' : reported;
   if (explicit === 'UNCHANGED_ACKNOWLEDGED') {
+    const activationClosed = status?.activationEpoch?.admission_open === false;
     return {
       state: explicit,
-      notice: false,
-      message: 'Tool contract không đổi và SHA hiện tại đã được acknowledge; process restart không yêu cầu tools/list mới.',
-      toast: 'Tool contract không đổi; connector vẫn acknowledged sau process restart.'
+      notice: activationClosed,
+      message: activationClosed
+        ? 'SHA contract đã acknowledge, nhưng activation mới vẫn chờ discovery hoặc compatibility bootstrap bound với process hiện tại.'
+        : 'Tool contract không đổi và SHA hiện tại đã được acknowledge.',
+      toast: activationClosed
+        ? 'Activation mới vẫn chờ connector freshness bound với process hiện tại.'
+        : 'Tool contract không đổi và SHA hiện tại đã được acknowledge.'
     };
   }
   if (explicit === 'CURRENT_ACKNOWLEDGED') {
@@ -338,6 +343,14 @@ function connectorContractPresentation(status = {}) {
       notice: false,
       message: 'Tool contract hiện tại đã được discovery và acknowledge.',
       toast: 'Tool contract hiện tại đã được discovery và acknowledge.'
+    };
+  }
+  if (explicit === 'CURRENT_COMPATIBLE_ACKNOWLEDGED') {
+    return {
+      state: explicit,
+      notice: false,
+      message: 'Tool contract hiện tại đã được compatibility ACK bằng no-workspace bootstrap của đúng process/epoch; không ghi nhận discovery giả.',
+      toast: 'Connector compatibility đã được ACK cho activation hiện tại.'
     };
   }
   if (explicit === 'CHANGED_DISCOVERED_NEEDS_ACK') {
@@ -352,8 +365,16 @@ function connectorContractPresentation(status = {}) {
     return {
       state: explicit,
       notice: true,
-      message: 'Tool contract SHA đã đổi. ChatGPT cần thực hiện tools/list hoặc server/discover cho contract hiện tại.',
-      toast: 'ChatGPT chưa discovery tool contract SHA hiện tại.'
+      message: 'Tool contract SHA đã đổi. ChatGPT cần discovery contract hiện tại hoặc thực hiện compatibility bootstrap an toàn khi gọi lại workspace_context.',
+      toast: 'Connector chưa có discovery hoặc compatibility bootstrap cho activation hiện tại.'
+    };
+  }
+  if (explicit === 'CHANGED_COMPATIBLE_NEEDS_ACK' || explicit === 'UNCHANGED_COMPATIBLE_NEEDS_ACK') {
+    return {
+      state: explicit,
+      notice: true,
+      message: 'Đã có no-workspace compatibility bootstrap bound đúng process/epoch; Recovery Host đang hoàn tất ACK chính thức.',
+      toast: 'Compatibility bootstrap hợp lệ; đang chờ Recovery Host ACK.'
     };
   }
   if (explicit === 'UNAVAILABLE') {

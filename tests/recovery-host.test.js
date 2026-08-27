@@ -352,15 +352,18 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   assert.equal(fs.existsSync(paths.recoveryHostDescriptorFile()), false);
 });
 
-test('connector-pending supervision upgrades one transient tunnel census then defers full census until real discovery', async (t) => {
+test('connector-pending supervision persists tunnel recovery and wakes on an exact compatibility bootstrap', async (t) => {
   const paths = fixture(t);
   const revision = 'a'.repeat(64);
   const epochId = 'activation-connector-pending-0001';
   const processInstanceId = 'coding-process-instance-0001';
   const serverInstanceId = 'coding-server-instance-00001';
-  let discoveryObserved = false;
+  let bootstrapObserved = false;
   let lightweightCalls = 0;
   let censusCalls = 0;
+  let persistedCensusCalls = 0;
+  let finalizeCalls = 0;
+  const activationOrder = [];
   let tunnelStatusCalls = 0;
   let exactRevisionCalls = 0;
   const health = () => ({
@@ -372,10 +375,22 @@ test('connector-pending supervision upgrades one transient tunnel census then de
     device_id: '12345678-1234-4123-8123-123456789abc',
     device_instance_id: 'device-instance-connector-0001',
     code_revision: revision,
-    tool_contract: { schema_version: 1, profile: 'smart-v3', sha256: 'f'.repeat(64) },
-    connector_tool_discovery: discoveryObserved ? {
-      current_contract_observed: true,
+    tool_contract: {
+      schema_version: 1,
+      profile: 'smart-v3',
+      sha256: 'f'.repeat(64),
+      compatible_predecessor_sha256: ['e'.repeat(64)]
+    },
+    connector_tool_discovery: null,
+    connector_activation_bootstrap: bootstrapObserved ? {
+      current_contract_contact: true,
+      client_id: 'chatweb-recovery-host-test',
+      client_type: 'chatweb',
+      method: 'tools/call',
+      tool_name: 'workspace_context',
+      workspace_accessed: false,
       contract_sha256: 'f'.repeat(64),
+      activation_epoch_id: epochId,
       process_instance_id: processInstanceId,
       server_instance_id: serverInstanceId,
       observed_at: '2026-08-27T06:00:00.000Z'
@@ -385,14 +400,15 @@ test('connector-pending supervision upgrades one transient tunnel census then de
     setFullCleanActivation() {},
     setFullCleanSourceCheckpointResolver() {},
     currentMcpHealth: async () => health(),
-    connectorContractStatus: (_contract, discovery) => ({
+    connectorContractStatus: (_contract, _discovery, _contact, bootstrap) => ({
       currentSha256: 'f'.repeat(64),
       acknowledgedSha256: 'e'.repeat(64),
-      contractState: discovery ? 'CHANGED_DISCOVERED_NEEDS_ACK' : 'CHANGED_NEEDS_DISCOVERY',
-      refreshRequired: !discovery,
-      acknowledgementPending: Boolean(discovery),
-      rediscovered: Boolean(discovery),
-      rediscoveredAt: discovery?.observed_at || null
+      contractState: bootstrap ? 'CHANGED_COMPATIBLE_NEEDS_ACK' : 'CHANGED_NEEDS_DISCOVERY',
+      refreshRequired: !bootstrap,
+      acknowledgementPending: Boolean(bootstrap),
+      rediscovered: false,
+      rediscoveredAt: null,
+      bootstrapCurrent: Boolean(bootstrap)
     }),
     activationEpochStatus: () => ({
       activation_epoch_id: epochId,
@@ -498,10 +514,35 @@ test('connector-pending supervision upgrades one transient tunnel census then de
   }), 'utf8');
   host.fullCleanActivation = {
     current: () => epoch,
-    finalCensus: async () => {
+    finalCensus: async (_epochId, options = {}) => {
       censusCalls += 1;
+      assert.equal(_epochId, epochId);
+      assert.equal(options.reusePendingProjection, true,
+        'connector-pending watchdog census must reuse only the strict durable projection receipt');
       epoch.verification.tunnel_health_verified = true;
-      return { pass: false, activation_epoch_id: epochId, reason: 'UPDATE_INCOMPLETE' };
+      return {
+        pass: bootstrapObserved,
+        verified: bootstrapObserved,
+        activation_epoch_id: epochId,
+        reason: bootstrapObserved ? null : 'UPDATE_INCOMPLETE'
+      };
+    },
+    recordPendingCensus: (_epochId, census) => {
+      persistedCensusCalls += 1;
+      activationOrder.push(`persist:${census.pass}`);
+      assert.equal(_epochId, epochId);
+      assert.equal(census.activation_epoch_id, epochId);
+      epoch.verification = { ...epoch.verification, ...census };
+      return epoch;
+    },
+    finalize: async (_epochId) => {
+      finalizeCalls += 1;
+      activationOrder.push('finalize');
+      assert.equal(_epochId, epochId);
+      assert.equal(epoch.verification.pass, true,
+        'the exact passing census must be durable before independent finalize begins');
+      assert.equal(epoch.admission_state, 'CLOSED');
+      return { state: 'READY', admission_open: true, fully_ready: true };
     }
   };
   host.running = true;
@@ -510,6 +551,7 @@ test('connector-pending supervision upgrades one transient tunnel census then de
   assert.equal(lightweightCalls, 0);
   assert.equal(tunnelStatusCalls, 1, 'a transient negative census must be upgraded by one exact live Tunnel probe');
   assert.equal(censusCalls, 1, 'a recovered Tunnel probe must refresh the authoritative durable census once');
+  assert.equal(persistedCensusCalls, 1, 'the refreshed non-terminal census must replace stale durable evidence');
   assert.equal(pending.mcpRunning, true);
   assert.equal(pending.tunnelRunning, true, 'exact prior tunnel receipt plus unchanged live PID is retained while admission stays closed');
   assert.equal(pending.connectorContractState, 'CHANGED_NEEDS_DISCOVERY');
@@ -517,15 +559,19 @@ test('connector-pending supervision upgrades one transient tunnel census then de
   await host.superviseOnce();
   assert.equal(tunnelStatusCalls, 1, 'a verified pending Tunnel must not be re-probed on every supervision tick');
   assert.equal(censusCalls, 1, 'connector-pending supervision must defer further census work until real discovery');
+  assert.equal(persistedCensusCalls, 1);
   const cached = host.cachedActivationSnapshot();
   assert.equal(cached.snapshotSource, 'activation_connector_pending_cache');
   assert.equal(cached.snapshotBusy, false);
   assert.equal(cached.fullyReady, false);
   assert.equal(exactRevisionCalls, 0, 'cached read-only snapshots must not start blocking OS identity probes');
 
-  discoveryObserved = true;
+  bootstrapObserved = true;
   await host.superviseOnce();
-  assert.equal(censusCalls, 2, 'real current-process discovery must trigger the authoritative final census and ACK path');
+  assert.equal(censusCalls, 2, 'an exact current-process compatibility bootstrap must trigger the authoritative final census and ACK path');
+  assert.equal(persistedCensusCalls, 2, 'the passing compatibility census must replace the older durable receipt before finalize');
+  assert.equal(finalizeCalls, 1);
+  assert.deepEqual(activationOrder.slice(-2), ['persist:true', 'finalize']);
   assert.equal(lightweightCalls, 0);
 });
 
@@ -1083,6 +1129,9 @@ test('activation launchers propagate the epoch through argv and child environmen
   assert.equal(launches[0].options.env.WEBCODEX_PROCESS_ROLE, 'recovery-host');
   assert.equal(launches[1].options.env.WEBCODEX_PROCESS_ROLE, 'electron-ui');
   assert.equal(launches[2].options.env.WEBCODEX_RECOVERY_BOOTSTRAP_ID, 'bootstrap-operation-0001');
+  assert.equal(launches[0].options.windowsHide, true, 'Recovery Host must remain a background process');
+  assert.equal(launches[1].options.windowsHide, false, 'Electron UI must be allowed to create a visible Windows window');
+  assert.equal(launches[2].options.windowsHide, true, 'bootstrap Recovery Host must remain a background process');
 });
 
 test('activation launchers reject expired requests before invoking the process spawn boundary', async () => {
@@ -1116,6 +1165,50 @@ test('Electron main delegates runtime ownership to Recovery Host', () => {
   assert.match(main, /suppressUiRecovery\(reason\)/);
   assert.match(main, /quitUi\('operator_quit'\)/);
   assert.equal(RPC_ACTIONS.includes('client.suppress_ui_recovery'), true);
+});
+
+test('Electron UI registers with Recovery Host only after its window is visible', () => {
+  const root = path.resolve(__dirname, '..');
+  const main = fs.readFileSync(path.join(root, 'electron', 'main.js'), 'utf8');
+  const createStart = main.indexOf('function createChatWindow()');
+  const managerStart = main.indexOf('function openManagerWindow()');
+  const startupStart = main.indexOf('app.whenReady().then(async () => {');
+  const startupEnd = main.indexOf("log.info('Coding Tools MCP UI đã kết nối Recovery Host');", startupStart);
+  assert.ok(createStart >= 0 && managerStart > createStart);
+  assert.ok(startupStart >= 0 && startupEnd > startupStart);
+
+  const createSource = main.slice(createStart, managerStart);
+  const revealFunction = createSource.indexOf('const revealOpeningWindow =');
+  const readyListener = createSource.indexOf("openingWindow.once('ready-to-show'");
+  const loadFile = createSource.indexOf('chatWindow.loadFile(');
+  const showWindow = createSource.indexOf('openingWindow.show()', revealFunction);
+  const visibleGuard = createSource.indexOf('openingWindow.isVisible()', showWindow);
+  const markReady = createSource.indexOf('uiWindowReady = true', visibleGuard);
+  const register = createSource.indexOf('registerUiRevision()', markReady);
+  const revealOnReady = createSource.indexOf('() => revealOpeningWindow()', readyListener);
+  assert.ok(revealFunction >= 0 && readyListener > revealFunction && readyListener < loadFile,
+    'ready-to-show must be subscribed before local HTML can load');
+  assert.ok(showWindow > revealFunction && visibleGuard > showWindow && markReady > visibleGuard && register > markReady,
+    'the window must be shown, verified visible, and marked ready before UI registration');
+  assert.ok(revealOnReady > readyListener && revealOnReady < loadFile,
+    'ready-to-show must trigger the bounded visible-window reveal path');
+
+  const registerStart = main.indexOf('async function registerUiRevision()');
+  const registerEnd = main.indexOf('async function suppressUiRecovery', registerStart);
+  const registerSource = main.slice(registerStart, registerEnd);
+  assert.match(registerSource, /!uiWindowReady/);
+  assert.match(registerSource, /chatWindow\.isDestroyed\(\)/);
+  assert.match(registerSource, /chatWindow\.webContents\.isDestroyed\(\)/);
+
+  const startupSource = main.slice(startupStart, startupEnd);
+  const createAtStartup = startupSource.indexOf('createChatWindow()');
+  assert.ok(createAtStartup >= 0);
+  assert.doesNotMatch(startupSource.slice(0, createAtStartup), /registerUiRevision\(\)/,
+    'startup must not publish UI readiness before creating and showing the window');
+
+  const managerSource = main.slice(managerStart, main.indexOf('function registerIpc()', managerStart));
+  assert.ok(managerSource.indexOf("managerWindow.once('ready-to-show'") < managerSource.indexOf('managerWindow.loadFile('),
+    'the manager window must subscribe before loading local HTML');
 });
 
 test('Recovery Host restart resolves the current accepted checkpoint and rejects caller drift', async (t) => {

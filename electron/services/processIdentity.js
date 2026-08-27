@@ -20,11 +20,15 @@ const DEFAULT_WAIT_TIMEOUT_MS = 5_000;
 const POWERSHELL_OBSERVE_SCRIPT = [
   '& { param([int]$processId)',
   '$ErrorActionPreference = "Stop"',
-  '$process = Get-CimInstance Win32_Process -Filter ("ProcessId=" + $processId)',
-  'if ($null -eq $process) { exit 3 }',
-  '$creation = $process.CreationDate',
-  'if ($null -eq $creation) { exit 4 }',
-  '[Console]::Out.Write($creation.ToUniversalTime().ToFileTimeUtc().ToString([Globalization.CultureInfo]::InvariantCulture))',
+  'try { $process = Get-Process -Id $processId -ErrorAction Stop } catch { exit 3 }',
+  '$creation = $process.StartTime.ToUniversalTime().ToFileTimeUtc()',
+  'if ($creation -le 0) { exit 4 }',
+  // Win32_Process.CreationDate, used by the original persisted receipt, has
+  // microsecond precision. Get-Process avoids the much slower CIM/WMI path;
+  // truncate its 100ns FILETIME to the same precision so existing and newly
+  // captured tokens remain byte-for-byte compatible.
+  '$creation = $creation - ($creation % 10)',
+  '[Console]::Out.Write($creation.ToString([Globalization.CultureInfo]::InvariantCulture))',
   '}'
 ].join('; ');
 

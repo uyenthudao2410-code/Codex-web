@@ -646,11 +646,16 @@ test('connector contract stays pending until current tools/list rediscovery is o
 test('runtime snapshots expose rediscovery without implicitly acknowledging a changed contract', async () => {
   const acknowledgedSha = 'b'.repeat(64);
   const currentSha = 'c'.repeat(64);
+  const activationEpochId = 'activation-runtime-snapshot-0001';
+  const processInstanceId = 'runtime-process-snapshot-0001';
+  const serverInstanceId = 'runtime-server-snapshot-00001';
   const contract = { schema_version: 1, profile: 'smart-v3', sha256: currentSha };
   const discovery = {
     current_contract_observed: true,
     contract_sha256: currentSha,
-    observed_at: '2026-08-26T00:00:00.000Z'
+    observed_at: '2026-08-26T00:00:00.000Z',
+    process_instance_id: processInstanceId,
+    server_instance_id: serverInstanceId
   };
   fs.writeFileSync(runtimeStatePath, JSON.stringify({
     manualStop: false,
@@ -662,10 +667,14 @@ test('runtime snapshots expose rediscovery without implicitly acknowledging a ch
     secrets: { get: () => 'token', status: () => ({}) },
     environment: { inspect: async () => ({}) },
     log: { info() {}, warn() {}, error() {} },
-    emitProgress() {}
+    emitProgress() {},
+    activationEpochId
   });
   orchestrator.currentMcpHealth = async () => ({
     ready: true,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    instance_id: serverInstanceId,
     tool_contract: contract,
     connector_tool_discovery: discovery
   });
@@ -760,6 +769,152 @@ test('activation connector acknowledgement accepts only an exact current-process
   assert.equal(acknowledged.acknowledgedSha256, currentSha);
   assert.equal(acknowledged.rediscovered, true);
   assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, currentSha);
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
+});
+
+test('activation connector compatibility bootstrap is exact, no-workspace, and never claims rediscovery', () => {
+  const acknowledgedSha = '34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c';
+  const currentSha = '57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053';
+  const activationEpochId = 'activation-compatible-bootstrap-0001';
+  const processInstanceId = 'compatible-process-instance-0001';
+  const serverInstanceId = 'compatible-server-instance-00001';
+  const nowUnixMs = Date.now();
+  const observedAt = new Date(nowUnixMs - 10).toISOString();
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: acknowledgedSha,
+    chatgptToolContractSchemaVersion: 1,
+    chatgptToolContractProfile: 'smart-v3'
+  }), 'utf8');
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    activationEpochId
+  });
+  const bootstrap = {
+    observed: true,
+    current_contract_contact: true,
+    client_id: 'chatweb-connector-current',
+    client_type: 'chatweb',
+    method: 'tools/call',
+    tool_name: 'workspace_context',
+    workspace_accessed: false,
+    contract_sha256: currentSha,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    server_instance_id: serverInstanceId,
+    observed_at: observedAt
+  };
+  const health = {
+    ready: true,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    instance_id: serverInstanceId,
+    tool_contract: {
+      schema_version: 1,
+      profile: 'smart-v3',
+      sha256: currentSha,
+      compatible_predecessor_sha256: [acknowledgedSha]
+    },
+    connector_tool_discovery: null,
+    connector_client_contact: null,
+    connector_activation_bootstrap: bootstrap
+  };
+
+  for (const invalidBootstrap of [
+    { ...bootstrap, process_instance_id: 'retired-process-instance-0001' },
+    { ...bootstrap, server_instance_id: 'retired-server-instance-00001' },
+    { ...bootstrap, activation_epoch_id: 'activation-retired-bootstrap-0001' },
+    { ...bootstrap, client_type: 'generic-client' },
+    { ...bootstrap, workspace_accessed: true },
+    { ...bootstrap, contract_sha256: 'f'.repeat(64) },
+    { ...bootstrap, observed_at: new Date(nowUnixMs + 60_000).toISOString() }
+  ]) {
+    assert.throws(
+      () => orchestrator.acknowledgeExactConnectorDiscovery({
+        ...health,
+        connector_activation_bootstrap: invalidBootstrap
+      }, { activationEpochId, nowUnixMs }),
+      { code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED' }
+    );
+    assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, acknowledgedSha);
+  }
+
+  const pending = orchestrator.connectorContractStatus(
+    health.tool_contract,
+    null,
+    null,
+    bootstrap
+  );
+  assert.equal(pending.contractState, 'CHANGED_COMPATIBLE_NEEDS_ACK');
+  assert.equal(pending.bootstrapCurrent, true);
+  assert.equal(pending.rediscovered, false);
+  assert.equal(pending.acknowledgementPending, true);
+
+  const acknowledged = orchestrator.acknowledgeExactConnectorDiscovery(health, {
+    activationEpochId,
+    nowUnixMs
+  });
+  assert.equal(acknowledged.contractState, 'CURRENT_COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(acknowledged.compatibilityAcknowledged, true);
+  assert.equal(acknowledged.compatibilityAcknowledgedAt, observedAt);
+  assert.equal(acknowledged.rediscovered, false);
+  assert.equal(acknowledged.rediscoveredAt, null);
+  assert.equal(acknowledged.acknowledgedSha256, currentSha);
+  assert.deepEqual(orchestrator.connectorContractFreshness(health, acknowledged), {
+    ready: true,
+    mode: 'compatible_activation_bootstrap',
+    observedAt
+  });
+  const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+  assert.equal(persisted.chatgptToolContractCompatibilitySource, 'declared_exact_predecessor_activation_bootstrap');
+  assert.equal(persisted.chatgptToolContractCompatibilityPredecessorSha256, acknowledgedSha);
+  assert.equal(persisted.chatgptToolContractCompatibilityContactSha256, currentSha);
+  assert.equal(persisted.chatgptToolContractCompatibilityProcessInstanceId, processInstanceId);
+  assert.equal(persisted.chatgptToolContractCompatibilityServerInstanceId, serverInstanceId);
+  assert.equal(persisted.chatgptToolContractCompatibilityActivationEpochId, activationEpochId);
+  assert.equal(Object.hasOwn(persisted, 'chatgptToolContractRediscoveredAt'), false);
+
+  const nextEpochId = 'activation-compatible-bootstrap-0002';
+  const nextBootstrap = {
+    ...bootstrap,
+    activation_epoch_id: nextEpochId,
+    process_instance_id: 'compatible-process-instance-0002',
+    server_instance_id: 'compatible-server-instance-00002',
+    observed_at: new Date(nowUnixMs - 5).toISOString()
+  };
+  const nextOrchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    activationEpochId: nextEpochId
+  });
+  const nextHealth = {
+    ...health,
+    activation_epoch_id: nextEpochId,
+    process_instance_id: nextBootstrap.process_instance_id,
+    instance_id: nextBootstrap.server_instance_id,
+    connector_activation_bootstrap: nextBootstrap
+  };
+  const sameContractPending = nextOrchestrator.connectorContractStatus(
+    nextHealth.tool_contract,
+    null,
+    null,
+    nextBootstrap
+  );
+  assert.equal(sameContractPending.contractState, 'UNCHANGED_COMPATIBLE_NEEDS_ACK');
+  const sameContractAcknowledged = nextOrchestrator.acknowledgeExactConnectorDiscovery(nextHealth, {
+    activationEpochId: nextEpochId,
+    nowUnixMs
+  });
+  assert.equal(sameContractAcknowledged.contractState, 'CURRENT_COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(sameContractAcknowledged.compatibilitySource, 'exact_current_contract_activation_bootstrap');
+  assert.equal(sameContractAcknowledged.rediscovered, false);
   fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
 });
 
