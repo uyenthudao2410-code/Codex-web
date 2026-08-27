@@ -6,16 +6,26 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const { RecoveryIpcClient, loadRecoveryDescriptor, isProcessAlive } = require('../electron/services/recoveryIpc');
+const { readJson } = require('../electron/services/jsonStore');
+const { ComponentRevisionTracker } = require('../electron/services/componentRevision');
+const { ActivationEpochStore } = require('../electron/services/activationEpoch');
 const {
+  bootstrapCurrentRecoveryHost,
+  readBootstrapResult
+} = require('../electron/services/recoveryBootstrap');
+const {
+  ensureRecoveryHost,
   descriptorMatchesInstallation,
-  descriptorRequestOptions
+  descriptorRequestOptions,
+  suppressDevelopmentRecoverySupervisor
 } = require('../electron/services/recoveryHostLauncher');
 const { activationSourceCheckpoint: sourceCheckpointForActivation } = require('../electron/services/activationClosure');
 
-const ACTIONS = new Set(['start', 'stop', 'replace', 'status']);
+const ACTIONS = new Set(['start', 'stop', 'replace', 'refresh', 'status']);
 const INSTANCE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
-const DEFAULT_TIMEOUT_MS = 35_000;
+const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_POLL_MS = 250;
+const REFRESH_OPERATION_ID_PATTERN = /^full-clean-refresh-[A-Za-z0-9_-]{15,127}$/;
 
 function lifecycleError(code, message, details = {}) {
   return Object.assign(new Error(message), { code, details });
@@ -24,7 +34,7 @@ function lifecycleError(code, message, details = {}) {
 function normalizeAction(value) {
   const action = String(value || 'start').trim().toLowerCase();
   if (!ACTIONS.has(action)) {
-    throw lifecycleError('DEV_UI_ACTION_INVALID', 'Usage: npm run dev | npm run dev:status | npm run dev:stop | npm run dev:replace');
+    throw lifecycleError('DEV_UI_ACTION_INVALID', 'Usage: npm start | npm run dev | npm run dev:status | npm run dev:stop | npm run dev:replace');
   }
   return action;
 }
@@ -107,6 +117,133 @@ function knownUnavailable(error) {
   return ['ENOENT', 'RECOVERY_DESCRIPTOR_STALE', 'RECOVERY_HOST_UNAVAILABLE', 'ECONNREFUSED'].includes(String(error?.code || ''));
 }
 
+function refreshOperationId(now = Date.now()) {
+  const value = `full-clean-refresh-${Number(now).toString(36)}-${crypto.randomBytes(12).toString('hex')}`;
+  if (!REFRESH_OPERATION_ID_PATTERN.test(value)) {
+    throw lifecycleError('DEV_UI_REFRESH_OPERATION_INVALID', 'The full-system refresh operation identity is invalid.');
+  }
+  return value;
+}
+
+function refreshRuntimeState(paths) {
+  try {
+    const state = readJson(paths.stateFile(), {});
+    return state && typeof state === 'object' ? state : {};
+  } catch {
+    return {};
+  }
+}
+
+function activationCensus(record) {
+  const verification = record?.verification;
+  if (!verification || typeof verification !== 'object') return null;
+  if (verification.final_census && typeof verification.final_census === 'object') {
+    return verification.final_census;
+  }
+  if (String(verification.activation_epoch_id || '') === String(record?.activation_epoch_id || '')) {
+    return verification;
+  }
+  return null;
+}
+
+const CONNECTOR_PENDING_FATAL_REASONS = new Set([
+  'CURRENT_CONTRACT_SHA256_INVALID',
+  'PROCESS_INSTANCE_ID_MISSING',
+  'SERVER_INSTANCE_ID_MISSING',
+  'VALIDATION_TIMESTAMP_INVALID',
+  'DISCOVERY_FROM_FUTURE',
+  'CONNECTOR_CONTRACT_STATUS_UNAVAILABLE',
+  'CONNECTOR_CONTRACT_UNAVAILABLE',
+  'STATUS_CURRENT_SHA256_MISMATCH'
+]);
+
+function connectorGateIsPending(census) {
+  const validation = census?.connector_validation;
+  if (!validation || typeof validation !== 'object' || Array.isArray(validation)) return false;
+  if (validation.valid === true) return true;
+  if (!Array.isArray(validation.reasons) || validation.reasons.length === 0) return false;
+  return validation.reasons.every((reason) => (
+    typeof reason === 'string' && !CONNECTOR_PENDING_FATAL_REASONS.has(reason)
+  ));
+}
+
+function refreshRuntimeReady(runtime, state, epochId, processAlive, record = null, previous = {}) {
+  const revision = runtime?.codeRevision?.codingMcp || {};
+  const epochCandidates = [
+    runtime?.activationEpoch?.activation_epoch_id,
+    state?.nativeActivationEpochId,
+    state?.tunnelActivationEpochId
+  ].map((value) => String(value || '').trim()).filter(Boolean);
+  const epochMatches = Boolean(epochId)
+    && epochCandidates.length >= 2
+    && epochCandidates.every((value) => value === epochId);
+  const mcpPid = Number(state?.nativePid || 0);
+  const tunnelPid = Number(state?.tunnelPid || 0);
+  const census = activationCensus(record);
+  const exactCensusPresent = Boolean(census
+    && String(census.activation_epoch_id || '') === epochId);
+  const componentCensusVerified = Boolean(census
+    && String(census.activation_epoch_id || '') === epochId
+    && census.process_identity_verified === true
+    && census.process_identity_changed === true
+    && census.tunnel_identity_changed === true
+    && census.tunnel_health_verified === true
+    && census.recovery_host_revision_matches === true
+    && census.recovery_host_epoch_matches === true
+    && census.ui_verified === true
+    && census.recovery_plane_identity_changed === true
+    && census.recovery_plane_epoch_matches === true
+    && census.recovery_plane_verified === true
+    && census.projection_rebuild_verified === true
+    && census.workspace_matches === true
+    && census.device_matches === true
+    && census.revision_matches === true
+    && census.epoch_matches === true
+    && connectorGateIsPending(census));
+  const previousMcpPid = Number(previous?.coding_mcp?.pid || 0);
+  const previousTunnelPid = Number(previous?.coding_tunnel?.pid || 0);
+  const previousRecoveryMcpPid = Number(previous?.recovery_mcp?.pid || 0);
+  const previousRecoveryTunnelPid = Number(previous?.recovery_tunnel?.pid || 0);
+  const previousHostPid = Number(previous?.recovery_host?.pid || 0);
+  const newRecoveryMcpPid = Number(census?.recovery_mcp_pid || 0);
+  const newRecoveryTunnelPid = Number(census?.recovery_tunnel_pid || 0);
+  const freshPids = Boolean(
+    mcpPid > 0 && tunnelPid > 0
+    && (!previousMcpPid || mcpPid !== previousMcpPid)
+    && (!previousTunnelPid || tunnelPid !== previousTunnelPid)
+    && (!previousRecoveryMcpPid || newRecoveryMcpPid !== previousRecoveryMcpPid)
+    && (!previousRecoveryTunnelPid || newRecoveryTunnelPid !== previousRecoveryTunnelPid)
+    && (!previousHostPid || Number(census?.host_pid || 0) !== previousHostPid)
+  );
+  // finalCensus probes the Coding Tunnel after the lightweight runtime
+  // snapshot. During an activation awaiting real-client discovery that
+  // snapshot can still say tunnelRunning=false even though the later, exact
+  // PID/epoch/control-plane probe passed. Prefer the stronger census receipt;
+  // do not let the earlier observational bit turn a completed process refresh
+  // into a CLI timeout.
+  const tunnelRunning = exactCensusPresent
+    ? census.tunnel_health_verified === true
+    : runtime?.tunnelRunning === true;
+  return {
+    mcpRunning: runtime?.mcpRunning === true,
+    tunnelRunning,
+    nativeAlive: runtime?.nativeAlive === true,
+    revisionMatches: Boolean(revision.running_revision && revision.disk_revision
+      && revision.running_revision === revision.disk_revision),
+    epochMatches,
+    mcpPid: Number.isSafeInteger(mcpPid) && mcpPid > 0 ? mcpPid : null,
+    tunnelPid: Number.isSafeInteger(tunnelPid) && tunnelPid > 0 ? tunnelPid : null,
+    processIdentitiesPresent: Boolean(String(state?.nativeInstanceId || '').trim()
+      && String(state?.tunnelInstanceId || '').trim()),
+    ownedProcessesAlive: Boolean(
+      mcpPid > 0 && tunnelPid > 0 && processAlive(mcpPid) && processAlive(tunnelPid)
+    ),
+    componentCensusVerified,
+    freshPids,
+    census
+  };
+}
+
 function spawnElectron(executable, appRoot, args, {
   spawnProcess = spawn,
   detached = false,
@@ -140,9 +277,19 @@ function createRuntimeDependencies(options = {}) {
   const expectedIdentity = paths.runtimeIdentity();
   const executable = options.electronExecutable || paths.executablePath();
   const appRoot = paths.appRoot();
+  const revisions = options.revisions || new ComponentRevisionTracker({ paths, refreshIntervalMs: 0 });
+  const epochStore = options.epochStore || (
+    typeof paths.activationEpochFile === 'function' || typeof paths.dataRoot === 'function'
+      ? new ActivationEpochStore({ paths })
+      : null
+  );
   const spawnProcess = options.spawnProcess || spawn;
   const sleep = options.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const output = options.output || ((line) => process.stdout.write(`${line}\n`));
+  const ensureHost = options.ensureRecoveryHost || ensureRecoveryHost;
+  const suppressDevelopmentSupervisor = options.suppressDevelopmentSupervisor
+    || suppressDevelopmentRecoverySupervisor;
+  const bootstrapRecoveryHost = options.bootstrapRecoveryHost || bootstrapCurrentRecoveryHost;
 
   async function inspect() {
     let descriptor;
@@ -179,6 +326,51 @@ function createRuntimeDependencies(options = {}) {
       status,
       ui: uiObservation(status),
       errorCode: null
+    };
+  }
+
+  async function inspectRefreshTarget() {
+    let descriptor;
+    try {
+      descriptor = loadRecoveryDescriptor(paths);
+    } catch (error) {
+      if (knownUnavailable(error)) return unavailableObservation(error);
+      throw error;
+    }
+    const installationMatches = descriptor.runtime_mode === 'development'
+      && descriptorMatchesInstallation(descriptor, expectedIdentity);
+    if (!installationMatches) {
+      return {
+        ...unavailableObservation(),
+        hostAvailable: true,
+        installationMatches: false,
+        descriptor,
+        errorCode: 'DEV_UI_INSTALLATION_MISMATCH'
+      };
+    }
+    const client = new RecoveryIpcClient({ paths });
+    let status = null;
+    try {
+      status = await client.ping({
+        ...descriptorRequestOptions(descriptor),
+        timeout: Math.min(8_000, Math.max(1_500, Number(options.refreshProbeTimeoutMs || 8_000)))
+      });
+    } catch (error) {
+      // Descriptor + exact OS identity remain sufficient mutation authority
+      // for the external bootstrap. A busy old event loop is precisely one of
+      // the states npm start must be able to replace.
+      if (!['RECOVERY_REQUEST_TIMEOUT', 'ECONNRESET', 'ECONNREFUSED'].includes(String(error?.code || ''))) {
+        throw error;
+      }
+    }
+    return {
+      hostAvailable: true,
+      installationMatches: true,
+      descriptor,
+      client,
+      status,
+      ui: uiObservation(status || {}),
+      errorCode: status ? null : 'RECOVERY_STATUS_UNAVAILABLE'
     };
   }
 
@@ -231,10 +423,79 @@ function createRuntimeDependencies(options = {}) {
     );
   }
 
+  async function refresh(observation) {
+    if (!observation?.client || !observation?.descriptor) {
+      throw lifecycleError('DEV_UI_HOST_UNAVAILABLE', 'Recovery Host is unavailable; the full-system refresh cannot be authenticated.');
+    }
+    const operationId = refreshOperationId();
+    try {
+      const supervisor = suppressDevelopmentSupervisor();
+      if (supervisor?.suppressed !== true && supervisor?.reason !== 'manifest_unavailable') {
+        throw lifecycleError(
+          'DEV_UI_REFRESH_SUPERVISOR_UNCERTAIN',
+          'The persisted development Recovery Supervisor could not be suppressed safely.',
+          { reason: supervisor?.reason || 'unknown' }
+        );
+      }
+      const requestedAtUnixMs = Date.now();
+      const expectedDiskRevision = revisions.disk('recovery_host', { force: true }).revision;
+      const result = await bootstrapRecoveryHost({
+        app: { isPackaged: false, getAppPath: () => appRoot },
+        paths,
+        client: observation.client,
+        descriptor: observation.descriptor,
+        status: observation.status,
+        operationId,
+        sourceCheckpoint: null,
+        expectedDiskRevision,
+        refresh: true,
+        forceRefresh: true,
+        requestedAtUnixMs,
+        expiresAtUnixMs: requestedAtUnixMs + Math.min(120_000, Math.max(60_000, Number(options.timeoutMs || DEFAULT_TIMEOUT_MS))),
+        timeoutMs: 15_000,
+        spawnProcess
+      });
+      return { operationId, result, expectedDiskRevision };
+    } catch (error) {
+      throw lifecycleError(
+        String(error?.code || 'DEV_UI_REFRESH_FAILED'),
+        String(error?.message || 'Full-system refresh was refused by Recovery Host.'),
+        { operation_id: operationId, cause_code: error?.code || null }
+      );
+    }
+  }
+
   return {
     inspect,
+    inspectRefreshTarget,
+    ensureRefreshHost: async () => {
+      await ensureHost({
+        app: { isPackaged: false, getAppPath: () => appRoot },
+        paths,
+        log: options.log || { warn() {}, error() {} },
+        timeoutMs: Math.min(20_000, Math.max(5_000, Number(options.refreshHostTimeoutMs || 15_000))),
+        spawnProcess,
+        sleep,
+        suppressDevelopmentSupervisor
+      });
+      return inspectRefreshTarget();
+    },
     activate,
     suppress,
+    refresh,
+    runtimeState: () => refreshRuntimeState(paths),
+    recoveryPlaneState: () => {
+      try { return readJson(paths.recoveryPlaneStateFile(), {}); } catch { return {}; }
+    },
+    activationRecord: () => {
+      try { return epochStore?.current?.() || null; } catch { return null; }
+    },
+    bootstrapResult: (operationId) => {
+      try { return readBootstrapResult(paths, operationId) || null; } catch { return null; }
+    },
+    descriptor: () => {
+      try { return loadRecoveryDescriptor(paths); } catch { return null; }
+    },
     runtimeSnapshot: (observation) => {
       if (!observation?.client || !observation?.descriptor) return Promise.resolve(null);
       return observation.client.call(
@@ -477,12 +738,236 @@ async function replaceLifecycle(deps) {
   return replacement;
 }
 
+function previousRefreshIdentities(observation, runtimeState = {}, recoveryPlaneState = {}) {
+  return {
+    recovery_host: {
+      pid: Number(observation?.descriptor?.owner_pid || 0) || null,
+      instance_id: String(observation?.descriptor?.instance_id || '') || null
+    },
+    electron_ui: {
+      pid: Number(observation?.ui?.pid || 0) || null,
+      instance_id: String(observation?.ui?.instanceId || '') || null
+    },
+    coding_mcp: {
+      pid: Number(runtimeState?.nativePid || 0) || null,
+      instance_id: String(runtimeState?.nativeInstanceId || '') || null
+    },
+    coding_tunnel: {
+      pid: Number(runtimeState?.tunnelPid || 0) || null,
+      instance_id: String(runtimeState?.tunnelInstanceId || '') || null
+    },
+    recovery_mcp: {
+      pid: Number(recoveryPlaneState?.recoveryMcpPid || 0) || null,
+      instance_id: String(recoveryPlaneState?.recoveryMcpInstanceId || '') || null
+    },
+    recovery_tunnel: {
+      pid: Number(recoveryPlaneState?.recoveryTunnelPid || 0) || null,
+      instance_id: String(recoveryPlaneState?.recoveryTunnelInstanceId || '') || null
+    }
+  };
+}
+
+async function refreshLifecycle(deps) {
+  let before = typeof deps.inspectRefreshTarget === 'function'
+    ? await deps.inspectRefreshTarget()
+    : await deps.inspect();
+  assertSameDevelopmentInstallation(before);
+  if (!before.hostAvailable || !before.client || !before.descriptor) {
+    if (typeof deps.ensureRefreshHost !== 'function') {
+      throw lifecycleError(
+        'DEV_UI_HOST_UNAVAILABLE',
+        'Recovery Host is unavailable and npm start has no authenticated bootstrap path.'
+      );
+    }
+    deps.output('DEV_UI REFRESH bootstrap=RecoveryHost source=current-checkout');
+    before = await deps.ensureRefreshHost();
+    assertSameDevelopmentInstallation(before);
+    if (!before?.hostAvailable || !before?.client || !before?.descriptor) {
+      throw lifecycleError(
+        'DEV_UI_HOST_BOOTSTRAP_FAILED',
+        'npm start could not establish an authenticated current-checkout Recovery Host before refresh.'
+      );
+    }
+  }
+  const previousHostInstance = String(before.descriptor.instance_id || '').trim();
+  const previousUiInstance = String(before.ui?.instanceId || '').trim();
+  const beforeState = typeof deps.runtimeState === 'function' ? deps.runtimeState() : {};
+  const beforeRecoveryPlane = typeof deps.recoveryPlaneState === 'function'
+    ? deps.recoveryPlaneState() : {};
+  const previous = previousRefreshIdentities(before, beforeState, beforeRecoveryPlane);
+  deps.output([
+    'DEV_UI REFRESH',
+    'action=full_clean',
+    `previous_host=${previousHostInstance || 'unknown'}`,
+    `previous_ui=${previousUiInstance || 'none'}`,
+    'services=RecoveryHost,CodingMCP,CodingTunnel,RecoveryMCP,RecoveryTunnel,ElectronUI'
+  ].join(' '));
+
+  const request = await deps.refresh(before);
+  let epochId = String(
+    request?.result?.activation_epoch_id
+      || request?.result?.activationEpochId
+      || request?.activation_epoch_id
+      || ''
+  ).trim();
+  let replacementDescriptor = null;
+  if (!epochId && typeof deps.activationRecord === 'function') {
+    const deadline = Date.now() + deps.timeoutMs;
+    while (Date.now() < deadline) {
+      const record = deps.activationRecord();
+      const descriptor = typeof deps.descriptor === 'function' ? deps.descriptor() : null;
+      if (record
+        && String(record.operation_id || '') === String(request?.operationId || '')
+        && String(record.activation_epoch_id || '')
+        && descriptor
+        && String(descriptor.instance_id || '') !== previousHostInstance
+        && String(descriptor.activation_epoch_id || '') === String(record.activation_epoch_id || '')) {
+        epochId = String(record.activation_epoch_id);
+        replacementDescriptor = descriptor;
+        break;
+      }
+      const bootstrap = typeof deps.bootstrapResult === 'function'
+        ? deps.bootstrapResult(request?.operationId) : null;
+      if (bootstrap && ['failed', 'expired'].includes(String(bootstrap.state || ''))) {
+        throw lifecycleError(
+          String(bootstrap.error?.code || 'DEV_UI_REFRESH_BOOTSTRAP_FAILED'),
+          String(bootstrap.error?.message || 'Recovery Host refresh bootstrap failed.'),
+          { operation_id: request?.operationId || null, bootstrap }
+        );
+      }
+      await deps.sleep(deps.pollMs);
+    }
+  }
+  if (!epochId) {
+    throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNAVAILABLE',
+      'Recovery Host refresh did not expose a durable activation epoch.',
+      { operation_id: request?.operationId || null });
+  }
+
+  let replacement = null;
+  if (typeof deps.activationRecord !== 'function') {
+    replacement = await waitForObservation(
+      deps,
+      (current) => current.hostAvailable
+        && current.installationMatches === true
+        && String(current.descriptor?.instance_id || '') !== previousHostInstance
+        && String(current.descriptor?.activation_epoch_id || '') === epochId
+        && current.ui.state === 'CURRENT'
+        && Boolean(current.ui.instanceId)
+        && current.ui.instanceId !== previousUiInstance,
+      'the replacement Recovery Host and Electron UI for the refresh epoch'
+    );
+    replacementDescriptor = replacement.descriptor;
+  }
+
+  const deadline = Date.now() + deps.timeoutMs;
+  let lastRuntime = null;
+  let lastState = null;
+  let lastObservation = replacement;
+  let lastRecord = null;
+  while (Date.now() < deadline) {
+    lastRecord = typeof deps.activationRecord === 'function' ? deps.activationRecord() : null;
+    replacementDescriptor = typeof deps.descriptor === 'function'
+      ? (deps.descriptor() || replacementDescriptor) : replacementDescriptor;
+    try {
+      const census = activationCensus(lastRecord);
+      if (census?.runtime) lastRuntime = census.runtime;
+      else if (lastObservation?.client && typeof deps.runtimeSnapshot === 'function') {
+        lastRuntime = await deps.runtimeSnapshot(lastObservation);
+      }
+      lastState = typeof deps.runtimeState === 'function' ? deps.runtimeState() : {};
+      const readiness = refreshRuntimeReady(
+        lastRuntime, lastState, epochId, deps.processAlive, lastRecord, previous
+      );
+      const uiInstance = String(readiness.census?.ui_instance_id
+        || lastObservation?.ui?.instanceId || '').trim();
+      const hostCurrent = Boolean(replacementDescriptor
+        && String(replacementDescriptor.instance_id || '') !== previousHostInstance
+        && String(replacementDescriptor.activation_epoch_id || '') === epochId);
+      const exactCensusRequired = typeof deps.activationRecord === 'function';
+      const activationRecordCurrent = !exactCensusRequired || Boolean(lastRecord
+        && String(lastRecord.operation_id || '') === String(request?.operationId || '')
+        && String(lastRecord.activation_epoch_id || '') === epochId
+        && ['VERIFYING', 'READY'].includes(String(lastRecord.state || '')));
+      if (hostCurrent
+        && activationRecordCurrent
+        && uiInstance
+        && uiInstance !== previousUiInstance
+        && readiness.mcpRunning
+        && readiness.tunnelRunning
+        && readiness.nativeAlive
+        && readiness.revisionMatches
+        && readiness.epochMatches
+        && readiness.processIdentitiesPresent
+        && readiness.ownedProcessesAlive
+        && (!exactCensusRequired || (readiness.componentCensusVerified && readiness.freshPids))) {
+        const durableReady = lastRecord?.state === 'READY' && lastRecord?.admission_state === 'OPEN';
+        const admission = durableReady || (!exactCensusRequired
+          && lastRuntime?.activationEpoch?.admission_open === true)
+          ? 'open' : 'closed';
+        const fullyReady = exactCensusRequired
+          ? durableReady
+          : lastRuntime?.fullyReady === true;
+        const activation = String(lastRecord?.state || (fullyReady ? 'READY' : 'VERIFYING'));
+        const connectorState = String(lastRuntime?.connectorContractState || 'UNAVAILABLE');
+        const connector = fullyReady && admission === 'open' ? 'ready' : 'pending';
+        deps.output([
+          'DEV_UI REFRESHED',
+          'action=full_clean',
+          `epoch=${epochId}`,
+          `activation=${activation}`,
+          `host=${replacementDescriptor.instance_id}`,
+          `ui=${uiInstance}`,
+          `mcp_pid=${readiness.mcpPid || 'unknown'}`,
+          `tunnel_pid=${readiness.tunnelPid || 'unknown'}`,
+          `mcp=${readiness.mcpRunning ? 'ready' : 'stopped'}`,
+          `tunnel=${readiness.tunnelRunning ? 'ready' : 'stopped'}`,
+          `admission=${admission}`,
+          `fully_ready=${fullyReady ? 'true' : 'false'}`,
+          `connector=${connector}`,
+          `connector_state=${connectorState}`
+        ].join(' '));
+        return {
+          ...(lastObservation || {}),
+          descriptor: replacementDescriptor,
+          ui: lastObservation?.ui || { state: 'CURRENT', instanceId: uiInstance },
+          refresh: request,
+          epochId,
+          runtime: lastRuntime,
+          runtimeState: lastState,
+          activationRecord: lastRecord,
+          readiness
+        };
+      }
+    } catch {
+      // Replacement creates a short descriptor/IPC gap.  Keep polling while
+      // preserving the exact identity predicates above; no green state is
+      // inferred from a transient port or process alone.
+    }
+    await deps.sleep(deps.pollMs);
+  }
+  throw lifecycleError(
+    'DEV_UI_REFRESH_POSTFLIGHT_FAILED',
+    'Full-system refresh did not prove fresh Recovery Host, MCP, Tunnel, UI and activation-epoch identities.',
+    {
+      operation_id: request?.operationId || null,
+      activation_epoch_id: epochId,
+      host_instance_id: replacementDescriptor?.instance_id || lastObservation?.descriptor?.instance_id || null,
+      ui_instance_id: lastRecord ? activationCensus(lastRecord)?.ui_instance_id : lastObservation?.ui?.instanceId || null,
+      runtime: lastRuntime,
+      runtime_state: lastState,
+      activation_record: lastRecord
+    }
+  );
+}
+
 async function runLifecycle(action, dependencies = null) {
   const normalized = normalizeAction(action);
   const deps = dependencies || createRuntimeDependencies();
   if (normalized === 'status') return statusLifecycle(deps);
   if (normalized === 'stop') return stopLifecycle(deps);
   if (normalized === 'replace') return replaceLifecycle(deps);
+  if (normalized === 'refresh') return refreshLifecycle(deps);
   return startLifecycle(deps);
 }
 
@@ -514,6 +999,9 @@ module.exports = {
   startLifecycle,
   stopLifecycle,
   replaceLifecycle,
+  refreshLifecycle,
   runLifecycle,
-  lifecycleError
+  lifecycleError,
+  refreshOperationId,
+  refreshRuntimeReady
 };

@@ -147,6 +147,80 @@ def control_presence_projection(
 
 def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict[str, Any]:
     """Return the bounded authoritative state required by the 2-second panel poll."""
+    activation = runtime.activation_admission_snapshot(blocking=False)
+    if activation.get("admission_open") is not True:
+        # A full-clean activation deliberately closes tool admission while the
+        # replacement process rebuilds its projection and captures a canonical
+        # ledger census.  Panel polling must not compete with that transaction
+        # by reconciling and re-verifying the ledger every two seconds.  Return
+        # a stable fail-closed shape until the exact epoch is committed READY.
+        return {
+            "schema_version": 2,
+            "snapshot_scope": "live_control",
+            "state": "UPDATE_INCOMPLETE",
+            "activation": activation,
+            "task": {
+                "task_id": None,
+                "objective": "",
+                "status": "waiting",
+                "current_step": "Runtime activation pending",
+                "next_step": "Wait for the full-clean activation census to complete.",
+                "modified_files": [],
+                "current_command": None,
+                "updated_at": None,
+                "pause_reason": "RUNTIME_ACTIVATION_PENDING",
+            },
+            "run_id": "",
+            "run": None,
+            "waves": [],
+            "events": [],
+            "proofs": [],
+            "delegations": [],
+            "provider_traffic": {"automatic_routing": {}},
+            "capsule": None,
+            "runtime_activity": {
+                "schema_version": 1,
+                "state": "IDLE",
+                "active": False,
+                "active_tool_calls": 0,
+                "active_commands": 0,
+                "active_background_operations": 0,
+                "active_delegations": 0,
+                "write_active": False,
+                "managed_jobs": [],
+                "background_operations": [],
+            },
+            "counts": {"events": 0, "waves": 0, "checkpoints": 0},
+            "integrity": {"ok": False, "code": "UPDATE_INCOMPLETE"},
+            "runtime": {
+                "process_instance_id": runtime.process_instance_id,
+                "server_instance_id": runtime.server_instance_id,
+                "tool_contract": runtime.tool_contract,
+            },
+            "clients": [],
+            "authority": {
+                "controller": {
+                    "owner_client_id": "",
+                    "status": "unavailable",
+                    "fencing_token": 0,
+                    "expires_at": 0,
+                    "updated_at": "",
+                },
+                "write": {
+                    "owner": "",
+                    "status": "unavailable",
+                    "fencing_token": 0,
+                    "expires_at": 0,
+                },
+            },
+            "continuity": {
+                "safe_to_rotate_chatweb": False,
+                "reason_codes": ["RUNTIME_ACTIVATION_PENDING"],
+                "capsule_status": "unavailable",
+                "desktop_online": False,
+                "context_pressure": {"status": "unknown", "source": "activation_pending"},
+            },
+        }
     runtime._maybe_reconcile_stale_orchestration()
     runtime._reconcile_task_orchestration_projection()
     state = runtime.task_state.get()

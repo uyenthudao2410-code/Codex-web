@@ -216,6 +216,70 @@ test('Recovery Host lock rejects a second live owner and replaces a dead owner',
   assert.equal(releaseRecoveryHostLock(paths, 'replacement'), true);
 });
 
+test('duplicate replacement contender cannot fail the epoch owned by the live Recovery Host', async (t) => {
+  const paths = fixture(t);
+  const finalOwner = 'final-recovery-host-owner-0001';
+  const oldOwner = 'old-recovery-host-owner-00001';
+  const revision = 'a'.repeat(64);
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ autoStartServices: false }) },
+    secrets: {},
+    environment: {},
+    log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+    orchestrator: {
+      setFullCleanActivation() {},
+      setActivationEpoch() {},
+      codingMcpRevisionStatus: () => ({
+        running_revision: revision,
+        disk_revision: revision,
+        update_pending: false,
+        state: 'current'
+      }),
+      isManuallyStopped: () => false
+    },
+    healthService: {},
+    gateway: { start: async () => {}, stop: async () => {} },
+    revisionTracker: {
+      captureRunning: () => revision,
+      status: () => ({
+        running_revision: revision,
+        disk_revision: revision,
+        update_pending: false,
+        state: 'current'
+      })
+    },
+    recoveryPlaneService: { setActivationEpoch() {} },
+    processIdentityObserver: async (pid) => ({
+      state: 'live',
+      pid,
+      process_start_token: '123456789'
+    })
+  });
+  const created = host.activationEpochStore.create({
+    operation_id: 'duplicate-replacement-operation-0001',
+    expires_at_unix_ms: Date.now() + 60_000,
+    component_evidence: {
+      recovery_host: { instance_id: oldOwner, pid: 48001 }
+    }
+  });
+  host.activationEpochStore.update(created.activation_epoch_id, {
+    state: 'HANDOFF',
+    reason: 'replacement-owner-already-live'
+  });
+  acquireRecoveryHostLock(paths, finalOwner);
+  t.after(() => releaseRecoveryHostLock(paths, finalOwner));
+
+  await assert.rejects(host.start(), { code: 'RECOVERY_HOST_ALREADY_RUNNING' });
+  const current = host.activationEpochStore.current();
+  assert.equal(current.activation_epoch_id, created.activation_epoch_id);
+  assert.equal(current.state, 'HANDOFF');
+  assert.equal(current.admission_state, 'CLOSED');
+  assert.equal(current.error, null);
+  assert.equal(host.ownsLock, false);
+  assert.equal(host.running, false);
+});
+
 test('Recovery Host owns supervision and IPC without stopping the runtime when UI exits', async (t) => {
   const paths = fixture(t);
   const calls = { supervise: 0, runtimeStop: 0, gatewayStart: 0, gatewayStop: 0 };
@@ -286,6 +350,183 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   assert.equal(calls.gatewayStop, 1);
   assert.equal(fs.existsSync(paths.recoveryHostLockFile()), false);
   assert.equal(fs.existsSync(paths.recoveryHostDescriptorFile()), false);
+});
+
+test('connector-pending supervision upgrades one transient tunnel census then defers full census until real discovery', async (t) => {
+  const paths = fixture(t);
+  const revision = 'a'.repeat(64);
+  const epochId = 'activation-connector-pending-0001';
+  const processInstanceId = 'coding-process-instance-0001';
+  const serverInstanceId = 'coding-server-instance-00001';
+  let discoveryObserved = false;
+  let lightweightCalls = 0;
+  let censusCalls = 0;
+  let tunnelStatusCalls = 0;
+  let exactRevisionCalls = 0;
+  const health = () => ({
+    ready: true,
+    activation_epoch_id: epochId,
+    process_instance_id: processInstanceId,
+    instance_id: serverInstanceId,
+    workspace: 'E:\\DEV\\Codex-web',
+    device_id: '12345678-1234-4123-8123-123456789abc',
+    device_instance_id: 'device-instance-connector-0001',
+    code_revision: revision,
+    tool_contract: { schema_version: 1, profile: 'smart-v3', sha256: 'f'.repeat(64) },
+    connector_tool_discovery: discoveryObserved ? {
+      current_contract_observed: true,
+      contract_sha256: 'f'.repeat(64),
+      process_instance_id: processInstanceId,
+      server_instance_id: serverInstanceId,
+      observed_at: '2026-08-27T06:00:00.000Z'
+    } : null
+  });
+  const orchestrator = {
+    setFullCleanActivation() {},
+    setFullCleanSourceCheckpointResolver() {},
+    currentMcpHealth: async () => health(),
+    connectorContractStatus: (_contract, discovery) => ({
+      currentSha256: 'f'.repeat(64),
+      acknowledgedSha256: 'e'.repeat(64),
+      contractState: discovery ? 'CHANGED_DISCOVERED_NEEDS_ACK' : 'CHANGED_NEEDS_DISCOVERY',
+      refreshRequired: !discovery,
+      acknowledgementPending: Boolean(discovery),
+      rediscovered: Boolean(discovery),
+      rediscoveredAt: discovery?.observed_at || null
+    }),
+    activationEpochStatus: () => ({
+      activation_epoch_id: epochId,
+      state: 'UPDATE_INCOMPLETE',
+      epoch_state: 'VERIFYING',
+      admission_open: false,
+      update_incomplete: true
+    }),
+    codingMcpRevisionStatus: () => {
+      exactRevisionCalls += 1;
+      return {
+        running_revision: revision,
+        disk_revision: revision,
+        update_pending: false,
+        state: 'current'
+      };
+    },
+    lightweightSnapshot: async () => {
+      lightweightCalls += 1;
+      throw new Error('connector-pending supervision must not run blocking identity probes');
+    },
+    tunnel: {
+      status: async () => {
+        tunnelStatusCalls += 1;
+        return true;
+      }
+    },
+    supervise: async () => ({})
+  };
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ workspace: 'E:\\DEV\\Codex-web', autoStartServices: false }) },
+    secrets: {},
+    environment: {},
+    log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+    orchestrator,
+    healthService: {},
+    gateway: {},
+    processAlive: () => true,
+    revisionTracker: {
+      captureRunning: () => revision,
+      status: (_component, running) => ({
+        running_revision: running || revision,
+        disk_revision: revision,
+        update_pending: false,
+        state: 'current'
+      })
+    },
+    recoveryPlaneService: { setActivationEpoch() {} }
+  });
+  const epoch = {
+    operation_id: 'full-clean-refresh-connector-pending-0001',
+    activation_epoch_id: epochId,
+    state: 'VERIFYING',
+    admission_state: 'CLOSED',
+    verification: {
+      activation_epoch_id: epochId,
+      process_instance_id: processInstanceId,
+      server_instance_id: serverInstanceId,
+      supervisor_instance_id: 'coding-supervisor-instance-0001',
+      tunnel_instance_id: 'coding-tunnel-instance-000001',
+      tunnel_pid: 45002,
+      running_revision: revision,
+      process_identity_verified: true,
+      process_identity_changed: true,
+      tunnel_identity_changed: true,
+      tunnel_health_verified: false,
+      recovery_host_revision_matches: true,
+      recovery_host_epoch_matches: true,
+      ui_verified: true,
+      recovery_plane_identity_changed: true,
+      recovery_plane_epoch_matches: true,
+      recovery_plane_verified: true,
+      projection_rebuild_verified: true,
+      workspace_matches: true,
+      device_matches: true,
+      revision_matches: true,
+      epoch_matches: true,
+      connector_validation: { valid: false, reasons: ['CURRENT_CONTRACT_NOT_REDISCOVERED'] },
+      runtime: {
+        workspace: 'E:\\DEV\\Codex-web',
+        mcpRunning: true,
+        nativeAlive: true,
+        tunnelRunning: false,
+        fullyReady: false,
+        connectorContractState: 'CHANGED_NEEDS_DISCOVERY',
+        device: {
+          device_id: '12345678-1234-4123-8123-123456789abc',
+          device_instance_id: 'device-instance-connector-0001'
+        },
+        codeRevision: { codingMcp: { running_revision: revision, disk_revision: revision } }
+      }
+    }
+  };
+  fs.writeFileSync(paths.stateFile(), JSON.stringify({
+    nativePid: 45001,
+    nativeInstanceId: 'coding-supervisor-instance-0001',
+    nativeActivationEpochId: epochId,
+    nativeCodeRevision: revision,
+    tunnelPid: 45002,
+    tunnelInstanceId: 'coding-tunnel-instance-000001',
+    tunnelActivationEpochId: epochId
+  }), 'utf8');
+  host.fullCleanActivation = {
+    current: () => epoch,
+    finalCensus: async () => {
+      censusCalls += 1;
+      epoch.verification.tunnel_health_verified = true;
+      return { pass: false, activation_epoch_id: epochId, reason: 'UPDATE_INCOMPLETE' };
+    }
+  };
+  host.running = true;
+
+  const pending = await host.superviseOnce();
+  assert.equal(lightweightCalls, 0);
+  assert.equal(tunnelStatusCalls, 1, 'a transient negative census must be upgraded by one exact live Tunnel probe');
+  assert.equal(censusCalls, 1, 'a recovered Tunnel probe must refresh the authoritative durable census once');
+  assert.equal(pending.mcpRunning, true);
+  assert.equal(pending.tunnelRunning, true, 'exact prior tunnel receipt plus unchanged live PID is retained while admission stays closed');
+  assert.equal(pending.connectorContractState, 'CHANGED_NEEDS_DISCOVERY');
+
+  await host.superviseOnce();
+  assert.equal(tunnelStatusCalls, 1, 'a verified pending Tunnel must not be re-probed on every supervision tick');
+  assert.equal(censusCalls, 1, 'connector-pending supervision must defer further census work until real discovery');
+  const cached = host.cachedActivationSnapshot();
+  assert.equal(cached.snapshotSource, 'activation_connector_pending_cache');
+  assert.equal(cached.snapshotBusy, false);
+  assert.equal(cached.fullyReady, false);
+  assert.equal(exactRevisionCalls, 0, 'cached read-only snapshots must not start blocking OS identity probes');
+
+  discoveryObserved = true;
+  await host.superviseOnce();
+  assert.equal(censusCalls, 2, 'real current-process discovery must trigger the authoritative final census and ACK path');
+  assert.equal(lightweightCalls, 0);
 });
 
 test('new unsuppressed Recovery Host relaunches UI after initial registration grace expires', async (t) => {
@@ -942,4 +1183,10 @@ test('Recovery Host restart resolves the current accepted checkpoint and rejects
     sourceCheckpoint: { ...SOURCE_CHECKPOINT, wave_id: 'wave-recovery-host-other' }
   }), { code: 'ACTIVATION_SOURCE_CHECKPOINT_MISMATCH' });
   assert.equal(calls.length, 1);
+
+  await handler({ refresh: true, mode: 'full_clean_refresh', reason: 'npm_start_refresh' });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].refresh, true);
+  assert.equal(calls[1].mode, 'full_clean_refresh');
+  assert.equal(calls[1].sourceCheckpoint, null);
 });

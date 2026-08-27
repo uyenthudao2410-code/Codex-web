@@ -32,6 +32,9 @@ class ActivationLifecycleMixin:
         """
         epoch_id = str(os.environ.get(f"{ENV_PREFIX}_ACTIVATION_EPOCH_ID") or "").strip()
         configured_gate = str(os.environ.get(f"{ENV_PREFIX}_ACTIVATION_GATE") or "").strip().lower()
+        allow_acceptance_pending = str(
+            os.environ.get(f"{ENV_PREFIX}_ACTIVATION_ALLOW_ACCEPTANCE_PENDING") or ""
+        ).strip().lower()
         raw_expiry = str(os.environ.get(f"{ENV_PREFIX}_ACTIVATION_EXPIRES_AT_UNIX_MS") or "").strip()
         try:
             expires_at_unix_ms = int(raw_expiry) if raw_expiry else 0
@@ -40,6 +43,13 @@ class ActivationLifecycleMixin:
         self.activation_epoch_id = epoch_id or None
         self.activation_gate_config = configured_gate or "open"
         self.activation_admission = "closed" if configured_gate == "closed" else "open"
+        # This is startup-bound authority from the exact Recovery Host epoch,
+        # not a caller-controlled GET parameter. It preserves durable
+        # AWAITING_ACCEPTANCE rows during a process refresh while the ordinary
+        # live-work, ownership and ledger-integrity gates remain fail-closed.
+        self.activation_allow_acceptance_pending = bool(
+            epoch_id and configured_gate == "closed" and allow_acceptance_pending == "true"
+        )
         self.activation_expires_at_unix_ms = expires_at_unix_ms if expires_at_unix_ms > 0 else None
         self.activation_ready_commit_digest: str | None = None
         self.activation_completion_closed = False
@@ -126,7 +136,7 @@ class ActivationLifecycleMixin:
             # content-free census reader.  This mutates only the rebuildable
             # projection, never the canonical ledger.
             try:
-                if self.orchestration_ledger.current_active_run() is None:
+                if not self.orchestration_ledger.list_runs(limit=1, status="active"):
                     state = self.task_state.get()
                     current = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
                     self.task_state.update(
@@ -149,9 +159,32 @@ class ActivationLifecycleMixin:
         self._record_projection_rebuild_receipt(census, reconciled=projection.get("available") is True)
         return census
 
-    def activation_admission_snapshot(self) -> dict[str, Any]:
-        """Return the current startup epoch/admission state for operator payloads."""
-        with self.activation_lock:
+    def activation_admission_snapshot(self, *, blocking: bool = True) -> dict[str, Any]:
+        """Return the startup epoch/admission projection without making health hang.
+
+        Canonical activation preflight deliberately holds ``activation_lock``
+        while it captures the immutable ledger census and fences new work. That
+        census can take several seconds on a real retained ledger. The health
+        endpoint must remain independently observable during that interval, so
+        its non-blocking caller receives an explicitly CLOSED/busy projection
+        instead of waiting on the census and being misclassified as a dead MCP.
+        Mutating and commit paths retain the ordinary blocking snapshot.
+        """
+        acquired = self.activation_lock.acquire(blocking=blocking)
+        if not acquired:
+            return {
+                "activation_epoch_id": getattr(self, "activation_epoch_id", None),
+                "activation_gate": "closed",
+                "activation_admission": "closed",
+                "admission": "closed",
+                "admission_open": False,
+                "configured_gate": str(getattr(self, "activation_gate_config", "open") or "open"),
+                "ready_commit_digest": None,
+                "expires_at_unix_ms": getattr(self, "activation_expires_at_unix_ms", None),
+                "completion_closed": True,
+                "snapshot_busy": True,
+            }
+        try:
             admission = str(getattr(self, "activation_admission", "open") or "open").lower()
             expires_at_unix_ms = getattr(self, "activation_expires_at_unix_ms", None)
             return {
@@ -164,7 +197,10 @@ class ActivationLifecycleMixin:
                 "ready_commit_digest": getattr(self, "activation_ready_commit_digest", None),
                 "expires_at_unix_ms": expires_at_unix_ms,
                 "completion_closed": bool(getattr(self, "activation_completion_closed", False)),
+                "snapshot_busy": False,
             }
+        finally:
+            self.activation_lock.release()
 
     def activation_preflight_snapshot(
         self,
@@ -176,6 +212,9 @@ class ActivationLifecycleMixin:
             **self.activation_preflight(
                 operation_id=operation_id,
                 ignore_active_tool_calls=ignore_active_tool_calls,
+                allow_acceptance_pending=bool(
+                    getattr(self, "activation_allow_acceptance_pending", False)
+                ),
             ),
             **self.activation_admission_snapshot(),
             "workspace": str(self.workspace.root),

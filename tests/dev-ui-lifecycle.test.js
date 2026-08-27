@@ -17,6 +17,12 @@ const REVISION = 'a'.repeat(64);
 const ACCEPTED_HEAD = 'b'.repeat(40);
 const PROOF_FINGERPRINT = 'c'.repeat(64);
 
+test('package start contract routes through the full-system refresh lifecycle', () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
+  assert.equal(packageJson.scripts.start, 'node scripts/dev-ui-lifecycle.js refresh');
+  assert.equal(packageJson.scripts['dev:refresh'], packageJson.scripts.start);
+});
+
 function acceptedClosure(overrides = {}) {
   return {
     schema_version: 1,
@@ -364,6 +370,229 @@ test('dev:replace first activates a current handler, then stops and verifies a n
   assert.match(fixture.lines.at(-1), /DEV_UI REPLACED .*running_revision=.* disk_revision=/);
 });
 
+test('npm start refreshes the whole owned runtime and keeps connector readiness explicit', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const oldHost = fixture.current.descriptor.instance_id;
+  const oldUi = fixture.current.ui.instanceId;
+  const epoch = 'full-clean-refresh-test-0001';
+  fixture.deps.refresh = async () => {
+    fixture.current = {
+      ...observation('CURRENT', 'fresh-ui-instance-0000001', 43001),
+      descriptor: {
+        ...fixture.current.descriptor,
+        instance_id: 'fresh-recovery-host-0001',
+        activation_epoch_id: epoch
+      }
+    };
+    return { operationId: 'full-clean-refresh-test-operation-0001', result: { activation_epoch_id: epoch } };
+  };
+  fixture.deps.runtimeSnapshot = async () => ({
+    mcpRunning: true,
+    tunnelRunning: true,
+    nativeAlive: true,
+    fullyReady: false,
+    connectorContractState: 'UNAVAILABLE',
+    activationEpoch: { activation_epoch_id: epoch, admission_open: false },
+    codeRevision: { codingMcp: { running_revision: REVISION, disk_revision: REVISION } }
+  });
+  fixture.deps.runtimeState = () => ({
+    nativePid: 44001,
+    tunnelPid: 44002,
+    nativeInstanceId: 'fresh-mcp-supervisor-0001',
+    tunnelInstanceId: 'fresh-coding-tunnel-0001',
+    nativeActivationEpochId: epoch,
+    tunnelActivationEpochId: epoch
+  });
+  fixture.deps.processAlive = () => true;
+
+  const result = await runLifecycle('refresh', fixture.deps);
+  assert.equal(result.epochId, epoch);
+  assert.notEqual(result.descriptor.instance_id, oldHost);
+  assert.notEqual(result.ui.instanceId, oldUi);
+  assert.equal(result.readiness.mcpRunning, true);
+  assert.equal(result.readiness.tunnelRunning, true);
+  assert.equal(result.runtime.fullyReady, false, 'connector gate must not be invented by npm start');
+  assert.match(fixture.lines[0], /DEV_UI REFRESH action=full_clean/);
+  assert.match(fixture.lines.at(-1), /DEV_UI REFRESHED .*activation=VERIFYING .*admission=closed fully_ready=false connector=pending connector_state=UNAVAILABLE/);
+});
+
+test('npm start exits successfully after exact process refresh while connector discovery remains pending', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const operationId = 'full-clean-refresh-exact-operation-0001';
+  const epoch = 'full-clean-refresh-exact-epoch-0001';
+  const oldState = {
+    nativePid: 44001,
+    tunnelPid: 44002,
+    nativeInstanceId: 'old-mcp-supervisor-instance-01',
+    tunnelInstanceId: 'old-coding-tunnel-instance-01'
+  };
+  const newState = {
+    nativePid: 45001,
+    tunnelPid: 45002,
+    nativeInstanceId: 'new-mcp-supervisor-instance-01',
+    tunnelInstanceId: 'new-coding-tunnel-instance-01',
+    nativeActivationEpochId: epoch,
+    tunnelActivationEpochId: epoch
+  };
+  let runtimeStateReads = 0;
+  fixture.deps.runtimeState = () => (++runtimeStateReads === 1 ? oldState : newState);
+  fixture.deps.recoveryPlaneState = () => ({
+    recoveryMcpPid: 44003,
+    recoveryTunnelPid: 44004,
+    recoveryMcpInstanceId: 'old-recovery-mcp-instance-001',
+    recoveryTunnelInstanceId: 'old-recovery-tunnel-instance-1'
+  });
+  fixture.deps.refresh = async () => ({ operationId, result: { activation_epoch_id: epoch } });
+  fixture.deps.descriptor = () => ({
+    owner_pid: 45000,
+    instance_id: 'new-recovery-host-instance-0001',
+    activation_epoch_id: epoch
+  });
+  const runtime = {
+    mcpRunning: true,
+    // This is the earlier lightweight observation. The exact tunnel probe in
+    // the same final census below is the stronger postflight receipt.
+    tunnelRunning: false,
+    nativeAlive: true,
+    fullyReady: false,
+    connectorContractState: 'CHANGED_NEEDS_DISCOVERY',
+    activationEpoch: { activation_epoch_id: epoch, admission_open: false },
+    codeRevision: { codingMcp: { running_revision: REVISION, disk_revision: REVISION } }
+  };
+  fixture.deps.activationRecord = () => ({
+    operation_id: operationId,
+    activation_epoch_id: epoch,
+    state: 'VERIFYING',
+    admission_state: 'CLOSED',
+    verification: {
+      activation_epoch_id: epoch,
+      host_pid: 45000,
+      process_identity_verified: true,
+      process_identity_changed: true,
+      tunnel_identity_changed: true,
+      tunnel_health_verified: true,
+      recovery_host_revision_matches: true,
+      recovery_host_epoch_matches: true,
+      ui_verified: true,
+      ui_instance_id: 'new-electron-ui-instance-0001',
+      recovery_mcp_pid: 45003,
+      recovery_tunnel_pid: 45004,
+      recovery_plane_identity_changed: true,
+      recovery_plane_epoch_matches: true,
+      recovery_plane_verified: true,
+      projection_rebuild_verified: true,
+      workspace_matches: true,
+      device_matches: true,
+      revision_matches: true,
+      epoch_matches: true,
+      connector_validation: {
+        valid: false,
+        code: 'UPDATE_INCOMPLETE',
+        reasons: [
+          'CURRENT_CONTRACT_NOT_REDISCOVERED',
+          'ACKNOWLEDGED_SHA256_MISMATCH',
+          'STATUS_NOT_REDISCOVERED',
+          'CONNECTOR_REFRESH_REQUIRED',
+          'CONNECTOR_CONTRACT_CHANGED',
+          'CONNECTOR_CONTRACT_STATE_INVALID'
+        ]
+      },
+      runtime
+    }
+  });
+  fixture.deps.processAlive = () => true;
+
+  const result = await runLifecycle('refresh', fixture.deps);
+  assert.equal(result.epochId, epoch);
+  assert.equal(result.readiness.componentCensusVerified, true);
+  assert.equal(result.readiness.freshPids, true);
+  assert.equal(result.readiness.tunnelRunning, true);
+  assert.equal(result.runtime.tunnelRunning, false, 'the stale lightweight bit remains visible as evidence');
+  assert.match(fixture.lines.at(-1), /DEV_UI REFRESHED .*activation=VERIFYING .*mcp=ready tunnel=ready admission=closed fully_ready=false connector=pending connector_state=CHANGED_NEEDS_DISCOVERY/);
+});
+
+test('npm start bootstraps a missing Recovery Host and then performs the same full refresh', async () => {
+  const fixture = harness(unavailableObservation(Object.assign(new Error('missing'), { code: 'ENOENT' })));
+  const epoch = 'full-clean-refresh-cold-0001';
+  fixture.deps.ensureRefreshHost = async () => {
+    fixture.calls.push('ensure-refresh-host');
+    fixture.current = observation('CURRENT', 'bootstrap-ui-instance-0001', 43011);
+    fixture.current.descriptor = {
+      ...fixture.current.descriptor,
+      owner_pid: 43010,
+      instance_id: 'bootstrap-recovery-host-0001'
+    };
+    return fixture.current;
+  };
+  fixture.deps.refresh = async () => {
+    fixture.calls.push('full-clean-refresh');
+    fixture.current = observation('CURRENT', 'cold-refresh-ui-instance-001', 43021);
+    fixture.current.descriptor = {
+      ...fixture.current.descriptor,
+      owner_pid: 43020,
+      instance_id: 'cold-refresh-recovery-host-01',
+      activation_epoch_id: epoch
+    };
+    return {
+      operationId: 'full-clean-refresh-cold-operation-0001',
+      result: { activation_epoch_id: epoch }
+    };
+  };
+  fixture.deps.runtimeSnapshot = async () => ({
+    mcpRunning: true,
+    tunnelRunning: true,
+    nativeAlive: true,
+    fullyReady: false,
+    connectorContractState: 'UNAVAILABLE',
+    activationEpoch: { activation_epoch_id: epoch, admission_open: false },
+    codeRevision: { codingMcp: { running_revision: REVISION, disk_revision: REVISION } }
+  });
+  fixture.deps.runtimeState = () => ({
+    nativePid: 44011,
+    tunnelPid: 44012,
+    nativeInstanceId: 'cold-refresh-mcp-instance-01',
+    tunnelInstanceId: 'cold-refresh-tunnel-inst-01',
+    nativeActivationEpochId: epoch,
+    tunnelActivationEpochId: epoch
+  });
+  fixture.deps.processAlive = () => true;
+
+  const result = await runLifecycle('refresh', fixture.deps);
+  assert.equal(result.epochId, epoch);
+  assert.deepEqual(fixture.calls, ['ensure-refresh-host', 'full-clean-refresh']);
+  assert.match(fixture.lines[0], /DEV_UI REFRESH bootstrap=RecoveryHost source=current-checkout/);
+  assert.match(fixture.lines.at(-1), /DEV_UI REFRESHED .*activation=VERIFYING .*admission=closed fully_ready=false connector=pending/);
+});
+
+test('refresh dependency suppresses the persisted development supervisor before bootstrap', async () => {
+  const calls = [];
+  const deps = createRuntimeDependencies({
+    paths: {
+      runtimeIdentity: () => ({ mode: 'development', installation_id: 'c'.repeat(64) }),
+      executablePath: () => process.execPath,
+      appRoot: () => path.resolve(__dirname, '..')
+    },
+    revisions: { disk: () => ({ revision: REVISION }) },
+    output: () => {},
+    sleep: async () => {},
+    suppressDevelopmentSupervisor: () => {
+      calls.push('suppress-supervisor');
+      return { suppressed: true, reason: 'development_supervisor_disabled' };
+    },
+    bootstrapRecoveryHost: async (options) => {
+      calls.push('bootstrap-recovery-host');
+      assert.equal(options.refresh, true);
+      assert.equal(options.forceRefresh, true);
+      assert.equal(options.sourceCheckpoint, null);
+      return { activation_epoch_id: 'full-clean-refresh-dependency-0001' };
+    }
+  });
+
+  const result = await deps.refresh(observation('CURRENT'));
+  assert.deepEqual(calls, ['suppress-supervisor', 'bootstrap-recovery-host']);
+  assert.equal(result.result.activation_epoch_id, 'full-clean-refresh-dependency-0001');
+});
+
 test('dev stop and replace refuse a non-development UI even when revisions match', async () => {
   for (const action of ['stop', 'replace']) {
     const fixture = harness(observation('CURRENT'));
@@ -378,7 +607,7 @@ test('dev stop and replace refuse a non-development UI even when revisions match
 
 test('all mutating lifecycle actions fail closed for another installation', async () => {
   const foreign = { ...observation('CURRENT'), installationMatches: false };
-  for (const action of ['start', 'stop', 'replace']) {
+  for (const action of ['start', 'stop', 'replace', 'refresh']) {
     const fixture = harness(foreign);
     await assert.rejects(runLifecycle(action, fixture.deps), { code: 'DEV_UI_INSTALLATION_MISMATCH' });
     assert.deepEqual(fixture.calls, []);

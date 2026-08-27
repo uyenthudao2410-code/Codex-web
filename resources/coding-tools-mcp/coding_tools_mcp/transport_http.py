@@ -252,8 +252,16 @@ class HTTPSessionManager:
         )[:MAX_TRACKED_SESSION_ALIASES]
         self._sessions = dict(newest)
 
-    def stats(self) -> dict[str, int]:
-        with self._lock:
+    def stats(self, *, blocking: bool = True) -> dict[str, Any]:
+        acquired = self._lock.acquire(blocking=blocking)
+        if not acquired:
+            return {
+                "tracked_aliases": None,
+                "shared_runtimes": None,
+                "execution_contexts": None,
+                "snapshot_busy": True,
+            }
+        try:
             context_ids = {
                 str(getattr(record.runtime, "execution_context_id", "") or "")
                 for record in self._sessions.values()
@@ -263,7 +271,10 @@ class HTTPSessionManager:
                 "tracked_aliases": len(self._sessions),
                 "shared_runtimes": 0 if self._closed else 1,
                 "execution_contexts": len(context_ids),
+                "snapshot_busy": False,
             }
+        finally:
+            self._lock.release()
 
     def close(self) -> None:
         with self._lock:

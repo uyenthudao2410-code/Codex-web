@@ -125,6 +125,29 @@ test('orchestrator obtains the managed P5 seed only from the encrypted secret st
   assert.deepEqual(calls, [P5_A0_SEED_SECRET]);
 });
 
+test('full-clean replacement binds acceptance preservation to the child activation environment', () => {
+  const launch = {
+    resourcesRoot: path.join(os.tmpdir(), 'bundle-root'),
+    moduleRoot: path.join(os.tmpdir(), 'module-root'),
+    vendoredPython: path.join(os.tmpdir(), 'module-root', 'python_vendor')
+  };
+  const env = buildNativeMcpEnv({
+    sourceEnv: { PATH: 'safe-base-path' },
+    launch,
+    settings: { authorizedRoots: [], progressReportSeconds: 90 },
+    token: 'test-mcp-bearer',
+    diskRevision: 'revision-test',
+    supervisorRequestFile: path.join(os.tmpdir(), 'supervisor-test.json'),
+    activationEpochId: 'activation-epoch-test-0001',
+    activationGate: 'closed',
+    activationAllowAcceptancePending: true,
+    activationExpiresAtUnixMs: 4_000_000_000_000
+  });
+  assert.equal(env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID, 'activation-epoch-test-0001');
+  assert.equal(env.CODING_TOOLS_MCP_ACTIVATION_GATE, 'closed');
+  assert.equal(env.CODING_TOOLS_MCP_ACTIVATION_ALLOW_ACCEPTANCE_PENDING, 'true');
+});
+
 test('activation epoch status distinguishes a valid empty store from unavailable durable authority', () => {
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({}) },
@@ -220,6 +243,35 @@ test('Coding MCP health classifies deterministic mismatches separately from tran
   assert.equal(observed.failure.deterministic, false);
 });
 
+test('activation census can request a bounded health window without weakening identity checks', { timeout: 10_000 }, async (t) => {
+  const token = 'token';
+  const server = http.createServer((request, response) => {
+    assert.equal(request.url, '/__control/health');
+    setTimeout(() => {
+      const body = JSON.stringify({
+        ready: true,
+        workspace: 'C:\\work\\one',
+        device_id: 'device-a',
+        activation_epoch_id: 'activation-health-window-0001'
+      });
+      response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
+      response.end(body);
+    }, 1_500);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const observed = await readMcpHealthObservation(
+    server.address().port,
+    token,
+    'C:\\work\\one',
+    'device-a',
+    'activation-health-window-0001',
+    { timeoutMs: 5_000 }
+  );
+  assert.equal(observed.failure, null);
+  assert.equal(observed.health.activation_epoch_id, 'activation-health-window-0001');
+});
+
 test('Coding MCP activation preflight requires workspace identity even for a refusal', async (t) => {
   const token = 'token';
   let includeWorkspace = false;
@@ -240,6 +292,24 @@ test('Coding MCP activation preflight requires workspace identity even for a ref
   const result = await readMcpActivationPreflight(port, token);
   assert.equal(result.safe, false);
   assert.equal(result.code, 'RUNTIME_BUSY');
+  assert.equal(result.workspace, 'C:\\work\\one');
+});
+
+test('Coding MCP activation observation allows a bounded multi-second ledger census', { timeout: 10_000 }, async (t) => {
+  const token = 'token';
+  const server = http.createServer((request, response) => {
+    assert.equal(request.url, '/__control/activation');
+    setTimeout(() => {
+      const body = JSON.stringify({ safe: true, code: 'READY', workspace: 'C:\\work\\one' });
+      response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
+      response.end(body);
+    }, 3_250);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+
+  const result = await readMcpActivationPreflight(server.address().port, token);
+  assert.equal(result.safe, true);
   assert.equal(result.workspace, 'C:\\work\\one');
 });
 

@@ -5,7 +5,7 @@ const { RecoveryPlaneService } = require('./recoveryPlaneService');
 const { HealthService } = require('./healthService');
 const { HubProxyGateway } = require('./hubProxyGateway');
 const { RecoveryIpcServer } = require('./recoveryIpc');
-const { ensureParent } = require('./jsonStore');
+const { ensureParent, readJson } = require('./jsonStore');
 const { loadOrCreateDeviceIdentity, normalizeDeviceIdentity } = require('./deviceIdentity');
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { RecoveryActivation } = require('./recoveryActivation');
@@ -36,6 +36,66 @@ function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function isProcessAlive(pid) {
   if (!Number.isInteger(Number(pid)) || Number(pid) <= 0) return false;
   try { process.kill(Number(pid), 0); return true; } catch { return false; }
+}
+
+function activationCensus(record) {
+  const verification = record?.verification;
+  if (!verification || typeof verification !== 'object' || Array.isArray(verification)) return null;
+  if (verification.final_census && typeof verification.final_census === 'object') {
+    return verification.final_census;
+  }
+  return String(verification.activation_epoch_id || '') === String(record?.activation_epoch_id || '')
+    ? verification : null;
+}
+
+function activationPendingCensus(record) {
+  if (String(record?.state || '') !== 'VERIFYING') return false;
+  const census = activationCensus(record);
+  return census
+    && census.process_identity_verified === true
+    && census.process_identity_changed === true
+    && census.tunnel_identity_changed === true
+    && census.recovery_host_revision_matches === true
+    && census.recovery_host_epoch_matches === true
+    && census.ui_verified === true
+    && census.recovery_plane_identity_changed === true
+    && census.recovery_plane_epoch_matches === true
+    && census.recovery_plane_verified === true
+    && census.projection_rebuild_verified === true
+    && census.workspace_matches === true
+    && census.device_matches === true
+    && census.revision_matches === true
+    && census.epoch_matches === true
+    && census.connector_validation
+    && census.connector_validation.valid === false
+    ? census : null;
+}
+
+function activationAwaitsConnector(record) {
+  const census = activationPendingCensus(record);
+  return Boolean(census && census.tunnel_health_verified === true);
+}
+
+function activationAwaitsTunnelOrConnector(record) {
+  return Boolean(activationPendingCensus(record));
+}
+
+function exactConnectorDiscoveryObserved(health, census) {
+  const discovery = health?.connector_tool_discovery;
+  const currentSha256 = String(health?.tool_contract?.sha256 || '').trim();
+  const processInstanceId = String(health?.process_instance_id || '').trim();
+  const serverInstanceId = String(health?.instance_id || health?.server_instance_id || '').trim();
+  const observedAt = String(discovery?.observed_at || '').trim();
+  return Boolean(discovery
+    && discovery.current_contract_observed === true
+    && currentSha256
+    && String(discovery.contract_sha256 || '').trim() === currentSha256
+    && processInstanceId === String(census?.process_instance_id || '').trim()
+    && serverInstanceId === String(census?.server_instance_id || '').trim()
+    && String(discovery.process_instance_id || '').trim() === processInstanceId
+    && String(discovery.server_instance_id || '').trim() === serverInstanceId
+    && observedAt
+    && Number.isFinite(Date.parse(observedAt)));
 }
 
 function activationClosureProjection({
@@ -580,12 +640,50 @@ class RecoveryHost {
       });
     }
     if (durableEpoch && ACTIVE_STATES.has(durableEpoch.state)) {
-      throw Object.assign(new Error('Another durable activation epoch is already active.'), {
-        code: 'ACTIVATION_EPOCH_ACTIVE',
-        details: { activation_epoch_id: durableEpoch.activation_epoch_id, operation_id: durableEpoch.operation_id || null }
-      });
+      const durableExpiry = Number(
+        durableEpoch.expires_at_unix_ms || durableEpoch.metadata?.expires_at_unix_ms || 0
+      );
+      if (durableExpiry > 0 && Date.now() >= durableExpiry) {
+        const expiredEpochId = durableEpoch.activation_epoch_id;
+        try {
+          durableEpoch = this.activationEpochStore.fail(expiredEpochId, {
+            code: 'ACTIVATION_REQUEST_EXPIRED',
+            message: 'The prior activation epoch expired before a new bootstrap refresh.',
+            details: {
+              activation_epoch_id: expiredEpochId,
+              operation_id: durableEpoch.operation_id || null,
+              expires_at_unix_ms: durableExpiry,
+              process_mutated: false
+            }
+          });
+        } catch (error) {
+          // The store atomically terminalizes an epoch detected exactly at an
+          // expiry boundary and then throws the typed expiry to its caller.
+          // Re-read and accept only that exact durable FAILED result.
+          const terminal = this.activationEpochStore.current();
+          if (String(error?.code || '') !== 'ACTIVATION_REQUEST_EXPIRED'
+            || terminal?.activation_epoch_id !== expiredEpochId
+            || terminal?.state !== 'FAILED'
+            || terminal?.error?.code !== 'ACTIVATION_REQUEST_EXPIRED') {
+            throw error;
+          }
+          durableEpoch = terminal;
+        }
+      } else {
+        throw Object.assign(new Error('Another durable activation epoch is already active.'), {
+          code: 'ACTIVATION_EPOCH_ACTIVE',
+          details: { activation_epoch_id: durableEpoch.activation_epoch_id, operation_id: durableEpoch.operation_id || null }
+        });
+      }
     }
-    return { operationId, expectedRevision, expiresAtUnixMs, replayEpoch: null, requiresNewEpoch: true };
+    return {
+      operationId,
+      expectedRevision,
+      expiresAtUnixMs,
+      replayEpoch: null,
+      requiresNewEpoch: true,
+      durableEpoch
+    };
   }
 
   recordBootstrapEpoch(epoch, extra = {}) {
@@ -648,7 +746,7 @@ class RecoveryHost {
     return this.bootstrapActivation;
   }
 
-  hostStatus() {
+  hostStatus({ preferCachedRuntime = false } = {}) {
     let codeRevision;
     try {
       codeRevision = this.revisions.status('recovery_host', this.recoveryHostRunningRevision, { force: true });
@@ -664,7 +762,11 @@ class RecoveryHost {
     const electronUiRevision = this.activation.uiRevisionStatus({ force: true });
     const autoActivation = this.autoActivation?.status?.() || null;
     let codingMcpRevision = {};
-    try { codingMcpRevision = this.orchestrator.codingMcpRevisionStatus?.({ force: true }) || {}; } catch {}
+    if (preferCachedRuntime) {
+      codingMcpRevision = this.lastSupervisionStatus?.codeRevision?.codingMcp || {};
+    } else {
+      try { codingMcpRevision = this.orchestrator.codingMcpRevisionStatus?.({ force: true }) || {}; } catch {}
+    }
     let activationEpoch = null;
     try { activationEpoch = this.fullCleanActivation?.current?.() || null; } catch (error) {
       activationEpoch = { state: 'UPDATE_INCOMPLETE', admission_state: 'CLOSED', error: { code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID'), message: String(error?.message || error) } };
@@ -798,16 +900,18 @@ class RecoveryHost {
     };
   }
 
-  decorate(value) {
+  decorate(value, { preferCachedRuntime = false } = {}) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
-    const recoveryHost = this.hostStatus();
+    const recoveryHost = this.hostStatus({ preferCachedRuntime });
     const activationClosure = activationClosureProjection({
       autoActivation: recoveryHost.auto_activation,
       recoveryHostRevision: recoveryHost.code_revision,
       electronUiRevision: recoveryHost.electron_ui_revision,
-      codingMcpRevision: (() => {
-        try { return this.orchestrator.codingMcpRevisionStatus?.({ force: true }) || {}; } catch { return {}; }
-      })(),
+      codingMcpRevision: preferCachedRuntime
+        ? (value?.codeRevision?.codingMcp || this.lastSupervisionStatus?.codeRevision?.codingMcp || {})
+        : (() => {
+          try { return this.orchestrator.codingMcpRevisionStatus?.({ force: true }) || {}; } catch { return {}; }
+        })(),
       runtime: value
     });
     recoveryHost.activation_closure = activationClosure;
@@ -852,6 +956,102 @@ class RecoveryHost {
     return { ...value, ...(status ? { status } : {}), activationClosure, activationEpoch: epochStatus, updateIncomplete: incomplete, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost };
   }
 
+  async connectorPendingObservation(record) {
+    const census = activationCensus(record) || {};
+    const prior = census.runtime && typeof census.runtime === 'object' ? census.runtime : {};
+    const state = readJson(this.paths.stateFile(), {});
+    const health = await this.orchestrator.currentMcpHealth?.({ timeoutMs: 3_000 }).catch?.(() => null) || null;
+    const priorDevice = prior.device && typeof prior.device === 'object' ? prior.device : {};
+    const processCurrent = Boolean(health
+      && health.ready === true
+      && String(health.activation_epoch_id || '') === String(record.activation_epoch_id || '')
+      && String(health.process_instance_id || '') === String(census.process_instance_id || '')
+      && String(health.instance_id || health.server_instance_id || '') === String(census.server_instance_id || '')
+      && String(health.workspace || '').toLowerCase() === String(prior.workspace || '').toLowerCase()
+      && String(health.device_id || '').toLowerCase() === String(priorDevice.device_id || '').toLowerCase()
+      && String(health.device_instance_id || '') === String(priorDevice.device_instance_id || '')
+      && String(health.code_revision || '') === String(census.running_revision || '')
+      && String(state.nativeInstanceId || '') === String(census.supervisor_instance_id || '')
+      && String(state.nativeActivationEpochId || '') === String(record.activation_epoch_id || '')
+      && String(state.nativeCodeRevision || '') === String(census.running_revision || '')
+      && Number(state.nativePid || 0) > 0
+      && this.processAlive(Number(state.nativePid)));
+    const tunnelReceiptCurrent = Boolean(
+      Number(state.tunnelPid || 0) === Number(census.tunnel_pid || 0)
+      && String(state.tunnelInstanceId || '') === String(census.tunnel_instance_id || '')
+      && String(state.tunnelActivationEpochId || '') === String(record.activation_epoch_id || '')
+      && Number(state.tunnelPid || 0) > 0
+      && this.processAlive(Number(state.tunnelPid)));
+    let tunnelCurrent = Boolean(census.tunnel_health_verified === true && tunnelReceiptCurrent);
+    let censusRefreshRequired = false;
+    if (!tunnelCurrent
+      && census.tunnel_health_verified !== true
+      && tunnelReceiptCurrent
+      && typeof this.orchestrator?.tunnel?.status === 'function') {
+      try {
+        tunnelCurrent = await this.orchestrator.tunnel.status(this.settings.load(), {
+          activationEpochId: String(record.activation_epoch_id || '')
+        }) === true;
+        censusRefreshRequired = tunnelCurrent;
+      } catch {
+        tunnelCurrent = false;
+      }
+    }
+    const contract = health && typeof this.orchestrator.connectorContractStatus === 'function'
+      ? this.orchestrator.connectorContractStatus(
+        health.tool_contract || null,
+        health.connector_tool_discovery || null,
+        health.connector_client_contact || null
+      )
+      : null;
+    const runtime = {
+      ...prior,
+      mcpRunning: processCurrent,
+      nativeAlive: processCurrent,
+      tunnelRunning: tunnelCurrent,
+      componentsReady: false,
+      connectorReady: false,
+      fullyReady: false,
+      updateIncomplete: true,
+      activationEpoch: this.orchestrator.activationEpochStatus?.() || prior.activationEpoch || null,
+      ...(health?.tool_contract ? {
+        toolContract: {
+          schemaVersion: Number(health.tool_contract.schema_version || 0),
+          profile: String(health.tool_contract.profile || ''),
+          sha256: String(health.tool_contract.sha256 || '')
+        }
+      } : {}),
+      ...(contract ? {
+        connectorContractAcknowledgedSha256: contract.acknowledgedSha256 || null,
+        connectorContractState: contract.contractState || 'UNAVAILABLE',
+        connectorRefreshRequired: contract.refreshRequired === true,
+        connectorAcknowledgementPending: contract.acknowledgementPending === true,
+        connectorRediscovered: contract.rediscovered === true,
+        connectorRediscoveredAt: contract.rediscoveredAt || null
+      } : {})
+    };
+    return {
+      runtime,
+      componentCurrent: processCurrent && tunnelCurrent,
+      mcpCurrent: processCurrent,
+      tunnelCurrent,
+      censusRefreshRequired,
+      componentRegression: Boolean(census.tunnel_health_verified === true && !tunnelCurrent),
+      discoveryObserved: processCurrent && exactConnectorDiscoveryObserved(health, census)
+    };
+  }
+
+  cachedActivationSnapshot() {
+    let record = null;
+    try { record = this.fullCleanActivation.current?.() || null; } catch {}
+    if (!activationAwaitsConnector(record) || !this.lastSupervisionStatus) return null;
+    return this.decorate({
+      ...this.lastSupervisionStatus,
+      snapshotBusy: Boolean(this.supervisionInFlight),
+      snapshotSource: 'activation_connector_pending_cache'
+    }, { preferCachedRuntime: true });
+  }
+
   handlers() {
     return {
       'recovery.ping': async () => ({ ready: this.running && !this.bootstrapBlocksAdmission(), ...this.hostStatus() }),
@@ -874,7 +1074,8 @@ class RecoveryHost {
         return result;
       },
       'runtime.snapshot': async (options = {}) => this.decorate(await this.orchestrator.snapshot(options)),
-      'runtime.lightweight_snapshot': async () => this.decorate(await this.orchestrator.lightweightSnapshot()),
+      'runtime.lightweight_snapshot': async () => this.cachedActivationSnapshot()
+        || this.decorate(await this.orchestrator.lightweightSnapshot()),
       'runtime.activation_epoch_status': async () => this.hostStatus().activation_epoch,
       'runtime.complete_activation_epoch': async (activationEpochId) => {
         this.assertBootstrapMutationAllowed();
@@ -895,16 +1096,25 @@ class RecoveryHost {
       'runtime.restart': async (options = {}) => {
         this.assertBootstrapMutationAllowed();
         const soft = options?.automatic === true || options?.mode === 'soft_recovery';
+        const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
         const result = soft
           ? await this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' })
           : (this.fullCleanActivation?.restart && typeof this.orchestrator?.completeActivationEpoch === 'function'
             ? await this.fullCleanActivation.restart({
               ...options,
-              // Resolve and validate against the live closure even when a
-              // client omitted sourceCheckpoint.  A supplied value is not
-              // trusted unless it is byte-for-byte the current authority.
-              sourceCheckpoint: this._resolveRequestedFullCleanCheckpoint(options?.sourceCheckpoint),
-              reason: options.reason || 'operator_restart'
+              // Code/revision activation is bound to the live accepted
+              // closure.  The explicit npm-start process refresh is the only
+              // exception: it carries no source authority and therefore must
+              // be marked as a refresh all the way through the durable epoch.
+              ...(refresh
+                ? { refresh: true, mode: 'full_clean_refresh', sourceCheckpoint: null }
+                : {
+                  // Resolve and validate against the live closure even when a
+                  // client omitted sourceCheckpoint.  A supplied value is not
+                  // trusted unless it is byte-for-byte the current authority.
+                  sourceCheckpoint: this._resolveRequestedFullCleanCheckpoint(options?.sourceCheckpoint)
+                }),
+              reason: options.reason || (refresh ? 'npm_start_refresh' : 'operator_restart')
             })
             : (() => {
               throw Object.assign(new Error('Operator restart requires the Recovery Host full-clean activation coordinator.'), {
@@ -948,6 +1158,8 @@ class RecoveryHost {
         return this.lastSupervisionStatus;
       }
       const admissionBlocked = Boolean(epoch && epoch.state !== 'READY');
+      const connectorPending = activationAwaitsTunnelOrConnector(epoch);
+      let pendingObservation = null;
       try {
         // During a full-clean transaction the coordinator is the sole owner of
         // component mutation.  The normal watchdog must not restart MCP/Tunnel
@@ -956,14 +1168,24 @@ class RecoveryHost {
         // admission closed.  The ordinary watchdog must not mutate MCP,
         // Tunnel, Recovery Plane, or consume restart tickets in that state;
         // only the explicit activation coordinator may advance it.
+        pendingObservation = connectorPending
+          ? await this.connectorPendingObservation(epoch)
+          : null;
         runtime = admissionBlocked
-          ? await this.orchestrator.lightweightSnapshot()
+          ? (pendingObservation?.runtime || await this.orchestrator.lightweightSnapshot())
           : await this.orchestrator.supervise();
         this.lastSupervisionStatus = runtime;
       } catch (error) {
         this.log.error(error.message, { stage: 'recovery-host-supervise' });
       }
-      if (epoch && ['STARTING', 'VERIFYING', 'HANDOFF', 'FROZEN', 'STOPPING', 'ADMISSION_CLOSED', 'PREPARING'].includes(epoch.state)) {
+      const shouldRunFinalCensus = !connectorPending
+        || pendingObservation?.mcpCurrent !== true
+        || pendingObservation?.componentRegression === true
+        || pendingObservation?.censusRefreshRequired === true
+        || pendingObservation?.discoveryObserved === true;
+      if (shouldRunFinalCensus
+        && epoch
+        && ['STARTING', 'VERIFYING', 'HANDOFF', 'FROZEN', 'STOPPING', 'ADMISSION_CLOSED', 'PREPARING'].includes(epoch.state)) {
         try {
           const census = await this.fullCleanActivation.finalCensus(epoch.activation_epoch_id, {
             expectedOldInstanceId: this.replacement?.expectedOldInstanceId || ''
@@ -1058,6 +1280,9 @@ class RecoveryHost {
       this.recordBootstrapFailure(error, durableEpoch);
       throw error;
     }
+    if (bootstrapPlan && Object.prototype.hasOwnProperty.call(bootstrapPlan, 'durableEpoch')) {
+      durableEpoch = bootstrapPlan.durableEpoch;
+    }
     let replacementEpochId = String(this.replacement?.activationEpochId || '').trim();
     let fullCleanReplacement = Boolean(replacementEpochId);
     let recoveredFromDurableEpoch = false;
@@ -1133,6 +1358,11 @@ class RecoveryHost {
     }
     const persistReplacementFailure = (error) => {
       if (!replacementEpochId) return;
+      // A duplicate launcher that never acquired Recovery Host ownership must
+      // not terminalize the epoch owned by the already-running replacement.
+      // RECOVERY_HOST_ALREADY_RUNNING is an ownership refusal for the
+      // contender, not a failure of the durable activation transaction.
+      if (String(error?.code || '') === 'RECOVERY_HOST_ALREADY_RUNNING') return;
       try {
         const current = this.activationEpochStore.current();
         if (!current || current.activation_epoch_id !== replacementEpochId || current.state === 'READY') return;
@@ -1243,6 +1473,16 @@ class RecoveryHost {
         });
       }
       if (this.replacement?.expectedOldInstanceId) {
+        const currentOwner = readLock(this.paths.recoveryHostLockFile());
+        if (currentOwner
+          && isProcessAlive(currentOwner.pid)
+          && String(currentOwner.instance_id || '') !== String(this.replacement.expectedOldInstanceId)) {
+          throw Object.assign(new Error('A Recovery Host already owns the active replacement epoch.'), {
+            code: 'RECOVERY_HOST_ALREADY_RUNNING',
+            ownerPid: Number(currentOwner.pid),
+            ownerInstanceId: String(currentOwner.instance_id || '')
+          });
+        }
         await waitForReplacementLockRelease(this.paths, this.replacement.expectedOldInstanceId);
       }
       acquireRecoveryHostLock(this.paths, this.instanceId);
@@ -1289,10 +1529,14 @@ class RecoveryHost {
             operationId: bootstrapPlan.operationId,
             component: 'recovery_host',
             expectedDiskRevision: bootstrapPlan.expectedRevision,
-            sourceCheckpoint: this.bootstrap.source_checkpoint,
+            ...(this.bootstrap.refresh === true
+              ? { refresh: true, mode: 'full_clean_refresh', sourceCheckpoint: null }
+              : { sourceCheckpoint: this.bootstrap.source_checkpoint }),
             allowAcceptancePending: this.bootstrap.allow_acceptance_pending === true,
             expiresAtUnixMs: bootstrapPlan.expiresAtUnixMs,
-            reason: 'recovery_host_bootstrap'
+            reason: this.bootstrap.refresh === true
+              ? 'npm_start_refresh_bootstrap'
+              : 'recovery_host_bootstrap'
           });
         } catch (error) {
           this.recordBootstrapFailure(error, this.activationEpochStore.current());
@@ -1315,11 +1559,17 @@ class RecoveryHost {
         return this.hostStatus();
       }
       if (fullCleanReplacement) {
-        await this.fullCleanActivation.continueReplacement({
+        const continued = await this.fullCleanActivation.continueReplacement({
           activationEpochId: this.replacement.activationEpochId,
           expectedOldInstanceId: this.replacement.expectedOldInstanceId,
           expiresAtUnixMs: this.replacement.expiresAtUnixMs
         });
+        if (continued?.census?.runtime) {
+          this.lastSupervisionStatus = {
+            ...continued.census.runtime,
+            tunnelRunning: continued.census.tunnel_health_verified === true
+          };
+        }
         this.lastRecoveryPlaneStatus = this.recoveryPlane?.lastStatus || this.lastRecoveryPlaneStatus;
         this.recordBootstrapEpoch(this.activationEpochStore.current(), {
           replacement_host_instance_id: this.instanceId,

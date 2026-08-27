@@ -54,6 +54,7 @@ function buildNativeMcpEnv({
   p5Seed = '',
   activationEpochId = '',
   activationGate = '',
+  activationAllowAcceptancePending = false,
   activationExpiresAtUnixMs = 0
 }) {
   const env = coreNativeEnvironment(sourceEnv);
@@ -79,6 +80,9 @@ function buildNativeMcpEnv({
   });
   if (String(activationEpochId || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = String(activationEpochId).trim();
   if (String(activationGate || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_GATE = String(activationGate).trim().toLowerCase();
+  if (activationAllowAcceptancePending === true) {
+    env.CODING_TOOLS_MCP_ACTIVATION_ALLOW_ACCEPTANCE_PENDING = 'true';
+  }
   const activationExpiry = Number(activationExpiresAtUnixMs || 0);
   if (activationExpiry > 0) {
     if (!Number.isSafeInteger(activationExpiry)) {
@@ -465,6 +469,7 @@ class NativeService {
       device: this.device,
       activationEpochId: requestedEpoch,
       activationGate: options.activationGate,
+      activationAllowAcceptancePending: options.activationAllowAcceptancePending === true,
       activationExpiresAtUnixMs: requestedExpiry
     });
     const args = [

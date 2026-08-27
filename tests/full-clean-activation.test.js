@@ -69,7 +69,7 @@ function projectionReceipt(root, overrides = {}) {
   const completedAtUnixMs = Object.hasOwn(overrides, 'completed_at_unix_ms')
     ? overrides.completed_at_unix_ms : 1_700_000_000_000;
   const receipt = {
-    schema_version: 1,
+    schema_version: 2,
     kind: 'coding_tools_mcp_projection_rebuild',
     activation_epoch_id: id('activation-projection', '1001'),
     process_instance_id: id('mcp-process', '1001'),
@@ -88,12 +88,24 @@ function projectionReceipt(root, overrides = {}) {
     projection: {
       run_id: id('run-projection', '1001'),
       wave_id: id('wave-projection', '1001'),
-      orchestration_state: 'CHECKPOINTED'
+      orchestration_state: 'CHECKPOINTED',
+      mode: 'global',
+      context_count: 0,
+      contextual_sha256: ''
     },
     completed_at: new Date(completedAtUnixMs).toISOString(),
     completed_at_unix_ms: completedAtUnixMs,
     reconciled: true,
     ...overrides
+  };
+  receipt.projection = {
+    run_id: id('run-projection', '1001'),
+    wave_id: id('wave-projection', '1001'),
+    orchestration_state: 'CHECKPOINTED',
+    mode: 'global',
+    context_count: 0,
+    contextual_sha256: '',
+    ...(overrides.projection || {})
   };
   delete receipt.integrity_sha256;
   receipt.integrity_sha256 = canonicalProjectionRebuildSha256(receipt);
@@ -280,6 +292,28 @@ test('projection rebuild gate accepts only one exact current preflight and healt
   assert.equal(result.projection_classification, 'CHECKPOINTED');
 });
 
+test('projection rebuild gate accepts a ledger-bound contextual projection set without selecting a global run', () => {
+  const root = path.resolve('projection-gate-contextual-workspace');
+  const receipt = projectionReceipt(root, {
+    projection_classification: 'CONTEXTUAL_PROJECTIONS',
+    projection: {
+      run_id: '',
+      wave_id: '',
+      orchestration_state: '',
+      mode: 'contextual',
+      context_count: 6,
+      contextual_sha256: '9'.repeat(64)
+    }
+  });
+  const result = validateProjectionRebuildGate(projectionGateInput(root, {
+    preflightReceipt: receipt,
+    healthReceipt: receipt
+  }));
+
+  assert.equal(result.valid, true);
+  assert.equal(result.projection_classification, 'CONTEXTUAL_PROJECTIONS');
+});
+
 test('projection rebuild gate fails closed for identity, ledger, projection, timestamp, and wrapper drift', () => {
   const root = path.resolve('projection-gate-workspace');
   const base = projectionReceipt(root);
@@ -458,7 +492,7 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   const connectorRediscoveredAt = new Date(nowUnixMs - 1000).toISOString();
   const receipt = projectionReceipt(root, {
     projection_classification: 'NO_ACTIVE_PROJECTION',
-    projection: { run_id: '', wave_id: '', orchestration_state: '' }
+    projection: { run_id: '', wave_id: '', orchestration_state: '', mode: 'global' }
   });
   const wrapper = projectionWrapper(receipt);
   const processStartToken = observeProcessIdentity(process.pid).process_start_token || '1';
@@ -571,7 +605,16 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
         },
         lifecycle: {
           snapshot: projectionSnapshot(),
-          projection: { available: true, classification: 'NO_ACTIVE_PROJECTION', run_id: '', wave_id: '' },
+          projection: {
+            available: true,
+            classification: 'NO_ACTIVE_PROJECTION',
+            run_id: '',
+            wave_id: '',
+            orchestration_state: '',
+            mode: 'global',
+            context_count: 0,
+            contextual_sha256: ''
+          },
           projection_classification: 'NO_ACTIVE_PROJECTION',
           projection_rebuild: wrapper,
           projection_rebuild_receipt: receipt,
@@ -734,6 +777,31 @@ test('full-clean restart refuses a missing accepted source checkpoint before any
   );
   assert.equal(coordinator.current(), null);
   assert.deepEqual(calls, []);
+});
+
+test('explicit process refresh starts a full-clean epoch without inventing a source checkpoint', async (t) => {
+  const { root, paths } = fixture(t);
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: epochStore(paths),
+    settings: { load: () => ({ workspace: root }) }
+  });
+  let observed = null;
+  coordinator._restart = async (options) => {
+    observed = options;
+    return { activation_epoch_id: id('activation-refresh', '1001'), state: 'HANDOFF' };
+  };
+
+  const result = await coordinator.restart({
+    operationId: id('operation-refresh', '1001'),
+    refresh: true,
+    mode: 'full_clean_refresh',
+    reason: 'npm_start_refresh'
+  });
+  assert.equal(result.state, 'HANDOFF');
+  assert.equal(observed.refresh, true);
+  assert.equal(observed.mode, 'full_clean_refresh');
+  assert.equal(observed.sourceCheckpoint, null);
 });
 
 test('full-clean single-flight reuses only the exact operation and source authority', async (t) => {

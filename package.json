@@ -7,11 +7,12 @@
   "main": "electron/main.js",
   "scripts": {
     "icon:build": "node scripts/generate-icon.js",
-    "start": "electron .",
+    "start": "node scripts/dev-ui-lifecycle.js refresh",
     "dev": "node scripts/dev-ui-lifecycle.js start",
     "dev:status": "node scripts/dev-ui-lifecycle.js status",
     "dev:stop": "node scripts/dev-ui-lifecycle.js stop",
     "dev:replace": "node scripts/dev-ui-lifecycle.js replace",
+    "dev:refresh": "node scripts/dev-ui-lifecycle.js refresh",
     "test": "node --test tests/*.test.js && node scripts/check-source-root-clean.js && node scripts/check-sensitive-tracked.js",
     "test:recovery:e2e": "node --test tests/integration/recovery-host-process.test.js",
     "test:recovery:packaged": "npm run dist:dir && node scripts/packaged-recovery-smoke.js",

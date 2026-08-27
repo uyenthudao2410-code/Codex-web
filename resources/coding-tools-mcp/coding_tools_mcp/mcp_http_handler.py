@@ -201,14 +201,38 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 self.send_unauthorized(head_only=head_only)
                 return
             runtime = self.runtime
-            with runtime.sessions_lock:
-                active_commands = len(runtime.sessions)
-                retained_outputs = len(runtime.output_sessions)
-            activation = runtime.activation_admission_snapshot()
+            sessions_snapshot_busy = not runtime.sessions_lock.acquire(blocking=False)
+            if sessions_snapshot_busy:
+                active_commands = None
+                retained_outputs = None
+            else:
+                try:
+                    active_commands = len(runtime.sessions)
+                    retained_outputs = len(runtime.output_sessions)
+                finally:
+                    runtime.sessions_lock.release()
+            # Health is a liveness/identity observation and must not queue behind
+            # a concurrent connector/session bookkeeping write.  Each snapshot
+            # stays fail-closed when busy; mutation and activation paths retain
+            # their ordinary blocking locks.
+            connector_discovery = runtime.connector_tool_discovery(blocking=False)
+            connector_contact = runtime.connector_client_contact(blocking=False)
+            http_sessions = self.server.sessions.stats(blocking=False)
+            activation = runtime.activation_admission_snapshot(blocking=False)
+            health_snapshot_busy = bool(
+                sessions_snapshot_busy
+                or activation.get("snapshot_busy") is True
+                or connector_discovery.get("snapshot_busy") is True
+                or connector_contact.get("snapshot_busy") is True
+                or http_sessions.get("snapshot_busy") is True
+            )
             self.send_json({
                 "ready": not runtime._closed,
                 "activation": activation,
                 **activation,
+                "snapshot_busy": health_snapshot_busy,
+                "health_snapshot_busy": health_snapshot_busy,
+                "sessions_snapshot_busy": sessions_snapshot_busy,
                 "version": __version__,
                 "instance_id": runtime.server_instance_id,
                 "process_instance_id": runtime.process_instance_id,
@@ -219,8 +243,8 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 "tool_profile": runtime.tool_contract["profile"],
                 "tool_count": len(runtime.exposed_tool_names()),
                 "tool_contract": dict(runtime.tool_contract),
-                "connector_tool_discovery": runtime.connector_tool_discovery(),
-                "connector_client_contact": runtime.connector_client_contact(),
+                "connector_tool_discovery": connector_discovery,
+                "connector_client_contact": connector_contact,
                 "projection_rebuild": runtime.projection_rebuild_snapshot(),
                 "workspace_generation": runtime.workspace_generation,
                 "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
@@ -230,7 +254,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 "active_commands": active_commands,
                 "retained_outputs": retained_outputs,
                 "legacy_session_alias_uses": runtime.legacy_session_alias_uses,
-                "http_sessions": self.server.sessions.stats(),
+                "http_sessions": http_sessions,
             }, head_only=head_only)
             return
         if normalized == "/__control/activation":

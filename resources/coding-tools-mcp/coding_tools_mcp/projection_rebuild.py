@@ -18,12 +18,13 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-PROJECTION_REBUILD_SCHEMA_VERSION = 1
+PROJECTION_REBUILD_SCHEMA_VERSION = 2
 PROJECTION_REBUILD_KIND = "coding_tools_mcp_projection_rebuild"
 PROJECTION_REBUILD_MAX_AGE_MS = 5 * 60 * 1000
 PROJECTION_REBUILD_FUTURE_SKEW_MS = 1_000
 PROJECTION_REBUILD_ALLOWED_CLASSIFICATIONS = frozenset({
     "NO_ACTIVE_PROJECTION",
+    "CONTEXTUAL_PROJECTIONS",
     "PROJECTION_CONSISTENT",
     "CHECKPOINTED",
     "BLOCKED",
@@ -55,7 +56,14 @@ _LEDGER_INTEGRITY_FIELDS = frozenset({
     "integrity_check",
     "foreign_key_check_rows",
 })
-_PROJECTION_FIELDS = frozenset({"run_id", "wave_id", "orchestration_state"})
+_PROJECTION_FIELDS = frozenset({
+    "run_id",
+    "wave_id",
+    "orchestration_state",
+    "mode",
+    "context_count",
+    "contextual_sha256",
+})
 _UNSET = object()
 
 
@@ -113,7 +121,7 @@ def _parse_timestamp(value: Any) -> int | None:
     return int(round(parsed.timestamp() * 1000))
 
 
-def _projection_identity(value: Mapping[str, Any] | None) -> dict[str, str]:
+def _projection_identity(value: Mapping[str, Any] | None) -> dict[str, Any]:
     source = dict(value or {})
     nested = source.get("orchestration")
     if isinstance(nested, Mapping):
@@ -122,6 +130,9 @@ def _projection_identity(value: Mapping[str, Any] | None) -> dict[str, str]:
         "run_id": str(source.get("run_id") or "").strip(),
         "wave_id": str(source.get("wave_id") or "").strip(),
         "orchestration_state": str(source.get("orchestration_state") or "").strip().upper(),
+        "mode": str(source.get("mode") or "").strip().lower(),
+        "context_count": source.get("context_count", 0),
+        "contextual_sha256": str(source.get("contextual_sha256") or "").strip().lower(),
     }
 
 
@@ -138,15 +149,34 @@ def _ledger_integrity(snapshot: Mapping[str, Any]) -> dict[str, Any]:
 def _classification_matches_projection(classification: str, projection: Mapping[str, Any]) -> bool:
     if any(
         not isinstance(projection.get(field), str) or len(str(projection.get(field))) > 256
-        for field in _PROJECTION_FIELDS
+        for field in ("run_id", "wave_id", "orchestration_state", "mode", "contextual_sha256")
     ):
         return False
     run_id = str(projection.get("run_id") or "")
     wave_id = str(projection.get("wave_id") or "")
     state = str(projection.get("orchestration_state") or "")
+    mode = str(projection.get("mode") or "")
+    context_count = projection.get("context_count")
+    contextual_sha256 = str(projection.get("contextual_sha256") or "")
+    if not isinstance(context_count, int) or isinstance(context_count, bool) or context_count < 0:
+        return False
     if classification == "NO_ACTIVE_PROJECTION":
-        return not run_id and not wave_id and not state
+        return (
+            not run_id and not wave_id and not state
+            and mode in {"none", "global"}
+            and context_count == 0
+            and not contextual_sha256
+        )
+    if classification == "CONTEXTUAL_PROJECTIONS":
+        return (
+            not run_id and not wave_id and not state
+            and mode == "contextual"
+            and context_count > 0
+            and _is_digest(contextual_sha256)
+        )
     if not run_id or not wave_id or not state:
+        return False
+    if mode != "global" or context_count != 0 or contextual_sha256:
         return False
     expected_terminal = {
         "CHECKPOINTED": "CHECKPOINTED",
@@ -358,21 +388,36 @@ def validate_projection_rebuild_receipt(
 def reconcile_task_orchestration_projection(runtime: Any) -> bool:
     """Repair the compact task projection from current canonical ledger facts."""
     state = runtime.task_state.get()
-    if not str(state.get("task_id") or "").strip() and not str(state.get("objective") or "").strip():
-        return False
     projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
     run_id = str(projection.get("run_id") or "").strip()
     task_id = str(state.get("task_id") or "").strip()
+    objective = str(state.get("objective") or "").strip()
+    restoring_empty_state = False
     if not run_id and task_id:
-        active = runtime.orchestration_ledger.current_active_run(task_id=task_id)
-        run_id = str(active.get("run_id") or "") if active else ""
-    if not run_id and not task_id and not runtime.task_state.is_scoped():
-        active = runtime.orchestration_ledger.current_active_run()
-        run_id = str(active.get("run_id") or "") if active else ""
+        matches = [
+            item for item in runtime.orchestration_ledger.list_runs(limit=100, status="active")
+            if str(item.get("task_id") or "").strip() == task_id
+        ]
+        if len(matches) == 1:
+            run_id = str(matches[0].get("run_id") or "")
+    if not run_id and not task_id and not objective and not runtime.task_state.is_scoped():
+        # An unscoped empty projection may be restored only when the ledger
+        # identifies exactly one active run.  Multiple active rows commonly
+        # belong to independent ChatWeb task contexts; selecting the newest one
+        # would silently cross an authority boundary.
+        active_runs = runtime.orchestration_ledger.list_runs(limit=100, status="active")
+        if len(active_runs) == 1:
+            run_id = str(active_runs[0].get("run_id") or "")
+            restoring_empty_state = bool(run_id)
     if not run_id:
         return False
     run = runtime.orchestration_ledger.get_run(run_id)
     if not isinstance(run, dict):
+        return False
+    if restoring_empty_state and (
+        not str(run.get("task_id") or "").strip()
+        or not str(run.get("objective") or "").strip()
+    ):
         return False
     target_state = {
         "accepted": "CHECKPOINTED",
@@ -443,5 +488,13 @@ def reconcile_task_orchestration_projection(runtime: Any) -> bool:
     )
     if not projection_changed and not task_changed:
         return False
-    runtime.task_state.update(desired_task, event="orchestration_projection_reconciled")
+    if restoring_empty_state:
+        runtime.task_state.restore_from_ledger(
+            task_id=str(run.get("task_id") or ""),
+            objective=str(run.get("objective") or ""),
+            changes=desired_task,
+            event="orchestration_projection_restored",
+        )
+    else:
+        runtime.task_state.update(desired_task, event="orchestration_projection_reconciled")
     return True

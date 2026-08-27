@@ -186,6 +186,19 @@ function validateCheckpoint(value) {
   };
 }
 
+function validateOptionalRefreshCheckpoint(value, refresh) {
+  if (refresh === true) {
+    if (value !== null && value !== undefined) {
+      throw bootstrapError(
+        'RECOVERY_BOOTSTRAP_INVALID',
+        'A process-refresh bootstrap cannot carry source checkpoint authority.'
+      );
+    }
+    return null;
+  }
+  return validateCheckpoint(value);
+}
+
 function expectedIdentity(paths) {
   const identity = paths?.runtimeIdentity?.();
   if (!identity || !INSTALLATION_ID.test(text(identity.installation_id).toLowerCase())
@@ -266,6 +279,7 @@ function buildBootstrapEnvelope({
   requestedAtUnixMs = Date.now(),
   expiresAtUnixMs = Number(requestedAtUnixMs) + DEFAULT_TTL_MS,
   activationEpochId = '',
+  refresh = false,
   oldHostProcessStartToken = descriptor?.owner_process_start_token
 } = {}) {
   const identity = expectedIdentity(paths);
@@ -284,6 +298,7 @@ function buildBootstrapEnvelope({
   }
   const epoch = text(activationEpochId);
   if (epoch && !EPOCH_ID.test(epoch)) throw bootstrapError('RECOVERY_BOOTSTRAP_INVALID', 'Recovery Host bootstrap activation epoch is invalid.');
+  const processRefresh = refresh === true;
   const envelope = {
     schema_version: BOOTSTRAP_SCHEMA_VERSION,
     kind: BOOTSTRAP_KIND,
@@ -297,8 +312,13 @@ function buildBootstrapEnvelope({
     runtime_mode: identity.mode,
     app_root: path.resolve(paths.appRoot()),
     expected_disk_revision: revision,
+    // A refresh preserves durable AWAITING_ACCEPTANCE rows but never treats
+    // them as live mutation authority. Active tools, commands, agent lanes,
+    // managed jobs, P5 epochs and unexplained ownership remain hard blockers
+    // in the independent canonical census.
     allow_acceptance_pending: true,
-    source_checkpoint: validateCheckpoint(sourceCheckpoint),
+    source_checkpoint: validateOptionalRefreshCheckpoint(sourceCheckpoint, processRefresh),
+    ...(processRefresh ? { refresh: true } : {}),
     ...(epoch ? { activation_epoch_id: epoch } : {})
   };
   return { ...envelope, integrity_sha256: canonicalDigest(envelope) };
@@ -312,11 +332,10 @@ function validateBootstrapEnvelope(raw, paths, { bootstrapId = '', now = Date.no
     'expected_installation_id', 'runtime_mode', 'app_root',
     'expected_disk_revision', 'allow_acceptance_pending', 'source_checkpoint', 'integrity_sha256'
   ];
-  const optional = ['activation_epoch_id'];
+  const optional = ['activation_epoch_id', 'refresh'];
   const keys = Object.keys(raw).sort();
-  const allowed = [...required, ...optional].sort();
-  if (JSON.stringify(keys) !== JSON.stringify(allowed)
-    && JSON.stringify(keys) !== JSON.stringify(required.sort())) {
+  const allowed = new Set([...required, ...optional]);
+  if (required.some((key) => !keys.includes(key)) || keys.some((key) => !allowed.has(key))) {
     throw bootstrapError('RECOVERY_BOOTSTRAP_INVALID', 'Recovery Host bootstrap envelope fields are not canonical.');
   }
   if (Number(raw.schema_version) !== BOOTSTRAP_SCHEMA_VERSION || raw.kind !== BOOTSTRAP_KIND) throw bootstrapError('RECOVERY_BOOTSTRAP_INVALID', 'Recovery Host bootstrap envelope schema is unsupported.');
@@ -339,7 +358,11 @@ function validateBootstrapEnvelope(raw, paths, { bootstrapId = '', now = Date.no
   if (!REVISION.test(text(raw.expected_disk_revision).toLowerCase())) throw bootstrapError('RECOVERY_BOOTSTRAP_INVALID', 'Recovery Host bootstrap expected revision is invalid.');
   if (typeof raw.allow_acceptance_pending !== 'boolean') throw bootstrapError('RECOVERY_BOOTSTRAP_INVALID', 'Recovery Host bootstrap acceptance policy is invalid.');
   if (raw.activation_epoch_id !== undefined && raw.activation_epoch_id !== null && !EPOCH_ID.test(text(raw.activation_epoch_id))) throw bootstrapError('RECOVERY_BOOTSTRAP_INVALID', 'Recovery Host bootstrap activation epoch is invalid.');
-  const checkpoint = validateCheckpoint(raw.source_checkpoint);
+  if (raw.refresh !== undefined && typeof raw.refresh !== 'boolean') {
+    throw bootstrapError('RECOVERY_BOOTSTRAP_INVALID', 'Recovery Host bootstrap refresh flag is invalid.');
+  }
+  const refresh = raw.refresh === true;
+  const checkpoint = validateOptionalRefreshCheckpoint(raw.source_checkpoint, refresh);
   if (typeof raw.integrity_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(raw.integrity_sha256)
     || raw.integrity_sha256 !== canonicalDigest(withoutIntegrity(raw))) throw bootstrapError('RECOVERY_BOOTSTRAP_INTEGRITY_FAILED', 'Recovery Host bootstrap envelope integrity check failed.');
   return {
@@ -354,6 +377,7 @@ function validateBootstrapEnvelope(raw, paths, { bootstrapId = '', now = Date.no
     runtime_mode: identity.mode,
     app_root: path.resolve(paths.appRoot()),
     expected_disk_revision: text(raw.expected_disk_revision).toLowerCase(),
+    refresh,
     source_checkpoint: checkpoint,
     bootstrap_path: bootstrapFile(paths, operationId),
     result_path: bootstrapResultFile(paths, operationId)
@@ -531,6 +555,8 @@ async function bootstrapCurrentRecoveryHost({
   sourceCheckpoint,
   expectedDiskRevision,
   activationEpochId = '',
+  refresh = false,
+  forceRefresh = false,
   requestedAtUnixMs = Date.now(),
   expiresAtUnixMs = Number(requestedAtUnixMs) + DEFAULT_TTL_MS,
   timeoutMs = 15_000,
@@ -544,7 +570,9 @@ async function bootstrapCurrentRecoveryHost({
 } = {}) {
   const freshness = assessRecoveryHostFreshness({ paths, descriptor, status, expectedDiskRevision });
   if (!freshness.installation_matches) throw bootstrapError('RECOVERY_HOST_INSTALLATION_MISMATCH', 'Refused to terminate a Recovery Host from another installation.', freshness);
-  if (freshness.current) return { required: false, stale: false, descriptor, status, freshness };
+  if (freshness.current && forceRefresh !== true) {
+    return { required: false, stale: false, descriptor, status, freshness };
+  }
   const ownerPid = Number(descriptor?.owner_pid || 0);
   const ownerInstanceId = text(descriptor?.instance_id);
   if (!Number.isInteger(ownerPid) || ownerPid <= 0 || !ownerInstanceId) throw bootstrapError('RECOVERY_BOOTSTRAP_TARGET_INVALID', 'Stale Recovery Host descriptor has no authenticated process identity.');
@@ -591,6 +619,7 @@ async function bootstrapCurrentRecoveryHost({
     requestedAtUnixMs,
     expiresAtUnixMs,
     activationEpochId,
+    refresh: refresh === true,
     oldHostProcessStartToken: ownerIdentity.process_start_token
   });
   const file = writeBootstrapEnvelope(paths, envelope);
@@ -600,7 +629,15 @@ async function bootstrapCurrentRecoveryHost({
     // Ask the authenticated host to stop only its children first.  Transport
     // response loss is not proof that the stop did not happen; the exact
     // descriptor/PID checks below remain the mutation authority.
-    try { await client.stop({ manual: false }, descriptorOptions); }
+    try {
+      await client.stop(
+        { manual: false },
+        {
+          ...descriptorOptions,
+          timeout: Math.min(15_000, Math.max(1_000, Number(timeoutMs) || 15_000))
+        }
+      );
+    }
     catch (error) {
       log?.warn?.('Stale Recovery Host stop response was unavailable; reconciling exact process identity before handoff.', {
         operationId: envelope.operation_id,

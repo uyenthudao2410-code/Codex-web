@@ -457,7 +457,12 @@ async function ensureRecoveryHost({
     // Missing/stale/unreachable host falls through to a current-checkout spawn.
   }
 
-  await spawnRecoveryHost(app, spawnProcess);
+  const executablePath = typeof paths?.executablePath === 'function'
+    ? String(paths.executablePath() || '').trim()
+    : '';
+  await spawnRecoveryHost(app, spawnProcess, {
+    ...(executablePath ? { executablePath } : {})
+  });
   const deadline = Date.now() + Math.max(1000, Number(timeoutMs) || 15_000);
   let lastError = null;
   while (Date.now() < deadline) {

@@ -157,6 +157,98 @@ class ActivationEpochTests(unittest.TestCase):
             thread.join(timeout=5)
             self.assertFalse(thread.is_alive())
 
+    def test_health_remains_fail_closed_and_responsive_during_activation_census(self) -> None:
+        runtime = Runtime(Path(self.temp.name), transport="http")
+        server = RuntimeHTTPServer(("127.0.0.1", 0), MCPHandler, runtime, runtime_factory=None)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        runtime.activation_lock.acquire()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=2)
+            try:
+                connection.request("GET", "/__control/health")
+                response = connection.getresponse()
+                payload = json.loads(response.read().decode("utf-8"))
+            finally:
+                connection.close()
+            self.assertEqual(response.status, 200)
+            self.assertTrue(payload["ready"])
+            self.assertEqual(payload["activation_epoch_id"], "epoch-test-001")
+            self.assertEqual(payload["activation_admission"], "closed")
+            self.assertFalse(payload["admission_open"])
+            self.assertTrue(payload["snapshot_busy"])
+        finally:
+            runtime.activation_lock.release()
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+            runtime.close()
+            self.assertFalse(thread.is_alive())
+
+    def test_health_remains_responsive_when_observational_locks_are_busy(self) -> None:
+        runtime = Runtime(Path(self.temp.name), transport="http")
+        server = RuntimeHTTPServer(("127.0.0.1", 0), MCPHandler, runtime, runtime_factory=None)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        lock_cases = (
+            (runtime.sessions_lock, "sessions_snapshot_busy"),
+            (runtime.tool_discovery_lock, "connector_tool_discovery"),
+            (runtime.tool_contact_lock, "connector_client_contact"),
+            (server.sessions._lock, "http_sessions"),
+        )
+        try:
+            for lock, busy_field in lock_cases:
+                lock.acquire()
+                try:
+                    connection = http.client.HTTPConnection(
+                        "127.0.0.1", server.server_address[1], timeout=2
+                    )
+                    try:
+                        connection.request("GET", "/__control/health")
+                        response = connection.getresponse()
+                        payload = json.loads(response.read().decode("utf-8"))
+                    finally:
+                        connection.close()
+                finally:
+                    lock.release()
+                self.assertEqual(response.status, 200)
+                self.assertTrue(payload["ready"])
+                self.assertTrue(payload["health_snapshot_busy"])
+                if busy_field == "sessions_snapshot_busy":
+                    self.assertTrue(payload[busy_field])
+                    self.assertIsNone(payload["active_commands"])
+                    self.assertIsNone(payload["retained_outputs"])
+                else:
+                    self.assertTrue(payload[busy_field]["snapshot_busy"])
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+            runtime.close()
+            self.assertFalse(thread.is_alive())
+
+    def test_closed_epoch_can_preserve_durable_acceptance_without_weakening_other_preflight_gates(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"CODING_TOOLS_MCP_ACTIVATION_ALLOW_ACCEPTANCE_PENDING": "true"},
+        ):
+            runtime = Runtime(Path(self.temp.name))
+        try:
+            self.assertTrue(runtime.activation_allow_acceptance_pending)
+            with patch.object(
+                runtime,
+                "activation_preflight",
+                return_value={"safe": True, "code": "READY"},
+            ) as preflight:
+                snapshot = runtime.activation_preflight_snapshot(
+                    operation_id="activation-operation-test-0001"
+                )
+            self.assertTrue(snapshot["safe"])
+            self.assertTrue(preflight.call_args.kwargs["allow_acceptance_pending"])
+            self.assertEqual(preflight.call_args.kwargs["ignore_active_tool_calls"], 0)
+        finally:
+            runtime.close()
+
     def test_completion_refuses_expiry_mismatch_and_exact_deadline(self) -> None:
         runtime = Runtime(Path(self.temp.name))
         try:

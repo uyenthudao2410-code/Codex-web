@@ -305,6 +305,46 @@ class TaskStateStore:
             self._event(state, event, {"fields": sorted(changes)})
             return self._write(state)
 
+    def restore_from_ledger(
+        self,
+        *,
+        task_id: str,
+        objective: str,
+        changes: dict[str, Any],
+        event: str = "orchestration_projection_restored",
+    ) -> dict[str, Any]:
+        """Materialize an empty projection from one exact canonical run.
+
+        This is an activation/recovery primitive, not a task-creation path.  It
+        refuses to overwrite an existing task and preserves the ledger's task
+        identity instead of generating a replacement id that only looks
+        related to the canonical run.
+        """
+        canonical_task_id = _text(task_id, 256)
+        canonical_objective = _text(objective, 4000)
+        if not canonical_task_id or not canonical_objective:
+            raise ValueError("canonical task identity is required for projection restoration")
+        with self._lock:
+            current = self._read()
+            if self._has_task(current):
+                raise RuntimeError("projection restoration requires an empty task state")
+            state = _default_state()
+            state["task_id"] = canonical_task_id
+            state["objective"] = canonical_objective
+            for key in ("status", "current_step", "next_step"):
+                if key in changes:
+                    state[key] = _text(changes[key])
+            orchestration = changes.get("orchestration")
+            state["orchestration"] = copy.deepcopy(orchestration) if isinstance(orchestration, dict) else {}
+            if "failure" in changes:
+                failure = changes["failure"]
+                state["failure"] = None if failure in (None, "") else _text(failure)
+            self._event(state, event, {
+                "source": "canonical_ledger",
+                "run_id": str(state["orchestration"].get("run_id") or ""),
+            })
+            return self._write(state)
+
     def set_orchestration_projection(self, projection: dict[str, Any], *, event: str = "orchestration_projected") -> dict[str, Any]:
         """Persist the compact current view; the SQLite ledger remains history authority."""
         with self._lock:

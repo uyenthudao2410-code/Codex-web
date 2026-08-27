@@ -512,11 +512,29 @@ npm install
 npm start
 ```
 
-Script hiện tại chạy:
+`npm start` là lệnh **full-system refresh** cho đúng installation hiện tại. Nó
+gửi yêu cầu `full_clean_refresh` tới Recovery Host, đóng admission, dừng và
+thay thế Recovery Host, Coding MCP/Tunnel, Recovery MCP/Tunnel đã cấu hình và
+Electron UI bằng process mới trong cùng một `activation_epoch_id`, rồi kiểm tra
+PID/instance/revision trước khi trả quyền điều khiển. Lệnh không xoá
+`ledger.sqlite3`, task history, acceptance state, settings, secrets hay device
+identity. Nếu canonical ledger, ownership hoặc runtime postflight không chứng
+minh được, lệnh fail-closed với `UPDATE_INCOMPLETE`.
 
-```text
-electron .
-```
+Completion của CLI và admission của connector là hai mốc khác nhau. Khi exact
+component census đã chứng minh toàn bộ process mới, `npm start` trả exit code 0
+với `DEV_UI REFRESHED`, kể cả khi record durable còn
+`activation=VERIFYING admission=closed fully_ready=false connector=pending`.
+Trạng thái này không phải lỗi khởi động MCP/Tunnel và không được đổi thành
+`fullyReady=true`: Recovery Host chỉ chuyển epoch sang `READY`, mở admission và
+ACK contract sau receipt `tools/list`/`server/discover` thật của đúng MCP process
+hiện tại. Thiếu/sai PID, epoch, revision, workspace, device, projection hoặc
+health receipt vẫn làm `npm start` fail.
+
+`npm run dev` chỉ là lifecycle helper cho UI (focus/activate missing UI), còn
+`npm run dev:stop` chỉ đóng UI và giữ toàn bộ service nền. Connector discovery
+và ACK vẫn là gate riêng: refresh có thể khởi động process mới nhưng admission
+chỉ mở khi Recovery Host nhận được receipt discovery hiện tại.
 
 Trên thanh công cụ có nút **Bảng điều khiển** để mở **Execution Control Center** ngay bên cạnh ChatGPT. Panel hiển thị theo thời gian thực:
 

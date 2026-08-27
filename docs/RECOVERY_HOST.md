@@ -111,10 +111,27 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
 - Thao tác operator quit gửi authenticated `client.suppress_ui_recovery` cho đúng
   UI instance trước khi thoát. Suppression được lưu trong user-data và sống qua
   Recovery Host replacement; registration UI hợp lệ kế tiếp sẽ xóa suppression.
-- Development operators use `npm run dev`, `npm run dev:stop`, and
-  `npm run dev:replace`. These commands bind every mutating signal to the exact
+- Development operators use `npm start` (full-system refresh), `npm run dev`,
+  `npm run dev:stop`, and `npm run dev:replace`. These commands bind every
+  mutating signal to the exact
   `development` installation identity from the authenticated Recovery Host
   descriptor. They never scan by process name or accept an arbitrary PID.
+- `npm start` requests the explicit `full_clean_refresh` transaction. Recovery
+  Host closes admission, captures the canonical ledger census, stops the exact
+  owned child set, hands off to a new Recovery Host and starts fresh MCP,
+  Tunnel, Recovery-plane and UI processes under one activation epoch. Durable
+  ledger/history/configuration/identity files are retained. A missing census,
+  foreign process or incomplete postflight remains `UPDATE_INCOMPLETE`; no
+  process-name kill or false `fullyReady` result is allowed.
+- `npm start` returns success when the exact component-refresh census is
+  complete; it does not require the external connector client to have completed
+  discovery in the same CLI lifetime. The truthful pending receipt is
+  `activation=VERIFYING admission=closed fully_ready=false connector=pending`.
+  Recovery Host keeps the epoch closed and automatically re-enters final census
+  only after a real current-process `tools/list`/`server/discover` receipt is
+  observed. While only that gate is pending, lightweight status uses the last
+  exact component receipt plus bounded live MCP/PID observations, avoiding a
+  second heavy OS-identity/Tunnel census on every watchdog tick.
 - `dev:stop` persists watchdog suppression before dispatching an Electron
   single-instance stop signal containing the exact registered UI instance ID.
   The primary UI accepts that signal only when it matches its in-memory identity,

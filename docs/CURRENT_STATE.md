@@ -16,7 +16,7 @@ When repository documents disagree, use this order:
 
 A source implementation can be newer than the process currently running. For Electron, Recovery Host, Coding Tools MCP, and other supervised components, distinguish **source present**, **focused proof passed**, **EOCL accepted**, **controlled activation completed**, and **packaged/released**.
 
-Development startup now has an explicit UI lifecycle contract. `npm run dev` inspects the authenticated Recovery Host receipt for this exact development installation, classifies Electron UI as `CURRENT`, `STALE`, or `MISSING`, uses component activation for a stale UI, launches a missing UI, and succeeds only after `running_revision == disk_revision` is observed with PID/instance/mode metadata. Stale activation is authorized only from `auto_activation.closure_input` when source acceptance, accepted-receipt completeness, activation eligibility, affected-component validity, and `electron_ui` ownership are all explicit; the exact checkpoint/run/wave/proof/accepted-HEAD identity is forwarded as `source_checkpoint`, while missing or ineligible closure state is a typed refusal. `npm run dev:stop` suppresses UI watchdog recovery and asks the exact registered single instance to quit while preserving Recovery Host, MCP, and Tunnel. It refuses an initially unavailable Recovery Host and reports success only after that exact host reports the UI `MISSING` or the previously bound PID is proven dead; transient host loss is not stop proof. `npm run dev:replace` applies the same exact-instance stop postflight, then relaunches and verifies a different UI instance. Direct `npm start` remains a compatibility entry point; when another UI owns the lock it prints an actionable diagnostic instead of silently appearing successful.
+Development startup has two explicit contracts. `npm start` (and its alias `npm run dev:refresh`) is the operator full-system refresh: it authenticates the current Recovery Host, creates a durable `full_clean_refresh` activation epoch, replaces Recovery Host, Coding MCP/Tunnel, configured Recovery MCP/Tunnel and Electron UI, then verifies fresh process identities, matching revisions and epoch binding. It never deletes durable truth; it fails closed if ownership, canonical ledger state or postflight cannot be proven. `npm run dev` inspects the authenticated Recovery Host receipt for this exact development installation, classifies Electron UI as `CURRENT`, `STALE`, or `MISSING`, uses component activation for a stale UI, launches a missing UI, and succeeds only after `running_revision == disk_revision` is observed with PID/instance/mode metadata. Stale code activation remains authorized only from an eligible accepted closure checkpoint. `npm run dev:stop` suppresses UI watchdog recovery and asks the exact registered single instance to quit while preserving Recovery Host, MCP, and Tunnel. It refuses an initially unavailable Recovery Host and reports success only after that exact host reports the UI `MISSING` or the previously bound PID is proven dead; transient host loss is not stop proof. `npm run dev:replace` applies the same exact-instance stop postflight, then relaunches and verifies a different UI instance. Connector discovery/ACK remains a separate gate; a refresh does not invent a connector receipt or open admission early.
 
 The Command Center exposes loaded-source status for the three revisioned components—Electron UI, Recovery Host, and Coding MCP—and reports Tunnel health separately as `READY` or `STOPPED`. `CURRENT` is process/revision evidence only and never derives from Tunnel availability; it is not EOCL acceptance, release, deployment, production, or SLO proof. A source-update notice remains visible whenever a running component revision differs from disk.
 
@@ -28,11 +28,11 @@ A schema-v2 postflight is accepted only when its operation, component, checkpoin
 
 `LIVE_CLOSED` means only that this exact accepted local source is loaded and locally ready under the verified lifecycle and connector contract. Its projection deliberately remains `release_state=NOT_RELEASED` and `production_state=NOT_CLAIMED`. Connector continuity is separate: `UNCHANGED_ACKNOWLEDGED` is current only when the current and acknowledged contract SHA-256 values are identical and `connector_refresh_required=false`; a changed contract SHA requires current-process `tools/list` or `server/discover` followed by official Recovery Host acknowledgement. A normal `tools/call` or `workspace_context` call is not connector rediscovery.
 
-### Operational recency override — 2026-08-25
+### Operational recency override — 2026-08-27
 
 The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md) is the current operational receipt for volatile lifecycle, connector, PRL, and packaged-harness claims. It supersedes older uses of “current”, “active”, or “accepted” in this document when those terms describe a live process or connector rather than a source implementation.
 
-- The checked-out baseline is `main @ 898d57454f9a5113d8aa3f56d1650e4b3e0d6924`. The current full-clean activation-closure and PRL v11 hardening waves are newer uncommitted source until an exact accepted checkpoint says otherwise. PRL now fails public caller-derived authority closed, records immutable non-code dispositions and checkpoint-bound reconciliation, reports revision-scoped clocks/intervals, and emits C4 receipt schema `2` with Backup-API snapshot identity plus independently rebuilt proof/checkpoint/bridge coverage. Neither a matched source revision nor a fresh runtime receipt is a package, installer, release, deployment, production, or SLO claim.
+- The checked-out baseline is `main @ f85082b7b016dfd20dc9c1f769362c9a9942cb61`. The current full-clean activation-closure and PRL v11 hardening waves are newer uncommitted source until an exact accepted checkpoint says otherwise. PRL now fails public caller-derived authority closed, records immutable non-code dispositions and checkpoint-bound reconciliation, reports revision-scoped clocks/intervals, and emits C4 receipt schema `2` with Backup-API snapshot identity plus independently rebuilt proof/checkpoint/bridge coverage. Neither a matched source revision nor a fresh runtime receipt is a package, installer, release, deployment, production, or SLO claim.
 - Earlier P0/P4 connector acknowledgements and tool calls are `VERIFIED_SNAPSHOT`, not current-process authority. The current connector claim must be read from a fresh Recovery Host closure receipt under the unchanged-versus-changed SHA rules above; no persisted hash, generic tool call, or historical rediscovery timestamp may substitute for it.
 - P5 anchors remain terminal and the earlier A0 source-drift epoch retains its truthful zero funnel. Volatile ordinary-RUN, managed-job, and residue counts are not frozen in this maintained source document: recapture them from one immutable `report_lifecycle_census.py` snapshot before activation or stale-run reconciliation, and use only the official exact-ID path for a genuinely eligible stale RUN.
 - PRL-D and A2 remain `HOLD_NATURAL_EVIDENCE`; missing natural observations, TTPR, stage coverage, and measured money remain unknown rather than zero.
@@ -40,7 +40,7 @@ The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLE
 
 ### Source validation update — 2026-08-27
 
-At the current uncommitted source fingerprint, the complete Coding Tools MCP Python suite passes `698` tests with `4` environment-conditional skips and `106` subtests. The focused full-clean/activation, acceptance, orchestration, PRL, and projection packet passes `120` tests with `1` skip and `43` subtests. These are source-level regression results only; they do not establish a live Recovery Host handoff, current-process connector discovery/ACK, package, release, deployment, or production readiness.
+At the current uncommitted source fingerprint, the Node repository suite passes `482/482`, including the full-clean refresh, Recovery Host, Tunnel, Recovery Plane, UI lifecycle, delivery-surface and source-root/secret guards. The unchanged Coding Tools MCP Python source packet retains its verified complete result of `698` tests with `4` environment-conditional skips and `106` subtests; the focused full-clean/activation, acceptance, orchestration, PRL, and projection packet passes `120` tests with `1` skip and `43` subtests. These are source-level regression results only; they do not establish current-process connector discovery/ACK, package, release, deployment, or production readiness. Live process-refresh evidence remains a separate receipt.
 
 ### Live reconciliation — 2026-08-26
 
@@ -147,6 +147,19 @@ compatibility-only contact and ordinary `tools/call` are insufficient. Only a
 verified `READY` epoch with `admission_open=true` may report `fullyReady=true`.
 The ledger, task history, acceptance state, settings, secrets handles,
 authorized roots, and device identity are never deleted by this transaction.
+
+The development `npm start` command treats exact process refresh completion and
+connector acceptance as separate observable boundaries. It exits successfully
+after the new Recovery Host, Coding MCP/Tunnel, Recovery MCP/Tunnel and Electron
+UI have passed their exact identity/epoch/revision/health/projection census. If
+real-client discovery has not happened yet, the durable epoch remains
+`VERIFYING`, admission remains closed, and the CLI reports
+`fully_ready=false connector=pending`; it does not wait until TTL and misreport
+the completed process refresh as a startup failure. While only this external
+connector gate remains, Recovery Host serves a bounded cached read-only runtime
+snapshot and polls the MCP discovery receipt without repeating OS-identity and
+Tunnel census probes every five seconds. Exact current-process discovery is the
+event that re-enters the authoritative final census/ACK/READY transaction.
 
 When a failed activation left Coding MCP stopped, an explicit retry is admitted
 only after Recovery Host obtains an independent immutable/query-only

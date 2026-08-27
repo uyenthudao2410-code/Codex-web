@@ -25,6 +25,9 @@ const RECOVERY_MCP_START_ATTEMPTS = 30;
 const RECOVERY_TUNNEL_START_ATTEMPTS = 90;
 const LEGACY_CANDIDATE_STABILIZATION_ATTEMPTS = 4;
 const LEGACY_CANDIDATE_STABILIZATION_DELAY_MS = 250;
+const RECOVERY_MCP_HEALTH_TIMEOUT_MS = 3_000;
+const RECOVERY_MCP_ACTIVATION_HEALTH_TIMEOUT_MS = 10_000;
+const RECOVERY_TUNNEL_PROBE_TIMEOUT_MS = 10_000;
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -42,18 +45,62 @@ function recoveryTunnelFingerprint(settings, authToken, deviceId = '', activatio
   return sha256(JSON.stringify(value));
 }
 
-function recoveryMcpHealth(port, authToken, expectedDeviceId = '', expectedDeviceInstanceId = '', expectedActivationEpochId = '', expectedPid = 0, expectedInstanceId = '') {
+function recoveryMcpHealthObservation(port, authToken, expectedDeviceId = '', expectedDeviceInstanceId = '', expectedActivationEpochId = '', expectedPid = 0, expectedInstanceId = '', options = {}) {
   return new Promise((resolve) => {
-    const request = http.request({ host: '127.0.0.1', port: Number(port), path: '/healthz', method: 'GET', headers: { Authorization: `Bearer ${authToken}` }, timeout: 800 }, (response) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const timeoutMs = Number.isSafeInteger(Number(options.timeoutMs)) && Number(options.timeoutMs) > 0
+      ? Math.min(Number(options.timeoutMs), RECOVERY_MCP_ACTIVATION_HEALTH_TIMEOUT_MS)
+      : RECOVERY_MCP_HEALTH_TIMEOUT_MS;
+    const request = http.request({ host: '127.0.0.1', port: Number(port), path: '/healthz', method: 'GET', headers: { Authorization: `Bearer ${authToken}`, Connection: 'close' }, timeout: timeoutMs }, (response) => {
       let body = '';
+      let bodyTruncated = false;
       response.setEncoding('utf8');
-      response.on('data', (chunk) => { if (body.length < 16 * 1024) body += chunk; });
-      response.on('end', () => { if (response.statusCode !== 200) { resolve(null); return; } try { const payload = JSON.parse(body); const deviceMatches = !expectedDeviceId || String(payload.device_id || '').toLowerCase() === String(expectedDeviceId).toLowerCase(); const instanceMatches = !expectedDeviceInstanceId || String(payload.device_instance_id || '') === String(expectedDeviceInstanceId); const epochMatches = !expectedActivationEpochId || String(payload.activation_epoch_id || '') === String(expectedActivationEpochId); const pidMatches = !expectedPid || Number(payload.pid) === Number(expectedPid); const processInstanceMatches = !expectedInstanceId || String(payload.instance_id || '') === String(expectedInstanceId); resolve(payload.ok === true && payload.service === 'recovery-mcp' && deviceMatches && instanceMatches && epochMatches && pidMatches && processInstanceMatches ? payload : null); } catch { resolve(null); } });
+      response.on('data', (chunk) => {
+        if (body.length + chunk.length <= 16 * 1024) body += chunk;
+        else bodyTruncated = true;
+      });
+      response.on('end', () => {
+        if (bodyTruncated) { finish({ ok: false, failure_kind: 'response_too_large', payload: null }); return; }
+        if (response.statusCode !== 200) { finish({ ok: false, failure_kind: 'http_status', status_code: Number(response.statusCode || 0), payload: null }); return; }
+        let payload;
+        try { payload = JSON.parse(body); }
+        catch { finish({ ok: false, failure_kind: 'invalid_json', payload: null }); return; }
+        const checks = [
+          ['not_ready', payload.ok === true],
+          ['service_mismatch', payload.service === 'recovery-mcp'],
+          ['device_id_mismatch', !expectedDeviceId || String(payload.device_id || '').toLowerCase() === String(expectedDeviceId).toLowerCase()],
+          ['device_instance_id_mismatch', !expectedDeviceInstanceId || String(payload.device_instance_id || '') === String(expectedDeviceInstanceId)],
+          ['activation_epoch_mismatch', !expectedActivationEpochId || String(payload.activation_epoch_id || '') === String(expectedActivationEpochId)],
+          ['pid_mismatch', !expectedPid || Number(payload.pid) === Number(expectedPid)],
+          ['instance_id_mismatch', !expectedInstanceId || String(payload.instance_id || '') === String(expectedInstanceId)]
+        ];
+        const failure = checks.find(([, matches]) => !matches);
+        finish({ ok: !failure, failure_kind: failure?.[0] || null, payload: failure ? null : payload });
+      });
     });
-    request.on('timeout', () => { request.destroy(); resolve(null); });
-    request.on('error', () => resolve(null));
+    request.on('timeout', () => { request.destroy(); finish({ ok: false, failure_kind: 'timeout', payload: null }); });
+    request.on('error', (error) => finish({ ok: false, failure_kind: 'request_error', error_code: String(error?.code || '') || null, payload: null }));
     request.end();
   });
+}
+
+async function recoveryMcpHealth(port, authToken, expectedDeviceId = '', expectedDeviceInstanceId = '', expectedActivationEpochId = '', expectedPid = 0, expectedInstanceId = '', options = {}) {
+  const observation = await recoveryMcpHealthObservation(
+    port,
+    authToken,
+    expectedDeviceId,
+    expectedDeviceInstanceId,
+    expectedActivationEpochId,
+    expectedPid,
+    expectedInstanceId,
+    options
+  );
+  return observation.ok ? observation.payload : null;
 }
 async function stopExactTree(identity, options = {}) {
   if (!identity) return false;
@@ -102,7 +149,7 @@ function persistenceCleanupFailure(kind, persistenceError, cleanupError) {
 }
 
 async function recoveryTunnelListenerPid(port) {
-  const result = await run('netstat.exe', ['-ano', '-p', 'tcp'], { allowFailure: true, timeoutMs: 3000 });
+  const result = await run('netstat.exe', ['-ano', '-p', 'tcp'], { allowFailure: true, timeoutMs: RECOVERY_TUNNEL_PROBE_TIMEOUT_MS });
   if (result.code !== 0) return null;
   const target = `127.0.0.1:${Number(port)}`;
   for (const line of String(result.stdout || '').split(/\r?\n/)) {
@@ -121,7 +168,7 @@ async function recoveryTunnelReady(paths, port, pid) {
   const result = await run(paths.tunnelExecutable(), [
     'health', '--port', String(port), '--pid', String(pid),
     '--require-control-plane-poll', '--json'
-  ], { allowFailure: true, timeoutMs: 3000 });
+  ], { allowFailure: true, timeoutMs: RECOVERY_TUNNEL_PROBE_TIMEOUT_MS });
   return result.code === 0;
 }
 
@@ -463,27 +510,49 @@ class RecoveryPlaneService {
     const state = this.readState();
     const existingReceipt = storedProcessReceipt(state, 'recoveryMcp');
     const existingIdentity = await this.ownedIdentity(state, 'recoveryMcp', 'RECOVERY_MCP');
-    const current = Boolean(state.recoveryMcpInstanceId)
-      && Boolean(existingIdentity)
-      && state.recoveryMcpFingerprint === fingerprint
-      && Number(state.recoveryMcpPort) === Number(settings.recoveryMcpPort)
-      && (!this.device || state.recoveryMcpDeviceInstanceId === this.device.deviceInstanceId)
-      && String(state.recoveryMcpActivationEpochId || '') === String(this.activationEpochId || '')
-      && await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, state.recoveryMcpPid, state.recoveryMcpInstanceId);
+    const currentChecks = {
+      instance_id_present: Boolean(state.recoveryMcpInstanceId),
+      exact_process_identity: Boolean(existingIdentity),
+      fingerprint_matches: state.recoveryMcpFingerprint === fingerprint,
+      port_matches: Number(state.recoveryMcpPort) === Number(settings.recoveryMcpPort),
+      device_instance_matches: !this.device || state.recoveryMcpDeviceInstanceId === this.device.deviceInstanceId,
+      activation_epoch_matches: String(state.recoveryMcpActivationEpochId || '') === String(this.activationEpochId || '')
+    };
+    const prerequisitesMatch = Object.values(currentChecks).every(Boolean);
+    const currentHealth = prerequisitesMatch
+      ? await recoveryMcpHealthObservation(
+        settings.recoveryMcpPort,
+        authToken,
+        this.device?.deviceId || '',
+        this.device?.deviceInstanceId || '',
+        this.activationEpochId,
+        state.recoveryMcpPid,
+        state.recoveryMcpInstanceId,
+        { timeoutMs: RECOVERY_MCP_ACTIVATION_HEALTH_TIMEOUT_MS }
+      )
+      : { ok: false, failure_kind: 'prerequisite_mismatch', payload: null };
+    currentChecks.health_verified = currentHealth.ok === true;
+    let replacementReason = Object.entries(currentChecks).find(([, matches]) => !matches)?.[0]
+      || currentHealth.failure_kind
+      || null;
+    this.lastMcpCurrentObservation = {
+      current: Object.values(currentChecks).every(Boolean),
+      failure_kind: replacementReason,
+      checks: currentChecks,
+      health_failure_kind: currentHealth.failure_kind || null
+    };
+    const current = this.lastMcpCurrentObservation.current;
     if (current) {
       const latestState = this.readState();
       const latestIdentity = await this.ownedIdentity(latestState, 'recoveryMcp', 'RECOVERY_MCP');
-      const latestHealth = latestIdentity && await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, latestState.recoveryMcpPid, latestState.recoveryMcpInstanceId);
-      const finalState = latestHealth ? this.readState() : null;
-      const finalIdentity = finalState && await this.ownedIdentity(finalState, 'recoveryMcp', 'RECOVERY_MCP');
-      if (finalIdentity && sameProcessIdentity(latestIdentity, finalIdentity)
-        && finalState.recoveryMcpFingerprint === fingerprint
-        && finalState.recoveryMcpInstanceId === state.recoveryMcpInstanceId) {
+      if (latestIdentity && sameProcessIdentity(existingIdentity, latestIdentity)
+        && latestState.recoveryMcpFingerprint === fingerprint
+        && latestState.recoveryMcpInstanceId === state.recoveryMcpInstanceId) {
         return {
           state: 'healthy',
-          pid: finalState.recoveryMcpPid,
-          process_start_token: finalIdentity.process_start_token,
-          instance_id: finalState.recoveryMcpInstanceId,
+          pid: latestState.recoveryMcpPid,
+          process_start_token: latestIdentity.process_start_token,
+          instance_id: latestState.recoveryMcpInstanceId,
           port: settings.recoveryMcpPort,
           revision: scriptRevision,
           replaced: false,
@@ -492,6 +561,12 @@ class RecoveryPlaneService {
           activation_epoch_id: this.activationEpochId || null
         };
       }
+      replacementReason = 'confirmation_state_changed';
+      this.lastMcpCurrentObservation = {
+        ...this.lastMcpCurrentObservation,
+        current: false,
+        failure_kind: replacementReason
+      };
     }
     if (existingIdentity) await this.terminateOwnedIdentity(existingIdentity, 'recoveryMcp', 'RECOVERY_MCP');
     if (existingIdentity || existingReceipt.pid || existingReceipt.process_start_token) {
@@ -525,13 +600,13 @@ class RecoveryPlaneService {
     }
     for (let index = 0; index < RECOVERY_MCP_START_ATTEMPTS; index += 1) {
       if (!isAlive(child.pid)) break;
-      if (await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, child.pid, recoveryMcpInstanceId)) {
+      if (await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, child.pid, recoveryMcpInstanceId, { timeoutMs: RECOVERY_MCP_ACTIVATION_HEALTH_TIMEOUT_MS })) {
         const latestState = this.readState();
         const latestIdentity = await this.ownedIdentity(latestState, 'recoveryMcp', 'RECOVERY_MCP');
         if (latestIdentity && sameProcessIdentity(spawnedIdentity, latestIdentity)
           && latestState.recoveryMcpInstanceId === recoveryMcpInstanceId
           && latestState.recoveryMcpFingerprint === fingerprint) {
-          return { state: 'healthy', pid: child.pid, process_start_token: latestIdentity.process_start_token, instance_id: recoveryMcpInstanceId, port: settings.recoveryMcpPort, revision: scriptRevision, replaced: true, device_id: this.device?.deviceId || null, device_instance_id: this.device?.deviceInstanceId || null, activation_epoch_id: this.activationEpochId || null };
+          return { state: 'healthy', pid: child.pid, process_start_token: latestIdentity.process_start_token, instance_id: recoveryMcpInstanceId, port: settings.recoveryMcpPort, revision: scriptRevision, replaced: true, replacement_reason: replacementReason, device_id: this.device?.deviceId || null, device_instance_id: this.device?.deviceInstanceId || null, activation_epoch_id: this.activationEpochId || null };
         }
       }
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -748,4 +823,4 @@ class RecoveryPlaneService {
   }
 }
 
-module.exports = { RecoveryPlaneService, recoveryFingerprint, recoveryTunnelFingerprint, recoveryMcpHealth, recoveryTunnelListenerPid, recoveryTunnelReady, stopExactTree };
+module.exports = { RecoveryPlaneService, recoveryFingerprint, recoveryTunnelFingerprint, recoveryMcpHealth, recoveryMcpHealthObservation, recoveryTunnelListenerPid, recoveryTunnelReady, stopExactTree };

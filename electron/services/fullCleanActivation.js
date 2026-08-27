@@ -8,7 +8,7 @@ const { readJson } = require('./jsonStore');
 const { pythonStatus } = require('./environmentService');
 const { isAlive: isAlivePid } = require('./nativeService');
 const { tunnelFingerprint } = require('./tunnelService');
-const { recoveryMcpHealth, recoveryTunnelReady: probeRecoveryTunnelReady } = require('./recoveryPlaneService');
+const { recoveryMcpHealthObservation, recoveryTunnelReady: probeRecoveryTunnelReady } = require('./recoveryPlaneService');
 const {
   activationPostflight,
   lifecycleDecisionIsClean,
@@ -26,7 +26,7 @@ const PROJECTION_REBUILD_KIND = 'coding_tools_mcp_projection_rebuild';
 const PROJECTION_REBUILD_MAX_AGE_MS = 5 * 60 * 1000;
 const PROJECTION_REBUILD_FUTURE_SKEW_MS = 1000;
 const PROJECTION_REBUILD_ALLOWED_CLASSIFICATIONS = new Set([
-  'NO_ACTIVE_PROJECTION', 'PROJECTION_CONSISTENT', 'CHECKPOINTED', 'BLOCKED', 'ABORTED'
+  'NO_ACTIVE_PROJECTION', 'CONTEXTUAL_PROJECTIONS', 'PROJECTION_CONSISTENT', 'CHECKPOINTED', 'BLOCKED', 'ABORTED'
 ]);
 const PROJECTION_REBUILD_RECEIPT_FIELDS = new Set([
   'schema_version', 'kind', 'activation_epoch_id', 'process_instance_id',
@@ -38,7 +38,9 @@ const PROJECTION_REBUILD_RECEIPT_FIELDS = new Set([
 const PROJECTION_REBUILD_LEDGER_FIELDS = new Set([
   'backup_api_copy', 'immutable', 'query_only', 'integrity_check', 'foreign_key_check_rows'
 ]);
-const PROJECTION_REBUILD_PROJECTION_FIELDS = new Set(['run_id', 'wave_id', 'orchestration_state']);
+const PROJECTION_REBUILD_PROJECTION_FIELDS = new Set([
+  'run_id', 'wave_id', 'orchestration_state', 'mode', 'context_count', 'contextual_sha256'
+]);
 const CONNECTOR_DISCOVERY_FUTURE_SKEW_MS = 1000;
 const ACTIVATION_RESPONSE_LOSS_CODES = new Set([
   'ECONNABORTED', 'ECONNREFUSED', 'ECONNRESET', 'EPIPE', 'ETIMEDOUT',
@@ -100,7 +102,10 @@ function projectionIdentity(value) {
   return {
     run_id: text(source.run_id),
     wave_id: text(source.wave_id),
-    orchestration_state: text(source.orchestration_state).toUpperCase()
+    orchestration_state: text(source.orchestration_state).toUpperCase(),
+    mode: text(source.mode).toLowerCase(),
+    context_count: source.context_count ?? 0,
+    contextual_sha256: text(source.contextual_sha256).toLowerCase()
   };
 }
 
@@ -118,7 +123,7 @@ function validateProjectionRebuildReceipt(receipt, {
     add(receipt && typeof receipt === 'object' ? 'RECEIPT_FIELDS_INVALID' : 'RECEIPT_MISSING');
     return { valid: false, code: 'UPDATE_INCOMPLETE', reasons, receipt: null };
   }
-  if (receipt.schema_version !== 1 || receipt.kind !== PROJECTION_REBUILD_KIND) add('RECEIPT_SCHEMA_INVALID');
+  if (receipt.schema_version !== 2 || receipt.kind !== PROJECTION_REBUILD_KIND) add('RECEIPT_SCHEMA_INVALID');
   for (const field of ['activation_epoch_id', 'process_instance_id', 'server_instance_id']) {
     if (typeof receipt[field] !== 'string' || !receipt[field].trim() || receipt[field].length > 256) {
       add(`${field.toUpperCase()}_INVALID`);
@@ -138,15 +143,32 @@ function validateProjectionRebuildReceipt(receipt, {
   const classification = receipt.projection_classification;
   const projection = receipt.projection;
   const projectionFieldsValid = exactObjectFields(projection, PROJECTION_REBUILD_PROJECTION_FIELDS)
-    && Object.values(projection).every((item) => typeof item === 'string' && item.length <= 256);
+    && ['run_id', 'wave_id', 'orchestration_state', 'mode', 'contextual_sha256']
+      .every((field) => typeof projection?.[field] === 'string' && projection[field].length <= 256)
+    && Number.isSafeInteger(projection?.context_count)
+    && projection.context_count >= 0;
   const emptyProjection = projectionFieldsValid
     && !projection.run_id && !projection.wave_id && !projection.orchestration_state;
   const completeProjection = projectionFieldsValid
     && Boolean(projection.run_id && projection.wave_id && projection.orchestration_state);
+  const noActiveProjection = emptyProjection
+    && ['none', 'global'].includes(projection?.mode)
+    && projection.context_count === 0
+    && !projection.contextual_sha256;
+  const contextualProjection = emptyProjection
+    && projection?.mode === 'contextual'
+    && projection.context_count > 0
+    && HEX64.test(projection.contextual_sha256);
+  const globalProjection = completeProjection
+    && projection?.mode === 'global'
+    && projection.context_count === 0
+    && !projection.contextual_sha256;
   const terminalState = { CHECKPOINTED: 'CHECKPOINTED', BLOCKED: 'BLOCKED', ABORTED: 'ABORTED' }[classification];
   if (!PROJECTION_REBUILD_ALLOWED_CLASSIFICATIONS.has(classification)
     || !projectionFieldsValid
-    || (classification === 'NO_ACTIVE_PROJECTION' ? !emptyProjection : !completeProjection)
+    || (classification === 'NO_ACTIVE_PROJECTION' && !noActiveProjection)
+    || (classification === 'CONTEXTUAL_PROJECTIONS' && !contextualProjection)
+    || (!['NO_ACTIVE_PROJECTION', 'CONTEXTUAL_PROJECTIONS'].includes(classification) && !globalProjection)
     || (terminalState && projection.orchestration_state !== terminalState)) add('PROJECTION_CLASSIFICATION_INVALID');
   if (receipt.reconciled !== true) add('RECONCILIATION_FLAG_INVALID');
   const completedMs = receipt.completed_at_unix_ms;
@@ -1144,14 +1166,18 @@ class FullCleanActivation {
       if (typeof this.orchestrator?.restart !== 'function') throw epochError('SOFT_RESTART_UNAVAILABLE', 'Soft restart is unavailable.');
       return this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' });
     }
-    // A full-clean restart is an accepted-checkpoint transaction.  Refuse an
-    // unbound/manual request before even entering the in-flight coordinator so
-    // no stale epoch can be expired, created, fenced, or stopped on inference.
-    const sourceCheckpoint = requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
+    // Code/revision activation remains an accepted-checkpoint transaction.
+    // `refresh` is the explicit operator process-refresh surface used by
+    // `npm start`: it still gets the same durable epoch, census, handoff and
+    // final admission gates, but it is not allowed to invent a RUN/WAVE
+    // checkpoint for an operation that is only refreshing the installation.
+    const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
+    const sourceCheckpoint = refresh ? null : requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
     const requestedOperationId = text(options.operationId) || operationId();
     const requestKey = canonicalJson({
       operation_id: requestedOperationId,
       source_checkpoint: sourceCheckpoint,
+      refresh,
       component: text(options.component) || 'coding_mcp',
       expected_disk_revision: text(options.expectedDiskRevision) || null,
       activation_epoch_id: text(options.activationEpochId) || null,
@@ -1165,7 +1191,7 @@ class FullCleanActivation {
       });
     }
     this.inFlightRequestKey = requestKey;
-    const tracked = this._restart({ ...options, operationId: requestedOperationId, sourceCheckpoint }).finally(() => {
+    const tracked = this._restart({ ...options, refresh, operationId: requestedOperationId, sourceCheckpoint }).finally(() => {
       if (this.inFlight === tracked) {
         this.inFlight = null;
         this.inFlightRequestKey = null;
@@ -1176,8 +1202,9 @@ class FullCleanActivation {
   }
 
   async _restart(options = {}) {
-    const sourceCheckpoint = requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
-    options = { ...options, sourceCheckpoint };
+    const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
+    const sourceCheckpoint = refresh ? null : requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
+    options = { ...options, refresh, sourceCheckpoint };
     const operation_id = text(options.operationId) || operationId();
     const expiresAtUnixMs = Number(options.expiresAtUnixMs || (this.now() + DEFAULT_TTL_MS));
     if (!Number.isSafeInteger(expiresAtUnixMs) || expiresAtUnixMs <= this.now()) throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request is expired.');
@@ -1309,6 +1336,8 @@ class FullCleanActivation {
         component_evidence: componentEvidence,
         metadata: {
           reason: options.reason || 'operator_restart',
+          allow_acceptance_pending: options.allowAcceptancePending === true,
+          refresh: options.refresh === true,
           requested_at_unix_ms: this.now(),
           expires_at_unix_ms: expiresAtUnixMs,
           ...(text(heldCensus?.census_fingerprint)
@@ -1405,7 +1434,14 @@ class FullCleanActivation {
       if (typeof this.orchestrator?.start !== 'function') {
         throw epochError('RUNTIME_START_UNAVAILABLE', 'Full clean activation requires a Coding MCP runtime launcher.');
       }
-      await this.orchestrator.start({ automatic: true, fullClean: true, activationEpochId: epochId, activationGate: 'closed', expiresAtUnixMs: effectiveExpiry });
+      await this.orchestrator.start({
+        automatic: true,
+        fullClean: true,
+        activationEpochId: epochId,
+        activationGate: 'closed',
+        activationAllowAcceptancePending: record.metadata?.allow_acceptance_pending === true,
+        expiresAtUnixMs: effectiveExpiry
+      });
       if (typeof this.recoveryPlane?.ensure !== 'function') {
         throw epochError('RECOVERY_PLANE_UNAVAILABLE', 'Full clean activation requires the Recovery MCP/Tunnel plane launcher.');
       }
@@ -1443,7 +1479,6 @@ class FullCleanActivation {
       throw epochError('ACTIVATION_EPOCH_NOT_CURRENT', 'Final census must target the current durable activation epoch.');
     }
     const settings = this._settings();
-    const runtime = await this.orchestrator?.lightweightSnapshot?.() || {};
     let activationObservation = null;
     let activationObservationFailure = null;
     try {
@@ -1457,7 +1492,14 @@ class FullCleanActivation {
         message: text(error?.message) || 'Fresh activation observation failed.'
       };
     }
-    const health = await this.orchestrator?.currentMcpHealth?.().catch?.(() => null) || null;
+    // The projection receipt is created by the preflight above. Capture one
+    // bounded post-preflight health observation and reuse it for the runtime
+    // snapshot so final census cannot contradict itself through a second short
+    // liveness probe while the freshly launched UI is polling control state.
+    const health = await this.orchestrator?.currentMcpHealth?.({
+      timeoutMs: 15_000
+    }).catch?.(() => null) || null;
+    const runtime = await this.orchestrator?.lightweightSnapshot?.({ mcpHealth: health }) || {};
     let tunnelStatusVerified = runtime.tunnelRunning === true;
     if (typeof this.orchestrator?.tunnel?.status === 'function') {
       try {
@@ -1596,22 +1638,29 @@ class FullCleanActivation {
     const recoveryMcpEpochMatches = Boolean(String(plane.activation_epoch_id || '') === epochId
       && String(plane.mcp?.activation_epoch_id || planeState.recoveryMcpActivationEpochId || '') === epochId);
     let recoveryMcpHealthVerified = false;
+    let recoveryMcpHealthFailureKind = 'not_observed';
     if (currentRecoveryMcpPid && currentRecoveryMcpInstanceId && this.secrets?.get && settings.recoveryMcpPort) {
       try {
         const token = this.secrets.get('mcpAuthToken');
-        const health = await recoveryMcpHealth(
+        const observation = await recoveryMcpHealthObservation(
           settings.recoveryMcpPort,
           token,
           this.deviceIdentity?.device_id || '',
           this._deviceInstanceId() || '',
           epochId,
           currentRecoveryMcpPid,
-          currentRecoveryMcpInstanceId
+          currentRecoveryMcpInstanceId,
+          { timeoutMs: 10_000 }
         );
+        const health = observation.payload;
+        recoveryMcpHealthFailureKind = observation.failure_kind;
         recoveryMcpHealthVerified = Boolean(health
           && Number(health.pid) === currentRecoveryMcpPid
           && String(health.instance_id || '') === currentRecoveryMcpInstanceId);
-      } catch { recoveryMcpHealthVerified = false; }
+      } catch {
+        recoveryMcpHealthVerified = false;
+        recoveryMcpHealthFailureKind = 'observation_exception';
+      }
     }
     const recoveryMcpReady = Boolean(plane.mcp?.state === 'healthy'
       && recoveryMcpEpochMatches
@@ -1689,6 +1738,7 @@ class FullCleanActivation {
       recovery_tunnel_pid: currentRecoveryTunnelPid,
       recovery_tunnel_instance_id: currentRecoveryTunnelInstanceId || null,
       recovery_mcp_health_verified: recoveryMcpHealthVerified,
+      recovery_mcp_health_failure_kind: recoveryMcpHealthFailureKind,
       recovery_tunnel_health_verified: recoveryTunnelHealthVerified,
       running_revision: text(revision.running_revision),
       disk_revision: text(revision.disk_revision),

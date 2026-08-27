@@ -82,6 +82,36 @@ function logStub() {
   return { info() {}, warn() {}, error() {}, read: () => [], clear() {} };
 }
 
+test('refresh bootstrap is checkpoint-free but keeps durable acceptance preservation explicit', (t) => {
+  const paths = fixture(t);
+  const requestedAt = Date.now();
+  const refresh = buildBootstrapEnvelope({
+    paths,
+    descriptor: descriptor(paths),
+    operationId: OPERATION_ONE,
+    sourceCheckpoint: null,
+    expectedDiskRevision: REVISION,
+    refresh: true,
+    requestedAtUnixMs: requestedAt,
+    expiresAtUnixMs: requestedAt + 90_000
+  });
+  writeBootstrapEnvelope(paths, refresh);
+  const loaded = readBootstrapEnvelope(paths, { bootstrapId: OPERATION_ONE });
+  assert.equal(loaded.refresh, true);
+  assert.equal(loaded.source_checkpoint, null);
+  assert.equal(loaded.allow_acceptance_pending, true);
+  assert.throws(() => buildBootstrapEnvelope({
+    paths,
+    descriptor: descriptor(paths),
+    operationId: OPERATION_TWO,
+    sourceCheckpoint: SOURCE_CHECKPOINT,
+    expectedDiskRevision: REVISION,
+    refresh: true,
+    requestedAtUnixMs: requestedAt,
+    expiresAtUnixMs: requestedAt + 90_000
+  }), { code: 'RECOVERY_BOOTSTRAP_INVALID' });
+});
+
 test('bootstrap artifacts are operation-scoped and exact-envelope removal cannot delete another operation', (t) => {
   const paths = fixture(t);
   const first = envelope(paths, OPERATION_ONE);
@@ -321,6 +351,60 @@ test('bootstrap replay before durable HANDOFF terminalizes fail-closed instead o
   assert.equal(fs.existsSync(paths.recoveryHostBootstrapFile(OPERATION_ONE)), false);
   assert.equal(gatewayStarts, 0);
   assert.equal(fs.existsSync(paths.recoveryHostLockFile()), false);
+});
+
+test('new bootstrap terminalizes an expired prior epoch and can create a fresh operation', async (t) => {
+  const paths = fixture(t);
+  const request = envelope(paths, OPERATION_TWO, {
+    descriptor: { owner_pid: 78003, instance_id: 'expired-prior-host-0001' }
+  });
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ workspace: paths.appRoot(), autoStartServices: false }) },
+    secrets: {},
+    environment: {},
+    log: logStub(),
+    orchestrator: {
+      setFullCleanActivation() {},
+      setActivationEpoch() {},
+      codingMcpRevisionStatus: () => ({
+        running_revision: REVISION,
+        disk_revision: REVISION,
+        update_pending: false,
+        state: 'current'
+      })
+    },
+    healthService: {},
+    gateway: {},
+    revisionTracker: {
+      captureRunning: () => REVISION,
+      status: () => ({
+        running_revision: REVISION,
+        disk_revision: REVISION,
+        update_pending: false,
+        state: 'current'
+      })
+    },
+    recoveryPlaneService: { setActivationEpoch() {} },
+    bootstrap: request,
+    processIdentityObserver: async (pid) => ({ state: 'absent', pid, process_start_token: null })
+  });
+  const created = host.activationEpochStore.create({
+    operation_id: OPERATION_ONE,
+    expires_at_unix_ms: Date.now() + 30,
+    component_evidence: {
+      recovery_host: { instance_id: 'expired-epoch-owner-0001', pid: 78002 }
+    }
+  });
+  host.activationEpochStore.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  await new Promise((resolve) => setTimeout(resolve, 40));
+
+  const plan = await host.prepareBootstrapStart(host.activationEpochStore.current());
+  assert.equal(plan.operationId, OPERATION_TWO);
+  assert.equal(plan.requiresNewEpoch, true);
+  assert.equal(plan.durableEpoch.state, 'FAILED');
+  assert.equal(plan.durableEpoch.error.code, 'ACTIVATION_REQUEST_EXPIRED');
+  assert.equal(host.activationEpochStore.current().state, 'FAILED');
 });
 
 test('host status exposes durable operation binding and fails closed on incomplete connector evidence', async (t) => {

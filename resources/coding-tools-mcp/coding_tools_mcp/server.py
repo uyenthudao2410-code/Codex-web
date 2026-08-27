@@ -1157,13 +1157,28 @@ class Runtime(
         with self.tool_discovery_lock:
             self.tool_discovery_receipts[client_id] = receipt
 
-    def connector_tool_discovery(self) -> dict[str, Any]:
-        with self.tool_discovery_lock:
+    def connector_tool_discovery(self, *, blocking: bool = True) -> dict[str, Any]:
+        acquired = self.tool_discovery_lock.acquire(blocking=blocking)
+        if not acquired:
+            return {
+                "observed": False,
+                "current_contract_observed": False,
+                "contract_sha256": None,
+                "observed_at": None,
+                "client_id": None,
+                "client_name": None,
+                "process_instance_id": None,
+                "server_instance_id": None,
+                "snapshot_busy": True,
+            }
+        try:
             candidates = [
                 dict(receipt)
                 for receipt in self.tool_discovery_receipts.values()
                 if str(receipt.get("client_type") or "") == "chatweb"
             ]
+        finally:
+            self.tool_discovery_lock.release()
         latest = max(candidates, key=lambda item: str(item.get("observed_at") or ""), default=None)
         current_sha = str(self.tool_contract.get("sha256") or "")
         current = bool(
@@ -1181,6 +1196,7 @@ class Runtime(
             "client_name": str((latest or {}).get("client_name") or "") or None,
             "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
             "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
+            "snapshot_busy": False,
         }
 
     def _maybe_reconcile_stale_orchestration(self, *, force: bool = False) -> list[str]:

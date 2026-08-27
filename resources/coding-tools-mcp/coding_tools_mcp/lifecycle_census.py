@@ -222,26 +222,81 @@ def open_lifecycle_census_snapshot(workspace: Path) -> LifecycleCensusSnapshot:
 
 
 def read_task_projection(workspace: Path) -> dict[str, Any]:
-    """Read only the compact orchestration identity from task-state.json."""
-    path = Path(workspace).resolve(strict=False) / ".coding-tools" / "task-state.json"
-    if not path.is_file():
-        return {"available": False, "status": "missing", "orchestration": {}}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
-        return {"available": False, "status": "unreadable", "orchestration": {}}
-    if not isinstance(payload, dict) or not isinstance(payload.get("orchestration"), dict):
-        return {"available": False, "status": "invalid", "orchestration": {}}
-    orchestration = payload["orchestration"]
-    return {
-        "available": True,
-        "status": "readable",
-        "orchestration": {
+    """Read the unscoped projection or a content-free contextual projection set."""
+    root = Path(workspace).resolve(strict=False)
+    path = root / ".coding-tools" / "task-state.json"
+    global_projection: dict[str, Any] | None = None
+    global_status = "missing"
+    if path.is_file():
+        global_status = "unreadable"
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            payload = None
+        if not isinstance(payload, dict) or not isinstance(payload.get("orchestration"), dict):
+            return {"available": False, "status": "invalid" if payload is not None else global_status, "orchestration": {}}
+        orchestration = payload["orchestration"]
+        global_projection = {
             "run_id": str(orchestration.get("run_id") or "").strip(),
             "wave_id": str(orchestration.get("wave_id") or "").strip(),
             "orchestration_state": str(orchestration.get("orchestration_state") or "").strip(),
-        },
-    }
+        }
+        if any(global_projection.values()):
+            return {
+                "available": True,
+                "status": "readable",
+                "orchestration": global_projection,
+                "mode": "global",
+                "context_count": 0,
+                "contextual_sha256": "",
+            }
+
+    context_dir = root / ".coding-tools" / "task-contexts"
+    context_paths = sorted(
+        path for path in context_dir.glob("*.json")
+        if not path.name.endswith("-history.json")
+    ) if context_dir.is_dir() else []
+    if context_paths:
+        contextual: list[dict[str, str]] = []
+        invalid_count = 0
+        for context_path in context_paths:
+            try:
+                value = json.loads(context_path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                invalid_count += 1
+                continue
+            orchestration = value.get("orchestration") if isinstance(value, dict) else None
+            if not isinstance(orchestration, dict):
+                invalid_count += 1
+                continue
+            contextual.append({
+                "context_id": context_path.stem,
+                "run_id": str(orchestration.get("run_id") or "").strip(),
+                "wave_id": str(orchestration.get("wave_id") or "").strip(),
+                "orchestration_state": str(orchestration.get("orchestration_state") or "").strip().upper(),
+            })
+        encoded = json.dumps(contextual, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return {
+            "available": invalid_count == 0,
+            "status": "contextual" if invalid_count == 0 else "contextual_invalid",
+            "orchestration": {},
+            "mode": "contextual",
+            "context_count": len(context_paths),
+            "contextual_sha256": hashlib.sha256(encoded.encode("utf-8", errors="surrogatepass")).hexdigest(),
+            "contextual_projections": contextual,
+            "invalid_context_count": invalid_count,
+        }
+
+    if global_projection is not None:
+        return {
+            "available": True,
+            "status": "readable",
+            "orchestration": global_projection,
+            "mode": "global",
+            "context_count": 0,
+            "contextual_sha256": "",
+        }
+    return {"available": False, "status": global_status, "orchestration": {}}
 
 
 def _latest_timestamp(rows: list[sqlite3.Row], field: str) -> str:
@@ -268,7 +323,11 @@ def _is_live_fence(row: sqlite3.Row, observed_at: float) -> bool:
 
 def _latest_state_after(facts: LedgerFacts, run_id: str) -> str:
     events = facts.list_events(run_id)
-    return str(events[-1].get("state_after") or "").upper() if events else ""
+    for event in reversed(events):
+        state = str(event.get("state_after") or "").strip().upper()
+        if state:
+            return state
+    return ""
 
 
 def _last_event_guard(facts: LedgerFacts, run_id: str) -> dict[str, Any]:
@@ -283,12 +342,89 @@ def _projection_status(
     projection: Mapping[str, Any] | None,
     *,
     facts: LedgerFacts,
+    records: list[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     value = dict(projection or {})
     nested = value.get("orchestration") if isinstance(value.get("orchestration"), Mapping) else value
     run_id = str(nested.get("run_id") or "").strip()
     wave_id = str(nested.get("wave_id") or "").strip()
     state = str(nested.get("orchestration_state") or "").strip()
+    mode = str(value.get("mode") or ("global" if value.get("available") is True else "")).strip().lower()
+    if mode == "contextual" and value.get("available") is True:
+        contextual = value.get("contextual_projections")
+        entries = list(contextual) if isinstance(contextual, list) else []
+        by_run: dict[str, list[dict[str, str]]] = defaultdict(list)
+        malformed = False
+        for item in entries:
+            if not isinstance(item, Mapping):
+                malformed = True
+                continue
+            identity = {
+                "run_id": str(item.get("run_id") or "").strip(),
+                "wave_id": str(item.get("wave_id") or "").strip(),
+                "orchestration_state": str(item.get("orchestration_state") or "").strip().upper(),
+            }
+            present = [bool(identity[field]) for field in ("run_id", "wave_id", "orchestration_state")]
+            if any(present) and not all(present):
+                malformed = True
+            if identity["run_id"]:
+                by_run[identity["run_id"]].append(identity)
+
+        relevant_classes = {
+            "LIVE_OWNED",
+            "AWAITING_ACCEPTANCE",
+            "GRACE_PERIOD_INACTIVE",
+            "TERMINAL_PARENT_CONTRADICTION",
+            "UNEXPLAINED_ACTIVE",
+        }
+        relevant = [
+            dict(item) for item in (records or [])
+            if str(item.get("classification") or "") in relevant_classes
+        ]
+        missing: list[str] = []
+        conflicting: list[str] = []
+        for record in relevant:
+            relevant_run_id = str(record.get("run_id") or "").strip()
+            waves = facts.list_waves(relevant_run_id) if relevant_run_id else []
+            expected_wave_id = str(waves[-1].get("wave_id") or "").strip() if waves else ""
+            expected_state = str(record.get("latest_state_after") or "").strip().upper()
+            candidates = by_run.get(relevant_run_id, [])
+            exact = [
+                item for item in candidates
+                if item["wave_id"] == expected_wave_id and item["orchestration_state"] == expected_state
+            ]
+            if not relevant_run_id or not expected_wave_id or not expected_state or not exact:
+                missing.append(relevant_run_id)
+            if any(item not in exact for item in candidates):
+                conflicting.append(relevant_run_id)
+
+        digest = str(value.get("contextual_sha256") or "").strip().lower()
+        context_count = value.get("context_count")
+        consistent = bool(
+            not malformed
+            and not missing
+            and not conflicting
+            and isinstance(context_count, int)
+            and not isinstance(context_count, bool)
+            and context_count > 0
+            and len(digest) == 64
+            and all(char in "0123456789abcdef" for char in digest)
+        )
+        return {
+            "available": True,
+            "classification": "CONTEXTUAL_PROJECTIONS" if consistent else "PROJECTION_DRIFT",
+            "mode": "contextual",
+            "run_id": "",
+            "wave_id": "",
+            "orchestration_state": "",
+            "context_count": context_count if isinstance(context_count, int) else 0,
+            "contextual_sha256": digest,
+            "relevant_run_count": len(relevant),
+            "bound_relevant_run_count": len(relevant) - len(set(missing)),
+            "missing_run_count": len(set(missing)),
+            "conflicting_run_count": len(set(conflicting)),
+            "malformed_context_projection": malformed,
+        }
     if value.get("available") is not True:
         return {
             "available": False,
@@ -313,7 +449,16 @@ def _projection_status(
                 "reason": "active_ledger_run_missing_projection",
                 "active_run_count": len(active_runs),
             }
-        return {"available": bool(value.get("available", True)), "classification": "NO_ACTIVE_PROJECTION", "run_id": "", "wave_id": ""}
+        return {
+            "available": bool(value.get("available", True)),
+            "classification": "NO_ACTIVE_PROJECTION",
+            "mode": "global",
+            "run_id": "",
+            "wave_id": "",
+            "orchestration_state": "",
+            "context_count": 0,
+            "contextual_sha256": "",
+        }
     run = facts.get_run(run_id) if run_id else None
     waves = facts.list_waves(run_id) if run else []
     current_wave_id = str(waves[-1].get("wave_id") or "").strip() if waves else ""
@@ -335,6 +480,7 @@ def _projection_status(
     return {
         "available": bool(value.get("available", True)),
         "classification": consistent_classification if consistent else "PROJECTION_DRIFT",
+        "mode": "global",
         "run_id": run_id,
         "wave_id": wave_id,
         "orchestration_state": state,
@@ -345,6 +491,8 @@ def _projection_status(
         "canonical_run_status": run_status,
         "canonical_orchestration_state": canonical_state,
         "expected_projection_state": expected_state,
+        "context_count": 0,
+        "contextual_sha256": "",
     }
 
 
@@ -600,7 +748,7 @@ def lifecycle_census(
                 updated_at=str(item["job_updated_at"]),
             )
 
-    projection_result = _projection_status(projection, facts=facts)
+    projection_result = _projection_status(projection, facts=facts, records=records)
     counts = Counter(str(item["classification"]) for item in records)
     job_counts = Counter(str(item["classification"]) for item in job_records)
     return {

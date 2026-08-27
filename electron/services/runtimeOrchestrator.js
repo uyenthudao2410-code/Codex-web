@@ -97,6 +97,12 @@ const DETERMINISTIC_MCP_HEALTH_FAILURES = new Set([
   'protocol_mismatch',
   'invalid_json'
 ]);
+// A retained canonical ledger census is intentionally stronger than a cheap
+// liveness probe and can exceed three seconds on a healthy workspace. Keep the
+// activation observation bounded without turning a valid census into a false
+// MCP timeout. The separate health probe remains short and independently live.
+const MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS = 15_000;
+const MCP_HEALTH_TIMEOUT_MS = 1_200;
 
 function mcpHealthFailure(kind, details = {}) {
   return {
@@ -106,8 +112,12 @@ function mcpHealthFailure(kind, details = {}) {
   };
 }
 
-function readMcpHealthObservation(port, token, expectedWorkspace = '', expectedDeviceId = '', expectedActivationEpochId = '') {
+function readMcpHealthObservation(port, token, expectedWorkspace = '', expectedDeviceId = '', expectedActivationEpochId = '', options = {}) {
   return new Promise((resolve) => {
+    const requestedTimeout = Number(options.timeoutMs || MCP_HEALTH_TIMEOUT_MS);
+    const timeoutMs = Number.isFinite(requestedTimeout)
+      ? Math.max(MCP_HEALTH_TIMEOUT_MS, Math.min(Math.trunc(requestedTimeout), MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS))
+      : MCP_HEALTH_TIMEOUT_MS;
     let settled = false;
     const finish = (health, failure = null) => {
       if (settled) return;
@@ -120,7 +130,7 @@ function readMcpHealthObservation(port, token, expectedWorkspace = '', expectedD
       path: '/__control/health',
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
-      timeout: 1200
+      timeout: timeoutMs
     }, (response) => {
       let body = '';
       response.setEncoding('utf8');
@@ -184,8 +194,8 @@ function readMcpHealthObservation(port, token, expectedWorkspace = '', expectedD
   });
 }
 
-function readMcpHealth(port, token, expectedWorkspace = '', expectedDeviceId = '', expectedActivationEpochId = '') {
-  return readMcpHealthObservation(port, token, expectedWorkspace, expectedDeviceId, expectedActivationEpochId)
+function readMcpHealth(port, token, expectedWorkspace = '', expectedDeviceId = '', expectedActivationEpochId = '', options = {}) {
+  return readMcpHealthObservation(port, token, expectedWorkspace, expectedDeviceId, expectedActivationEpochId, options)
     .then(({ health }) => health);
 }
 
@@ -248,7 +258,7 @@ function readMcpActivationPreflight(port, token, options = {}) {
       path: '/__control/activation',
       method: 'GET',
       headers,
-      timeout: 3000
+      timeout: MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS
     }, (response) => {
       let body = '';
       response.setEncoding('utf8');
@@ -288,7 +298,7 @@ function switchMcpWorkspace(port, token, workspace) {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body)
       },
-      timeout: 5000
+      timeout: MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS
     }, (response) => {
       let payload = '';
       response.setEncoding('utf8');
@@ -926,11 +936,18 @@ class RuntimeOrchestrator {
     return result;
   }
 
-  async currentMcpHealth() {
+  async currentMcpHealth(options = {}) {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
     const observation = token
-      ? await readMcpHealthObservation(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '', this.activationEpochId)
+      ? await readMcpHealthObservation(
+        settings.mcpPort,
+        token,
+        settings.workspace,
+        this.device?.deviceId || '',
+        this.activationEpochId,
+        options
+      )
       : { health: null, failure: mcpHealthFailure('auth_token_missing') };
     this.lastMcpHealthFailure = observation.failure;
     return observation.health;
@@ -1548,6 +1565,7 @@ class RuntimeOrchestrator {
         p5Seed: this.p5A0Seed(),
         activationEpochId: this.activationEpochId || '',
         activationGate: options.activationGate || '',
+        activationAllowAcceptancePending: options.activationAllowAcceptancePending === true,
         activationExpiresAtUnixMs: Number(options.expiresAtUnixMs || 0) || 0
       });
 
@@ -1721,10 +1739,11 @@ class RuntimeOrchestrator {
     }
   }
 
-  async lightweightSnapshot() {
+  async lightweightSnapshot(options = {}) {
     const settings = this.settingsStore.load();
+    const suppliedMcpHealth = Object.prototype.hasOwnProperty.call(options, 'mcpHealth');
     const [mcpHealth, nativeAlive, tunnelRunning, git] = await Promise.all([
-      this.currentMcpHealth(),
+      suppliedMcpHealth ? Promise.resolve(options.mcpHealth) : this.currentMcpHealth(options),
       this.native.status().catch(() => false),
       this.tunnel.status(settings, { activationEpochId: this.activationEpochId || '' }).catch(() => false),
       this.gitStatus(settings.workspace)
