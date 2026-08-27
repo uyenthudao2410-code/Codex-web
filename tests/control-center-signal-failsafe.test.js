@@ -82,9 +82,11 @@ test('manager preload expires a missing heartbeat instead of leaving runtime act
   assert.equal(watchdog.ms, 15_000);
   watchdog.fn();
   assert.equal(events.length, 1);
-  assert.equal(events[0].mcpRunning, false);
-  assert.equal(events[0].tunnelRunning, false);
+  assert.equal(events[0].mcpRunning, null);
+  assert.equal(events[0].nativeAlive, null);
+  assert.equal(events[0].tunnelRunning, null);
   assert.equal(events[0].fullyReady, false);
+  assert.equal(events[0].telemetryAvailable, false);
   assert.equal(events[0].failureKind, 'heartbeat_stale');
   assert.equal(events[0].signalStale, true);
   unsubscribe();

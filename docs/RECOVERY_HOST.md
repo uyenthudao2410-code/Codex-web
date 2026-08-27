@@ -85,6 +85,18 @@ HTTP health xanh và runtime idle, mới đủ điều kiện soft-restart riên
 Primary lifecycle watchdog vẫn là authority cho process/Tunnel liveness; vì vậy
 tool call dài không bị biến thành semantic failure rồi tự cắt MCP đang phục vụ.
 
+Electron UI heartbeat chỉ đọc projection supervision hoàn tất gần nhất qua
+`runtime.lightweight_snapshot`; nó không chạy thêm MCP health, Tunnel CLI, Git,
+`netstat` hoặc OS-identity probe song song với watchdog. Projection mang
+`snapshotSource`, `snapshotObservedAtUnixMs`, `snapshotAgeMs`, `snapshotBusy`,
+`telemetryAvailable` và `signalStale`; UI publisher giữ single-flight nên một
+heartbeat chậm không tạo lượt poll chồng lên nhau. Khi chưa có projection hoặc
+projection cũ hơn 30 giây, MCP/Coding Tunnel/Recovery Tunnel được trình bày là
+`UNKNOWN/WARN` (vàng), không bị suy diễn thành `false`/đỏ. Màu đỏ chỉ dành cho
+process/component đã xác nhận dừng/lỗi hoặc Recovery state deterministic
+`blocked_*`; receipt cũ chỉ được giữ làm context và không được dùng để tuyên bố
+fresh green hay mở activation admission.
+
 ## Phase 3B independent Recovery MCP/Tunnel
 
 Recovery Host supervise một break-glass data plane riêng: Python
@@ -145,9 +157,10 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
   process yet. Recovery Host keeps the epoch closed and automatically re-enters
   final census after either an exact current-process `tools/list` /
   `server/discover` receipt or the activation-only compatibility bootstrap
-  described below. While only that gate is pending, lightweight status uses the
-  last exact component receipt plus bounded live MCP/PID observations, avoiding
-  a second heavy OS-identity/Tunnel census on every watchdog tick. The first
+  described below. While only that gate is pending, the supervisor refreshes
+  its exact component projection with bounded live MCP/PID observations;
+  lightweight UI status only consumes that completed projection and never starts
+  a second heavy OS-identity/Tunnel census. The first
   cached-client `workspace_context` call can therefore return a retryable
   bootstrap envelope; after the watchdog commits the ACK and opens admission,
   the retry performs the real workspace read.

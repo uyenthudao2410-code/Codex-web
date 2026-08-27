@@ -44,6 +44,7 @@ let buildVerification;
 let panelView = null;
 let panelVisible = false;
 let lastRecoveryProgressTime = '';
+let runtimeHeartbeatInFlight = null;
 const TOOLBAR_HEIGHT = 112;
 const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
 const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;
@@ -999,15 +1000,23 @@ if (recoveryHostMode) {
     log.on('entry', (payload) => sendManager('logs:entry', payload));
     registerIpc();
     createChatWindow();
-    setInterval(() => orchestrator.lightweightSnapshot().then((status) => {
-      const progress = status?.recoveryHost?.last_progress;
-      if (progress?.time && progress.time !== lastRecoveryProgressTime) {
-        lastRecoveryProgressTime = progress.time;
-        sendManager('runtime:progress', progress);
-      }
-      sendManager('runtime:heartbeat', status);
-      if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
-    }).then(() => registerUiRevision()).catch(() => {}), 5000).unref();
+    const publishRuntimeHeartbeat = () => {
+      if (runtimeHeartbeatInFlight) return runtimeHeartbeatInFlight;
+      const operation = orchestrator.lightweightSnapshot().then((status) => {
+        const progress = status?.recoveryHost?.last_progress;
+        if (progress?.time && progress.time !== lastRecoveryProgressTime) {
+          lastRecoveryProgressTime = progress.time;
+          sendManager('runtime:progress', progress);
+        }
+        sendManager('runtime:heartbeat', status);
+        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
+      }).then(() => registerUiRevision()).catch(() => {});
+      runtimeHeartbeatInFlight = operation;
+      return operation.finally(() => {
+        if (runtimeHeartbeatInFlight === operation) runtimeHeartbeatInFlight = null;
+      });
+    };
+    setInterval(() => { void publishRuntimeHeartbeat(); }, 5000).unref();
     log.info('Coding Tools MCP UI đã kết nối Recovery Host');
     });
 

@@ -83,11 +83,12 @@ function subscribeWithHeartbeatWatchdog(listener) {
     timer = setTimeout(() => {
       if (disposed) return;
       listener({
-        mcpRunning: false,
-        tunnelRunning: false,
+        mcpRunning: null,
+        nativeAlive: null,
+        tunnelRunning: null,
         fullyReady: false,
         recovering: false,
-        failures: 1,
+        telemetryAvailable: false,
         failureKind: 'heartbeat_stale',
         signalStale: true,
         staleAfterMs: HEARTBEAT_STALE_MS

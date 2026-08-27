@@ -61,6 +61,18 @@ test('startup failure cleans runtime state and blocks automatic recovery until m
   assert.match(recoveryHost, /this\.orchestrator\.start\(\{ automatic: true \}\)/);
 });
 
+test('Electron heartbeat is single-flight and reads the completed Recovery Host projection', () => {
+  const main = read('electron/main.js');
+  const recoveryHost = read('electron/services/recoveryHost.js');
+  assert.match(main, /let runtimeHeartbeatInFlight = null;/);
+  assert.match(main, /if \(runtimeHeartbeatInFlight\) return runtimeHeartbeatInFlight;/);
+  assert.match(main, /runtimeHeartbeatInFlight = operation;/);
+  assert.match(main, /if \(runtimeHeartbeatInFlight === operation\) runtimeHeartbeatInFlight = null;/);
+  assert.match(recoveryHost, /'runtime\.lightweight_snapshot': async \(\) => this\.cachedRuntimeSnapshot\(\)/);
+  const handler = recoveryHost.match(/'runtime\.lightweight_snapshot':[\s\S]*?'runtime\.activation_epoch_status'/)?.[0] || '';
+  assert.doesNotMatch(handler, /orchestrator\.lightweightSnapshot/);
+});
+
 test('browser task strip exposes stage progress and long-command elapsed time', () => {
   const html = read('renderer/browser.html');
   const browser = read('renderer/browser.js');

@@ -563,6 +563,10 @@ test('connector-pending supervision persists tunnel recovery and wakes on an exa
   const cached = host.cachedActivationSnapshot();
   assert.equal(cached.snapshotSource, 'activation_connector_pending_cache');
   assert.equal(cached.snapshotBusy, false);
+  assert.equal(cached.telemetryAvailable, true);
+  assert.equal(cached.signalStale, false);
+  assert.ok(Number(cached.snapshotObservedAtUnixMs) > 0);
+  assert.ok(Number(cached.snapshotAgeMs) >= 0);
   assert.equal(cached.fullyReady, false);
   assert.equal(exactRevisionCalls, 0, 'cached read-only snapshots must not start blocking OS identity probes');
 
@@ -573,6 +577,57 @@ test('connector-pending supervision persists tunnel recovery and wakes on an exa
   assert.equal(finalizeCalls, 1);
   assert.deepEqual(activationOrder.slice(-2), ['persist:true', 'finalize']);
   assert.equal(lightweightCalls, 0);
+});
+
+test('Recovery Host lightweight IPC serves one fresh supervision projection without duplicate live probes', async (t) => {
+  const { host } = uiRecoveryFixture(t);
+  let directProbeCalls = 0;
+  host.orchestrator.lightweightSnapshot = async () => {
+    directProbeCalls += 1;
+    throw new Error('UI heartbeat must not launch a second live probe');
+  };
+  host.lastRecoveryPlaneStatus = {
+    state: 'healthy',
+    mcp: { state: 'healthy' },
+    tunnel: { state: 'healthy' }
+  };
+  host.recordSupervisionStatus({
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: true,
+    componentsReady: true,
+    connectorReady: true,
+    fullyReady: true,
+    failures: 0,
+    codeRevision: { codingMcp: { running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64) } }
+  });
+  const handler = host.handlers()['runtime.lightweight_snapshot'];
+  host.supervisionInFlight = Promise.resolve();
+  const first = await handler();
+  assert.equal(directProbeCalls, 0);
+  assert.equal(first.mcpRunning, true);
+  assert.equal(first.tunnelRunning, true);
+  assert.equal(first.snapshotBusy, true);
+  assert.equal(first.snapshotSource, 'recovery_host_supervision_cache');
+  assert.equal(first.signalStale, false);
+  assert.ok(Number(first.snapshotAgeMs) >= 0);
+  assert.equal(first.recoveryHost.recovery_plane.tunnel.state, 'healthy');
+
+  host.supervisionInFlight = null;
+  host.lastSupervisionObservedAtUnixMs = Date.now() - 31_000;
+  const stale = await handler();
+  assert.equal(directProbeCalls, 0);
+  assert.equal(stale.signalStale, true);
+  assert.ok(stale.snapshotAgeMs >= 30_000);
+
+  host.lastSupervisionStatus = null;
+  host.lastSupervisionObservedAtUnixMs = 0;
+  const unavailable = await handler();
+  assert.equal(directProbeCalls, 0);
+  assert.equal(unavailable.telemetryAvailable, false);
+  assert.equal(unavailable.signalStale, true);
+  assert.equal(unavailable.mcpRunning, null);
+  assert.equal(unavailable.tunnelRunning, null);
 });
 
 test('new unsuppressed Recovery Host relaunches UI after initial registration grace expires', async (t) => {

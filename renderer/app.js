@@ -92,6 +92,9 @@ function setDot(element, status) {
 }
 
 function recoveryTunnelPresentation(source) {
+  if (source?.status?.signalStale === true || source?.signalStale === true) {
+    return { state: 'connecting', label: 'Telemetry gián đoạn', detail: 'Đang giữ receipt gần nhất và chờ heartbeat mới từ Recovery Host.' };
+  }
   const tunnel = source?.recoveryHost?.recovery_plane?.tunnel || null;
   const raw = String(tunnel?.state || '').toLowerCase();
   if (raw === 'healthy') return { state: 'connected', label: 'Đã kết nối', detail: 'Recovery Tunnel đã qua health check cục bộ.' };
@@ -99,7 +102,8 @@ function recoveryTunnelPresentation(source) {
   if (raw === 'not_configured') return { state: 'not_configured', label: 'Chưa cấu hình', detail: 'Chưa có Recovery Tunnel ID riêng.' };
   if (raw === 'blocked_shared_tunnel_id') return { state: 'error', label: 'Bị chặn', detail: 'Recovery Tunnel ID đang trùng với Coding Tunnel ID chính.' };
   if (raw === 'blocked_missing_runtime_key') return { state: 'error', label: 'Thiếu Runtime Key', detail: 'Đã có Recovery Tunnel ID nhưng chưa có Runtime API Key khả dụng.' };
-  if (raw) return { state: 'error', label: 'Lỗi kết nối', detail: `Recovery Tunnel báo trạng thái: ${raw}.` };
+  if (raw.startsWith('blocked_')) return { state: 'error', label: 'Bị chặn', detail: `Recovery Tunnel báo trạng thái: ${raw}.` };
+  if (raw) return { state: 'connecting', label: 'Đang xác minh lại', detail: `Recovery Tunnel tạm báo trạng thái: ${raw}.` };
   return { state: 'not_configured', label: 'Đang kiểm tra', detail: 'Chưa nhận được telemetry Recovery Tunnel từ Recovery Host.' };
 }
 
@@ -903,6 +907,18 @@ async function repairHealth() {
 
 function applyHeartbeat(status) {
   if (!state.snapshot || !status) return;
+  if (status.signalStale === true || status.telemetryAvailable === false) {
+    state.snapshot.status.signalStale = true;
+    renderRecoveryTunnelSettings({ ...state.snapshot, signalStale: true });
+    $('#sideRuntimeText').textContent = 'Telemetry tạm gián đoạn';
+    $('#mcpStatus').textContent = 'Đang chờ heartbeat mới';
+    $('#tunnelStatus').textContent = 'Đang chờ heartbeat mới';
+    setDot($('#sideRuntimeDot'), 'warn');
+    setDot($('#mcpDot'), 'warn');
+    setDot($('#tunnelDot'), 'warn');
+    return;
+  }
+  delete state.snapshot.status.signalStale;
   // Heartbeats are authoritative point-in-time projections. Never retain a
   // previous green closure/connector receipt when the current host omits it.
   for (const key of ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure', 'activationEpoch', 'updateIncomplete']) {

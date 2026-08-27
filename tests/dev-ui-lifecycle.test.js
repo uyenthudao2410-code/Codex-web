@@ -872,9 +872,93 @@ test('heartbeat code clears omitted closure and connector receipts instead of re
     $: () => ({ textContent: '' })
   });
   vm.runInContext(source.slice(start, end), context, { filename: 'renderer/app-heartbeat.js' });
+  context.__staleHeartbeat = {
+    mcpRunning: null,
+    tunnelRunning: null,
+    fullyReady: false,
+    telemetryAvailable: false,
+    signalStale: true
+  };
+  vm.runInContext('applyHeartbeat(__staleHeartbeat)', context);
+  assert.equal(snapshot.status.signalStale, true);
+  assert.equal(snapshot.status.activationClosure.closure_state, 'LIVE_CLOSED',
+    'a missing transport heartbeat is uncertainty, not authority to erase the last receipt');
+  assert.equal(snapshot.status.connectorContractState, 'CURRENT_ACKNOWLEDGED');
   context.__heartbeat = { mcpRunning: true, tunnelRunning: true, fullyReady: true };
   vm.runInContext('applyHeartbeat(__heartbeat)', context);
+  assert.equal(Object.hasOwn(snapshot.status, 'signalStale'), false);
   assert.equal(Object.hasOwn(snapshot.status, 'activationClosure'), false);
   assert.equal(Object.hasOwn(snapshot.status, 'connectorContractState'), false);
   assert.equal(Object.hasOwn(snapshot.status, 'connectorRefreshRequired'), false);
+});
+
+test('chat toolbar renders transient or stale service telemetry as warning instead of false red', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '..', 'renderer', 'browser.js'), 'utf8');
+  const start = source.indexOf('function renderServiceState');
+  const end = source.indexOf('function renderWorkspaceHealth');
+  assert.ok(start >= 0 && end > start);
+  const elements = new Map();
+  const element = () => ({
+    classes: new Set(),
+    classList: {
+      add(...values) { values.forEach((value) => this.owner.classes.add(value)); },
+      remove(...values) { values.forEach((value) => this.owner.classes.delete(value)); },
+      toggle(value, enabled) { if (enabled) this.owner.classes.add(value); else this.owner.classes.delete(value); }
+    },
+    dataset: {},
+    title: '',
+    textContent: '',
+    setAttribute() {}
+  });
+  for (const selector of ['#mcpState', '#tunnelState', '#recoveryTunnelState', '#deviceState', '#deviceStateName', '#gitState', '#gitStateText']) {
+    const value = element();
+    value.classList.owner = value;
+    elements.set(selector, value);
+  }
+  const context = vm.createContext({
+    lastRuntimeState: null,
+    lastRuntimeCheckAt: 0,
+    Date,
+    Number,
+    String,
+    Boolean,
+    $: (selector) => elements.get(selector),
+    renderWorkspaceHealth() {}
+  });
+  vm.runInContext(source.slice(start, end), context, { filename: 'renderer/browser-service-state.js' });
+  context.__healthy = {
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: true,
+    telemetryAvailable: true,
+    recoveryHost: { recovery_plane: { tunnel: { state: 'healthy' } } },
+    device: { device_id: 'device-toolbar-0001', online: true, git: {} }
+  };
+  vm.runInContext('renderServiceState(__healthy)', context);
+  assert.equal(elements.get('#mcpState').classes.has('ready'), true);
+  assert.equal(elements.get('#tunnelState').classes.has('ready'), true);
+  assert.equal(elements.get('#recoveryTunnelState').classes.has('ready'), true);
+
+  context.__stale = { signalStale: true, telemetryAvailable: false };
+  vm.runInContext('renderServiceState(__stale)', context);
+  for (const selector of ['#mcpState', '#tunnelState', '#recoveryTunnelState']) {
+    assert.equal(elements.get(selector).classes.has('warn'), true);
+    assert.equal(elements.get(selector).classes.has('error'), false);
+  }
+
+  context.__transient = {
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: false,
+    telemetryAvailable: true,
+    failures: 1,
+    failureKind: 'tunnel_unavailable',
+    recoveryHost: { recovery_plane: { tunnel: { state: 'failed' } } },
+    device: { device_id: 'device-toolbar-0001', online: true, git: {} }
+  };
+  vm.runInContext('renderServiceState(__transient)', context);
+  assert.equal(elements.get('#tunnelState').classes.has('warn'), true);
+  assert.equal(elements.get('#tunnelState').classes.has('error'), false);
+  assert.equal(elements.get('#recoveryTunnelState').classes.has('warn'), true);
+  assert.equal(elements.get('#recoveryTunnelState').classes.has('error'), false);
 });

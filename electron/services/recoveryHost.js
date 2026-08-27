@@ -23,6 +23,11 @@ const {
 } = require('./processIdentity');
 
 const SUPERVISION_INTERVAL_MS = 5000;
+// UI clients poll every five seconds. Their read path must consume the latest
+// completed supervisor projection instead of launching another MCP/Tunnel/Git
+// probe in parallel with the supervisor. Keep an explicit freshness window so
+// a stalled supervisor becomes UNKNOWN/WARN telemetry rather than stale green.
+const SUPERVISION_STATUS_STALE_MS = 30_000;
 const REPLACEMENT_WAIT_MS = 15_000;
 const HANDOFF_SUPERVISION_DRAIN_MS = 10_000;
 const UI_RECOVERY_REGISTRATION_TIMEOUT_MS = 15_000;
@@ -258,6 +263,7 @@ class RecoveryHost {
     this.supervisionTimer = null;
     this.supervisionInFlight = null;
     this.lastSupervisionStatus = null;
+    this.lastSupervisionObservedAtUnixMs = 0;
     this.lastRecoveryPlaneStatus = null;
     this.ownsLock = false;
     this.running = false;
@@ -770,7 +776,7 @@ class RecoveryHost {
   hostStatus({ preferCachedRuntime = false } = {}) {
     let codeRevision;
     try {
-      codeRevision = this.revisions.status('recovery_host', this.recoveryHostRunningRevision, { force: true });
+      codeRevision = this.revisions.status('recovery_host', this.recoveryHostRunningRevision, { force: !preferCachedRuntime });
     } catch (error) {
       codeRevision = {
         running_revision: this.recoveryHostRunningRevision || null,
@@ -780,7 +786,7 @@ class RecoveryHost {
         error_code: String(error?.code || 'REVISION_UNAVAILABLE')
       };
     }
-    const electronUiRevision = this.activation.uiRevisionStatus({ force: true });
+    const electronUiRevision = this.activation.uiRevisionStatus({ force: !preferCachedRuntime });
     const autoActivation = this.autoActivation?.status?.() || null;
     let codingMcpRevision = {};
     if (preferCachedRuntime) {
@@ -1081,10 +1087,56 @@ class RecoveryHost {
     let record = null;
     try { record = this.fullCleanActivation.current?.() || null; } catch {}
     if (!activationAwaitsConnector(record) || !this.lastSupervisionStatus) return null;
+    const observedAtUnixMs = Number(this.lastSupervisionObservedAtUnixMs || 0);
+    const ageMs = observedAtUnixMs > 0 ? Math.max(0, Date.now() - observedAtUnixMs) : null;
     return this.decorate({
       ...this.lastSupervisionStatus,
+      telemetryAvailable: true,
+      signalStale: ageMs === null || ageMs > SUPERVISION_STATUS_STALE_MS,
       snapshotBusy: Boolean(this.supervisionInFlight),
-      snapshotSource: 'activation_connector_pending_cache'
+      snapshotSource: 'activation_connector_pending_cache',
+      snapshotObservedAtUnixMs: observedAtUnixMs || null,
+      snapshotAgeMs: ageMs
+    }, { preferCachedRuntime: true });
+  }
+
+  recordSupervisionStatus(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return this.lastSupervisionStatus;
+    this.lastSupervisionStatus = value;
+    this.lastSupervisionObservedAtUnixMs = Date.now();
+    return value;
+  }
+
+  cachedRuntimeSnapshot() {
+    const activation = this.cachedActivationSnapshot();
+    if (activation) return activation;
+    const observed = this.lastSupervisionStatus;
+    const observedAtUnixMs = Number(this.lastSupervisionObservedAtUnixMs || 0);
+    const ageMs = observedAtUnixMs > 0 ? Math.max(0, Date.now() - observedAtUnixMs) : null;
+    if (!observed) {
+      return this.decorate({
+        mcpRunning: null,
+        nativeAlive: null,
+        tunnelRunning: null,
+        componentsReady: false,
+        connectorReady: false,
+        fullyReady: false,
+        telemetryAvailable: false,
+        signalStale: true,
+        snapshotBusy: Boolean(this.supervisionInFlight),
+        snapshotSource: 'recovery_host_supervision_unavailable',
+        snapshotObservedAtUnixMs: null,
+        snapshotAgeMs: null
+      }, { preferCachedRuntime: true });
+    }
+    return this.decorate({
+      ...observed,
+      telemetryAvailable: true,
+      signalStale: ageMs === null || ageMs > SUPERVISION_STATUS_STALE_MS,
+      snapshotBusy: Boolean(this.supervisionInFlight),
+      snapshotSource: 'recovery_host_supervision_cache',
+      snapshotObservedAtUnixMs: observedAtUnixMs || null,
+      snapshotAgeMs: ageMs
     }, { preferCachedRuntime: true });
   }
 
@@ -1110,8 +1162,7 @@ class RecoveryHost {
         return result;
       },
       'runtime.snapshot': async (options = {}) => this.decorate(await this.orchestrator.snapshot(options)),
-      'runtime.lightweight_snapshot': async () => this.cachedActivationSnapshot()
-        || this.decorate(await this.orchestrator.lightweightSnapshot()),
+      'runtime.lightweight_snapshot': async () => this.cachedRuntimeSnapshot(),
       'runtime.activation_epoch_status': async () => this.hostStatus().activation_epoch,
       'runtime.complete_activation_epoch': async (activationEpochId) => {
         this.assertBootstrapMutationAllowed();
@@ -1210,7 +1261,7 @@ class RecoveryHost {
         runtime = admissionBlocked
           ? (pendingObservation?.runtime || await this.orchestrator.lightweightSnapshot())
           : await this.orchestrator.supervise();
-        this.lastSupervisionStatus = runtime;
+        this.recordSupervisionStatus(runtime);
       } catch (error) {
         this.log.error(error.message, { stage: 'recovery-host-supervise' });
       }
@@ -1242,7 +1293,7 @@ class RecoveryHost {
             // stale/incomplete. recordPendingCensus never opens admission.
             this.fullCleanActivation.recordPendingCensus(epoch.activation_epoch_id, census);
             const completed = await this.fullCleanActivation.finalize(epoch.activation_epoch_id, census);
-            this.lastSupervisionStatus = { ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed };
+            this.recordSupervisionStatus({ ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed });
             this.recordBootstrapEpoch(this.activationEpochStore.current(), {
               replacement_host_instance_id: this.instanceId,
               replacement_host_pid: process.pid
@@ -1255,10 +1306,10 @@ class RecoveryHost {
             // census. Admission remains closed until the full census passes.
             this.fullCleanActivation.recordPendingCensus(epoch.activation_epoch_id, census);
             if (census.runtime && typeof census.runtime === 'object') {
-              this.lastSupervisionStatus = {
+              this.recordSupervisionStatus({
                 ...census.runtime,
                 tunnelRunning: census.tunnel_health_verified === true
-              };
+              });
             }
             this.lastRecoveryPlaneStatus = this.recoveryPlane?.lastStatus || this.lastRecoveryPlaneStatus;
             this.recordBootstrapEpoch(this.activationEpochStore.current(), {
@@ -1647,10 +1698,10 @@ class RecoveryHost {
           expiresAtUnixMs: this.replacement.expiresAtUnixMs
         });
         if (continued?.census?.runtime) {
-          this.lastSupervisionStatus = {
+          this.recordSupervisionStatus({
             ...continued.census.runtime,
             tunnelRunning: continued.census.tunnel_health_verified === true
-          };
+          });
         }
         this.lastRecoveryPlaneStatus = this.recoveryPlane?.lastStatus || this.lastRecoveryPlaneStatus;
         this.recordBootstrapEpoch(this.activationEpochStore.current(), {
@@ -1705,7 +1756,7 @@ class RecoveryHost {
       const current = this.settings.load();
       if (!fullCleanReplacement && !failedEpochBlocked && !recoveredFromDurableEpoch && !primaryMigrationFailed && current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
         const observed = await this.orchestrator.lightweightSnapshot().catch(() => null);
-        this.lastSupervisionStatus = observed;
+        this.recordSupervisionStatus(observed);
         if (!observed?.nativeAlive && !observed?.tunnelRunning) {
           this.orchestrator.start({ automatic: true }).catch((error) => {
             this.log.error(error.message, { stage: 'recovery-host-auto-start' });
@@ -1856,6 +1907,7 @@ module.exports = {
   releaseRecoveryHostLock,
   isProcessAlive,
   SUPERVISION_INTERVAL_MS,
+  SUPERVISION_STATUS_STALE_MS,
   HANDOFF_SUPERVISION_DRAIN_MS,
   UI_RECOVERY_REGISTRATION_TIMEOUT_MS,
   UI_RECOVERY_COOLDOWN_MS,

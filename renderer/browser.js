@@ -53,34 +53,61 @@ function renderChatState(state) {
 }
 
 function renderServiceState(state) {
-  lastRuntimeState = state || null;
+  const staleSignal = !state || state.signalStale === true || state.telemetryAvailable === false;
+  const current = staleSignal && lastRuntimeState
+    ? { ...lastRuntimeState, ...(state || {}), signalStale: true, telemetryAvailable: false }
+    : (state || { signalStale: true, telemetryAvailable: false });
+  lastRuntimeState = current;
   lastRuntimeCheckAt = Date.now();
-  [['#mcpState', state?.mcpRunning], ['#tunnelState', state?.tunnelRunning]].forEach(([selector, value]) => {
+  const failures = Number(current.failures || 0);
+  const transient = current.signalStale === true || current.telemetryAvailable === false
+    || current.recovering === true || current.recoveryDeferred === true;
+  const servicePresentation = (kind) => {
+    const value = kind === 'mcp' ? current.mcpRunning : current.tunnelRunning;
+    if (transient || value == null) return { tone: 'warn', title: `${kind === 'mcp' ? 'MCP' : 'Tunnel'}: Telemetry tạm gián đoạn` };
+    if (value === true) return { tone: 'ready', title: `${kind === 'mcp' ? 'MCP' : 'Tunnel'}: Đang hoạt động` };
+    if (kind === 'mcp' && current.nativeAlive === true && current.mcpHealthFailureDeterministic !== true) {
+      return { tone: 'warn', title: 'MCP: Process còn sống, health check đang được xác minh lại' };
+    }
+    if (kind === 'tunnel' && failures > 0 && failures < 3) {
+      return { tone: 'warn', title: 'Tunnel: Health check tạm thời chưa xác nhận' };
+    }
+    return { tone: 'error', title: `${kind === 'mcp' ? 'MCP' : 'Tunnel'}: Đã dừng hoặc lỗi đã được xác nhận` };
+  };
+  [['#mcpState', 'mcp'], ['#tunnelState', 'tunnel']].forEach(([selector, kind]) => {
     const element = $(selector);
-    element.classList.toggle('ready', Boolean(value));
-    element.classList.toggle('error', !value);
+    const presentation = servicePresentation(kind);
+    element.classList.remove('ready', 'warn', 'error');
+    element.classList.add(presentation.tone);
+    element.title = presentation.title;
+    element.setAttribute('aria-label', presentation.title);
   });
   const recoveryElement = $('#recoveryTunnelState');
-  const recoveryTunnel = state?.recoveryHost?.recovery_plane?.tunnel || null;
+  const recoveryTunnel = current?.recoveryHost?.recovery_plane?.tunnel || null;
   const rawState = String(recoveryTunnel?.state || '').toLowerCase();
-  const presentation = rawState === 'healthy'
+  const deterministicRecoveryBlock = rawState.startsWith('blocked_');
+  const presentation = transient
+    ? { state: 'unknown', tone: 'warn', title: 'Tunnel cứu hộ: Telemetry tạm gián đoạn' }
+    : rawState === 'healthy'
     ? { state: 'connected', tone: 'ready', title: 'Tunnel cứu hộ: Đã kết nối' }
     : rawState === 'starting'
       ? { state: 'connecting', tone: 'warn', title: 'Tunnel cứu hộ: Đang kết nối' }
       : rawState === 'not_configured'
         ? { state: 'not_configured', tone: '', title: 'Tunnel cứu hộ: Chưa cấu hình' }
-        : rawState
-          ? { state: 'error', tone: 'error', title: `Tunnel cứu hộ: Lỗi (${rawState})` }
+        : deterministicRecoveryBlock
+          ? { state: 'error', tone: 'error', title: `Tunnel cứu hộ: Bị chặn (${rawState})` }
+          : rawState
+            ? { state: 'connecting', tone: 'warn', title: `Tunnel cứu hộ: Đang xác minh lại (${rawState})` }
           : { state: 'not_configured', tone: '', title: 'Tunnel cứu hộ: Đang kiểm tra' };
   recoveryElement.classList.remove('ready', 'warn', 'error');
   if (presentation.tone) recoveryElement.classList.add(presentation.tone);
   recoveryElement.dataset.state = presentation.state;
   recoveryElement.title = presentation.title;
   recoveryElement.setAttribute('aria-label', presentation.title);
-  const device = state?.device || null;
+  const device = current?.device || null;
   const deviceButton = $('#deviceState');
-  const deviceName = String(device?.display_name || state?.recoveryHost?.device_display_name || 'Thiết bị');
-  const deviceId = String(device?.device_id || state?.recoveryHost?.device_id || '');
+  const deviceName = String(device?.display_name || current?.recoveryHost?.device_display_name || 'Thiết bị');
+  const deviceId = String(device?.device_id || current?.recoveryHost?.device_id || '');
   deviceButton.classList.toggle('ready', Boolean(deviceId) && device?.online !== false);
   deviceButton.classList.toggle('error', !deviceId);
   $('#deviceStateName').textContent = deviceName;
@@ -111,7 +138,7 @@ function renderWorkspaceHealth() {
 
 async function refreshStatus() {
   try { renderServiceState(unwrap(await api.lightweightStatus())); }
-  catch { renderServiceState(null); }
+  catch { renderServiceState({ signalStale: true, telemetryAvailable: false }); }
 }
 
 async function refreshTask(force = false) {
