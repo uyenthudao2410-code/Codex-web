@@ -137,7 +137,17 @@ async function codeActivationRequest(component, allowAcceptancePending = false) 
     expires_at_unix_ms: now + 60_000,
     expected_disk_revision: uiRevisionTracker.disk(component, { force: true }).revision,
     allow_acceptance_pending: allowAcceptancePending === true,
+    full_clean_required: true,
+    activation_mode: 'full_clean_activation',
     source_checkpoint: sourceCheckpoint
+  };
+}
+
+async function fullCleanRestartOptions() {
+  const snapshot = await orchestrator.snapshot({ force: true, reason: 'manual-full-clean-restart-authority' });
+  return {
+    reason: 'operator_restart',
+    sourceCheckpoint: activationSourceCheckpoint(snapshot?.recoveryHost)
   };
 }
 
@@ -882,7 +892,7 @@ function registerIpc() {
   }));
   secureHandle('runtime:start', () => invokeSafely(() => orchestrator.start()));
   secureHandle('runtime:stop', () => invokeSafely(() => orchestrator.stop()));
-  secureHandle('runtime:restart', () => invokeSafely(() => orchestrator.restart()));
+  secureHandle('runtime:restart', () => invokeSafely(async () => orchestrator.restart(await fullCleanRestartOptions())));
   secureHandle('code:activation-preflight', (_event, component, allowAcceptancePending) => invokeSafely(async () => {
     const request = await codeActivationRequest(component, allowAcceptancePending);
     return { request, preflight: await orchestrator.activationPreflight(request) };

@@ -29,7 +29,7 @@ const {
   spawnElectronUi,
   assertActivationDeadline
 } = require('../electron/services/recoveryHostLauncher');
-const { replacementArguments } = require('../electron/recoveryHost');
+const { replacementArguments, bootstrapArguments } = require('../electron/recoveryHost');
 
 const SOURCE_CHECKPOINT = Object.freeze({
   checkpoint_id: 'checkpoint-recovery-host-0001',
@@ -146,6 +146,8 @@ test('RuntimePaths resolves backend state without importing Electron APIs', (t) 
   assert.equal(paths.settingsFile(), path.join(paths.dataRoot(), 'settings.json'));
   assert.equal(path.basename(paths.appRoot()), 'app');
   assert.equal(paths.recoveryHostDescriptorFile(), path.join(paths.dataRoot(), 'recovery-host.json'));
+  assert.equal(paths.recoveryHostBootstrapFile('bootstrap-operation-0001'), path.join(paths.dataRoot(), 'recovery-host-bootstrap.bootstrap-operation-0001.json'));
+  assert.equal(paths.recoveryHostBootstrapResultFile('bootstrap-operation-0001'), path.join(paths.dataRoot(), 'recovery-host-bootstrap.bootstrap-operation-0001.result.json'));
   assert.equal(paths.recoveryActionsFile(), path.join(paths.dataRoot(), 'recovery-actions.json'));
   assert.equal(paths.tunnelExecutable(), path.join(paths.resourcesRoot(), 'tools', 'tunnel-client.exe'));
 });
@@ -260,7 +262,10 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   const snapshot = await client.snapshot();
   const persistedDevice = loadOrCreateDeviceIdentity(paths);
   const descriptor = JSON.parse(fs.readFileSync(paths.recoveryHostDescriptorFile(), 'utf8'));
-  assert.equal(snapshot.status.fullyReady, true);
+  assert.equal(snapshot.status.fullyReady, false);
+  assert.equal(snapshot.updateIncomplete, true);
+  assert.equal(snapshot.recoveryHost.runtime.fully_ready, false);
+  assert.equal(snapshot.recoveryHost.runtime.connector_ready, false);
   assert.equal(snapshot.recoveryHost.state, 'healthy');
   assert.equal(snapshot.recoveryHost.device_id, persistedDevice.device_id);
   assert.equal(snapshot.recoveryHost.device_instance_id, host.instanceId);
@@ -784,6 +789,12 @@ test('Recovery Host launch arguments preserve the app root in development', () =
   assert.deepEqual(electronUiArguments({ isPackaged: false, getAppPath: () => 'E:\\app' }, {
     activationEpochId: 'epoch-activation-0001'
   }), ['E:\\app', '--activation-epoch-id=epoch-activation-0001']);
+  assert.deepEqual(recoveryHostArguments({ isPackaged: true, getAppPath: () => 'ignored' }, {
+    bootstrapId: 'bootstrap-operation-0001'
+  }), ['--recovery-host', '--recovery-bootstrap=bootstrap-operation-0001']);
+  assert.deepEqual(bootstrapArguments(['electron.exe', '--recovery-bootstrap=bootstrap-operation-0001']), {
+    operationId: 'bootstrap-operation-0001'
+  });
   assert.deepEqual(replacementArguments([
     'electron.exe',
     '--replace-recovery-host=old-instance-0000001',
@@ -820,14 +831,17 @@ test('activation launchers propagate the epoch through argv and child environmen
   const options = { activationEpochId: 'epoch-activation-0001' };
   await spawnRecoveryHost(app, spawnProcess, options);
   await spawnElectronUi(app, spawnProcess, options);
+  await spawnRecoveryHost(app, spawnProcess, { bootstrapId: 'bootstrap-operation-0001' });
   assert.deepEqual(launches.map((item) => item.args), [
     ['--recovery-host', '--activation-epoch-id=epoch-activation-0001'],
-    ['--activation-epoch-id=epoch-activation-0001']
+    ['--activation-epoch-id=epoch-activation-0001'],
+    ['--recovery-host', '--recovery-bootstrap=bootstrap-operation-0001']
   ]);
   assert.equal(launches[0].options.env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID, 'epoch-activation-0001');
   assert.equal(launches[1].options.env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID, 'epoch-activation-0001');
   assert.equal(launches[0].options.env.WEBCODEX_PROCESS_ROLE, 'recovery-host');
   assert.equal(launches[1].options.env.WEBCODEX_PROCESS_ROLE, 'electron-ui');
+  assert.equal(launches[2].options.env.WEBCODEX_RECOVERY_BOOTSTRAP_ID, 'bootstrap-operation-0001');
 });
 
 test('activation launchers reject expired requests before invoking the process spawn boundary', async () => {
@@ -861,4 +875,71 @@ test('Electron main delegates runtime ownership to Recovery Host', () => {
   assert.match(main, /suppressUiRecovery\(reason\)/);
   assert.match(main, /quitUi\('operator_quit'\)/);
   assert.equal(RPC_ACTIONS.includes('client.suppress_ui_recovery'), true);
+});
+
+test('Recovery Host restart resolves the current accepted checkpoint and rejects caller drift', async (t) => {
+  const paths = fixture(t);
+  const calls = [];
+  const closureInput = {
+    schema_version: 1,
+    source_accepted: true,
+    accepted_receipts_complete: true,
+    component_receipts_valid: true,
+    activation_eligible: true,
+    eligibility_code: 'ACTIVATABLE',
+    affected_components: ['recovery_host'],
+    affected_components_valid: true,
+    source_checkpoint_id: SOURCE_CHECKPOINT.checkpoint_id,
+    run_id: SOURCE_CHECKPOINT.run_id,
+    wave_id: SOURCE_CHECKPOINT.wave_id,
+    proof_fingerprint: SOURCE_CHECKPOINT.proof_fingerprint,
+    accepted_head: SOURCE_CHECKPOINT.git_head
+  };
+  const orchestrator = {
+    setFullCleanActivation() {},
+    setFullCleanSourceCheckpointResolver(resolver) { this.checkpointResolver = resolver; },
+    completeActivationEpoch: async () => ({}),
+    activationEpochStatus: () => ({ state: 'NONE', admission_open: true, update_incomplete: false }),
+    codingMcpRevisionStatus: () => ({
+      running_revision: 'a'.repeat(64),
+      disk_revision: 'a'.repeat(64),
+      update_pending: false,
+      state: 'current'
+    })
+  };
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ autoStartServices: false, workspace: 'C:\\work\\one' }) },
+    secrets: {},
+    environment: {},
+    log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+    orchestrator,
+    healthService: {},
+    gateway: {},
+    autoActivationController: { status: () => ({ closure_input: closureInput }) },
+    revisionTracker: {
+      captureRunning: () => 'a'.repeat(64),
+      status: () => ({
+        running_revision: 'a'.repeat(64),
+        disk_revision: 'a'.repeat(64),
+        update_pending: false,
+        state: 'current'
+      })
+    }
+  });
+  host.assertBootstrapMutationAllowed = () => true;
+  host.fullCleanActivation.restart = async (options) => {
+    calls.push(options);
+    return { full_clean_activation: true, state: 'HANDOFF', admission_open: false, fully_ready: false };
+  };
+
+  const handler = host.handlers()['runtime.restart'];
+  await handler({ reason: 'operator_restart' });
+  assert.deepEqual(calls[0].sourceCheckpoint, SOURCE_CHECKPOINT);
+  assert.deepEqual(orchestrator.checkpointResolver(), SOURCE_CHECKPOINT);
+
+  await assert.rejects(handler({
+    sourceCheckpoint: { ...SOURCE_CHECKPOINT, wave_id: 'wave-recovery-host-other' }
+  }), { code: 'ACTIVATION_SOURCE_CHECKPOINT_MISMATCH' });
+  assert.equal(calls.length, 1);
 });

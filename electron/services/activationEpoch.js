@@ -27,6 +27,7 @@ const EPOCH_STATES = Object.freeze([
   'HANDOFF',
   'STARTING',
   'VERIFYING',
+  'READY_COMMITTED',
   'READY',
   'FAILED'
 ]);
@@ -39,6 +40,7 @@ const MODE_VALUES = new Set(['full_clean_activation', 'soft_recovery']);
 // stronger (timestamp plus 128 bits of randomness).
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
+const READY_COMMIT_DIGEST_PATTERN = /^[0-9a-f]{64}$/;
 
 function sleepSync(milliseconds) {
   const view = new Int32Array(new SharedArrayBuffer(4));
@@ -284,6 +286,24 @@ function requestFingerprint(intent) {
   return crypto.createHash('sha256').update(canonicalJson(intent)).digest('hex');
 }
 
+function readyCommitDigestFor(epochId, expiresAtUnixMs, verification) {
+  return crypto.createHash('sha256').update(canonicalJson({
+    activation_epoch_id: epochId,
+    expires_at_unix_ms: expiresAtUnixMs,
+    verification
+  })).digest('hex');
+}
+
+function normalizeReadyCommitDigest(value) {
+  if (typeof value !== 'string' || !READY_COMMIT_DIGEST_PATTERN.test(value)) {
+    throw epochError(
+      'ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID',
+      'ready() requires the canonical lowercase 64-hex ready commit digest.'
+    );
+  }
+  return value;
+}
+
 function normalizeTransition(value) {
   const source = isPlainObject(value) ? value : {};
   const state = normalizeState(source.state || source.phase);
@@ -410,6 +430,9 @@ function normalizeRecord(value, { allowLegacy = false } = {}) {
   const componentEvidence = boundedClone(value.component_evidence || null, 'component_evidence');
   const metadata = boundedClone(value.metadata || null, 'metadata');
   const verification = boundedClone(value.verification || null, 'verification');
+  const readyCommitDigest = value.ready_commit_digest === undefined || value.ready_commit_digest === null || value.ready_commit_digest === ''
+    ? null : String(value.ready_commit_digest);
+  if (readyCommitDigest !== null && !READY_COMMIT_DIGEST_PATTERN.test(readyCommitDigest)) throw storeError('Activation epoch ready_commit_digest is invalid.');
   const transitionsInput = value.transitions;
   if (!Array.isArray(transitionsInput) || transitionsInput.length === 0) {
     if (!allowLegacy) throw storeError('Activation epoch transitions are required.');
@@ -442,9 +465,9 @@ function normalizeRecord(value, { allowLegacy = false } = {}) {
   if (!allowLegacy && transitions.at(-1)?.state !== state) {
     throw storeError('Activation epoch transition history does not match the current state.');
   }
-  if (!allowLegacy && state === 'READY'
+  if (!allowLegacy && (state === 'READY_COMMITTED' || state === 'READY')
     && !transitions.some((transition) => transition.state === 'STOPPING')) {
-    throw storeError('READY activation epoch requires an explicit STOPPING transition.');
+    throw storeError(`${state} activation epoch requires an explicit STOPPING transition.`);
   }
   const admissionState = value.admission_state === undefined || value.admission_state === null
     ? (allowLegacy ? (state === 'READY' ? 'OPEN' : 'CLOSED') : null)
@@ -511,9 +534,24 @@ function normalizeRecord(value, { allowLegacy = false } = {}) {
   if (requestFp && requestFp !== requestFingerprint(requestIntent)) {
     throw storeError('Activation epoch request_fingerprint does not match request_intent.');
   }
-  if (!allowLegacy && state === 'READY') {
+  if (!allowLegacy && (state === 'READY_COMMITTED' || state === 'READY')) {
     validateReadyVerification(verification, id, { components });
   }
+  if (readyCommitDigest) {
+    if (state !== 'READY_COMMITTED' && state !== 'READY' && state !== 'FAILED') {
+      throw storeError('Activation epoch ready_commit_digest is only valid after verification commit.');
+    }
+    if (!verification) throw storeError('Activation epoch ready_commit_digest requires verification proof.');
+    validateReadyVerification(verification, id, { components });
+    if (readyCommitDigest !== readyCommitDigestFor(id, expires.unixMs, verification)) {
+      throw storeError('Activation epoch ready_commit_digest does not bind the canonical verification proof.');
+    }
+    if (state === 'READY' && !transitions.some((transition) => transition.state === 'READY_COMMITTED')) {
+      throw storeError('READY activation epoch with ready_commit_digest requires READY_COMMITTED transition evidence.');
+    }
+  }
+  if (!allowLegacy && state === 'READY_COMMITTED' && !readyCommitDigest) throw storeError('READY_COMMITTED activation epoch requires ready_commit_digest.');
+  if (!allowLegacy && state === 'READY' && transitions.some((transition) => transition.state === 'READY_COMMITTED') && !readyCommitDigest) throw storeError('READY activation epoch reached through READY_COMMITTED requires ready_commit_digest.');
   if (!allowLegacy && expires.unixMs !== null && expires.unixMs < createdAtUnixMs) {
     throw storeError('Activation epoch expiry precedes creation.');
   }
@@ -533,6 +571,7 @@ function normalizeRecord(value, { allowLegacy = false } = {}) {
     owner_pid: ownerPid,
     expires_at: expires.iso,
     expires_at_unix_ms: expires.unixMs,
+    ready_commit_digest: readyCommitDigest,
     verification,
     metadata,
     request_intent: requestIntent,
@@ -774,7 +813,7 @@ class ActivationEpochStore {
     if (!Number.isSafeInteger(now) || now < 0) throw epochError('ACTIVATION_EPOCH_CLOCK_INVALID', 'Activation epoch clock is invalid.');
     const intent = canonicalIntent(input);
     if (intent.expires_at_unix_ms !== null && intent.expires_at_unix_ms <= now) {
-      throw epochError('ACTIVATION_EPOCH_EXPIRED', 'Activation epoch expiry must be in the future.');
+      throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Activation epoch expiry must be in the future.');
     }
     const requestedId = input.activation_epoch_id || input.epoch_id;
     const id = requestedId ? normalizeId(requestedId) : generatedEpochId(now);
@@ -782,10 +821,11 @@ class ActivationEpochStore {
       const lockedNow = this.now();
       if (!Number.isSafeInteger(lockedNow) || lockedNow < 0) throw epochError('ACTIVATION_EPOCH_CLOCK_INVALID', 'Activation epoch clock is invalid.');
       if (intent.expires_at_unix_ms !== null && intent.expires_at_unix_ms <= lockedNow) {
-        throw epochError('ACTIVATION_EPOCH_EXPIRED', 'Activation epoch expiry must be in the future.');
+        throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Activation epoch expiry must be in the future.');
       }
       const store = this._read();
       if (store.current) {
+        if (ACTIVE_STATES.has(store.current.state)) this._assertNotExpiredLocked(store, store.current, 'create');
         if (store.current.activation_epoch_id === id
           && store.current.request_fingerprint === requestFingerprint(intent)) return clone(store.current);
         if (store.current.activation_epoch_id === id) {
@@ -822,6 +862,7 @@ class ActivationEpochStore {
         owner_pid: intent.owner_pid,
         expires_at: intent.expires_at_unix_ms === null ? null : isoAt(intent.expires_at_unix_ms),
         expires_at_unix_ms: intent.expires_at_unix_ms,
+        ready_commit_digest: null,
         verification: null,
         metadata: intent.metadata,
         request_intent: intent,
@@ -858,6 +899,53 @@ class ActivationEpochStore {
     return { store, id, record: store.current };
   }
 
+  _assertNotExpiredLocked(store, record, boundary) {
+    const now = this.now();
+    if (!Number.isSafeInteger(now) || now < 0) {
+      throw epochError('ACTIVATION_EPOCH_CLOCK_INVALID', 'Activation epoch clock is invalid.');
+    }
+    if (now < record.updated_at_unix_ms) {
+      throw epochError('ACTIVATION_EPOCH_CLOCK_REGRESSION', 'Activation epoch clock moved backwards.');
+    }
+    if (!ACTIVE_STATES.has(record.state) || record.expires_at_unix_ms === null || now < record.expires_at_unix_ms) return now;
+    if (!store.current || store.current.activation_epoch_id !== record.activation_epoch_id
+      || store.current.revision !== record.revision) {
+      throw epochError('ACTIVATION_EPOCH_CONFLICT', 'Activation epoch changed while checking expiry.');
+    }
+    const details = {
+      activation_epoch_id: record.activation_epoch_id,
+      boundary: String(boundary || 'mutation').slice(0, 96),
+      expires_at_unix_ms: record.expires_at_unix_ms
+    };
+    const next = {
+      ...record,
+      state: 'FAILED',
+      revision: record.revision + 1,
+      admission_state: 'CLOSED',
+      updated_at: isoAt(now),
+      updated_at_unix_ms: now,
+      started_at: record.started_at || isoAt(now),
+      started_at_unix_ms: record.started_at_unix_ms ?? now,
+      failed_at: isoAt(now),
+      failed_at_unix_ms: now,
+      error: {
+        code: 'ACTIVATION_REQUEST_EXPIRED',
+        message: 'Activation request expired before the activation boundary completed.',
+        details
+      },
+      transitions: compactTransitions([...record.transitions, {
+        state: 'FAILED', at: isoAt(now), reason: `expired:${details.boundary}`
+      }])
+    };
+    store.current = next;
+    this._write(store);
+    throw epochError(
+      'ACTIVATION_REQUEST_EXPIRED',
+      'Activation request expired before the activation boundary completed.',
+      details
+    );
+  }
+
   update(epochId, patch = {}) {
     if (isPlainObject(epochId) && (patch === undefined || patch === null || Object.keys(patch).length === 0)) {
       patch = epochId;
@@ -866,6 +954,13 @@ class ActivationEpochStore {
     if (!isPlainObject(patch)) throw epochError('ACTIVATION_EPOCH_ARGUMENT_INVALID', 'Activation epoch update must be an object.');
     return this._withLock(() => {
       const { store, id, record } = this._requireCurrent(epochId);
+      // Terminal records are immutable.  Do not consult the injected clock for
+      // a terminal no-op/replay: a later clock regression must not mask the
+      // durable terminal result with an unrelated clock error.  Active records
+      // still run the expiry fence before any mutation or CAS decision.
+      const now = ACTIVE_STATES.has(record.state)
+        ? this._assertNotExpiredLocked(store, record, 'update')
+        : null;
       if (patch.expected_revision !== undefined && Number(patch.expected_revision) !== record.revision) {
         throw epochError('ACTIVATION_EPOCH_CONFLICT', 'Activation epoch revision is stale.', {
           expected_revision: Number(patch.expected_revision),
@@ -882,13 +977,12 @@ class ActivationEpochStore {
         if (!patch.state || normalizeState(patch.state) === record.state) return clone(record);
         throw epochError('ACTIVATION_EPOCH_TERMINAL', 'A terminal activation epoch cannot be updated.', { state: record.state });
       }
-      const now = this.now();
-      if (!Number.isSafeInteger(now) || now < record.updated_at_unix_ms) {
-        throw epochError('ACTIVATION_EPOCH_CLOCK_REGRESSION', 'Activation epoch clock moved backwards.');
-      }
       const nextState = patch.state === undefined && patch.phase === undefined
         ? record.state
         : normalizeState(patch.state || patch.phase);
+      if (nextState === 'READY_COMMITTED') {
+        throw epochError('ACTIVATION_EPOCH_READY_COMMIT_REQUIRED', 'Use commitReady() to enter READY_COMMITTED.');
+      }
       if (TERMINAL_STATES.has(nextState)) {
         throw epochError('ACTIVATION_EPOCH_TERMINAL_TRANSITION', 'Use ready() or fail() to terminalize an activation epoch.');
       }
@@ -981,10 +1075,7 @@ class ActivationEpochStore {
       const { store, record } = this._requireCurrent(epochId);
       if (record.state === 'FAILED') return clone(record);
       if (record.state === 'READY') throw epochError('ACTIVATION_EPOCH_TERMINAL', 'A ready activation epoch cannot be failed.');
-      const now = this.now();
-      if (!Number.isSafeInteger(now) || now < record.updated_at_unix_ms) {
-        throw epochError('ACTIVATION_EPOCH_CLOCK_REGRESSION', 'Activation epoch clock moved backwards.');
-      }
+      const now = this._assertNotExpiredLocked(store, record, 'fail');
       const normalizedFailure = normalizeError(failure) || {
         code: 'ACTIVATION_EPOCH_FAILED',
         message: 'Activation epoch failed.',
@@ -1010,35 +1101,73 @@ class ActivationEpochStore {
     });
   }
 
-  ready(epochId, verification = null) {
+  commitReady(epochId, verification) {
     return this._withLock(() => {
       const { store, id, record } = this._requireCurrent(epochId);
-      if (record.state === 'READY') {
-        // READY is terminal and idempotent.  Still reject an explicitly
-        // mismatched epoch id so a stale caller cannot mistake another epoch
-        // for its own completion.
-        if (isPlainObject(verification) && verification.activation_epoch_id !== undefined
-          && normalizeId(verification.activation_epoch_id) !== id) {
-          throw epochError('ACTIVATION_EPOCH_ID_MISMATCH', 'Final verification belongs to another activation epoch.');
-        }
-        return clone(record);
+      if (record.state === 'FAILED' || record.state === 'READY') {
+        throw epochError('ACTIVATION_EPOCH_TERMINAL', 'A terminal activation epoch cannot commit ready verification.');
       }
-      if (record.state === 'FAILED') throw epochError('ACTIVATION_EPOCH_TERMINAL', 'A failed activation epoch cannot become ready.');
-      if (STATE_ORDER.get(record.state) < STATE_ORDER.get('STOPPING')) {
-        throw epochError('ACTIVATION_EPOCH_READY_STATE_INVALID', 'READY requires the activation to have reached STOPPING/VERIFYING.');
+      const now = this._assertNotExpiredLocked(store, record, 'commitReady');
+      if (record.state === 'READY_COMMITTED') {
+        const replayProof = boundedClone(verification, 'verification');
+        validateReadyVerification(replayProof, id, record);
+        if (replayProof.verified_at === undefined || replayProof.verified_at === null || replayProof.verified_at === '') {
+          replayProof.verified_at = record.verification?.verified_at;
+        }
+        const replayDigest = readyCommitDigestFor(id, record.expires_at_unix_ms, replayProof);
+        if (replayDigest === record.ready_commit_digest && sameCanonical(replayProof, record.verification)) return clone(record);
+        throw epochError('ACTIVATION_EPOCH_READY_COMMIT_CONFLICT', 'READY_COMMITTED replay proof does not match the durable commit.');
+      }
+      if (record.state !== 'VERIFYING') {
+        throw epochError('ACTIVATION_EPOCH_READY_COMMIT_STATE_INVALID', 'commitReady() requires exact VERIFYING state.');
       }
       if (!record.transitions.some((transition) => transition.state === 'STOPPING')) {
-        throw epochError('ACTIVATION_EPOCH_READY_STATE_INVALID', 'READY requires an explicit STOPPING transition.');
-      }
-      validateReadyVerification(verification, id, record);
-      const now = this.now();
-      if (!Number.isSafeInteger(now) || now < record.updated_at_unix_ms) {
-        throw epochError('ACTIVATION_EPOCH_CLOCK_REGRESSION', 'Activation epoch clock moved backwards.');
+        throw epochError('ACTIVATION_EPOCH_READY_COMMIT_STATE_INVALID', 'commitReady() requires durable STOPPING transition evidence.');
       }
       const proof = boundedClone(verification, 'verification');
+      validateReadyVerification(proof, id, record);
       if (proof.verified_at === undefined || proof.verified_at === null || proof.verified_at === '') proof.verified_at = isoAt(now);
       const startedAt = record.started_at || isoAt(now);
       const startedAtUnixMs = record.started_at_unix_ms ?? (record.started_at ? Date.parse(record.started_at) : now);
+      const readyCommitDigest = readyCommitDigestFor(id, record.expires_at_unix_ms, proof);
+      const next = {
+        ...record,
+        state: 'READY_COMMITTED',
+        revision: record.revision + 1,
+        admission_state: 'CLOSED',
+        updated_at: isoAt(now),
+        updated_at_unix_ms: now,
+        started_at: startedAt,
+        started_at_unix_ms: startedAtUnixMs,
+        ready_commit_digest: readyCommitDigest,
+        verification: proof,
+        error: null,
+        transitions: compactTransitions([...record.transitions, { state: 'READY_COMMITTED', at: isoAt(now), reason: 'verification-committed' }])
+      };
+      store.current = next;
+      this._write(store);
+      return clone(normalizeRecord(next));
+    });
+  }
+
+  ready(epochId, readyCommitDigest) {
+    return this._withLock(() => {
+      const { store, record } = this._requireCurrent(epochId);
+      const now = ACTIVE_STATES.has(record.state)
+        ? this._assertNotExpiredLocked(store, record, 'ready')
+        : null;
+      if (record.state === 'FAILED') throw epochError('ACTIVATION_EPOCH_TERMINAL', 'A failed activation epoch cannot become ready.');
+      const digest = normalizeReadyCommitDigest(readyCommitDigest);
+      if (record.state === 'READY') {
+        if (record.ready_commit_digest === digest) return clone(record);
+        throw epochError('ACTIVATION_EPOCH_READY_COMMIT_CONFLICT', 'READY replay digest does not match the durable commit.');
+      }
+      if (record.state !== 'READY_COMMITTED') {
+        throw epochError('ACTIVATION_EPOCH_READY_STATE_INVALID', 'ready() requires READY_COMMITTED state.');
+      }
+      if (record.ready_commit_digest !== digest) {
+        throw epochError('ACTIVATION_EPOCH_READY_COMMIT_CONFLICT', 'ready() digest does not match the durable verification commit.');
+      }
       const next = {
         ...record,
         state: 'READY',
@@ -1046,13 +1175,10 @@ class ActivationEpochStore {
         admission_state: 'OPEN',
         updated_at: isoAt(now),
         updated_at_unix_ms: now,
-        started_at: startedAt,
-        started_at_unix_ms: startedAtUnixMs,
         ready_at: isoAt(now),
         ready_at_unix_ms: now,
-        verification: proof,
         error: null,
-        transitions: compactTransitions([...record.transitions, { state: 'READY', at: isoAt(now), reason: 'verified' }])
+        transitions: compactTransitions([...record.transitions, { state: 'READY', at: isoAt(now), reason: 'ready-commit-opened' }])
       };
       store.current = next;
       this._write(store);

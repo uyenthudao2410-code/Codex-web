@@ -40,6 +40,14 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
                 self.assertTrue(all(float(item["duration_ms"]) >= 0 for item in by_stage.values()))
                 self.assertTrue(all("turn_id" not in item and "trace_id" not in item for item in by_stage.values()))
 
+                runtime.orchestration_ledger.record_proof(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    stage_id="a2-stage-span-fixture",
+                    stage_version="1",
+                    input_fingerprint="a2-stage-span-fixture-proof",
+                    status="passed",
+                )
                 accepted = runtime.task_control({
                     "action": "accept",
                     "run_id": run_id,
@@ -141,6 +149,14 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
             self.assertEqual([item["wave_id"] for item in filtered["audit"]["waves"]], [result["orchestration"]["wave_id"]])
             self.assertTrue(filtered["audit"]["model_free"])
             self.assertFalse(filtered["audit"]["raw_transcript_included"])
+            runtime.orchestration_ledger.record_proof(
+                run_id=result["orchestration"]["run_id"],
+                wave_id=result["orchestration"]["wave_id"],
+                stage_id="replanned-wave-fixture",
+                stage_version="1",
+                input_fingerprint="replanned-wave-fixture-proof",
+                status="passed",
+            )
             accepted = runtime.task_control({
                 "action": "accept",
                 "run_id": result["orchestration"]["run_id"],

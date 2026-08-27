@@ -72,7 +72,11 @@ class HealthService {
     if (!before.environment.tunnelClient.installed) unresolved.push('Cài đặt lại trợ lý để khôi phục Tunnel Client');
     if (!before.environment.python.installed) unresolved.push('Sửa chữa Python Portable');
     if (!unresolved.length) {
-      await this.orchestrator.restart();
+      await this.orchestrator.restart({
+        automatic: true,
+        mode: 'soft_recovery',
+        reason: 'health_repair'
+      });
       actions.push('Đã khởi động lại MCP và Tunnel');
     }
     const after = await this.inspect();

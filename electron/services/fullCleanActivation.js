@@ -15,12 +15,35 @@ const {
   normalizeLifecycleDecision,
   verifyActivationPostflight
 } = require('./activationPostflight');
+const { normalizeSourceCheckpoint } = require('./recoveryActivation');
 
 const COMPONENTS = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
 const DEFAULT_TTL_MS = 120_000;
 const execFileAsync = promisify(execFile);
 const HEX64 = /^[a-f0-9]{64}$/;
 const TERMINAL_P5_LIFECYCLES = new Set(['EPOCH_CLOSED', 'EPOCH_HARD_STOPPED']);
+const PROJECTION_REBUILD_KIND = 'coding_tools_mcp_projection_rebuild';
+const PROJECTION_REBUILD_MAX_AGE_MS = 5 * 60 * 1000;
+const PROJECTION_REBUILD_FUTURE_SKEW_MS = 1000;
+const PROJECTION_REBUILD_ALLOWED_CLASSIFICATIONS = new Set([
+  'NO_ACTIVE_PROJECTION', 'PROJECTION_CONSISTENT', 'CHECKPOINTED', 'BLOCKED', 'ABORTED'
+]);
+const PROJECTION_REBUILD_RECEIPT_FIELDS = new Set([
+  'schema_version', 'kind', 'activation_epoch_id', 'process_instance_id',
+  'server_instance_id', 'workspace', 'ledger_snapshot_sha256',
+  'ledger_logical_sha256', 'ledger_integrity', 'projection_classification',
+  'projection', 'completed_at', 'completed_at_unix_ms', 'reconciled',
+  'integrity_sha256'
+]);
+const PROJECTION_REBUILD_LEDGER_FIELDS = new Set([
+  'backup_api_copy', 'immutable', 'query_only', 'integrity_check', 'foreign_key_check_rows'
+]);
+const PROJECTION_REBUILD_PROJECTION_FIELDS = new Set(['run_id', 'wave_id', 'orchestration_state']);
+const CONNECTOR_DISCOVERY_FUTURE_SKEW_MS = 1000;
+const ACTIVATION_RESPONSE_LOSS_CODES = new Set([
+  'ECONNABORTED', 'ECONNREFUSED', 'ECONNRESET', 'EPIPE', 'ETIMEDOUT',
+  'MCP_ACTIVATION_RESPONSE_INVALID', 'ORCHESTRATION_STATE_UNCERTAIN'
+]);
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -34,9 +57,255 @@ function epochError(code, message, details = {}) {
 
 function text(value) { return String(value || '').trim(); }
 
+function isActivationResponseLoss(error) {
+  return ACTIVATION_RESPONSE_LOSS_CODES.has(String(error?.code || '').trim().toUpperCase());
+}
+
+function exactActivationAdmission(value, epochId, readyCommitDigest, expiresAtUnixMs, admissionOpen) {
+  return Boolean(value
+    && String(value.activation_epoch_id || '') === String(epochId || '')
+    && String(value.ready_commit_digest || '') === String(readyCommitDigest || '')
+    && Number(value.expires_at_unix_ms || 0) === Number(expiresAtUnixMs || 0)
+    && value.admission_open === admissionOpen);
+}
+
 function canonicalWorkspace(value) {
   const resolved = path.resolve(String(value || ''));
   return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+function exactObjectFields(value, fields) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value)
+    && Object.keys(value).length === fields.size
+    && Object.keys(value).every((key) => fields.has(key)));
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function canonicalProjectionRebuildSha256(receipt) {
+  const payload = Object.fromEntries(Object.entries(receipt || {}).filter(([key]) => key !== 'integrity_sha256'));
+  return crypto.createHash('sha256').update(canonicalJson(payload), 'utf8').digest('hex');
+}
+
+function projectionIdentity(value) {
+  const outer = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const source = outer.orchestration && typeof outer.orchestration === 'object' && !Array.isArray(outer.orchestration)
+    ? outer.orchestration : outer;
+  return {
+    run_id: text(source.run_id),
+    wave_id: text(source.wave_id),
+    orchestration_state: text(source.orchestration_state).toUpperCase()
+  };
+}
+
+function validateProjectionRebuildReceipt(receipt, {
+  activationEpochId,
+  processInstanceId,
+  serverInstanceId,
+  workspace,
+  ledgerSnapshot,
+  nowUnixMs
+} = {}) {
+  const reasons = [];
+  const add = (reason) => { if (!reasons.includes(reason)) reasons.push(reason); };
+  if (!exactObjectFields(receipt, PROJECTION_REBUILD_RECEIPT_FIELDS)) {
+    add(receipt && typeof receipt === 'object' ? 'RECEIPT_FIELDS_INVALID' : 'RECEIPT_MISSING');
+    return { valid: false, code: 'UPDATE_INCOMPLETE', reasons, receipt: null };
+  }
+  if (receipt.schema_version !== 1 || receipt.kind !== PROJECTION_REBUILD_KIND) add('RECEIPT_SCHEMA_INVALID');
+  for (const field of ['activation_epoch_id', 'process_instance_id', 'server_instance_id']) {
+    if (typeof receipt[field] !== 'string' || !receipt[field].trim() || receipt[field].length > 256) {
+      add(`${field.toUpperCase()}_INVALID`);
+    }
+  }
+  if (typeof receipt.workspace !== 'string' || !receipt.workspace.trim() || receipt.workspace.length > 4096) add('WORKSPACE_INVALID');
+  if (!HEX64.test(receipt.ledger_snapshot_sha256) || !HEX64.test(receipt.ledger_logical_sha256)) add('LEDGER_HASH_INVALID');
+  const integrity = receipt.ledger_integrity;
+  if (!exactObjectFields(integrity, PROJECTION_REBUILD_LEDGER_FIELDS)
+    || integrity.backup_api_copy !== true
+    || integrity.immutable !== true
+    || integrity.query_only !== true
+    || !Array.isArray(integrity.integrity_check)
+    || integrity.integrity_check.length !== 1
+    || integrity.integrity_check[0] !== 'ok'
+    || integrity.foreign_key_check_rows !== 0) add('LEDGER_INTEGRITY_INVALID');
+  const classification = receipt.projection_classification;
+  const projection = receipt.projection;
+  const projectionFieldsValid = exactObjectFields(projection, PROJECTION_REBUILD_PROJECTION_FIELDS)
+    && Object.values(projection).every((item) => typeof item === 'string' && item.length <= 256);
+  const emptyProjection = projectionFieldsValid
+    && !projection.run_id && !projection.wave_id && !projection.orchestration_state;
+  const completeProjection = projectionFieldsValid
+    && Boolean(projection.run_id && projection.wave_id && projection.orchestration_state);
+  const terminalState = { CHECKPOINTED: 'CHECKPOINTED', BLOCKED: 'BLOCKED', ABORTED: 'ABORTED' }[classification];
+  if (!PROJECTION_REBUILD_ALLOWED_CLASSIFICATIONS.has(classification)
+    || !projectionFieldsValid
+    || (classification === 'NO_ACTIVE_PROJECTION' ? !emptyProjection : !completeProjection)
+    || (terminalState && projection.orchestration_state !== terminalState)) add('PROJECTION_CLASSIFICATION_INVALID');
+  if (receipt.reconciled !== true) add('RECONCILIATION_FLAG_INVALID');
+  const completedMs = receipt.completed_at_unix_ms;
+  const timestampValid = Number.isSafeInteger(completedMs) && completedMs > 0;
+  if (!timestampValid) add('RECEIPT_TIMESTAMP_INVALID');
+  let canonicalCompletedAt = null;
+  if (timestampValid) {
+    try { canonicalCompletedAt = new Date(completedMs).toISOString(); } catch { canonicalCompletedAt = null; }
+  }
+  if (!canonicalCompletedAt || receipt.completed_at !== canonicalCompletedAt || Date.parse(receipt.completed_at) !== completedMs) {
+    add('RECEIPT_TIMESTAMP_MISMATCH');
+  }
+  if (!Number.isSafeInteger(nowUnixMs) || nowUnixMs <= 0) add('VALIDATION_TIMESTAMP_INVALID');
+  else if (timestampValid) {
+    if (completedMs > nowUnixMs + PROJECTION_REBUILD_FUTURE_SKEW_MS) add('RECEIPT_FROM_FUTURE');
+    if (nowUnixMs - completedMs > PROJECTION_REBUILD_MAX_AGE_MS) add('RECEIPT_STALE');
+  }
+  if (text(receipt.activation_epoch_id) !== text(activationEpochId)) add('ACTIVATION_EPOCH_ID_MISMATCH');
+  if (text(receipt.process_instance_id) !== text(processInstanceId)) add('PROCESS_INSTANCE_ID_MISMATCH');
+  if (text(receipt.server_instance_id) !== text(serverInstanceId)) add('SERVER_INSTANCE_ID_MISMATCH');
+  if (!workspace || canonicalWorkspace(receipt.workspace) !== canonicalWorkspace(workspace)) add('WORKSPACE_MISMATCH');
+  if (!canonicalSnapshot(ledgerSnapshot)) add('CURRENT_LEDGER_INTEGRITY_INVALID');
+  else {
+    if (receipt.ledger_snapshot_sha256 !== text(ledgerSnapshot.sha256).toLowerCase()) add('LEDGER_SNAPSHOT_SHA256_MISMATCH');
+    if (receipt.ledger_logical_sha256 !== text(ledgerSnapshot.logical_sha256).toLowerCase()) add('LEDGER_LOGICAL_SHA256_MISMATCH');
+  }
+  if (!HEX64.test(receipt.integrity_sha256)
+    || receipt.integrity_sha256 !== canonicalProjectionRebuildSha256(receipt)) add('RECEIPT_INTEGRITY_INVALID');
+  return {
+    valid: reasons.length === 0,
+    code: reasons.length === 0 ? 'READY' : 'UPDATE_INCOMPLETE',
+    reasons,
+    receipt
+  };
+}
+
+function validateProjectionRebuildGate({ preflight, health, expected, nowUnixMs } = {}) {
+  const reasons = [];
+  const add = (prefix, values) => {
+    for (const value of values) {
+      const reason = `${prefix}_${value}`;
+      if (!reasons.includes(reason)) reasons.push(reason);
+    }
+  };
+  const validateWrapper = (wrapper, prefix) => {
+    if (!wrapper || typeof wrapper !== 'object' || Array.isArray(wrapper)) {
+      add(prefix, ['WRAPPER_MISSING']);
+      return { valid: false, receipt: null };
+    }
+    if (wrapper.current !== true) add(prefix, ['WRAPPER_NOT_CURRENT']);
+    const validation = wrapper.validation;
+    if (!validation || typeof validation !== 'object' || Array.isArray(validation)
+      || validation.valid !== true || validation.code !== 'READY'
+      || !Array.isArray(validation.reasons) || validation.reasons.length !== 0) {
+      add(prefix, ['WRAPPER_VALIDATION_INVALID']);
+    }
+    const result = validateProjectionRebuildReceipt(wrapper.receipt, { ...expected, nowUnixMs });
+    add(prefix, result.reasons);
+    if (validation?.projection_classification !== wrapper.receipt?.projection_classification) {
+      add(prefix, ['WRAPPER_CLASSIFICATION_MISMATCH']);
+    }
+    return result;
+  };
+  const preflightResult = validateWrapper(preflight?.projection_rebuild, 'PREFLIGHT');
+  const healthResult = validateWrapper(health?.projection_rebuild, 'HEALTH');
+  const preflightReceipt = preflightResult.receipt;
+  const healthReceipt = healthResult.receipt;
+  if (!preflight?.projection_rebuild_receipt
+    || canonicalJson(preflight.projection_rebuild_receipt) !== canonicalJson(preflightReceipt)) {
+    add('PREFLIGHT', ['DUPLICATE_RECEIPT_MISMATCH']);
+  }
+  if (preflightReceipt) {
+    if (text(preflight?.projection_classification).toUpperCase() !== preflightReceipt.projection_classification) {
+      add('PREFLIGHT', ['PROJECTION_CLASSIFICATION_MISMATCH']);
+    }
+    if (canonicalJson(projectionIdentity(preflight?.projection)) !== canonicalJson(preflightReceipt.projection)) {
+      add('PREFLIGHT', ['PROJECTION_IDENTITY_MISMATCH']);
+    }
+  }
+  if (!preflightReceipt || !healthReceipt
+    || preflightReceipt.integrity_sha256 !== healthReceipt.integrity_sha256
+    || canonicalJson(preflightReceipt) !== canonicalJson(healthReceipt)) {
+    add('CROSS_OBSERVATION', ['RECEIPT_MISMATCH']);
+  }
+  return {
+    valid: reasons.length === 0,
+    code: reasons.length === 0 ? 'READY' : 'UPDATE_INCOMPLETE',
+    reasons,
+    projection_classification: healthReceipt?.projection_classification || preflightReceipt?.projection_classification || null,
+    receipt: healthReceipt || preflightReceipt || null
+  };
+}
+
+function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) {
+  const reasons = [];
+  const add = (reason) => { if (!reasons.includes(reason)) reasons.push(reason); };
+  const processInstanceId = text(health?.process_instance_id);
+  const serverInstanceId = text(health?.instance_id || health?.server_instance_id);
+  const currentSha256 = text(health?.tool_contract?.sha256);
+  const discovery = health?.connector_tool_discovery;
+  const observedAt = text(discovery?.observed_at);
+  const observedAtUnixMs = Date.parse(observedAt);
+
+  if (!HEX64.test(currentSha256)) add('CURRENT_CONTRACT_SHA256_INVALID');
+  if (!processInstanceId) add('PROCESS_INSTANCE_ID_MISSING');
+  if (!serverInstanceId) add('SERVER_INSTANCE_ID_MISSING');
+  if (!discovery || typeof discovery !== 'object' || Array.isArray(discovery)) {
+    add('DISCOVERY_RECEIPT_MISSING');
+  } else {
+    if (discovery.current_contract_observed !== true) add('CURRENT_CONTRACT_NOT_REDISCOVERED');
+    if (text(discovery.contract_sha256) !== currentSha256) add('DISCOVERY_CONTRACT_SHA256_MISMATCH');
+    if (text(discovery.process_instance_id) !== processInstanceId) add('DISCOVERY_PROCESS_INSTANCE_ID_MISMATCH');
+    if (text(discovery.server_instance_id) !== serverInstanceId) add('DISCOVERY_SERVER_INSTANCE_ID_MISMATCH');
+    if (!observedAt || !Number.isFinite(observedAtUnixMs)) add('DISCOVERY_TIMESTAMP_INVALID');
+    else if (!Number.isSafeInteger(nowUnixMs) || nowUnixMs <= 0) add('VALIDATION_TIMESTAMP_INVALID');
+    else if (observedAtUnixMs > nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) add('DISCOVERY_FROM_FUTURE');
+  }
+
+  if (!contractStatus || typeof contractStatus !== 'object' || Array.isArray(contractStatus)) {
+    add('CONNECTOR_CONTRACT_STATUS_UNAVAILABLE');
+  } else {
+    if (contractStatus.available !== true) add('CONNECTOR_CONTRACT_UNAVAILABLE');
+    if (text(contractStatus.currentSha256) !== currentSha256) add('STATUS_CURRENT_SHA256_MISMATCH');
+    if (text(contractStatus.acknowledgedSha256) !== currentSha256) add('ACKNOWLEDGED_SHA256_MISMATCH');
+    if (contractStatus.rediscovered !== true) add('STATUS_NOT_REDISCOVERED');
+    if (text(contractStatus.rediscoveredSha256) !== currentSha256) add('STATUS_REDISCOVERED_SHA256_MISMATCH');
+    if (text(contractStatus.rediscoveredAt) !== observedAt) add('STATUS_REDISCOVERY_TIMESTAMP_MISMATCH');
+    if (contractStatus.refreshRequired !== false) add('CONNECTOR_REFRESH_REQUIRED');
+    if (contractStatus.acknowledgementPending !== false) add('CONNECTOR_ACKNOWLEDGEMENT_PENDING');
+    if (contractStatus.contractChanged !== false) add('CONNECTOR_CONTRACT_CHANGED');
+    if (text(contractStatus.contractState) !== 'CURRENT_ACKNOWLEDGED') add('CONNECTOR_CONTRACT_STATE_INVALID');
+  }
+
+  return {
+    valid: reasons.length === 0,
+    code: reasons.length === 0 ? 'READY' : 'UPDATE_INCOMPLETE',
+    reasons,
+    current_sha256: HEX64.test(currentSha256) ? currentSha256 : null,
+    acknowledged_sha256: HEX64.test(text(contractStatus?.acknowledgedSha256))
+      ? text(contractStatus.acknowledgedSha256) : null,
+    rediscovered_at: Number.isFinite(observedAtUnixMs) ? observedAt : null,
+    process_instance_id: processInstanceId || null,
+    server_instance_id: serverInstanceId || null
+  };
+}
+
+function requireCanonicalSourceCheckpoint(value) {
+  try {
+    return normalizeSourceCheckpoint(value);
+  } catch (error) {
+    if (error?.code === 'ACTIVATION_SOURCE_CHECKPOINT_REQUIRED'
+      || error?.code === 'INVALID_SOURCE_CHECKPOINT'
+      || error?.code === 'INVALID_ARGUMENT') {
+      throw error;
+    }
+    throw epochError('ACTIVATION_SOURCE_CHECKPOINT_REQUIRED', 'Full clean activation requires an exact accepted source checkpoint.', {
+      cause_code: text(error?.code) || null
+    });
+  }
 }
 
 function canonicalSnapshot(snapshot) {
@@ -409,6 +678,7 @@ class FullCleanActivation {
     this.wait = waitFn;
     this.store = epochStore || new ActivationEpochStore({ paths, now });
     this.inFlight = null;
+    this.inFlightRequestKey = null;
   }
 
   current() { return this.store.current(); }
@@ -618,7 +888,8 @@ class FullCleanActivation {
       },
       electron_ui: {
         instance_id: text(ui.instance_id) || null,
-        pid: numeric(ui.pid)
+        pid: numeric(ui.pid),
+        process_start_token: text(ui.process_start_token) || null
       }
     };
   }
@@ -629,7 +900,7 @@ class FullCleanActivation {
     }
     let runtime = { safe: true, code: 'COMPONENT_STOPPED' };
     if (typeof this.orchestrator?.inspectCodeActivation === 'function') {
-      runtime = await this.orchestrator.inspectCodeActivation();
+      runtime = await this.orchestrator.inspectCodeActivation({ operationId: text(requestedOperationId) });
       const allowed = runtime?.code === 'COMPONENT_STOPPED'
         || runtime?.safe === true
         || (runtime?.code === 'ACCEPTANCE_PENDING' && allowAcceptancePending === true);
@@ -694,7 +965,11 @@ class FullCleanActivation {
       component_revisions: preflight?.component_revisions || this._componentRevisions(),
       component_evidence: component_evidence || {
         recovery_host: { instance_id: this.recoveryInstanceId || null },
-        electron_ui: { instance_id: uiPresence.instance_id || null, pid: uiPresence.pid || null },
+        electron_ui: {
+          instance_id: uiPresence.instance_id || null,
+          pid: uiPresence.pid || null,
+          process_start_token: uiPresence.process_start_token || null
+        },
         device_id: this.deviceIdentity?.device_id || null,
       device_instance_id: this._deviceInstanceId()
       },
@@ -720,21 +995,31 @@ class FullCleanActivation {
     }
   }
 
-  async _freshLifecycle(record) {
+  async _freshActivationObservation(record) {
     const sourceCheckpoint = record?.source_checkpoint;
-    if (!sourceCheckpoint || typeof this.orchestrator?.verifyCodeActivation !== 'function') return null;
-    const raw = await this.orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint);
+    let raw;
+    if (sourceCheckpoint && typeof this.orchestrator?.verifyCodeActivation === 'function') {
+      raw = await this.orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint);
+    } else if (!sourceCheckpoint && typeof this.orchestrator?.inspectCodeActivation === 'function') {
+      // Operator/UI restarts do not necessarily originate from an accepted
+      // RUN/WAVE checkpoint.  The authenticated GET preflight is still
+      // mandatory: it reconciles the runtime projection and builds the
+      // process-local receipt that complete_activation_epoch later consumes.
+      raw = await this.orchestrator.inspectCodeActivation({ operationId: record.operation_id });
+    } else {
+      throw epochError('LIFECYCLE_VERIFICATION_FAILED', 'Full clean activation cannot obtain a fresh runtime lifecycle observation.');
+    }
     const lifecycle = raw?.lifecycle && typeof raw.lifecycle === 'object' ? raw.lifecycle : {};
     const snapshot = lifecycle.snapshot && typeof lifecycle.snapshot === 'object' ? lifecycle.snapshot : {};
     const counts = raw?.counts && typeof raw.counts === 'object' ? raw.counts : {};
     const source = raw?.source_checkpoint && typeof raw.source_checkpoint === 'object' ? raw.source_checkpoint : {};
-    const sourceMatches = source.ok === true
+    const sourceMatches = !sourceCheckpoint || (source.ok === true
       && source.code === 'ACTIVATABLE'
       && source.checkpoint_id === sourceCheckpoint.checkpoint_id
       && source.run_id === sourceCheckpoint.run_id
       && source.wave_id === sourceCheckpoint.wave_id
       && source.proof_fingerprint === sourceCheckpoint.proof_fingerprint
-      && source.git_head === sourceCheckpoint.git_head;
+      && source.git_head === sourceCheckpoint.git_head);
     const countKeys = [
       'active_tool_calls', 'active_commands', 'starting_commands',
       'active_background_operations', 'active_managed_processes',
@@ -742,32 +1027,26 @@ class FullCleanActivation {
       'threshold_sensitive_stale_candidates', 'owned_codex_sidecar_residues'
     ];
     const normalizedCounts = Object.fromEntries(countKeys.map((key) => [key, Number.isSafeInteger(counts[key]) ? counts[key] : -1]));
-    const canonicalSnapshot = snapshot.backup_api_copy === true
-      && snapshot.immutable === true
-      && snapshot.query_only === true
-      && Array.isArray(snapshot.integrity_check)
-      && snapshot.integrity_check.length === 1
-      && snapshot.integrity_check[0] === 'ok'
-      && Number(snapshot.foreign_key_check_rows) === 0
-      && /^[a-f0-9]{64}$/.test(String(snapshot.sha256 || ''))
-      && /^[a-f0-9]{64}$/.test(String(snapshot.logical_sha256 || ''));
+    const canonicalLifecycleSnapshot = canonicalSnapshot(snapshot);
+    const workspaceMatches = canonicalWorkspace(raw?.workspace) === canonicalWorkspace(this._settings().workspace);
+    const clean = raw?.safe === true
+      && raw?.code === 'READY'
+      && sourceMatches
+      && canonicalLifecycleSnapshot
+      && workspaceMatches
+      && raw?.fenced === false
+      && raw?.fence_operation_id == null
+      && countKeys.slice(0, 7).every((key) => normalizedCounts[key] === 0)
+      && Number(lifecycle.unexplained_active_runs || 0) === 0
+      && Number(lifecycle.unbound_live_resource_residues || 0) === 0;
     const decision = {
       schema_version: 1,
-      clean: raw?.safe === true
-        && raw?.code === 'READY'
-        && raw?.operation_id === record.operation_id
-        && sourceMatches
-        && canonicalSnapshot
-        && raw?.fenced === false
-        && raw?.fence_operation_id == null
-        && countKeys.slice(0, 7).every((key) => normalizedCounts[key] === 0)
-        && Number(lifecycle.unexplained_active_runs || 0) === 0
-        && Number(lifecycle.unbound_live_resource_residues || 0) === 0,
+      clean: clean && Boolean(sourceCheckpoint) && raw?.operation_id === record.operation_id,
       code: String(raw?.code || 'ORCHESTRATION_STATE_UNCERTAIN'),
       reason: String(raw?.reason || ''),
       observed_at: new Date(this.now()).toISOString(),
-      canonical_lifecycle_observed: canonicalSnapshot,
-      source_checkpoint_verified: sourceMatches,
+      canonical_lifecycle_observed: canonicalLifecycleSnapshot,
+      source_checkpoint_verified: Boolean(sourceCheckpoint) && sourceMatches,
       fence_released: raw?.fenced === false && raw?.fence_operation_id == null,
       fenced: raw?.fenced === true,
       fence_operation_id: raw?.fence_operation_id || null,
@@ -776,17 +1055,34 @@ class FullCleanActivation {
       unbound_live_resource_residues: Number.isSafeInteger(lifecycle.unbound_live_resource_residues) ? lifecycle.unbound_live_resource_residues : -1,
       operation_id: record.operation_id
     };
-    const normalized = normalizeLifecycleDecision(decision);
-    if (!normalized || !lifecycleDecisionIsClean(normalized)) {
+    const normalized = sourceCheckpoint ? normalizeLifecycleDecision(decision) : null;
+    if (!clean || (sourceCheckpoint && (!normalized || !lifecycleDecisionIsClean(normalized)))) {
       throw epochError('LIFECYCLE_VERIFICATION_FAILED', 'Full clean activation did not receive a fresh checkpoint-bound unfenced lifecycle proof.', {
         operation_id: record.operation_id,
         source_checkpoint_verified: sourceMatches,
-        canonical_lifecycle_observed: canonicalSnapshot,
+        canonical_lifecycle_observed: canonicalLifecycleSnapshot,
+        workspace_matches: workspaceMatches,
         fenced: raw?.fenced,
         fence_operation_id: raw?.fence_operation_id || null
       });
     }
-    return normalized;
+    return {
+      lifecycle_decision: normalized,
+      checkpoint_bound: Boolean(sourceCheckpoint),
+      snapshot,
+      projection: lifecycle.projection && typeof lifecycle.projection === 'object' ? lifecycle.projection : {},
+      projection_classification: text(lifecycle.projection_classification || lifecycle.projection?.classification).toUpperCase(),
+      projection_rebuild: lifecycle.projection_rebuild && typeof lifecycle.projection_rebuild === 'object'
+        ? lifecycle.projection_rebuild : null,
+      projection_rebuild_receipt: lifecycle.projection_rebuild_receipt
+        && typeof lifecycle.projection_rebuild_receipt === 'object'
+        ? lifecycle.projection_rebuild_receipt : null
+    };
+  }
+
+  async _freshLifecycle(record) {
+    const observation = await this._freshActivationObservation(record);
+    return observation.lifecycle_decision;
   }
 
   _componentPostflights(record, census, lifecycle) {
@@ -848,12 +1144,40 @@ class FullCleanActivation {
       if (typeof this.orchestrator?.restart !== 'function') throw epochError('SOFT_RESTART_UNAVAILABLE', 'Soft restart is unavailable.');
       return this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' });
     }
-    if (this.inFlight) return this.inFlight;
-    this.inFlight = this._restart(options).finally(() => { this.inFlight = null; });
-    return this.inFlight;
+    // A full-clean restart is an accepted-checkpoint transaction.  Refuse an
+    // unbound/manual request before even entering the in-flight coordinator so
+    // no stale epoch can be expired, created, fenced, or stopped on inference.
+    const sourceCheckpoint = requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
+    const requestedOperationId = text(options.operationId) || operationId();
+    const requestKey = canonicalJson({
+      operation_id: requestedOperationId,
+      source_checkpoint: sourceCheckpoint,
+      component: text(options.component) || 'coding_mcp',
+      expected_disk_revision: text(options.expectedDiskRevision) || null,
+      activation_epoch_id: text(options.activationEpochId) || null,
+      expires_at_unix_ms: options.expiresAtUnixMs == null ? null : Number(options.expiresAtUnixMs),
+      allow_acceptance_pending: options.allowAcceptancePending === true
+    });
+    if (this.inFlight) {
+      if (this.inFlightRequestKey === requestKey) return this.inFlight;
+      throw epochError('RUNTIME_BUSY', 'Another full-clean activation operation is already in flight.', {
+        requested_operation_id: requestedOperationId
+      });
+    }
+    this.inFlightRequestKey = requestKey;
+    const tracked = this._restart({ ...options, operationId: requestedOperationId, sourceCheckpoint }).finally(() => {
+      if (this.inFlight === tracked) {
+        this.inFlight = null;
+        this.inFlightRequestKey = null;
+      }
+    });
+    this.inFlight = tracked;
+    return tracked;
   }
 
   async _restart(options = {}) {
+    const sourceCheckpoint = requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
+    options = { ...options, sourceCheckpoint };
     const operation_id = text(options.operationId) || operationId();
     const expiresAtUnixMs = Number(options.expiresAtUnixMs || (this.now() + DEFAULT_TTL_MS));
     if (!Number.isSafeInteger(expiresAtUnixMs) || expiresAtUnixMs <= this.now()) throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request is expired.');
@@ -1120,6 +1444,19 @@ class FullCleanActivation {
     }
     const settings = this._settings();
     const runtime = await this.orchestrator?.lightweightSnapshot?.() || {};
+    let activationObservation = null;
+    let activationObservationFailure = null;
+    try {
+      // This call must precede health.  The MCP preflight reconciles the compact
+      // projection and binds its receipt to one immutable ledger snapshot;
+      // health must then expose that exact same process-local receipt.
+      activationObservation = await this._freshActivationObservation(record);
+    } catch (error) {
+      activationObservationFailure = {
+        code: text(error?.code) || 'LIFECYCLE_VERIFICATION_FAILED',
+        message: text(error?.message) || 'Fresh activation observation failed.'
+      };
+    }
     const health = await this.orchestrator?.currentMcpHealth?.().catch?.(() => null) || null;
     let tunnelStatusVerified = runtime.tunnelRunning === true;
     if (typeof this.orchestrator?.tunnel?.status === 'function') {
@@ -1142,6 +1479,27 @@ class FullCleanActivation {
     const currentTunnelId = text(state.tunnelInstanceId);
     const currentTunnelPid = numeric(state.tunnelPid);
     const expectedDeviceInstanceId = this._deviceInstanceId();
+    const censusNowUnixMs = this.now();
+    const projectionRebuild = validateProjectionRebuildGate({
+      preflight: activationObservation,
+      health,
+      expected: {
+        activationEpochId: epochId,
+        processInstanceId: currentMcpProcessId,
+        serverInstanceId: currentMcpServerId,
+        workspace: settings.workspace,
+        ledgerSnapshot: activationObservation?.snapshot
+      },
+      nowUnixMs: censusNowUnixMs
+    });
+    let connectorContractStatus = null;
+    try {
+      connectorContractStatus = this.orchestrator?.connectorContractStatus?.(
+        health?.tool_contract || null,
+        health?.connector_tool_discovery || null,
+        health?.connector_client_contact || null
+      ) || null;
+    } catch { connectorContractStatus = null; }
     const identityChanged = (current, previous) => Boolean(current && (!text(previous) || current !== text(previous)));
     const epochMatches = Boolean(health && String(health.activation_epoch_id || '') === epochId
       && String(state.nativeActivationEpochId || '') === epochId
@@ -1167,9 +1525,6 @@ class FullCleanActivation {
       && state.tunnelFingerprint === tunnelFingerprint(settings, this.deviceIdentity?.device_id || '', epochId)
       && identityChanged(currentTunnelId, oldTunnel.instance_id)
       && (!oldTunnel.pid || currentTunnelPid !== numeric(oldTunnel.pid)));
-    const connectorReady = Boolean(runtime.connectorRefreshRequired === false
-      && runtime.connectorRediscovered === true
-      && runtime.connectorAcknowledgementPending === false);
     const boundOldHostId = text(oldRecoveryHost.instance_id);
     const oldHostPid = numeric(oldRecoveryHost.pid);
     const expectedHostId = text(expectedOldInstanceId) || boundOldHostId;
@@ -1284,11 +1639,37 @@ class FullCleanActivation {
         && recoveryTunnelIdentityChanged
         && recoveryTunnelHealthVerified)
       : Boolean(!plane.tunnel || plane.tunnel.state === 'not_configured' || plane.tunnel.configured !== true);
-    const pass = Boolean(runtime.mcpRunning === true && tunnelStatusVerified && health?.ready === true
+    const componentsReadyForConnector = Boolean(runtime.mcpRunning === true && tunnelStatusVerified && health?.ready === true
       && processIdentity && epochMatches && workspaceMatches && deviceMatches && revisionMatches
-      && tunnelEpochMatches && connectorReady && hostChanged && recoveryHostRevisionMatches
+      && tunnelEpochMatches && hostChanged && recoveryHostRevisionMatches
       && recoveryHostEpochMatches
-      && uiReady && recoveryMcpReady && recoveryTunnelReady);
+      && uiReady && recoveryMcpReady && recoveryTunnelReady && projectionRebuild.valid);
+    let connectorAcknowledgement = { attempted: false, completed: false, error: null };
+    if (componentsReadyForConnector
+      && connectorContractStatus?.contractState === 'CHANGED_DISCOVERED_NEEDS_ACK') {
+      connectorAcknowledgement = { attempted: true, completed: false, error: null };
+      try {
+        if (typeof this.orchestrator?.acknowledgeExactConnectorDiscovery !== 'function') {
+          throw epochError('CONNECTOR_ACKNOWLEDGEMENT_UNAVAILABLE', 'Exact current-process connector acknowledgement is unavailable.');
+        }
+        connectorContractStatus = await this.orchestrator.acknowledgeExactConnectorDiscovery(health, {
+          activationEpochId: epochId,
+          nowUnixMs: censusNowUnixMs
+        });
+        connectorAcknowledgement.completed = true;
+      } catch (error) {
+        connectorAcknowledgement.error = {
+          code: text(error?.code) || 'CONNECTOR_ACKNOWLEDGEMENT_FAILED',
+          message: text(error?.message) || 'Connector acknowledgement failed.'
+        };
+      }
+    }
+    const connectorReady = validateConnectorReadyGate({
+      health,
+      contractStatus: connectorContractStatus,
+      nowUnixMs: censusNowUnixMs
+    });
+    const pass = Boolean(componentsReadyForConnector && connectorReady.valid);
     return {
       verified: pass,
       pass,
@@ -1328,9 +1709,20 @@ class FullCleanActivation {
       recovery_plane_epoch_matches: recoveryMcpEpochMatches && (!recoveryTunnelConfigured || recoveryTunnelEpochMatches),
       epoch_matches: epochMatches && tunnelEpochMatches && recoveryHostEpochMatches && recoveryMcpEpochMatches
         && (!recoveryTunnelConfigured || recoveryTunnelEpochMatches),
-      connector_acknowledged: connectorReady,
+      connector_acknowledged: connectorReady.valid,
+      connector_validation: connectorReady,
+      connector_acknowledgement: connectorAcknowledgement,
       ui_verified: uiReady,
       recovery_plane_verified: recoveryMcpReady && recoveryTunnelReady,
+      projection_rebuild_verified: projectionRebuild.valid,
+      projection_rebuild_validation: {
+        code: projectionRebuild.code,
+        reasons: projectionRebuild.reasons,
+        projection_classification: projectionRebuild.projection_classification,
+        ...(activationObservationFailure ? { observation_failure: activationObservationFailure } : {})
+      },
+      projection_rebuild_receipt: projectionRebuild.receipt,
+      lifecycle_decision: activationObservation?.lifecycle_decision || null,
       reason: pass ? null : 'UPDATE_INCOMPLETE',
       runtime
     };
@@ -1339,9 +1731,8 @@ class FullCleanActivation {
   async finalize(activationEpochId, census = null) {
     const epochId = text(activationEpochId);
     if (!epochId) throw epochError('ACTIVATION_EPOCH_ID_REQUIRED', 'Activation epoch is required.');
-    let initialProof = null;
     let record = null;
-    let lifecycleBeforeOpen = null;
+    let committed = null;
     let opened = false;
     try {
       // Never trust a caller-supplied boolean/projection as final proof.  A
@@ -1350,44 +1741,123 @@ class FullCleanActivation {
       // read inside the transaction catch so a transport/store/census
       // exception is durably terminalized as FAILED rather than leaving an
       // active epoch that merely appears stuck.
-      initialProof = await this.finalCensus(epochId);
-      if (!initialProof.pass) throw epochError('UPDATE_INCOMPLETE', 'Full clean activation final census is incomplete.', initialProof);
-      record = this.store.current();
-      lifecycleBeforeOpen = await this._freshLifecycle(record);
-      if (typeof this.orchestrator?.completeActivationEpoch === 'function') {
-        await this.orchestrator.completeActivationEpoch(epochId);
-        opened = true;
-      }
-      // Re-read every component after MCP admission is completed and before the
-      // durable READY transition.  If any identity/revision/epoch changed in
-      // that window, close admission again and leave the epoch failed/closed.
       const finalProof = await this.finalCensus(epochId);
-      if (!finalProof.pass) throw epochError('UPDATE_INCOMPLETE', 'Full clean activation changed during final commit.', finalProof);
-      const lifecycle = record?.source_checkpoint ? await this._freshLifecycle(record) : lifecycleBeforeOpen;
+      if (!finalProof.pass) throw epochError('UPDATE_INCOMPLETE', 'Full clean activation final census is incomplete.', finalProof);
+      record = this.store.current();
+      if (!record || record.activation_epoch_id !== epochId) {
+        throw epochError('ACTIVATION_EPOCH_NOT_CURRENT', 'Final activation proof no longer belongs to the current durable epoch.');
+      }
+      // finalCensus already captured the checkpoint/lifecycle decision before
+      // the matching MCP health receipt.  Re-running preflight here would
+      // create a different receipt observation and break the atomic binding.
+      const lifecycle = finalProof.lifecycle_decision || null;
+      if (record.source_checkpoint && !lifecycleDecisionIsClean(lifecycle)) {
+        throw epochError('LIFECYCLE_VERIFICATION_FAILED', 'Final activation census omitted its checkpoint-bound lifecycle proof.');
+      }
       const postflightByComponent = this._componentPostflights(record, finalProof, lifecycle);
       const censusWithProof = {
         ...finalProof,
         component_postflights: postflightByComponent,
         lifecycle_verified: lifecycle ? lifecycleDecisionIsClean(lifecycle) : null
       };
-      const ready = this.store.ready(epochId, { verified: true, activation_epoch_id: epochId, final_census: censusWithProof });
+      // Commit the exact census durably while admission is still CLOSED.  If
+      // this write fails, completeActivationEpoch is never called.
+      committed = this.store.commitReady(epochId, {
+        verified: true,
+        activation_epoch_id: epochId,
+        final_census: censusWithProof
+      });
+      const readyCommitDigest = text(committed.ready_commit_digest);
+      const expiresAtUnixMs = Number(committed.expires_at_unix_ms || 0);
+      if (!HEX64.test(readyCommitDigest) || !Number.isSafeInteger(expiresAtUnixMs) || expiresAtUnixMs <= 0) {
+        throw epochError('UPDATE_INCOMPLETE', 'Durable activation commit is missing its bound digest or expiry.');
+      }
+      if (typeof this.orchestrator?.completeActivationEpoch !== 'function') {
+        throw epochError('MCP_ACTIVATION_CONTROL_UNAVAILABLE', 'Coding MCP activation admission control is unavailable.');
+      }
+      let admission = null;
+      try {
+        admission = await this.orchestrator.completeActivationEpoch(epochId, readyCommitDigest);
+        opened = admission?.admission_open === true;
+        if (!exactActivationAdmission(admission, epochId, readyCommitDigest, expiresAtUnixMs, true)) {
+          throw epochError('UPDATE_INCOMPLETE', 'Coding MCP did not acknowledge the exact durable activation commit.', {
+            activation_epoch_id: epochId,
+            ready_commit_digest: readyCommitDigest,
+            observed: admission || null
+          });
+        }
+        opened = true;
+      } catch (error) {
+        if (!isActivationResponseLoss(error)) throw error;
+        // A response can be lost after the MCP opened admission.  Never retry
+        // the mutation blindly: reconcile the exact process health once.
+        opened = true;
+        let health = null;
+        try { health = await this.orchestrator?.currentMcpHealth?.(); }
+        catch { health = null; }
+        if (!exactActivationAdmission(health, epochId, readyCommitDigest, expiresAtUnixMs, true)) {
+          throw epochError('MCP_ACTIVATION_COMMIT_UNCERTAIN', 'Coding MCP activation response was lost and exact admission could not be reconciled.', {
+            activation_epoch_id: epochId,
+            ready_commit_digest: readyCommitDigest,
+            cause_code: String(error?.code || '') || null,
+            health: health || null
+          });
+        }
+        admission = health;
+      }
+      // No fallible component census is permitted after effective admission
+      // opens.  The final local transition consumes only the exact digest that
+      // was already acknowledged by the MCP process.
+      const ready = this.store.ready(epochId, readyCommitDigest);
       const result = this._actionResult(ready, {
         state: 'READY',
         admission_open: true,
         fully_ready: true,
         census: censusWithProof,
-        postflight_by_component: postflightByComponent
+        postflight_by_component: postflightByComponent,
+        ready_commit_digest: readyCommitDigest,
+        mcp_admission: admission
       });
-      const linked = this._finishLinkedAction(ready, 'completed', result);
-      return linked || result;
+      // Runtime readiness is already terminal and authoritative.  A secondary
+      // action-store/reporting failure must not close a successfully committed
+      // runtime or turn READY into a contradictory FAILED projection.
+      try {
+        const linked = this._finishLinkedAction(ready, 'completed', result);
+        return linked || result;
+      } catch (error) {
+        this.log?.error?.(error.message, {
+          stage: 'full-clean-activation-reporting',
+          activationEpochId: epochId,
+          code: error?.code || ''
+        });
+        return result;
+      }
     } catch (error) {
       if (opened) {
         let closed = false;
         if (typeof this.orchestrator?.closeActivationEpoch === 'function') {
           try {
-            const closeResult = await this.orchestrator.closeActivationEpoch(epochId);
-            closed = closeResult?.ok !== false;
-          } catch { closed = false; }
+            const digest = text(committed?.ready_commit_digest);
+            const closeResult = await this.orchestrator.closeActivationEpoch(epochId, digest);
+            closed = Boolean(closeResult?.ok === true
+              && closeResult?.admission_open === false
+              && String(closeResult?.activation_epoch_id || '') === epochId
+              && (!digest || String(closeResult?.ready_commit_digest || '') === digest));
+          } catch (closeError) {
+            if (isActivationResponseLoss(closeError)) {
+              try {
+                const digest = text(committed?.ready_commit_digest);
+                const health = await this.orchestrator?.currentMcpHealth?.();
+                closed = exactActivationAdmission(
+                  health,
+                  epochId,
+                  digest,
+                  Number(committed?.expires_at_unix_ms || 0),
+                  false
+                );
+              } catch { closed = false; }
+            }
+          }
         }
         // If the exact MCP close could not be confirmed, stop the owned
         // primary runtime as a second fail-closed boundary.  A FAILED durable
@@ -1410,5 +1880,8 @@ module.exports = {
   operationId,
   canonicalLedgerCensus,
   canonicalSnapshot,
-  summarizeCensus
+  summarizeCensus,
+  canonicalProjectionRebuildSha256,
+  validateProjectionRebuildGate,
+  validateConnectorReadyGate
 };

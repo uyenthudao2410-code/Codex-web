@@ -18,6 +18,8 @@ test.after(() => {
   fs.rmSync(runtimeStatePath, { force: true });
   fs.rmSync(supervisorRequestPath, { force: true });
   fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.processing`, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.processing.bak`, { force: true });
 });
 const { RuntimeOrchestrator, readMcpHealth, loopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
 const { installTunnelProcessFixture, withWorkingDirectory } = require('./helpers/tunnel-process-fixture');
@@ -87,7 +89,7 @@ function spawnMcp(workspace, port, options = {}) {
 }
 
 function makeHarness(mcpProcess, mcpPortSetting, tunnelStatus, failureKind) {
-  const calls = { restart: 0, tunnelStarts: 0 };
+  const calls = { restart: 0, tunnelStarts: 0, mcpReplacements: 0 };
   const orchestrator = new RuntimeOrchestrator({
     settings: {
       load: () => ({
@@ -109,6 +111,7 @@ function makeHarness(mcpProcess, mcpPortSetting, tunnelStatus, failureKind) {
     emitProgress() {},
     emitStatus() {}
   });
+  orchestrator.activationEpochStore = { current: () => null };
   orchestrator.heartbeatFailures = 2;
   orchestrator.heartbeatFailureKind = failureKind;
   orchestrator.native = {
@@ -120,6 +123,14 @@ function makeHarness(mcpProcess, mcpPortSetting, tunnelStatus, failureKind) {
   };
   orchestrator.restart = async () => {
     calls.restart += 1;
+    if (mcpProcess.exitCode === null && mcpProcess.signalCode === null) {
+      mcpProcess.kill();
+      await new Promise((resolve) => mcpProcess.once('close', resolve));
+    }
+  };
+  orchestrator.recoverMcpOnly = async (options = {}) => {
+    assert.equal(options.replaceLiveOwned, true);
+    calls.mcpReplacements += 1;
     if (mcpProcess.exitCode === null && mcpProcess.signalCode === null) {
       mcpProcess.kill();
       await new Promise((resolve) => mcpProcess.once('close', resolve));
@@ -163,6 +174,7 @@ test('real primary Tunnel recovery replaces only the Tunnel PID and preserves th
       deviceIdentity:{version:1,device_id:deviceId,display_name:'Primary tunnel PID test',created_at:'2026-08-17T00:00:00.000Z'},
       deviceInstanceId
     });
+    orchestrator.activationEpochStore = { current: () => null };
 
     await withWorkingDirectory(fixtureDir,()=>orchestrator.recoverTunnelOnly());
     let state=JSON.parse(fs.readFileSync(stateFile,'utf8'));
@@ -228,7 +240,7 @@ test('live supervisor recovers only the tunnel and never kills a healthy MCP', a
   }
 });
 
-test('live supervisor escalates and force-restarts a hung live MCP after repeated deferrals', async () => {
+test('live supervisor escalates by replacing only a hung live MCP after repeated deferrals', async () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-sup-'));
   const port = 19122;
   const mcp = spawnMcp(workspace, port);
@@ -246,8 +258,9 @@ test('live supervisor escalates and force-restarts a hung live MCP after repeate
     }
     orchestrator.nextRecoveryAt = 0;
     await orchestrator.supervise();
-    assert.equal(calls.restart, 1);
-    assert.equal(mcp.exitCode === null && mcp.signalCode === null, false, 'MCP must be force-killed by escalation restart');
+    assert.equal(calls.restart, 0);
+    assert.equal(calls.mcpReplacements, 1);
+    assert.equal(mcp.exitCode === null && mcp.signalCode === null, false, 'MCP must be replaced without touching Tunnel');
   } finally {
     if (mcp.exitCode === null && mcp.signalCode === null) {
       mcp.kill();

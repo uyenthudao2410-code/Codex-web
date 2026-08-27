@@ -1,0 +1,971 @@
+{
+  "version": 2,
+  "task_id": "9e235771d7b34e97bc192011b90120dc",
+  "orchestration": {
+    "run_id": "4426173625d44baca8f7f9ac903ff820",
+    "wave_id": "14050d9f7b8b453fa45f85505170ca1e",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "898d57454f9a5113d8aa3f56d1650e4b3e0d6924",
+    "worktree_fp": "f278ee73a347724f3ae8b8235d01dafabedbe5da8c35c827f4da6d66ee1b7607",
+    "contract_fp": "8f4e47043f90c64bcf19c15188a5e74a8c3a11085ab866a2ccc4583868dde712"
+  },
+  "objective": "Continue the SAME run 4426173625d44baca8f7f9ac903ff820 from the applied A/B/C hardening in prior wave 48fa8355c6b44e1ba97689f8abf42bdd. New deterministic evidence is exact: proof 1 and proof 2 passed, while proof 3 failed only because coordination.py is 1609 lines against budget 1600. Preserve all already-applied A/B/C behavior and all unrelated worker changes. Refactor only the newly added activation/checkpoint helper logic out of coordination.py into its owning acceptance_receipts.py / activation_lifecycle.py boundaries so coordination.py returns to <=1600 lines without weakening the canonical worktree-fingerprint check, one-snapshot activation preflight requirement, exact five-field public source_checkpoint, protected .coding-tools exclusion, or projection_drift fail-closed behavior. Do not restart, full-clean activate, accept/reject, manually modify .coding-tools/ledger, clean/reset/revert, or create another run. Then run exactly the four operator proofs in order.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-26T17:15:49.169Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-26T17:15:49.169Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-26T17:15:49.169Z"
+    }
+  ],
+  "current_step": "Awaiting acceptance",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "tb_-JLKwNbOmy4OmZqDMIi5h",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-26T17:15:47.496Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/services/componentRevision.js",
+          "operation": "update"
+        },
+        {
+          "path": "tests/component-revision.test.js",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_activation_preflight.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ACCEPTING",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 111,
+        "head_hash": "02bd315a30c5c7b0ea3bc1797bb7bf35972d65fa3772a7af3132afb7551884e7"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4426173625d44baca8f7f9ac903ff820\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4426173625d44baca8f7f9ac903ff820\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4426173625d44baca8f7f9ac903ff820\\wave-002.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4426173625d44baca8f7f9ac903ff820\\wave-003.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "4426173625d44baca8f7f9ac903ff820",
+      "wave_id": "14050d9f7b8b453fa45f85505170ca1e",
+      "base_head": "898d57454f9a5113d8aa3f56d1650e4b3e0d6924",
+      "worktree_fp": "f278ee73a347724f3ae8b8235d01dafabedbe5da8c35c827f4da6d66ee1b7607",
+      "contract_fp": "8f4e47043f90c64bcf19c15188a5e74a8c3a11085ab866a2ccc4583868dde712",
+      "objective_provenance": {
+        "effective_objective": "Continue the SAME run 4426173625d44baca8f7f9ac903ff820 from the applied A/B/C hardening in prior wave 48fa8355c6b44e1ba97689f8abf42bdd. New deterministic evidence is exact: proof 1 and proof 2 passed, while proof 3 failed only because coordination.py is 1609 lines against budget 1600. Preserve all already-applied A/B/C behavior and all unrelated worker changes. Refactor only the newly added activation/checkpoint helper logic out of coordination.py into its owning acceptance_receipts.py / activation_lifecycle.py boundaries so coordination.py returns to <=1600 lines without weakening the canonical worktree-fingerprint check, one-snapshot activation preflight requirement, exact five-field public source_checkpoint, protected .coding-tools exclusion, or projection_drift fail-closed behavior. Do not restart, full-clean activate, accept/reject, manually modify .coding-tools/ledger, clean/reset/revert, or create another run. Then run exactly the four operator proofs in order.",
+        "objective_revision": 3,
+        "objective_sha256": "4593ca7d8aee416e04597bcbde9a1141ecfbbf206e5eaf6214422258c7934be2",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 4,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "9509fea88da047969387c49d64bbde26",
+          "stage_id": "check:1a46f0fadadf887b",
+          "status": "passed",
+          "duration_ms": 1313,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "ad07398d3ac540a0b53492d723a9a412",
+          "stage_id": "check:8170ac7d0860f1fc",
+          "status": "passed",
+          "duration_ms": 65141,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "bffa230bcac3455984185fff2a86460c",
+          "stage_id": "check:9840051871779d79",
+          "status": "passed",
+          "duration_ms": 1100,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "5f2e861fa95648d4be0bc00ceba2851d",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1869,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+  },
+  "completion_report_id": "0c368839c0d79195e0d893a8b85c6d099a0857146badb0aa8c528668ae8703ce",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '24 passed, 21 subtests passed in 39.21s'",
+      "finished_at": "2026-08-26T17:04:13.626Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "Je28VB4gzAxk6c8kBTxjbDJ9"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "4426173625d44baca8f7f9ac903ff820",
+        "owner_wave": "b980dbc561fb49bfb8a0050de990a4df",
+        "size_bytes": 101,
+        "command_id": "Je28VB4gzAxk6c8kBTxjbDJ9",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:Je28VB4gzAxk6c8kBTxjbDJ9:stdout",
+            "total_stream_bytes": 101,
+            "total_retained_bytes": 101,
+            "head_retained_bytes": 101,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:Je28VB4gzAxk6c8kBTxjbDJ9:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '27 passed, 21 subtests passed in 55.42s'",
+      "finished_at": "2026-08-26T17:12:12.759Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "2c_86pkAyXddF1AGaVpp48-Q"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "4426173625d44baca8f7f9ac903ff820",
+        "owner_wave": "48fa8355c6b44e1ba97689f8abf42bdd",
+        "size_bytes": 101,
+        "command_id": "2c_86pkAyXddF1AGaVpp48-Q",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:2c_86pkAyXddF1AGaVpp48-Q:stdout",
+            "total_stream_bytes": 101,
+            "total_retained_bytes": 101,
+            "head_retained_bytes": 101,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:2c_86pkAyXddF1AGaVpp48-Q:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '27 passed, 21 subtests passed in 63.23s (0:01:03)'",
+      "finished_at": "2026-08-26T17:15:43.565Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "tFTD52Ozo8IGMHe3IOksqegW"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "4426173625d44baca8f7f9ac903ff820",
+        "owner_wave": "14050d9f7b8b453fa45f85505170ca1e",
+        "size_bytes": 111,
+        "command_id": "tFTD52Ozo8IGMHe3IOksqegW",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:tFTD52Ozo8IGMHe3IOksqegW:stdout",
+            "total_stream_bytes": 111,
+            "total_retained_bytes": 111,
+            "head_retained_bytes": 111,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:tFTD52Ozo8IGMHe3IOksqegW:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "electron/services/componentRevision.js",
+      "operation": "update",
+      "updated_at": "2026-08-26T17:12:15.643Z"
+    },
+    {
+      "path": "tests/component-revision.test.js",
+      "operation": "update",
+      "updated_at": "2026-08-26T17:12:15.643Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+      "operation": "update",
+      "updated_at": "2026-08-26T17:15:50.104Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+      "operation": "update",
+      "updated_at": "2026-08-26T17:15:50.104Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+      "operation": "update",
+      "updated_at": "2026-08-26T17:12:15.643Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+      "operation": "update",
+      "updated_at": "2026-08-26T17:15:50.104Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_activation_preflight.py",
+      "operation": "update",
+      "updated_at": "2026-08-26T17:12:15.643Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+      "operation": "update",
+      "updated_at": "2026-08-26T17:12:15.643Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "created_at": "2026-08-26T17:03:21.985Z",
+  "updated_at": "2026-08-26T17:16:10.878Z",
+  "events": [
+    {
+      "time": "2026-08-26T17:03:21.985Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Perform exactly one authoritative mutation wave in workspace E:\\DEV\\Codex-web. Coding-VP MCP is write/proof owner. Before any edit, read the exact current definitions/call sites/tests for COMPONENT_SPECS.recovery_host, _orchestration_workspace_identity, _verify_activation_source_checkpoint, activation_preflight, checkpoint metadata/source_checkpoint construction, lifecycle projection classification, and _activation_lifecycle_summary. Preserve every pre-existing change outside this hardening scope; do not delete, revert, overwrite, clean, reset, or normalize another worker's changes. Never modify ledger.sqlite3, any .coding-tools file, or weaken protected .coding-tools exclusion. Do not create a second wave, do not restart runtime, do not run full-clean activation, and do not invoke task_control accept/reject.\n\nImplement only these hardening requirements while preserving module-size budgets and existing mixin boundaries:\nA) Revision binding: in electron/services/componentRevision.js add exactly electron/services/recoveryBootstrap.js to COMPONENT_SPECS.recovery_host.files. Add a focused assertion in tests/component-revision.test.js proving the manifest owns this file.\nB) Whole-worktree checkpoint binding: in resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py and coordination.py, activation_preflight must obtain ONE _orchestration_workspace_identity snapshot and pass both current_git_head and current_worktree_fp into _verify_activation_source_checkpoint. Checkpoint metadata must contain canonical 64-character metadata.worktree_fp. The verifier must compare it to current_worktree_fp and fail closed with exactly {code:\"SOURCE_DRIFT\", reason:\"worktree_fingerprint_changed\"} when any dirty source outside accepted receipts changes after the checkpoint. Keep the exact existing five-field public source_checkpoint contract unchanged. Do not trust a worktree fingerprint reported by an old host process. Preserve compatibility with existing fixtures/checkpoints and protected .coding-tools exclusion. Add regression coverage in tests/test_activation_preflight.py that creates/checkpoints, then edits a dirty source file not represented by accepted receipts and proves activation_preflight rejects with reason worktree_fingerprint_changed.\nC) Projection proof: in lifecycle_census.py classify projection deterministically from canonical run state: current nonterminal with matching wave => active/current classification; accepted/CHECKPOINTED => CHECKPOINTED; blocked => BLOCKED; aborted/stale/reconciled => ABORTED or the existing equivalent classification. Correct terminal projections must not become projection drift. Expose the projection result/classification from activation_lifecycle.py _activation_lifecycle_summary. In coordination.py activation_preflight must fail closed with code ORCHESTRATION_STATE_UNCERTAIN and reason projection_drift when lifecycle projection classification is PROJECTION_DRIFT. Add focused tests in tests/test_lifecycle_census.py and tests/test_activation_preflight.py for drift and for correct terminal projections.\n\nAfter edits, run only the four requested proof commands in the given order. The pytest command must execute with current directory resources/coding-tools-mcp; the cmd wrapper in commands is solely to establish that cwd. Do not add broad/full-suite or activation/restart proof. Finish with the wave in its normal post-proof state without accept/reject. Return complete structured run/wave/lease, changed paths, proof IDs/fingerprints, completion report, and final orchestration status."
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:23.574Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:27.684Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:29.008Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:29.017Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:30.284Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:30.910Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:31.801Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/component-revision.test.js",
+        "session_id": "FfVLRn3Qp-K16gSIn5MFD1XP"
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:32.268Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/component-revision.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:03:33.252Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+        "session_id": "Je28VB4gzAxk6c8kBTxjbDJ9"
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:13.626Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:14.652Z",
+      "event": "command_started",
+      "details": {
+        "command": "python scripts/check_module_size.py",
+        "session_id": "mtPPUkjFZDTk_qXA8Qp_2f09"
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:15.250Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python scripts/check_module_size.py",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:15.550Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:16.159Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:16.163Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:16.166Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:16.365Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "5ec5a6fb25deb0603bf810c80555f70c5a8ac4890de690ed28a6d3a7636b1b31"
+      }
+    },
+    {
+      "time": "2026-08-26T17:04:16.501Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T17:08:50.626Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:08:51.422Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-26T17:09:28.672Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-26T17:09:57.780Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "5ec5a6fb25deb0603bf810c80555f70c5a8ac4890de690ed28a6d3a7636b1b31"
+      }
+    },
+    {
+      "time": "2026-08-26T17:10:29.203Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:10:31.112Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T17:10:31.607Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_INVALID"
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:06.758Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:09.416Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:10.600Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:10.611Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:13.024Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:13.678Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:14.483Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/component-revision.test.js",
+        "session_id": "K2nB-vPaprAm5gEm34L0L7Wp"
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:15.125Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/component-revision.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:11:15.991Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+        "session_id": "2c_86pkAyXddF1AGaVpp48-Q"
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:12.759Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:13.941Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/check_module_size.py",
+        "session_id": "ZK8shY5cBfO4xeSoexGy7328"
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:14.367Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/check_module_size.py",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:14.643Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:15.309Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:15.314Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:15.319Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:15.580Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "7d105905057e3c3750e4cbfd323d776f0b55bf24f978524d0f6fe9ff326c19e0"
+      }
+    },
+    {
+      "time": "2026-08-26T17:12:15.643Z",
+      "event": "files_modified",
+      "details": {
+        "count": 8
+      }
+    },
+    {
+      "time": "2026-08-26T17:13:39.386Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:13:39.793Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "7d105905057e3c3750e4cbfd323d776f0b55bf24f978524d0f6fe9ff326c19e0"
+      }
+    },
+    {
+      "time": "2026-08-26T17:13:52.299Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:28.505Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:31.216Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:32.726Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:32.738Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:34.728Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:36.445Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:37.370Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/component-revision.test.js",
+        "session_id": "UATur3oKHu1UqBq2kiZmnudO"
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:38.013Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/component-revision.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:14:39.038Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+        "session_id": "tFTD52Ozo8IGMHe3IOksqegW"
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:43.565Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /d /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_activation_preflight.py tests/test_lifecycle_census.py -q\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:44.693Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/check_module_size.py",
+        "session_id": "hqSeUsSwqjF1W8wOvfobjfY-"
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:45.153Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/check_module_size.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:46.296Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check",
+        "session_id": "tb_-JLKwNbOmy4OmZqDMIi5h"
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:47.496Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:49.154Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:49.169Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:49.520Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:49.524Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:49.880Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "0c368839c0d79195e0d893a8b85c6d099a0857146badb0aa8c528668ae8703ce"
+      }
+    },
+    {
+      "time": "2026-08-26T17:15:50.104Z",
+      "event": "files_modified",
+      "details": {
+        "count": 3
+      }
+    },
+    {
+      "time": "2026-08-26T17:16:10.878Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

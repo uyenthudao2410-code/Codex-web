@@ -22,6 +22,14 @@ function epoch(number) {
   return `activation-epoch-${String(number).padStart(4, '0')}`;
 }
 
+function verificationFor(epochId, finalCensus = {}) {
+  return {
+    verified: true,
+    activation_epoch_id: epochId,
+    final_census: { pass: true, activation_epoch_id: epochId, ...finalCensus }
+  };
+}
+
 test('activation epoch is durable, closes admission, and never mutates the ledger', (t) => {
   const { paths, file, root } = fixture(t);
   const ledger = path.join(root, 'ledger.sqlite3');
@@ -51,7 +59,7 @@ test('activation epoch is durable, closes admission, and never mutates the ledge
   assert.equal(reloaded.history().length, 0);
 });
 
-test('epoch updates are forward-only and ready requires explicit final verification', (t) => {
+test('epoch updates are forward-only and ready uses the durable two-phase commit', (t) => {
   const { paths } = fixture(t);
   let clock = 1_700_000_100_000;
   const store = new ActivationEpochStore({ paths, now: () => clock++ });
@@ -65,19 +73,30 @@ test('epoch updates are forward-only and ready requires explicit final verificat
     { code: 'ACTIVATION_EPOCH_STATE_REGRESSION' }
   );
   assert.throws(
-    () => store.ready(created.activation_epoch_id, { activation_epoch_id: created.activation_epoch_id }),
-    { code: 'ACTIVATION_EPOCH_READY_PROOF_REQUIRED' }
+    () => store.ready(created.activation_epoch_id, verificationFor(created.activation_epoch_id)),
+    { code: 'ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID' }
   );
-
-  const ready = store.ready(created.activation_epoch_id, {
-    verified: true,
-    activation_epoch_id: created.activation_epoch_id,
-    final_census: { all_components_same_epoch: true, connector_acknowledged: true }
-  });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id, {
+    all_components_same_epoch: true,
+    connector_acknowledged: true
+  }));
+  assert.equal(committed.state, 'READY_COMMITTED');
+  assert.equal(committed.admission_state, 'CLOSED');
+  assert.match(committed.ready_commit_digest, /^[0-9a-f]{64}$/);
+  const ready = store.ready(created.activation_epoch_id, committed.ready_commit_digest);
   assert.equal(ready.state, 'READY');
   assert.equal(ready.admission_state, 'OPEN');
   assert.equal(store.admissionClosed(), false);
-  assert.equal(store.ready(created.activation_epoch_id, { verified: false }).state, 'READY');
+  assert.equal(store.ready(created.activation_epoch_id, committed.ready_commit_digest).state, 'READY');
+  // Terminal records are immutable and must not consult a regressed injected
+  // clock before returning their terminal/idempotent result.
+  clock = 0;
+  assert.equal(store.update(created.activation_epoch_id, { metadata: { ignored: true } }).state, 'READY');
+  assert.throws(
+    () => store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id)),
+    { code: 'ACTIVATION_EPOCH_TERMINAL' }
+  );
   assert.throws(
     () => store.update(created.activation_epoch_id, { state: 'FAILED' }),
     { code: 'ACTIVATION_EPOCH_TERMINAL' }
@@ -98,7 +117,10 @@ test('failure is terminal, remains fail-closed, and replay is idempotent', (t) =
   assert.equal(failed.admission_state, 'CLOSED');
   assert.equal(failed.error.code, 'COMPONENT_VERIFY_FAILED');
   assert.equal(store.fail(created.activation_epoch_id, 'retry is not allowed').state, 'FAILED');
-  assert.throws(() => store.ready(created.activation_epoch_id, { verified: true }), { code: 'ACTIVATION_EPOCH_TERMINAL' });
+  clock = 0;
+  assert.equal(store.update(created.activation_epoch_id, { metadata: { ignored: true } }).state, 'FAILED');
+  assert.throws(() => store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id)), { code: 'ACTIVATION_EPOCH_TERMINAL' });
+  assert.throws(() => store.ready(created.activation_epoch_id, 'a'.repeat(64)), { code: 'ACTIVATION_EPOCH_TERMINAL' });
 });
 
 test('terminal epochs roll into bounded history and duplicate identities are rejected', (t) => {
@@ -166,7 +188,7 @@ test('a corrupt primary never falls back to an older READY backup', (t) => {
   assert.throws(() => new ActivationEpochStore({ paths }).current(), { code: 'ACTIVATION_EPOCH_STORE_INVALID' });
 });
 
-test('expiry and owner evidence are durable and stale active epochs remain blocking', (t) => {
+test('create boundary durably expires the current active epoch before admitting another', (t) => {
   const { paths } = fixture(t);
   let clock = 1_700_000_700_000;
   const expiry = clock + 5;
@@ -187,8 +209,60 @@ test('expiry and owner evidence are durable and stale active epochs remain block
   clock = expiry;
   assert.throws(
     () => reloaded.create({ activation_epoch_id: epoch(42), operation_id: operation(42) }),
-    (error) => error.code === 'ACTIVATION_EPOCH_ACTIVE' && error.details.stale === true
+    { code: 'ACTIVATION_REQUEST_EXPIRED' }
   );
+  const failed = reloaded.current();
+  assert.equal(failed.activation_epoch_id, created.activation_epoch_id);
+  assert.equal(failed.state, 'FAILED');
+  assert.equal(failed.admission_state, 'CLOSED');
+  assert.equal(failed.error.code, 'ACTIVATION_REQUEST_EXPIRED');
+});
+
+test('update expiry is durable and late proof cannot resurrect the epoch', (t) => {
+  const { paths } = fixture(t);
+  let clock = 1_700_000_750_000;
+  const expiry = clock + 10;
+  const store = new ActivationEpochStore({ paths, now: () => clock });
+  const created = store.create({ activation_epoch_id: epoch(421), operation_id: operation(421), expires_at_unix_ms: expiry });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  clock = expiry;
+  assert.throws(() => store.update(created.activation_epoch_id, { state: 'VERIFYING' }), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+  assert.equal(store.current().state, 'FAILED');
+  assert.equal(store.current().admission_state, 'CLOSED');
+  assert.equal(store.current().error.code, 'ACTIVATION_REQUEST_EXPIRED');
+  assert.equal(store.update(created.activation_epoch_id, { verification: verificationFor(created.activation_epoch_id) }).state, 'FAILED');
+  assert.throws(() => store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id)), { code: 'ACTIVATION_EPOCH_TERMINAL' });
+  assert.equal(store.current().state, 'FAILED');
+});
+
+test('commitReady expires exact VERIFYING durably at the deadline', (t) => {
+  const { paths } = fixture(t);
+  let clock = 1_700_000_760_000;
+  const expiry = clock + 10;
+  const store = new ActivationEpochStore({ paths, now: () => clock });
+  const created = store.create({ activation_epoch_id: epoch(422), operation_id: operation(422), expires_at_unix_ms: expiry });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  clock = expiry;
+  assert.throws(() => store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id)), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+  assert.equal(store.current().state, 'FAILED');
+  assert.equal(store.current().error.code, 'ACTIVATION_REQUEST_EXPIRED');
+});
+
+test('ready expires a durable READY_COMMITTED epoch and keeps admission closed', (t) => {
+  const { paths } = fixture(t);
+  let clock = 1_700_000_770_000;
+  const expiry = clock + 10;
+  const store = new ActivationEpochStore({ paths, now: () => clock });
+  const created = store.create({ activation_epoch_id: epoch(423), operation_id: operation(423), expires_at_unix_ms: expiry });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id));
+  clock = expiry;
+  assert.throws(() => store.ready(created.activation_epoch_id, committed.ready_commit_digest), { code: 'ACTIVATION_REQUEST_EXPIRED' });
+  assert.equal(store.current().state, 'FAILED');
+  assert.equal(store.current().admission_state, 'CLOSED');
+  assert.equal(store.current().error.code, 'ACTIVATION_REQUEST_EXPIRED');
 });
 
 test('creation fingerprint binds revision and identity evidence, not only operation metadata', (t) => {
@@ -211,52 +285,93 @@ test('creation fingerprint binds revision and identity evidence, not only operat
   );
 });
 
-test('READY requires a bound final census and a completed stop phase', (t) => {
+test('commitReady requires exact VERIFYING, durable STOPPING, and a bound final census', (t) => {
   const { paths } = fixture(t);
   let clock = 1_700_000_900_000;
   const store = new ActivationEpochStore({ paths, now: () => clock++ });
   const created = store.create({ activation_epoch_id: epoch(44), operation_id: operation(44) });
   assert.throws(
-    () => store.ready(created.activation_epoch_id, { verified: true, activation_epoch_id: created.activation_epoch_id }),
-    { code: 'ACTIVATION_EPOCH_READY_STATE_INVALID' }
+    () => store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id)),
+    { code: 'ACTIVATION_EPOCH_READY_COMMIT_STATE_INVALID' }
   );
   store.update(created.activation_epoch_id, { state: 'STOPPING' });
   assert.throws(
-    () => store.ready(created.activation_epoch_id, { verified: true, activation_epoch_id: created.activation_epoch_id }),
+    () => store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id)),
+    { code: 'ACTIVATION_EPOCH_READY_COMMIT_STATE_INVALID' }
+  );
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  assert.throws(
+    () => store.commitReady(created.activation_epoch_id, {
+      verified: true,
+      activation_epoch_id: created.activation_epoch_id
+    }),
     { code: 'ACTIVATION_EPOCH_READY_PROOF_REQUIRED' }
   );
   assert.throws(
-    () => store.ready(created.activation_epoch_id, {
+    () => store.commitReady(created.activation_epoch_id, {
       verified: true,
       activation_epoch_id: created.activation_epoch_id,
       final_census: { pass: true, activation_epoch_id: epoch(45) }
     }),
     { code: 'ACTIVATION_EPOCH_ID_MISMATCH' }
   );
-  const ready = store.ready(created.activation_epoch_id, {
-    verified: true,
-    activation_epoch_id: created.activation_epoch_id,
-    final_census: { pass: true, activation_epoch_id: created.activation_epoch_id }
-  });
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id));
+  const ready = store.ready(created.activation_epoch_id, committed.ready_commit_digest);
   assert.equal(ready.state, 'READY');
   assert.equal(ready.admission_state, 'OPEN');
   assert.equal(ready.verification.verified_at !== undefined, true);
 });
 
-test('READY refuses a direct VERIFYING jump without durable STOPPING evidence', (t) => {
+test('commitReady refuses a direct VERIFYING jump without durable STOPPING evidence', (t) => {
   const { paths } = fixture(t);
   let clock = 1_700_000_950_000;
   const store = new ActivationEpochStore({ paths, now: () => clock++ });
   const created = store.create({ activation_epoch_id: epoch(45), operation_id: operation(45) });
   store.update(created.activation_epoch_id, { state: 'VERIFYING', reason: 'skipped-stop' });
   assert.throws(
-    () => store.ready(created.activation_epoch_id, {
-      verified: true,
-      activation_epoch_id: created.activation_epoch_id,
-      final_census: { pass: true, activation_epoch_id: created.activation_epoch_id }
-    }),
-    { code: 'ACTIVATION_EPOCH_READY_STATE_INVALID' }
+    () => store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id)),
+    { code: 'ACTIVATION_EPOCH_READY_COMMIT_STATE_INVALID' }
   );
+});
+
+test('READY_COMMITTED requires commitReady and exact commit replay is idempotent', (t) => {
+  const { paths } = fixture(t);
+  let clock = 1_700_000_955_000;
+  const store = new ActivationEpochStore({ paths, now: () => clock++ });
+  const created = store.create({ activation_epoch_id: epoch(451), operation_id: operation(451) });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  assert.throws(
+    () => store.update(created.activation_epoch_id, { state: 'READY_COMMITTED' }),
+    { code: 'ACTIVATION_EPOCH_READY_COMMIT_REQUIRED' }
+  );
+  const proof = verificationFor(created.activation_epoch_id);
+  const committed = store.commitReady(created.activation_epoch_id, proof);
+  assert.deepEqual(store.commitReady(created.activation_epoch_id, proof), committed);
+  assert.throws(
+    () => store.commitReady(created.activation_epoch_id, { ...proof, proof_variant: 'different' }),
+    { code: 'ACTIVATION_EPOCH_READY_COMMIT_CONFLICT' }
+  );
+});
+
+test('ready is digest-only, canonical, exact-match, and replay-safe', (t) => {
+  const { paths } = fixture(t);
+  let clock = 1_700_000_957_000;
+  const store = new ActivationEpochStore({ paths, now: () => clock++ });
+  const created = store.create({ activation_epoch_id: epoch(452), operation_id: operation(452) });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id));
+  const mismatch = `${committed.ready_commit_digest[0] === '0' ? '1' : '0'}${committed.ready_commit_digest.slice(1)}`;
+  assert.throws(() => store.ready(created.activation_epoch_id), { code: 'ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID' });
+  assert.throws(() => store.ready(created.activation_epoch_id, verificationFor(created.activation_epoch_id)), { code: 'ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID' });
+  assert.throws(() => store.ready(created.activation_epoch_id, 'A'.repeat(64)), { code: 'ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID' });
+  assert.throws(() => store.ready(created.activation_epoch_id, 'abc'), { code: 'ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID' });
+  assert.throws(() => store.ready(created.activation_epoch_id, mismatch), { code: 'ACTIVATION_EPOCH_READY_COMMIT_CONFLICT' });
+  const ready = store.ready(created.activation_epoch_id, committed.ready_commit_digest);
+  assert.equal(ready.state, 'READY');
+  assert.deepEqual(store.ready(created.activation_epoch_id, committed.ready_commit_digest), ready);
+  assert.throws(() => store.ready(created.activation_epoch_id, mismatch), { code: 'ACTIVATION_EPOCH_READY_COMMIT_CONFLICT' });
 });
 
 test('a semantically corrupt backup blocks an otherwise readable primary', (t) => {
@@ -280,12 +395,41 @@ test('transition compaction preserves STOPPING evidence for long activations', (
   }
   const current = store.current();
   assert.equal(current.transitions.some((transition) => transition.state === 'STOPPING'), true);
-  const ready = store.ready(created.activation_epoch_id, {
-    verified: true,
-    activation_epoch_id: created.activation_epoch_id,
-    final_census: { pass: true, activation_epoch_id: created.activation_epoch_id }
-  });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id));
+  const ready = store.ready(created.activation_epoch_id, committed.ready_commit_digest);
   assert.equal(ready.state, 'READY');
+});
+
+test('record normalization binds ready commit digest to canonical proof and permits legacy READY without it', (t) => {
+  const bound = fixture(t);
+  let clock = 1_700_000_975_000;
+  const store = new ActivationEpochStore({ paths: bound.paths, now: () => clock++ });
+  const created = store.create({ activation_epoch_id: epoch(50), operation_id: operation(50) });
+  store.update(created.activation_epoch_id, { state: 'STOPPING' });
+  store.update(created.activation_epoch_id, { state: 'VERIFYING' });
+  const committed = store.commitReady(created.activation_epoch_id, verificationFor(created.activation_epoch_id));
+  store.ready(created.activation_epoch_id, committed.ready_commit_digest);
+  const tampered = JSON.parse(fs.readFileSync(bound.file, 'utf8'));
+  tampered.current.verification.final_census.tampered = true;
+  fs.writeFileSync(bound.file, JSON.stringify(tampered), 'utf8');
+  assert.throws(() => store.current(), { code: 'ACTIVATION_EPOCH_STORE_INVALID' });
+
+  const legacy = fixture(t);
+  clock = 1_700_000_976_000;
+  const legacyStore = new ActivationEpochStore({ paths: legacy.paths, now: () => clock++ });
+  const legacyCreated = legacyStore.create({ activation_epoch_id: epoch(51), operation_id: operation(51) });
+  legacyStore.update(legacyCreated.activation_epoch_id, { state: 'STOPPING' });
+  legacyStore.update(legacyCreated.activation_epoch_id, { state: 'VERIFYING' });
+  const legacyCommit = legacyStore.commitReady(legacyCreated.activation_epoch_id, verificationFor(legacyCreated.activation_epoch_id));
+  legacyStore.ready(legacyCreated.activation_epoch_id, legacyCommit.ready_commit_digest);
+  const snapshot = JSON.parse(fs.readFileSync(legacy.file, 'utf8'));
+  snapshot.current.ready_commit_digest = null;
+  snapshot.current.transitions = snapshot.current.transitions.filter((transition) => transition.state !== 'READY_COMMITTED');
+  fs.writeFileSync(legacy.file, JSON.stringify(snapshot), 'utf8');
+  const loaded = new ActivationEpochStore({ paths: legacy.paths, now: () => clock++ }).current();
+  assert.equal(loaded.state, 'READY');
+  assert.equal(loaded.ready_commit_digest, null);
 });
 
 test('mutating operations use a bounded interprocess lock and expose CAS conflicts', (t) => {

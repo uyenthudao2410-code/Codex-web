@@ -32,6 +32,14 @@ class OperatorReportIsolationTests(unittest.TestCase):
                     "include_diff": False,
                 })
                 run_id = result["orchestration"]["run_id"]
+                runtime.orchestration_ledger.record_proof(
+                    run_id=run_id,
+                    wave_id=result["orchestration"]["wave_id"],
+                    stage_id="operator-report-latch-fixture",
+                    stage_version="1",
+                    input_fingerprint="operator-report-latch-fixture-proof",
+                    status="passed",
+                )
                 accepted = runtime.task_control({
                     "action": "accept",
                     "run_id": run_id,
@@ -71,6 +79,14 @@ class OperatorReportIsolationTests(unittest.TestCase):
                     "include_diff": False,
                 })
                 first_run_id = first["orchestration"]["run_id"]
+                runtime.orchestration_ledger.record_proof(
+                    run_id=first_run_id,
+                    wave_id=first["orchestration"]["wave_id"],
+                    stage_id="first-operator-report-fixture",
+                    stage_version="1",
+                    input_fingerprint="first-operator-report-fixture-proof",
+                    status="passed",
+                )
                 runtime.task_control({
                     "action": "accept",
                     "run_id": first_run_id,
@@ -97,6 +113,14 @@ class OperatorReportIsolationTests(unittest.TestCase):
                     "include_diff": False,
                 })
                 second_run_id = second["orchestration"]["run_id"]
+                runtime.orchestration_ledger.record_proof(
+                    run_id=second_run_id,
+                    wave_id=second["orchestration"]["wave_id"],
+                    stage_id="second-operator-report-fixture",
+                    stage_version="1",
+                    input_fingerprint="second-operator-report-fixture-proof",
+                    status="passed",
+                )
                 runtime.task_control({
                     "action": "accept",
                     "run_id": second_run_id,

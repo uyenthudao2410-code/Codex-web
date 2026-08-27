@@ -5,6 +5,7 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const crypto = require('node:crypto');
 const {
   NativeService,
   isAlive,
@@ -20,6 +21,7 @@ const {
   P5_A0_SEED_SECRET,
   P5_A0_SEED_HANDLE
 } = require('../electron/services/nativeService');
+const { TunnelService } = require('../electron/services/tunnelService');
 const { normalizeProxyValue } = require('../electron/services/proxyService');
 const runtimePaths = require('../electron/paths');
 const runtimeStatePath = path.join(os.tmpdir(), `webcodex-runtime-lifecycle-${process.pid}.json`);
@@ -31,12 +33,16 @@ test.after(() => {
   fs.rmSync(runtimeStatePath, { force: true });
   fs.rmSync(supervisorRequestPath, { force: true });
   fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.processing`, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.processing.bak`, { force: true });
 });
 test.beforeEach(() => {
   fs.rmSync(supervisorRequestPath, { force: true });
   fs.rmSync(`${supervisorRequestPath}.bak`, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.processing`, { force: true });
+  fs.rmSync(`${supervisorRequestPath}.processing.bak`, { force: true });
 });
-const { RuntimeOrchestrator, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, parseGitStatusPorcelainV2, parseLoopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
+const { RuntimeOrchestrator, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, activationPreflightProof, parseGitStatusPorcelainV2, parseLoopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
 const { classifyStoredDeviceOwner } = require('../electron/services/deviceIdentity');
 
 test('process liveness rejects missing and non-positive PIDs before OS probing', () => {
@@ -117,6 +123,35 @@ test('orchestrator obtains the managed P5 seed only from the encrypted secret st
   });
   assert.equal(orchestrator.p5A0Seed(), 'managed-seed');
   assert.deepEqual(calls, [P5_A0_SEED_SECRET]);
+});
+
+test('activation epoch status distinguishes a valid empty store from unavailable durable authority', () => {
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({}) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+
+  orchestrator.activationEpochStore = { current: () => null };
+  assert.deepEqual(orchestrator.activationEpochStatus(), {
+    activation_epoch_id: null,
+    operation_id: null,
+    state: 'NONE',
+    admission_open: true,
+    update_incomplete: false
+  });
+
+  orchestrator.activationEpochStore = null;
+  assert.deepEqual(orchestrator.activationEpochStatus(), {
+    activation_epoch_id: null,
+    operation_id: null,
+    state: 'UPDATE_INCOMPLETE',
+    admission_open: false,
+    update_incomplete: true,
+    error_code: 'ACTIVATION_EPOCH_STORE_UNAVAILABLE'
+  });
 });
 
 test('Coding MCP health is trusted only when workspace and device_id both match', async (t) => {
@@ -231,15 +266,20 @@ test('device-aware process services keep legacy or foreign live owners fail-clos
   assert.match(tunnelSource, /TUNNEL_PROCESS_OWNER_UNVERIFIED/);
   assert.match(tunnelSource, /TUNNEL_PROCESS_FOREIGN_DEVICE/);
   assert.match(recoverySource, /\$\{kind\}_OWNER_UNVERIFIED/);
-  assert.match(recoverySource, /assertOwnedLive\(state\.recoveryMcpPid/);
-  assert.match(recoverySource, /assertOwnedLive\(state\.recoveryTunnelPid/);
+  assert.match(recoverySource, /exactIdentity\(state, 'recoveryMcp'/);
+  assert.match(recoverySource, /exactIdentity\(state, 'recoveryTunnel'/);
+  for (const source of [nativeSource, tunnelSource, recoverySource]) {
+    assert.match(source, /processStartToken|ProcessStartToken/);
+    assert.match(source, /terminateExactProcessTree/);
+    assert.doesNotMatch(source, /taskkill\.exe/);
+  }
   assert.match(recoverySource, /preflightLegacyOwnershipMigration/);
   assert.match(recoverySource, /RECOVERY_MCP_LEGACY_MIGRATION_UNVERIFIED/);
   assert.match(recoverySource, /RECOVERY_TUNNEL_LEGACY_MIGRATION_UNVERIFIED/);
 });
 
 function recoveryHarness(status) {
-  const calls = { restart: 0, tunnel: 0, mcp: 0 };
+  const calls = { restart: 0, tunnel: 0, mcp: 0, mcpOptions: [] };
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ autoStartServices: true }) },
     secrets: { get: () => '' },
@@ -250,7 +290,7 @@ function recoveryHarness(status) {
   orchestrator.lightweightSnapshot = async () => ({ ...status });
   orchestrator.restart = async () => { calls.restart += 1; };
   orchestrator.recoverTunnelOnly = async () => { calls.tunnel += 1; };
-  orchestrator.recoverMcpOnly = async () => { calls.mcp += 1; };
+  orchestrator.recoverMcpOnly = async (options = {}) => { calls.mcp += 1; calls.mcpOptions.push(options); };
   orchestrator.isManuallyStopped = () => false;
   orchestrator.heartbeatFailures = 2;
   orchestrator.heartbeatFailureKind = status.mcpRunning
@@ -344,7 +384,9 @@ test('runtime state migration keeps only current native and tunnel fields', () =
   assert.deepEqual(
     currentRuntimeState({
       nativePid: 1,
+      nativeProcessStartToken: '10000000000000001',
       tunnelPid: 2,
+      tunnelProcessStartToken: '10000000000000002',
       tunnelStartedAt: '2026-08-17T00:00:00.000Z',
       tunnelId: 'tunnel-device-a',
       tunnelFingerprint: 'f'.repeat(64),
@@ -357,7 +399,9 @@ test('runtime state migration keeps only current native and tunnel fields', () =
     }),
     {
       nativePid: 1,
+      nativeProcessStartToken: '10000000000000001',
       tunnelPid: 2,
+      tunnelProcessStartToken: '10000000000000002',
       tunnelStartedAt: '2026-08-17T00:00:00.000Z',
       tunnelId: 'tunnel-device-a',
       tunnelFingerprint: 'f'.repeat(64),
@@ -384,9 +428,12 @@ test('native revision status is pending only when the live process has a capture
       state: runningRevision ? (runningRevision === 'disk-revision' ? 'current' : 'update_pending') : 'unknown'
     })
   };
-  const native = new NativeService({ info() {} }, paths, revisions);
+  const processStartToken = '10000000000000001';
+  const native = new NativeService({ info() {} }, paths, revisions, null, {
+    processIdentityObserver: (pid) => ({ state: 'live', pid, process_start_token: processStartToken })
+  });
   try {
-    fs.writeFileSync(runtimeStatePath, JSON.stringify({ nativePid: process.pid, nativeCodeRevision: 'running-revision' }));
+    fs.writeFileSync(runtimeStatePath, JSON.stringify({ nativePid: process.pid, nativeProcessStartToken: processStartToken, nativeCodeRevision: 'running-revision' }));
     const pending = native.revisionStatus();
     assert.equal(pending.update_pending, true);
     assert.equal(pending.state, 'update_pending');
@@ -394,8 +441,8 @@ test('native revision status is pending only when the live process has a capture
     fs.writeFileSync(runtimeStatePath, JSON.stringify({ nativePid: process.pid }));
     const legacy = native.revisionStatus();
     assert.equal(legacy.running_revision, null);
-    assert.equal(legacy.update_pending, null);
-    assert.equal(legacy.state, 'unknown');
+    assert.equal(legacy.update_pending, false);
+    assert.equal(legacy.state, 'stopped');
   } finally {
     fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }));
   }
@@ -557,9 +604,14 @@ test('runtime snapshots expose rediscovery without implicitly acknowledging a ch
     revisionStatus: () => ({ running_revision: 'r', disk_revision: 'r', update_pending: false, state: 'current' })
   };
   orchestrator.tunnel = { status: async () => true };
+  orchestrator.activationEpochStatus = () => ({ admission_open: true, update_incomplete: false });
   orchestrator.gitStatus = async () => ({ available: true, branch: 'main', head: null, head_short: null, dirty: true });
 
   const lightweight = await orchestrator.lightweightSnapshot();
+  assert.equal(lightweight.componentsReady, true);
+  assert.equal(lightweight.connectorReady, false);
+  assert.equal(lightweight.fullyReady, false);
+  assert.equal(lightweight.updateIncomplete, true);
   assert.equal(lightweight.connectorContractState, 'CHANGED_DISCOVERED_NEEDS_ACK');
   assert.equal(lightweight.connectorRediscovered, true);
   assert.equal(lightweight.connectorRefreshRequired, false);
@@ -576,6 +628,67 @@ test('runtime snapshots expose rediscovery without implicitly acknowledging a ch
 
   const acknowledged = orchestrator.acknowledgeConnectorContractHash(contract, discovery);
   assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
+  assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, currentSha);
+  const ready = await orchestrator.lightweightSnapshot();
+  assert.equal(ready.componentsReady, true);
+  assert.equal(ready.connectorReady, true);
+  assert.equal(ready.fullyReady, true);
+  assert.equal(ready.updateIncomplete, false);
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
+});
+
+test('activation connector acknowledgement accepts only an exact current-process discovery receipt', () => {
+  const acknowledgedSha = 'b'.repeat(64);
+  const currentSha = 'c'.repeat(64);
+  const activationEpochId = 'activation-connector-epoch-0001';
+  const nowUnixMs = Date.now();
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: acknowledgedSha,
+    chatgptToolContractSchemaVersion: 1,
+    chatgptToolContractProfile: 'smart-v3'
+  }), 'utf8');
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    activationEpochId
+  });
+  const health = {
+    ready: true,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: 'process-current',
+    instance_id: 'server-current',
+    tool_contract: { schema_version: 1, profile: 'smart-v3', sha256: currentSha },
+    connector_tool_discovery: {
+      current_contract_observed: true,
+      contract_sha256: currentSha,
+      observed_at: new Date(nowUnixMs - 1).toISOString(),
+      process_instance_id: 'process-current',
+      server_instance_id: 'server-current'
+    }
+  };
+  assert.throws(
+    () => orchestrator.acknowledgeExactConnectorDiscovery({
+      ...health,
+      connector_tool_discovery: {
+        ...health.connector_tool_discovery,
+        process_instance_id: 'process-retired'
+      }
+    }, { activationEpochId, nowUnixMs }),
+    { code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED' }
+  );
+  assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, acknowledgedSha);
+
+  const acknowledged = orchestrator.acknowledgeExactConnectorDiscovery(health, {
+    activationEpochId,
+    nowUnixMs
+  });
+  assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
+  assert.equal(acknowledged.acknowledgedSha256, currentSha);
+  assert.equal(acknowledged.rediscovered, true);
   assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, currentSha);
   fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
 });
@@ -799,8 +912,16 @@ test('Coding MCP activation prepare forwards the checkpoint-bound source receipt
 
 test('supervisor consumes a fresh workspace-bound restart ticket exactly once', async () => {
   const workspace = 'C:\\work\\one';
-  const calls = { activate: 0 };
+  const ticketId = 'restart-ticket-0001';
+  const calls = { fullClean: 0 };
   let activationOptions = null;
+  const sourceCheckpoint = {
+    checkpoint_id: 'checkpoint-supervisor-0001',
+    run_id: 'run-supervisor-0001',
+    wave_id: 'wave-supervisor-0001',
+    proof_fingerprint: 'c'.repeat(64),
+    git_head: 'd'.repeat(40)
+  };
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ workspace, autoStartServices: true }) },
     secrets: { get: () => '' },
@@ -809,34 +930,306 @@ test('supervisor consumes a fresh workspace-bound restart ticket exactly once', 
     emitProgress() {}
   });
   orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
-  orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one' });
+  orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one', tool_contract: { sha256: 'e'.repeat(64) } });
   orchestrator.revisions.disk = () => ({ revision: 'a'.repeat(64) });
-  orchestrator.activateCodingMcpUpdate = async (revision, options) => {
-    calls.activate += 1;
-    activationOptions = options;
-    return { new_revision: revision };
+  orchestrator.activationEpochStore = {
+    load: () => ({
+      current: {
+        activation_epoch_id: 'epoch-supervisor-0001',
+        operation_id: ticketId,
+        state: 'HANDOFF'
+      },
+      history: []
+    })
   };
+  orchestrator.setFullCleanSourceCheckpointResolver(() => sourceCheckpoint);
+  orchestrator.setFullCleanActivation({ restart: async (options) => {
+    calls.fullClean += 1;
+    activationOptions = options;
+    return {
+      full_clean_activation: true,
+      activation_epoch_id: 'epoch-supervisor-0001',
+      state: 'HANDOFF',
+      admission_open: false,
+      fully_ready: false
+    };
+  } });
   const now = Date.now();
   fs.writeFileSync(supervisorRequestPath, JSON.stringify({
     version: 1,
     action: 'restart',
-    ticket_id: 'ticket-1',
+    ticket_id: ticketId,
+    operation_id: ticketId,
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
     process_instance_id: 'process-one',
     server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
     workspace,
     requested_at_unix_ms: now - 1000,
     not_before_unix_ms: now - 1,
     expires_at_unix_ms: now + 30000
   }), 'utf8');
   const result = await orchestrator.supervise();
-  assert.equal(calls.activate, 1);
+  assert.equal(calls.fullClean, 1);
   assert.equal(fs.existsSync(supervisorRequestPath), false);
-  assert.equal(result.supervisorRequest.ticketId, 'ticket-1');
-  assert.equal(result.supervisorRequest.status, 'completed');
-  assert.equal(result.supervisorRequest.component, 'coding_mcp');
+  assert.equal(fs.existsSync(`${supervisorRequestPath}.processing`), false);
+  assert.equal(result.supervisorRequest.ticketId, ticketId);
+  assert.equal(result.supervisorRequest.operationId, ticketId);
+  assert.equal(result.supervisorRequest.status, 'accepted');
+  assert.equal(result.supervisorRequest.component, 'full_system');
+  assert.equal(result.supervisorRequest.activation_mode, 'full_clean_activation');
+  assert.equal(activationOptions.operationId, ticketId);
+  assert.deepEqual(activationOptions.sourceCheckpoint, sourceCheckpoint);
+  assert.equal(activationOptions.expectedDiskRevision, 'a'.repeat(64));
   assert.equal(activationOptions.expiresAtUnixMs, now + 30000);
-  assert.equal(activationOptions.automatic, true);
-  assert.equal(activationOptions.mode, 'soft_recovery');
+  assert.equal(activationOptions.automatic, undefined);
+  assert.equal(activationOptions.mode, undefined);
+});
+
+test('supervisor resumes a claimed processing journal after a Recovery Host crash window', async () => {
+  const workspace = 'C:\\work\\one';
+  const ticketId = 'restart-processing-resume-0001';
+  const calls = { fullClean: 0 };
+  const sourceCheckpoint = {
+    checkpoint_id: 'checkpoint-processing-resume-0001',
+    run_id: 'run-processing-resume-0001',
+    wave_id: 'wave-processing-resume-0001',
+    proof_fingerprint: 'c'.repeat(64),
+    git_head: 'd'.repeat(40)
+  };
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one', tool_contract: { sha256: 'e'.repeat(64) } });
+  orchestrator.revisions.disk = () => ({ revision: 'a'.repeat(64) });
+  orchestrator.activationEpochStore = {
+    load: () => ({
+      current: { activation_epoch_id: 'epoch-processing-resume-0001', operation_id: ticketId, state: 'HANDOFF' },
+      history: []
+    })
+  };
+  orchestrator.setFullCleanSourceCheckpointResolver(() => sourceCheckpoint);
+  orchestrator.setFullCleanActivation({ restart: async () => {
+    calls.fullClean += 1;
+    return { full_clean_activation: true, activation_epoch_id: 'epoch-processing-resume-0001', state: 'READY', admission_open: true, fully_ready: true };
+  } });
+  const now = Date.now();
+  fs.writeFileSync(`${supervisorRequestPath}.processing`, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: ticketId,
+    operation_id: ticketId,
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  }), 'utf8');
+  const result = await orchestrator.supervise();
+  assert.equal(calls.fullClean, 1);
+  assert.equal(result.supervisorRequest.status, 'completed');
+  assert.equal(fs.existsSync(`${supervisorRequestPath}.processing`), false);
+});
+
+test('supervisor retains the processing journal across RUNTIME_BUSY and retries the same operation', async () => {
+  const workspace = 'C:\\work\\one';
+  const ticketId = 'restart-runtime-busy-retry-0001';
+  const sourceCheckpoint = {
+    checkpoint_id: 'checkpoint-runtime-busy-retry-0001',
+    run_id: 'run-runtime-busy-retry-0001',
+    wave_id: 'wave-runtime-busy-retry-0001',
+    proof_fingerprint: 'c'.repeat(64),
+    git_head: 'd'.repeat(40)
+  };
+  let attempts = 0;
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one', tool_contract: { sha256: 'e'.repeat(64) } });
+  orchestrator.revisions.disk = () => ({ revision: 'a'.repeat(64) });
+  orchestrator.activationEpochStore = {
+    load: () => ({
+      current: attempts > 1 ? { activation_epoch_id: 'epoch-runtime-busy-retry-0001', operation_id: ticketId, state: 'HANDOFF' } : null,
+      history: []
+    })
+  };
+  orchestrator.setFullCleanSourceCheckpointResolver(() => sourceCheckpoint);
+  orchestrator.setFullCleanActivation({ restart: async () => {
+    attempts += 1;
+    if (attempts === 1) throw Object.assign(new Error('initiating tool call still active'), { code: 'RUNTIME_BUSY' });
+    return { full_clean_activation: true, activation_epoch_id: 'epoch-runtime-busy-retry-0001', state: 'READY', admission_open: true, fully_ready: true };
+  } });
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: ticketId,
+    operation_id: ticketId,
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  }), 'utf8');
+  const deferred = await orchestrator.supervise();
+  assert.equal(deferred.supervisorRequest.status, 'deferred');
+  assert.equal(deferred.supervisorRequest.request_retained, true);
+  assert.equal(fs.existsSync(`${supervisorRequestPath}.processing`), true);
+  const completed = await orchestrator.supervise();
+  assert.equal(completed.supervisorRequest.status, 'completed');
+  assert.equal(attempts, 2);
+  assert.equal(fs.existsSync(`${supervisorRequestPath}.processing`), false);
+});
+
+test('supervisor restart ticket fails closed without Recovery Host checkpoint authority', async () => {
+  const workspace = 'C:\\work\\one';
+  let mutationCalls = 0;
+  let fenceCancellations = 0;
+  const errors = [];
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error(message, details) { errors.push({ message, details }); } },
+    emitProgress() {},
+    fullCleanActivation: { restart: async () => { mutationCalls += 1; } }
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one', tool_contract: { sha256: 'e'.repeat(64) } });
+  orchestrator.activationEpochStore = { load: () => ({ current: null, history: [] }) };
+  orchestrator.cancelCodeActivation = async (operationId, options) => {
+    assert.equal(operationId, 'ticket-no-authority');
+    assert.equal(options?.strict, true);
+    fenceCancellations += 1;
+    return true;
+  };
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: 'ticket-no-authority',
+    operation_id: 'ticket-no-authority',
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  }), 'utf8');
+  const result = await orchestrator.supervise();
+  assert.equal(mutationCalls, 0);
+  assert.equal(fenceCancellations, 1, 'a pre-epoch failure releases only the exact deferred fence');
+  assert.equal(result.supervisorRequest.status, 'failed');
+  assert.equal(result.supervisorRequest.ticketId, 'ticket-no-authority');
+  assert.equal(result.supervisorRequest.operationId, 'ticket-no-authority');
+  assert.equal(result.supervisorRequest.activation_mode, 'full_clean_activation');
+  assert.equal(result.supervisorRequest.error.code, 'ACTIVATION_SOURCE_CHECKPOINT_UNAVAILABLE');
+  assert.equal(errors.at(-1)?.details?.ticketId, 'ticket-no-authority');
+});
+
+test('supervisor never cancels or reopens a fence after a durable epoch binds the ticket operation', async () => {
+  const workspace = 'C:\\work\\one';
+  const ticketId = 'restart-epoch-bound-0001';
+  let epochBound = false;
+  let fenceCancellations = 0;
+  const sourceCheckpoint = {
+    checkpoint_id: 'checkpoint-supervisor-bound-0001',
+    run_id: 'run-supervisor-bound-0001',
+    wave_id: 'wave-supervisor-bound-0001',
+    proof_fingerprint: 'c'.repeat(64),
+    git_head: 'd'.repeat(40)
+  };
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one', tool_contract: { sha256: 'e'.repeat(64) } });
+  orchestrator.revisions.disk = () => ({ revision: 'a'.repeat(64) });
+  orchestrator.setFullCleanSourceCheckpointResolver(() => sourceCheckpoint);
+  orchestrator.activationEpochStore = {
+    load: () => ({
+      current: epochBound ? {
+        activation_epoch_id: 'activation-supervisor-bound-0001',
+        operation_id: ticketId,
+        state: 'FAILED'
+      } : null,
+      history: []
+    })
+  };
+  orchestrator.cancelCodeActivation = async () => { fenceCancellations += 1; return true; };
+  orchestrator.setFullCleanActivation({
+    restart: async () => {
+      epochBound = true;
+      throw Object.assign(new Error('replacement launch failed after durable epoch create'), { code: 'RECOVERY_REPLACEMENT_UNAVAILABLE' });
+    }
+  });
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: ticketId,
+    operation_id: ticketId,
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  }), 'utf8');
+  const result = await orchestrator.supervise();
+  assert.equal(result.supervisorRequest.status, 'failed');
+  assert.equal(result.supervisorRequest.error.code, 'RECOVERY_REPLACEMENT_UNAVAILABLE');
+  assert.equal(epochBound, true);
+  assert.equal(fenceCancellations, 0, 'durable FAILED/CLOSED epoch remains fail-closed and authoritative');
+});
+
+test('Recovery Host activation preflight capability is operation-bound and HMAC-authenticated', async (t) => {
+  const token = 'token';
+  const operationId = 'activation-operation-http-0002';
+  const server = http.createServer((request, response) => {
+    assert.equal(request.url, '/__control/activation');
+    assert.equal(request.headers['x-coding-tools-activation-operation'], operationId);
+    assert.equal(request.headers['x-coding-tools-activation-proof'], activationPreflightProof(token, operationId));
+    const payload = { safe: true, code: 'READY', workspace: 'C:\\work\\one' };
+    const body = JSON.stringify(payload);
+    response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
+    response.end(body);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const result = await readMcpActivationPreflight(server.address().port, token, { operationId });
+  assert.equal(result.safe, true);
+  assert.equal(activationPreflightProof(token, operationId), activationPreflightProof(token, operationId));
+  assert.notEqual(activationPreflightProof(token, operationId), activationPreflightProof(token, `${operationId}-other`));
 });
 
 test('Coding MCP activation verifies revision and a new process identity without touching the tunnel', async (t) => {
@@ -1017,6 +1410,135 @@ test('supervisor rejects stale or wrong-workspace restart tickets without restar
   assert.equal(fs.existsSync(supervisorRequestPath), false);
 });
 
+test('supervisor rejects every malformed restart envelope without invoking full-clean activation', async () => {
+  const workspace = 'C:\\work\\one';
+  let fullCleanCalls = 0;
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    fullCleanActivation: { restart: async () => { fullCleanCalls += 1; } }
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  const now = Date.now();
+  const base = {
+    version: 1,
+    action: 'restart',
+    ticket_id: 'restart-ticket-0001',
+    operation_id: 'restart-ticket-0001',
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  };
+  const malformed = [
+    ['missing operation_id', ({ ...base, operation_id: undefined })],
+    ['operation mismatch', ({ ...base, operation_id: 'restart-ticket-other-0001' })],
+    ['short ticket id', ({ ...base, ticket_id: 'restart-short', operation_id: 'restart-short' })],
+    ['leading underscore', ({ ...base, ticket_id: '_restart-ticket-0001', operation_id: '_restart-ticket-0001' })],
+    ['leading hyphen', ({ ...base, ticket_id: '-restart-ticket-0001', operation_id: '-restart-ticket-0001' })],
+    ['invalid character', ({ ...base, ticket_id: 'restart-ticket-00!', operation_id: 'restart-ticket-00!' })],
+    ['overlong ticket id', ({ ...base, ticket_id: `restart-${'a'.repeat(123)}`, operation_id: `restart-${'a'.repeat(123)}` })],
+    ['numeric ticket id', ({ ...base, ticket_id: 1234567890123456, operation_id: 1234567890123456 })]
+  ];
+  for (const [label, ticket] of malformed) {
+    fs.writeFileSync(supervisorRequestPath, JSON.stringify(ticket), 'utf8');
+    await orchestrator.supervise();
+    assert.equal(fullCleanCalls, 0, label);
+    assert.equal(fs.existsSync(supervisorRequestPath), false, label);
+    assert.equal(fs.existsSync(`${supervisorRequestPath}.processing`), false, label);
+  }
+});
+
+test('supervisor treats the exact ticket expiry instant as already expired', () => {
+  const workspace = 'C:\\work\\one';
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: 'restart-expiry-boundary-0001',
+    operation_id: 'restart-expiry-boundary-0001',
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now
+  }), 'utf8');
+  const originalNow = Date.now;
+  Date.now = () => now;
+  try {
+    assert.equal(orchestrator.pendingSupervisorRestartRequest(), null);
+  } finally {
+    Date.now = originalNow;
+  }
+  assert.equal(fs.existsSync(supervisorRequestPath), false);
+  assert.equal(fs.existsSync(`${supervisorRequestPath}.processing`), false);
+});
+
+test('supervisor preserves an accepted ticket when reading its durable journal is uncertain', async () => {
+  const workspace = 'C:\\work\\one';
+  let fullCleanCalls = 0;
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    fullCleanActivation: { restart: async () => { fullCleanCalls += 1; } }
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  const now = Date.now();
+  const ticket = {
+    version: 1,
+    action: 'restart',
+    ticket_id: 'restart-read-uncertain-0001',
+    operation_id: 'restart-read-uncertain-0001',
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  };
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify(ticket), 'utf8');
+  const originalReadFileSync = fs.readFileSync;
+  fs.readFileSync = function uncertainSupervisorRead(filePath, ...args) {
+    if (String(filePath) === supervisorRequestPath) {
+      throw Object.assign(new Error('temporary sharing violation'), { code: 'EACCES' });
+    }
+    return originalReadFileSync.call(fs, filePath, ...args);
+  };
+  try {
+    await orchestrator.supervise();
+  } finally {
+    fs.readFileSync = originalReadFileSync;
+  }
+  assert.equal(fullCleanCalls, 0);
+  assert.equal(fs.existsSync(supervisorRequestPath), true);
+  assert.equal(fs.existsSync(`${supervisorRequestPath}.processing`), false);
+});
+
 test('supervisor never recovers a restart ticket from json backup', async () => {
   const workspace = 'C:\\work\\one';
   const calls = { restart: 0 };
@@ -1188,6 +1710,7 @@ test('MCP-only recovery refuses an unexpectedly occupied MCP port without touchi
     log: { info() {}, warn() {}, error() {} },
     emitProgress() {}
   });
+  orchestrator.activationEpochStore = { current: () => null };
   orchestrator.validate = () => {};
   let nativeStarts = 0;
   let tunnelTouches = 0;
@@ -1205,6 +1728,73 @@ test('MCP-only recovery refuses an unexpectedly occupied MCP port without touchi
   assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).tunnelPid, 4242);
 });
 
+test('MCP-only soft recovery stops the replacement when disk revision drifts after spawn', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-mcp-soft-revision-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const stateFile = path.join(root, 'runtime-state.json');
+  const expectedRevision = 'a'.repeat(64);
+  const changedRevision = 'b'.repeat(64);
+  const activationEpochId = 'activation-soft-recovery-0001';
+  fs.writeFileSync(stateFile, JSON.stringify({ manualStop: false, nativePid: null, tunnelPid: 4242 }), 'utf8');
+  const reservation = http.createServer();
+  await new Promise((resolve) => reservation.listen(0, '127.0.0.1', resolve));
+  const port = reservation.address().port;
+  await new Promise((resolve) => reservation.close(resolve));
+  const orchestrator = new RuntimeOrchestrator({
+    paths: { stateFile: () => stateFile },
+    settings: { load: () => ({ workspace: root, mcpPort: port }) },
+    secrets: { get: () => 'token', set() {} },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    activationEpochId
+  });
+  orchestrator.validate = () => {};
+  orchestrator.activationEpochStore = {
+    current: () => ({
+      activation_epoch_id: activationEpochId,
+      state: 'READY',
+      admission_state: 'OPEN',
+      component_revisions: { coding_mcp: { disk_revision: expectedRevision } },
+      verification: { final_census: { running_revision: expectedRevision, disk_revision: expectedRevision } }
+    })
+  };
+  let revisionReads = 0;
+  orchestrator.revisions = {
+    disk: () => ({ revision: ++revisionReads === 1 ? expectedRevision : changedRevision })
+  };
+  let replacementServer = null;
+  let stops = 0;
+  orchestrator.native = {
+    start: async (_settings, _token, _progress, options) => {
+      assert.equal(options.expectedCodeRevision, expectedRevision);
+      replacementServer = http.createServer((_request, response) => response.end('ok'));
+      await new Promise((resolve) => replacementServer.listen(port, '127.0.0.1', resolve));
+      fs.writeFileSync(stateFile, JSON.stringify({
+        manualStop: false,
+        nativePid: process.pid,
+        nativeCodeRevision: expectedRevision,
+        tunnelPid: 4242
+      }), 'utf8');
+      return { reused: false };
+    },
+    status: async () => true,
+    stop: async () => {
+      stops += 1;
+      if (replacementServer?.listening) await new Promise((resolve) => replacementServer.close(resolve));
+      fs.writeFileSync(stateFile, JSON.stringify({ manualStop: false, nativePid: null, tunnelPid: 4242 }), 'utf8');
+      return true;
+    }
+  };
+  orchestrator.currentMcpHealth = async () => ({ ready: true, code_revision: expectedRevision });
+
+  await assert.rejects(orchestrator.recoverMcpOnly(), { code: 'REVISION_CHANGED_DURING_RECOVERY' });
+  assert.equal(stops, 1);
+  assert.equal(revisionReads, 2);
+  assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).tunnelPid, 4242);
+  assert.equal(replacementServer?.listening, false);
+});
+
 test('supervisor requires three consecutive failures of the same kind', async () => {
   const { orchestrator, calls } = recoveryHarness({
     fullyReady: false,
@@ -1219,7 +1809,7 @@ test('supervisor requires three consecutive failures of the same kind', async ()
   assert.equal(calls.restart, 0);
 });
 
-test('supervisor escalates to a full restart after repeated deferrals of a hung live MCP', async () => {
+test('supervisor replaces only a hung live MCP after repeated deferrals', async () => {
   const { orchestrator, calls } = recoveryHarness({
     fullyReady: false,
     mcpRunning: false,
@@ -1237,7 +1827,9 @@ test('supervisor escalates to a full restart after repeated deferrals of a hung 
   }
   orchestrator.nextRecoveryAt = 0;
   await orchestrator.supervise();
-  assert.equal(calls.restart, 1);
+  assert.equal(calls.restart, 0);
+  assert.equal(calls.mcp, 1);
+  assert.deepEqual(calls.mcpOptions, [{ replaceLiveOwned: true, reason: 'hung_mcp_soft_recovery' }]);
   assert.equal(calls.tunnel, 0);
   assert.equal(orchestrator.deferredRecoveryCount, 0);
 });
@@ -1264,14 +1856,72 @@ test('supervisor resets the deferral counter once the runtime becomes healthy', 
   assert.equal(calls.restart, 0);
 });
 
-test('native and tunnel stop paths own the whole process tree on Windows', () => {
+test('native and tunnel stop paths require exact process identity before tree termination', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const root = path.resolve(__dirname, '..');
   for (const relative of ['electron/services/nativeService.js', 'electron/services/tunnelService.js']) {
     const source = fs.readFileSync(path.join(root, relative), 'utf8');
-    assert.match(source, /taskkill\.exe/);
-    assert.match(source, /\/T/);
-    assert.match(source, /\/F/);
+    assert.match(source, /terminateExactProcessTree/);
+    assert.match(source, /ProcessStartToken/);
+    assert.doesNotMatch(source, /taskkill\.exe/);
   }
 });
+
+function exactStopHarness(ServiceClass, prefix, token, observed) {
+  const file = path.join(os.tmpdir(), `webcodex-exact-stop-${prefix}-${process.pid}-${crypto.randomBytes(4).toString('hex')}.json`);
+  const fields = prefix === 'native'
+    ? { nativePid: process.pid, nativeProcessStartToken: token }
+    : { tunnelPid: process.pid, tunnelProcessStartToken: token };
+  fs.writeFileSync(file, JSON.stringify(fields), 'utf8');
+  const paths = { stateFile: () => file };
+  const terminated = [];
+  const options = {
+    processIdentityObserver: () => observed,
+    exactProcessTerminator: async (identity) => { terminated.push(identity); }
+  };
+  const service = ServiceClass === NativeService
+    ? new ServiceClass({ info() {} }, paths, { status() { return {}; } }, null, options)
+    : new ServiceClass({ info() {} }, paths, null, options);
+  return { file, fields, service, terminated };
+}
+
+for (const [label, ServiceClass, prefix] of [
+  ['native', NativeService, 'native'],
+  ['tunnel', TunnelService, 'tunnel']
+]) {
+  test(`${label} stop forwards the exact stored PID and start token`, async (t) => {
+    const token = '10000000000000011';
+    const harness = exactStopHarness(ServiceClass, prefix, token, { state: 'live', pid: process.pid, process_start_token: token });
+    t.after(() => fs.rmSync(harness.file, { force: true }));
+    assert.equal(await harness.service.stop(), true);
+    assert.deepEqual(harness.terminated, [{ pid: process.pid, process_start_token: token }]);
+    const state = JSON.parse(fs.readFileSync(harness.file, 'utf8'));
+    assert.equal(state[`${prefix}Pid`], null);
+    assert.equal(state[`${prefix}ProcessStartToken`], null);
+  });
+
+  test(`${label} stop rejects a recycled PID without calling the terminator`, async (t) => {
+    const token = '10000000000000012';
+    const harness = exactStopHarness(ServiceClass, prefix, token, { state: 'live', pid: process.pid, process_start_token: '10000000000000013' });
+    t.after(() => fs.rmSync(harness.file, { force: true }));
+    await assert.rejects(harness.service.stop(), { code: `${label.toUpperCase()}_PROCESS_IDENTITY_CHANGED` });
+    assert.deepEqual(harness.terminated, []);
+    assert.deepEqual(JSON.parse(fs.readFileSync(harness.file, 'utf8')), harness.fields);
+  });
+
+  test(`${label} stop rejects unavailable or missing identity without clearing state`, async (t) => {
+    const token = '10000000000000014';
+    const unavailable = exactStopHarness(ServiceClass, prefix, token, { state: 'unavailable', pid: process.pid, code: 'PROCESS_IDENTITY_UNVERIFIED' });
+    t.after(() => fs.rmSync(unavailable.file, { force: true }));
+    await assert.rejects(unavailable.service.stop(), { code: `${label.toUpperCase()}_PROCESS_IDENTITY_UNVERIFIED` });
+    assert.deepEqual(unavailable.terminated, []);
+    assert.deepEqual(JSON.parse(fs.readFileSync(unavailable.file, 'utf8')), unavailable.fields);
+
+    const missing = exactStopHarness(ServiceClass, prefix, null, { state: 'live', pid: process.pid, process_start_token: token });
+    t.after(() => fs.rmSync(missing.file, { force: true }));
+    await assert.rejects(missing.service.stop(), { code: `${label.toUpperCase()}_PROCESS_IDENTITY_UNVERIFIED` });
+    assert.deepEqual(missing.terminated, []);
+    assert.deepEqual(JSON.parse(fs.readFileSync(missing.file, 'utf8')), missing.fields);
+  });
+}

@@ -28,6 +28,66 @@ function assertActivationDeadline(expiresAtUnixMs, boundary, processMutated = fa
 
 const MAX_DEFERRED_RECOVERIES = 6;
 const MAX_SUPERVISOR_REQUEST_AGE_MS = 60_000;
+const READY_COMMIT_DIGEST_PATTERN = /^[0-9a-f]{64}$/;
+const OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
+
+function validSupervisorRestartRequest(request, settings, now = Date.now()) {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) return false;
+  const ticketId = request.ticket_id;
+  const requestedAt = request.requested_at_unix_ms;
+  const notBefore = request.not_before_unix_ms;
+  const expiresAt = request.expires_at_unix_ms;
+  return request.version === 1
+    && request.action === 'restart'
+    && typeof ticketId === 'string'
+    && OPERATION_ID_PATTERN.test(ticketId)
+    && ticketId.trim() === ticketId
+    && typeof request.operation_id === 'string'
+    && request.operation_id === ticketId
+    && request.activation_mode === 'full_clean_activation'
+    && request.full_clean_required === true
+    && typeof request.workspace === 'string'
+    && workspaceKey(request.workspace) === workspaceKey(settings.workspace)
+    && typeof request.process_instance_id === 'string'
+    && request.process_instance_id.trim() === request.process_instance_id
+    && request.process_instance_id.length > 0
+    && typeof request.server_instance_id === 'string'
+    && request.server_instance_id.trim() === request.server_instance_id
+    && request.server_instance_id.length > 0
+    && typeof request.tool_contract_sha256 === 'string'
+    && READY_COMMIT_DIGEST_PATTERN.test(request.tool_contract_sha256)
+    && Number.isSafeInteger(requestedAt)
+    && Number.isSafeInteger(notBefore)
+    && Number.isSafeInteger(expiresAt)
+    && requestedAt > 0
+    && requestedAt <= now + 5000
+    && now - requestedAt <= MAX_SUPERVISOR_REQUEST_AGE_MS
+    && requestedAt < notBefore
+    && notBefore < expiresAt
+    && expiresAt - requestedAt <= MAX_SUPERVISOR_REQUEST_AGE_MS
+    // Expiry is an exact fail-closed boundary: at `now === expiresAt` the
+    // ticket is already expired and must not be claimed or replayed.
+    && expiresAt > now;
+}
+
+function readSupervisorRestartRequest(file, settings, now = Date.now()) {
+  let raw = '';
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { state: 'absent', file };
+    return { state: 'unknown', file, error };
+  }
+  let request = null;
+  try {
+    request = JSON.parse(raw);
+  } catch (error) {
+    return { state: 'invalid', file, error };
+  }
+  return validSupervisorRestartRequest(request, settings, now)
+    ? { state: 'valid', file, request, ready: now >= request.not_before_unix_ms }
+    : { state: 'invalid', file, request };
+}
 
 const DETERMINISTIC_MCP_HEALTH_FAILURES = new Set([
   'auth_token_missing',
@@ -166,14 +226,28 @@ async function loopbackListenerPid(port) {
   return parseLoopbackListenerPid(result.stdout, port);
 }
 
-function readMcpActivationPreflight(port, token) {
+function activationPreflightProof(token, operationId) {
+  const value = String(operationId || '').trim();
+  if (!value) return '';
+  return crypto.createHmac('sha256', String(token || ''))
+    .update(`coding-tools-mcp-activation-preflight:${value}`, 'utf8')
+    .digest('hex');
+}
+
+function readMcpActivationPreflight(port, token, options = {}) {
   return new Promise((resolve, reject) => {
+    const operationId = String(options?.operationId || '').trim();
+    const headers = { Authorization: `Bearer ${token}` };
+    if (operationId) {
+      headers['X-Coding-Tools-Activation-Operation'] = operationId;
+      headers['X-Coding-Tools-Activation-Proof'] = activationPreflightProof(token, operationId);
+    }
     const request = http.request({
       host: '127.0.0.1',
       port,
       path: '/__control/activation',
       method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
+      headers,
       timeout: 3000
     }, (response) => {
       let body = '';
@@ -307,7 +381,7 @@ function controlMcpActivation(port, token, payload) {
 }
 
 class RuntimeOrchestrator {
-  constructor({ settings, secrets, environment, log, emitProgress = () => {}, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '', fullCleanActivation = null }) {
+  constructor({ settings, secrets, environment, log, emitProgress = () => {}, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '', fullCleanActivation = null, resolveFullCleanSourceCheckpoint = null }) {
     this.settingsStore = settings;
     this.secrets = secrets;
     this.environment = environment;
@@ -317,8 +391,12 @@ class RuntimeOrchestrator {
     this.paths = paths;
     this.revisions = revisionTracker || new ComponentRevisionTracker({ paths });
     this.activationEpochStore = (() => { try { return new ActivationEpochStore({ paths }); } catch { return null; } })();
-    this.activationEpochId = String(activationEpochId || '').trim() || String(this.activationEpochStore?.current()?.activation_epoch_id || '').trim();
+    this.activationEpochId = String(activationEpochId || '').trim() || (() => {
+      try { return String(this.activationEpochStore?.current?.()?.activation_epoch_id || '').trim(); } catch { return ''; }
+    })();
     this.fullCleanActivation = fullCleanActivation;
+    this.resolveFullCleanSourceCheckpoint = typeof resolveFullCleanSourceCheckpoint === 'function'
+      ? resolveFullCleanSourceCheckpoint : null;
     this.device = (deviceIdentity || deviceInstanceId) ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId) : null;
     this.native = new NativeService(log, paths, this.revisions, this.device);
     this.tunnel = new TunnelService(log, paths, this.device);
@@ -354,23 +432,78 @@ class RuntimeOrchestrator {
     return this.fullCleanActivation;
   }
 
+  setFullCleanSourceCheckpointResolver(resolver) {
+    this.resolveFullCleanSourceCheckpoint = typeof resolver === 'function' ? resolver : null;
+    return this.resolveFullCleanSourceCheckpoint;
+  }
+
   activationEpochStatus() {
+    if (!this.activationEpochStore || typeof this.activationEpochStore.current !== 'function') {
+      return {
+        activation_epoch_id: null,
+        operation_id: null,
+        state: 'UPDATE_INCOMPLETE',
+        admission_open: false,
+        update_incomplete: true,
+        error_code: 'ACTIVATION_EPOCH_STORE_UNAVAILABLE'
+      };
+    }
     let record = null;
-    try { record = this.activationEpochStore?.current?.() || null; } catch (error) {
+    try { record = this.activationEpochStore.current() || null; } catch (error) {
       return { activation_epoch_id: null, state: 'UPDATE_INCOMPLETE', admission_open: false, update_incomplete: true, error_code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID') };
     }
-    if (!record) return { activation_epoch_id: null, state: 'NONE', admission_open: true, update_incomplete: false };
+    if (!record) return { activation_epoch_id: null, operation_id: null, state: 'NONE', admission_open: true, update_incomplete: false };
     const id = String(record.activation_epoch_id || '');
     const admissionOpen = record.state === 'READY' && record.admission_state === 'OPEN';
     return {
       activation_epoch_id: id || null,
+      operation_id: String(record.operation_id || '').trim() || null,
       state: admissionOpen ? 'READY' : 'UPDATE_INCOMPLETE',
       epoch_state: record.state,
       admission_open: admissionOpen,
       update_incomplete: !admissionOpen,
+      ready_commit_digest: String(record.ready_commit_digest || '') || null,
+      expires_at_unix_ms: Number(record.expires_at_unix_ms || 0) || null,
       ready_at: record.ready_at || null,
       error: record.error || null
     };
+  }
+
+  /**
+   * Determine whether a deferred supervisor operation has a durable epoch
+   * binding.  This is deliberately tri-state: an unreadable epoch store is
+   * not evidence that no epoch exists, so callers must retain the fence and
+   * keep admission closed rather than reopening on uncertainty.
+   */
+  activationEpochBinding(operationId) {
+    const id = String(operationId || '').trim();
+    if (!id) return { known: false, bound: false, operation_id: null };
+    try {
+      if (!this.activationEpochStore || typeof this.activationEpochStore.load !== 'function') {
+        return { known: false, bound: false, operation_id: id, reason: 'epoch_store_unavailable' };
+      }
+      const snapshot = this.activationEpochStore.load();
+      const records = [
+        snapshot?.current,
+        ...(Array.isArray(snapshot?.history) ? snapshot.history : [])
+      ].filter((item) => item && typeof item === 'object');
+      const bound = records.find((item) => String(item.operation_id || '').trim() === id) || null;
+      return {
+        known: true,
+        bound: Boolean(bound),
+        operation_id: id,
+        activation_epoch_id: bound?.activation_epoch_id || null,
+        epoch_state: bound?.state || null
+      };
+    } catch (error) {
+      return {
+        known: false,
+        bound: false,
+        operation_id: id,
+        reason: 'epoch_store_read_failed',
+        error_code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID')
+      };
+    }
   }
 
   assertActivationRevisionContinuity() {
@@ -448,21 +581,49 @@ class RuntimeOrchestrator {
     return epoch;
   }
 
-  async completeActivationEpoch(activationEpochId) {
+  async completeActivationEpoch(activationEpochId, readyCommitDigest) {
     const id = String(activationEpochId || '').trim();
     if (!id) throw Object.assign(new Error('Activation epoch is required.'), { code: 'ACTIVATION_EPOCH_ID_REQUIRED' });
+    const digest = String(readyCommitDigest || '').trim();
+    if (!READY_COMMIT_DIGEST_PATTERN.test(digest)) {
+      throw Object.assign(new Error('Activation ready commit digest is invalid.'), {
+        code: 'ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID'
+      });
+    }
     // Validate the durable current epoch before mutating the in-memory
     // expectation.  A stale/foreign completion request must not poison the
     // orchestrator so that subsequent health checks start rejecting the real
     // active process.
+    const durableRecord = this.activationEpochStore?.current?.() || null;
     const durable = this.activationEpochStatus();
-    if (!durable.activation_epoch_id || durable.activation_epoch_id !== id) {
+    if (!durable.activation_epoch_id || durable.activation_epoch_id !== id
+      || !durableRecord || durableRecord.activation_epoch_id !== id) {
       throw Object.assign(new Error('The activation epoch is not the current durable epoch.'), {
         code: 'UPDATE_INCOMPLETE',
         details: {
           activation_epoch_id: id,
           current_activation_epoch_id: durable.activation_epoch_id || null
         }
+      });
+    }
+    if (durableRecord.state !== 'READY_COMMITTED'
+      || String(durableRecord.ready_commit_digest || '') !== digest
+      || String(durableRecord.admission_state || '') !== 'CLOSED') {
+      throw Object.assign(new Error('Coding MCP admission requires the exact durable READY_COMMITTED proof.'), {
+        code: 'UPDATE_INCOMPLETE',
+        details: {
+          activation_epoch_id: id,
+          epoch_state: durableRecord.state || null,
+          admission_state: durableRecord.admission_state || null,
+          ready_commit_digest_matches: String(durableRecord.ready_commit_digest || '') === digest
+        }
+      });
+    }
+    const expiresAtUnixMs = Number(durableRecord.expires_at_unix_ms || 0);
+    if (!Number.isSafeInteger(expiresAtUnixMs) || expiresAtUnixMs <= 0 || Date.now() >= expiresAtUnixMs) {
+      throw Object.assign(new Error('Activation request expired before Coding MCP admission could open.'), {
+        code: 'ACTIVATION_REQUEST_EXPIRED',
+        details: { activation_epoch_id: id, expires_at_unix_ms: expiresAtUnixMs || null }
       });
     }
     this.setActivationEpoch(id);
@@ -471,12 +632,31 @@ class RuntimeOrchestrator {
     if (!token || !(await this.native.status(settings, { activationEpochId: id }))) {
       throw Object.assign(new Error('Coding MCP replacement is not running for the requested activation epoch.'), { code: 'UPDATE_INCOMPLETE' });
     }
-    const result = await controlMcpActivation(settings.mcpPort, token, { action: 'complete_epoch', activation_epoch_id: id });
+    const result = await controlMcpActivation(settings.mcpPort, token, {
+      action: 'complete_epoch',
+      activation_epoch_id: id,
+      ready_commit_digest: digest,
+      expires_at_unix_ms: expiresAtUnixMs
+    });
+    if (result?.ok !== true
+      || result?.admission_open !== true
+      || String(result?.activation_epoch_id || '') !== id
+      || String(result?.ready_commit_digest || '') !== digest
+      || Number(result?.expires_at_unix_ms || 0) !== expiresAtUnixMs) {
+      throw Object.assign(new Error('Coding MCP did not acknowledge the exact durable activation commit.'), {
+        code: 'UPDATE_INCOMPLETE',
+        details: {
+          activation_epoch_id: id,
+          ready_commit_digest: digest,
+          observed: result || null
+        }
+      });
+    }
     this.invalidateSnapshot();
     return result;
   }
 
-  async closeActivationEpoch(activationEpochId) {
+  async closeActivationEpoch(activationEpochId, readyCommitDigest = '') {
     const id = String(activationEpochId || '').trim();
     if (!id) throw Object.assign(new Error('Activation epoch is required.'), { code: 'ACTIVATION_EPOCH_ID_REQUIRED' });
     const durable = this.activationEpochStatus();
@@ -491,13 +671,24 @@ class RuntimeOrchestrator {
     }
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
+    const durableRecord = this.activationEpochStore?.current?.() || null;
+    const digest = String(readyCommitDigest || durableRecord?.ready_commit_digest || '').trim();
+    if (digest && !READY_COMMIT_DIGEST_PATTERN.test(digest)) {
+      throw Object.assign(new Error('Activation ready commit digest is invalid.'), {
+        code: 'ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID'
+      });
+    }
     // Closing is the rollback/fail-closed path after an admission transition.
     // Do not skip the exact control request merely because the persisted PID
     // projection is temporarily unavailable; the MCP endpoint can still be
     // reachable, and a mismatched process will reject the exact epoch without
     // being mutated.
     if (!token) return { ok: false, admission_open: false, activation_epoch_id: id, code: 'MCP_AUTH_UNAVAILABLE' };
-    const result = await controlMcpActivation(settings.mcpPort, token, { action: 'close_epoch', activation_epoch_id: id });
+    const result = await controlMcpActivation(settings.mcpPort, token, {
+      action: 'close_epoch',
+      activation_epoch_id: id,
+      ...(digest ? { ready_commit_digest: digest } : {})
+    });
     this.invalidateSnapshot();
     return result;
   }
@@ -706,13 +897,13 @@ class RuntimeOrchestrator {
     });
   }
 
-  async inspectCodeActivation() {
+  async inspectCodeActivation(options = {}) {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
     if (!token || !(await this.native.status(settings))) {
       return { safe: true, code: 'COMPONENT_STOPPED', reason: 'coding_mcp_stopped', workspace: settings.workspace };
     }
-    const result = await readMcpActivationPreflight(settings.mcpPort, token);
+    const result = await readMcpActivationPreflight(settings.mcpPort, token, options);
     if (workspaceKey(result.workspace) !== workspaceKey(settings.workspace)) {
       throw Object.assign(new Error('Coding MCP activation preflight returned another workspace.'), { code: 'WORKSPACE_MISMATCH' });
     }
@@ -1014,6 +1205,69 @@ class RuntimeOrchestrator {
     return this.connectorContractStatus(toolContract, discovery, contact);
   }
 
+  acknowledgeExactConnectorDiscovery(health, { activationEpochId = '', nowUnixMs = Date.now() } = {}) {
+    const expectedEpochId = String(activationEpochId || this.activationEpochId || '').trim();
+    const observedEpochId = String(health?.activation_epoch_id || '').trim();
+    const processInstanceId = String(health?.process_instance_id || '').trim();
+    const serverInstanceId = String(health?.instance_id || health?.server_instance_id || '').trim();
+    const contractSha256 = String(health?.tool_contract?.sha256 || '').trim().toLowerCase();
+    const discovery = health?.connector_tool_discovery;
+    const observedAt = String(discovery?.observed_at || '').trim();
+    const observedAtUnixMs = Date.parse(observedAt);
+    const exact = Boolean(
+      health?.ready === true
+      && expectedEpochId
+      && observedEpochId === expectedEpochId
+      && processInstanceId
+      && serverInstanceId
+      && READY_COMMIT_DIGEST_PATTERN.test(contractSha256)
+      && discovery && typeof discovery === 'object' && !Array.isArray(discovery)
+      && discovery.current_contract_observed === true
+      && String(discovery.contract_sha256 || '').trim().toLowerCase() === contractSha256
+      && String(discovery.process_instance_id || '').trim() === processInstanceId
+      && String(discovery.server_instance_id || '').trim() === serverInstanceId
+      && Number.isFinite(observedAtUnixMs)
+      && Number.isSafeInteger(nowUnixMs) && nowUnixMs > 0
+      && observedAtUnixMs <= nowUnixMs + 5000
+    );
+    if (!exact) {
+      throw Object.assign(new Error('Connector acknowledgement requires an exact current-process tools/list or server/discover receipt for this activation epoch.'), {
+        code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+      });
+    }
+    const before = this.connectorContractStatus(
+      health.tool_contract,
+      discovery,
+      health.connector_client_contact
+    );
+    if (!before.contractChanged) return before;
+    if (before.contractState !== 'CHANGED_DISCOVERED_NEEDS_ACK'
+      || before.rediscovered !== true
+      || before.refreshRequired !== false
+      || before.acknowledgementPending !== true) {
+      throw Object.assign(new Error('Connector contract is not eligible for exact current-process acknowledgement.'), {
+        code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+      });
+    }
+    const acknowledged = this.acknowledgeConnectorContractHash(
+      health.tool_contract,
+      discovery,
+      health.connector_client_contact
+    );
+    if (acknowledged.contractState !== 'CURRENT_ACKNOWLEDGED'
+      || acknowledged.currentSha256 !== contractSha256
+      || acknowledged.acknowledgedSha256 !== contractSha256
+      || acknowledged.rediscovered !== true
+      || acknowledged.refreshRequired !== false
+      || acknowledged.acknowledgementPending !== false) {
+      throw Object.assign(new Error('Connector acknowledgement did not commit the exact current contract receipt.'), {
+        code: 'CONNECTOR_ACKNOWLEDGEMENT_INCOMPLETE'
+      });
+    }
+    this.invalidateSnapshot();
+    return acknowledged;
+  }
+
   synchronizeConnectorContract(toolContract, discovery = null, contact = null) {
     const status = this.connectorContractStatus(toolContract, discovery, contact);
     if (!status.acknowledgementPending) return status;
@@ -1048,73 +1302,173 @@ class RuntimeOrchestrator {
 
   pendingSupervisorRestartRequest() {
     if (this.busy || this.recovering) return null;
-    const file = this.paths.supervisorRequestFile();
-    if (!fs.existsSync(file)) return null;
-    let request = null;
-    try {
-      request = JSON.parse(fs.readFileSync(file, 'utf8'));
-    } catch {
-      request = null;
-    }
+    const pendingFile = this.paths.supervisorRequestFile();
+    const processingFile = `${pendingFile}.processing`;
     const settings = this.settingsStore.load();
     const now = Date.now();
-    const requestedAt = Number(request?.requested_at_unix_ms || 0);
-    const notBefore = Number(request?.not_before_unix_ms || requestedAt);
-    const expiresAt = Number(request?.expires_at_unix_ms || 0);
-    const valid = Boolean(
-      request
-      && request.version === 1
-      && request.action === 'restart'
-      && String(request.ticket_id || '').trim()
-      && workspaceKey(request.workspace) === workspaceKey(settings.workspace)
-      && requestedAt > 0
-      && requestedAt <= now + 5000
-      && now - requestedAt <= MAX_SUPERVISOR_REQUEST_AGE_MS
-      && expiresAt >= now
-    );
-    if (!valid) {
-      fs.rmSync(file, { force: true });
-      fs.rmSync(`${file}.bak`, { force: true });
-      this.log.warn('Đã loại bỏ yêu cầu restart supervisor không hợp lệ hoặc đã hết hạn', {
-        ticketId: request?.ticket_id || '',
-        workspace: request?.workspace || ''
+    for (const file of [processingFile, pendingFile]) {
+      const observation = readSupervisorRestartRequest(file, settings, now);
+      if (observation.state === 'absent') continue;
+      if (observation.state === 'unknown') {
+        this.log.warn('Không thể đọc chắc chắn yêu cầu restart supervisor; giữ journal để fail closed', {
+          file,
+          code: observation.error?.code || 'SUPERVISOR_REQUEST_READ_UNCERTAIN'
+        });
+        return { uncertain: true, file, processing: file === processingFile };
+      }
+      if (observation.state === 'invalid') {
+        fs.rmSync(file, { force: true });
+        fs.rmSync(`${file}.bak`, { force: true });
+        this.log.warn('Đã loại bỏ yêu cầu restart supervisor không hợp lệ hoặc đã hết hạn', {
+          ticketId: observation.request?.ticket_id || '',
+          workspace: observation.request?.workspace || ''
+        });
+        continue;
+      }
+      if (!observation.ready) return null;
+      return {
+        file,
+        request: observation.request,
+        processing: file === processingFile,
+        pendingFile,
+        processingFile
+      };
+    }
+    return null;
+  }
+
+  claimSupervisorRestartRequest() {
+    const pending = this.pendingSupervisorRestartRequest();
+    if (!pending || pending.uncertain) return null;
+    if (pending.processing) return pending;
+    if (fs.existsSync(pending.processingFile)) return null;
+    try {
+      fs.renameSync(pending.file, pending.processingFile);
+    } catch (error) {
+      this.log.warn('Không thể claim durable supervisor restart journal; sẽ thử lại mà không xóa ticket', {
+        file: pending.file,
+        code: error?.code || 'SUPERVISOR_REQUEST_CLAIM_FAILED'
       });
       return null;
     }
-    if (now < notBefore) return null;
-    return { file, request };
+    return { ...pending, file: pending.processingFile, processing: true };
+  }
+
+  finalizeSupervisorRestartRequest(claimed) {
+    if (!claimed?.file) return;
+    fs.rmSync(claimed.file, { force: true });
+    fs.rmSync(`${claimed.file}.bak`, { force: true });
   }
 
   async serviceSupervisorRestartRequest() {
-    const pending = this.pendingSupervisorRestartRequest();
+    const pending = this.claimSupervisorRestartRequest();
     if (!pending) return null;
-    fs.rmSync(pending.file, { force: true });
-    fs.rmSync(`${pending.file}.bak`, { force: true });
     const ticketId = String(pending.request.ticket_id);
     this.log.info('Recovery Host supervisor đã nhận yêu cầu restart từ Coding Tools MCP', { ticketId });
     try {
       const health = await this.currentMcpHealth();
+      const ticketContractSha256 = String(pending.request.tool_contract_sha256 || '').trim().toLowerCase();
+      const healthContractSha256 = String(health?.tool_contract?.sha256 || '').trim().toLowerCase();
       if (!health
         || health.process_instance_id !== pending.request.process_instance_id
-        || health.instance_id !== pending.request.server_instance_id) {
+        || health.instance_id !== pending.request.server_instance_id
+        || !READY_COMMIT_DIGEST_PATTERN.test(ticketContractSha256)
+        || healthContractSha256 !== ticketContractSha256) {
         throw Object.assign(new Error('Supervisor restart ticket no longer matches the running MCP instance.'), { code: 'STALE_RESTART_TICKET' });
       }
+      if (!this.fullCleanActivation || typeof this.fullCleanActivation.restart !== 'function') {
+        throw Object.assign(new Error('Full clean activation is unavailable for the supervisor restart ticket.'), {
+          code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE'
+        });
+      }
+      if (typeof this.resolveFullCleanSourceCheckpoint !== 'function') {
+        throw Object.assign(new Error('The supervisor restart ticket has no Recovery Host accepted-code checkpoint authority.'), {
+          code: 'ACTIVATION_SOURCE_CHECKPOINT_UNAVAILABLE'
+        });
+      }
+      // Resolve the checkpoint only from the current authenticated Recovery Host
+      // closure.  The MCP ticket is an operation/deadline envelope, never a
+      // source-authority envelope, so a stale or caller-supplied checkpoint can
+      // never be smuggled into the full-clean transaction.
+      const sourceCheckpoint = await this.resolveFullCleanSourceCheckpoint();
       const expectedRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
-      const result = await this.activateCodingMcpUpdate(expectedRevision, {
+      const result = await this.fullCleanActivation.restart({
+        operationId: ticketId,
+        sourceCheckpoint,
+        expectedDiskRevision: expectedRevision,
         expiresAtUnixMs: Number(pending.request.expires_at_unix_ms || 0),
-        // A supervisor ticket is an automatic local recovery request. Keep it
-        // on the soft component-scoped path explicitly; manual/revision
-        // activation is the only path that may enter the full-clean
-        // coordinator.
-        automatic: true,
-        mode: 'soft_recovery'
+        reason: pending.request.reason || 'task_control_restart_runtime'
       });
-      const pendingFullClean = result?.full_clean_activation === true
-        && result?.fully_ready !== true;
-      return { ticketId, status: pendingFullClean ? 'accepted' : 'completed', component: 'coding_mcp', result };
+      const binding = this.activationEpochBinding(ticketId);
+      if (!binding.known || !binding.bound) {
+        throw Object.assign(new Error('Full-clean activation returned without a durable epoch bound to the supervisor operation.'), {
+          code: 'ACTIVATION_EPOCH_BINDING_UNVERIFIED'
+        });
+      }
+      this.finalizeSupervisorRestartRequest(pending);
+      const ready = result?.full_clean_activation === true
+        && result?.state === 'READY'
+        && result?.admission_open === true
+        && result?.fully_ready === true;
+      return {
+        ticketId,
+        operationId: ticketId,
+        status: ready ? 'completed' : 'accepted',
+        component: 'full_system',
+        activation_mode: 'full_clean_activation',
+        result
+      };
     } catch (error) {
+      // The MCP fence is installed before this deferred ticket is consumed.
+      // If Recovery Host failed before FullCleanActivation could create a
+      // durable epoch, release exactly this operation's fence so the old
+      // process is not left draining until TTL.  Once an epoch is bound (even
+      // FAILED/CLOSED), never reopen admission or cancel its operation fence;
+      // the durable epoch is the source of truth and must remain fail-closed.
+      const binding = this.activationEpochBinding(ticketId);
+      const retryAfterToolReturn = String(error?.code || '') === 'RUNTIME_BUSY'
+        && Date.now() < Number(pending.request.expires_at_unix_ms || 0);
+      let requestFinalized = false;
+      if (binding.known && binding.bound) {
+        this.finalizeSupervisorRestartRequest(pending);
+        requestFinalized = true;
+      } else if (retryAfterToolReturn) {
+        this.log?.info?.('Supervisor restart journal remains claimed until the initiating tool call leaves admission', {
+          ticketId,
+          code: 'RUNTIME_BUSY'
+        });
+      } else if (binding.known && !binding.bound) {
+        try {
+          const cancelled = await this.cancelCodeActivation(ticketId, { strict: true });
+          if (cancelled === true || (cancelled === false && error?.code === 'STALE_RESTART_TICKET')) {
+            this.finalizeSupervisorRestartRequest(pending);
+            requestFinalized = true;
+          }
+        } catch (cleanupError) {
+          this.log?.warn?.('Không thể giải phóng activation fence sau khi supervisor restart thất bại; giữ trạng thái fail-closed', {
+            ticketId,
+            code: cleanupError?.code || 'ACTIVATION_FENCE_RELEASE_FAILED'
+          });
+        }
+      } else if (!binding.known) {
+        this.log?.warn?.('Không thể xác định durable activation epoch sau khi supervisor restart thất bại; không mở admission', {
+          ticketId,
+          reason: binding.reason || 'epoch_store_uncertain',
+          code: binding.error_code || ''
+        });
+      }
       this.log.error(error.message, { stage: 'supervisor-restart-request', ticketId });
-      return { ticketId, status: 'failed', error: error.message };
+      return {
+        ticketId,
+        operationId: ticketId,
+        status: retryAfterToolReturn ? 'deferred' : 'failed',
+        activation_mode: 'full_clean_activation',
+        request_retained: !requestFinalized,
+        error: {
+          code: String(error?.code || 'SUPERVISOR_RESTART_FAILED'),
+          message: String(error?.message || error)
+        }
+      };
     }
   }
 
@@ -1193,7 +1547,8 @@ class RuntimeOrchestrator {
       await this.native.start(settings, token, this.progress.bind(this), {
         p5Seed: this.p5A0Seed(),
         activationEpochId: this.activationEpochId || '',
-        activationGate: options.activationGate || ''
+        activationGate: options.activationGate || '',
+        activationExpiresAtUnixMs: Number(options.expiresAtUnixMs || 0) || 0
       });
 
       this.progress('mcp-health', 64, 'Đang xác minh Coding Tools MCP');
@@ -1260,8 +1615,11 @@ class RuntimeOrchestrator {
   }
 
   async restart(options = {}) {
-    if (options.automatic !== true && this.fullCleanActivation?.restart) {
-      return this.fullCleanActivation.restart(options);
+    if (options.automatic !== true) {
+      if (this.fullCleanActivation?.restart) return this.fullCleanActivation.restart(options);
+      throw Object.assign(new Error('Operator restart requires the Recovery Host full-clean activation coordinator.'), {
+        code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE'
+      });
     }
     const durableEpoch = this.activationEpochStatus();
     if (durableEpoch.update_incomplete === true) {
@@ -1386,13 +1744,26 @@ class RuntimeOrchestrator {
         && codeRevision.running_revision !== codeRevision.disk_revision)
     );
     const revisionReady = codeRevision.state !== 'unavailable' && !revisionDrift;
+    const componentsReady = Boolean(mcpRunning && tunnelRunning && epochReady && revisionReady);
+    const connectorReady = Boolean(
+      connectorContract.available === true
+      && connectorContract.rediscovered === true
+      && connectorContract.currentSha256
+      && connectorContract.acknowledgedSha256 === connectorContract.currentSha256
+      && connectorContract.refreshRequired === false
+      && connectorContract.acknowledgementPending === false
+      && connectorContract.contractChanged === false
+      && connectorContract.contractState === 'CURRENT_ACKNOWLEDGED'
+    );
     return {
       workspace: settings.workspace,
       mcpRunning,
       nativeAlive,
       tunnelRunning,
-      fullyReady: mcpRunning && tunnelRunning && epochReady && revisionReady,
-      updateIncomplete: activationEpoch.update_incomplete === true || revisionDrift,
+      componentsReady,
+      connectorReady,
+      fullyReady: componentsReady && connectorReady,
+      updateIncomplete: activationEpoch.update_incomplete === true || revisionDrift || !connectorReady,
       activationEpoch,
       device: this.deviceProjection(settings, { mcpHealth, nativeAlive, tunnelRunning, git }),
       toolContract: connectorContract.available ? {
@@ -1413,6 +1784,7 @@ class RuntimeOrchestrator {
 
   async recoverTunnelOnly() {
     this.assertSoftRecoveryAllowed();
+    this.assertActivationRevisionContinuity();
     const settings = this.settingsStore.load();
     const runtimeApiKey = this.secrets.get('runtimeApiKey');
     if (!runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
@@ -1433,20 +1805,28 @@ class RuntimeOrchestrator {
     this.invalidateSnapshot();
   }
 
-  async recoverMcpOnly() {
+  async recoverMcpOnly(options = {}) {
     this.assertSoftRecoveryAllowed();
     const settings = this.settingsStore.load();
     this.validate(settings);
     const token = await this.ensureToken();
     const before = readJson(this.paths.stateFile(), {});
-    this.assertActivationRevisionContinuity();
+    const continuity = this.assertActivationRevisionContinuity();
+    const expectedRevision = continuity.verified === true
+      ? String(continuity.expected_revision || '').trim() : '';
     const oldNativePid = Number(before.nativePid || 0);
     const tunnelPid = Number(before.tunnelPid || 0);
 
     if (isAlive(oldNativePid)) {
-      throw Object.assign(new Error('Coding MCP process is still alive; refusing dead-process recovery.'), {
-        code: 'MCP_PROCESS_STILL_ALIVE'
-      });
+      if (options.replaceLiveOwned !== true) {
+        throw Object.assign(new Error('Coding MCP process is still alive; refusing dead-process recovery.'), {
+          code: 'MCP_PROCESS_STILL_ALIVE'
+        });
+      }
+      // Semantic recovery may replace a persistently hung process, but only
+      // through NativeService's exact PID + process-start-token authority.
+      // Tunnel remains untouched and its identity is verified after spawn.
+      await this.native.stop();
     }
     if (await canConnect('127.0.0.1', settings.mcpPort, 350)) {
       throw Object.assign(new Error(`Cổng cục bộ ${settings.mcpPort} đang bị tiến trình khác chiếm dụng; từ chối nhận hoặc dừng tiến trình không xác định.`), {
@@ -1458,15 +1838,18 @@ class RuntimeOrchestrator {
     try {
       started = await this.native.start(settings, token, this.progress.bind(this), {
         p5Seed: this.p5A0Seed(),
-        activationEpochId: this.activationEpochId || ''
+        activationEpochId: this.activationEpochId || '',
+        ...(expectedRevision ? { expectedCodeRevision: expectedRevision } : {})
       });
       let health = null;
       let ownedPid = 0;
       for (let index = 0; index < 35; index += 1) {
         const state = readJson(this.paths.stateFile(), {});
         ownedPid = Number(state.nativePid || 0);
-        health = await readMcpHealth(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '', this.activationEpochId || '');
-        if (health && ownedPid > 0 && isAlive(ownedPid) && await loopbackListenerPid(settings.mcpPort) === ownedPid) break;
+        health = await this.currentMcpHealth();
+        if (health && ownedPid > 0 && isAlive(ownedPid)
+          && (!expectedRevision || String(health.code_revision || '') === expectedRevision)
+          && await loopbackListenerPid(settings.mcpPort) === ownedPid) break;
         health = null;
         if (!(await this.native.status(settings))) {
           throw Object.assign(new Error('Coding Tools MCP exited during MCP-only recovery.'), { code: 'MCP_RECOVERY_PROCESS_EXITED' });
@@ -1477,6 +1860,15 @@ class RuntimeOrchestrator {
         throw Object.assign(new Error('Coding Tools MCP did not pass exact identity and listener ownership checks during MCP-only recovery.'), {
           code: 'MCP_RECOVERY_NOT_READY'
         });
+      }
+      if (expectedRevision) {
+        const postDiskRevision = String(this.revisions.disk('coding_mcp', { force: true }).revision || '').trim();
+        if (postDiskRevision !== expectedRevision) {
+          throw Object.assign(new Error('Coding MCP source changed during soft recovery; replacement remains stopped pending full-clean activation.'), {
+            code: 'REVISION_CHANGED_DURING_RECOVERY',
+            details: { expected_revision: expectedRevision, disk_revision: postDiskRevision || null }
+          });
+        }
       }
       const after = readJson(this.paths.stateFile(), {});
       this.log.info('Coding Tools MCP đã được khôi phục mà không khởi động lại OpenAI Tunnel', {
@@ -1506,7 +1898,13 @@ class RuntimeOrchestrator {
       return { ...(await this.lightweightSnapshot()), supervisorRequest };
     }
     const status = await this.lightweightSnapshot();
-    if (status.fullyReady) {
+    // Connector rediscovery/ACK is part of aggregate readiness but is not a
+    // component-health failure.  Keep the watchdog on the component-only
+    // projection so an UPDATE_INCOMPLETE connector gate never triggers a
+    // needless Tunnel or MCP soft recovery.
+    const componentsReady = status.componentsReady === true
+      || (status.componentsReady == null && status.fullyReady === true);
+    if (componentsReady) {
       const wasFailing = this.heartbeatFailures > 0 || this.recovering || this.heartbeatFailureSince > 0;
       this.endFailureStreak();
       if (wasFailing) this.lastRecoveryAt = Date.now();
@@ -1598,7 +1996,7 @@ class RuntimeOrchestrator {
             attempt: this.recoveryAttempts
           });
           this.deferredRecoveryCount = 0;
-          await this.restart({ automatic: true });
+          await this.recoverMcpOnly({ replaceLiveOwned: true, reason: 'hung_mcp_soft_recovery' });
         } else {
           this.log.warn('Coding Tools MCP không trả lời health check nhưng process vẫn còn sống; hoãn restart để không cắt tool call đang chạy', {
             failures: this.heartbeatFailures,
@@ -1699,4 +2097,4 @@ class RuntimeOrchestrator {
   }
 }
 
-module.exports = { RuntimeOrchestrator, probeMcp, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, parseGitStatusPorcelainV2, parseLoopbackListenerPid, loopbackListenerPid, setMcpAuthorizedRoots };
+module.exports = { RuntimeOrchestrator, probeMcp, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, activationPreflightProof, parseGitStatusPorcelainV2, parseLoopbackListenerPid, loopbackListenerPid, setMcpAuthorizedRoots };

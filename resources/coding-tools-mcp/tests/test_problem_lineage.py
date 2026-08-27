@@ -353,7 +353,11 @@ class ProblemLineageTests(unittest.TestCase):
             root = Path(temp)
             (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
             runtime = Runtime(root, permission_mode="dangerous")
-            runtime._orchestration_workspace_identity = lambda _path: {"branch": "test", "base_head": "head", "worktree_fp": "worktree"}
+            runtime._orchestration_workspace_identity = lambda _path: {
+                "branch": "test",
+                "base_head": "a" * 40,
+                "worktree_fp": "b" * 64,
+            }
             try:
                 runtime.orchestration_ledger.migrate_problem_lineage_schema()
                 attach_chatweb(runtime, "runtime-c3")

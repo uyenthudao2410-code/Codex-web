@@ -191,6 +191,89 @@ class LifecycleCensusTests(unittest.TestCase):
             self.assertFalse(result["read_contract"]["canonical_writer_instantiated"])
             self.assertFalse(result["mutated_canonical_ledger"])
 
+    def test_projection_classification_tracks_canonical_active_and_terminal_states(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            cases = (
+                ("active", "PROVING", "PROJECTION_CONSISTENT"),
+                ("accepted", "CHECKPOINTED", "CHECKPOINTED"),
+                ("blocked", "BLOCKED", "BLOCKED"),
+                ("aborted", "ABORTED", "ABORTED"),
+            )
+            accepted_projection: tuple[str, str] | None = None
+            for run_status, canonical_state, expected_classification in cases:
+                run_id = self._run(ledger, started_at=_iso(OBSERVED_AT - 60))
+                wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                ledger.append_event(run_id, event_type="state", state_after=canonical_state)
+                if run_status != "active":
+                    with ledger._lock, ledger._connect() as connection:
+                        connection.execute("UPDATE runs SET status=? WHERE run_id=?", (run_status, run_id))
+                        connection.execute("UPDATE waves SET status=? WHERE run_id=? AND wave_id=?", (run_status, run_id, wave_id))
+                with open_lifecycle_census_snapshot(root) as snapshot:
+                    result = lifecycle_census(
+                        snapshot,
+                        workspace=root,
+                        observed_at=OBSERVED_AT,
+                        projection={
+                            "available": True,
+                            "orchestration": {
+                                "run_id": run_id,
+                                "wave_id": wave_id,
+                                "orchestration_state": canonical_state,
+                            },
+                        },
+                        process_probe=self._probe,
+                    )
+                self.assertEqual(result["projection"]["classification"], expected_classification)
+                if run_status == "accepted":
+                    accepted_projection = (run_id, wave_id)
+            self.assertIsNotNone(accepted_projection)
+            accepted_run, accepted_wave = accepted_projection or ("", "")
+            with open_lifecycle_census_snapshot(root) as snapshot:
+                drift = lifecycle_census(
+                    snapshot,
+                    workspace=root,
+                    observed_at=OBSERVED_AT,
+                    projection={
+                        "available": True,
+                        "orchestration": {
+                            "run_id": accepted_run,
+                            "wave_id": accepted_wave,
+                            "orchestration_state": "ACCEPTING",
+                        },
+                    },
+                    process_probe=self._probe,
+                )
+            self.assertEqual(drift["projection"]["classification"], "PROJECTION_DRIFT")
+
+    def test_unavailable_or_empty_projection_does_not_hide_an_active_ledger_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = self._run(ledger, started_at=_iso(OBSERVED_AT - 60))
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            ledger.append_event(run_id, event_type="state", state_after="PROVING")
+
+            for projection, expected, reason in (
+                ({"available": False, "status": "unreadable", "orchestration": {}}, "PROJECTION_UNAVAILABLE", None),
+                ({"available": True, "orchestration": {}}, "PROJECTION_DRIFT", "active_ledger_run_missing_projection"),
+            ):
+                with self.subTest(expected=expected), open_lifecycle_census_snapshot(root) as snapshot:
+                    result = lifecycle_census(
+                        snapshot,
+                        workspace=root,
+                        observed_at=OBSERVED_AT,
+                        projection=projection,
+                        process_probe=self._probe,
+                    )
+                self.assertEqual(result["projection"]["classification"], expected)
+                if reason:
+                    self.assertEqual(result["projection"]["reason"], reason)
+                self.assertNotEqual(result["projection"]["classification"], "NO_ACTIVE_PROJECTION")
+                self.assertEqual(result["projection"].get("run_id"), "")
+                self.assertTrue(wave_id)
+
 
 if __name__ == "__main__":
     unittest.main()

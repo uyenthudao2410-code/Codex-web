@@ -58,9 +58,9 @@ function activationAuthorityError(code, message, details = {}) {
   return Object.assign(new Error(message), { code, details });
 }
 
-function activationSourceCheckpoint(hostStatus, component) {
+function activationSourceCheckpoint(hostStatus, component = '') {
   const requestedComponent = String(component || '');
-  if (!COMPONENTS.includes(requestedComponent)) {
+  if (requestedComponent && !COMPONENTS.includes(requestedComponent)) {
     throw activationAuthorityError('INVALID_COMPONENT', 'Activation component is not allowlisted.');
   }
   const closure = hostStatus?.auto_activation?.closure_input;
@@ -86,12 +86,12 @@ function activationSourceCheckpoint(hostStatus, component) {
     || closure.eligibility_code !== 'ACTIVATABLE'
     || closure.affected_components_valid !== true
     || !affectedComponentsValid
-    || !affectedComponents.includes(requestedComponent)) {
+    || (requestedComponent && !affectedComponents.includes(requestedComponent))) {
     throw activationAuthorityError(
       'ACTIVATION_SOURCE_CHECKPOINT_NOT_ELIGIBLE',
       'The accepted-code closure checkpoint is not eligible for the requested component.',
       {
-        component: requestedComponent,
+        component: requestedComponent || null,
         eligibility_code: typeof closure.eligibility_code === 'string' ? closure.eligibility_code : null,
         affected_components: affectedComponents
       }

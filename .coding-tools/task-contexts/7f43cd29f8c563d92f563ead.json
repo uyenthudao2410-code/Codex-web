@@ -1,0 +1,547 @@
+{
+  "version": 2,
+  "task_id": "19fed6dc7ce145acb7d747c72f4f42ce",
+  "orchestration": {
+    "run_id": "f24f1594d3104bf7a55ba079ce068515",
+    "wave_id": "a5720ade8752493785ac1aa23cf5725e",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "898d57454f9a5113d8aa3f56d1650e4b3e0d6924",
+    "worktree_fp": "f9dfe5373593e3cd54f7d87e1a92160854005f3960c8862a02ada33cdf10ff9a",
+    "contract_fp": "9a156c358145ad9eba222a267a0facd8aac435a63486a1e72b8489abe8fd1ad6"
+  },
+  "objective": "New isolated EOCL RUN/WAVE. Only mutate electron/services/activationEpoch.js and tests/activation-epoch.test.js. Implement fail-closed expiry under lock; generic update cannot enter READY_COMMITTED; add commitReady(epochId, verification) from exact VERIFYING with durable STOPPING, canonical proof digest and idempotent replay/conflict; change ready(epochId, digest) to lowercase-64hex digest-only exact-match transition READY_COMMITTED->READY/OPEN with replay rules; normalize stored digest against canonical proof while allowing legacy READY without digest; add focused tests for expiry durability/non-resurrection, digest validation/bypass, READY_COMMITTED update rejection, commit idempotency/conflict, and VERIFYING-without-STOPPING rejection. Preserve unrelated dirty work. Run only the four supplied proof commands. Stop at ACCEPTING; do not accept/checkpoint/restart/push/release.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-26T21:06:49.748Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-26T21:06:49.748Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-26T21:06:49.748Z"
+    }
+  ],
+  "current_step": "Awaiting acceptance",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "5JIRr9ALjHTxYaRGJpo-rvPS",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-26T21:06:48.790Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ACCEPTING",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 66,
+        "head_hash": "7796621a170f1d50f2308a0dda24b4923f1942aa862f0da345eeecb12525ef4a"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f24f1594d3104bf7a55ba079ce068515\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f24f1594d3104bf7a55ba079ce068515\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f24f1594d3104bf7a55ba079ce068515\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "f24f1594d3104bf7a55ba079ce068515",
+      "wave_id": "a5720ade8752493785ac1aa23cf5725e",
+      "base_head": "898d57454f9a5113d8aa3f56d1650e4b3e0d6924",
+      "worktree_fp": "f9dfe5373593e3cd54f7d87e1a92160854005f3960c8862a02ada33cdf10ff9a",
+      "contract_fp": "9a156c358145ad9eba222a267a0facd8aac435a63486a1e72b8489abe8fd1ad6",
+      "objective_provenance": {
+        "effective_objective": "New isolated EOCL RUN/WAVE. Only mutate electron/services/activationEpoch.js and tests/activation-epoch.test.js. Implement fail-closed expiry under lock; generic update cannot enter READY_COMMITTED; add commitReady(epochId, verification) from exact VERIFYING with durable STOPPING, canonical proof digest and idempotent replay/conflict; change ready(epochId, digest) to lowercase-64hex digest-only exact-match transition READY_COMMITTED->READY/OPEN with replay rules; normalize stored digest against canonical proof while allowing legacy READY without digest; add focused tests for expiry durability/non-resurrection, digest validation/bypass, READY_COMMITTED update rejection, commit idempotency/conflict, and VERIFYING-without-STOPPING rejection. Preserve unrelated dirty work. Run only the four supplied proof commands. Stop at ACCEPTING; do not accept/checkpoint/restart/push/release.",
+        "objective_revision": 1,
+        "objective_sha256": "6e10ab3de109d0bea40e9a4ddda3f2a90d4eb43d3e3ab35ab16f7147e2a7a154",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 4,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "0ef106f901844e4fa6a2f64dd64fb05d",
+          "stage_id": "check:619ebb36c1e3cab1",
+          "status": "passed",
+          "duration_ms": 940,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "1e93e33c9b6e4f78a1471f847b411b7f",
+          "stage_id": "check:e64805ecc6491461",
+          "status": "passed",
+          "duration_ms": 3049,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "1c05d2f044cd48ffa0bf91905245f145",
+          "stage_id": "check:9840051871779d79",
+          "status": "passed",
+          "duration_ms": 1159,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "7e95f1461999416085a0c7ab8de56d5f",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1752,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+  },
+  "completion_report_id": "3ba4383eb27beaf91283f1f1e7db7b55142d8d5eb540072fe7af98b3160c7c71",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "electron/services/activationEpoch.js",
+      "operation": "update",
+      "updated_at": "2026-08-26T21:06:50.373Z"
+    },
+    {
+      "path": "tests/activation-epoch.test.js",
+      "operation": "update",
+      "updated_at": "2026-08-26T21:06:50.373Z"
+    }
+  ],
+  "failure": "Durable mutation evidence exceeds the safe write-lease paths available for final acceptance.",
+  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "created_at": "2026-08-26T21:02:57.392Z",
+  "updated_at": "2026-08-26T21:15:47.723Z",
+  "events": [
+    {
+      "time": "2026-08-26T21:02:57.393Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "New isolated EOCL RUN/WAVE. Only mutate electron/services/activationEpoch.js and tests/activation-epoch.test.js. Implement fail-closed expiry under lock; generic update cannot enter READY_COMMITTED; add commitReady(epochId, verification) from exact VERIFYING with durable STOPPING, canonical proof digest and idempotent replay/conflict; change ready(epochId, digest) to lowercase-64hex digest-only exact-match transition READY_COMMITTED->READY/OPEN with replay rules; normalize stored digest against canonical proof while allowing legacy READY without digest; add focused tests for expiry durability/non-resurrection, digest validation/bypass, READY_COMMITTED update rejection, commit idempotency/conflict, and VERIFYING-without-STOPPING rejection. Preserve unrelated dirty work. Run only the four supplied proof commands. Stop at ACCEPTING; do not accept/checkpoint/restart/push/release."
+      }
+    },
+    {
+      "time": "2026-08-26T21:02:58.640Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:00.772Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:01.843Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:01.854Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:02.918Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:03.520Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:04.303Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --check electron/services/activationEpoch.js",
+        "session_id": "Mc43yYvG1R_3uxDaYrI86ANr"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:04.680Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --check electron/services/activationEpoch.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:05.580Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/activation-epoch.test.js",
+        "session_id": "XREuXI6vQmyqh0UoQIq5mQ0p"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:06.830Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/activation-epoch.test.js",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:07.094Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:07.703Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:07.703Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:07.713Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:07.837Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "edb18563beeda421a7caf30720f3f8a1b0c2939fc0cd8efe45f840dc80853d72"
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:07.975Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:19.560Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:03:19.811Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-08-26T21:04:55.960Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "edb18563beeda421a7caf30720f3f8a1b0c2939fc0cd8efe45f840dc80853d72"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:34.982Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:36.615Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:37.302Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:38.402Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:38.414Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:39.849Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:40.434Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:41.283Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --check electron/services/activationEpoch.js",
+        "session_id": "H8BOMge6yTn8c0YuOIjwCCfM"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:41.622Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --check electron/services/activationEpoch.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:42.635Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/activation-epoch.test.js",
+        "session_id": "RQm3ZHRCrJw8P_C_ZYKMNb12"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:45.122Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/activation-epoch.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:46.172Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/check_module_size.py",
+        "session_id": "n5FDsdUsUzxauukGmqMNtX_G"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:46.681Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/check_module_size.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:47.507Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check",
+        "session_id": "5JIRr9ALjHTxYaRGJpo-rvPS"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:48.790Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:49.744Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:49.748Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:50.048Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:50.053Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:50.225Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "3ba4383eb27beaf91283f1f1e7db7b55142d8d5eb540072fe7af98b3160c7c71"
+      }
+    },
+    {
+      "time": "2026-08-26T21:06:50.373Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-08-26T21:15:46.270Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-26T21:15:47.723Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+      }
+    }
+  ]
+}

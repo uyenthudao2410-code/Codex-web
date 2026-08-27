@@ -224,14 +224,18 @@ def open_lifecycle_census_snapshot(workspace: Path) -> LifecycleCensusSnapshot:
 def read_task_projection(workspace: Path) -> dict[str, Any]:
     """Read only the compact orchestration identity from task-state.json."""
     path = Path(workspace).resolve(strict=False) / ".coding-tools" / "task-state.json"
+    if not path.is_file():
+        return {"available": False, "status": "missing", "orchestration": {}}
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
-        return {"available": False, "orchestration": {}}
-    orchestration = payload.get("orchestration") if isinstance(payload, dict) else {}
-    orchestration = orchestration if isinstance(orchestration, dict) else {}
+        return {"available": False, "status": "unreadable", "orchestration": {}}
+    if not isinstance(payload, dict) or not isinstance(payload.get("orchestration"), dict):
+        return {"available": False, "status": "invalid", "orchestration": {}}
+    orchestration = payload["orchestration"]
     return {
         "available": True,
+        "status": "readable",
         "orchestration": {
             "run_id": str(orchestration.get("run_id") or "").strip(),
             "wave_id": str(orchestration.get("wave_id") or "").strip(),
@@ -285,22 +289,62 @@ def _projection_status(
     run_id = str(nested.get("run_id") or "").strip()
     wave_id = str(nested.get("wave_id") or "").strip()
     state = str(nested.get("orchestration_state") or "").strip()
+    if value.get("available") is not True:
+        return {
+            "available": False,
+            "classification": "PROJECTION_UNAVAILABLE",
+            "run_id": run_id,
+            "wave_id": wave_id,
+            "orchestration_state": state,
+            "source_status": str(value.get("status") or "unavailable"),
+        }
     if not run_id and not wave_id and not state:
+        active_runs = [
+            item for item in facts.list_runs(limit=5000)
+            if str(item.get("status") or "").strip().lower() == _ACTIVE_RUN_STATUS
+        ]
+        if active_runs:
+            return {
+                "available": True,
+                "classification": "PROJECTION_DRIFT",
+                "run_id": "",
+                "wave_id": "",
+                "orchestration_state": "",
+                "reason": "active_ledger_run_missing_projection",
+                "active_run_count": len(active_runs),
+            }
         return {"available": bool(value.get("available", True)), "classification": "NO_ACTIVE_PROJECTION", "run_id": "", "wave_id": ""}
     run = facts.get_run(run_id) if run_id else None
-    wave_matches = bool(
-        run and wave_id and any(str(item.get("wave_id") or "") == wave_id for item in facts.list_waves(run_id))
-    )
-    consistent = bool(run and str(run.get("status") or "") == _ACTIVE_RUN_STATUS and (not wave_id or wave_matches))
+    waves = facts.list_waves(run_id) if run else []
+    current_wave_id = str(waves[-1].get("wave_id") or "").strip() if waves else ""
+    wave_matches = bool(run and wave_id and current_wave_id and wave_id == current_wave_id)
+    run_status = str(run.get("status") or "").strip().lower() if run else ""
+    canonical_state = _latest_state_after(facts, run_id) if run else ""
+    projected_state = state.upper()
+    expected_state = ""
+    consistent_classification = "PROJECTION_CONSISTENT"
+    if run_status == "accepted" or canonical_state == "CHECKPOINTED":
+        expected_state, consistent_classification = "CHECKPOINTED", "CHECKPOINTED"
+    elif run_status == "blocked" or canonical_state == "BLOCKED":
+        expected_state, consistent_classification = "BLOCKED", "BLOCKED"
+    elif run_status in {"aborted", "stale", "reconciled", "reconciled_stale"} or canonical_state in {"ABORTED", "STALE", "RECONCILED"}:
+        expected_state, consistent_classification = "ABORTED", "ABORTED"
+    elif run_status == _ACTIVE_RUN_STATUS and canonical_state and canonical_state not in {"CHECKPOINTED", "BLOCKED", "ABORTED", "STALE", "RECONCILED"}:
+        expected_state = canonical_state
+    consistent = bool(run and wave_matches and expected_state and projected_state == expected_state)
     return {
         "available": bool(value.get("available", True)),
-        "classification": "PROJECTION_CONSISTENT" if consistent else "PROJECTION_DRIFT",
+        "classification": consistent_classification if consistent else "PROJECTION_DRIFT",
         "run_id": run_id,
         "wave_id": wave_id,
         "orchestration_state": state,
         "run_found": run is not None,
-        "run_active": bool(run and str(run.get("status") or "") == _ACTIVE_RUN_STATUS),
+        "run_active": run_status == _ACTIVE_RUN_STATUS,
         "wave_matches_run": wave_matches if wave_id else None,
+        "current_wave_id": current_wave_id,
+        "canonical_run_status": run_status,
+        "canonical_orchestration_state": canonical_state,
+        "expected_projection_state": expected_state,
     }
 
 

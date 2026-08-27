@@ -431,7 +431,13 @@ test('Electron main makes duplicate start actionable and accepts only exact UI l
   assert.match(source, /async function codeActivationRequest\(component, allowAcceptancePending = false\)/);
   assert.match(source, /orchestrator\.snapshot\(\{ force: true, reason: 'manual-code-activation-authority' \}\)/);
   assert.match(source, /activationSourceCheckpoint\(snapshot\?\.recoveryHost, component\)/);
+  assert.match(source, /full_clean_required: true/);
+  assert.match(source, /activation_mode: 'full_clean_activation'/);
   assert.equal((source.match(/await codeActivationRequest\(component, allowAcceptancePending\)/g) || []).length, 2);
+  assert.match(source, /async function fullCleanRestartOptions\(\)/);
+  assert.match(source, /orchestrator\.snapshot\(\{ force: true, reason: 'manual-full-clean-restart-authority' \}\)/);
+  assert.match(source, /sourceCheckpoint: activationSourceCheckpoint\(snapshot\?\.recoveryHost\)/);
+  assert.match(source, /orchestrator\.restart\(await fullCleanRestartOptions\(\)\)/);
 });
 
 test('Electron task list reads and controls canonical orchestration state instead of task-state files', () => {

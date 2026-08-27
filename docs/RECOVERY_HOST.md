@@ -63,6 +63,20 @@ chạy headless và chưa từng nhận registration trong host instance hiện 
 launch có registration grace/cooldown, giới hạn số lần trong cửa sổ thời gian và
 circuit break để tránh crash loop.
 
+Trong `full_clean_activation`, Recovery Host cũng là owner của bước connector ACK
+sau handoff. ACK chỉ được ghi khi tất cả component/projection gate khác đã pass và
+một health observation duy nhất chứng minh discovery thuộc đúng
+`activation_epoch_id`, `process_instance_id`, `server_instance_id` và tool-contract
+SHA hiện tại. Vì vậy deferred restart từ `task_control` không phụ thuộc vào một
+CLI worker còn sống để hoàn tất ACK, nhưng vẫn không thể dùng persisted SHA,
+`tools/call` hoặc receipt của process cũ để mở admission.
+
+Watchdog vẫn dùng `soft_recovery` theo component: Tunnel failure chỉ thay Tunnel;
+MCP exit hoặc semantic hang sau ngưỡng defer chỉ thay exact owned MCP process và
+giữ nguyên Tunnel PID. MCP replacement mang expected code revision qua spawn và
+được dừng fail-closed nếu disk revision đổi trước postflight, thay vì âm thầm tải
+source mới dưới activation epoch cũ.
+
 ## Phase 3B independent Recovery MCP/Tunnel
 
 Recovery Host supervise một break-glass data plane riêng: Python
@@ -225,6 +239,26 @@ và `activate_update`; request sẽ tạo full-clean epoch và trả operation s
 Không có watcher tự restart; soft restart chỉ thuộc watchdog khi xử lý lỗi cục
 bộ và không được nạp revision mới dưới epoch cũ.
 
+`task_control(action="restart_runtime")` dùng cùng transaction này qua deferred
+post-tool-call handoff. MCP kiểm tra idle, dựng activation fence và ghi một ticket
+ngắn hạn bound exact workspace/process/server; `ticket_id` đồng thời là
+`operation_id`. Signed census không được trừ active tool call đang khởi tạo restart:
+trong khi count còn khác `0`, nó phải trả `RUNTIME_BUSY`, giữ nguyên journal/fence
+và retry cùng operation. Chỉ sau khi tool response đã rời MCP boundary, Recovery Host xác minh lại exact
+MCP instance, lấy source checkpoint duy nhất từ
+`hostStatus.auto_activation.closure_input`, rồi gọi `FullCleanActivation.restart`.
+Khi host claim ticket, nó rename sang journal `.processing` và chỉ xóa journal sau
+khi durable epoch đã bind đúng operation hoặc fence được xác nhận hủy. Crash giữa
+claim và epoch creation vì thế được resume ở lần supervise sau; lỗi
+`RUNTIME_BUSY` giữ journal/fence để retry cùng operation, còn trạng thái đọc không
+chắc chắn luôn giữ fail-closed.
+Ticket không được mang hoặc suy diễn source authority. Authenticated GET preflight
+phải forward đúng signed operation ID để nhận lại chính fence đã dựng; operation
+khác vẫn bị `RUNTIME_BUSY`. Thiếu/stale/non-activatable checkpoint, identity lệch
+hoặc ticket hết hạn đều fail closed trước process mutation. Public
+`runtime.restart` cũng resolve checkpoint phía Recovery Host; nếu caller có gửi
+checkpoint thì nó phải exact-match closure hiện hành.
+
 ### Activation Closure Contract
 
 Chuỗi authority bắt buộc là `ACCEPTED/CHECKPOINTED -> ACTIVATABLE -> component
@@ -244,9 +278,11 @@ checkpoint không có component cần restart.
 
 Closure cuối còn yêu cầu component running/disk revision khớp, Runtime + Tunnel
 fully ready và connector contract current. Exact `tools/list` SHA vừa là audit
-identity vừa là freshness identity bắt buộc. `UNCHANGED_ACKNOWLEDGED` chỉ hợp lệ
-khi exact current SHA bằng acknowledged SHA; không cần tạo rediscovery giả nếu
-contract không đổi. Khi exact SHA thay đổi, connector phải giữ
+identity vừa là freshness identity bắt buộc. Sau bất kỳ process replacement hoặc
+full-clean epoch nào, kể cả contract SHA không đổi, phải có discovery receipt mới
+bound exact current process/server/epoch; persisted SHA không phải process-freshness
+proof. Nếu exact current SHA đã bằng acknowledged SHA thì không cần ghi một ACK mới,
+nhưng final readiness vẫn chờ discovery mới. Khi exact SHA thay đổi, connector phải giữ
 `CHANGED_NEEDS_DISCOVERY` cho tới khi target process hiện tại thật sự nhận
 `tools/list` hoặc `server/discover`. Receipt đó phải bind current contract SHA,
 process instance và server instance; sau receipt trạng thái mới được chuyển sang

@@ -357,18 +357,29 @@ ChatGPT / MCP call
       ↓
 MCP kiểm tra explicit confirmation + runtime idle
       ↓
-ghi delayed, short-lived, workspace-bound one-shot ticket
+ghi delayed, short-lived, workspace/process/server-bound one-shot ticket
+và fence cùng operation_id
       ↓
 trả response với expected_disconnect=true
       ↓
-Electron supervisor consume ticket
+Recovery Host supervisor consume ticket, xác minh exact MCP instance
       ↓
-RuntimeOrchestrator.restart()
+resolve exact accepted source checkpoint từ closure hiện hành
       ↓
-reconnect → workspace_context(full) → xác minh instance id mới
+FullCleanActivation.restart(operation_id=ticket_id)
+      ↓
+đóng admission → handoff Recovery Host → thay toàn bộ process
+      ↓
+final census cùng activation_epoch_id → connector ACK → READY
+      ↓
+reconnect → workspace_context(full) → xác minh epoch/process/server id mới
 ```
 
-Ticket hiện được collapse khi có concurrent request, hết hạn nhanh và không được replay từ JSON backup. Electron là owner của service lifecycle; MCP không tự kill process phục vụ chính request của nó.
+Ticket hiện được collapse khi có concurrent request, hết hạn nhanh và không được replay từ JSON backup. Khi Recovery Host bắt đầu xử lý, ticket được claim sang journal cùng thư mục với hậu tố `.processing`; journal này được giữ cho tới khi cùng `operation_id` đã bind vào durable activation epoch hoặc fence được xác nhận hủy. Vì vậy host có thể resume sau crash giữa lúc claim và lúc tạo epoch; `RUNTIME_BUSY` do tool response chưa rời admission chỉ làm deferred retry, không làm mất ticket. Lỗi đọc/xác nhận không chắc chắn không bị diễn giải thành ticket vắng mặt và không mở lại admission. Ticket không mang source authority: Recovery Host chỉ lấy checkpoint từ `auto_activation.closure_input` đã `ACCEPTED/CHECKPOINTED`, và từ chối trước mutation nếu closure thiếu, stale hoặc không activatable. Signed post-tool-call preflight giữ đúng `operation_id` nhưng không trừ active tool call đang khởi tạo restart: transaction chỉ được admit khi count thật sự về `0`. Electron/Recovery Host là owner của service lifecycle; MCP không tự kill process phục vụ chính request của nó. Watchdog/health repair vẫn dùng `soft_recovery` cục bộ và bị revision-continuity guard chặn nếu disk source đã đổi.
+
+Sau replacement, Recovery Host tự hoàn tất connector ACK cho deferred `task_control` restart chỉ khi các component/projection gate khác đã pass và exact health receipt chứng minh `tools/list`/`server/discover` thuộc cùng epoch, MCP process/server ID và contract SHA. Persisted SHA, compatibility-only contact và một `tools/call` thông thường không đủ điều kiện ACK; thiếu receipt này thì epoch tiếp tục `UPDATE_INCOMPLETE` và admission vẫn đóng.
+
+Auto-recovery giữ semantics component-scoped: Tunnel chết chỉ thay Tunnel; MCP chết hoặc semantic hang quá ngưỡng defer chỉ thay exact owned MCP PID và giữ Tunnel. Soft MCP replacement khóa expected revision cả trước spawn lẫn postflight; disk drift làm replacement bị dừng và yêu cầu full-clean activation thay vì chạy mixed revision.
 
 ### Command session
 
@@ -539,7 +550,7 @@ Desktop proxy gửi heartbeat định kỳ khi stdio còn attach, nhưng không 
 
 ### Khởi động lại dịch vụ
 
-Trong desktop app, dùng nút **“Khởi động lại toàn bộ dịch vụ”** để Electron restart MCP và Tunnel theo đúng ownership/order.
+Trong desktop app, nút **“Khởi động lại toàn bộ dịch vụ”** luôn yêu cầu exact accepted source checkpoint và chạy `full_clean_activation`: đóng admission, thay Recovery Host, Coding MCP/Tunnel, Recovery MCP/Tunnel đã cấu hình và Electron UI bằng process mới cùng một `activation_epoch_id`, rồi chỉ báo READY sau final census + connector discovery/ACK. Nút này không còn là stop/start riêng MCP và Tunnel.
 
 Nếu MCP tool contract thay đổi, sau restart app có thể hiện cảnh báo connector stale. Khi đó refresh/recreate MCP app phía ChatGPT theo khả năng workspace, mở chat mới nếu cần, xác minh schema mới rồi mới xác nhận contract trong desktop app.
 

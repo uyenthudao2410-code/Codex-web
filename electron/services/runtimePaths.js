@@ -9,6 +9,15 @@ function requiredRoot(value, name) {
   return resolved;
 }
 
+function optionalArtifactId(value, name) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/.test(text)) {
+    throw Object.assign(new Error(`${name} is invalid.`), { code: 'RUNTIME_ARTIFACT_ID_INVALID' });
+  }
+  return text;
+}
+
 class RuntimePaths {
   constructor({ dataRoot, resourcesRoot, appRoot, runtimeMode = 'development', executablePath = process.execPath }) {
     this.dataRootPath = requiredRoot(dataRoot, 'dataRoot');
@@ -38,6 +47,23 @@ class RuntimePaths {
   supervisorRequestFile() { return path.join(this.dataRootPath, 'runtime-supervisor-request.json'); }
   recoveryHostDescriptorFile() { return path.join(this.dataRootPath, 'recovery-host.json'); }
   recoveryHostLockFile() { return path.join(this.dataRootPath, 'recovery-host.lock'); }
+  // A stale Recovery Host cannot safely execute a full-clean request.  The
+  // bootstrap envelope is a small, integrity-bound control-plane handoff used
+  // to start the current checkout before the activation coordinator runs.  It
+  // intentionally lives beside (and never replaces) the durable activation
+  // epoch, settings, identity, or orchestration ledger.
+  recoveryHostBootstrapFile(operationId = '') {
+    const suffix = optionalArtifactId(operationId, 'Recovery Host bootstrap operation ID');
+    return path.join(this.dataRootPath, suffix
+      ? `recovery-host-bootstrap.${suffix}.json`
+      : 'recovery-host-bootstrap.json');
+  }
+  recoveryHostBootstrapResultFile(operationId = '') {
+    const suffix = optionalArtifactId(operationId, 'Recovery Host bootstrap result operation ID');
+    return path.join(this.dataRootPath, suffix
+      ? `recovery-host-bootstrap.${suffix}.result.json`
+      : 'recovery-host-bootstrap.result.json');
+  }
   recoveryActionsFile() { return path.join(this.dataRootPath, 'recovery-actions.json'); }
   // Activation epochs are durable control-plane state.  Keep this separate
   // from runtime-state.json and, critically, from the workspace's canonical

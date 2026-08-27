@@ -37,7 +37,7 @@
       "updated_at": "2026-08-26T10:21:11.631Z"
     }
   ],
-  "current_step": "Acceptance decision - operator report required",
+  "current_step": "Awaiting acceptance",
   "current_command": {
     "command": "node --test tests/dashboard-analytics.test.js tests/control-center-manager.test.js tests/control-panel.test.js tests/dev-ui-lifecycle.test.js",
     "kind": "command",
@@ -11972,9 +11972,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject.",
+  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
   "created_at": "2026-08-26T10:19:36.363Z",
-  "updated_at": "2026-08-26T10:21:12.284Z",
+  "updated_at": "2026-08-26T16:19:59.571Z",
   "events": [
     {
       "time": "2026-08-26T10:19:36.363Z",
@@ -12218,6 +12218,19 @@
       "event": "files_modified",
       "details": {
         "count": 2
+      }
+    },
+    {
+      "time": "2026-08-26T16:19:59.571Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     }
   ]

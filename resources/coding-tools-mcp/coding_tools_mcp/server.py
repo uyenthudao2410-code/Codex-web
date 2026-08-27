@@ -105,6 +105,7 @@ from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, 
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class  # noqa: F401  # composition-root namespace
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
 from .orchestration_report import OrchestrationReport  # noqa: F401  # composition-root namespace
+from .projection_rebuild import reconcile_task_orchestration_projection  # noqa: F401  # composition-root namespace
 from .operator_report import build_command_completion_report, build_orchestration_runtime_result  # noqa: F401  # composition-root namespace
 from .proof_ledger import ProofLedger  # noqa: F401  # composition-root namespace
 from .telemetry import SessionTelemetry  # noqa: F401  # composition-root namespace
@@ -358,6 +359,7 @@ class Runtime(
         self.supervisor_request_lock = threading.Lock()
         self.activation_lock = threading.RLock()
         self._initialize_activation_admission()
+        self._initialize_projection_rebuild()
         self.activation_fence: dict[str, Any] | None = None
         self.active_tool_calls = 0
         self.session_principals: dict[str, str] = {}
@@ -447,6 +449,8 @@ class Runtime(
         self._orchestration_control_primary = self._new_orchestration_control(self.workspace.root)
         self._orchestration_controls[str(self.workspace.root)] = self._orchestration_control_primary
         self.reconciled_task_orchestration = self._reconcile_task_orchestration_projection()
+        if self.activation_epoch_id:
+            self._projection_rebuild_census(reconciliation_already_performed=True)
         self._proof_ledger_primary = ProofLedger(self.workspace.root, self.orchestration_ledger)
         self._proof_ledgers[str(self.workspace.root)] = self._proof_ledger_primary
         self._orchestration_report_primary = OrchestrationReport(self.workspace.root, self.orchestration_ledger)
@@ -577,98 +581,15 @@ class Runtime(
         )
 
     def _reconcile_task_orchestration_projection(self) -> bool:
-        state = self.task_state.get()
-        if not str(state.get("task_id") or "").strip() and not str(state.get("objective") or "").strip():
-            return False
-        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
-        run_id = str(projection.get("run_id") or "").strip()
-        task_id = str(state.get("task_id") or "").strip()
-        if not run_id and task_id:
-            active = self.orchestration_ledger.current_active_run(task_id=task_id)
-            run_id = str(active.get("run_id") or "") if active else ""
-        # Workspace-global recovery is legacy-only: a task with an identity
-        # must never inherit a run owned by a different task.
-        if not run_id and not task_id and not self.task_state.is_scoped():
-            active = self.orchestration_ledger.current_active_run()
-            run_id = str(active.get("run_id") or "") if active else ""
-        if not run_id:
-            return False
-        run = self.orchestration_ledger.get_run(run_id)
-        if not isinstance(run, dict):
-            return False
-        run_status = str(run.get("status") or "").lower()
-        target_state = {
-            "accepted": "CHECKPOINTED",
-            "blocked": "BLOCKED",
-            "aborted": "ABORTED",
-            "stale": "ABORTED",
-        }.get(run_status)
-        ctx = self.orchestration_control.snapshot(run_id)
-        if ctx is None:
-            return False
-        waves = self.orchestration_ledger.list_waves(run_id)
-        repaired = dict(projection)
-        repaired.update(ctx.projection())
-        repaired["run_id"] = run_id
-        if waves:
-            repaired["wave_id"] = str(waves[-1].get("wave_id") or repaired.get("wave_id") or "")
-        if target_state:
-            repaired["orchestration_state"] = target_state
-            repaired["write_lease_id"] = ""
-            repaired["write_owner"] = ""
-
-        canonical_state = str(repaired.get("orchestration_state") or "").upper()
-        desired_task: dict[str, Any] = {"orchestration": repaired}
-        if canonical_state == "ACCEPTING":
-            desired_task.update({
-                "status": "waiting",
-                "current_step": "Awaiting acceptance",
-                "next_step": (
-                    "Present orchestration.completion_report to the operator, then inspect the durable proof and "
-                    "call task_control action=accept or reject; "
-                    "do not retry completed tool calls."
-                ),
-                "failure": None,
-            })
-        elif canonical_state == "CHECKPOINTED":
-            desired_task.update({
-                "status": "completed",
-                "current_step": "Completed - operator report required",
-                "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
-                "failure": None,
-            })
-        elif canonical_state == "REPLAN":
-            desired_task.update({
-                "status": "waiting",
-                "current_step": "Replan required - operator report required",
-                "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
-                "failure": state.get("failure"),
-            })
-        elif canonical_state == "BLOCKED":
-            desired_task.update({
-                "status": "failed",
-                "current_step": "Blocked - operator report required",
-                "next_step": "Present orchestration.completion_report to the operator, then resolve the durable blocker before another execution wave.",
-                "failure": state.get("failure"),
-            })
-        elif canonical_state == "ABORTED":
-            desired_task.update({
-                "status": "stopped",
-                "current_step": "Aborted - operator report required",
-                "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
-                "failure": state.get("failure"),
-            })
-        current_projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
-        projection_changed = any(current_projection.get(key) != repaired.get(key) for key in repaired)
-        task_changed = any(
-            state.get(key) != desired_task[key]
-            for key in ("status", "current_step", "next_step", "failure")
-            if key in desired_task
-        )
-        if not projection_changed and not task_changed:
-            return False
-        self.task_state.update(desired_task, event="orchestration_projection_reconciled")
-        return True
+        repaired = reconcile_task_orchestration_projection(self)
+        if repaired:
+            self._projection_rebuild_receipt = None
+            self._projection_rebuild_failure = {
+                "valid": False,
+                "code": "UPDATE_INCOMPLETE",
+                "reasons": ["PROJECTION_CHANGED_AFTER_RECEIPT", "RECEIPT_MISSING"],
+            }
+        return repaired
 
     def close(self) -> None:
         self._opencode_provider.close()
@@ -813,6 +734,8 @@ class Runtime(
             self._orchestration_control_primary = self._new_orchestration_control(self.workspace.root)
             self._orchestration_controls[str(self.workspace.root)] = self._orchestration_control_primary
             self.reconciled_task_orchestration = self._reconcile_task_orchestration_projection()
+            if self.activation_epoch_id:
+                self._projection_rebuild_census(reconciliation_already_performed=True)
             self._proof_ledger_primary = ProofLedger(self.workspace.root, self.orchestration_ledger)
             self._proof_ledgers[str(self.workspace.root)] = self._proof_ledger_primary
             self._orchestration_report_primary = OrchestrationReport(self.workspace.root, self.orchestration_ledger)

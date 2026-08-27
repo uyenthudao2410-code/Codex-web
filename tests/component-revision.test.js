@@ -110,7 +110,17 @@ test('Recovery Host revision owns the semantic watchdog implementation it loads'
   );
 });
 
+test('Recovery Host revision manifest owns stale-host bootstrap source', () => {
+  assert.equal(
+    COMPONENT_SPECS.recovery_host.files.includes('electron/services/recoveryBootstrap.js'),
+    true
+  );
+  assert.equal(componentOwnsPath('recovery_host', 'electron/services/recoveryBootstrap.js'), true);
+});
+
 test('activation census sources are owned by the components that execute them', () => {
+  assert.equal(componentOwnsPath('recovery_host', 'electron/services/activationClosure.js'), true);
+  assert.equal(componentOwnsPath('recovery_host', 'electron/services/activationPostflight.js'), true);
   assert.equal(componentOwnsPath('recovery_host', 'electron/services/fullCleanActivation.js'), true);
   assert.equal(
     componentOwnsPath('coding_mcp', 'resources/coding-tools-mcp/coding_tools_mcp/activation_ledger_census.py'),

@@ -14,6 +14,9 @@ from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 
 
 class ActivationEpochTests(unittest.TestCase):
+    ready_commit_digest = "a" * 64
+    expires_at_unix_ms = 4_000_000_000_000
+
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.env = patch.dict(
@@ -21,6 +24,7 @@ class ActivationEpochTests(unittest.TestCase):
             {
                 "CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID": "epoch-test-001",
                 "CODING_TOOLS_MCP_ACTIVATION_GATE": "closed",
+                "CODING_TOOLS_MCP_ACTIVATION_EXPIRES_AT_UNIX_MS": str(self.expires_at_unix_ms),
                 "CODING_TOOLS_MCP_TOOL_MODE": "smart",
             },
         )
@@ -39,12 +43,31 @@ class ActivationEpochTests(unittest.TestCase):
             self.assertEqual(runtime.activation_admission_snapshot()["activation_admission"], "closed")
 
             with self.assertRaises(ToolFailure) as mismatch:
-                runtime.complete_activation_epoch("wrong-epoch")
+                runtime.complete_activation_epoch(
+                    "wrong-epoch", self.ready_commit_digest, self.expires_at_unix_ms
+                )
             self.assertEqual(mismatch.exception.code, "UPDATE_INCOMPLETE")
 
-            opened = runtime.complete_activation_epoch("epoch-test-001")
+            with self.assertRaises(ToolFailure) as missing_digest:
+                runtime.complete_activation_epoch("epoch-test-001", "", self.expires_at_unix_ms)
+            self.assertEqual(
+                missing_digest.exception.code,
+                "ACTIVATION_EPOCH_READY_COMMIT_DIGEST_INVALID",
+            )
+
+            opened = runtime.complete_activation_epoch(
+                "epoch-test-001", self.ready_commit_digest, self.expires_at_unix_ms
+            )
             self.assertTrue(opened["ok"])
             self.assertEqual(opened["activation_admission"], "open")
+            self.assertEqual(opened["ready_commit_digest"], self.ready_commit_digest)
+            self.assertEqual(opened["expires_at_unix_ms"], self.expires_at_unix_ms)
+            self.assertEqual(
+                runtime.complete_activation_epoch(
+                    "epoch-test-001", self.ready_commit_digest, self.expires_at_unix_ms
+                )["activation_admission"],
+                "open",
+            )
             allowed = runtime.call_tool("workspace_context", {"detail": "compact"})
             self.assertFalse(allowed["isError"])
         finally:
@@ -80,7 +103,12 @@ class ActivationEpochTests(unittest.TestCase):
                 self.assertEqual(metadata_response.status, 200)
                 self.assertIn("result", metadata_payload)
 
-            body = json.dumps({"action": "complete_epoch", "activation_epoch_id": "epoch-test-001"}).encode("utf-8")
+            body = json.dumps({
+                "action": "complete_epoch",
+                "activation_epoch_id": "epoch-test-001",
+                "ready_commit_digest": self.ready_commit_digest,
+                "expires_at_unix_ms": self.expires_at_unix_ms,
+            }).encode("utf-8")
             connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
             try:
                 connection.request(
@@ -95,11 +123,64 @@ class ActivationEpochTests(unittest.TestCase):
                 connection.close()
             self.assertEqual(completion_response.status, 200)
             self.assertEqual(completion_payload["activation_admission"], "open")
+            self.assertEqual(completion_payload["ready_commit_digest"], self.ready_commit_digest)
+
+            close_body = json.dumps({
+                "action": "close_epoch",
+                "activation_epoch_id": "epoch-test-001",
+                "ready_commit_digest": self.ready_commit_digest,
+            }).encode("utf-8")
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+            try:
+                connection.request(
+                    "POST",
+                    "/__control/activation",
+                    body=close_body,
+                    headers={"Content-Type": "application/json"},
+                )
+                close_response = connection.getresponse()
+                close_payload = json.loads(close_response.read().decode("utf-8"))
+            finally:
+                connection.close()
+            self.assertEqual(close_response.status, 200)
+            self.assertFalse(close_payload["admission_open"])
+            self.assertTrue(close_payload["completion_closed"])
+
+            with self.assertRaises(ToolFailure) as reopened:
+                runtime.complete_activation_epoch(
+                    "epoch-test-001", self.ready_commit_digest, self.expires_at_unix_ms
+                )
+            self.assertEqual(reopened.exception.code, "UPDATE_INCOMPLETE")
         finally:
             server.shutdown()
             server.server_close()
             thread.join(timeout=5)
             self.assertFalse(thread.is_alive())
+
+    def test_completion_refuses_expiry_mismatch_and_exact_deadline(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            with self.assertRaises(ToolFailure) as mismatch:
+                runtime.complete_activation_epoch(
+                    "epoch-test-001",
+                    self.ready_commit_digest,
+                    self.expires_at_unix_ms - 1,
+                )
+            self.assertEqual(mismatch.exception.code, "UPDATE_INCOMPLETE")
+            self.assertFalse(runtime.activation_admission_snapshot()["admission_open"])
+
+            runtime.activation_expires_at_unix_ms = 1_700_000_000_000
+            with patch("coding_tools_mcp.activation_lifecycle.time.time", return_value=1_700_000_000):
+                with self.assertRaises(ToolFailure) as expired:
+                    runtime.complete_activation_epoch(
+                        "epoch-test-001",
+                        self.ready_commit_digest,
+                        1_700_000_000_000,
+                    )
+            self.assertEqual(expired.exception.code, "ACTIVATION_REQUEST_EXPIRED")
+            self.assertFalse(runtime.activation_admission_snapshot()["admission_open"])
+        finally:
+            runtime.close()
 
 
 if __name__ == "__main__":

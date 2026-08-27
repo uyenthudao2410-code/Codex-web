@@ -1,0 +1,486 @@
+[
+  {
+    "version": 2,
+    "task_id": "d53917792c7649f3864b347ee8cf57f2",
+    "orchestration": {
+      "run_id": "72e196913f77424e95768f83016d9df1",
+      "wave_id": "53a88a364f6447a0ab06eeaba2e1473c",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "898d57454f9a5113d8aa3f56d1650e4b3e0d6924",
+      "worktree_fp": "f9dfe5373593e3cd54f7d87e1a92160854005f3960c8862a02ada33cdf10ff9a",
+      "contract_fp": ""
+    },
+    "objective": "Actual new security-hardening mutation RUN/WAVE in E:\\DEV\\Codex-web. Fresh base HEAD is 898d57454f9a5113d8aa3f56d1650e4b3e0d6924 and pre-write source fingerprint is a30b8aaf55dd66db53dce0aa3691ad9e96116884fa5b61774efc1bfe358ab5a3 unless preflight observes new concurrent source drift. Prior checkpoint ff9b364fd1134e2c8d750d33c9af4403 becomes stale on first write and MUST NOT be used for activation. Preserve unrelated/concurrent work; no reset/revert/clean; do not edit .coding-tools/** or ledger.sqlite3 manually; no restart; no task_control accept/reject. Coding-VP MCP is sole writer/proof owner. Implement durable-deadline + two-phase READY_COMMITTED/CLOSED -> exact MCP epoch+digest bind/complete -> health reconcile -> READY/OPEN, with fail-closed expiry, no post-open fallible census, response-loss health reconciliation without duplicate complete, exact close/owned-stop on post-open failure, and all requested regressions. Run exactly the six supplied proof commands in order. If green stop at ACCEPTING; do not accept.",
+    "status": "waiting",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "in_progress",
+        "updated_at": "2026-08-26T17:43:58.777Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "pending",
+        "updated_at": "2026-08-26T17:43:58.777Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-08-26T17:43:58.777Z"
+      }
+    ],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ygbBEE5lcuWx5dm1d_yrmRKd",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 632,
+      "finished_at": "2026-08-26T17:57:41.118Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-26T17:40:17.260Z",
+    "updated_at": "2026-08-26T17:57:41.119Z",
+    "events": [
+      {
+        "time": "2026-08-26T17:40:17.260Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-26T17:40:17.578Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 55 \"path: '/__control/health'\" -- electron/services/runtimeOrchestrator.js",
+          "session_id": "IOXpSYopV3s2M6nzS4gjKkA8"
+        }
+      },
+      {
+        "time": "2026-08-26T17:40:17.862Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 55 \"path: '/__control/health'\" -- electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:40:24.478Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n \"const fs =\\|const http =\\|const os =\\|const path =\\|RuntimeOrchestrator\" -- tests/runtime-lifecycle.test.js",
+          "session_id": "cqRRznktZu_HseaZ0gEbDkx4"
+        }
+      },
+      {
+        "time": "2026-08-26T17:40:24.880Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n \"const fs =\\|const http =\\|const os =\\|const path =\\|RuntimeOrchestrator\" -- tests/runtime-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:40:30.853Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n \"complete_activation_epoch(\" -- resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/tests/test_activation_epoch.py",
+          "session_id": "qExJdSsebUGXocvMGTShCRHs"
+        }
+      },
+      {
+        "time": "2026-08-26T17:40:31.123Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n \"complete_activation_epoch(\" -- resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/tests/test_activation_epoch.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:40:37.048Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 8 \"function id\" -- tests/full-clean-activation.test.js",
+          "session_id": "fZ2hQUr0T_Y_WFAlL8ovd19P"
+        }
+      },
+      {
+        "time": "2026-08-26T17:40:37.347Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 8 \"function id\" -- tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:42:01.785Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-26T17:42:14.020Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 24 -B 6 \"_requireCurrent(epochId)\" -- electron/services/activationEpoch.js",
+          "session_id": "JpOx43gNPte-L244DJxUAcDB"
+        }
+      },
+      {
+        "time": "2026-08-26T17:42:14.324Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 24 -B 6 \"_requireCurrent(epochId)\" -- electron/services/activationEpoch.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:42:27.005Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -B 5 -A 5 \"ACTIVATION_EPOCH_EXPIRED\" -- electron/services/activationEpoch.js",
+          "session_id": "ZOQinSUP0O9JVka-MVA-ROnT"
+        }
+      },
+      {
+        "time": "2026-08-26T17:42:27.332Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -B 5 -A 5 \"ACTIVATION_EPOCH_EXPIRED\" -- electron/services/activationEpoch.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:43:54.900Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T17:43:57.589Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-26T17:43:58.766Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-26T17:43:58.777Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T17:44:00.542Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T17:44:00.544Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-26T17:44:00.548Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T17:44:00.654Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-26T17:44:07.895Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T17:46:15.321Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-26T17:48:08.471Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-26T17:50:07.797Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T17:50:10.239Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T17:50:10.250Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T17:51:18.303Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 10 \"_assertNotExpiredLocked\\|ACTIVATION_REQUEST_EXPIRED\\|ready_commit_digest\" -- electron/services/activationEpoch.js electron/services/fullCleanActivation.js",
+          "session_id": "0hjgcAtOGEfBwtJX83d4sBxe"
+        }
+      },
+      {
+        "time": "2026-08-26T17:51:18.772Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 10 \"_assertNotExpiredLocked\\|ACTIVATION_REQUEST_EXPIRED\\|ready_commit_digest\" -- electron/services/activationEpoch.js electron/services/fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:56:44.971Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-26T17:56:58.243Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 48 -B 4 \"test('READY requires a bound final census\" -- tests/activation-epoch.test.js && git grep -n -A 24 -B 4 \"test('READY refuses a direct VERIFYING jump\" -- tests/activation-epoch.test.js && git grep -n -A 30 -B 4 \"test('transition compaction preserves STOPPING\" -- tests/activation-epoch.test.js",
+          "session_id": "PXyMDPD9P03zWmH_RPefh-dD"
+        }
+      },
+      {
+        "time": "2026-08-26T17:56:59.061Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 48 -B 4 \"test('READY requires a bound final census\" -- tests/activation-epoch.test.js && git grep -n -A 24 -B 4 \"test('READY refuses a direct VERIFYING jump\" -- tests/activation-epoch.test.js && git grep -n -A 30 -B 4 \"test('transition compaction preserves STOPPING\" -- tests/activation-epoch.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:57:21.827Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -B 20 -A 42 \"activation-epoch', '0002'\" -- tests/full-clean-activation.test.js",
+          "session_id": "mqiZYXwvjvapRn4K-kMm5kpy"
+        }
+      },
+      {
+        "time": "2026-08-26T17:57:22.267Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -B 20 -A 42 \"activation-epoch', '0002'\" -- tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:57:29.043Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 28 -B 2 \"const status = await host.start\" -- tests/full-clean-activation.test.js",
+          "session_id": "XyAgfwCMvzxqJYDIzUFrIvDs"
+        }
+      },
+      {
+        "time": "2026-08-26T17:57:29.485Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 28 -B 2 \"const status = await host.start\" -- tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-26T17:57:40.614Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 42 -B 2 \"test('epoch updates are forward-only\" -- tests/activation-epoch.test.js && git grep -n -A 48 -B 2 \"test('expiry and owner evidence\" -- tests/activation-epoch.test.js",
+          "session_id": "ygbBEE5lcuWx5dm1d_yrmRKd"
+        }
+      },
+      {
+        "time": "2026-08-26T17:57:41.119Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 42 -B 2 \"test('epoch updates are forward-only\" -- tests/activation-epoch.test.js && git grep -n -A 48 -B 2 \"test('expiry and owner evidence\" -- tests/activation-epoch.test.js",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T17:58:35.875Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "7b33f7781a4f4294a8287696e68c899e",
+    "orchestration": {
+      "run_id": "3c033f9e3bc044bf9e33025dadac66f1",
+      "wave_id": "f18e7189335f41e490ed8f75610d98c1",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "898d57454f9a5113d8aa3f56d1650e4b3e0d6924",
+      "worktree_fp": "f9dfe5373593e3cd54f7d87e1a92160854005f3960c8862a02ada33cdf10ff9a",
+      "contract_fp": ""
+    },
+    "objective": "Apply the relocalized four-file JS packet only; unique full method/test-title replacements, deterministic mcp_only. No restart/activation/accept/reject; preserve concurrent work; stop at ACCEPTING after exact checks.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "sdoLLV3JWNomXWM531rqbtn6",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 664,
+      "finished_at": "2026-08-26T17:59:32.140Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-26T17:58:35.882Z",
+    "updated_at": "2026-08-26T17:59:32.140Z",
+    "events": [
+      {
+        "time": "2026-08-26T17:58:35.883Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-26T17:58:36.426Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-26T17:58:36.771Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-26T17:59:12.689Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-26T17:59:31.690Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -l \"72e196913f77424e95768f83016d9df1\" -- .coding-tools/task-contexts .coding-tools/task-context-workspaces.json",
+          "session_id": "sdoLLV3JWNomXWM531rqbtn6"
+        }
+      },
+      {
+        "time": "2026-08-26T17:59:32.140Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -l \"72e196913f77424e95768f83016d9df1\" -- .coding-tools/task-contexts .coding-tools/task-context-workspaces.json",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-26T17:59:39.911Z",
+    "archive_reason": "finished"
+  }
+]

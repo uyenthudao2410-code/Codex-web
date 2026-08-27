@@ -179,9 +179,10 @@ test('different connector SHA cannot close through the retired compatibility sta
 
 test('manual activation authority maps only the exact eligible Recovery Host closure checkpoint', () => {
   const closure = acceptedCode();
-  const sourceCheckpoint = activationSourceCheckpoint({
+  const hostStatus = {
     auto_activation: { closure_input: closure }
-  }, 'recovery_host');
+  };
+  const sourceCheckpoint = activationSourceCheckpoint(hostStatus, 'recovery_host');
   assert.deepEqual(sourceCheckpoint, {
     checkpoint_id: CHECKPOINT,
     run_id: RUN,
@@ -189,6 +190,7 @@ test('manual activation authority maps only the exact eligible Recovery Host clo
     proof_fingerprint: PROOF,
     git_head: HEAD
   });
+  assert.deepEqual(activationSourceCheckpoint(hostStatus), sourceCheckpoint);
   assert.equal(Object.hasOwn(sourceCheckpoint, 'postflight_receipts'), false);
 });
 
@@ -458,6 +460,7 @@ test('Recovery Host projection uses fresh component revision and contradictory r
     deviceIdentity: { device_id: 'device-closure-0001', display_name: 'Closure device' },
     deviceInstanceId: 'device-instance-closure-0001',
     orchestrator: { codingMcpRevisionStatus: () => ({}) },
+    bootstrapBlocksAdmission: () => false,
     running: true
   };
   const decorated = RecoveryHost.prototype.decorate.call(host, runtime);

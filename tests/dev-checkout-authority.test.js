@@ -17,6 +17,9 @@ const {
   retireStaleDevelopmentRecoveryHost
 } = require('../electron/services/recoveryHostLauncher');
 
+const STALE_PROCESS_START_TOKEN = '133801234567890123';
+const CURRENT_PROCESS_START_TOKEN = '133801234567890999';
+
 function makeRoot(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-dev-checkout-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -155,6 +158,7 @@ test('dev relocation stops old primary runtime and terminates only the authentic
     token: 'x'.repeat(43),
     owner: 'recovery-host',
     owner_pid: 42420,
+    owner_process_start_token: STALE_PROCESS_START_TOKEN,
     instance_id: 'stale-recovery-host-0001',
     installation_id: 'a'.repeat(64),
     runtime_mode: 'development'
@@ -169,14 +173,19 @@ test('dev relocation stops old primary runtime and terminates only the authentic
     descriptor: stale,
     log: { warn() {} },
     readDescriptor: () => stale,
-    terminateProcess: (pid) => { calls.terminate.push(pid); alive = false; },
-    processAlive: () => alive,
+    processIdentityObserver: async (pid) => alive
+      ? { state: 'live', pid, process_start_token: STALE_PROCESS_START_TOKEN }
+      : { state: 'absent', pid, process_start_token: null },
+    terminateProcess: (identity) => { calls.terminate.push(identity); alive = false; },
     sleep: async () => {},
     timeoutMs: 1000
   });
 
   assert.deepEqual(calls.stop, [{ manual: false }]);
-  assert.deepEqual(calls.terminate, [stale.owner_pid]);
+  assert.deepEqual(calls.terminate, [{
+    pid: stale.owner_pid,
+    process_start_token: STALE_PROCESS_START_TOKEN
+  }]);
   assert.equal(result.retired, true);
   assert.equal(alive, false);
 });
@@ -193,6 +202,7 @@ test('ensureRecoveryHost replaces checkout A with checkout B instead of attachin
     token: 'x'.repeat(43),
     owner: 'recovery-host',
     owner_pid: 42420,
+    owner_process_start_token: STALE_PROCESS_START_TOKEN,
     instance_id: 'stale-recovery-host-0001',
     installation_id: identity(checkoutA).installation_id,
     runtime_mode: 'development'
@@ -200,6 +210,7 @@ test('ensureRecoveryHost replaces checkout A with checkout B instead of attachin
   const current = {
     ...stale,
     owner_pid: 42421,
+    owner_process_start_token: CURRENT_PROCESS_START_TOKEN,
     instance_id: 'current-recovery-host-001',
     installation_id: expected.installation_id
   };
@@ -207,7 +218,15 @@ test('ensureRecoveryHost replaces checkout A with checkout B instead of attachin
   let oldAlive = true;
   const calls = { stop: 0, terminate: [], spawn: 0 };
   const client = {
-    ping: async () => ({ ready: true }),
+    ping: async () => {
+      const active = phase === 'stale' ? stale : current;
+      return {
+        ready: true,
+        pid: active.owner_pid,
+        process_start_token: active.owner_process_start_token,
+        instance_id: active.instance_id
+      };
+    },
     stop: async (options) => { assert.deepEqual(options, { manual: false }); calls.stop += 1; return { stopped: true }; }
   };
   const fakeSpawn = () => {
@@ -229,14 +248,24 @@ test('ensureRecoveryHost replaces checkout A with checkout B instead of attachin
     spawnProcess: fakeSpawn,
     clientFactory: () => client,
     readDescriptor: () => phase === 'stale' ? stale : current,
-    terminateProcess: (pid) => { calls.terminate.push(pid); oldAlive = false; },
-    processAlive: (pid) => pid === stale.owner_pid ? oldAlive : true,
+    processIdentityObserver: async (pid) => {
+      if (pid === stale.owner_pid) {
+        return oldAlive
+          ? { state: 'live', pid, process_start_token: STALE_PROCESS_START_TOKEN }
+          : { state: 'absent', pid, process_start_token: null };
+      }
+      return { state: 'live', pid, process_start_token: CURRENT_PROCESS_START_TOKEN };
+    },
+    terminateProcess: (identity) => { calls.terminate.push(identity); oldAlive = false; },
     sleep: async () => {}
   });
 
   assert.equal(result, client);
   assert.equal(calls.stop, 1);
-  assert.deepEqual(calls.terminate, [stale.owner_pid]);
+  assert.deepEqual(calls.terminate, [{
+    pid: stale.owner_pid,
+    process_start_token: STALE_PROCESS_START_TOKEN
+  }]);
   assert.equal(calls.spawn, 1);
 });
 
@@ -246,6 +275,7 @@ test('dev relocation fails closed if Recovery Host owner changes after runtime s
   const expected = identity(checkout);
   const stale = {
     owner_pid: 42420,
+    owner_process_start_token: STALE_PROCESS_START_TOKEN,
     instance_id: 'stale-recovery-host-0001',
     installation_id: 'a'.repeat(64),
     runtime_mode: 'development'
@@ -261,7 +291,11 @@ test('dev relocation fails closed if Recovery Host owner changes after runtime s
       log: { warn() {} },
       readDescriptor: () => ({ ...stale, owner_pid: 42421, instance_id: 'different-owner-00001' }),
       terminateProcess: () => { terminated = true; },
-      processAlive: () => true,
+      processIdentityObserver: async (pid) => ({
+        state: 'live',
+        pid,
+        process_start_token: STALE_PROCESS_START_TOKEN
+      }),
       sleep: async () => {},
       timeoutMs: 1000
     }),

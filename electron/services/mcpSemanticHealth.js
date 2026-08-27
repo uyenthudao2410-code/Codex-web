@@ -196,10 +196,18 @@ class SemanticMcpHealthWatchdog {
 
       this.nextRestartAt = Date.now() + this.restartCooldownMs;
       try {
-        await this.orchestrator.restart({ automatic: true });
+        if (typeof this.orchestrator?.recoverMcpOnly !== 'function') {
+          throw Object.assign(new Error('Coding MCP-only semantic recovery is unavailable.'), {
+            code: 'MCP_RECOVERY_UNAVAILABLE'
+          });
+        }
+        await this.orchestrator.recoverMcpOnly({
+          replaceLiveOwned: true,
+          reason: 'semantic_watchdog_soft_recovery'
+        });
         const observedFailures = this.failures;
         this.failures = 0;
-        this.log?.warn?.('Recovery Host restarted Coding MCP after repeated semantic tool-plane failures', {
+        this.log?.warn?.('Recovery Host replaced only Coding MCP after repeated semantic tool-plane failures', {
           failures: observedFailures,
           reason: String(result?.reason || 'unknown')
         });

@@ -4,6 +4,11 @@ const http = require('node:http');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
 const { runtimeDeviceIdentity } = require('./deviceIdentity');
 const { INSTALLATION_ID_PATTERN } = require('./runtimeIdentity');
+const {
+  normalizeProcessStartToken,
+  observeProcessIdentity,
+  processIdentityFrom
+} = require('./processIdentity');
 
 const MAX_DESCRIPTOR_BYTES = 16 * 1024;
 const MAX_REQUEST_BYTES = 64 * 1024;
@@ -76,7 +81,17 @@ function isProcessAlive(pid) {
 }
 
 class RecoveryIpcServer {
-  constructor({ paths, handlers, log, instanceId, startedAt, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '' }) {
+  constructor({
+    paths,
+    handlers,
+    log,
+    instanceId,
+    startedAt,
+    deviceIdentity = null,
+    deviceInstanceId = '',
+    activationEpochId = '',
+    processIdentityObserver = observeProcessIdentity
+  }) {
     this.paths = paths;
     this.handlers = handlers;
     this.log = log;
@@ -86,6 +101,10 @@ class RecoveryIpcServer {
       ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId)
       : null;
     this.activationEpochId = String(activationEpochId || '').trim() || null;
+    this.processIdentityObserver = typeof processIdentityObserver === 'function'
+      ? processIdentityObserver
+      : observeProcessIdentity;
+    this.ownerProcessIdentity = null;
     this.server = null;
     this.port = 0;
     this.token = '';
@@ -102,6 +121,9 @@ class RecoveryIpcServer {
       token: this.token,
       owner: 'recovery-host',
       owner_pid: process.pid,
+      ...(this.ownerProcessIdentity?.process_start_token
+        ? { owner_process_start_token: this.ownerProcessIdentity.process_start_token }
+        : {}),
       instance_id: this.instanceId,
       ...(runtimeIdentity ? {
         installation_id: runtimeIdentity.installation_id,
@@ -125,7 +147,10 @@ class RecoveryIpcServer {
     if (!this.server) return null;
     const file = this.paths.recoveryHostDescriptorFile();
     const current = readJson(file, null);
-    if (!current || current.instance_id !== this.instanceId || Number(current.owner_pid) !== Number(process.pid)) {
+    const expectedOwnerToken = normalizeProcessStartToken(this.ownerProcessIdentity?.process_start_token);
+    const observedOwnerToken = normalizeProcessStartToken(current?.owner_process_start_token);
+    if (!current || current.instance_id !== this.instanceId || Number(current.owner_pid) !== Number(process.pid)
+      || !expectedOwnerToken || observedOwnerToken !== expectedOwnerToken) {
       throw Object.assign(new Error('Recovery Host descriptor owner changed before epoch update.'), { code: 'RECOVERY_DESCRIPTOR_CHANGED' });
     }
     this.activationEpochId = id || null;
@@ -138,6 +163,26 @@ class RecoveryIpcServer {
 
   async start() {
     if (this.server) return this.descriptor();
+    let observed;
+    try { observed = await this.processIdentityObserver(process.pid); }
+    catch (error) {
+      throw Object.assign(new Error('Recovery Host process creation identity is unavailable.'), {
+        code: 'RECOVERY_PROCESS_IDENTITY_UNVERIFIED',
+        cause: error
+      });
+    }
+    try {
+      if (String(observed?.state || '') !== 'live') throw new Error('process identity is not live');
+      this.ownerProcessIdentity = processIdentityFrom({
+        pid: process.pid,
+        process_start_token: observed?.process_start_token
+      });
+    } catch (error) {
+      throw Object.assign(new Error('Recovery Host process creation identity is unavailable.'), {
+        code: 'RECOVERY_PROCESS_IDENTITY_UNVERIFIED',
+        cause: error
+      });
+    }
     this.token = crypto.randomBytes(32).toString('base64url');
     this.server = http.createServer((request, response) => this.handle(request, response));
     await new Promise((resolve, reject) => {
@@ -161,7 +206,10 @@ class RecoveryIpcServer {
     this.port = 0;
     this.token = '';
     const current = readJson(this.paths.recoveryHostDescriptorFile(), null);
-    if (current?.instance_id === this.instanceId) {
+    if (current?.instance_id === this.instanceId
+      && Number(current.owner_pid) === Number(process.pid)
+      && normalizeProcessStartToken(current.owner_process_start_token)
+        === normalizeProcessStartToken(this.ownerProcessIdentity?.process_start_token)) {
       fs.rmSync(this.paths.recoveryHostDescriptorFile(), { force: true });
       fs.rmSync(`${this.paths.recoveryHostDescriptorFile()}.bak`, { force: true });
     }
@@ -253,6 +301,10 @@ function loadRecoveryDescriptor(paths) {
   const port = Number(descriptor?.port || 0);
   const token = String(descriptor?.token || '');
   const ownerPid = Number(descriptor?.owner_pid || 0);
+  const ownerTokenSupplied = descriptor?.owner_process_start_token !== undefined
+    && descriptor?.owner_process_start_token !== null
+    && String(descriptor.owner_process_start_token).trim() !== '';
+  const ownerProcessStartToken = normalizeProcessStartToken(descriptor?.owner_process_start_token);
   const installationId = String(descriptor?.installation_id || '').toLowerCase();
   const runtimeMode = String(descriptor?.runtime_mode || '');
   const hasRuntimeIdentity = Boolean(descriptor?.installation_id || descriptor?.runtime_mode);
@@ -274,11 +326,15 @@ function loadRecoveryDescriptor(paths) {
   if (!Number.isInteger(ownerPid) || !isProcessAlive(ownerPid)) {
     throw Object.assign(new Error('Recovery Host descriptor owner is not alive.'), { code: 'RECOVERY_DESCRIPTOR_STALE' });
   }
+  if (ownerTokenSupplied && !ownerProcessStartToken) {
+    throw Object.assign(new Error('Recovery Host descriptor process identity is invalid.'), { code: 'RECOVERY_DESCRIPTOR_INVALID' });
+  }
   return {
     ...descriptor,
     port,
     token,
     owner_pid: ownerPid,
+    owner_process_start_token: ownerProcessStartToken || null,
     installation_id: installationId || null,
     runtime_mode: runtimeMode || null
   };
@@ -288,10 +344,13 @@ function assertExpectedDescriptor(descriptor, options = {}) {
   const expectedOwnerPid = Number(options.expectedOwnerPid || 0);
   const expectedInstanceId = String(options.expectedInstanceId || '');
   const expectedInstallationId = String(options.expectedInstallationId || '').toLowerCase();
+  const expectedOwnerProcessStartToken = normalizeProcessStartToken(options.expectedOwnerProcessStartToken);
   const ownerMatches = !expectedOwnerPid || Number(descriptor.owner_pid) === expectedOwnerPid;
   const instanceMatches = !expectedInstanceId || String(descriptor.instance_id || '') === expectedInstanceId;
   const installationMatches = !expectedInstallationId || String(descriptor.installation_id || '').toLowerCase() === expectedInstallationId;
-  if (ownerMatches && instanceMatches && installationMatches) return descriptor;
+  const processStartMatches = !expectedOwnerProcessStartToken
+    || normalizeProcessStartToken(descriptor.owner_process_start_token) === expectedOwnerProcessStartToken;
+  if (ownerMatches && instanceMatches && installationMatches && processStartMatches) return descriptor;
   throw Object.assign(new Error('Recovery Host descriptor changed before the authenticated request was sent.'), {
     code: 'RECOVERY_DESCRIPTOR_CHANGED',
     details: {
@@ -300,7 +359,9 @@ function assertExpectedDescriptor(descriptor, options = {}) {
       expected_instance_id: expectedInstanceId || null,
       observed_instance_id: String(descriptor.instance_id || '') || null,
       expected_installation_id: expectedInstallationId || null,
-      observed_installation_id: String(descriptor.installation_id || '') || null
+      observed_installation_id: String(descriptor.installation_id || '') || null,
+      expected_owner_process_start_token: expectedOwnerProcessStartToken || null,
+      observed_owner_process_start_token: normalizeProcessStartToken(descriptor.owner_process_start_token) || null
     }
   });
 }

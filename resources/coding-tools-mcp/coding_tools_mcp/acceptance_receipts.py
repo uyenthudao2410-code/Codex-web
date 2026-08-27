@@ -688,6 +688,23 @@ def _checkpoint_failure(code: str, reason: str, **details: Any) -> dict[str, Any
     return {"ok": False, "code": code, "reason": reason, "details": details}
 
 
+def _accepted_checkpoint_metadata(identity: Any, *, accepted_by: str, accepted_files: dict[str, Any]) -> dict[str, Any]:
+    worktree_fp = str(identity.get("worktree_fp") or "") if isinstance(identity, dict) else ""
+    if not _is_canonical_hex(worktree_fp, 64):
+        raise ToolFailure(
+            "ORCHESTRATION_STATE_UNCERTAIN",
+            "Canonical worktree fingerprint is required before checkpointing.",
+            category="runtime",
+            retryable=False,
+        )
+    return {
+        "accepted_by": accepted_by,
+        "worktree_fp": worktree_fp,
+        "workspace_identity": dict(identity.get("workspace_identity") or {}),
+        "accepted_files": accepted_files,
+    }
+
+
 def _verify_lifecycle_snapshot(lifecycle: Any) -> bool:
     snapshot = lifecycle.get("snapshot") if isinstance(lifecycle, dict) else None
     foreign_key_rows = snapshot.get("foreign_key_check_rows") if isinstance(snapshot, dict) else None
@@ -711,6 +728,7 @@ def _verify_activation_source_checkpoint(
     source_checkpoint: Any,
     *,
     current_git_head: str,
+    current_worktree_fp: str,
     lifecycle: Any,
 ) -> dict[str, Any]:
     """Verify one exact accepted checkpoint before an internal activation fence."""
@@ -780,6 +798,11 @@ def _verify_activation_source_checkpoint(
         return _checkpoint_failure("SOURCE_DRIFT", "git_head_changed", expected_git_head=git_head)
 
     metadata = checkpoint.get("metadata") if isinstance(checkpoint.get("metadata"), dict) else {}
+    checkpoint_worktree_fp = metadata.get("worktree_fp")
+    if not _is_canonical_hex(checkpoint_worktree_fp, 64):
+        return _checkpoint_failure("CHECKPOINT_NOT_ACTIVATABLE", "checkpoint_worktree_fingerprint_invalid")
+    if not _is_canonical_hex(current_worktree_fp, 64):
+        return _checkpoint_failure("ORCHESTRATION_STATE_UNCERTAIN", "current_worktree_fingerprint_invalid")
     accepted = metadata.get("accepted_files") if isinstance(metadata.get("accepted_files"), dict) else {}
     files = accepted.get("files") if isinstance(accepted.get("files"), list) else []
     receipt_source = accepted.get("source")
@@ -905,6 +928,13 @@ def _verify_activation_source_checkpoint(
             return _checkpoint_failure("RECEIPT_INCOMPLETE", "durable_patch_surface_provenance_invalid")
     elif receipt_source == "durable_wave_patch_surface":
         return _checkpoint_failure("RECEIPT_INCOMPLETE", "durable_patch_surface_evidence_missing")
+    if current_worktree_fp != checkpoint_worktree_fp:
+        return _checkpoint_failure(
+            "SOURCE_DRIFT",
+            "worktree_fingerprint_changed",
+            expected_worktree_fp=checkpoint_worktree_fp,
+            observed_worktree_fp=current_worktree_fp,
+        )
     return {
         "ok": True,
         "code": "ACTIVATABLE",

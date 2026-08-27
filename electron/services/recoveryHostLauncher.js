@@ -3,9 +3,18 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { RecoveryIpcClient, loadRecoveryDescriptor, isProcessAlive } = require('./recoveryIpc');
 const { sameInstallationIdentity } = require('./runtimeIdentity');
+const {
+  normalizeProcessStartToken,
+  observeProcessIdentity,
+  processIdentityFrom,
+  sameProcessIdentity,
+  terminateExactProcessTree,
+  waitForExactProcessExit
+} = require('./processIdentity');
 
 const MAX_SUPERVISOR_MANIFEST_BYTES = 64 * 1024;
 const ACTIVATION_EPOCH_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+const ACTIVATION_OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -30,10 +39,44 @@ function activationEpochId(options = {}) {
   return value;
 }
 
+function activationOperationId(options = {}) {
+  const value = String(options?.operationId || '').trim();
+  if (!value) return '';
+  if (!ACTIVATION_OPERATION_ID_PATTERN.test(value)) {
+    throw Object.assign(new Error('Activation operation identity is invalid.'), {
+      code: 'INVALID_ACTIVATION_OPERATION_ID'
+    });
+  }
+  return value;
+}
+
+function recoveryBootstrapId(options = {}) {
+  const value = String(options?.bootstrapId || options?.recoveryBootstrapId || '').trim();
+  if (!value) return '';
+  if (!ACTIVATION_OPERATION_ID_PATTERN.test(value)) {
+    throw Object.assign(new Error('Recovery Host bootstrap identity is invalid.'), {
+      code: 'INVALID_RECOVERY_BOOTSTRAP_ID'
+    });
+  }
+  return value;
+}
+
+function executableForLaunch(options = {}) {
+  const candidate = String(options?.executablePath || process.execPath || '').trim();
+  if (!candidate || !path.isAbsolute(candidate)) {
+    throw Object.assign(new Error('A qualified Electron executable path is required for Recovery Host launch.'), {
+      code: 'RECOVERY_EXECUTABLE_UNAVAILABLE'
+    });
+  }
+  return candidate;
+}
+
 function processEnvironment(role, options = {}) {
   const env = { ...process.env, WEBCODEX_PROCESS_ROLE: role };
   const epoch = activationEpochId(options);
   if (epoch) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = epoch;
+  const bootstrap = recoveryBootstrapId(options);
+  if (bootstrap) env.WEBCODEX_RECOVERY_BOOTSTRAP_ID = bootstrap;
   return env;
 }
 
@@ -41,10 +84,17 @@ function recoveryHostArguments(app, options = {}) {
   const args = app.isPackaged
     ? ['--recovery-host']
     : [app.getAppPath(), '--recovery-host'];
-  if (options.expectedOldInstanceId && options.operationId) {
+  const operation = activationOperationId(options);
+  if (options.expectedOldInstanceId && operation) {
     args.push(`--replace-recovery-host=${options.expectedOldInstanceId}`);
-    args.push(`--activation-operation=${options.operationId}`);
+    args.push(`--activation-operation=${operation}`);
+  } else if (options.expectedOldInstanceId || operation) {
+    throw Object.assign(new Error('Recovery Host replacement requires both old instance and operation identities.'), {
+      code: 'RECOVERY_REPLACEMENT_ARGUMENTS_INVALID'
+    });
   }
+  const bootstrap = recoveryBootstrapId(options);
+  if (bootstrap) args.push(`--recovery-bootstrap=${bootstrap}`);
   const epoch = activationEpochId(options);
   if (epoch) args.push(`--activation-epoch-id=${epoch}`);
   return args;
@@ -60,7 +110,7 @@ function recoveryLoginItemArguments(app) {
 
 async function spawnRecoveryHost(app, spawnProcess = spawn, options = {}) {
   assertActivationDeadline(options);
-  const child = spawnProcess(process.execPath, recoveryHostArguments(app, options), {
+  const child = spawnProcess(executableForLaunch(options), recoveryHostArguments(app, options), {
     detached: true,
     windowsHide: true,
     stdio: 'ignore',
@@ -83,7 +133,7 @@ function electronUiArguments(app, options = {}) {
 
 async function spawnElectronUi(app, spawnProcess = spawn, options = {}) {
   assertActivationDeadline(options);
-  const child = spawnProcess(process.execPath, electronUiArguments(app, options), {
+  const child = spawnProcess(executableForLaunch(options), electronUiArguments(app, options), {
     detached: true,
     windowsHide: true,
     stdio: 'ignore',
@@ -132,10 +182,20 @@ function descriptorMatchesInstallation(descriptor, expectedIdentity) {
 }
 
 function descriptorRequestOptions(descriptor) {
+  const tokenSupplied = descriptor?.owner_process_start_token !== undefined
+    && descriptor?.owner_process_start_token !== null
+    && String(descriptor.owner_process_start_token).trim() !== '';
+  const processStartToken = normalizeProcessStartToken(descriptor?.owner_process_start_token);
+  if (tokenSupplied && !processStartToken) {
+    throw Object.assign(new Error('Recovery Host descriptor process identity is invalid.'), {
+      code: 'RECOVERY_DESCRIPTOR_INVALID'
+    });
+  }
   return {
     expectedOwnerPid: Number(descriptor?.owner_pid || 0),
     expectedInstanceId: String(descriptor?.instance_id || ''),
-    ...(descriptor?.installation_id ? { expectedInstallationId: String(descriptor.installation_id) } : {})
+    ...(descriptor?.installation_id ? { expectedInstallationId: String(descriptor.installation_id) } : {}),
+    ...(processStartToken ? { expectedOwnerProcessStartToken: processStartToken } : {})
   };
 }
 
@@ -152,6 +212,17 @@ function installationMismatchError(expectedIdentity, descriptor) {
       }
     }
   );
+}
+
+function isProcessAuthorityError(error) {
+  const code = String(error?.code || '');
+  return code === 'RECOVERY_HOST_INSTALLATION_MISMATCH'
+    || code === 'RECOVERY_DESCRIPTOR_CHANGED'
+    || code === 'RECOVERY_DESCRIPTOR_INVALID'
+    || code === 'RECOVERY_PROCESS_IDENTITY_UNVERIFIED'
+    || code.startsWith('RECOVERY_HOST_DEV_HANDOFF_')
+    || code.startsWith('PROCESS_IDENTITY_')
+    || code.startsWith('PROCESS_TERMINATION_');
 }
 
 async function waitForProcessExit(pid, {
@@ -173,6 +244,23 @@ async function readVerifiedReadyHost(client, paths, readDescriptor = loadRecover
     try {
       const descriptor = readDescriptor(paths);
       const status = await client.ping(descriptorRequestOptions(descriptor));
+      const descriptorToken = normalizeProcessStartToken(descriptor?.owner_process_start_token);
+      const statusToken = normalizeProcessStartToken(status?.process_start_token);
+      if (Number(status?.pid || 0) !== Number(descriptor.owner_pid)
+        || String(status?.instance_id || '') !== String(descriptor.instance_id || '')
+        || (descriptorToken && statusToken !== descriptorToken)) {
+        throw Object.assign(new Error('Recovery Host status identity does not match its authenticated descriptor.'), {
+          code: 'RECOVERY_DESCRIPTOR_CHANGED',
+          details: {
+            expected_owner_pid: Number(descriptor.owner_pid || 0) || null,
+            observed_owner_pid: Number(status?.pid || 0) || null,
+            expected_instance_id: String(descriptor.instance_id || '') || null,
+            observed_instance_id: String(status?.instance_id || '') || null,
+            expected_owner_process_start_token: descriptorToken || null,
+            observed_owner_process_start_token: statusToken || null
+          }
+        });
+      }
       return status?.ready ? { descriptor, status } : null;
     } catch (error) {
       lastError = error;
@@ -191,8 +279,9 @@ async function retireStaleDevelopmentRecoveryHost({
   descriptor,
   log,
   readDescriptor = loadRecoveryDescriptor,
-  terminateProcess = (pid) => process.kill(Number(pid), 'SIGTERM'),
-  processAlive = isProcessAlive,
+  processIdentityObserver = observeProcessIdentity,
+  terminateProcess = null,
+  waitForExactExit = waitForExactProcessExit,
   sleep = wait,
   timeoutMs = 5000
 }) {
@@ -206,6 +295,47 @@ async function retireStaleDevelopmentRecoveryHost({
       code: 'RECOVERY_HOST_DEV_HANDOFF_UNVERIFIED'
     });
   }
+  let baselineObservation;
+  try { baselineObservation = await processIdentityObserver(ownerPid); }
+  catch (error) {
+    throw Object.assign(new Error('Stale development Recovery Host process identity is unavailable.'), {
+      code: 'RECOVERY_HOST_DEV_HANDOFF_PROCESS_IDENTITY_UNVERIFIED',
+      cause: error
+    });
+  }
+  if (String(baselineObservation?.state || '') !== 'live') {
+    throw Object.assign(new Error('Stale development Recovery Host process identity is unavailable.'), {
+      code: baselineObservation?.state === 'absent'
+        ? 'RECOVERY_HOST_DEV_HANDOFF_TARGET_EXITED'
+        : 'RECOVERY_HOST_DEV_HANDOFF_PROCESS_IDENTITY_UNVERIFIED'
+    });
+  }
+  let ownerIdentity;
+  try {
+    ownerIdentity = processIdentityFrom({
+      pid: ownerPid,
+      process_start_token: baselineObservation.process_start_token
+    });
+  } catch (error) {
+    throw Object.assign(new Error('Stale development Recovery Host process identity is unavailable.'), {
+      code: 'RECOVERY_HOST_DEV_HANDOFF_PROCESS_IDENTITY_UNVERIFIED',
+      cause: error
+    });
+  }
+  const descriptorToken = normalizeProcessStartToken(descriptor?.owner_process_start_token);
+  const descriptorTokenSupplied = descriptor?.owner_process_start_token !== undefined
+    && descriptor?.owner_process_start_token !== null
+    && String(descriptor.owner_process_start_token).trim() !== '';
+  if (descriptorTokenSupplied && !descriptorToken) {
+    throw Object.assign(new Error('Stale development Recovery Host process identity is invalid.'), {
+      code: 'RECOVERY_HOST_DEV_HANDOFF_PROCESS_IDENTITY_UNVERIFIED'
+    });
+  }
+  if (descriptorToken && descriptorToken !== ownerIdentity.process_start_token) {
+    throw Object.assign(new Error('Recovery Host owner changed before development checkout handoff.'), {
+      code: 'RECOVERY_HOST_DEV_HANDOFF_TARGET_CHANGED'
+    });
+  }
 
   log?.warn?.('Development checkout changed; retiring the previous Recovery Host before starting the current checkout', {
     oldInstallationId: descriptor?.installation_id || 'legacy',
@@ -217,29 +347,64 @@ async function retireStaleDevelopmentRecoveryHost({
   // descriptor race cannot stop a replacement process.
   await client.stop({ manual: false }, descriptorRequestOptions(descriptor));
 
-  let verified;
+  let verified = null;
   try {
     verified = readDescriptor(paths);
   } catch (error) {
-    if (error?.code === 'RECOVERY_DESCRIPTOR_STALE' || error?.code === 'ENOENT') return { retired: true, alreadyExited: true };
-    throw error;
+    if (error?.code !== 'RECOVERY_DESCRIPTOR_STALE' && error?.code !== 'ENOENT') throw error;
   }
 
-  if (descriptorMatchesInstallation(verified, expectedIdentity)) {
+  if (verified && descriptorMatchesInstallation(verified, expectedIdentity)) {
     return { retired: false, alreadyCurrent: true };
   }
-  if (Number(verified.owner_pid) !== ownerPid || String(verified.instance_id || '') !== instanceId) {
+  if (verified && (Number(verified.owner_pid) !== ownerPid || String(verified.instance_id || '') !== instanceId)) {
+    throw Object.assign(new Error('Recovery Host owner changed during development checkout handoff.'), {
+      code: 'RECOVERY_HOST_DEV_HANDOFF_TARGET_CHANGED'
+    });
+  }
+  const verifiedToken = normalizeProcessStartToken(verified?.owner_process_start_token);
+  if (verifiedToken && verifiedToken !== ownerIdentity.process_start_token) {
     throw Object.assign(new Error('Recovery Host owner changed during development checkout handoff.'), {
       code: 'RECOVERY_HOST_DEV_HANDOFF_TARGET_CHANGED'
     });
   }
 
-  terminateProcess(ownerPid);
-  const exited = await waitForProcessExit(ownerPid, { processAlive, sleep, timeoutMs });
-  if (!exited) {
-    throw Object.assign(new Error('Previous development Recovery Host did not exit after runtime shutdown.'), {
-      code: 'RECOVERY_HOST_DEV_HANDOFF_TIMEOUT'
+  let afterStop;
+  try { afterStop = await processIdentityObserver(ownerPid); }
+  catch (error) {
+    throw Object.assign(new Error('Recovery Host process identity became unavailable during development checkout handoff.'), {
+      code: 'RECOVERY_HOST_DEV_HANDOFF_PROCESS_IDENTITY_UNVERIFIED',
+      cause: error
     });
+  }
+  if (afterStop?.state === 'absent') return { retired: true, alreadyExited: true };
+  if (afterStop?.state !== 'live') {
+    throw Object.assign(new Error('Recovery Host process identity became unavailable during development checkout handoff.'), {
+      code: 'RECOVERY_HOST_DEV_HANDOFF_PROCESS_IDENTITY_UNVERIFIED'
+    });
+  }
+  if (!sameProcessIdentity(ownerIdentity, afterStop)) {
+    return { retired: true, alreadyExited: true, replaced: true };
+  }
+
+  const exactTerminator = typeof terminateProcess === 'function'
+    ? terminateProcess
+    : (identity) => terminateExactProcessTree(identity, { observeProcessIdentity: processIdentityObserver, sleep, timeoutMs });
+  await exactTerminator(ownerIdentity);
+  try {
+    await waitForExactExit(ownerIdentity, {
+      observeProcessIdentity: processIdentityObserver,
+      sleep,
+      timeoutMs
+    });
+  } catch (error) {
+    if (error?.code === 'PROCESS_TERMINATION_TIMEOUT') {
+      throw Object.assign(new Error('Previous development Recovery Host did not exit after runtime shutdown.'), {
+        code: 'RECOVERY_HOST_DEV_HANDOFF_TIMEOUT',
+        cause: error
+      });
+    }
+    throw error;
   }
   return { retired: true, alreadyExited: false };
 }
@@ -252,7 +417,9 @@ async function ensureRecoveryHost({
   spawnProcess = spawn,
   clientFactory = (options) => new RecoveryIpcClient(options),
   readDescriptor = loadRecoveryDescriptor,
-  terminateProcess = (pid) => process.kill(Number(pid), 'SIGTERM'),
+  processIdentityObserver = observeProcessIdentity,
+  terminateProcess = null,
+  waitForExactExit = waitForExactProcessExit,
   processAlive = isProcessAlive,
   sleep = wait,
   suppressDevelopmentSupervisor = suppressDevelopmentRecoverySupervisor
@@ -278,18 +445,15 @@ async function ensureRecoveryHost({
         descriptor: existing.descriptor,
         log,
         readDescriptor,
+        processIdentityObserver,
         terminateProcess,
-        processAlive,
+        waitForExactExit,
         sleep,
         timeoutMs: Math.min(5000, Math.max(1000, Number(timeoutMs) || 5000))
       });
     }
   } catch (error) {
-    if (String(error?.code || '').startsWith('RECOVERY_HOST_DEV_HANDOFF_')
-      || error?.code === 'RECOVERY_HOST_INSTALLATION_MISMATCH'
-      || error?.code === 'RECOVERY_DESCRIPTOR_CHANGED') {
-      throw error;
-    }
+    if (isProcessAuthorityError(error)) throw error;
     // Missing/stale/unreachable host falls through to a current-checkout spawn.
   }
 
@@ -304,6 +468,7 @@ async function ensureRecoveryHost({
         lastError = installationMismatchError(expectedIdentity, ready.descriptor);
       }
     } catch (error) {
+      if (isProcessAuthorityError(error)) throw error;
       lastError = error;
     }
     await sleep(100);
@@ -321,6 +486,9 @@ module.exports = {
   ensureRecoveryHost,
   spawnRecoveryHost,
   recoveryHostArguments,
+  activationOperationId,
+  recoveryBootstrapId,
+  executableForLaunch,
   recoveryLoginItemArguments,
   electronUiArguments,
   spawnElectronUi,

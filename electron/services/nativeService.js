@@ -9,6 +9,13 @@ const { rotateLog } = require('./logService');
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { classifyStoredDeviceOwner } = require('./deviceIdentity');
 const { canonicalPath } = require('./runtimeIdentity');
+const {
+  normalizeProcessStartToken,
+  observeProcessIdentity,
+  processIdentityFrom,
+  sameProcessIdentity,
+  terminateExactProcessTree
+} = require('./processIdentity');
 
 const SECRET_BROKER_ENV = 'CODING_TOOLS_MCP_SECRET_BROKER';
 const AUTH_HANDLE_ENV = 'CODING_TOOLS_MCP_AUTH_HANDLE';
@@ -36,7 +43,19 @@ function coreNativeEnvironment(sourceEnv = process.env) {
   return env;
 }
 
-function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, diskRevision, supervisorRequestFile, device = null, p5Seed = '', activationEpochId = '', activationGate = '' }) {
+function buildNativeMcpEnv({
+  sourceEnv = process.env,
+  launch,
+  settings,
+  token,
+  diskRevision,
+  supervisorRequestFile,
+  device = null,
+  p5Seed = '',
+  activationEpochId = '',
+  activationGate = '',
+  activationExpiresAtUnixMs = 0
+}) {
   const env = coreNativeEnvironment(sourceEnv);
   const broker = { [MCP_AUTH_HANDLE]: String(token || '') };
   if (String(sourceEnv.OPENAI_API_KEY || '')) broker[OPENAI_API_KEY_HANDLE] = String(sourceEnv.OPENAI_API_KEY);
@@ -60,6 +79,15 @@ function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, d
   });
   if (String(activationEpochId || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = String(activationEpochId).trim();
   if (String(activationGate || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_GATE = String(activationGate).trim().toLowerCase();
+  const activationExpiry = Number(activationExpiresAtUnixMs || 0);
+  if (activationExpiry > 0) {
+    if (!Number.isSafeInteger(activationExpiry)) {
+      throw Object.assign(new Error('Coding MCP activation expiry is invalid.'), {
+        code: 'ACTIVATION_EPOCH_EXPIRY_INVALID'
+      });
+    }
+    env.CODING_TOOLS_MCP_ACTIVATION_EXPIRES_AT_UNIX_MS = String(activationExpiry);
+  }
   if (device) {
     env.CODING_TOOLS_MCP_DEVICE_ID = device.deviceId;
     env.CODING_TOOLS_MCP_DEVICE_INSTANCE_ID = device.deviceInstanceId;
@@ -74,6 +102,109 @@ function buildNativeMcpEnv({ sourceEnv = process.env, launch, settings, token, d
 function isAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
+function processIdentityError(kind, suffix, message, details = {}) {
+  return Object.assign(new Error(message), {
+    code: `${String(kind || 'PROCESS')}_PROCESS_IDENTITY_${suffix}`,
+    details
+  });
+}
+
+function storedProcessReceipt(state, pidField, tokenField) {
+  const pid = Number(state?.[pidField]);
+  return {
+    pid: Number.isSafeInteger(pid) && pid > 0 ? pid : null,
+    process_start_token: normalizeProcessStartToken(state?.[tokenField])
+  };
+}
+
+function sameStoredProcessReceipt(state, pidField, tokenField, expected) {
+  const actual = storedProcessReceipt(state, pidField, tokenField);
+  return actual.pid === (expected?.pid ?? null)
+    && actual.process_start_token === (expected?.process_start_token ?? null);
+}
+
+function persistenceCleanupFailure(kind, persistenceError, cleanupError) {
+  cleanupError.persistenceError = persistenceError;
+  cleanupError.details = {
+    ...(cleanupError.details || {}),
+    persistence_error_code: persistenceError?.code || '',
+    persistence_error_message: persistenceError?.message || ''
+  };
+  if (!cleanupError.code) cleanupError.code = `${kind}_PROCESS_PERSISTENCE_CLEANUP_FAILED`;
+  return cleanupError;
+}
+
+async function captureSpawnedProcessIdentity(pidValue, {
+  processIdentityObserver = observeProcessIdentity,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  attempts = 5,
+  delayMs = 50,
+  kind = 'PROCESS'
+} = {}) {
+  const pid = Number(pidValue);
+  if (!Number.isSafeInteger(pid) || pid <= 0) {
+    throw processIdentityError(kind, 'UNVERIFIED', 'Spawned process PID is invalid.', { pid: pidValue ?? null });
+  }
+  let lastObservation = null;
+  for (let attempt = 0; attempt < Math.max(1, Number(attempts) || 1); attempt += 1) {
+    try { lastObservation = await processIdentityObserver(pid); }
+    catch (error) {
+      lastObservation = { state: 'unavailable', code: 'PROCESS_IDENTITY_UNVERIFIED', cause_code: error?.code || '' };
+    }
+    if (lastObservation?.state === 'live') {
+      try {
+        return processIdentityFrom({ pid, process_start_token: lastObservation.process_start_token });
+      } catch { /* retry malformed or unavailable launch observation */ }
+    }
+    if (lastObservation?.state === 'absent') {
+      throw processIdentityError(kind, 'EXITED', 'Spawned process exited before its OS identity was captured.', { pid });
+    }
+    if (attempt + 1 < Math.max(1, Number(attempts) || 1) && Number(delayMs) > 0) await sleep(Number(delayMs));
+  }
+  throw processIdentityError(kind, 'UNVERIFIED', 'Spawned process OS identity could not be verified.', {
+    pid,
+    observed_state: lastObservation?.state || null,
+    observed_code: lastObservation?.code || null
+  });
+}
+
+async function requireExactStoredProcessIdentity({ pid: pidValue, processStartToken }, {
+  processIdentityObserver = observeProcessIdentity,
+  kind = 'PROCESS'
+} = {}) {
+  const pid = Number(pidValue);
+  if (!Number.isSafeInteger(pid) || pid <= 0 || !isAlive(pid)) return null;
+  const token = normalizeProcessStartToken(processStartToken);
+  if (!token) {
+    throw processIdentityError(kind, 'UNVERIFIED', 'Live process state has no verified OS start token.', { pid });
+  }
+  let observed;
+  try { observed = await processIdentityObserver(pid); }
+  catch (error) {
+    throw processIdentityError(kind, 'UNVERIFIED', 'Live process OS identity could not be observed.', {
+      pid,
+      cause_code: error?.code || ''
+    });
+  }
+  if (observed?.state === 'absent') return null;
+  if (observed?.state !== 'live') {
+    throw processIdentityError(kind, 'UNVERIFIED', 'Live process OS identity could not be verified.', {
+      pid,
+      observed_state: observed?.state || null,
+      observed_code: observed?.code || null
+    });
+  }
+  const identity = processIdentityFrom({ pid, process_start_token: token });
+  if (!sameProcessIdentity(identity, observed)) {
+    throw processIdentityError(kind, 'CHANGED', 'Stored PID now belongs to a different OS process identity.', {
+      pid,
+      expected_process_start_token: token,
+      observed_process_start_token: normalizeProcessStartToken(observed.process_start_token)
+    });
+  }
+  return identity;
 }
 
 function assertActivationDeadline(expiresAtUnixMs, processMutated = false) {
@@ -151,9 +282,10 @@ function resolveNativeLaunchContract(paths, python) {
 function currentRuntimeState(input = {}) {
   const allowed = new Set([
     'manualStop', 'tunnelPid', 'tunnelStartedAt', 'tunnelId', 'tunnelFingerprint',
-    'tunnelDeviceId', 'tunnelDeviceInstanceId', 'tunnelInstanceId', 'tunnelActivationEpochId',
+    'tunnelDeviceId', 'tunnelDeviceInstanceId', 'tunnelInstanceId', 'tunnelActivationEpochId', 'tunnelProcessStartToken',
     'nativePid', 'nativeFingerprint', 'nativeWorkspace', 'nativePort',
-    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId', 'nativeActivationEpochId',
+    'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId', 'nativeActivationEpochId', 'nativeProcessStartToken',
+    'nativeActivationExpiresAtUnixMs',
     'nativeRuntimeMode', 'nativeModuleRoot',
     'nativeDeviceId', 'nativeDeviceInstanceId', 'startedAt',
     'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt', 'chatgptToolContractRediscoveredAt'
@@ -162,11 +294,20 @@ function currentRuntimeState(input = {}) {
 }
 
 class NativeService {
-  constructor(log, paths = defaultPaths, revisionTracker = null, device = null) {
+  constructor(log, paths = defaultPaths, revisionTracker = null, device = null, options = {}) {
     this.log = log;
     this.paths = paths;
     this.revisions = revisionTracker || new ComponentRevisionTracker({ paths });
     this.device = device;
+    this.processIdentityObserver = typeof options.processIdentityObserver === 'function'
+      ? options.processIdentityObserver
+      : observeProcessIdentity;
+    this.exactProcessTerminator = typeof options.exactProcessTerminator === 'function'
+      ? options.exactProcessTerminator
+      : terminateExactProcessTree;
+    this.identitySleep = typeof options.identitySleep === 'function'
+      ? options.identitySleep
+      : (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   assertOwnedLive(state) {
@@ -175,6 +316,63 @@ class NativeService {
     if (ownership === 'owned') return;
     const code = ownership === 'foreign' ? 'NATIVE_PROCESS_FOREIGN_DEVICE' : 'NATIVE_PROCESS_OWNER_UNVERIFIED';
     throw Object.assign(new Error(ownership === 'foreign' ? 'Coding MCP process state belongs to another device; refusing to adopt or terminate it.' : 'Coding MCP process state predates device ownership metadata; refusing to adopt or terminate the live process.'), { code, ownerDeviceId: String(state.nativeDeviceId || '') || null, expectedDeviceId: this.device.deviceId });
+  }
+
+  async ownedIdentity(state) {
+    // Establish OS start-token authority before applying device ownership.
+    // A live legacy record without a token must surface the typed identity
+    // failure and may never be adopted or terminated.
+    const identity = await requireExactStoredProcessIdentity({
+      pid: state.nativePid,
+      processStartToken: state.nativeProcessStartToken
+    }, {
+      processIdentityObserver: this.processIdentityObserver,
+      kind: 'NATIVE'
+    });
+    this.assertOwnedLive(state);
+    return identity;
+  }
+
+  clearOwnedState(expectedReceipt = null) {
+    updateJsonAtomic(this.paths.stateFile(), (value) => {
+      if (expectedReceipt && !sameStoredProcessReceipt(value, 'nativePid', 'nativeProcessStartToken', expectedReceipt)) {
+        throw Object.assign(new Error('Coding MCP process state changed before exact cleanup.'), {
+          code: 'NATIVE_PROCESS_STATE_CHANGED'
+        });
+      }
+      return {
+        ...value,
+        nativePid: null,
+        nativeProcessStartToken: null,
+        nativeFingerprint: '',
+        nativeWorkspace: '',
+        nativePort: null,
+        nativePermissionMode: '',
+        nativeInstanceId: '',
+        nativeCodeRevision: '',
+        nativeRuntimeMode: '',
+        nativeModuleRoot: '',
+        nativeDeviceId: '',
+        nativeDeviceInstanceId: '',
+        nativeActivationEpochId: null,
+        nativeActivationExpiresAtUnixMs: null
+      };
+    });
+  }
+
+  async terminateOwnedIdentity(identity) {
+    if (!identity) return false;
+    const state = readJson(this.paths.stateFile(), {});
+    if (!sameStoredProcessReceipt(state, 'nativePid', 'nativeProcessStartToken', identity)) {
+      throw Object.assign(new Error('Coding MCP process state changed before exact termination.'), {
+        code: 'NATIVE_PROCESS_STATE_CHANGED'
+      });
+    }
+    await this.exactProcessTerminator(identity, {
+      observeProcessIdentity: this.processIdentityObserver
+    });
+    this.clearOwnedState(identity);
+    return true;
   }
 
   async start(settings, token, progress, options = {}) {
@@ -194,35 +392,62 @@ class NativeService {
         diskRevision
       });
     }
-    this.assertOwnedLive(current);
+    const currentReceipt = storedProcessReceipt(current, 'nativePid', 'nativeProcessStartToken');
+    const currentIdentity = await this.ownedIdentity(current);
     const requestedEpoch = String(options.activationEpochId || '').trim();
+    const requestedExpiry = Number(options.activationExpiresAtUnixMs || options.expiresAtUnixMs || 0);
+    if (requestedExpiry > 0 && !Number.isSafeInteger(requestedExpiry)) {
+      throw Object.assign(new Error('Coding MCP activation expiry is invalid.'), {
+        code: 'ACTIVATION_EPOCH_EXPIRY_INVALID'
+      });
+    }
     const launchAuthorityMatches = current.nativeRuntimeMode === launch.runtimeMode
       && pathKey(current.nativeModuleRoot) === pathKey(launch.moduleRoot);
     const epochMatches = !requestedEpoch || String(current.nativeActivationEpochId || '').trim() === requestedEpoch;
-    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint && launchAuthorityMatches && epochMatches) {
-      const updatePending = Boolean(current.nativeCodeRevision && current.nativeCodeRevision !== diskRevision);
-      this.log.info('MCP Portable đã chạy trong thư mục làm việc mục tiêu', { pid: current.nativePid, workspace: settings.workspace });
-      if (updatePending) {
-        this.log.info('Coding Tools MCP có source revision mới đang chờ controlled activation', {
-          pid: current.nativePid,
-          runningRevision: String(current.nativeCodeRevision).slice(0, 12),
-          diskRevision: diskRevision.slice(0, 12)
-        });
+    const expiryMatches = !requestedEpoch
+      || Number(current.nativeActivationExpiresAtUnixMs || 0) === requestedExpiry;
+    if (currentIdentity && current.nativeFingerprint === fingerprint && launchAuthorityMatches && epochMatches && expiryMatches) {
+      // Re-read the receipt immediately before reuse; a concurrent stop or
+      // replacement must not turn a stale observation into an owner claim.
+      const latest = readJson(this.paths.stateFile(), {});
+      let latestIdentity = null;
+      try { latestIdentity = await this.ownedIdentity(latest); } catch { latestIdentity = null; }
+      if (latestIdentity && sameProcessIdentity(currentIdentity, latestIdentity)
+        && latest.nativeFingerprint === fingerprint
+        && latest.nativeRuntimeMode === launch.runtimeMode
+        && pathKey(latest.nativeModuleRoot) === pathKey(launch.moduleRoot)
+        && (!requestedEpoch || String(latest.nativeActivationEpochId || '').trim() === requestedEpoch)
+        && (!requestedEpoch || Number(latest.nativeActivationExpiresAtUnixMs || 0) === requestedExpiry)) {
+        const updatePending = Boolean(latest.nativeCodeRevision && latest.nativeCodeRevision !== diskRevision);
+        this.log.info('MCP Portable đã chạy trong thư mục làm việc mục tiêu', { pid: latest.nativePid, workspace: settings.workspace });
+        if (updatePending) {
+          this.log.info('Coding Tools MCP có source revision mới đang chờ controlled activation', {
+            pid: latest.nativePid,
+            runningRevision: String(latest.nativeCodeRevision).slice(0, 12),
+            diskRevision: diskRevision.slice(0, 12)
+          });
+        }
+        return { reused: true, pid: latest.nativePid, processStartToken: latest.nativeProcessStartToken, codeRevision: latest.nativeCodeRevision || null, updatePending };
       }
-      return { reused: true, pid: current.nativePid, codeRevision: current.nativeCodeRevision || null, updatePending };
     }
-    if (isAlive(current.nativePid) && current.nativeFingerprint === fingerprint && (!launchAuthorityMatches || !epochMatches)) {
+    if (currentIdentity && current.nativeFingerprint === fingerprint && (!launchAuthorityMatches || !epochMatches || !expiryMatches)) {
       this.log.warn('Coding MCP đang chạy không có launch authority khớp checkout hiện tại; sẽ tạo lại thay vì reuse', {
         pid: current.nativePid,
         runtimeMode: launch.runtimeMode,
         moduleRoot: launch.moduleRoot,
         requestedActivationEpochId: requestedEpoch || null,
-        runningActivationEpochId: String(current.nativeActivationEpochId || '') || null
+        runningActivationEpochId: String(current.nativeActivationEpochId || '') || null,
+        requestedActivationExpiresAtUnixMs: requestedExpiry || null,
+        runningActivationExpiresAtUnixMs: Number(current.nativeActivationExpiresAtUnixMs || 0) || null
       });
     }
-    if (isAlive(current.nativePid)) {
+    if (currentIdentity) {
       this.log.info('Phát hiện cấu hình MCP Portable đã thay đổi, đang âm thầm tạo lại', { from: current.nativeWorkspace || '', to: settings.workspace });
-      await this.stop();
+      await this.terminateOwnedIdentity(currentIdentity);
+    } else if (current.nativePid || current.nativeProcessStartToken) {
+      // The exact stored owner has exited. Clear only the stale receipt; a
+      // recycled PID is never adopted or terminated.
+      this.clearOwnedState(currentReceipt);
     }
 
     progress('native-start', 45, `Đang âm thầm khởi động môi trường runtime portable bằng ${python.version}`);
@@ -239,7 +464,8 @@ class NativeService {
       p5Seed: options.p5Seed,
       device: this.device,
       activationEpochId: requestedEpoch,
-      activationGate: options.activationGate
+      activationGate: options.activationGate,
+      activationExpiresAtUnixMs: requestedExpiry
     });
     const args = [
       ...python.prefixArgs,
@@ -251,6 +477,7 @@ class NativeService {
     ];
     const command = launch.command;
     let child;
+    let spawnedIdentity;
     try {
       assertActivationDeadline(options.expiresAtUnixMs, options.activationProcessMutated === true);
       child = spawn(command, args, {
@@ -264,29 +491,56 @@ class NativeService {
         child.once('spawn', resolve);
         child.once('error', reject);
       });
+      // The child is detached; release the parent handle even if the OS probe
+      // cannot establish a token.  No unverified PID is persisted or killed.
       child.unref();
+      spawnedIdentity = await captureSpawnedProcessIdentity(child.pid, {
+        processIdentityObserver: this.processIdentityObserver,
+        sleep: this.identitySleep,
+        kind: 'NATIVE'
+      });
     } finally {
       fs.closeSync(output);
     }
     const instanceId = crypto.randomBytes(12).toString('hex');
-    updateJsonAtomic(this.paths.stateFile(), (value) => ({
-      ...currentRuntimeState(value),
-      nativePid: child.pid,
-      nativeFingerprint: fingerprint,
-      nativeWorkspace: path.resolve(settings.workspace),
-      nativePort: Number(settings.mcpPort),
-      nativePermissionMode: settings.permissionMode,
-      nativeToolMode: 'smart',
-      nativeCommand: command,
-      nativeCodeRevision: diskRevision,
-      nativeRuntimeMode: launch.runtimeMode,
-      nativeModuleRoot: launch.moduleRoot,
-      nativeDeviceId: this.device?.deviceId || '',
-      nativeDeviceInstanceId: this.device?.deviceInstanceId || '',
-      startedAt: new Date().toISOString(),
-      nativeInstanceId: instanceId,
-      nativeActivationEpochId: requestedEpoch || null
-    }));
+    try {
+      updateJsonAtomic(this.paths.stateFile(), (value) => {
+        if (!sameStoredProcessReceipt(value, 'nativePid', 'nativeProcessStartToken', { pid: null, process_start_token: null })) {
+          throw Object.assign(new Error('Coding MCP process state changed before launch receipt persistence.'), {
+            code: 'NATIVE_PROCESS_STATE_CHANGED'
+          });
+        }
+        return {
+          ...currentRuntimeState(value),
+          nativePid: child.pid,
+          nativeProcessStartToken: spawnedIdentity.process_start_token,
+          nativeFingerprint: fingerprint,
+          nativeWorkspace: path.resolve(settings.workspace),
+          nativePort: Number(settings.mcpPort),
+          nativePermissionMode: settings.permissionMode,
+          nativeToolMode: 'smart',
+          nativeCommand: command,
+          nativeCodeRevision: diskRevision,
+          nativeRuntimeMode: launch.runtimeMode,
+          nativeModuleRoot: launch.moduleRoot,
+          nativeDeviceId: this.device?.deviceId || '',
+          nativeDeviceInstanceId: this.device?.deviceInstanceId || '',
+          startedAt: new Date().toISOString(),
+          nativeInstanceId: instanceId,
+          nativeActivationEpochId: requestedEpoch || null,
+          nativeActivationExpiresAtUnixMs: requestedExpiry || null
+        };
+      });
+    } catch (error) {
+      try {
+        await this.exactProcessTerminator(spawnedIdentity, {
+          observeProcessIdentity: this.processIdentityObserver
+        });
+      } catch (cleanupError) {
+        throw persistenceCleanupFailure('NATIVE', error, cleanupError);
+      }
+      throw error;
+    }
     this.log.info('Môi trường runtime MCP Portable đã khởi động', {
       pid: child.pid,
       workspace: settings.workspace,
@@ -298,6 +552,7 @@ class NativeService {
     return {
       reused: false,
       pid: child.pid,
+      processStartToken: spawnedIdentity.process_start_token,
       instanceId,
       codeRevision: diskRevision,
       updatePending: false,
@@ -308,31 +563,12 @@ class NativeService {
 
   async stop() {
     const state = readJson(this.paths.stateFile(), {});
-    const alive = isAlive(state.nativePid);
-    this.assertOwnedLive(state);
-    try {
-      if (alive) {
-        const { run } = require('./commandRunner');
-        await run('taskkill.exe', ['/PID', String(state.nativePid), '/T', '/F'], { allowFailure: true });
-      }
-      return alive;
-    } finally {
-      updateJsonAtomic(this.paths.stateFile(), (value) => ({
-        ...value,
-        nativePid: null,
-        nativeFingerprint: '',
-        nativeWorkspace: '',
-        nativePort: null,
-        nativePermissionMode: '',
-        nativeInstanceId: '',
-        nativeCodeRevision: '',
-        nativeRuntimeMode: '',
-        nativeModuleRoot: '',
-        nativeDeviceId: '',
-        nativeDeviceInstanceId: '',
-        nativeActivationEpochId: null
-      }));
+    const identity = await this.ownedIdentity(state);
+    if (!identity) {
+      this.clearOwnedState(storedProcessReceipt(state, 'nativePid', 'nativeProcessStartToken'));
+      return false;
     }
+    return this.terminateOwnedIdentity(identity);
   }
 
   async markWorkspace(settings) {
@@ -349,16 +585,33 @@ class NativeService {
 
   async status(settings = null, options = {}) {
     const state = readJson(this.paths.stateFile(), {});
-    if (!isAlive(state.nativePid)) return false;
+    let identity;
+    try { identity = await this.ownedIdentity(state); } catch { return false; }
+    if (!identity) return false;
     if (this.device && classifyStoredDeviceOwner(state.nativeDeviceId, this.device.deviceId) !== 'owned') return false;
     if (settings && state.nativeFingerprint !== runtimeFingerprint(settings)) return false;
     const expectedEpoch = String(options.activationEpochId || '').trim();
-    return !expectedEpoch || String(state.nativeActivationEpochId || '').trim() === expectedEpoch;
+    if (expectedEpoch && String(state.nativeActivationEpochId || '').trim() !== expectedEpoch) return false;
+    try {
+      const latest = await this.ownedIdentity(readJson(this.paths.stateFile(), {}));
+      return Boolean(latest && sameProcessIdentity(identity, latest));
+    } catch {
+      return false;
+    }
   }
 
   revisionStatus(options = {}) {
     const state = readJson(this.paths.stateFile(), {});
-    const alive = isAlive(state.nativePid);
+    let alive = false;
+    if (isAlive(state.nativePid) && normalizeProcessStartToken(state.nativeProcessStartToken)) {
+      try {
+        const observed = this.processIdentityObserver(state.nativePid);
+        alive = !observed?.then && sameProcessIdentity({
+          pid: state.nativePid,
+          process_start_token: state.nativeProcessStartToken
+        }, observed);
+      } catch { alive = false; }
+    }
     try {
       const status = this.revisions.status('coding_mcp', alive ? state.nativeCodeRevision : null, options);
       if (!alive) return { ...status, update_pending: false, state: 'stopped', activation_epoch_id: null };
@@ -379,6 +632,8 @@ class NativeService {
 module.exports = {
   NativeService,
   isAlive,
+  captureSpawnedProcessIdentity,
+  requireExactStoredProcessIdentity,
   runtimeFingerprint,
   currentRuntimeState,
   resolveNativeLaunchContract,

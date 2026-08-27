@@ -10,10 +10,17 @@ const { loadOrCreateDeviceIdentity, normalizeDeviceIdentity } = require('./devic
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { RecoveryActivation } = require('./recoveryActivation');
 const { AcceptedCodeActivationController } = require('./recoveryActionStore');
-const { computeActivationClosure } = require('./activationClosure');
+const { computeActivationClosure, activationSourceCheckpoint } = require('./activationClosure');
 const { FullCleanActivation, canonicalLedgerCensus } = require('./fullCleanActivation');
 const { ActivationEpochStore, ACTIVE_STATES } = require('./activationEpoch');
-const { run } = require('./commandRunner');
+const { writeBootstrapResult, readBootstrapResult, removeBootstrapEnvelope } = require('./recoveryBootstrap');
+const {
+  normalizeProcessStartToken,
+  observeProcessIdentity,
+  processIdentityFrom,
+  sameProcessIdentity,
+  terminateExactProcessTree
+} = require('./processIdentity');
 
 const SUPERVISION_INTERVAL_MS = 5000;
 const REPLACEMENT_WAIT_MS = 15_000;
@@ -131,7 +138,9 @@ class RecoveryHost {
     paths, settings, secrets, environment, log, orchestrator, healthService, gateway, ipcServerFactory,
     revisionTracker = null, actionStore = null, spawnRecoveryReplacement = null, spawnElectronUi = null,
     exitProcess = null, replacement = null, autoActivationController = null, recoveryPlaneService = null,
-    deviceIdentity = null
+    deviceIdentity = null, bootstrap = null, processAlive = isProcessAlive,
+    processIdentityObserver = observeProcessIdentity,
+    exactProcessTerminator = terminateExactProcessTree
   }) {
     this.paths = paths;
     this.settings = settings;
@@ -172,6 +181,21 @@ class RecoveryHost {
     this.ownsLock = false;
     this.running = false;
     this.replacement = replacement;
+    // A bootstrap envelope is present only when a current-checkout process was
+    // launched to replace a stale Recovery Host.  It is consumed before normal
+    // watchdog/startup recovery so the stale process can never execute a
+    // component-scoped activation request.
+    this.bootstrap = bootstrap;
+    this.bootstrapActivation = bootstrap ? { state: 'pending', operation_id: bootstrap.operation_id || null } : null;
+    this.bootstrapEnvelopeConsumed = false;
+    this.processAlive = typeof processAlive === 'function' ? processAlive : isProcessAlive;
+    this.processIdentityObserver = typeof processIdentityObserver === 'function'
+      ? processIdentityObserver
+      : observeProcessIdentity;
+    this.exactProcessTerminator = typeof exactProcessTerminator === 'function'
+      ? exactProcessTerminator
+      : terminateExactProcessTree;
+    this.processIdentity = null;
     this.exitProcess = exitProcess || (() => {});
     this.handoffStarted = false;
     this.replacementWaitMs = REPLACEMENT_WAIT_MS;
@@ -196,6 +220,7 @@ class RecoveryHost {
       actionStore,
       spawnRecoveryReplacement,
       spawnElectronUi,
+      processIdentityObserver: this.processIdentityObserver,
       beginRecoveryHandoff: (operationId) => this.scheduleRecoveryHandoff(operationId)
     });
     if (this.activation.uiRecoveryPreferenceStatus().suppressed) {
@@ -244,26 +269,45 @@ class RecoveryHost {
       },
       terminateUi: async (presence) => {
         const pid = Number(presence?.pid || 0);
-        if (!pid || pid === process.pid) throw Object.assign(new Error('Refused to terminate an unverified Electron UI owner.'), { code: 'UI_RECOVERY_INSTANCE_MISMATCH' });
-        if (process.platform === 'win32') {
-          const result = await run('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { allowFailure: true });
-          if (Number(result?.code) !== 0) {
-            throw Object.assign(new Error('Electron UI termination command failed.'), {
-              code: 'UI_TERMINATION_FAILED',
-              details: { pid, exit_code: result?.code ?? null }
-            });
-          }
-        } else {
-          try { process.kill(pid, 'SIGTERM'); } catch (error) {
-            if (error?.code !== 'ESRCH') throw Object.assign(error, { code: 'UI_TERMINATION_FAILED' });
-          }
+        const instanceId = String(presence?.instance_id || '').trim();
+        const token = normalizeProcessStartToken(presence?.process_start_token);
+        if (!pid || pid === process.pid || !instanceId || !token) {
+          throw Object.assign(new Error('Refused to terminate an unverified Electron UI owner.'), {
+            code: 'UI_RECOVERY_INSTANCE_MISMATCH'
+          });
         }
-        const deadline = Date.now() + 5000;
-        while (isProcessAlive(pid) && Date.now() < deadline) await wait(50);
-        if (isProcessAlive(pid)) {
-          throw Object.assign(new Error('Electron UI process remained alive after termination request.'), {
-            code: 'UI_TERMINATION_FAILED',
-            details: { pid }
+        const currentPresence = this.activation.uiPresence();
+        if (!currentPresence.alive
+          || Number(currentPresence.pid) !== pid
+          || String(currentPresence.instance_id || '') !== instanceId
+          || normalizeProcessStartToken(currentPresence.process_start_token) !== token) {
+          throw Object.assign(new Error('Electron UI owner changed before exact termination.'), {
+            code: 'UI_RECOVERY_INSTANCE_MISMATCH',
+            details: { pid, instance_id: instanceId }
+          });
+        }
+        let identity;
+        try { identity = processIdentityFrom({ pid, process_start_token: token }); }
+        catch (error) {
+          throw Object.assign(new Error('Electron UI process identity is unavailable for termination.'), {
+            code: 'UI_PROCESS_IDENTITY_UNVERIFIED',
+            cause: error
+          });
+        }
+        try {
+          await this.exactProcessTerminator(identity, {
+            observeProcessIdentity: this.processIdentityObserver,
+            timeoutMs: 5000
+          });
+        } catch (error) {
+          throw Object.assign(new Error('Electron UI exact process termination failed.'), {
+            code: error?.code === 'PROCESS_IDENTITY_UNVERIFIED'
+              ? 'UI_PROCESS_IDENTITY_UNVERIFIED'
+              : error?.code === 'PROCESS_IDENTITY_CHANGED'
+                ? 'UI_RECOVERY_INSTANCE_MISMATCH'
+                : 'UI_TERMINATION_FAILED',
+            cause: error,
+            details: { pid, instance_id: instanceId }
           });
         }
         return true;
@@ -273,7 +317,34 @@ class RecoveryHost {
     });
     this.activation.fullCleanActivation = this.fullCleanActivation;
     this.orchestrator.setFullCleanActivation?.(this.fullCleanActivation);
+    // All non-soft restart callers (including deferred task_control tickets)
+    // must obtain their source authority from this Recovery Host's current
+    // accepted-code closure.  Never infer a checkpoint from a ticket or a
+    // stale component projection.
+    this.orchestrator.setFullCleanSourceCheckpointResolver?.(
+      () => this.resolveFullCleanSourceCheckpoint()
+    );
     if (replacement?.activationEpochId) this.orchestrator.setActivationEpoch?.(replacement.activationEpochId);
+  }
+
+  resolveFullCleanSourceCheckpoint() {
+    return activationSourceCheckpoint(this.hostStatus());
+  }
+
+  _resolveRequestedFullCleanCheckpoint(requested) {
+    const authoritative = this.resolveFullCleanSourceCheckpoint();
+    if (requested === undefined || requested === null) return authoritative;
+    const fields = ['checkpoint_id', 'run_id', 'wave_id', 'proof_fingerprint', 'git_head'];
+    const matches = requested && typeof requested === 'object' && !Array.isArray(requested)
+      && Object.keys(requested).length === fields.length
+      && fields.every((field) => requested[field] === authoritative[field]);
+    if (!matches) {
+      throw Object.assign(new Error('The requested full-clean source checkpoint does not match the current Recovery Host accepted-code closure.'), {
+        code: 'ACTIVATION_SOURCE_CHECKPOINT_MISMATCH',
+        details: { source_checkpoint: authoritative }
+      });
+    }
+    return authoritative;
   }
 
   resetUiRecoveryTracking(state = 'healthy') {
@@ -394,6 +465,189 @@ class RecoveryHost {
     }
   }
 
+  bootstrapBlocksAdmission() {
+    return Boolean(this.bootstrap && this.bootstrapActivation?.state !== 'completed');
+  }
+
+  assertBootstrapMutationAllowed() {
+    if (!this.bootstrapBlocksAdmission()) return true;
+    throw Object.assign(new Error('Recovery Host bootstrap owns activation; external runtime mutation is closed.'), {
+      code: 'RECOVERY_BOOTSTRAP_IN_PROGRESS',
+      details: {
+        operation_id: this.bootstrap?.operation_id || null,
+        state: this.bootstrapActivation?.state || 'pending'
+      }
+    });
+  }
+
+  async prepareBootstrapStart(durableEpoch) {
+    if (!this.bootstrap) return null;
+    const operationId = String(this.bootstrap.operation_id || '').trim();
+    const expiresAtUnixMs = Number(this.bootstrap.expires_at_unix_ms || 0);
+    if (!operationId || !Number.isSafeInteger(expiresAtUnixMs) || Date.now() >= expiresAtUnixMs) {
+      throw Object.assign(new Error('Recovery Host bootstrap request expired before startup.'), {
+        code: 'RECOVERY_BOOTSTRAP_EXPIRED',
+        details: { operation_id: operationId || null, expires_at_unix_ms: expiresAtUnixMs || null }
+      });
+    }
+    const oldPid = Number(this.bootstrap.old_host_pid || 0);
+    const oldInstanceId = String(this.bootstrap.old_host_instance_id || '').trim();
+    const oldProcessStartToken = normalizeProcessStartToken(this.bootstrap.old_host_process_start_token);
+    if (!Number.isInteger(oldPid) || oldPid <= 0 || !oldInstanceId || !oldProcessStartToken
+      || oldPid === process.pid || oldInstanceId === this.instanceId) {
+      throw Object.assign(new Error('Previous Recovery Host identity is still active or was not replaced.'), {
+        code: 'RECOVERY_BOOTSTRAP_OLD_HOST_ACTIVE',
+        details: {
+          operation_id: operationId,
+          old_host_pid: oldPid,
+          old_host_process_start_token: oldProcessStartToken || null,
+          old_host_instance_id: oldInstanceId
+        }
+      });
+    }
+    let observedOldHost;
+    try { observedOldHost = await this.processIdentityObserver(oldPid); }
+    catch (error) {
+      throw Object.assign(new Error('Previous Recovery Host process identity could not be observed.'), {
+        code: 'RECOVERY_BOOTSTRAP_PROCESS_IDENTITY_UNVERIFIED',
+        cause: error
+      });
+    }
+    if (observedOldHost?.state === 'unavailable' || !['absent', 'live'].includes(String(observedOldHost?.state || ''))) {
+      throw Object.assign(new Error('Previous Recovery Host process identity could not be observed.'), {
+        code: 'RECOVERY_BOOTSTRAP_PROCESS_IDENTITY_UNVERIFIED'
+      });
+    }
+    if (observedOldHost?.state === 'live' && sameProcessIdentity({
+      pid: oldPid,
+      process_start_token: oldProcessStartToken
+    }, observedOldHost)) {
+      throw Object.assign(new Error('Previous Recovery Host identity is still active or was not replaced.'), {
+        code: 'RECOVERY_BOOTSTRAP_OLD_HOST_ACTIVE',
+        details: {
+          operation_id: operationId,
+          old_host_pid: oldPid,
+          old_host_process_start_token: oldProcessStartToken,
+          old_host_instance_id: oldInstanceId
+        }
+      });
+    }
+    const revision = this.revisions.status('recovery_host', this.recoveryHostRunningRevision, { force: true });
+    const expectedRevision = String(this.bootstrap.expected_disk_revision || '').trim().toLowerCase();
+    if (!expectedRevision || revision.state !== 'current'
+      || String(revision.running_revision || '').toLowerCase() !== expectedRevision
+      || String(revision.disk_revision || '').toLowerCase() !== expectedRevision) {
+      throw Object.assign(new Error('Bootstrap Recovery Host is not running the requested current checkout revision.'), {
+        code: 'RECOVERY_BOOTSTRAP_REVISION_MISMATCH',
+        details: {
+          operation_id: operationId,
+          expected_disk_revision: expectedRevision || null,
+          running_revision: revision.running_revision || null,
+          disk_revision: revision.disk_revision || null,
+          revision_state: revision.state || null
+        }
+      });
+    }
+    const suppliedEpochId = String(this.bootstrap.activation_epoch_id || '').trim();
+    if (durableEpoch && String(durableEpoch.operation_id || '') === operationId) {
+      if (suppliedEpochId && String(durableEpoch.activation_epoch_id || '') !== suppliedEpochId) {
+        throw Object.assign(new Error('Bootstrap activation epoch does not match the durable operation.'), {
+          code: 'ACTIVATION_EPOCH_ID_MISMATCH'
+        });
+      }
+      if (durableEpoch.state === 'FAILED' || durableEpoch.state === 'READY') {
+        throw Object.assign(new Error('Bootstrap activation epoch is already terminal.'), {
+          code: durableEpoch.state === 'FAILED' ? 'UPDATE_INCOMPLETE' : 'RECOVERY_BOOTSTRAP_TERMINAL',
+          details: {
+            operation_id: operationId,
+            activation_epoch_id: durableEpoch.activation_epoch_id,
+            state: durableEpoch.state
+          }
+        });
+      }
+      return { operationId, expectedRevision, expiresAtUnixMs, replayEpoch: durableEpoch, requiresNewEpoch: false };
+    }
+    const priorResult = readBootstrapResult(this.paths, operationId);
+    if (priorResult && ['completed', 'failed', 'expired'].includes(String(priorResult.state || ''))) {
+      throw Object.assign(new Error('Recovery Host bootstrap operation is already terminal without a matching durable epoch.'), {
+        code: 'RECOVERY_BOOTSTRAP_TERMINAL',
+        details: { operation_id: operationId, state: priorResult.state }
+      });
+    }
+    if (suppliedEpochId) {
+      throw Object.assign(new Error('Bootstrap supplied an activation epoch that is not the current durable operation.'), {
+        code: 'ACTIVATION_EPOCH_NOT_CURRENT'
+      });
+    }
+    if (durableEpoch && ACTIVE_STATES.has(durableEpoch.state)) {
+      throw Object.assign(new Error('Another durable activation epoch is already active.'), {
+        code: 'ACTIVATION_EPOCH_ACTIVE',
+        details: { activation_epoch_id: durableEpoch.activation_epoch_id, operation_id: durableEpoch.operation_id || null }
+      });
+    }
+    return { operationId, expectedRevision, expiresAtUnixMs, replayEpoch: null, requiresNewEpoch: true };
+  }
+
+  recordBootstrapEpoch(epoch, extra = {}) {
+    if (!epoch || typeof epoch !== 'object') return null;
+    const operationId = String(epoch.operation_id || '').trim();
+    const isBootstrapOperation = Boolean(
+      operationId
+      && (operationId === String(this.bootstrap?.operation_id || '')
+        || String(epoch.metadata?.reason || '') === 'recovery_host_bootstrap')
+    );
+    if (!isBootstrapOperation) return null;
+    const state = epoch.state === 'READY' ? 'completed' : epoch.state === 'FAILED' ? 'failed' : 'started';
+    const receipt = {
+      operation_id: operationId,
+      state,
+      ...(epoch.state === 'FAILED' ? { error: epoch.error || { code: 'UPDATE_INCOMPLETE', message: 'Full-clean bootstrap activation failed.' } } : {}),
+      result: {
+        activation_epoch_id: epoch.activation_epoch_id || null,
+        activation_state: epoch.state || null,
+        admission_open: epoch.admission_state === 'OPEN',
+        fully_ready: epoch.state === 'READY' && epoch.admission_state === 'OPEN',
+        ...extra
+      }
+    };
+    try { writeBootstrapResult(this.paths, receipt); }
+    catch (error) {
+      this.log?.error?.(error.message, { stage: 'recovery-bootstrap-result', operationId, code: error?.code || '' });
+    }
+    if (this.bootstrap && operationId === String(this.bootstrap.operation_id || '')) {
+      this.bootstrapActivation = { state, operation_id: operationId, activation_epoch_id: epoch.activation_epoch_id || null };
+      if (!this.bootstrapEnvelopeConsumed) {
+        try {
+          removeBootstrapEnvelope(this.paths, operationId, this.bootstrap.integrity_sha256 || '');
+          this.bootstrapEnvelopeConsumed = true;
+        } catch (error) {
+          this.log?.error?.(error.message, { stage: 'recovery-bootstrap-consume', operationId, code: error?.code || '' });
+        }
+      }
+    }
+    return receipt;
+  }
+
+  recordBootstrapFailure(error, durableEpoch = null) {
+    if (!this.bootstrap) return null;
+    if (durableEpoch && String(durableEpoch.operation_id || '') === String(this.bootstrap.operation_id || '')) {
+      return this.recordBootstrapEpoch(durableEpoch);
+    }
+    const state = String(error?.code || '') === 'RECOVERY_BOOTSTRAP_EXPIRED' ? 'expired' : 'failed';
+    this.bootstrapActivation = { state, operation_id: this.bootstrap.operation_id || null };
+    try {
+      writeBootstrapResult(this.paths, {
+        operation_id: this.bootstrap.operation_id,
+        state,
+        error: { code: error?.code || 'RECOVERY_BOOTSTRAP_FAILED', message: error?.message || String(error) },
+        result: { activation_epoch_id: null, admission_open: false, fully_ready: false }
+      });
+    } catch (persistError) {
+      this.log?.error?.(persistError.message, { stage: 'recovery-bootstrap-failure-result', code: persistError?.code || '' });
+    }
+    return this.bootstrapActivation;
+  }
+
   hostStatus() {
     let codeRevision;
     try {
@@ -415,12 +669,61 @@ class RecoveryHost {
     try { activationEpoch = this.fullCleanActivation?.current?.() || null; } catch (error) {
       activationEpoch = { state: 'UPDATE_INCOMPLETE', admission_state: 'CLOSED', error: { code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID'), message: String(error?.message || error) } };
     }
-    const epochStatus = this.orchestrator.activationEpochStatus?.() || {
+    let epochStatus = this.orchestrator.activationEpochStatus?.() || {
       activation_epoch_id: activationEpoch?.activation_epoch_id || null,
+      operation_id: activationEpoch?.operation_id || null,
       state: activationEpoch?.state || 'NONE',
-      admission_open: !activationEpoch || activationEpoch.state === 'READY',
-      update_incomplete: Boolean(activationEpoch && activationEpoch.state !== 'READY')
+      // A READY state without an explicit OPEN admission bit is not an open
+      // runtime.  This fallback is used by legacy/test orchestrators and must
+      // fail closed instead of projecting a stale green status.
+      admission_open: !activationEpoch
+        || (activationEpoch.state === 'READY' && activationEpoch.admission_state === 'OPEN'),
+      update_incomplete: Boolean(activationEpoch && (activationEpoch.state !== 'READY' || activationEpoch.admission_state !== 'OPEN'))
     };
+    const durableOperationId = String(activationEpoch?.operation_id || '').trim() || null;
+    const projectedOperationId = String(epochStatus?.operation_id || '').trim() || null;
+    epochStatus = { ...epochStatus, operation_id: durableOperationId };
+    if (projectedOperationId && projectedOperationId !== durableOperationId) {
+      epochStatus = {
+        ...epochStatus,
+        admission_open: false,
+        update_incomplete: true,
+        error_code: 'ACTIVATION_OPERATION_MISMATCH'
+      };
+    }
+    const bootstrapAdmissionBlocked = this.bootstrapBlocksAdmission();
+    if (bootstrapAdmissionBlocked) {
+      epochStatus = {
+        ...epochStatus,
+        state: epochStatus?.state && epochStatus.state !== 'NONE' ? epochStatus.state : 'UPDATE_INCOMPLETE',
+        admission_open: false,
+        update_incomplete: true
+      };
+    }
+    const fullCleanAvailable = Boolean(
+      this.fullCleanActivation
+      && typeof this.fullCleanActivation.restart === 'function'
+      && typeof this.fullCleanActivation.finalCensus === 'function'
+      && codeRevision.state === 'current'
+      && codeRevision.running_revision
+      && codeRevision.disk_revision
+      && codeRevision.running_revision === codeRevision.disk_revision
+    );
+    const fullCleanState = !this.fullCleanActivation
+      ? 'unavailable'
+      : fullCleanAvailable ? 'current' : 'stale';
+    const connectorCurrentSha256 = String(this.lastSupervisionStatus?.toolContract?.sha256 || '').trim().toLowerCase();
+    const connectorAcknowledgedSha256 = String(this.lastSupervisionStatus?.connectorContractAcknowledgedSha256 || '').trim().toLowerCase();
+    const connectorAckShaMatches = Boolean(
+      /^[a-f0-9]{64}$/.test(connectorCurrentSha256)
+      && connectorCurrentSha256 === connectorAcknowledgedSha256
+    );
+    const connectorReady = Boolean(
+      this.lastSupervisionStatus?.connectorRefreshRequired === false
+      && this.lastSupervisionStatus?.connectorRediscovered === true
+      && this.lastSupervisionStatus?.connectorAcknowledgementPending === false
+      && connectorAckShaMatches
+    );
     const activationClosure = activationClosureProjection({
       autoActivation,
       recoveryHostRevision: codeRevision,
@@ -432,8 +735,9 @@ class RecoveryHost {
       }
     });
     return {
-      state: this.running ? 'healthy' : 'starting',
+      state: bootstrapAdmissionBlocked ? 'bootstrapping' : this.running ? 'healthy' : 'starting',
       pid: process.pid,
+      process_start_token: this.processIdentity?.process_start_token || null,
       instance_id: this.instanceId,
       device_id: this.deviceIdentity.device_id,
       device_instance_id: this.deviceInstanceId,
@@ -443,6 +747,26 @@ class RecoveryHost {
       gateway: this.gateway?.server ? 'healthy' : 'stopped',
       gateway_metrics: this.gateway?.metrics?.() || null,
       code_revision: codeRevision,
+      full_clean_activation: {
+        available: fullCleanAvailable,
+        contract_version: 1,
+        running_revision: codeRevision.running_revision || null,
+        disk_revision: codeRevision.disk_revision || null,
+        state: fullCleanState,
+        activation_epoch_id: epochStatus.activation_epoch_id || null
+      },
+      recovery_bootstrap: this.bootstrap ? {
+        operation_id: this.bootstrap.operation_id || null,
+        expected_disk_revision: this.bootstrap.expected_disk_revision || null,
+        old_host_pid: Number(this.bootstrap.old_host_pid || 0) || null,
+        old_host_process_start_token: this.bootstrap.old_host_process_start_token || null,
+        old_host_instance_id: this.bootstrap.old_host_instance_id || null,
+        state: this.bootstrapActivation?.state || 'pending'
+      } : null,
+      capabilities: {
+        full_clean_activation: fullCleanAvailable,
+        activation_epoch: true
+      },
       electron_ui_revision: electronUiRevision,
       electron_ui_recovery: this.uiRecoveryStatus(),
       auto_activation: autoActivation,
@@ -454,8 +778,19 @@ class RecoveryHost {
       runtime: this.lastSupervisionStatus ? {
         mcp: Boolean(this.lastSupervisionStatus.mcpRunning),
         tunnel: Boolean(this.lastSupervisionStatus.tunnelRunning),
-        fully_ready: Boolean(this.lastSupervisionStatus.fullyReady && epochStatus.admission_open !== false),
-        update_incomplete: Boolean(epochStatus.update_incomplete),
+        fully_ready: Boolean(this.lastSupervisionStatus.fullyReady
+          && epochStatus.admission_open === true
+          && fullCleanAvailable
+          && connectorReady
+          && connectorAckShaMatches),
+        update_incomplete: Boolean(epochStatus.update_incomplete
+          || !fullCleanAvailable
+          || !connectorReady
+          || !connectorAckShaMatches),
+        connector_ready: connectorReady,
+        connector_ack_sha_matches: connectorAckShaMatches,
+        connector_current_sha256: connectorCurrentSha256 || null,
+        connector_acknowledged_sha256: connectorAcknowledgedSha256 || null,
         activation_epoch_id: epochStatus.activation_epoch_id || null,
         recovering: Boolean(this.lastSupervisionStatus.recovering),
         recovery_blocked: Boolean(this.lastSupervisionStatus.recoveryBlocked)
@@ -486,22 +821,46 @@ class RecoveryHost {
       : value.status;
     let epochStatus = null;
     try {
-      epochStatus = this.orchestrator.activationEpochStatus?.() || this.fullCleanActivation?.current?.() || null;
+      const durableEpoch = this.fullCleanActivation?.current?.() || null;
+      epochStatus = this.orchestrator.activationEpochStatus?.() || durableEpoch;
+      if (epochStatus) {
+        const durableOperationId = String(durableEpoch?.operation_id || '').trim() || null;
+        const projectedOperationId = String(epochStatus?.operation_id || '').trim() || null;
+        epochStatus = { ...epochStatus, operation_id: durableOperationId };
+        if (projectedOperationId && projectedOperationId !== durableOperationId) {
+          epochStatus = { ...epochStatus, admission_open: false, update_incomplete: true, error_code: 'ACTIVATION_OPERATION_MISMATCH' };
+        }
+      }
     } catch (error) {
       epochStatus = { state: 'UPDATE_INCOMPLETE', admission_open: false, update_incomplete: true, error_code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID') };
     }
-    const incomplete = Boolean(epochStatus && (epochStatus.update_incomplete === true || (epochStatus.state && epochStatus.state !== 'READY')));
-    if (status && incomplete) status.fullyReady = false;
-    if (value && incomplete) value.fullyReady = false;
+    const epochIncomplete = Boolean(epochStatus && (
+      epochStatus.update_incomplete === true
+      || (epochStatus.state && epochStatus.state !== 'READY')
+      || (epochStatus.state === 'READY' && epochStatus.admission_open !== true)
+    )) || this.bootstrapBlocksAdmission();
+    // The aggregate runtime readiness contract is stricter than a durable
+    // READY epoch: the current Recovery Host capability and exact connector
+    // rediscovery/ACK must also be current.  Project that same truth onto every
+    // IPC snapshot so callers cannot observe a green top-level fullyReady next
+    // to recoveryHost.runtime.update_incomplete=true.
+    const aggregateReady = recoveryHost.runtime?.fully_ready === true;
+    const incomplete = epochIncomplete || !aggregateReady;
+    if (status && (incomplete || status.fullyReady !== true)) status.fullyReady = false;
+    if (Object.prototype.hasOwnProperty.call(value, 'fullyReady')
+      && (incomplete || value.fullyReady !== true)) value.fullyReady = false;
     return { ...value, ...(status ? { status } : {}), activationClosure, activationEpoch: epochStatus, updateIncomplete: incomplete, device: { ...device, scope: 'current_device_only', registry: 'local', device_id: this.deviceIdentity.device_id, device_instance_id: this.deviceInstanceId, display_name: this.deviceIdentity.display_name, online: this.running, workspace: String(device.workspace || value.workspace || currentSettings.workspace || ''), coding, recovery: { host_running: this.running, mcp_running: plane.mcp?.state === 'healthy', tunnel_running: plane.tunnel?.state === 'healthy', tunnel_state: String(plane.tunnel?.state || 'unknown'), tunnel_id: String(currentSettings.recoveryTunnelId || '') || null }, git: device.git || { available: false, branch: null, head: null, head_short: null, dirty: null } }, recoveryHost };
   }
 
   handlers() {
     return {
-      'recovery.ping': async () => ({ ready: this.running, ...this.hostStatus() }),
+      'recovery.ping': async () => ({ ready: this.running && !this.bootstrapBlocksAdmission(), ...this.hostStatus() }),
       'recovery.status': async () => this.hostStatus(),
       'code.activation_preflight': async (request) => this.activation.preflight(request),
-      'code.activate_update': async (request) => this.activation.activate(request),
+      'code.activate_update': async (request) => {
+        this.assertBootstrapMutationAllowed();
+        return this.activation.activate(request);
+      },
       'code.activation_status': async (operationId) => this.activation.status(operationId),
       'client.register_ui_revision': async (registration) => {
         const result = await this.activation.registerUi(registration);
@@ -509,37 +868,70 @@ class RecoveryHost {
         return result;
       },
       'client.suppress_ui_recovery': async (intent) => {
+        this.assertBootstrapMutationAllowed();
         const result = this.activation.suppressUiRecovery(intent);
         this.resetUiRecoveryTracking('suppressed');
         return result;
       },
       'runtime.snapshot': async (options = {}) => this.decorate(await this.orchestrator.snapshot(options)),
       'runtime.lightweight_snapshot': async () => this.decorate(await this.orchestrator.lightweightSnapshot()),
-      'runtime.activation_epoch_status': async () => this.orchestrator.activationEpochStatus?.() || { state: 'NONE', admission_open: true, update_incomplete: false },
+      'runtime.activation_epoch_status': async () => this.hostStatus().activation_epoch,
       'runtime.complete_activation_epoch': async (activationEpochId) => {
+        this.assertBootstrapMutationAllowed();
         if (!this.fullCleanActivation || typeof this.orchestrator?.completeActivationEpoch !== 'function') {
           throw Object.assign(new Error('Full clean activation is unavailable for this runtime owner.'), { code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE' });
         }
         const id = String(activationEpochId || '');
         return this.decorate(await this.fullCleanActivation.finalize(id, await this.fullCleanActivation.finalCensus(id)));
       },
-      'runtime.start': async (options = {}) => this.decorate(await this.orchestrator.start(options)),
-      'runtime.stop': async (options = {}) => this.decorate(await this.orchestrator.stop(options)),
+      'runtime.start': async (options = {}) => {
+        this.assertBootstrapMutationAllowed();
+        return this.decorate(await this.orchestrator.start(options));
+      },
+      'runtime.stop': async (options = {}) => {
+        this.assertBootstrapMutationAllowed();
+        return this.decorate(await this.orchestrator.stop(options));
+      },
       'runtime.restart': async (options = {}) => {
-        const result = options?.automatic === true || options?.mode === 'soft_recovery'
+        this.assertBootstrapMutationAllowed();
+        const soft = options?.automatic === true || options?.mode === 'soft_recovery';
+        const result = soft
           ? await this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' })
           : (this.fullCleanActivation?.restart && typeof this.orchestrator?.completeActivationEpoch === 'function'
-            ? await this.fullCleanActivation.restart({ ...options, reason: options.reason || 'operator_restart' })
-            : await this.orchestrator.restart(options));
+            ? await this.fullCleanActivation.restart({
+              ...options,
+              // Resolve and validate against the live closure even when a
+              // client omitted sourceCheckpoint.  A supplied value is not
+              // trusted unless it is byte-for-byte the current authority.
+              sourceCheckpoint: this._resolveRequestedFullCleanCheckpoint(options?.sourceCheckpoint),
+              reason: options.reason || 'operator_restart'
+            })
+            : (() => {
+              throw Object.assign(new Error('Operator restart requires the Recovery Host full-clean activation coordinator.'), {
+                code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE'
+              });
+            })());
         return this.decorate(result);
       },
-      'runtime.switch_workspace': async (workspace) => this.decorate(await this.orchestrator.switchWorkspace(workspace)),
-      'runtime.update_authorized_roots': async (roots) => this.decorate(await this.orchestrator.updateAuthorizedRoots(roots)),
-      'runtime.acknowledge_connector_contract': async () => this.decorate(await this.orchestrator.acknowledgeConnectorContract()),
+      'runtime.switch_workspace': async (workspace) => {
+        this.assertBootstrapMutationAllowed();
+        return this.decorate(await this.orchestrator.switchWorkspace(workspace));
+      },
+      'runtime.update_authorized_roots': async (roots) => {
+        this.assertBootstrapMutationAllowed();
+        return this.decorate(await this.orchestrator.updateAuthorizedRoots(roots));
+      },
+      'runtime.acknowledge_connector_contract': async () => {
+        this.assertBootstrapMutationAllowed();
+        return this.decorate(await this.orchestrator.acknowledgeConnectorContract());
+      },
       'health.inspect': async () => this.healthService.inspect(),
-      'health.repair': async () => this.healthService.repair(),
+      'health.repair': async () => {
+        this.assertBootstrapMutationAllowed();
+        return this.healthService.repair();
+      },
       'logs.read': async (limit = 300) => this.log.read(Math.max(1, Math.min(500, Number(limit) || 300))),
-      'logs.clear': async () => { this.log.clear(); return true; }
+      'logs.clear': async () => { this.assertBootstrapMutationAllowed(); this.log.clear(); return true; }
     };
   }
 
@@ -579,9 +971,17 @@ class RecoveryHost {
           if (census.pass) {
             const completed = await this.fullCleanActivation.finalize(epoch.activation_epoch_id, census);
             this.lastSupervisionStatus = { ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed };
+            this.recordBootstrapEpoch(this.activationEpochStore.current(), {
+              replacement_host_instance_id: this.instanceId,
+              replacement_host_pid: process.pid
+            });
           }
         } catch (error) {
           this.log.warn(error.message, { stage: 'full-clean-activation-census', code: error?.code || '' });
+          this.recordBootstrapEpoch(this.activationEpochStore.current(), {
+            replacement_host_instance_id: this.instanceId,
+            replacement_host_pid: process.pid
+          });
         }
       }
       // Recovery plane and UI repair are also component mutations.  They are
@@ -652,6 +1052,12 @@ class RecoveryHost {
       this.log?.error?.(error.message, { stage: 'recovery-host-activation-epoch-load', code: error?.code || '' });
       throw error;
     }
+    let bootstrapPlan = null;
+    try { bootstrapPlan = await this.prepareBootstrapStart(durableEpoch); }
+    catch (error) {
+      this.recordBootstrapFailure(error, durableEpoch);
+      throw error;
+    }
     let replacementEpochId = String(this.replacement?.activationEpochId || '').trim();
     let fullCleanReplacement = Boolean(replacementEpochId);
     let recoveredFromDurableEpoch = false;
@@ -660,13 +1066,31 @@ class RecoveryHost {
     // operator can submit a new explicit full-clean activation.  Component
     // startup/recovery remains suppressed below until that new epoch reaches
     // READY; a failed transaction must never be auto-healed by the watchdog.
-    const failedEpochBlocked = Boolean(!fullCleanReplacement && durableEpoch && durableEpoch.state === 'FAILED');
+    const failedEpochBlocked = Boolean(!bootstrapPlan && !fullCleanReplacement && durableEpoch && durableEpoch.state === 'FAILED');
     if (failedEpochBlocked) {
       this.log?.warn?.('Recovery Host is serving control-plane IPC with a failed activation epoch; explicit full-clean activation is required.', {
         activationEpochId: durableEpoch.activation_epoch_id
       });
     }
     if (!fullCleanReplacement && durableEpoch && ACTIVE_STATES.has(durableEpoch.state)) {
+      const resumableReplacementStates = new Set(['HANDOFF', 'STARTING', 'VERIFYING']);
+      if (!resumableReplacementStates.has(String(durableEpoch.state || ''))) {
+        const error = Object.assign(new Error('Activation crashed before a durable Recovery Host handoff and cannot skip directly to replacement startup.'), {
+          code: 'ACTIVATION_EPOCH_RESUME_UNSAFE',
+          details: {
+            activation_epoch_id: durableEpoch.activation_epoch_id,
+            operation_id: durableEpoch.operation_id || null,
+            state: durableEpoch.state,
+            process_mutated: durableEpoch.state === 'FROZEN' || durableEpoch.state === 'STOPPING'
+          }
+        });
+        try { durableEpoch = this.activationEpochStore.fail(durableEpoch.activation_epoch_id, error); }
+        catch (persistError) {
+          this.log?.error?.(persistError.message, { stage: 'recovery-host-unsafe-resume-failure-persist', code: persistError?.code || '' });
+        }
+        this.recordBootstrapFailure(error, durableEpoch);
+        throw error;
+      }
       const durableExpiry = Number(durableEpoch.expires_at_unix_ms || durableEpoch.metadata?.expires_at_unix_ms || 0);
       if (durableExpiry > 0 && Date.now() >= durableExpiry) {
         const error = Object.assign(new Error('Activation request expired before Recovery Host recovery.'), {
@@ -710,6 +1134,8 @@ class RecoveryHost {
     const persistReplacementFailure = (error) => {
       if (!replacementEpochId) return;
       try {
+        const current = this.activationEpochStore.current();
+        if (!current || current.activation_epoch_id !== replacementEpochId || current.state === 'READY') return;
         // Keep the durable activation gate closed whenever replacement startup
         // cannot complete.  The operation may already have been terminalized
         // by FullCleanActivation; store.fail() is idempotent for that case.
@@ -792,6 +1218,30 @@ class RecoveryHost {
       }
     }
     try {
+      let observedSelf;
+      try { observedSelf = await this.processIdentityObserver(process.pid); }
+      catch (error) {
+        throw Object.assign(new Error('Recovery Host process identity is unavailable before runtime ownership.'), {
+          code: 'RECOVERY_PROCESS_IDENTITY_UNVERIFIED',
+          cause: error
+        });
+      }
+      if (observedSelf?.state !== 'live') {
+        throw Object.assign(new Error('Recovery Host process identity is unavailable before runtime ownership.'), {
+          code: 'RECOVERY_PROCESS_IDENTITY_UNVERIFIED'
+        });
+      }
+      try {
+        this.processIdentity = processIdentityFrom({
+          pid: process.pid,
+          process_start_token: observedSelf.process_start_token
+        });
+      } catch (error) {
+        throw Object.assign(new Error('Recovery Host process identity is unavailable before runtime ownership.'), {
+          code: 'RECOVERY_PROCESS_IDENTITY_UNVERIFIED',
+          cause: error
+        });
+      }
       if (this.replacement?.expectedOldInstanceId) {
         await waitForReplacementLockRelease(this.paths, this.replacement.expectedOldInstanceId);
       }
@@ -811,10 +1261,59 @@ class RecoveryHost {
         startedAt: this.startedAt,
         deviceIdentity: this.deviceIdentity,
         deviceInstanceId: this.deviceInstanceId,
-        activationEpochId: this.orchestrator.activationEpochId || this.fullCleanActivation.current?.()?.activation_epoch_id || ''
+        activationEpochId: this.orchestrator.activationEpochId || this.fullCleanActivation.current?.()?.activation_epoch_id || '',
+        processIdentityObserver: async (pid) => {
+          if (Number(pid) === Number(process.pid) && this.processIdentity) {
+            return { state: 'live', ...this.processIdentity };
+          }
+          return this.processIdentityObserver(pid);
+        }
       });
       await this.ipcServer.start();
       this.running = true;
+      if (bootstrapPlan?.requiresNewEpoch) {
+        this.bootstrapActivation = { state: 'started', operation_id: bootstrapPlan.operationId };
+        writeBootstrapResult(this.paths, {
+          operation_id: bootstrapPlan.operationId,
+          state: 'started',
+          result: {
+            bootstrap_host_pid: process.pid,
+            bootstrap_host_instance_id: this.instanceId,
+            admission_open: false,
+            fully_ready: false
+          }
+        });
+        let activationResult;
+        try {
+          activationResult = await this.fullCleanActivation.restart({
+            operationId: bootstrapPlan.operationId,
+            component: 'recovery_host',
+            expectedDiskRevision: bootstrapPlan.expectedRevision,
+            sourceCheckpoint: this.bootstrap.source_checkpoint,
+            allowAcceptancePending: this.bootstrap.allow_acceptance_pending === true,
+            expiresAtUnixMs: bootstrapPlan.expiresAtUnixMs,
+            reason: 'recovery_host_bootstrap'
+          });
+        } catch (error) {
+          this.recordBootstrapFailure(error, this.activationEpochStore.current());
+          throw error;
+        }
+        const createdEpoch = this.activationEpochStore.current();
+        if (!createdEpoch || String(createdEpoch.operation_id || '') !== bootstrapPlan.operationId) {
+          const error = Object.assign(new Error('Bootstrap activation did not create the requested durable epoch.'), {
+            code: 'RECOVERY_BOOTSTRAP_EPOCH_UNAVAILABLE'
+          });
+          this.recordBootstrapFailure(error, createdEpoch);
+          throw error;
+        }
+        this.recordBootstrapEpoch(createdEpoch, {
+          bootstrap_host_instance_id: this.instanceId,
+          coordinator_result_state: activationResult?.state || activationResult?.activation_state || null
+        });
+        // FullCleanActivation scheduled this transitional host to hand off to a
+        // final Recovery Host. Do not start ordinary watchdog/auto-start paths.
+        return this.hostStatus();
+      }
       if (fullCleanReplacement) {
         await this.fullCleanActivation.continueReplacement({
           activationEpochId: this.replacement.activationEpochId,
@@ -822,6 +1321,10 @@ class RecoveryHost {
           expiresAtUnixMs: this.replacement.expiresAtUnixMs
         });
         this.lastRecoveryPlaneStatus = this.recoveryPlane?.lastStatus || this.lastRecoveryPlaneStatus;
+        this.recordBootstrapEpoch(this.activationEpochStore.current(), {
+          replacement_host_instance_id: this.instanceId,
+          replacement_host_pid: process.pid
+        });
       }
       let primaryLegacyMigration = { required: false };
       let recoveryLegacyMigration = { required: false };
@@ -881,12 +1384,39 @@ class RecoveryHost {
       if (!postStartEpoch || postStartEpoch.state === 'READY') this.autoActivation?.start?.();
       return this.hostStatus();
     } catch (error) {
+      const beforeCleanupEpoch = this.activationEpochStore.current();
+      const terminalReady = beforeCleanupEpoch?.state === 'READY';
       this.autoActivation?.stop?.();
-      await this.ipcServer?.stop().catch(() => false);
-      await this.gateway?.stop().catch(() => false);
-      if (this.ownsLock) releaseRecoveryHostLock(this.paths, this.instanceId);
-      this.ownsLock = false;
+      if (!terminalReady) {
+        await this.ipcServer?.stop().catch(() => false);
+        await this.gateway?.stop().catch(() => false);
+        if (this.ownsLock) releaseRecoveryHostLock(this.paths, this.instanceId);
+        this.ownsLock = false;
+      }
       persistReplacementFailure(error);
+      const terminalEpoch = this.activationEpochStore.current();
+      if (terminalReady || terminalEpoch?.state === 'READY') {
+        // Runtime readiness is authoritative once durably finalized. A stale or
+        // conflicting transient bootstrap receipt must not tear the recovered
+        // runtime back down; surface the receipt error for reconciliation.
+        this.recordBootstrapEpoch(terminalEpoch, {
+          replacement_host_instance_id: this.instanceId,
+          replacement_host_pid: process.pid,
+          receipt_error_code: error?.code || 'RECOVERY_BOOTSTRAP_RESULT_FAILED'
+        });
+        this.bootstrapActivation = {
+          state: 'receipt_conflict',
+          operation_id: terminalEpoch.operation_id || null,
+          activation_epoch_id: terminalEpoch.activation_epoch_id || null,
+          error_code: error?.code || 'RECOVERY_BOOTSTRAP_RESULT_FAILED'
+        };
+        return this.hostStatus();
+      }
+      this.recordBootstrapFailure(error, terminalEpoch);
+      this.recordBootstrapEpoch(terminalEpoch, {
+        replacement_host_instance_id: this.instanceId,
+        replacement_host_pid: process.pid
+      });
       throw error;
     }
   }

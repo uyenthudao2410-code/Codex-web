@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import http.client
 import json
 import sqlite3
@@ -14,11 +15,56 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from coding_tools_mcp.errors import ToolFailure
+from coding_tools_mcp.activation_capability import (
+    recovery_activation_capability,
+    recovery_activation_ignore_active_tool_calls,
+    valid_activation_operation_id,
+)
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 from coding_tools_mcp.solution_economics import record_patch_surface
 
 
 class ActivationPreflightTests(unittest.TestCase):
+    def test_activation_operation_id_validation_is_strictly_typed_and_untrimmed(self) -> None:
+        valid = "restart-operation-0001"
+        for value, expected in (
+            (valid, True),
+            (f" {valid}", False),
+            (valid.encode("utf-8"), False),
+            (1234567890123456, False),
+            (None, False),
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(valid_activation_operation_id(value), expected)
+
+    def test_recovery_activation_capability_authenticates_operation_without_ignoring_self_call(self) -> None:
+        handler = object.__new__(MCPHandler)
+        token = "activation-token"
+        operation_id = "activation-operation-http-0002"
+        handler._runtime = SimpleNamespace(auth_token=token)
+        handler.headers = {
+            "Authorization": f"Bearer {token}",
+            "X-Coding-Tools-Activation-Operation": operation_id,
+            "X-Coding-Tools-Activation-Proof": hmac.new(
+                token.encode("utf-8"),
+                f"coding-tools-mcp-activation-preflight:{operation_id}".encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest(),
+        }
+        self.assertEqual(recovery_activation_capability(handler.headers, handler._runtime), {
+            "operation_id": operation_id,
+            "ignore_active_tool_calls": 0,
+        })
+        self.assertEqual(recovery_activation_ignore_active_tool_calls(handler.headers, handler._runtime), 0)
+        handler.headers["X-Coding-Tools-Activation-Proof"] = "0" * 64
+        self.assertEqual(recovery_activation_capability(handler.headers, handler._runtime), {
+            "operation_id": "",
+            "ignore_active_tool_calls": 0,
+        })
+        self.assertEqual(recovery_activation_ignore_active_tool_calls(handler.headers, handler._runtime), 0)
+        handler.headers["Authorization"] = "Bearer another-token"
+        self.assertEqual(recovery_activation_ignore_active_tool_calls(handler.headers, handler._runtime), 0)
+
     @staticmethod
     def _canonical_lifecycle_snapshot() -> dict[str, object]:
         return {
@@ -55,7 +101,9 @@ class ActivationPreflightTests(unittest.TestCase):
         subprocess.run(["git", "config", "user.name", "Fixture"], cwd=root, check=True)
         source = root / "app.py"
         source.write_text("VALUE = 1\n", encoding="utf-8")
-        subprocess.run(["git", "add", "app.py"], cwd=root, check=True)
+        unrelated = root / "unrelated.py"
+        unrelated.write_text("OTHER = 1\n", encoding="utf-8")
+        subprocess.run(["git", "add", "app.py", "unrelated.py"], cwd=root, check=True)
         subprocess.run(["git", "commit", "-m", "fixture"], cwd=root, check=True, capture_output=True)
         runtime = Runtime(root, auth_token=auth_token)
         state = runtime.task_state.ensure_started("activation source checkpoint fixture")
@@ -240,6 +288,20 @@ class ActivationPreflightTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_source_checkpoint_unreceipted_dirty_source_drift_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            runtime, _source, source_checkpoint = self._accepted_checkpoint_fixture(root)
+            try:
+                self.assertTrue(runtime.activation_preflight(source_checkpoint=source_checkpoint)["safe"])
+                (root / "unrelated.py").write_text("OTHER = 2\n", encoding="utf-8")
+                refused = runtime.activation_preflight(source_checkpoint=source_checkpoint)
+                self.assertFalse(refused["safe"])
+                self.assertEqual(refused["code"], "SOURCE_DRIFT")
+                self.assertEqual(refused["reason"], "worktree_fingerprint_changed")
+            finally:
+                runtime.close()
+
     def test_true_no_mutation_checkpoint_is_exactly_activatable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime, _source, source_checkpoint = self._accepted_checkpoint_fixture(
@@ -419,6 +481,22 @@ class ActivationPreflightTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_prepare_rejects_operation_ids_with_non_alphanumeric_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                for operation_id in ("_activation-operation-0001", "-activation-operation-0001"):
+                    with self.subTest(operation_id=operation_id), self.assertRaises(ToolFailure) as raised:
+                        runtime.activation_preflight(
+                            operation_id=operation_id,
+                            expires_at_unix_ms=int(time.time() * 1000) + 30_000,
+                            prepare=True,
+                        )
+                    self.assertEqual(raised.exception.code, "INVALID_OPERATION_ID")
+                    self.assertIsNone(runtime.activation_fence)
+            finally:
+                runtime.close()
+
     def test_active_tool_call_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp))
@@ -582,6 +660,40 @@ class ActivationPreflightTests(unittest.TestCase):
                 )
                 runtime.close()
 
+    def test_signed_snapshot_reuses_exact_fence_only_after_restart_tool_call_leaves(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            operation_id = "activation-deferred-restart-0001"
+            try:
+                prepared = runtime.activation_preflight(
+                    operation_id=operation_id,
+                    expires_at_unix_ms=int(time.time() * 1000) + 30_000,
+                    prepare=True,
+                )
+                self.assertTrue(prepared["safe"])
+                self.assertTrue(prepared["fenced"])
+                runtime.active_tool_calls = 1
+                while_active = runtime.activation_preflight_snapshot(
+                    operation_id=operation_id,
+                )
+                self.assertFalse(while_active["safe"])
+                self.assertEqual(while_active["code"], "RUNTIME_BUSY")
+                self.assertEqual(while_active["counts"]["active_tool_calls"], 1)
+                runtime.active_tool_calls = 0
+                same_operation = runtime.activation_preflight_snapshot(
+                    operation_id=operation_id,
+                )
+                self.assertTrue(same_operation["safe"])
+                self.assertEqual(same_operation["fence_operation_id"], operation_id)
+                foreign = runtime.activation_preflight_snapshot(
+                    operation_id="activation-deferred-restart-other",
+                )
+                self.assertFalse(foreign["safe"])
+                self.assertEqual(foreign["code"], "RUNTIME_BUSY")
+                self.assertTrue(runtime.cancel_activation(operation_id))
+            finally:
+                runtime.close()
+
     def test_codex_sidecar_prepare_fails_closed_when_close_does_not_terminalize_job(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime = Runtime(Path(temp))
@@ -697,6 +809,37 @@ class ActivationPreflightTests(unittest.TestCase):
                 self.assertFalse(result["safe"])
                 self.assertEqual(result["code"], "ORCHESTRATION_STATE_UNCERTAIN")
                 self.assertEqual(result["reason"], "lifecycle_unexplained_or_unbound")
+            finally:
+                runtime.close()
+
+    def test_projection_drift_fails_closed_but_correct_terminal_projection_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            base = {
+                "classification_counts": {},
+                "run_ids_by_class": {},
+                "unexplained_active_runs": 0,
+                "unbound_live_resource_residues": 0,
+                "p5_lifecycles": [],
+                "snapshot": self._canonical_lifecycle_snapshot(),
+            }
+            try:
+                with patch.object(runtime, "_activation_lifecycle_summary", return_value={
+                    **base,
+                    "projection": {"classification": "PROJECTION_DRIFT"},
+                    "projection_classification": "PROJECTION_DRIFT",
+                }):
+                    refused = runtime.activation_preflight()
+                self.assertFalse(refused["safe"])
+                self.assertEqual(refused["code"], "ORCHESTRATION_STATE_UNCERTAIN")
+                self.assertEqual(refused["reason"], "projection_drift")
+                with patch.object(runtime, "_activation_lifecycle_summary", return_value={
+                    **base,
+                    "projection": {"classification": "CHECKPOINTED"},
+                    "projection_classification": "CHECKPOINTED",
+                }):
+                    allowed = runtime.activation_preflight()
+                self.assertTrue(allowed["safe"])
             finally:
                 runtime.close()
 

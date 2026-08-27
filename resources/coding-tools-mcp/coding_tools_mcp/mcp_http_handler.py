@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import functools
-import hashlib
 import html
 import http.server
 import json
@@ -16,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from . import __version__
+from .activation_capability import recovery_activation_capability, valid_activation_control_payload
 from .envutils import ENV_PREFIX, truthy_env
 from .errors import JsonRpcError, ToolFailure, normalize_exception_group
 from .http_origin import _configured_allowed_origins, is_allowed_origin  # noqa: F401  # compatibility re-export
@@ -221,6 +221,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 "tool_contract": dict(runtime.tool_contract),
                 "connector_tool_discovery": runtime.connector_tool_discovery(),
                 "connector_client_contact": runtime.connector_client_contact(),
+                "projection_rebuild": runtime.projection_rebuild_snapshot(),
                 "workspace_generation": runtime.workspace_generation,
                 "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
                 "device_id": str(os.environ.get(f"{ENV_PREFIX}_DEVICE_ID", "")).strip() or None,
@@ -236,7 +237,14 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             if not self.is_authorized():
                 self.send_unauthorized(head_only=head_only)
                 return
-            self.send_json(self.runtime.activation_preflight_snapshot(), head_only=head_only)
+            capability = recovery_activation_capability(self.headers, self.runtime)
+            self.send_json(
+                self.runtime.activation_preflight_snapshot(
+                    operation_id=str(capability["operation_id"]),
+                    ignore_active_tool_calls=int(capability["ignore_active_tool_calls"]),
+                ),
+                head_only=head_only,
+            )
             return
         if normalized == "/__control/orchestration/live":
             if not self.is_authorized():
@@ -642,21 +650,12 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
         if payload is None:
             return
         action = str(payload.get("action") or "").strip().lower()
-        allowed = {
-            "prepare": {"action", "operation_id", "expires_at_unix_ms", "workspace", "allow_acceptance_pending", "source_checkpoint"},
-            "cancel": {"action", "operation_id"},
-            "verify": {"action", "operation_id", "workspace", "source_checkpoint"},
-            "complete_epoch": {"action", "activation_epoch_id"},
-            "close_epoch": {"action", "activation_epoch_id"},
-        }
-        if action not in allowed or set(payload) - allowed[action]:
+        if not valid_activation_control_payload(action, payload):
             self.send_json({"error": "Invalid activation control request", "code": "INVALID_ARGUMENT"}, status=400)
             return
         try:
             if action in {"complete_epoch", "close_epoch"}:
-                result = self.server.control_runtime.activation_epoch_control(  # type: ignore[attr-defined]
-                    action, payload.get("activation_epoch_id")
-                )
+                result = self.server.control_runtime.activation_epoch_control(action, payload.get("activation_epoch_id"), payload.get("ready_commit_digest"), payload.get("expires_at_unix_ms"))  # type: ignore[attr-defined]
                 self.send_json(result)
                 return
             if action == "prepare":

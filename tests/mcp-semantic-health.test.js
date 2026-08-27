@@ -93,15 +93,18 @@ test('semantic probe rejects raw TaskGroup JSON-RPC failures even when HTTP is 2
   });
 });
 
-test('watchdog restarts through the existing orchestrator only after repeated semantic failures', async () => {
-  const calls = { restart: 0 };
+test('watchdog replaces only Coding MCP after repeated semantic failures', async () => {
+  const calls = { mcp: 0 };
   const orchestrator = {
     busy: false,
     recovering: false,
     isManuallyStopped: () => false,
-    restart: async (options) => {
-      assert.deepEqual(options, { automatic: true });
-      calls.restart += 1;
+    recoverMcpOnly: async (options) => {
+      assert.deepEqual(options, {
+        replaceLiveOwned: true,
+        reason: 'semantic_watchdog_soft_recovery'
+      });
+      calls.mcp += 1;
     }
   };
   const watchdog = new SemanticMcpHealthWatchdog({
@@ -121,20 +124,17 @@ test('watchdog restarts through the existing orchestrator only after repeated se
   const third = await watchdog.checkOnce();
   assert.equal(third.recovered, true);
   assert.equal(third.failures, 3);
-  assert.equal(calls.restart, 1);
+  assert.equal(calls.mcp, 1);
   assert.equal(watchdog.failures, 0);
 });
 
-test('watchdog fail-closes a deterministic configured-workspace mismatch without restarting', async () => {
-  const calls = { restart: 0 };
+test('watchdog fail-closes a deterministic configured-workspace mismatch without replacement', async () => {
+  const calls = { mcp: 0 };
   const orchestrator = {
     busy: false,
     recovering: false,
     isManuallyStopped: () => false,
-    restart: async (options) => {
-      assert.deepEqual(options, { automatic: true });
-      calls.restart += 1;
-    }
+    recoverMcpOnly: async () => { calls.mcp += 1; }
   };
   const watchdog = new SemanticMcpHealthWatchdog({
     settings: { load: () => ({ mcpPort: 18766, workspace: 'C:\\work\\current' }) },
@@ -158,11 +158,11 @@ test('watchdog fail-closes a deterministic configured-workspace mismatch without
   assert.equal(result.failures, 1);
   assert.equal(result.recoveryBlocked, true);
   assert.equal(result.deterministicFailure, true);
-  assert.equal(calls.restart, 0);
+  assert.equal(calls.mcp, 0);
   assert.equal(watchdog.failures, 1);
   const second = await watchdog.checkOnce();
   assert.equal(second.recoveryBlocked, true);
-  assert.equal(calls.restart, 0);
+  assert.equal(calls.mcp, 0);
 });
 
 test('semantic recovery policy distinguishes deterministic protocol failures from transient failures', () => {

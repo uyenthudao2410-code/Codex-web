@@ -16,11 +16,13 @@ if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 import coding_tools_mcp.server as server_module
+import coding_tools_mcp.coordination as coordination_module
 import coding_tools_mcp.task_state as task_state_module
 from coding_tools_mcp.build_verify import collect_artifacts, detect_project
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.task_state import TaskStateStore, classify_command, command_payload_succeeded
 from coding_tools_mcp.server import Runtime
+from coding_tools_mcp.restart_ticket import build_supervisor_restart_ticket, supervisor_restart_ticket_matches
 from coding_tools_mcp.textutils import DEFAULT_MAX_LINES, truncate_text_head
 from coding_tools_mcp.protocol import dispatch_rpc
 from coding_tools_mcp.document_tools import create_docx, extract_docx
@@ -632,11 +634,15 @@ class ToolModeTests(unittest.TestCase):
                     with self.assertRaises(ToolFailure) as missing_confirmation:
                         runtime.task_control({"action": "restart_runtime"})
                     self.assertEqual(missing_confirmation.exception.code, "RESTART_CONFIRMATION_REQUIRED")
-                    result = runtime.task_control({
-                        "action": "restart_runtime",
-                        "confirm_restart": True,
-                        "reason": "focused test",
-                    })
+                    # Even an opaque random suffix that begins with characters
+                    # forbidden at operation-id position zero must be made
+                    # canonical by the restart producer.
+                    with patch.object(coordination_module.secrets, "token_urlsafe", return_value="__unsafe-leading"):
+                        result = runtime.task_control({
+                            "action": "restart_runtime",
+                            "confirm_restart": True,
+                            "reason": "focused test",
+                        })
                     self.assertTrue(result["accepted"])
                     self.assertTrue(result["expected_disconnect"])
                     self.assertTrue(ticket_path.is_file())
@@ -644,11 +650,133 @@ class ToolModeTests(unittest.TestCase):
                     self.assertEqual(ticket["action"], "restart")
                     self.assertEqual(ticket["workspace"], str(workspace.resolve()))
                     self.assertEqual(ticket["ticket_id"], result["restart_ticket"])
+                    self.assertEqual(ticket["operation_id"], result["restart_ticket"])
+                    self.assertRegex(result["restart_ticket"], r"^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$")
+                    self.assertTrue(result["restart_ticket"].startswith("restart-"))
+                    self.assertEqual(ticket["activation_mode"], "full_clean_activation")
+                    self.assertTrue(ticket["full_clean_required"])
                     self.assertGreater(ticket["not_before_unix_ms"], ticket["requested_at_unix_ms"])
                     self.assertGreater(ticket["expires_at_unix_ms"], ticket["not_before_unix_ms"])
                     replay = runtime.task_control({"action": "restart_runtime", "confirm_restart": True})
                     self.assertTrue(replay["already_pending"])
                     self.assertEqual(replay["restart_ticket"], result["restart_ticket"])
+                finally:
+                    runtime.close()
+
+    def test_restart_ticket_write_failure_releases_the_exact_new_fence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            workspace = root / "workspace"
+            control = root / "control"
+            workspace.mkdir()
+            control.mkdir()
+            ticket_path = control / "runtime-supervisor-request.json"
+            with patch.dict("os.environ", {"CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE": str(ticket_path)}):
+                runtime = Runtime(workspace, permission_mode="safe")
+                try:
+                    with (
+                        patch.object(coordination_module.secrets, "token_urlsafe", return_value="write-failure-0001"),
+                        patch.object(coordination_module.os, "replace", side_effect=OSError("replace failed")),
+                        self.assertRaises(ToolFailure) as raised,
+                    ):
+                        runtime._enqueue_runtime_restart({"confirm_restart": True})
+                    self.assertEqual(raised.exception.code, "SUPERVISOR_REQUEST_FAILED")
+                    self.assertIsNone(runtime.activation_fence)
+                    self.assertFalse(ticket_path.exists())
+                    self.assertEqual(list(control.iterdir()), [])
+                finally:
+                    runtime.close()
+
+    def test_restart_ticket_replace_uncertainty_retains_fence_and_landed_ticket(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            workspace = root / "workspace"
+            control = root / "control"
+            workspace.mkdir()
+            control.mkdir()
+            ticket_path = control / "runtime-supervisor-request.json"
+            original_replace = coordination_module.os.replace
+            original_read_text = Path.read_text
+
+            def replace_then_report_failure(source, target):
+                original_replace(source, target)
+                raise OSError("replace completion was not observable")
+
+            def transient_confirmation_failure(path_value, *args, **kwargs):
+                if path_value == ticket_path and ticket_path.exists():
+                    raise OSError("temporary sharing violation")
+                return original_read_text(path_value, *args, **kwargs)
+
+            with patch.dict("os.environ", {"CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE": str(ticket_path)}):
+                runtime = Runtime(workspace, permission_mode="safe")
+                try:
+                    with (
+                        patch.object(coordination_module.secrets, "token_urlsafe", return_value="uncertain-land-0001"),
+                        patch.object(coordination_module.os, "replace", side_effect=replace_then_report_failure),
+                        patch.object(Path, "read_text", new=transient_confirmation_failure),
+                        self.assertRaises(ToolFailure) as raised,
+                    ):
+                        runtime._enqueue_runtime_restart({"confirm_restart": True})
+                    self.assertEqual(raised.exception.code, "SUPERVISOR_REQUEST_STATE_UNCERTAIN")
+                    self.assertEqual(
+                        runtime.activation_fence["operation_id"],
+                        "restart-uncertain-land-0001",
+                    )
+                    self.assertTrue(ticket_path.is_file())
+                    self.assertEqual(
+                        json.loads(original_read_text(ticket_path, encoding="utf-8"))["operation_id"],
+                        "restart-uncertain-land-0001",
+                    )
+                    self.assertEqual(list(control.glob("*.tmp")), [])
+                finally:
+                    runtime.close()
+
+    def test_restart_ticket_exact_expiry_is_not_reused(self) -> None:
+        now_ms = 1_700_000_000_000
+        ticket_id = "restart-expiry-boundary-0001"
+        ticket = build_supervisor_restart_ticket(
+            ticket_id=ticket_id,
+            now_ms=now_ms - 1_000,
+            workspace="C:\\work\\one",
+            process_instance_id="process-one",
+            server_instance_id="server-one",
+            tool_contract_sha256="e" * 64,
+            reason="expiry boundary",
+        )
+        ticket["expires_at_unix_ms"] = now_ms
+        self.assertFalse(
+            supervisor_restart_ticket_matches(
+                ticket,
+                now_ms=now_ms,
+                workspace="C:\\work\\one",
+                process_instance_id="process-one",
+                server_instance_id="server-one",
+                tool_contract_sha256="e" * 64,
+                fence_operation_id=ticket_id,
+            )
+        )
+
+    def test_existing_restart_ticket_is_not_reused_without_the_exact_live_fence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            workspace = root / "workspace"
+            control = root / "control"
+            workspace.mkdir()
+            control.mkdir()
+            ticket_path = control / "runtime-supervisor-request.json"
+            with patch.dict("os.environ", {"CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE": str(ticket_path)}):
+                runtime = Runtime(workspace, permission_mode="safe")
+                try:
+                    with patch.object(coordination_module.secrets, "token_urlsafe", side_effect=("first-ticket-0001", "second-ticket-0002")):
+                        first = runtime._enqueue_runtime_restart({"confirm_restart": True})
+                        runtime.activation_fence = None
+                        second = runtime._enqueue_runtime_restart({"confirm_restart": True})
+                    self.assertFalse(second["already_pending"])
+                    self.assertNotEqual(second["restart_ticket"], first["restart_ticket"])
+                    self.assertEqual(
+                        json.loads(ticket_path.read_text(encoding="utf-8"))["ticket_id"],
+                        second["restart_ticket"],
+                    )
                 finally:
                     runtime.close()
 

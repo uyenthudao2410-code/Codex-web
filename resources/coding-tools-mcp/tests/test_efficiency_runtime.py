@@ -172,7 +172,11 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             self.assertEqual(metric["fallback_search_queries"], 1)
 
     def test_performance_trace_v6_hourly_metrics_bucket_by_started_hour_and_prune_rolling_window(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
+        fixture_now = datetime.fromisoformat("2026-08-18T12:00:00+00:00").timestamp()
+        with tempfile.TemporaryDirectory() as temp, patch(
+            "coding_tools_mcp.performance_trace.time.time",
+            return_value=fixture_now,
+        ):
             store = PerformanceTraceStore(Path(temp))
             state = store.record(
                 tool="agent_workflow",
@@ -470,7 +474,9 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["sha256"], "57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053")
                 self.assertEqual(contract["schema_version"], 1)
                 self.assertEqual(contract["profile"], "smart-v3")
-                self.assertNotIn("compatible_predecessor_sha256", contract)
+                self.assertEqual(contract["compatible_predecessor_sha256"], [
+                    "34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c",
+                ])
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)
                 self.assertEqual(

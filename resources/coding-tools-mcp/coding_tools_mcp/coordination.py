@@ -12,6 +12,7 @@ from typing import Any
 
 from .envutils import ENV_PREFIX
 from .acceptance_receipts import (
+    _accepted_checkpoint_metadata,
     _accepted_checkpoint_file_receipts,
     _durable_wave_acceptance_paths,
     _verify_activation_source_checkpoint,
@@ -20,6 +21,7 @@ from .acceptance_receipts import (
     passed_proof_fingerprint,
 )
 from .codex_bridge import CodexBridgeError
+from .activation_capability import valid_activation_operation_id
 from .activation_lifecycle import ActivationLifecycleMixin
 from .errors import ToolFailure
 from .fs_utils import is_relative_to
@@ -29,9 +31,15 @@ from .p5_control import P5ControlMixin
 from .problem_lineage import ProblemLineageError
 from .problem_lineage_control import ProblemLineageControlMixin
 from .solution_shadow_control import SolutionShadowControlMixin
+from .restart_ticket import (
+    SUPERVISOR_RESTART_TICKET_PREFIX,
+    SUPERVISOR_RESTART_TICKET_TTL_MS,
+    build_supervisor_restart_ticket,
+    observe_installed_restart_ticket,
+    supervisor_restart_response,
+    supervisor_restart_ticket_matches,
+)
 
-SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
-SUPERVISOR_RESTART_RESPONSE_GRACE_MS = 2_000
 BACKGROUND_OPERATION_WAIT_MAX_MS = 60_000
 COORDINATION_LANE_OUTPUT_SCHEMA = {
     "type": "object",
@@ -83,8 +91,7 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
             self._activation_cleanup_locked()
             now_ms = int(time.time() * 1000)
             if prepare or require_unfenced:
-                allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
-                if not (16 <= len(operation_id) <= 128) or any(char not in allowed for char in operation_id):
+                if not valid_activation_operation_id(operation_id):
                     raise ToolFailure("INVALID_OPERATION_ID", "Invalid activation operation_id.", category="validation")
             if prepare:
                 if expires_at_unix_ms <= now_ms or expires_at_unix_ms > now_ms + 60_000:
@@ -170,25 +177,14 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                     "counts": counts,
                     "lifecycle": lifecycle,
                 }
+            if self._activation_projection_classification(lifecycle) == "PROJECTION_DRIFT":
+                return {"safe": False, "code": "ORCHESTRATION_STATE_UNCERTAIN", "reason": "projection_drift", "counts": counts, "lifecycle": lifecycle}
             lifecycle_counts = lifecycle.get("classification_counts") if isinstance(lifecycle.get("classification_counts"), dict) else {}
             threshold_candidates = int(lifecycle_counts.get("THRESHOLD_SENSITIVE_STALE_CANDIDATE") or 0)
             counts["threshold_sensitive_stale_candidates"] = threshold_candidates
-            unbound_count = int(lifecycle.get("unbound_live_resource_residues") or 0)
-            unbound_resources = lifecycle.get("unbound_live_resources")
-            sidecar_job_ids = {
-                str(row.get("job_id") or "") for row in owned_codex_sidecars
-                if str(row.get("job_id") or "")
-            }
-            owned_sidecar_residues = 0
-            if isinstance(unbound_resources, list) and len(unbound_resources) == unbound_count:
-                owned_sidecar_residues = len({
-                    str(row.get("resource_id") or "") for row in unbound_resources
-                    if isinstance(row, dict)
-                    and str(row.get("resource_type") or "") == "managed_process_job"
-                    and str(row.get("resource_id") or "") in sidecar_job_ids
-                    and not str(row.get("run_id") or "")
-                })
-            remaining_unbound_residues = unbound_count - owned_sidecar_residues
+            owned_sidecar_residues, remaining_unbound_residues = (
+                self._activation_unbound_residue_counts(lifecycle, owned_codex_sidecars)
+            )
             counts["owned_codex_sidecar_residues"] = owned_sidecar_residues
             if int(lifecycle.get("unexplained_active_runs") or 0) or remaining_unbound_residues:
                 return {
@@ -293,12 +289,11 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                         "counts": counts,
                     }
 
+            source_identity = self._orchestration_workspace_identity(str(self.workspace.root)) if source_checkpoint is not None else {}
             checkpoint_verification = None if source_checkpoint is None else _verify_activation_source_checkpoint(
-                self.workspace.root,
-                self.orchestration_ledger,
-                source_checkpoint,
-                current_git_head=str(self._orchestration_workspace_identity(str(self.workspace.root)).get("base_head") or ""),
-                lifecycle=lifecycle,
+                self.workspace.root, self.orchestration_ledger, source_checkpoint,
+                current_git_head=str(source_identity.get("base_head") or ""),
+                current_worktree_fp=str(source_identity.get("worktree_fp") or ""), lifecycle=lifecycle,
             )
             if checkpoint_verification is not None and checkpoint_verification.get("ok") is not True:
                 return {**checkpoint_verification, "safe": False, "counts": counts, "lifecycle": lifecycle}
@@ -857,30 +852,46 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
         request_path = self._supervisor_restart_request_path()
         with self.supervisor_request_lock:
             now_ms = int(time.time() * 1000)
-            if request_path.is_file():
+            processing_path = request_path.with_name(f"{request_path.name}.processing")
+            fence_operation_id = str(self.activation_fence.get("operation_id") or "") if self.activation_fence else ""
+            for existing_path in (processing_path, request_path):
+                if not existing_path.is_file():
+                    continue
                 try:
-                    existing = json.loads(request_path.read_text(encoding="utf-8"))
+                    existing = json.loads(existing_path.read_text(encoding="utf-8"))
                 except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-                    existing = {}
-                if (
-                    isinstance(existing, dict)
-                    and existing.get("action") == "restart"
-                    and str(existing.get("workspace") or "").casefold() == str(self.workspace.root).casefold()
-                    and int(existing.get("expires_at_unix_ms") or 0) > now_ms
-                    and str(existing.get("ticket_id") or "").strip()
+                    continue
+                if supervisor_restart_ticket_matches(
+                    existing,
+                    now_ms=now_ms,
+                    workspace=str(self.workspace.root),
+                    process_instance_id=self.process_instance_id,
+                    server_instance_id=self.server_instance_id,
+                    tool_contract_sha256=str(self.tool_contract["sha256"]),
+                    fence_operation_id=fence_operation_id,
                 ):
-                    return {
-                        "accepted": True,
-                        "already_pending": True,
-                        "restart_ticket": str(existing["ticket_id"]),
-                        "expected_disconnect": True,
-                        "supervisor": "electron",
-                        "not_before_unix_ms": int(existing.get("not_before_unix_ms") or 0),
-                        "expires_at_unix_ms": int(existing.get("expires_at_unix_ms") or 0),
-                        "recommended_next_action": "Allow the Electron supervisor to consume the pending ticket, then reconnect and verify runtime instance ids changed.",
-                    }
+                    return supervisor_restart_response(existing, already_pending=True)
 
-            ticket_id = secrets.token_urlsafe(12)
+            # Keep the operation identity compatible with every activation
+            # boundary.  ``token_urlsafe`` may begin with ``-`` or ``_``;
+            # prefixing it with an alphanumeric value makes the generated
+            # ticket valid for the stricter Recovery Host/MCP operation
+            # contract while retaining the opaque random suffix.
+            ticket_id = f"{SUPERVISOR_RESTART_TICKET_PREFIX}{secrets.token_urlsafe(12)}"
+            # Build and serialize the complete envelope before installing the
+            # in-memory fence. After the fence is installed, only the atomic
+            # filesystem operation remains.
+            ticket = build_supervisor_restart_ticket(
+                ticket_id=ticket_id,
+                now_ms=now_ms,
+                workspace=str(self.workspace.root),
+                process_instance_id=self.process_instance_id,
+                server_instance_id=self.server_instance_id,
+                tool_contract_sha256=str(self.tool_contract["sha256"]),
+                reason=str(args.get("reason") or "User requested runtime restart"),
+            )
+            serialized_ticket = json.dumps(ticket, ensure_ascii=False, sort_keys=True)
+            temporary = request_path.with_name(f".{request_path.name}.{ticket_id}.tmp")
             preflight = self.activation_preflight(
                 operation_id=ticket_id,
                 expires_at_unix_ms=now_ms + SUPERVISOR_RESTART_TICKET_TTL_MS,
@@ -896,30 +907,30 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                     retryable=str(preflight.get("code") or "") == "RUNTIME_BUSY",
                     details=preflight,
                 )
-            ticket = {
-                "version": 1,
-                "action": "restart",
-                "ticket_id": ticket_id,
-                "requested_at": datetime.now(timezone.utc).isoformat(),
-                "requested_at_unix_ms": now_ms,
-                "not_before_unix_ms": now_ms + SUPERVISOR_RESTART_RESPONSE_GRACE_MS,
-                "expires_at_unix_ms": now_ms + SUPERVISOR_RESTART_TICKET_TTL_MS,
-                "workspace": str(self.workspace.root),
-                "process_instance_id": self.process_instance_id,
-                "server_instance_id": self.server_instance_id,
-                "tool_contract_sha256": self.tool_contract["sha256"],
-                "reason": str(args.get("reason") or "User requested runtime restart")[:500],
-            }
-            temporary = request_path.with_name(f".{request_path.name}.{ticket_id}.tmp")
             try:
-                temporary.write_text(json.dumps(ticket, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+                temporary.write_text(serialized_ticket, encoding="utf-8")
                 os.replace(temporary, request_path)
-            except OSError as exc:
-                self.cancel_activation(ticket_id)
+            except Exception as exc:
+                installation_state = observe_installed_restart_ticket(request_path, ticket)
+                if installation_state in {"absent", "different"}:
+                    try:
+                        self.cancel_activation(ticket_id)
+                    except (ToolFailure, RuntimeError):
+                        pass
                 try:
                     temporary.unlink(missing_ok=True)
                 except OSError:
                     pass
+                if installation_state == "exact":
+                    return supervisor_restart_response(ticket, already_pending=False)
+                if installation_state == "unknown":
+                    raise ToolFailure(
+                        "SUPERVISOR_REQUEST_STATE_UNCERTAIN",
+                        "The supervisor restart ticket may have been installed; admission remains fenced until the supervisor consumes it or the fence expires.",
+                        category="runtime",
+                        retryable=False,
+                        details={"error": str(exc), "installation_state": installation_state},
+                    ) from exc
                 raise ToolFailure(
                     "SUPERVISOR_REQUEST_FAILED",
                     "Could not enqueue the Electron supervisor restart request.",
@@ -927,16 +938,7 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                     retryable=True,
                     details={"error": str(exc)},
                 ) from exc
-            return {
-                "accepted": True,
-                "already_pending": False,
-                "restart_ticket": ticket_id,
-                "expected_disconnect": True,
-                "supervisor": "electron",
-                "not_before_unix_ms": ticket["not_before_unix_ms"],
-                "expires_at_unix_ms": ticket["expires_at_unix_ms"],
-                "recommended_next_action": "The Electron supervisor will restart after this tool response has time to flush. Reconnect, then verify process_instance_id and server_instance_id changed.",
-            }
+            return supervisor_restart_response(ticket, already_pending=False)
 
     def _abort_task_orchestration(self, state: dict[str, Any], *, reason: str) -> dict[str, Any] | None:
         projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
@@ -1370,10 +1372,7 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                             wave_id=ctx.wave_id,
                             outcome={"source": "accepted_proof_auto_v1", "oracle_pass": True},
                         )
-                checkpoint_metadata = {
-                    "accepted_by": accepted_by, "worktree_fp": identity.get("worktree_fp"),
-                    "workspace_identity": dict(identity.get("workspace_identity") or {}), "accepted_files": accepted_files,
-                }
+                checkpoint_metadata = _accepted_checkpoint_metadata(identity, accepted_by=accepted_by, accepted_files=accepted_files)
                 if problem_outcome.get("required"):
                     checkpoint_metadata.update({"problem_outcome_claim": problem_outcome["claim"], "problem_outcome_claim_sha256": problem_outcome["claim_sha256"]})
                 _checkpoint_ctx, checkpoint_result = self.orchestration_control.checkpoint_with_receipt(

@@ -6,8 +6,18 @@ const { readJson, updateJsonAtomic, ensureParent } = require('./jsonStore');
 const { rotateLog } = require('./logService');
 const { canConnect } = require('./environmentService');
 const { run } = require('./commandRunner');
-const { isAlive } = require('./nativeService');
+const {
+  isAlive,
+  captureSpawnedProcessIdentity,
+  requireExactStoredProcessIdentity
+} = require('./nativeService');
 const { runtimeDeviceIdentity, classifyStoredDeviceOwner } = require('./deviceIdentity');
+const {
+  normalizeProcessStartToken,
+  observeProcessIdentity,
+  sameProcessIdentity,
+  terminateExactProcessTree
+} = require('./processIdentity');
 
 const RECOVERY_MCP_START_ATTEMPTS = 30;
 // tunnel-client defaults to a 30s control-plane long poll plus a 5s deadline guardrail.
@@ -45,10 +55,50 @@ function recoveryMcpHealth(port, authToken, expectedDeviceId = '', expectedDevic
     request.end();
   });
 }
-async function stopExactTree(pid) {
-  if (!isAlive(pid)) return false;
-  await run('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { allowFailure: true });
+async function stopExactTree(identity, options = {}) {
+  if (!identity) return false;
+  await terminateExactProcessTree(identity, options);
   return true;
+}
+
+function storedProcessReceipt(state, prefix) {
+  const pid = Number(state?.[`${prefix}Pid`]);
+  return {
+    pid: Number.isSafeInteger(pid) && pid > 0 ? pid : null,
+    process_start_token: normalizeProcessStartToken(state?.[`${prefix}ProcessStartToken`])
+  };
+}
+
+function sameStoredProcessReceipt(state, prefix, expected) {
+  const actual = storedProcessReceipt(state, prefix);
+  return actual.pid === (expected?.pid ?? null)
+    && actual.process_start_token === (expected?.process_start_token ?? null);
+}
+
+function stateFieldsMatch(state, expected = {}) {
+  return Object.entries(expected).every(([key, value]) => {
+    if (key.endsWith('ProcessStartToken')) {
+      return normalizeProcessStartToken(state?.[key]) === normalizeProcessStartToken(value);
+    }
+    if (key.endsWith('Pid')) {
+      const actualPid = Number(state?.[key]);
+      const expectedPid = Number(value);
+      return (Number.isSafeInteger(actualPid) && actualPid > 0 ? actualPid : null)
+        === (Number.isSafeInteger(expectedPid) && expectedPid > 0 ? expectedPid : null);
+    }
+    return state?.[key] === value;
+  });
+}
+
+function persistenceCleanupFailure(kind, persistenceError, cleanupError) {
+  cleanupError.persistenceError = persistenceError;
+  cleanupError.details = {
+    ...(cleanupError.details || {}),
+    persistence_error_code: persistenceError?.code || '',
+    persistence_error_message: persistenceError?.message || ''
+  };
+  if (!cleanupError.code) cleanupError.code = `${kind}_PROCESS_PERSISTENCE_CLEANUP_FAILED`;
+  return cleanupError;
 }
 
 async function recoveryTunnelListenerPid(port) {
@@ -76,11 +126,101 @@ async function recoveryTunnelReady(paths, port, pid) {
 }
 
 class RecoveryPlaneService {
-  constructor({ paths, log, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '' }) { this.paths = paths; this.log = log; this.device = (deviceIdentity || deviceInstanceId) ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId) : null; this.activationEpochId = String(activationEpochId || '').trim(); this.lastStatus = null; this.ensureInFlight = null; this.legacyCandidateStabilizationAttempts = LEGACY_CANDIDATE_STABILIZATION_ATTEMPTS; this.legacyCandidateStabilizationDelayMs = LEGACY_CANDIDATE_STABILIZATION_DELAY_MS; }
+  constructor({
+    paths,
+    log,
+    deviceIdentity = null,
+    deviceInstanceId = '',
+    activationEpochId = '',
+    processIdentityObserver = observeProcessIdentity,
+    exactProcessTerminator = terminateExactProcessTree,
+    identitySleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+  }) {
+    this.paths = paths;
+    this.log = log;
+    this.device = (deviceIdentity || deviceInstanceId) ? runtimeDeviceIdentity(deviceIdentity, deviceInstanceId) : null;
+    this.activationEpochId = String(activationEpochId || '').trim();
+    this.lastStatus = null;
+    this.ensureInFlight = null;
+    this.legacyCandidateStabilizationAttempts = LEGACY_CANDIDATE_STABILIZATION_ATTEMPTS;
+    this.legacyCandidateStabilizationDelayMs = LEGACY_CANDIDATE_STABILIZATION_DELAY_MS;
+    this.processIdentityObserver = typeof processIdentityObserver === 'function'
+      ? processIdentityObserver
+      : observeProcessIdentity;
+    this.exactProcessTerminator = typeof exactProcessTerminator === 'function'
+      ? exactProcessTerminator
+      : terminateExactProcessTree;
+    this.identitySleep = typeof identitySleep === 'function'
+      ? identitySleep
+      : (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  }
   setActivationEpoch(activationEpochId = '') { this.activationEpochId = String(activationEpochId || '').trim(); return this.activationEpochId || null; }
   readState() { return readJson(this.paths.recoveryPlaneStateFile(), {}); }
-  updateState(patch) { updateJsonAtomic(this.paths.recoveryPlaneStateFile(), (value) => ({ ...value, version: 1, ...patch, updatedAt: new Date().toISOString() })); }
+  updateState(patch, guard = null, errorCode = 'RECOVERY_PROCESS_STATE_CHANGED') {
+    updateJsonAtomic(this.paths.recoveryPlaneStateFile(), (value) => {
+      if (typeof guard === 'function' && !guard(value)) {
+        throw Object.assign(new Error('Recovery Plane process state changed before the guarded update.'), {
+          code: errorCode
+        });
+      }
+      return { ...value, version: 1, ...patch, updatedAt: new Date().toISOString() };
+    });
+  }
   assertOwnedLive(pid, storedDeviceId, kind) { if (!this.device || !isAlive(pid)) return; const ownership = classifyStoredDeviceOwner(storedDeviceId, this.device.deviceId); if (ownership === 'owned') return; const code = ownership === 'foreign' ? `${kind}_FOREIGN_DEVICE` : `${kind}_OWNER_UNVERIFIED`; throw Object.assign(new Error(ownership === 'foreign' ? `${kind} process state belongs to another device; refusing to adopt or terminate it.` : `${kind} process state predates device ownership metadata; refusing to adopt or terminate the live process.`), { code, ownerDeviceId: String(storedDeviceId || '') || null, expectedDeviceId: this.device.deviceId }); }
+
+  async ownedIdentity(state, prefix, kind) {
+    // Exact OS identity is the first gate.  This preserves the typed
+    // *_PROCESS_IDENTITY_UNVERIFIED contract for live legacy records that
+    // have no start token, before device ownership classification runs.
+    const identity = await this.exactIdentity(state, prefix, kind);
+    const pid = state?.[`${prefix}Pid`];
+    this.assertOwnedLive(pid, state?.[`${prefix}DeviceId`], kind);
+    return identity;
+  }
+
+  exactIdentity(state, prefix, kind) {
+    return requireExactStoredProcessIdentity({
+      pid: state?.[`${prefix}Pid`],
+      processStartToken: state?.[`${prefix}ProcessStartToken`]
+    }, {
+      processIdentityObserver: this.processIdentityObserver,
+      kind
+    });
+  }
+
+  async terminateOwnedIdentity(identity, prefix, kind = 'RECOVERY_PROCESS') {
+    if (!identity) return false;
+    if (!prefix) {
+      throw Object.assign(new Error('Recovery Plane exact termination requires a stored receipt prefix.'), {
+        code: `${kind}_PROCESS_STATE_UNVERIFIED`
+      });
+    }
+    const state = this.readState();
+    if (!sameStoredProcessReceipt(state, prefix, identity)) {
+      throw Object.assign(new Error('Recovery Plane process state changed before exact termination.'), {
+        code: `${kind}_PROCESS_STATE_CHANGED`
+      });
+    }
+    const current = await this.exactIdentity(state, prefix, kind);
+    if (!current) return false;
+    if (!sameProcessIdentity(identity, current)) {
+      throw Object.assign(new Error('Recovery Plane process identity changed before exact termination.'), {
+        code: `${kind}_PROCESS_IDENTITY_CHANGED`
+      });
+    }
+    await this.exactProcessTerminator(identity, {
+      observeProcessIdentity: this.processIdentityObserver
+    });
+    return true;
+  }
+
+  captureSpawnedIdentity(pid, kind) {
+    return captureSpawnedProcessIdentity(pid, {
+      processIdentityObserver: this.processIdentityObserver,
+      sleep: this.identitySleep,
+      kind
+    });
+  }
 
   legacyCandidateMigrationError(message = 'Legacy Recovery Tunnel candidate ownership could not be proven for this install.') {
     return Object.assign(new Error(message), { code: 'RECOVERY_TUNNEL_CANDIDATE_LEGACY_MIGRATION_UNVERIFIED' });
@@ -89,6 +229,8 @@ class RecoveryPlaneService {
   async stabilizeLegacyTunnelCandidate(settings, authToken, initialState, probes = {}) {
     const initialPid = Number(initialState.recoveryTunnelCandidatePid || 0);
     if (!initialPid || !isAlive(initialPid)) return initialState;
+    const initialIdentity = await this.exactIdentity(initialState, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+    if (!initialIdentity) return initialState;
     const legacyFingerprint = recoveryTunnelFingerprint(settings, authToken, '');
     const initialOwnership = classifyStoredDeviceOwner(initialState.recoveryTunnelCandidateDeviceId, this.device.deviceId);
     if (initialOwnership === 'foreign') {
@@ -111,6 +253,11 @@ class RecoveryPlaneService {
       if (candidatePid !== initialPid) {
         throw this.legacyCandidateMigrationError('Recovery Tunnel candidate changed during legacy ownership proof.');
       }
+      if (normalizeProcessStartToken(state.recoveryTunnelCandidateProcessStartToken)
+        !== initialIdentity.process_start_token) {
+        throw this.legacyCandidateMigrationError('Recovery Tunnel candidate OS identity changed during legacy ownership proof.');
+      }
+      await this.exactIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
       const ownership = classifyStoredDeviceOwner(state.recoveryTunnelCandidateDeviceId, this.device.deviceId);
       if (ownership === 'foreign') {
         throw Object.assign(new Error('Recovery Tunnel candidate belongs to another device.'), { code: 'RECOVERY_TUNNEL_FOREIGN_DEVICE' });
@@ -136,18 +283,30 @@ class RecoveryPlaneService {
         state = await this.stabilizeLegacyTunnelCandidate(settings, authToken, state, probes);
       }
     }
-    const plan = { required: false, recoveryMcpPid: null, recoveryTunnelPid: null, recoveryTunnelCandidatePid: null };
+    const plan = {
+      required: false,
+      recoveryMcpPid: null,
+      recoveryMcpProcessStartToken: null,
+      recoveryTunnelPid: null,
+      recoveryTunnelProcessStartToken: null,
+      recoveryTunnelCandidatePid: null,
+      recoveryTunnelCandidateProcessStartToken: null
+    };
     const recoveryMcpPid = Number(state.recoveryMcpPid || 0);
     if (recoveryMcpPid > 0 && isAlive(recoveryMcpPid)) {
       const ownership = classifyStoredDeviceOwner(state.recoveryMcpDeviceId, this.device.deviceId);
       if (ownership === 'foreign') throw Object.assign(new Error('Recovery MCP belongs to another device.'), { code: 'RECOVERY_MCP_FOREIGN_DEVICE' });
       if (ownership === 'legacy') {
-        const health = await (probes.mcpHealth || recoveryMcpHealth)(settings.recoveryMcpPort, authToken);
-        if (!health || Number(health.pid) !== recoveryMcpPid || Number(state.recoveryMcpPort) !== Number(settings.recoveryMcpPort)) {
-          throw Object.assign(new Error('Legacy Recovery MCP ownership could not be proven for this install.'), { code: 'RECOVERY_MCP_LEGACY_MIGRATION_UNVERIFIED' });
+        const identity = await this.exactIdentity(state, 'recoveryMcp', 'RECOVERY_MCP');
+        if (identity) {
+          const health = await (probes.mcpHealth || recoveryMcpHealth)(settings.recoveryMcpPort, authToken);
+          if (!health || Number(health.pid) !== recoveryMcpPid || Number(state.recoveryMcpPort) !== Number(settings.recoveryMcpPort)) {
+            throw Object.assign(new Error('Legacy Recovery MCP ownership could not be proven for this install.'), { code: 'RECOVERY_MCP_LEGACY_MIGRATION_UNVERIFIED' });
+          }
+          plan.recoveryMcpPid = recoveryMcpPid;
+          plan.recoveryMcpProcessStartToken = identity.process_start_token;
+          plan.required = true;
         }
-        plan.recoveryMcpPid = recoveryMcpPid;
-        plan.required = true;
       }
     }
     const recoveryTunnelPid = Number(state.recoveryTunnelPid || 0);
@@ -155,10 +314,14 @@ class RecoveryPlaneService {
       const ownership = classifyStoredDeviceOwner(state.recoveryTunnelDeviceId, this.device.deviceId);
       if (ownership === 'foreign') throw Object.assign(new Error('Recovery Tunnel belongs to another device.'), { code: 'RECOVERY_TUNNEL_FOREIGN_DEVICE' });
       if (ownership === 'legacy') {
-        const ready = await (probes.tunnelReady || recoveryTunnelReady)(this.paths, settings.recoveryHealthPort, recoveryTunnelPid);
-        if (!ready) throw Object.assign(new Error('Legacy Recovery Tunnel ownership could not be proven for this install.'), { code: 'RECOVERY_TUNNEL_LEGACY_MIGRATION_UNVERIFIED' });
-        plan.recoveryTunnelPid = recoveryTunnelPid;
-        plan.required = true;
+        const identity = await this.exactIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+        if (identity) {
+          const ready = await (probes.tunnelReady || recoveryTunnelReady)(this.paths, settings.recoveryHealthPort, recoveryTunnelPid);
+          if (!ready) throw Object.assign(new Error('Legacy Recovery Tunnel ownership could not be proven for this install.'), { code: 'RECOVERY_TUNNEL_LEGACY_MIGRATION_UNVERIFIED' });
+          plan.recoveryTunnelPid = recoveryTunnelPid;
+          plan.recoveryTunnelProcessStartToken = identity.process_start_token;
+          plan.required = true;
+        }
       }
     }
     candidatePid = Number(state.recoveryTunnelCandidatePid || 0);
@@ -168,14 +331,18 @@ class RecoveryPlaneService {
         throw Object.assign(new Error('Recovery Tunnel candidate belongs to another device.'), { code: 'RECOVERY_TUNNEL_FOREIGN_DEVICE' });
       }
       if (candidateOwnership === 'legacy') {
-        const legacyFingerprint = recoveryTunnelFingerprint(settings, authToken, '');
-        const ready = state.recoveryTunnelCandidateFingerprint === legacyFingerprint
-          && await (probes.tunnelReady || recoveryTunnelReady)(this.paths, settings.recoveryHealthPort, candidatePid);
-        if (!ready) {
-          throw this.legacyCandidateMigrationError();
+        const identity = await this.exactIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+        if (identity) {
+          const legacyFingerprint = recoveryTunnelFingerprint(settings, authToken, '');
+          const ready = state.recoveryTunnelCandidateFingerprint === legacyFingerprint
+            && await (probes.tunnelReady || recoveryTunnelReady)(this.paths, settings.recoveryHealthPort, candidatePid);
+          if (!ready) {
+            throw this.legacyCandidateMigrationError();
+          }
+          plan.recoveryTunnelCandidatePid = candidatePid;
+          plan.recoveryTunnelCandidateProcessStartToken = identity.process_start_token;
+          plan.required = true;
         }
-        plan.recoveryTunnelCandidatePid = candidatePid;
-        plan.required = true;
       }
     }
     return plan;
@@ -185,31 +352,58 @@ class RecoveryPlaneService {
     if (!plan?.required || !this.device) return false;
     const state = this.readState();
     const patch = {};
+    const expectedReceipts = [];
+    const expectedFields = {};
     if (plan.recoveryMcpPid) {
       if (Number(state.recoveryMcpPid) !== Number(plan.recoveryMcpPid)
+        || normalizeProcessStartToken(state.recoveryMcpProcessStartToken) !== plan.recoveryMcpProcessStartToken
         || classifyStoredDeviceOwner(state.recoveryMcpDeviceId, this.device.deviceId) !== 'legacy') {
         throw Object.assign(new Error('Recovery MCP changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
       }
+      const identity = await this.exactIdentity(state, 'recoveryMcp', 'RECOVERY_MCP');
+      if (!identity || identity.process_start_token !== plan.recoveryMcpProcessStartToken) {
+        throw Object.assign(new Error('Recovery MCP exited or changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
+      }
+      expectedReceipts.push(['recoveryMcp', storedProcessReceipt(state, 'recoveryMcp')]);
+      expectedFields.recoveryMcpDeviceId = state.recoveryMcpDeviceId;
+      expectedFields.recoveryMcpDeviceInstanceId = state.recoveryMcpDeviceInstanceId;
       patch.recoveryMcpDeviceId = this.device.deviceId;
       patch.recoveryMcpDeviceInstanceId = this.device.deviceInstanceId;
     }
     if (plan.recoveryTunnelPid) {
       if (Number(state.recoveryTunnelPid) !== Number(plan.recoveryTunnelPid)
+        || normalizeProcessStartToken(state.recoveryTunnelProcessStartToken) !== plan.recoveryTunnelProcessStartToken
         || classifyStoredDeviceOwner(state.recoveryTunnelDeviceId, this.device.deviceId) !== 'legacy') {
         throw Object.assign(new Error('Recovery Tunnel changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
       }
+      const identity = await this.exactIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+      if (!identity || identity.process_start_token !== plan.recoveryTunnelProcessStartToken) {
+        throw Object.assign(new Error('Recovery Tunnel exited or changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
+      }
+      expectedReceipts.push(['recoveryTunnel', storedProcessReceipt(state, 'recoveryTunnel')]);
+      expectedFields.recoveryTunnelDeviceId = state.recoveryTunnelDeviceId;
+      expectedFields.recoveryTunnelDeviceInstanceId = state.recoveryTunnelDeviceInstanceId;
       patch.recoveryTunnelDeviceId = this.device.deviceId;
       patch.recoveryTunnelDeviceInstanceId = this.device.deviceInstanceId;
     }
     if (plan.recoveryTunnelCandidatePid) {
       if (Number(state.recoveryTunnelCandidatePid) !== Number(plan.recoveryTunnelCandidatePid)
+        || normalizeProcessStartToken(state.recoveryTunnelCandidateProcessStartToken) !== plan.recoveryTunnelCandidateProcessStartToken
         || classifyStoredDeviceOwner(state.recoveryTunnelCandidateDeviceId, this.device.deviceId) !== 'legacy') {
         throw Object.assign(new Error('Recovery Tunnel candidate changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
       }
+      const identity = await this.exactIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+      if (!identity || identity.process_start_token !== plan.recoveryTunnelCandidateProcessStartToken) {
+        throw Object.assign(new Error('Recovery Tunnel candidate exited or changed after legacy migration preflight.'), { code: 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED' });
+      }
+      expectedReceipts.push(['recoveryTunnelCandidate', storedProcessReceipt(state, 'recoveryTunnelCandidate')]);
+      expectedFields.recoveryTunnelCandidateDeviceId = state.recoveryTunnelCandidateDeviceId;
+      expectedFields.recoveryTunnelCandidateDeviceInstanceId = state.recoveryTunnelCandidateDeviceInstanceId;
       patch.recoveryTunnelCandidateDeviceId = this.device.deviceId;
       patch.recoveryTunnelCandidateDeviceInstanceId = this.device.deviceInstanceId;
     }
-    this.updateState(patch);
+    this.updateState(patch, (value) => expectedReceipts.every(([prefix, receipt]) => sameStoredProcessReceipt(value, prefix, receipt))
+      && stateFieldsMatch(value, expectedFields), 'RECOVERY_LEGACY_MIGRATION_STATE_CHANGED');
     this.log?.info?.('Legacy Recovery Plane ownership proven; rotating services into device-aware mode', {
       recoveryMcpPid: plan.recoveryMcpPid || null,
       recoveryTunnelPid: plan.recoveryTunnelPid || null,
@@ -219,16 +413,30 @@ class RecoveryPlaneService {
   }
 
   async deactivateOwnedTunnel(state, { configured, tunnelState, errorCode = null }) {
-    this.assertOwnedLive(state.recoveryTunnelPid, state.recoveryTunnelDeviceId, 'RECOVERY_TUNNEL');
-    this.assertOwnedLive(state.recoveryTunnelCandidatePid, state.recoveryTunnelCandidateDeviceId, 'RECOVERY_TUNNEL');
-    if (isAlive(state.recoveryTunnelPid)) await stopExactTree(state.recoveryTunnelPid);
-    if (state.recoveryTunnelCandidatePid !== state.recoveryTunnelPid && isAlive(state.recoveryTunnelCandidatePid)) await stopExactTree(state.recoveryTunnelCandidatePid);
+    const tunnelIdentity = await this.ownedIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+    // Validate the candidate receipt independently even when its numeric PID
+    // equals the primary.  PID equality alone is not an identity proof.
+    const candidateIdentity = await this.ownedIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+    const identities = [
+      ['recoveryTunnel', tunnelIdentity],
+      ['recoveryTunnelCandidate', candidateIdentity]
+    ];
+    const terminated = [];
+    for (const [prefix, identity] of identities) {
+      if (!identity || terminated.some((value) => sameProcessIdentity(value, identity))) continue;
+      await this.terminateOwnedIdentity(identity, prefix, 'RECOVERY_TUNNEL');
+      terminated.push(identity);
+    }
+    const tunnelReceipt = storedProcessReceipt(state, 'recoveryTunnel');
+    const candidateReceipt = storedProcessReceipt(state, 'recoveryTunnelCandidate');
     this.updateState({
       recoveryTunnelPid: null,
+      recoveryTunnelProcessStartToken: null,
       recoveryTunnelInstanceId: null,
       recoveryTunnelFingerprint: null,
       recoveryTunnelActivationEpochId: null,
       recoveryTunnelCandidatePid: null,
+      recoveryTunnelCandidateProcessStartToken: null,
       recoveryTunnelCandidateInstanceId: null,
       recoveryTunnelCandidateFingerprint: null,
       recoveryTunnelCandidateActivationEpochId: null,
@@ -240,7 +448,8 @@ class RecoveryPlaneService {
       recoveryTunnelConfigured: configured,
       recoveryTunnelState: tunnelState,
       recoveryTunnelLastErrorCode: errorCode
-    });
+    }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnel', tunnelReceipt)
+      && sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', candidateReceipt), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
     return { state: tunnelState, configured, pid: null, instance_id: null, ...(errorCode ? { error_code: errorCode } : {}) };
   }
 
@@ -252,30 +461,47 @@ class RecoveryPlaneService {
     const scriptRevision = fileSha256(script);
     const fingerprint = recoveryFingerprint(settings, scriptRevision, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId);
     const state = this.readState();
-    this.assertOwnedLive(state.recoveryMcpPid, state.recoveryMcpDeviceId, 'RECOVERY_MCP');
+    const existingReceipt = storedProcessReceipt(state, 'recoveryMcp');
+    const existingIdentity = await this.ownedIdentity(state, 'recoveryMcp', 'RECOVERY_MCP');
     const current = Boolean(state.recoveryMcpInstanceId)
-      && isAlive(state.recoveryMcpPid)
+      && Boolean(existingIdentity)
       && state.recoveryMcpFingerprint === fingerprint
       && Number(state.recoveryMcpPort) === Number(settings.recoveryMcpPort)
       && (!this.device || state.recoveryMcpDeviceInstanceId === this.device.deviceInstanceId)
       && String(state.recoveryMcpActivationEpochId || '') === String(this.activationEpochId || '')
       && await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, state.recoveryMcpPid, state.recoveryMcpInstanceId);
-    if (current) return {
-      state: 'healthy',
-      pid: state.recoveryMcpPid,
-      instance_id: state.recoveryMcpInstanceId,
-      port: settings.recoveryMcpPort,
-      revision: scriptRevision,
-      replaced: false,
-      device_id: this.device?.deviceId || null,
-      device_instance_id: this.device?.deviceInstanceId || null,
-      activation_epoch_id: this.activationEpochId || null
-    };
-    if (isAlive(state.recoveryMcpPid)) await stopExactTree(state.recoveryMcpPid);
+    if (current) {
+      const latestState = this.readState();
+      const latestIdentity = await this.ownedIdentity(latestState, 'recoveryMcp', 'RECOVERY_MCP');
+      const latestHealth = latestIdentity && await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, latestState.recoveryMcpPid, latestState.recoveryMcpInstanceId);
+      const finalState = latestHealth ? this.readState() : null;
+      const finalIdentity = finalState && await this.ownedIdentity(finalState, 'recoveryMcp', 'RECOVERY_MCP');
+      if (finalIdentity && sameProcessIdentity(latestIdentity, finalIdentity)
+        && finalState.recoveryMcpFingerprint === fingerprint
+        && finalState.recoveryMcpInstanceId === state.recoveryMcpInstanceId) {
+        return {
+          state: 'healthy',
+          pid: finalState.recoveryMcpPid,
+          process_start_token: finalIdentity.process_start_token,
+          instance_id: finalState.recoveryMcpInstanceId,
+          port: settings.recoveryMcpPort,
+          revision: scriptRevision,
+          replaced: false,
+          device_id: this.device?.deviceId || null,
+          device_instance_id: this.device?.deviceInstanceId || null,
+          activation_epoch_id: this.activationEpochId || null
+        };
+      }
+    }
+    if (existingIdentity) await this.terminateOwnedIdentity(existingIdentity, 'recoveryMcp', 'RECOVERY_MCP');
+    if (existingIdentity || existingReceipt.pid || existingReceipt.process_start_token) {
+      this.updateState({ recoveryMcpPid: null, recoveryMcpProcessStartToken: null, recoveryMcpInstanceId: null, recoveryMcpPort: null, recoveryMcpFingerprint: null, recoveryMcpRevision: null, recoveryMcpStartedAt: null, recoveryMcpDeviceId: null, recoveryMcpDeviceInstanceId: null, recoveryMcpActivationEpochId: null }, (value) => sameStoredProcessReceipt(value, 'recoveryMcp', existingReceipt), 'RECOVERY_MCP_PROCESS_STATE_CHANGED');
+    }
     ensureParent(this.paths.recoveryMcpLogFile());
     rotateLog(this.paths.recoveryMcpLogFile());
     const output = fs.openSync(this.paths.recoveryMcpLogFile(), 'a');
     let child;
+    let spawnedIdentity;
     const recoveryMcpInstanceId = instanceId();
     try {
       const env = { ...process.env, WEBCODEX_RECOVERY_AUTH_TOKEN: authToken };
@@ -285,15 +511,33 @@ class RecoveryPlaneService {
       child = spawn(python, ['-u', script, '--host', '127.0.0.1', '--port', String(settings.recoveryMcpPort), '--data-root', this.paths.dataRoot()], { detached: true, windowsHide: true, stdio: ['ignore', output, output], env });
       await new Promise((resolve, reject) => { child.once('spawn', resolve); child.once('error', reject); });
       child.unref();
+      spawnedIdentity = await this.captureSpawnedIdentity(child.pid, 'RECOVERY_MCP');
     } finally { fs.closeSync(output); }
-    this.updateState({ recoveryMcpPid: child.pid, recoveryMcpInstanceId, recoveryMcpPort: Number(settings.recoveryMcpPort), recoveryMcpFingerprint: fingerprint, recoveryMcpRevision: scriptRevision, recoveryMcpStartedAt: new Date().toISOString(), recoveryMcpDeviceId: this.device?.deviceId || null, recoveryMcpDeviceInstanceId: this.device?.deviceInstanceId || null, recoveryMcpActivationEpochId: this.activationEpochId || null });
+    try {
+      this.updateState({ recoveryMcpPid: child.pid, recoveryMcpProcessStartToken: spawnedIdentity.process_start_token, recoveryMcpInstanceId, recoveryMcpPort: Number(settings.recoveryMcpPort), recoveryMcpFingerprint: fingerprint, recoveryMcpRevision: scriptRevision, recoveryMcpStartedAt: new Date().toISOString(), recoveryMcpDeviceId: this.device?.deviceId || null, recoveryMcpDeviceInstanceId: this.device?.deviceInstanceId || null, recoveryMcpActivationEpochId: this.activationEpochId || null }, (value) => sameStoredProcessReceipt(value, 'recoveryMcp', { pid: null, process_start_token: null }), 'RECOVERY_MCP_PROCESS_STATE_CHANGED');
+    } catch (error) {
+      try {
+        await this.exactProcessTerminator(spawnedIdentity, { observeProcessIdentity: this.processIdentityObserver });
+      } catch (cleanupError) {
+        throw persistenceCleanupFailure('RECOVERY_MCP', error, cleanupError);
+      }
+      throw error;
+    }
     for (let index = 0; index < RECOVERY_MCP_START_ATTEMPTS; index += 1) {
       if (!isAlive(child.pid)) break;
-      if (await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, child.pid, recoveryMcpInstanceId)) return { state: 'healthy', pid: child.pid, instance_id: recoveryMcpInstanceId, port: settings.recoveryMcpPort, revision: scriptRevision, replaced: true, device_id: this.device?.deviceId || null, device_instance_id: this.device?.deviceInstanceId || null, activation_epoch_id: this.activationEpochId || null };
+      if (await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, child.pid, recoveryMcpInstanceId)) {
+        const latestState = this.readState();
+        const latestIdentity = await this.ownedIdentity(latestState, 'recoveryMcp', 'RECOVERY_MCP');
+        if (latestIdentity && sameProcessIdentity(spawnedIdentity, latestIdentity)
+          && latestState.recoveryMcpInstanceId === recoveryMcpInstanceId
+          && latestState.recoveryMcpFingerprint === fingerprint) {
+          return { state: 'healthy', pid: child.pid, process_start_token: latestIdentity.process_start_token, instance_id: recoveryMcpInstanceId, port: settings.recoveryMcpPort, revision: scriptRevision, replaced: true, device_id: this.device?.deviceId || null, device_instance_id: this.device?.deviceInstanceId || null, activation_epoch_id: this.activationEpochId || null };
+        }
+      }
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
-    await stopExactTree(child.pid);
-    this.updateState({ recoveryMcpPid: null, recoveryMcpInstanceId: null, recoveryMcpDeviceId: null, recoveryMcpDeviceInstanceId: null, recoveryMcpActivationEpochId: null });
+    await this.terminateOwnedIdentity(spawnedIdentity, 'recoveryMcp', 'RECOVERY_MCP');
+    this.updateState({ recoveryMcpPid: null, recoveryMcpProcessStartToken: null, recoveryMcpInstanceId: null, recoveryMcpDeviceId: null, recoveryMcpDeviceInstanceId: null, recoveryMcpActivationEpochId: null }, (value) => sameStoredProcessReceipt(value, 'recoveryMcp', spawnedIdentity), 'RECOVERY_MCP_PROCESS_STATE_CHANGED');
     throw Object.assign(new Error('Recovery MCP failed its local readiness check.'), { code: 'RECOVERY_MCP_NOT_READY' });
   }
 
@@ -311,56 +555,99 @@ class RecoveryPlaneService {
     }
     if (!fs.existsSync(this.paths.tunnelExecutable())) throw Object.assign(new Error('Recovery Tunnel executable is missing.'), { code: 'RECOVERY_TUNNEL_EXECUTABLE_MISSING' });
     const fingerprint = recoveryTunnelFingerprint(settings, authToken, this.device?.deviceId || '', this.activationEpochId);
-    this.assertOwnedLive(state.recoveryTunnelPid, state.recoveryTunnelDeviceId, 'RECOVERY_TUNNEL');
+    const primaryReceipt = storedProcessReceipt(state, 'recoveryTunnel');
+    const candidateReceipt = storedProcessReceipt(state, 'recoveryTunnelCandidate');
+    const primaryIdentity = await this.ownedIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+    const candidateIdentity = await this.ownedIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
     const current = Boolean(state.recoveryTunnelInstanceId)
+      && Boolean(primaryIdentity)
       && state.recoveryTunnelFingerprint === fingerprint
       && String(state.recoveryTunnelActivationEpochId || '') === String(this.activationEpochId || '')
       && await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, state.recoveryTunnelPid);
-    if (current) return {
-      state: 'healthy',
-      configured: true,
-      pid: state.recoveryTunnelPid,
-      instance_id: state.recoveryTunnelInstanceId,
-      health_port: settings.recoveryHealthPort,
-      replaced: false,
-      device_id: this.device?.deviceId || null,
-      activation_epoch_id: this.activationEpochId || null
-    };
+    if (current) {
+      const latestState = this.readState();
+      const latestIdentity = await this.ownedIdentity(latestState, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+      const latestReady = latestIdentity
+        && sameProcessIdentity(primaryIdentity, latestIdentity)
+        && latestState.recoveryTunnelFingerprint === fingerprint
+        && latestState.recoveryTunnelInstanceId === state.recoveryTunnelInstanceId
+        && latestState.recoveryTunnelActivationEpochId === state.recoveryTunnelActivationEpochId
+        && await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, latestState.recoveryTunnelPid);
+      const finalState = latestReady ? this.readState() : null;
+      const finalIdentity = finalState && await this.ownedIdentity(finalState, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+      if (finalIdentity
+        && sameProcessIdentity(latestIdentity, finalIdentity)
+        && finalState.recoveryTunnelFingerprint === fingerprint
+        && finalState.recoveryTunnelInstanceId === state.recoveryTunnelInstanceId
+        && finalState.recoveryTunnelActivationEpochId === state.recoveryTunnelActivationEpochId) {
+        return {
+          state: 'healthy',
+          configured: true,
+          pid: finalState.recoveryTunnelPid,
+          process_start_token: finalIdentity.process_start_token,
+          instance_id: finalState.recoveryTunnelInstanceId,
+          health_port: settings.recoveryHealthPort,
+          replaced: false,
+          device_id: this.device?.deviceId || null,
+          activation_epoch_id: this.activationEpochId || null
+        };
+      }
+    }
 
     const candidatePid = Number(state.recoveryTunnelCandidatePid || 0);
-    this.assertOwnedLive(candidatePid, state.recoveryTunnelCandidateDeviceId, 'RECOVERY_TUNNEL');
-    const matchingCandidate = candidatePid > 0 && state.recoveryTunnelCandidateFingerprint === fingerprint && isAlive(candidatePid);
+    const matchingCandidate = Boolean(candidateIdentity)
+      && state.recoveryTunnelCandidateFingerprint === fingerprint
+      && Boolean(String(state.recoveryTunnelCandidateInstanceId || '').trim());
+    const terminated = [];
+    const terminateOnce = async (identity, prefix) => {
+      if (!identity || terminated.some((value) => sameProcessIdentity(value, identity))) return;
+      await this.terminateOwnedIdentity(identity, prefix, 'RECOVERY_TUNNEL');
+      terminated.push(identity);
+    };
     if (matchingCandidate) {
       for (let index = 0; index < RECOVERY_TUNNEL_START_ATTEMPTS; index += 1) {
         if (await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, candidatePid)) {
-          const startedAt = state.recoveryTunnelCandidateStartedAt || new Date().toISOString();
-          const candidateInstanceId = String(state.recoveryTunnelCandidateInstanceId || '').trim();
-          // A candidate PID alone is not a fresh runtime identity.  Legacy
-          // candidates are deliberately discarded and relaunched below.
-          if (!candidateInstanceId) break;
-          this.updateState({ recoveryTunnelPid: candidatePid, recoveryTunnelInstanceId: candidateInstanceId, recoveryTunnelFingerprint: fingerprint, recoveryTunnelActivationEpochId: this.activationEpochId || null, recoveryTunnelDeviceId: this.device?.deviceId || null, recoveryTunnelDeviceInstanceId: state.recoveryTunnelCandidateDeviceInstanceId || this.device?.deviceInstanceId || null, recoveryTunnelCandidatePid: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null, recoveryTunnelConfigured: true, recoveryTunnelState: 'healthy', recoveryTunnelLastErrorCode: null, recoveryTunnelStartedAt: startedAt });
-          return { state: 'healthy', configured: true, pid: candidatePid, instance_id: candidateInstanceId, health_port: settings.recoveryHealthPort, replaced: false, adopted_candidate: true, device_id: this.device?.deviceId || null, activation_epoch_id: this.activationEpochId || null };
+          const latestState = this.readState();
+          const latestCandidate = await this.ownedIdentity(latestState, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+          const latestPrimary = await this.ownedIdentity(latestState, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+          const candidateInstanceId = String(latestState.recoveryTunnelCandidateInstanceId || '').trim();
+          if (!latestCandidate || !sameProcessIdentity(candidateIdentity, latestCandidate)
+            || latestState.recoveryTunnelCandidateFingerprint !== fingerprint
+            || !candidateInstanceId
+            || (latestPrimary && !sameStoredProcessReceipt(latestState, 'recoveryTunnel', primaryReceipt))) {
+            throw Object.assign(new Error('Recovery Tunnel state changed before candidate promotion.'), { code: 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED' });
+          }
+          const startedAt = latestState.recoveryTunnelCandidateStartedAt || new Date().toISOString();
+          this.updateState({ recoveryTunnelPid: candidatePid, recoveryTunnelProcessStartToken: latestCandidate.process_start_token, recoveryTunnelInstanceId: candidateInstanceId, recoveryTunnelFingerprint: fingerprint, recoveryTunnelActivationEpochId: this.activationEpochId || null, recoveryTunnelDeviceId: this.device?.deviceId || null, recoveryTunnelDeviceInstanceId: latestState.recoveryTunnelCandidateDeviceInstanceId || this.device?.deviceInstanceId || null, recoveryTunnelCandidatePid: null, recoveryTunnelCandidateProcessStartToken: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null, recoveryTunnelConfigured: true, recoveryTunnelState: 'healthy', recoveryTunnelLastErrorCode: null, recoveryTunnelStartedAt: startedAt }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', candidateReceipt)
+            && sameStoredProcessReceipt(value, 'recoveryTunnel', primaryReceipt)
+            && stateFieldsMatch(value, { recoveryTunnelCandidateFingerprint: fingerprint, recoveryTunnelCandidateInstanceId: candidateInstanceId }), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
+          return { state: 'healthy', configured: true, pid: candidatePid, process_start_token: latestCandidate.process_start_token, instance_id: candidateInstanceId, health_port: settings.recoveryHealthPort, replaced: false, adopted_candidate: true, device_id: this.device?.deviceId || null, activation_epoch_id: this.activationEpochId || null };
         }
         if (!isAlive(candidatePid)) break;
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
-      if (isAlive(candidatePid)) await stopExactTree(candidatePid);
-      this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null });
+      if (candidateIdentity) await terminateOnce(candidateIdentity, 'recoveryTunnelCandidate');
+      this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateProcessStartToken: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', candidateReceipt), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
     }
 
-    if (candidatePid > 0 && isAlive(candidatePid)) {
-      await stopExactTree(candidatePid);
-      this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null });
+    if (candidateIdentity && !matchingCandidate) {
+      await terminateOnce(candidateIdentity, 'recoveryTunnelCandidate');
+      this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateProcessStartToken: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', candidateReceipt), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
+    } else if (!candidateIdentity && (candidateReceipt.pid || candidateReceipt.process_start_token)) {
+      this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateProcessStartToken: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', candidateReceipt), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
     }
-    if (isAlive(state.recoveryTunnelPid)) {
-      await stopExactTree(state.recoveryTunnelPid);
-      this.updateState({ recoveryTunnelPid: null, recoveryTunnelInstanceId: null, recoveryTunnelFingerprint: null, recoveryTunnelActivationEpochId: null, recoveryTunnelDeviceId: null, recoveryTunnelDeviceInstanceId: null });
+    if (primaryIdentity) {
+      await terminateOnce(primaryIdentity, 'recoveryTunnel');
+      this.updateState({ recoveryTunnelPid: null, recoveryTunnelProcessStartToken: null, recoveryTunnelInstanceId: null, recoveryTunnelFingerprint: null, recoveryTunnelActivationEpochId: null, recoveryTunnelDeviceId: null, recoveryTunnelDeviceInstanceId: null }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnel', primaryReceipt), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
+    } else if (primaryReceipt.pid || primaryReceipt.process_start_token) {
+      this.updateState({ recoveryTunnelPid: null, recoveryTunnelProcessStartToken: null, recoveryTunnelInstanceId: null, recoveryTunnelFingerprint: null, recoveryTunnelActivationEpochId: null, recoveryTunnelDeviceId: null, recoveryTunnelDeviceInstanceId: null }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnel', primaryReceipt), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
     }
 
     const refreshedListenerPid = await recoveryTunnelListenerPid(settings.recoveryHealthPort);
     if (refreshedListenerPid) {
       const errorCode = 'RECOVERY_TUNNEL_HEALTH_PORT_IN_USE';
-      this.updateState({ recoveryTunnelConfigured: true, recoveryTunnelState: 'blocked_health_port_in_use', recoveryTunnelLastErrorCode: errorCode });
+      this.updateState({ recoveryTunnelConfigured: true, recoveryTunnelState: 'blocked_health_port_in_use', recoveryTunnelLastErrorCode: errorCode }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnel', { pid: null, process_start_token: null })
+        && sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', { pid: null, process_start_token: null }), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
       throw Object.assign(new Error('Recovery Tunnel health port is owned by an unrecognized process; refusing to replace or adopt it.'), { code: errorCode });
     }
 
@@ -373,23 +660,46 @@ class RecoveryPlaneService {
     const proxyUrl = Object.prototype.hasOwnProperty.call(settings, 'effectiveProxyUrl') ? settings.effectiveProxyUrl : settings.proxyUrl;
     if (proxyUrl) args.push('--control-plane.http-proxy', proxyUrl);
     let child;
+    let spawnedIdentity;
     try {
       child = spawn(this.paths.tunnelExecutable(), args, { detached: true, windowsHide: true, stdio: ['ignore', output, output], env });
       await new Promise((resolve, reject) => { child.once('spawn', resolve); child.once('error', reject); });
       child.unref();
+      spawnedIdentity = await this.captureSpawnedIdentity(child.pid, 'RECOVERY_TUNNEL');
     } finally { fs.closeSync(output); }
     const candidateStartedAt = new Date().toISOString();
     const recoveryTunnelInstanceId = instanceId();
-    this.updateState({ recoveryTunnelCandidatePid: child.pid, recoveryTunnelCandidateInstanceId: recoveryTunnelInstanceId, recoveryTunnelCandidateFingerprint: fingerprint, recoveryTunnelCandidateActivationEpochId: this.activationEpochId || null, recoveryTunnelCandidateStartedAt: candidateStartedAt, recoveryTunnelCandidateDeviceId: this.device?.deviceId || null, recoveryTunnelCandidateDeviceInstanceId: this.device?.deviceInstanceId || null, recoveryTunnelConfigured: true, recoveryTunnelState: 'starting', recoveryTunnelLastErrorCode: null });
+    try {
+      this.updateState({ recoveryTunnelCandidatePid: child.pid, recoveryTunnelCandidateProcessStartToken: spawnedIdentity.process_start_token, recoveryTunnelCandidateInstanceId: recoveryTunnelInstanceId, recoveryTunnelCandidateFingerprint: fingerprint, recoveryTunnelCandidateActivationEpochId: this.activationEpochId || null, recoveryTunnelCandidateStartedAt: candidateStartedAt, recoveryTunnelCandidateDeviceId: this.device?.deviceId || null, recoveryTunnelCandidateDeviceInstanceId: this.device?.deviceInstanceId || null, recoveryTunnelConfigured: true, recoveryTunnelState: 'starting', recoveryTunnelLastErrorCode: null }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', { pid: null, process_start_token: null })
+        && sameStoredProcessReceipt(value, 'recoveryTunnel', { pid: null, process_start_token: null }), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
+    } catch (error) {
+      try {
+        await this.exactProcessTerminator(spawnedIdentity, { observeProcessIdentity: this.processIdentityObserver });
+      } catch (cleanupError) {
+        throw persistenceCleanupFailure('RECOVERY_TUNNEL', error, cleanupError);
+      }
+      throw error;
+    }
     for (let index = 0; index < RECOVERY_TUNNEL_START_ATTEMPTS; index += 1) {
-      if (await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, child.pid)) { this.updateState({ recoveryTunnelPid: child.pid, recoveryTunnelInstanceId: recoveryTunnelInstanceId, recoveryTunnelFingerprint: fingerprint, recoveryTunnelActivationEpochId: this.activationEpochId || null, recoveryTunnelDeviceId: this.device?.deviceId || null, recoveryTunnelDeviceInstanceId: this.device?.deviceInstanceId || null, recoveryTunnelCandidatePid: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null, recoveryTunnelState: 'healthy', recoveryTunnelLastErrorCode: null, recoveryTunnelStartedAt: candidateStartedAt }); return { state: 'healthy', configured: true, pid: child.pid, instance_id: recoveryTunnelInstanceId, health_port: settings.recoveryHealthPort, replaced: true, device_id: this.device?.deviceId || null, activation_epoch_id: this.activationEpochId || null }; }
+      if (await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, child.pid)) {
+        const latestState = this.readState();
+        const latestCandidate = await this.ownedIdentity(latestState, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+        if (!latestCandidate || !sameProcessIdentity(spawnedIdentity, latestCandidate)
+          || latestState.recoveryTunnelCandidateInstanceId !== recoveryTunnelInstanceId
+          || latestState.recoveryTunnelCandidateFingerprint !== fingerprint) {
+          throw Object.assign(new Error('Recovery Tunnel identity changed before promotion.'), { code: 'RECOVERY_TUNNEL_PROCESS_IDENTITY_CHANGED' });
+        }
+        this.updateState({ recoveryTunnelPid: child.pid, recoveryTunnelProcessStartToken: latestCandidate.process_start_token, recoveryTunnelInstanceId: recoveryTunnelInstanceId, recoveryTunnelFingerprint: fingerprint, recoveryTunnelActivationEpochId: this.activationEpochId || null, recoveryTunnelDeviceId: this.device?.deviceId || null, recoveryTunnelDeviceInstanceId: this.device?.deviceInstanceId || null, recoveryTunnelCandidatePid: null, recoveryTunnelCandidateProcessStartToken: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null, recoveryTunnelState: 'healthy', recoveryTunnelLastErrorCode: null, recoveryTunnelStartedAt: candidateStartedAt }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', { pid: child.pid, process_start_token: spawnedIdentity.process_start_token })
+          && sameStoredProcessReceipt(value, 'recoveryTunnel', { pid: null, process_start_token: null }), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
+        return { state: 'healthy', configured: true, pid: child.pid, process_start_token: latestCandidate.process_start_token, instance_id: recoveryTunnelInstanceId, health_port: settings.recoveryHealthPort, replaced: true, device_id: this.device?.deviceId || null, activation_epoch_id: this.activationEpochId || null };
+      }
       if (!isAlive(child.pid)) break;
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
     const exitedEarly = !isAlive(child.pid);
-    if (!exitedEarly) await stopExactTree(child.pid);
+    await this.terminateOwnedIdentity(spawnedIdentity, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
     const errorCode = exitedEarly ? 'RECOVERY_TUNNEL_PROCESS_EXITED' : 'RECOVERY_TUNNEL_NOT_READY';
-    this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null, recoveryTunnelState: 'failed', recoveryTunnelLastErrorCode: errorCode });
+    this.updateState({ recoveryTunnelCandidatePid: null, recoveryTunnelCandidateProcessStartToken: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null, recoveryTunnelState: 'failed', recoveryTunnelLastErrorCode: errorCode }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', spawnedIdentity), 'RECOVERY_TUNNEL_PROCESS_STATE_CHANGED');
     throw Object.assign(new Error(exitedEarly ? 'Recovery Tunnel process exited before readiness.' : 'Recovery Tunnel did not complete a successful control-plane poll.'), { code: errorCode });
   }
 
@@ -413,13 +723,27 @@ class RecoveryPlaneService {
 
   async stop() {
     const state = this.readState();
-    this.assertOwnedLive(state.recoveryTunnelPid, state.recoveryTunnelDeviceId, 'RECOVERY_TUNNEL');
-    this.assertOwnedLive(state.recoveryTunnelCandidatePid, state.recoveryTunnelCandidateDeviceId, 'RECOVERY_TUNNEL');
-    this.assertOwnedLive(state.recoveryMcpPid, state.recoveryMcpDeviceId, 'RECOVERY_MCP');
-    await stopExactTree(state.recoveryTunnelPid);
-    if (state.recoveryTunnelCandidatePid !== state.recoveryTunnelPid) await stopExactTree(state.recoveryTunnelCandidatePid);
-    await stopExactTree(state.recoveryMcpPid);
-    this.updateState({ recoveryTunnelPid: null, recoveryTunnelInstanceId: null, recoveryTunnelFingerprint: null, recoveryTunnelActivationEpochId: null, recoveryTunnelDeviceId: null, recoveryTunnelDeviceInstanceId: null, recoveryTunnelCandidatePid: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null, recoveryMcpPid: null, recoveryMcpInstanceId: null, recoveryMcpDeviceId: null, recoveryMcpDeviceInstanceId: null, recoveryMcpActivationEpochId: null, recoveryTunnelState: 'stopped' });
+    const tunnelIdentity = await this.ownedIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+    const candidateIdentity = await this.ownedIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+    const mcpIdentity = await this.ownedIdentity(state, 'recoveryMcp', 'RECOVERY_MCP');
+    const receipts = {
+      recoveryTunnel: storedProcessReceipt(state, 'recoveryTunnel'),
+      recoveryTunnelCandidate: storedProcessReceipt(state, 'recoveryTunnelCandidate'),
+      recoveryMcp: storedProcessReceipt(state, 'recoveryMcp')
+    };
+    const terminated = [];
+    for (const [prefix, identity, kind] of [
+      ['recoveryTunnel', tunnelIdentity, 'RECOVERY_TUNNEL'],
+      ['recoveryTunnelCandidate', candidateIdentity, 'RECOVERY_TUNNEL'],
+      ['recoveryMcp', mcpIdentity, 'RECOVERY_MCP']
+    ]) {
+      if (!identity || terminated.some((value) => sameProcessIdentity(value, identity))) continue;
+      await this.terminateOwnedIdentity(identity, prefix, kind);
+      terminated.push(identity);
+    }
+    this.updateState({ recoveryTunnelPid: null, recoveryTunnelProcessStartToken: null, recoveryTunnelInstanceId: null, recoveryTunnelFingerprint: null, recoveryTunnelActivationEpochId: null, recoveryTunnelDeviceId: null, recoveryTunnelDeviceInstanceId: null, recoveryTunnelCandidatePid: null, recoveryTunnelCandidateProcessStartToken: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null, recoveryMcpPid: null, recoveryMcpProcessStartToken: null, recoveryMcpInstanceId: null, recoveryMcpDeviceId: null, recoveryMcpDeviceInstanceId: null, recoveryMcpActivationEpochId: null, recoveryTunnelState: 'stopped' }, (value) => sameStoredProcessReceipt(value, 'recoveryTunnel', receipts.recoveryTunnel)
+      && sameStoredProcessReceipt(value, 'recoveryTunnelCandidate', receipts.recoveryTunnelCandidate)
+      && sameStoredProcessReceipt(value, 'recoveryMcp', receipts.recoveryMcp), 'RECOVERY_PROCESS_STATE_CHANGED');
     return true;
   }
 }

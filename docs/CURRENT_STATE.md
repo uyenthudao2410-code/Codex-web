@@ -32,15 +32,19 @@ A schema-v2 postflight is accepted only when its operation, component, checkpoin
 
 The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md) is the current operational receipt for volatile lifecycle, connector, PRL, and packaged-harness claims. It supersedes older uses of “current”, “active”, or “accepted” in this document when those terms describe a live process or connector rather than a source implementation.
 
-- The checked-out baseline is `main @ 4a79af617bfa6ed1768f390da6c4f73c16aa86a2`. The current activation-closure and PRL v11 hardening waves are newer uncommitted source until an exact accepted checkpoint says otherwise. PRL now fails public caller-derived authority closed, records immutable non-code dispositions and checkpoint-bound reconciliation, reports revision-scoped clocks/intervals, and emits C4 receipt schema `2` with Backup-API snapshot identity plus independently rebuilt proof/checkpoint/bridge coverage. Neither a matched source revision nor a fresh runtime receipt is a package, installer, release, deployment, production, or SLO claim.
+- The checked-out baseline is `main @ 898d57454f9a5113d8aa3f56d1650e4b3e0d6924`. The current full-clean activation-closure and PRL v11 hardening waves are newer uncommitted source until an exact accepted checkpoint says otherwise. PRL now fails public caller-derived authority closed, records immutable non-code dispositions and checkpoint-bound reconciliation, reports revision-scoped clocks/intervals, and emits C4 receipt schema `2` with Backup-API snapshot identity plus independently rebuilt proof/checkpoint/bridge coverage. Neither a matched source revision nor a fresh runtime receipt is a package, installer, release, deployment, production, or SLO claim.
 - Earlier P0/P4 connector acknowledgements and tool calls are `VERIFIED_SNAPSHOT`, not current-process authority. The current connector claim must be read from a fresh Recovery Host closure receipt under the unchanged-versus-changed SHA rules above; no persisted hash, generic tool call, or historical rediscovery timestamp may substitute for it.
 - P5 anchors remain terminal and the earlier A0 source-drift epoch retains its truthful zero funnel. Volatile ordinary-RUN, managed-job, and residue counts are not frozen in this maintained source document: recapture them from one immutable `report_lifecycle_census.py` snapshot before activation or stale-run reconciliation, and use only the official exact-ID path for a genuinely eligible stale RUN.
 - PRL-D and A2 remain `HOLD_NATURAL_EVIDENCE`; missing natural observations, TTPR, stage coverage, and measured money remain unknown rather than zero.
 - The isolated P0.3 packaged Recovery lane is source/package-local evidence, not an exact-frozen release candidate, installed-session, reboot/logon, connector, or production claim.
 
+### Source validation update — 2026-08-27
+
+At the current uncommitted source fingerprint, the complete Coding Tools MCP Python suite passes `698` tests with `4` environment-conditional skips and `106` subtests. The focused full-clean/activation, acceptance, orchestration, PRL, and projection packet passes `120` tests with `1` skip and `43` subtests. These are source-level regression results only; they do not establish a live Recovery Host handoff, current-process connector discovery/ACK, package, release, deployment, or production readiness.
+
 ### Live reconciliation — 2026-08-26
 
-The current Recovery Host receipt (captured `2026-08-26T02:06:12Z`) for `E:\DEV\Codex-web` is authoritative over pasted ChatGPT summaries. It reports `fullyReady=true`, Coding MCP `running_revision == disk_revision == cbcab4d0e5382431d1193724c7e13c128de319bceea7baae2e617a05decc3db5`, and the exact eight-tool `smart-v3` contract SHA `fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585`. The local `task_control` schema includes the source-gated `problem` and `p5` actions; a report claiming that the Coding MCP exposes an older contract is therefore stale for this process unless a newer authoritative snapshot contradicts it. Focused transport/stateless/fault validation is green (`22/22`), the SDK contract/exception boundary is green (`8/8`), and an HTTP-level `tools/call` regression confirms raw `ExceptionGroup` text cannot escape the JSON-RPC boundary (`6/6`). One transient semantic-probe timeout did trigger an automatic MCP restart; the health probe deadline is now 10 seconds so a slow dirty-checkout read does not masquerade as a broken execution plane. The connector freshness receipt is still fail-closed: `connectorRediscovered=false`, `connectorRediscoveredAt=null`, `connectorRefreshRequired=true`, with acknowledged SHA `34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c`; a model-text inventory or ordinary `tools/call` cannot replace real current-process `tools/list`/`server/discover`, official acknowledgement, or C4 natural evidence.
+The Recovery Host receipt captured at `2026-08-26T02:06:12Z` for `E:\DEV\Codex-web` remains historical live evidence for that loaded process. It reported the then-existing component-local `fullyReady=true`, Coding MCP `running_revision == disk_revision == cbcab4d0e5382431d1193724c7e13c128de319bceea7baae2e617a05decc3db5`, and the exact eight-tool `smart-v3` contract SHA `fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585`. It simultaneously reported `connectorRediscovered=false`, `connectorRediscoveredAt=null`, `connectorRefreshRequired=true`, with acknowledged SHA `34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c`. Under the maintained aggregate readiness contract below, that tuple is `UPDATE_INCOMPLETE` and must project `fullyReady=false`; the historical green field is not current activation authority. Focused transport/stateless/fault validation was green (`22/22`), the SDK contract/exception boundary was green (`8/8`), and an HTTP-level `tools/call` regression confirmed raw `ExceptionGroup` text could not escape the JSON-RPC boundary (`6/6`). A model-text inventory or ordinary `tools/call` cannot replace real current-process `tools/list`/`server/discover`, official acknowledgement, or C4 natural evidence.
 
 ## 2. Current product boundary
 
@@ -110,10 +114,24 @@ workspace roots, creates separate task/run projections, rejects cross-workspace
 and task projection are restored.
 
 `restart_runtime` is an action of `task_control`, not a ninth public tool. The runtime publishes a deterministic contract fingerprint and tool count so Electron can detect a stale ChatGPT connector schema.
+The action is a deferred post-tool-call full-clean request: MCP returns a short-lived
+ticket after fencing the exact operation, and Recovery Host later consumes the
+same ticket ID as the full-clean operation ID. Recovery Host revalidates the
+ticket's workspace/process/server identity and resolves source authority only
+from the current accepted closure; it never treats the ticket itself as a
+checkpoint. The signed Recovery Host census may reuse that exact fence identity,
+but it does not discount the initiating active tool call. It returns
+`RUNTIME_BUSY` and keeps the `.processing` journal until the MCP active-call count
+is actually zero, then retries the same operation. This proves the caller has
+left its tool boundary before process mutation while preserving fail-closed
+checkpoint authority.
 
 Runtime activation has two explicit modes. `soft_recovery` remains component-scoped
 for automatic local fault recovery (for example, a dead Tunnel or a crashed MCP)
-and is revision-continuity guarded. Operator `restart`, accepted code/revision
+and is revision-continuity guarded. Repeated semantic MCP failures replace only
+the exact owned MCP PID while preserving Tunnel identity; the replacement is
+stopped again if disk revision drifts across its spawn boundary. Operator
+`restart`, accepted code/revision
 activation, and controlled updates use `full_clean_activation`: a durable
 `activation_epoch_id` is created, admission closes, durable state is checkpointed,
 Electron UI/Coding Tunnel/Coding MCP and configured Recovery MCP/Tunnel are stopped,
@@ -121,7 +139,11 @@ and a replacement Recovery Host starts fresh processes with the same epoch. The
 epoch remains `UPDATE_INCOMPLETE` until a final current-process census verifies
 workspace, persistent device identity plus fresh lifecycle instance identity,
 disk/runtime revisions, process/server/supervisor identities, real tunnel health,
-UI and Recovery Plane identities, and a fresh connector discovery/ACK. Only a
+UI and Recovery Plane identities, and a fresh connector discovery/ACK. For the
+deferred `task_control` route, Recovery Host performs that ACK itself only after
+the exact post-preflight health receipt binds `tools/list`/`server/discover` to
+the current epoch, process ID, server ID and contract SHA; persisted hashes,
+compatibility-only contact and ordinary `tools/call` are insufficient. Only a
 verified `READY` epoch with `admission_open=true` may report `fullyReady=true`.
 The ledger, task history, acceptance state, settings, secrets handles,
 authorized roots, and device identity are never deleted by this transaction.

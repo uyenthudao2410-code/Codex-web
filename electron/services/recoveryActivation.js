@@ -1,7 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { RecoveryActionStore, OPERATION_ID_PATTERN } = require('./recoveryActionStore');
-const { isProcessAlive } = require('./recoveryIpc');
+const {
+  observeProcessIdentity,
+  processIdentityFrom,
+  sameProcessIdentity
+} = require('./processIdentity');
 const { recoveryHostLegacyV1Revision, RECOVERY_HOST_LEGACY_V1_CONTRACT } = require('./componentRevision');
 const { readJson, writeJsonAtomic } = require('./jsonStore');
 const {
@@ -73,7 +77,11 @@ function normalizeSourceCheckpoint(input, { allowEmptyProof = false } = {}) {
 function normalizeActivationRequest(input, now = Date.now(), { allowExpiredReplay = false } = {}) {
   const value = exactObject(input, new Set([
     'operation_id', 'component', 'requested_at_unix_ms', 'expires_at_unix_ms',
-    'expected_disk_revision', 'allow_acceptance_pending', 'source_checkpoint'
+    'expected_disk_revision', 'allow_acceptance_pending', 'source_checkpoint',
+    // Explicit marker for callers that require the system transaction.  A
+    // stale/legacy Recovery Host must reject this request rather than silently
+    // falling back to component-scoped activation.
+    'full_clean_required', 'activation_mode'
   ]), 'activation request');
   const request = {
     operation_id: String(value.operation_id || ''),
@@ -82,10 +90,15 @@ function normalizeActivationRequest(input, now = Date.now(), { allowExpiredRepla
     expires_at_unix_ms: Number(value.expires_at_unix_ms || 0),
     expected_disk_revision: String(value.expected_disk_revision || '').toLowerCase(),
     allow_acceptance_pending: value.allow_acceptance_pending === true,
-    source_checkpoint: normalizeSourceCheckpoint(value.source_checkpoint)
+    source_checkpoint: normalizeSourceCheckpoint(value.source_checkpoint),
+    full_clean_required: value.full_clean_required === true,
+    activation_mode: String(value.activation_mode || '').trim() || null
   };
   if (!OPERATION_ID_PATTERN.test(request.operation_id)) throw activationError('INVALID_OPERATION_ID', 'Invalid activation operation_id.');
   if (!COMPONENTS.has(request.component)) throw activationError('INVALID_COMPONENT', 'Activation component is not allowlisted.');
+  if (request.full_clean_required && request.activation_mode !== 'full_clean_activation') {
+    throw activationError('INVALID_ACTIVATION_MODE', 'A full-clean activation request must declare activation_mode=full_clean_activation.');
+  }
   if (!REVISION_PATTERN.test(request.expected_disk_revision)) throw activationError('INVALID_REVISION', 'expected_disk_revision must be a SHA-256 component revision.');
   if (!Number.isSafeInteger(request.requested_at_unix_ms) || !Number.isSafeInteger(request.expires_at_unix_ms)) {
     throw activationError('INVALID_ARGUMENT', 'Activation timestamps must be integer milliseconds.');
@@ -225,6 +238,7 @@ class RecoveryActivation {
     spawnElectronUi = null,
     beginRecoveryHandoff = null,
     fullCleanActivation = null,
+    processIdentityObserver = observeProcessIdentity,
     now = () => Date.now()
   }) {
     this.paths = paths;
@@ -238,6 +252,9 @@ class RecoveryActivation {
     this.spawnElectronUi = spawnElectronUi;
     this.beginRecoveryHandoff = beginRecoveryHandoff;
     this.fullCleanActivation = fullCleanActivation;
+    this.processIdentityObserver = typeof processIdentityObserver === 'function'
+      ? processIdentityObserver
+      : observeProcessIdentity;
     this.now = now;
     this.uiRegistration = null;
     this.uiRecoveryStateFile = path.join(paths.dataRoot(), 'electron-ui-recovery.json');
@@ -290,12 +307,22 @@ class RecoveryActivation {
 
   uiPresence() {
     const registration = this.uiRegistration;
+    let identityMatches = false;
+    if (registration) {
+      try {
+        const observed = this.processIdentityObserver(registration.pid);
+        // Presence is a synchronous status/activation projection. A thenable
+        // or unavailable observation cannot authorize the registered owner.
+        identityMatches = !observed?.then && sameProcessIdentity(registration, observed);
+      } catch { identityMatches = false; }
+    }
     return {
       tracked: Boolean(registration),
-      alive: Boolean(registration && isProcessAlive(registration.pid)),
+      alive: Boolean(registration && identityMatches),
       instance_id: registration?.instance_id || null,
       activation_epoch_id: registration?.activation_epoch_id || null,
       pid: registration?.pid || null,
+      process_start_token: registration?.process_start_token || null,
       registered_at_unix_ms: registration?.registered_at_unix_ms || null
     };
   }
@@ -370,6 +397,17 @@ class RecoveryActivation {
   async preflight(input) {
     const request = normalizeActivationRequest(input, this.now());
     const revision = this.validateExpectedRevision(request);
+    if (request.full_clean_required && !this.hasFullCleanCoordinator()) {
+      return {
+        safe: false,
+        code: 'RECOVERY_HOST_UPGRADE_REQUIRED',
+        component: request.component,
+        activation_mode: request.activation_mode,
+        full_clean_required: true,
+        revision,
+        reason: 'The authenticated Recovery Host does not expose the current full-clean activation coordinator.'
+      };
+    }
     const conflict = this.actions.active(request.operation_id);
     if (conflict) {
       return {
@@ -579,6 +617,17 @@ class RecoveryActivation {
       return { ...replay, deduplicated: true };
     }
     const request = normalizeActivationRequest(input, now);
+    if (request.full_clean_required && !this.hasFullCleanCoordinator()) {
+      // Preserve a durable refusal record for status polling, but never invoke
+      // the legacy component-scoped branch on a request that explicitly asks
+      // for a full-system transaction.
+      const claim = this.actions.begin(request);
+      if (!claim.created) return { ...claim.record, deduplicated: true };
+      return this.actions.finish(request.operation_id, 'refused', null, {
+        code: 'RECOVERY_HOST_UPGRADE_REQUIRED',
+        message: 'The authenticated Recovery Host is stale or lacks the full-clean coordinator; bootstrap a current replacement before activation.'
+      });
+    }
     // A revision activation is a system transaction when the Recovery Host
     // has the full-clean coordinator.  Keep the component-scoped path as a
     // compatibility fallback for isolated/unit hosts and legacy callers.
@@ -800,8 +849,34 @@ class RecoveryActivation {
     };
     if (!INSTANCE_ID_PATTERN.test(registration.instance_id) || !Number.isSafeInteger(registration.pid) || registration.pid <= 0
       || !REVISION_PATTERN.test(registration.revision) || !Number.isSafeInteger(registration.started_at_unix_ms)
-      || registration.started_at_unix_ms > this.now() + CLOCK_SKEW_MS || !isProcessAlive(registration.pid)) {
-      throw activationError('INVALID_UI_REGISTRATION', 'Electron UI registration is invalid or the process is not alive.');
+      || registration.started_at_unix_ms > this.now() + CLOCK_SKEW_MS) {
+      throw activationError('INVALID_UI_REGISTRATION', 'Electron UI registration is invalid.');
+    }
+    let observed;
+    try { observed = await this.processIdentityObserver(registration.pid); }
+    catch (error) {
+      throw activationError('UI_PROCESS_IDENTITY_UNVERIFIED', 'Electron UI process creation identity is unavailable.', {
+        pid: registration.pid,
+        cause_code: error?.code || ''
+      });
+    }
+    if (observed?.state !== 'live') {
+      throw activationError('UI_PROCESS_IDENTITY_UNVERIFIED', 'Electron UI process creation identity is unavailable.', {
+        pid: registration.pid,
+        observed_state: observed?.state || null
+      });
+    }
+    try {
+      const identity = processIdentityFrom({
+        pid: registration.pid,
+        process_start_token: observed.process_start_token
+      });
+      registration.process_start_token = identity.process_start_token;
+    } catch (error) {
+      throw activationError('UI_PROCESS_IDENTITY_UNVERIFIED', 'Electron UI process creation identity is unavailable.', {
+        pid: registration.pid,
+        cause_code: error?.code || ''
+      });
     }
     this.uiRegistration = registration;
     const epoch = this.fullCleanActivation?.current?.();
