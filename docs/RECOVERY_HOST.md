@@ -300,6 +300,14 @@ bất kỳ process nào. Nếu census không chứng minh quiescence thì epoch 
 vẫn giữ nguyên và operator phải xử lý đúng lifecycle/acceptance authority;
 không có đường tắt bằng cách xóa hoặc sửa ledger.
 
+Các `background_operation` thuộc process MCP cũ, có timestamp hợp lệ và đã
+qua grace window, được giữ làm stale evidence nhưng không giả thành live work
+vô thời hạn; runtime thay thế sẽ đánh dấu chúng orphaned khi khởi tạo. Tương tự,
+managed job chỉ được xem là restart-reconcilable khi probe exact PID/process
+token chứng minh process gốc đã chết hoặc PID đã được tái sử dụng. Evidence mới,
+không parse được, process còn sống/không xác minh được và mọi blocker còn lại
+vẫn fail-closed.
+
 Electron UI tự relaunch bằng launcher argv cố định sau khi host trả lệnh qua UI
 registration; registration revision mới complete action. Full-clean Recovery
 Host update dừng Coding MCP/Tunnel và Recovery Plane trước khi host cũ nhả

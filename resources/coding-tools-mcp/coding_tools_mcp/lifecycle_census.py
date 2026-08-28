@@ -32,6 +32,7 @@ LIFECYCLE_CLASSES = frozenset({
     "AWAITING_ACCEPTANCE",
     "GRACE_PERIOD_INACTIVE",
     "THRESHOLD_SENSITIVE_STALE_CANDIDATE",
+    "STALE_MANAGED_JOB_RESIDUE",
     "TERMINAL_PARENT_CONTRADICTION",
     "ORPHANED_OR_FOREIGN_MANAGED_JOB",
     "PROJECTION_DRIFT",
@@ -321,6 +322,17 @@ def _is_live_fence(row: sqlite3.Row, observed_at: float) -> bool:
     return str(row["status"] or "") == "active" and float(row["expires_at"] or 0) > observed_at
 
 
+def _is_live_background_operation(row: sqlite3.Row, observed_at: float, grace_seconds: float) -> bool:
+    if str(row["status"] or "") != "running":
+        return False
+    updated_at = _parse_timestamp(row["updated_at"] if "updated_at" in row.keys() else None)
+    started_at = _parse_timestamp(row["started_at"] if "started_at" in row.keys() else None)
+    latest = updated_at if updated_at is not None else started_at
+    if latest is None:
+        return True
+    return max(0.0, observed_at - latest) <= grace_seconds
+
+
 def _latest_state_after(facts: LedgerFacts, run_id: str) -> str:
     events = facts.list_events(run_id)
     for event in reversed(events):
@@ -545,17 +557,25 @@ def lifecycle_census(
         updated_ts = _parse_timestamp(updated_at) or _parse_timestamp(started_at)
         if updated_ts is not None:
             age = max(0.0, observed_at - updated_ts)
-        if state == "orphaned" or checkout_relation == "FOREIGN":
-            classification = "ORPHANED_OR_FOREIGN_MANAGED_JOB"
-            identity = "NOT_PROBED" if checkout_relation == "FOREIGN" else "ORPHANED_STATE"
-        elif pid <= 0:
-            classification = "GRACE_PERIOD_INACTIVE" if age is not None and age <= _JOB_START_GRACE_SECONDS else "ORPHANED_OR_FOREIGN_MANAGED_JOB"
+        if pid <= 0:
             identity = "NO_PID"
+            if age is not None and age <= _JOB_START_GRACE_SECONDS:
+                classification = "GRACE_PERIOD_INACTIVE"
+            elif age is not None:
+                classification = "STALE_MANAGED_JOB_RESIDUE"
+            else:
+                classification = "ORPHANED_OR_FOREIGN_MANAGED_JOB"
         else:
             observation = process_probe(pid, str(row["root_process_token"] or ""))
             identity = observation.identity
             if observation.exists and observation.identity == "MATCH":
-                classification = "LIVE_OWNED"
+                classification = (
+                    "LIVE_OWNED"
+                    if state != "orphaned" and checkout_relation == "CURRENT"
+                    else "ORPHANED_OR_FOREIGN_MANAGED_JOB"
+                )
+            elif not observation.exists or observation.identity == "MISMATCH":
+                classification = "STALE_MANAGED_JOB_RESIDUE"
             else:
                 classification = "ORPHANED_OR_FOREIGN_MANAGED_JOB"
         job_records.append({
@@ -577,7 +597,10 @@ def lifecycle_census(
             continue
         child_wave_active = any(str(item.get("status") or "") == "active" for item in facts.list_waves(run_id))
         child_lane_live = any(str(row["lifecycle"] or "") in _LIVE_LANE_LIFECYCLES for row in lanes_by_run.get(run_id, ()))
-        child_background_live = any(str(row["status"] or "") == "running" for row in background_by_run.get(run_id, ()))
+        child_background_live = any(
+            _is_live_background_operation(row, observed_at, grace)
+            for row in background_by_run.get(run_id, ())
+        )
         child_fence_live = any(_is_live_fence(row, observed_at) for row in fence_by_run.get(run_id, ()))
         child_lease_live = any(_is_live_controller(row, observed_at) for row in lease_by_run.get(run_id, ()))
         child_job_live = any(item["classification"] == "LIVE_OWNED" for item in job_records if item["run_id"] == run_id)
@@ -600,10 +623,18 @@ def lifecycle_census(
         ownership = {
             "active_controller_leases": sum(1 for row in lease_rows if _is_live_controller(row, observed_at)),
             "active_write_fences": sum(1 for row in fence_rows if _is_live_fence(row, observed_at)),
-            "running_background_operations": sum(1 for row in background_rows if str(row["status"] or "") == "running"),
+            "running_background_operations": sum(
+                1 for row in background_rows
+                if _is_live_background_operation(row, observed_at, grace)
+            ),
             "live_agent_lanes": sum(1 for row in lane_rows if str(row["lifecycle"] or "") in _LIVE_LANE_LIFECYCLES),
             "live_managed_jobs": sum(1 for item in run_jobs if item["classification"] == "LIVE_OWNED"),
         }
+        stale_background_operations = sum(
+            1 for row in background_rows
+            if str(row["status"] or "") == "running"
+            and not _is_live_background_operation(row, observed_at, grace)
+        )
         latest_candidates = [
             str(run.get("started_at") or ""),
             _latest_timestamp(facts._event_rows_by_run.get(run_id, ()), "event_time"),
@@ -658,6 +689,7 @@ def lifecycle_census(
             "latest_state_after": latest_state or None,
             "last_event": _last_event_guard(facts, run_id),
             "ownership": ownership,
+            "stale_background_operations": stale_background_operations,
             "p5_epoch_lifecycle": str(p5_by_run[run_id]["lifecycle"] or "") if run_id in p5_by_run else None,
             "managed_job_classifications": sorted({item["classification"] for item in run_jobs}),
         })
@@ -730,7 +762,7 @@ def lifecycle_census(
                 updated_at=str(row["updated_at"] or ""),
             )
     for row in lifecycle.rows("background_operations"):
-        if str(row["status"] or "") == "running":
+        if _is_live_background_operation(row, observed_at, grace):
             record_unbound(
                 resource_type="background_operation",
                 resource_id=str(row["operation_id"] or ""),
@@ -775,6 +807,11 @@ def lifecycle_census(
             "ordinary_active_runs": sum(1 for item in records if item["run_status"] == _ACTIVE_RUN_STATUS and item["classification"] != "P5_EXPERIMENT_ANCHOR"),
             "unexplained_active_runs": sum(1 for item in records if item["classification"] == "UNEXPLAINED_ACTIVE"),
             "unbound_live_resource_residues": len(unbound_live_resources),
+            "stale_background_operation_residues": sum(
+                1 for row in lifecycle.rows("background_operations")
+                if str(row["status"] or "") == "running"
+                and not _is_live_background_operation(row, observed_at, grace)
+            ),
             "projection_drift": projection_result["classification"] == "PROJECTION_DRIFT",
             "p5_epochs": len(p5_epochs),
         },

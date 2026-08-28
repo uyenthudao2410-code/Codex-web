@@ -1328,6 +1328,11 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                     ctx.wave_id,
                     workspace=scope_root,
                     explicit_attested_paths=explicit_acceptance_paths,
+                    explicit_attestations=(
+                        acceptance_files
+                        if accepted_files.get("source") == "explicit_acceptance_attestations"
+                        else None
+                    ),
                 )
                 receipt_mutation = any(
                     isinstance(item, dict)

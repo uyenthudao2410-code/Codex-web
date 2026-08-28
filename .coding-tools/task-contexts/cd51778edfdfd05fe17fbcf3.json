@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "task_id": "715eac65e4eb4bb5b68024ca036c69e3",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "active",
+  "steps": [],
+  "current_step": "Execute command",
+  "current_command": {
+    "command": "npm run dev:refresh",
+    "kind": "command",
+    "session_id": "oreyuoAxqbz5qtjc0ucjU5Bo",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-27T21:06:49.093Z"
+  },
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-27T21:06:48.876Z",
+  "updated_at": "2026-08-27T21:06:49.093Z",
+  "events": [
+    {
+      "time": "2026-08-27T21:06:48.876Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-27T21:06:49.093Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:refresh",
+        "session_id": "oreyuoAxqbz5qtjc0ucjU5Bo"
+      }
+    }
+  ]
+}

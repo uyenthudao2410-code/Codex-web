@@ -10,11 +10,12 @@ from unittest.mock import patch
 from coding_tools_mcp.acceptance_receipts import (
     _accepted_file_receipts,
     _durable_wave_acceptance_paths,
+    validate_existing_file_adoptions,
 )
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.git_tools import _parse_git_status_porcelain_v1_z
 from coding_tools_mcp.server import Runtime, validate_arguments
-from coding_tools_mcp.solution_economics import record_patch_surface
+from coding_tools_mcp.solution_economics import record_existing_file_adoption, record_patch_surface
 
 
 class AcceptanceFileAttestationTests(unittest.TestCase):
@@ -480,6 +481,118 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
                         ],
                     })
                 self.assertEqual(incomplete.exception.code, "ACCEPTANCE_FILE_ATTESTATION_REQUIRED")
+                self.assertEqual(runtime.orchestration_control.snapshot(ctx.run_id).state, "ACCEPTING")
+                self.assertEqual(runtime.orchestration_ledger.list_checkpoints(ctx.run_id), [])
+            finally:
+                runtime.close()
+
+    def test_explicit_preexisting_dirty_path_can_use_exact_no_write_adoption(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            dirty = root / "dirty.py"
+            dirty.write_text("DIRTY = True\n", encoding="utf-8")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["dirty.py"],
+                    existing_dirty_source_paths=["dirty.py"],
+                    patch_paths=[],
+                    proof_statuses=["passed"],
+                )
+                expected_sha256 = hashlib.sha256(dirty.read_bytes()).hexdigest()
+                adopted = validate_existing_file_adoptions(
+                    root,
+                    [{"path": "dirty.py", "sha256": expected_sha256}],
+                    existing_dirty_source_paths=["dirty.py"],
+                    allowed_paths=["dirty.py"],
+                )
+                before = dirty.read_bytes()
+                record_existing_file_adoption(
+                    runtime.orchestration_ledger,
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                    adoptions=adopted,
+                )
+                self.assertEqual(dirty.read_bytes(), before)
+                accepted = runtime.task_control({
+                    "action": "accept",
+                    "run_id": ctx.run_id,
+                    "wave_id": ctx.wave_id,
+                    "acceptance_files": [{"path": "dirty.py", "sha256": expected_sha256}],
+                })
+                self.assertTrue(accepted["accepted"])
+                receipts = runtime.orchestration_ledger.list_checkpoints(ctx.run_id)[-1]["metadata"]["accepted_files"]
+                self.assertEqual(receipts["source"], "explicit_acceptance_attestations")
+                self.assertEqual(receipts["files"][0]["receipt_kind"], "explicit_existing_file")
+                event_types = [item["event_type"] for item in runtime.orchestration_ledger.list_events(ctx.run_id)]
+                self.assertIn("existing_file_adoption_observed", event_types)
+                self.assertNotIn("patch_surface_observed", event_types)
+            finally:
+                runtime.close()
+
+    def test_existing_file_adoption_validation_requires_exact_sha_dirty_path_and_lease(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            dirty = root / "dirty.py"
+            dirty.write_text("DIRTY = True\n", encoding="utf-8")
+            expected_sha256 = hashlib.sha256(dirty.read_bytes()).hexdigest()
+            with self.assertRaises(ToolFailure) as wrong_sha:
+                validate_existing_file_adoptions(
+                    root,
+                    [{"path": "dirty.py", "sha256": "0" * 64}],
+                    existing_dirty_source_paths=["dirty.py"],
+                    allowed_paths=["dirty.py"],
+                )
+            self.assertEqual(wrong_sha.exception.code, "ACCEPTANCE_FILE_SHA_MISMATCH")
+            with self.assertRaises(ToolFailure) as outside_lease:
+                validate_existing_file_adoptions(
+                    root,
+                    [{"path": "dirty.py", "sha256": expected_sha256}],
+                    existing_dirty_source_paths=["dirty.py"],
+                    allowed_paths=["other.py"],
+                )
+            self.assertEqual(outside_lease.exception.code, "EXISTING_FILE_ADOPTION_OUTSIDE_LEASE")
+            with self.assertRaises(ToolFailure) as not_preexisting:
+                validate_existing_file_adoptions(
+                    root,
+                    [{"path": "dirty.py", "sha256": expected_sha256}],
+                    existing_dirty_source_paths=[],
+                    allowed_paths=["dirty.py"],
+                )
+            self.assertEqual(not_preexisting.exception.code, "EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED")
+
+    def test_existing_file_adoption_cannot_be_rebound_after_source_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            dirty = root / "dirty.py"
+            dirty.write_text("DIRTY = 'first'\n", encoding="utf-8")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["dirty.py"],
+                    existing_dirty_source_paths=["dirty.py"],
+                    patch_paths=[],
+                    proof_statuses=["passed"],
+                )
+                original_sha256 = hashlib.sha256(dirty.read_bytes()).hexdigest()
+                record_existing_file_adoption(
+                    runtime.orchestration_ledger,
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                    adoptions=[{"path": "dirty.py", "sha256": original_sha256}],
+                )
+                dirty.write_text("DIRTY = 'second'\n", encoding="utf-8")
+                replacement_sha256 = hashlib.sha256(dirty.read_bytes()).hexdigest()
+                with self.assertRaises(ToolFailure) as rebound:
+                    runtime.task_control({
+                        "action": "accept",
+                        "run_id": ctx.run_id,
+                        "wave_id": ctx.wave_id,
+                        "acceptance_files": [{"path": "dirty.py", "sha256": replacement_sha256}],
+                    })
+                self.assertEqual(rebound.exception.code, "ACCEPTANCE_FILE_ATTESTATION_REQUIRED")
                 self.assertEqual(runtime.orchestration_control.snapshot(ctx.run_id).state, "ACCEPTING")
                 self.assertEqual(runtime.orchestration_ledger.list_checkpoints(ctx.run_id), [])
             finally:

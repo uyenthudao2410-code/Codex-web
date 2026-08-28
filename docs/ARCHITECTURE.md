@@ -22,6 +22,16 @@ Recovery Host = runtime lifecycle owner
 Coding Tools MCP / EOCL = workspace mutation, proof and durable orchestration authority
 ```
 
+Each installed endpoint is self-describing. Electron creates a durable random
+installation `device_id`; Coding MCP hashes that identity into a stable,
+non-secret `endpoint_id`, combines it with the OS display name for a readable
+route key, and publishes the current canonical workspace identity/generation in
+MCP initialize/discovery metadata. Process, server, and activation identities are
+included only as freshness fields. Tool schemas remain installation-neutral, so
+multiple machines running the same build retain one tool-contract SHA while a
+client can pin a task directly to the correct endpoint without exploratory tool
+calls. Cross-device mutation failover is never implicit.
+
 Secondary Codex/OpenCode lanes are bounded candidate/review/provider lanes; they do not become an independent primary-checkout writer merely because a route/provider is available. `execution_route=auto` currently remains deterministic under the representative-evidence ROI gate.
 
 WebCodex is a self-hosted tool runtime that lets online AI clients operate private code through a server and a local execution agent. This document starts with the product architecture, then maps that architecture to the main Rust modules.

@@ -37,7 +37,7 @@ class ActivationEpochTests(unittest.TestCase):
     def test_closed_gate_returns_typed_pending_and_exact_epoch_opens_admission(self) -> None:
         runtime = Runtime(Path(self.temp.name))
         try:
-            blocked = runtime.call_tool("workspace_context", {"detail": "compact"})
+            blocked = runtime.call_tool("task_control", {"action": "get"})
             self.assertTrue(blocked["isError"])
             self.assertEqual(blocked["structuredContent"]["error"]["code"], "RUNTIME_ACTIVATION_PENDING")
             self.assertEqual(runtime.activation_admission_snapshot()["activation_admission"], "closed")

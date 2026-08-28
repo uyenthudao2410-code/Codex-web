@@ -1,0 +1,394 @@
+[
+  {
+    "version": 2,
+    "task_id": "6eabbf3069ef48b695da9a7244b186c4",
+    "orchestration": {
+      "run_id": "7eedba91a5c345438ecec9c5835e95a9",
+      "wave_id": "e686890be3a64600ba007fec19f9bdde",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+      "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+      "contract_fp": ""
+    },
+    "objective": "Diagnose why a task_control restart_runtime ticket was accepted with expected_disconnect=true but was not consumed before expires_at: ticket restart-Tk0y31JsQ9krhgaQ, accepted on live workspace E:\\Github\\Tools-Codex-web, old process_instance_id Eij1iUBrbn3u68n5 and server_instance_id OA4T9S_Np868eRD1 remained unchanged after expiry. Read only. Trace the exact enqueue persistence, supervisor polling/consumption, eligibility/fence checks, expiry handling, and any runtime log/state surfaces that distinguish ticket absent, expired, unconsumed, or consume failure. Do not mutate files, do not restart, do not reconcile acceptance state, and do not create broad cleanup.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-27T19:30:36.210Z",
+    "updated_at": "2026-08-27T19:31:04.437Z",
+    "events": [
+      {
+        "time": "2026-08-27T19:30:36.210Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Diagnose why a task_control restart_runtime ticket was accepted with expected_disconnect=true but was not consumed before expires_at: ticket restart-Tk0y31JsQ9krhgaQ, accepted on live workspace E:\\Github\\Tools-Codex-web, old process_instance_id Eij1iUBrbn3u68n5 and server_instance_id OA4T9S_Np868eRD1 remained unchanged after expiry. Read only. Trace the exact enqueue persistence, supervisor polling/consumption, eligibility/fence checks, expiry handling, and any runtime log/state surfaces that distinguish ticket absent, expired, unconsumed, or consume failure. Do not mutate files, do not restart, do not reconcile acceptance state, and do not create broad cleanup."
+        }
+      },
+      {
+        "time": "2026-08-27T19:30:37.271Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:31:04.437Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:31:04.437Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-27T19:31:21.723Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "afb5119f4df4421b84d8890cf6327c91",
+    "orchestration": {
+      "run_id": "fb4a9b2a16514375abd2f37c599ab7dd",
+      "wave_id": "cf6dc7ba1acd4a4db74f0c4ec2476081",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+      "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+      "contract_fp": ""
+    },
+    "objective": "Continue the same read-only restart-ticket diagnosis. Materialize only the exact enqueue/validation/consume code and focused tests needed to determine why accepted ticket restart-Tk0y31JsQ9krhgaQ was not consumed before expiry. No mutation and no restart.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-27T19:31:21.723Z",
+    "updated_at": "2026-08-27T19:31:28.778Z",
+    "events": [
+      {
+        "time": "2026-08-27T19:31:21.725Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-27T19:31:22.170Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:31:28.778Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:31:28.778Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-27T19:32:24.219Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "8441c092ff7148f9b8408ca03ec86506",
+    "orchestration": {
+      "run_id": "4570042890dd446c9a80f021ef927a03",
+      "wave_id": "d6bcdf9dc0e94b5e8a5ce58347ff0583",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+      "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+      "contract_fp": ""
+    },
+    "objective": "Continue the same read-only diagnosis of unconsumed accepted restart ticket restart-Tk0y31JsQ9krhgaQ. Materialize only the top-level supervision control flow needed to prove whether RecoveryHost bypasses RuntimeOrchestrator.supervise/serviceSupervisorRestartRequest while an activation fence/restart ticket is pending. No mutation, no restart, no cleanup.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-27T19:32:24.219Z",
+    "updated_at": "2026-08-27T19:32:26.515Z",
+    "events": [
+      {
+        "time": "2026-08-27T19:32:24.219Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-27T19:32:24.611Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:32:26.511Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:32:26.515Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-27T19:33:04.979Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "bc9d8f603fe0477cb0297ea3d5fd6bff",
+    "orchestration": {
+      "run_id": "4ef908da0c9140ffbe95093b52c0e357",
+      "wave_id": "ed907998ee1f49c8a10caad68c81cc7f",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+      "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+      "contract_fp": ""
+    },
+    "objective": "Continue the same read-only diagnosis. Prove whether Recovery Host and Coding MCP use the same supervisor restart journal path by tracing RuntimePaths.supervisorRequestFile and NativeService launch env into Python coordination. Also materialize RuntimeOrchestrator.supervise around the serviceSupervisorRestartRequest call and any existing source/test evidence for ticket path identity. No mutation and no restart.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-27T19:33:04.980Z",
+    "updated_at": "2026-08-27T19:33:07.132Z",
+    "events": [
+      {
+        "time": "2026-08-27T19:33:04.980Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-27T19:33:05.368Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:33:07.127Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:33:07.132Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-27T19:34:09.518Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "33d68bf3cf1748399d15b1f02bd8f39f",
+    "orchestration": {
+      "run_id": "2edba1227a444d119d8bdca3a5f6a01d",
+      "wave_id": "a3f2e57451e346bbab32b28b4ce20c46",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+      "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+      "contract_fp": ""
+    },
+    "objective": "Continue the same read-only diagnosis of accepted restart ticket restart-Tk0y31JsQ9krhgaQ not being consumed before TTL. Materialize only the exact RuntimeOrchestrator.supervise control flow after serviceSupervisorRestartRequest plus state transitions that can suppress later ticket retries. Determine whether a deferred RUNTIME_BUSY result can leave this.busy/this.recovering or another gate preventing subsequent .processing journal consumption. No mutation, no restart, no cleanup.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "PiJMOhQMPOVbFbtPj4zXGVAz",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 440,
+      "finished_at": "2026-08-27T19:34:35.955Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-27T19:34:09.519Z",
+    "updated_at": "2026-08-27T19:34:35.955Z",
+    "events": [
+      {
+        "time": "2026-08-27T19:34:09.519Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-27T19:34:09.993Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:34:15.917Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-27T19:34:15.919Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-27T19:34:35.606Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd.exe /d /c dir /a \"%APPDATA%\\web-mcp-assistant\\runtime-supervisor-request.json*\"",
+          "session_id": "PiJMOhQMPOVbFbtPj4zXGVAz"
+        }
+      },
+      {
+        "time": "2026-08-27T19:34:35.955Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd.exe /d /c dir /a \"%APPDATA%\\web-mcp-assistant\\runtime-supervisor-request.json*\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-27T19:34:47.867Z",
+    "archive_reason": "finished"
+  }
+]

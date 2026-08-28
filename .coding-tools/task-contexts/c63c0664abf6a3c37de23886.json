@@ -1,0 +1,476 @@
+{
+  "version": 2,
+  "task_id": "2e4db0b92a264cda93528cb19c01e69e",
+  "orchestration": {
+    "run_id": "53ac6845facd4cbc94154f712b6bbf27",
+    "wave_id": "8580fda5cf1b4ff7a063261f39d42691",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+    "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+    "contract_fp": ""
+  },
+  "objective": "Canonicalize and accept the already-present activation/recovery/connector hotfix in the authoritative worktree so Recovery Host can produce a fresh durable accepted-code closure checkpoint for controlled restart canary. Preserve all unrelated dirty work. Scope only: electron/services/activationEpoch.js; electron/services/fullCleanActivation.js; electron/services/recoveryHost.js; resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py; resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py; tests/activation-self-recovery.test.js; resources/coding-tools-mcp/tests/test_activation_restart_escape.py; resources/coding-tools-mcp/tests/test_connector_bootstrap_identity.py. Inspect the current scoped diff against HEAD b64c43c7e092301dd9abdfad32d4dc1910192485, verify it matches the proven causal fixes: durable expiry via FullCleanActivation boundary, confirmed restart escape through closed startup admission only, preserved connector-pending Tunnel recovery, and ChatWeb identity fallback for explicit chatweb client id with missing type. Do not rewrite or clean unrelated paths. Define the smallest focused proof required to bind an accepted-code checkpoint before restart canary.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-27T19:37:54.629Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-27T19:37:54.629Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "8Aosf6MeQ6o_t-s4rfU9cdu2",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 503,
+    "finished_at": "2026-08-27T19:37:54.434Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 51,
+        "head_hash": "a2e65dc7098db8e2a155572fff3b88018d88f1a1d376cc7a188aeab2c417313a"
+      },
+      "reports": {
+        "run_report": "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-53ac6845facd4cbc94154f712b6bbf27\\run-summary.md",
+        "wave_reports": [
+          "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-53ac6845facd4cbc94154f712b6bbf27\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "53ac6845facd4cbc94154f712b6bbf27",
+      "wave_id": "8580fda5cf1b4ff7a063261f39d42691",
+      "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+      "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Canonicalize and accept the already-present activation/recovery/connector hotfix in the authoritative worktree so Recovery Host can produce a fresh durable accepted-code closure checkpoint for controlled restart canary. Preserve all unrelated dirty work. Scope only: electron/services/activationEpoch.js; electron/services/fullCleanActivation.js; electron/services/recoveryHost.js; resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py; resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py; tests/activation-self-recovery.test.js; resources/coding-tools-mcp/tests/test_activation_restart_escape.py; resources/coding-tools-mcp/tests/test_connector_bootstrap_identity.py. Inspect the current scoped diff against HEAD b64c43c7e092301dd9abdfad32d4dc1910192485, verify it matches the proven causal fixes: durable expiry via FullCleanActivation boundary, confirmed restart escape through closed startup admission only, preserved connector-pending Tunnel recovery, and ChatWeb identity fallback for explicit chatweb client id with missing type. Do not rewrite or clean unrelated paths. Define the smallest focused proof required to bind an accepted-code checkpoint before restart canary.",
+        "objective_revision": 1,
+        "objective_sha256": "0ebc67bdd6fd693e26862b1ff07d3c2ad306536c3a250b42fdc253dd3bc962e6",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 6,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "717d9ff84fff41548589927c0471d71c",
+          "stage_id": "check:619ebb36c1e3cab1",
+          "status": "passed",
+          "duration_ms": 741,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "b436afd9697e4fb9b0e72a5d21d32bdb",
+          "stage_id": "check:90732f36c651cb3c",
+          "status": "passed",
+          "duration_ms": 815,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "5991689508ba4e5389765e0f4d9f947b",
+          "stage_id": "check:8be7cde4d81ebb48",
+          "status": "passed",
+          "duration_ms": 818,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "a11615b435a245a8882d4d41a5037753",
+          "stage_id": "check:9cb288f22bf3a8c4",
+          "status": "passed",
+          "duration_ms": 4100,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "c90874310fab46f997792e6264db42e3",
+          "stage_id": "check:80e034a8cfa0d216",
+          "status": "passed",
+          "duration_ms": 3106,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "1fe8578a18de4f3abe64a0031e894642",
+          "stage_id": "check:73a6f8cf7686c9c2",
+          "status": "passed",
+          "duration_ms": 869,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "0a72b3f5629758781f36db356afeae1203aef05f7b95ac696cd8fd5bf821b7ac",
+  "completion_report_acknowledged_id": "0a72b3f5629758781f36db356afeae1203aef05f7b95ac696cd8fd5bf821b7ac",
+  "completion_report_acknowledged_at": "2026-08-27T19:39:16.739Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-27T19:36:09.278Z",
+  "updated_at": "2026-08-27T19:45:49.336Z",
+  "events": [
+    {
+      "time": "2026-08-27T19:36:09.278Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Canonicalize and accept the already-present activation/recovery/connector hotfix in the authoritative worktree so Recovery Host can produce a fresh durable accepted-code closure checkpoint for controlled restart canary. Preserve all unrelated dirty work. Scope only: electron/services/activationEpoch.js; electron/services/fullCleanActivation.js; electron/services/recoveryHost.js; resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py; resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py; tests/activation-self-recovery.test.js; resources/coding-tools-mcp/tests/test_activation_restart_escape.py; resources/coding-tools-mcp/tests/test_connector_bootstrap_identity.py. Inspect the current scoped diff against HEAD b64c43c7e092301dd9abdfad32d4dc1910192485, verify it matches the proven causal fixes: durable expiry via FullCleanActivation boundary, confirmed restart escape through closed startup admission only, preserved connector-pending Tunnel recovery, and ChatWeb identity fallback for explicit chatweb client id with missing type. Do not rewrite or clean unrelated paths. Define the smallest focused proof required to bind an accepted-code checkpoint before restart canary."
+      }
+    },
+    {
+      "time": "2026-08-27T19:36:10.323Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-27T19:36:12.119Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-27T19:36:12.119Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:38.746Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:39.234Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:40.293Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:40.297Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:41.468Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:42.110Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:42.623Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --check electron/services/activationEpoch.js",
+        "session_id": "B5dgiDdoQkOKtOcV-1Wa4UBB"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:42.984Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --check electron/services/activationEpoch.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:43.760Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --check electron/services/fullCleanActivation.js",
+        "session_id": "jLr7oupxpZBx5KuqPMeAVvUX"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:44.117Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --check electron/services/fullCleanActivation.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:44.901Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --check electron/services/recoveryHost.js",
+        "session_id": "pCFpy47-618v1ClN8Pa8bwXq"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:45.284Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --check electron/services/recoveryHost.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:46.081Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/activation-self-recovery.test.js tests/activation-epoch.test.js tests/recovery-host.test.js",
+        "session_id": "HGaPXW1HckegOwmap9HiSFtL"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:49.777Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/activation-self-recovery.test.js tests/activation-epoch.test.js tests/recovery-host.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:50.542Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_activation_restart_escape.py && python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_connector_bootstrap_identity.py && python -m py_compile resources\\coding-tools-mcp\\coding_tools_mcp\\activation_lifecycle.py resources\\coding-tools-mcp\\coding_tools_mcp\\http_hub_identity.py\"",
+        "session_id": "yJ0KERqW7T7qdXRCFYJ11xOT"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:53.193Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_activation_restart_escape.py && python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_connector_bootstrap_identity.py && python -m py_compile resources\\coding-tools-mcp\\coding_tools_mcp\\activation_lifecycle.py resources\\coding-tools-mcp\\coding_tools_mcp\\http_hub_identity.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:54.068Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- electron/services/activationEpoch.js electron/services/fullCleanActivation.js electron/services/recoveryHost.js resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py tests/activation-self-recovery.test.js resources/coding-tools-mcp/tests/test_activation_restart_escape.py resources/coding-tools-mcp/tests/test_connector_bootstrap_identity.py",
+        "session_id": "8Aosf6MeQ6o_t-s4rfU9cdu2"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:54.434Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- electron/services/activationEpoch.js electron/services/fullCleanActivation.js electron/services/recoveryHost.js resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py tests/activation-self-recovery.test.js resources/coding-tools-mcp/tests/test_activation_restart_escape.py resources/coding-tools-mcp/tests/test_connector_bootstrap_identity.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:54.622Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:54.629Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:54.902Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:54.903Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:54.978Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "ec5e1d76aee2207fffbcd81704ab634a89b52f319f7ff3e9efad6438a3102ad8"
+      }
+    },
+    {
+      "time": "2026-08-27T19:37:55.101Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-27T19:38:04.567Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:38:20.662Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-27T19:38:20.666Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:38:20.750Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "0a72b3f5629758781f36db356afeae1203aef05f7b95ac696cd8fd5bf821b7ac"
+      }
+    },
+    {
+      "time": "2026-08-27T19:38:32.361Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:39:16.739Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "0a72b3f5629758781f36db356afeae1203aef05f7b95ac696cd8fd5bf821b7ac"
+      }
+    },
+    {
+      "time": "2026-08-27T19:45:49.336Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

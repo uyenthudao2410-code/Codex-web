@@ -799,6 +799,16 @@ class ActivationEpochStore {
     return clone(this._read().current);
   }
 
+  enforceCurrentExpiry(boundary = 'observe') {
+    return this._withLock(() => {
+      const store = this._read();
+      const record = store.current;
+      if (!record || !ACTIVE_STATES.has(record.state)) return clone(record);
+      this._assertNotExpiredLocked(store, record, boundary);
+      return clone(record);
+    });
+  }
+
   history() {
     return clone(this._read().history);
   }

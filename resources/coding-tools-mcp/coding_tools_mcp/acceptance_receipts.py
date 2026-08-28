@@ -10,6 +10,11 @@ from typing import Any
 
 from .errors import ToolFailure
 from .fs_utils import is_relative_to
+from .solution_economics import (
+    EXISTING_FILE_ADOPTION_EVENT,
+    EXISTING_FILE_ADOPTION_MEASUREMENT,
+    PATCH_SURFACE_FILE_ID_LIMIT,
+)
 
 
 MAX_ACCEPTED_FILE_RECEIPTS = 256
@@ -138,6 +143,103 @@ def _is_hex_digest(value: Any, length: int = 64) -> bool:
 
 def _is_canonical_hex(value: Any, length: int) -> bool:
     return isinstance(value, str) and len(value) == length and all(char in _HEX_DIGITS for char in value)
+
+
+def validate_existing_file_adoptions(
+    workspace: Path,
+    adoptions: Any,
+    *,
+    existing_dirty_source_paths: Any,
+    allowed_paths: Any,
+) -> list[dict[str, str]]:
+    """Validate exact existing bytes against the current wave's pre-write lease snapshot."""
+    if not isinstance(adoptions, list) or not adoptions:
+        raise ToolFailure(
+            "EXISTING_FILE_ADOPTION_INVALID",
+            "adopt_existing_files must be a non-empty bounded array.",
+            category="validation",
+        )
+    if len(adoptions) > PATCH_SURFACE_FILE_ID_LIMIT:
+        raise ToolFailure(
+            "EXISTING_FILE_ADOPTION_LIMIT_EXCEEDED",
+            "Too many existing files were supplied for adoption.",
+            category="validation",
+            details={"limit": PATCH_SURFACE_FILE_ID_LIMIT},
+        )
+    dirty_keys = {
+        _portable_path_key(item)
+        for item in existing_dirty_source_paths
+        if _portable_path(item)
+    } if isinstance(existing_dirty_source_paths, (list, tuple, set, frozenset)) else set()
+    allowed_keys = {
+        _portable_path_key(item)
+        for item in allowed_paths
+        if _portable_path(item)
+    } if isinstance(allowed_paths, (list, tuple, set, frozenset)) else set()
+    normalized: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in adoptions:
+        if not isinstance(item, dict) or set(item) != {"path", "sha256"}:
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_INVALID",
+                "Each existing-file adoption must contain exactly path and sha256.",
+                category="validation",
+            )
+        portable = _portable_path(item.get("path"))
+        key = _portable_path_key(portable)
+        relative = Path(portable)
+        if not portable or relative.is_absolute() or ".." in relative.parts or _is_protected_acceptance_path(portable):
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_PATH_INVALID",
+                "Existing-file adoption paths must be safe workspace-relative source paths.",
+                category="validation",
+                details={"path": portable},
+            )
+        if key in seen:
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_DUPLICATE",
+                "Each existing-file adoption path may appear only once.",
+                category="validation",
+                details={"path": portable},
+            )
+        seen.add(key)
+        if key not in dirty_keys:
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED",
+                "Existing-file adoption is limited to paths that were already dirty when the write lease was acquired.",
+                category="validation",
+                details={"path": portable},
+            )
+        if key not in allowed_keys:
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_OUTSIDE_LEASE",
+                "Existing-file adoption path is outside the active write lease.",
+                category="validation",
+                details={"path": portable},
+            )
+        normalized.append({
+            "path": portable,
+            "sha256": str(item.get("sha256") or "").strip().lower(),
+        })
+    receipts = _accepted_file_receipts(
+        workspace,
+        [],
+        acceptance_files=normalized,
+        run_id="existing-file-adoption",
+        wave_id="existing-file-adoption",
+        receipt_source="explicit_acceptance_attestations",
+    )
+    if receipts.get("complete") is not True or int(receipts.get("count") or 0) != len(normalized):
+        raise ToolFailure(
+            "EXISTING_FILE_ADOPTION_INCOMPLETE",
+            "Existing-file adoption could not establish complete exact-byte receipts.",
+            category="runtime",
+        )
+    return [
+        {"path": str(item.get("path") or ""), "sha256": str(item.get("sha256") or "")}
+        for item in receipts.get("files", [])
+        if isinstance(item, dict)
+    ]
 
 
 def _accepted_file_receipts(
@@ -417,6 +519,123 @@ def _accepted_file_receipts(
     }
 
 
+def _durable_wave_adoption_paths(
+    events: list[dict[str, Any]],
+    lease_payloads: list[dict[str, Any]],
+    *,
+    workspace: Path | None,
+    explicit_attestations: Any,
+) -> list[str]:
+    adopted_sha_by_id: dict[str, str] = {}
+    for event in events:
+        if str(event.get("event_type") or "") != EXISTING_FILE_ADOPTION_EVENT:
+            continue
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        files = payload.get("files") if isinstance(payload.get("files"), list) else []
+        file_count = payload.get("file_count")
+        valid = bool(
+            payload.get("schema_version") == 1
+            and payload.get("measurement") == EXISTING_FILE_ADOPTION_MEASUREMENT
+            and payload.get("complete") is True
+            and payload.get("content_free") is True
+            and payload.get("production_behavior_changed") is False
+            and isinstance(file_count, int)
+            and not isinstance(file_count, bool)
+            and 0 < file_count <= PATCH_SURFACE_FILE_ID_LIMIT
+            and len(files) == file_count
+        )
+        if not valid:
+            raise ToolFailure(
+                "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                "Durable existing-file adoption evidence is incomplete.",
+                category="runtime",
+                retryable=False,
+            )
+        for item in files:
+            file_id = str(item.get("file_id") or "").strip().lower() if isinstance(item, dict) else ""
+            sha256 = str(item.get("sha256") or "").strip().lower() if isinstance(item, dict) else ""
+            if not _is_hex_digest(file_id) or not _is_hex_digest(sha256):
+                raise ToolFailure(
+                    "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                    "Durable existing-file adoption evidence has an invalid identity.",
+                    category="runtime",
+                    retryable=False,
+                )
+            previous = adopted_sha_by_id.get(file_id)
+            if previous is not None and previous != sha256:
+                raise ToolFailure(
+                    "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                    "Durable existing-file adoption evidence conflicts for one path identity.",
+                    category="runtime",
+                    retryable=False,
+                )
+            adopted_sha_by_id[file_id] = sha256
+    if not adopted_sha_by_id:
+        return []
+    if not lease_payloads or workspace is None:
+        raise ToolFailure(
+            "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+            "Existing-file adoption evidence requires a matching durable write lease and workspace.",
+            category="runtime",
+            retryable=False,
+        )
+    allowed_paths = {
+        _portable_path(item)
+        for payload in lease_payloads
+        for item in payload.get("allowed_paths", [])
+        if _portable_path(item)
+    }
+    existing_dirty_keys = {
+        _portable_path_key(item)
+        for payload in lease_payloads
+        for item in payload.get("existing_dirty_source_paths", [])
+        if _portable_path(item)
+    }
+    protected_paths = {
+        _portable_path_key(item).rstrip("/")
+        for payload in lease_payloads
+        for item in payload.get("protected_paths", [])
+        if _portable_path(item)
+    }
+    protected_paths.update({".coding-tools", ".git"})
+    reconstructable: dict[str, str] = {}
+    for portable in sorted(allowed_paths):
+        key = _portable_path_key(portable)
+        relative = Path(portable)
+        if relative.is_absolute() or ".." in relative.parts or key not in existing_dirty_keys:
+            continue
+        if any(key == protected or key.startswith(f"{protected}/") for protected in protected_paths):
+            continue
+        if not _assert_safe_path(Path(workspace), relative, explicit=False, portable=portable):
+            raise ToolFailure(
+                "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                "Existing-file adoption evidence references an unsafe path.",
+                category="runtime",
+                retryable=False,
+                details={"path": portable},
+            )
+        file_id = hashlib.sha256(portable.encode("utf-8")).hexdigest()
+        if file_id in adopted_sha_by_id:
+            reconstructable[file_id] = portable
+    if set(adopted_sha_by_id).difference(reconstructable):
+        raise ToolFailure(
+            "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+            "Existing-file adoption evidence exceeds the pre-existing dirty paths in the durable write lease.",
+            category="runtime",
+            retryable=False,
+        )
+    attested_sha_by_key = {
+        _portable_path_key(item.get("path")): str(item.get("sha256") or "").strip().lower()
+        for item in explicit_attestations
+        if isinstance(item, dict) and _portable_path(item.get("path")) and _is_hex_digest(item.get("sha256"))
+    } if isinstance(explicit_attestations, list) else {}
+    return sorted(
+        portable
+        for file_id, portable in reconstructable.items()
+        if attested_sha_by_key.get(_portable_path_key(portable)) == adopted_sha_by_id[file_id]
+    )
+
+
 def _durable_wave_acceptance_paths(
     ledger: Any,
     run_id: str,
@@ -424,6 +643,7 @@ def _durable_wave_acceptance_paths(
     *,
     workspace: Path | None = None,
     explicit_attested_paths: Any = None,
+    explicit_attestations: Any = None,
 ) -> tuple[bool, list[str]]:
     """Recover exact touched paths from the canonical run/wave event stream."""
     events = [
@@ -467,6 +687,13 @@ def _durable_wave_acceptance_paths(
         for event in events
         if str(event.get("event_type") or "") == "write_lease_acquired"
     ]
+    adopted_paths = _durable_wave_adoption_paths(
+        events,
+        lease_payloads,
+        workspace=workspace,
+        explicit_attestations=explicit_attestations,
+    )
+    adopted_keys = {_portable_path_key(item) for item in adopted_paths}
     explicit_attested_keys = {
         _portable_path_key(item)
         for item in explicit_attested_paths
@@ -480,7 +707,7 @@ def _durable_wave_acceptance_paths(
                 for item in payload.get("existing_dirty_source_paths", [])
                 if _portable_path(item)
             }
-            if explicit_attested_keys.intersection(existing_dirty_keys):
+            if explicit_attested_keys.intersection(existing_dirty_keys).difference(adopted_keys):
                 raise ToolFailure(
                     "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
                     "A pre-existing dirty acceptance path must be present in the durable mutation surface.",
@@ -488,7 +715,7 @@ def _durable_wave_acceptance_paths(
                     retryable=False,
                     details={"run_id": run_id, "wave_id": wave_id},
                 )
-        return False, []
+        return False, adopted_paths
     if not observed_file_ids:
         raise ToolFailure(
             "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
@@ -561,7 +788,7 @@ def _durable_wave_acceptance_paths(
         file_id = hashlib.sha256(portable.encode("utf-8")).hexdigest()
         if file_id in observed_file_ids:
             matched[file_id] = portable
-    matched_keys = {_portable_path_key(portable) for portable in matched.values()}
+    matched_keys = {_portable_path_key(portable) for portable in matched.values()}.union(adopted_keys)
     unmatched_explicit_dirty = sorted(
         explicit_attested_keys.intersection(existing_dirty_paths).difference(matched_keys)
     )
@@ -590,7 +817,7 @@ def _durable_wave_acceptance_paths(
                 "matched_file_count": len(matched),
             },
         )
-    return True, sorted(matched.values())
+    return True, sorted(set(matched.values()).union(adopted_paths))
 
 
 def _accepted_checkpoint_file_receipts(
@@ -621,6 +848,7 @@ def _accepted_checkpoint_file_receipts(
         wave_id,
         workspace=workspace,
         explicit_attested_paths=explicit_paths if explicit else None,
+        explicit_attestations=acceptance_files if explicit else None,
     )
     task_items = list(modified_files) if isinstance(modified_files, list) else []
     source_items: list[Any]
@@ -893,6 +1121,11 @@ def _verify_activation_source_checkpoint(
             wave_id,
             workspace=workspace,
             explicit_attested_paths=sorted(seen) if receipt_source == "explicit_acceptance_attestations" else None,
+            explicit_attestations=[
+                {"path": str(item.get("path") or ""), "sha256": str(item.get("sha256") or "")}
+                for item in files
+                if isinstance(item, dict)
+            ] if receipt_source == "explicit_acceptance_attestations" else None,
         )
         current = _accepted_file_receipts(
             workspace,
@@ -918,14 +1151,19 @@ def _verify_activation_source_checkpoint(
     mutation_bearing_receipts = durable_mutation or bool(files)
     if mutation_bearing_receipts and not has_passed_proof(proofs):
         return _checkpoint_failure("RECEIPT_INCOMPLETE", "passed_proof_missing")
-    if durable_mutation and (not files or set(durable_paths).difference(seen)):
-        return _checkpoint_failure("RECEIPT_INCOMPLETE", "durable_patch_surface_not_covered")
+    if durable_paths and (not files or set(durable_paths).difference(seen)):
+        return _checkpoint_failure("RECEIPT_INCOMPLETE", "durable_authority_surface_not_covered")
     if durable_mutation:
         expected_kind = "explicit_existing_file" if receipt_source == "explicit_acceptance_attestations" else "durable_wave_patch_surface"
         if receipt_source not in {"explicit_acceptance_attestations", "durable_wave_patch_surface"} or any(
             receipt_kinds.get(path) != expected_kind for path in durable_paths
         ):
             return _checkpoint_failure("RECEIPT_INCOMPLETE", "durable_patch_surface_provenance_invalid")
+    elif durable_paths:
+        if receipt_source != "explicit_acceptance_attestations" or any(
+            receipt_kinds.get(path) != "explicit_existing_file" for path in durable_paths
+        ):
+            return _checkpoint_failure("RECEIPT_INCOMPLETE", "existing_file_adoption_provenance_invalid")
     elif receipt_source == "durable_wave_patch_surface":
         return _checkpoint_failure("RECEIPT_INCOMPLETE", "durable_patch_surface_evidence_missing")
     if current_worktree_fp != checkpoint_worktree_fp:

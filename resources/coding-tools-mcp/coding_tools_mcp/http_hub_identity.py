@@ -41,7 +41,13 @@ class HTTPHubIdentityMixin:
         raw_client_id = str(self.headers.get("X-Coding-Tools-Client-Id") or "").strip()
         raw_client_type = str(self.headers.get("X-Coding-Tools-Client-Type") or "").strip()
         client_id = raw_client_id or "chatweb"
-        client_type = raw_client_type or ("chatweb" if not raw_client_id else "client")
+        normalized_client_id = raw_client_id.lower()
+        implicit_chatweb_id = (
+            not normalized_client_id
+            or normalized_client_id == "chatweb"
+            or normalized_client_id.startswith(("chatweb-", "chatweb_", "chatweb:", "chatweb."))
+        )
+        client_type = raw_client_type or ("chatweb" if implicit_chatweb_id else "client")
         params = request.get("params") if isinstance(request.get("params"), dict) else {}
         meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
         client_info = meta.get("io.modelcontextprotocol/clientInfo") if isinstance(meta.get("io.modelcontextprotocol/clientInfo"), dict) else {}

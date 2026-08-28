@@ -18,6 +18,12 @@ from .code_mode import (
 TOOL_CONTRACT_SCHEMA_VERSION = 1
 SMART_TOOL_PROFILE = "smart-v3"
 SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA: dict[str, tuple[str, ...]] = {
+    # Reviewed 2026-08-28: adopt_existing_files adds an optional, fail-closed
+    # no-write adoption input to the two existing smart workflow tools. Older
+    # clients remain valid because their requests omit the new field.
+    "c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251": (
+        "57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053",
+    ),
     # Reviewed 2026-08-26: this exact smart-v3/v1 tools/list contract is
     # additive relative to the previously approved ChatGPT snapshot. Keying the
     # relation by the exact current SHA makes any later schema drift fail closed

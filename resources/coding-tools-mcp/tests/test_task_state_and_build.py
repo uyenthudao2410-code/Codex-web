@@ -1674,6 +1674,9 @@ class ToolModeTests(unittest.TestCase):
             ["auto", "deterministic", "mini", "luna", "terra", "sol_xhigh", "sol_max", "sol_ultra"],
         )
         self.assertIn("allow_high_cost", schemas["agent_workflow"]["properties"])
+        adoption_schema = schemas["agent_workflow"]["properties"]["adopt_existing_files"]
+        self.assertEqual(adoption_schema["maxItems"], 64)
+        self.assertEqual(adoption_schema["items"]["required"], ["path", "sha256"])
         evaluation_schema = schemas["agent_workflow"]["properties"]["evaluation"]
         self.assertEqual(evaluation_schema["properties"]["cache_stratum"]["enum"], ["cold", "warm", "unknown"])
         self.assertIn("policy_version", evaluation_schema["properties"])

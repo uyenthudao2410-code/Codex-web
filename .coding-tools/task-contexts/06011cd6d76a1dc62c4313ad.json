@@ -1,0 +1,161 @@
+{
+  "version": 2,
+  "task_id": "bf1e4e37e028443586fba702c9fd861e",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "WWuSA1j6uCxrAcvaOPnqG4yt",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-27T20:57:24.323Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "WWuSA1j6uCxrAcvaOPnqG4yt",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "WWuSA1j6uCxrAcvaOPnqG4yt",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+        "branch": "main",
+        "worktree_fp": "b878a9b5f69469a793239786ebdc38865e1e9678934cbaee0f5b14b2e40d96eb",
+        "dirty_paths": [
+          "docs/ARCHITECTURE.md",
+          "docs/CURRENT_STATE.md",
+          "docs/RECOVERY_HOST.md",
+          "electron/services/activationEpoch.js",
+          "electron/services/fullCleanActivation.js",
+          "electron/services/recoveryHost.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/mcp_metadata.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/protocol.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+          "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "tests/runtime-lifecycle.test.js",
+          "complete_connector_bootstrap_identity_fix.cmd",
+          "resources/coding-tools-mcp/coding_tools_mcp/endpoint_identity.py",
+          "resources/coding-tools-mcp/tests/test_activation_restart_escape.py",
+          "resources/coding-tools-mcp/tests/test_connector_bootstrap_identity.py",
+          "tests/activation-self-recovery.test.js"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "bf1e4e37e028443586fba702c9fd861e",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "5478cd034f85c0c66496819b52ade69ad4176048d74702fc5c6515a0fadfc5cf",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-27T20:56:55.790Z",
+  "updated_at": "2026-08-27T20:57:24.983Z",
+  "events": [
+    {
+      "time": "2026-08-27T20:56:55.790Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-27T20:56:55.987Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"full-clean-activation|dev:status|activation.*status|recovery.*status\" package.json scripts electron",
+        "session_id": "s6jv26NTy34cGSKfV2WYFbMz"
+      }
+    },
+    {
+      "time": "2026-08-27T20:56:56.242Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"full-clean-activation|dev:status|activation.*status|recovery.*status\" package.json scripts electron",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:57:04.014Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --status",
+        "session_id": "WWuSA1j6uCxrAcvaOPnqG4yt"
+      }
+    },
+    {
+      "time": "2026-08-27T20:57:24.323Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:57:24.983Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "WWuSA1j6uCxrAcvaOPnqG4yt",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "5478cd034f85c0c66496819b52ade69ad4176048d74702fc5c6515a0fadfc5cf"
+      }
+    }
+  ]
+}

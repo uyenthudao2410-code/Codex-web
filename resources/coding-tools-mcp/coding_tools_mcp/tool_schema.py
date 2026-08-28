@@ -177,6 +177,24 @@ def input_schemas() -> dict[str, dict[str, Any]]:
     integer = {"type": "integer"}
     boolean = {"type": "boolean"}
     string_array = {"type": "array", "items": {"type": "string"}}
+    existing_file_adoptions = {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 64,
+        "items": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "path": {**string, "minLength": 1, "maxLength": 2000},
+                "sha256": {**string, "minLength": 64, "maxLength": 64},
+            },
+            "required": ["path", "sha256"],
+        },
+        "description": (
+            "Exact-byte, no-write adoption of pre-existing dirty source for the current EOCL wave. "
+            "Every path must be inside the active write lease and its current SHA-256 must match."
+        ),
+    }
     return {
         "server_info": object_schema(),
         "agent_workflow": object_schema({
@@ -311,6 +329,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "files": {"type": "array", "maxItems": 40, "items": {"type": "object", "properties": {"path": string, "content": string}, "required": ["path", "content"], "additionalProperties": False}, "description": "Complete new files to create, especially for greenfield projects."},
             "patch": {**string, "description": "One complete apply_patch envelope for existing-file changes."},
             "patches": {"type": "array", "maxItems": 6, "items": string, "description": "Complete related patch envelopes, applied in order."},
+            "adopt_existing_files": existing_file_adoptions,
             "commands": {"type": "array", "maxItems": 6, "items": string, "description": "Initialization or focused checks to run in order before automatic verification."},
             "verification": {**string, "enum": ["none", "tests", "build", "all"], "description": "Automatic validation level. Defaults are selected from the workflow type."},
             "test_command": string,
@@ -360,6 +379,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "objective": string,
             "patch": string,
             "patches": {"type": "array", "maxItems": 10, "items": string},
+            "adopt_existing_files": existing_file_adoptions,
             "checks": {"type": "array", "maxItems": 8, "items": string},
             "path": {**string, "default": "."},
             "workdir": string,

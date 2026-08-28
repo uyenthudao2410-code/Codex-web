@@ -93,6 +93,31 @@ test('native MCP launch env brokers secrets and excludes ambient loader or secre
   assert.equal(env.PYTHONPATH.includes('ambient-pythonpath-must-not-pass'), false);
 });
 
+test('native MCP launch passes the durable installation identity to the child process', () => {
+  const launch = {
+    resourcesRoot: path.join(os.tmpdir(), 'bundle-root'),
+    moduleRoot: path.join(os.tmpdir(), 'module-root'),
+    vendoredPython: path.join(os.tmpdir(), 'module-root', 'python_vendor')
+  };
+  const env = buildNativeMcpEnv({
+    sourceEnv: { PATH: 'safe-base-path' },
+    launch,
+    settings: { authorizedRoots: [], progressReportSeconds: 90 },
+    token: 'test-mcp-bearer',
+    diskRevision: 'revision-test',
+    supervisorRequestFile: path.join(os.tmpdir(), 'supervisor-test.json'),
+    device: {
+      deviceId: '11111111-1111-4111-8111-111111111111',
+      deviceInstanceId: 'device-instance-home-0001',
+      displayName: 'Home Workstation'
+    }
+  });
+  assert.equal(env.CODING_TOOLS_MCP_DEVICE_ID, '11111111-1111-4111-8111-111111111111');
+  assert.equal(env.CODING_TOOLS_MCP_DEVICE_INSTANCE_ID, 'device-instance-home-0001');
+  assert.equal(env.CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME, 'Home Workstation');
+  assert.equal(env.CODING_TOOLS_MCP_AUTHORIZED_ROOTS, '[]');
+});
+
 test('native MCP launch ignores an ambient P5 seed when no managed SecretStore seed is supplied', () => {
   const launch = {
     resourcesRoot: path.join(os.tmpdir(), 'bundle-root'),

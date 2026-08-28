@@ -828,6 +828,7 @@ class FullCleanActivation {
   }
 
   current() { return this.store.current(); }
+  enforceCurrentExpiry(boundary = 'observe') { return this.store.enforceCurrentExpiry(boundary); }
 
   /**
    * Persist the latest non-terminal census while a replacement activation is

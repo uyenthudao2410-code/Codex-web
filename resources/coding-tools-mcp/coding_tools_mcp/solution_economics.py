@@ -13,6 +13,8 @@ from .rework_diagnosis import high_confidence_replan_reason_category, repair_cau
 SOLUTION_SHADOW_EVENT = "solution_shadow_recommended"
 SOLUTION_SHADOW_PATCH_SURFACE_EVENT = "solution_shadow_patch_surface_observed"
 PATCH_SURFACE_EVENT = "patch_surface_observed"
+EXISTING_FILE_ADOPTION_EVENT = "existing_file_adoption_observed"
+EXISTING_FILE_ADOPTION_MEASUREMENT = "content_addressed_existing_file_adoption_v1"
 PATCH_SURFACE_EVENT_TYPES = frozenset({PATCH_SURFACE_EVENT, SOLUTION_SHADOW_PATCH_SURFACE_EVENT})
 ELIGIBLE_WORKFLOWS = frozenset({"feature", "bugfix"})
 SCOPE_VALUES = frozenset({"localized_symbol", "localized_file", "bounded_multi_file", "cross_subsystem", "unknown"})
@@ -221,6 +223,53 @@ def _patch_surface_payload(patch_result: dict[str, Any]) -> dict[str, Any]:
         "content_free": True,
         "production_behavior_changed": False,
     }
+
+
+def _existing_file_adoption_payload(adoptions: Any) -> dict[str, Any]:
+    if not isinstance(adoptions, list) or not adoptions:
+        raise ValueError("existing-file adoption requires a non-empty array")
+    if len(adoptions) > PATCH_SURFACE_FILE_ID_LIMIT:
+        raise ValueError("existing-file adoption exceeds the bounded file limit")
+    files: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in adoptions:
+        if not isinstance(item, dict):
+            raise ValueError("existing-file adoption entries must be objects")
+        file_id = _path_identity(item.get("path"))
+        sha256 = str(item.get("sha256") or "").strip().lower()
+        if not file_id or len(sha256) != 64 or any(char not in "0123456789abcdef" for char in sha256):
+            raise ValueError("existing-file adoption requires exact path identity and SHA-256")
+        if file_id in seen:
+            raise ValueError("existing-file adoption paths must be unique")
+        seen.add(file_id)
+        files.append({"file_id": file_id, "sha256": sha256})
+    files.sort(key=lambda item: item["file_id"])
+    return {
+        "schema_version": 1,
+        "measurement": EXISTING_FILE_ADOPTION_MEASUREMENT,
+        "file_count": len(files),
+        "files": files,
+        "complete": True,
+        "content_free": True,
+        "production_behavior_changed": False,
+    }
+
+
+def record_existing_file_adoption(
+    ledger: OrchestrationLedger,
+    *,
+    run_id: str,
+    wave_id: str,
+    adoptions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Record exact-byte authority for pre-existing dirty files without writing them."""
+    event = ledger.append_event(
+        run_id,
+        wave_id=wave_id,
+        event_type=EXISTING_FILE_ADOPTION_EVENT,
+        payload=_existing_file_adoption_payload(adoptions),
+    )
+    return {"recorded": True, "event_id": event["event_id"], "seq": event["seq"]}
 
 
 def record_patch_surface(

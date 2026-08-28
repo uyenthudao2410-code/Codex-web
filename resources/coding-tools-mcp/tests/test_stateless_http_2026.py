@@ -27,6 +27,8 @@ EXPECTED_SMART_TOOLS = {
 }
 
 TASK_CONTEXT_META_KEY = "io.coding-tools/taskContextId"
+ENDPOINT_META_KEY = "io.coding-tools/endpoint"
+ENDPOINT_ROUTING_META_KEY = "io.coding-tools/routingInstructions"
 
 
 def modern_params(extra: dict | None = None) -> dict:
@@ -47,6 +49,9 @@ class StatelessHttp2026Tests(unittest.TestCase):
             {
                 "CODING_TOOLS_MCP_TOOL_MODE": "smart",
                 "CODING_TOOLS_MCP_STATELESS_HTTP_2026": "1",
+                "CODING_TOOLS_MCP_DEVICE_ID": "11111111-1111-4111-8111-111111111111",
+                "CODING_TOOLS_MCP_DEVICE_INSTANCE_ID": "device-instance-office-0001",
+                "CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME": "Office Workstation",
             },
         )
         self.env.start()
@@ -127,7 +132,16 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(result["resultType"], "complete")
         self.assertEqual(result["ttlMs"], 0)
         self.assertEqual(result["cacheScope"], "private")
-        self.assertEqual(result["_meta"]["io.modelcontextprotocol/serverInfo"]["name"], "coding-tools-mcp")
+        server_info = result["_meta"]["io.modelcontextprotocol/serverInfo"]
+        self.assertEqual(server_info["name"], "coding-tools-mcp")
+        self.assertIn("Office Workstation", server_info["title"])
+        endpoint = result["_meta"][ENDPOINT_META_KEY]
+        self.assertEqual(endpoint["endpoint_scope"], "device_installation")
+        self.assertEqual(endpoint["display_name"], "Office Workstation")
+        self.assertEqual(endpoint["device_instance_id"], "device-instance-office-0001")
+        self.assertTrue(endpoint["automatic"])
+        self.assertNotIn("11111111-1111-4111-8111-111111111111", json.dumps(endpoint))
+        self.assertIn(endpoint["route_key"], result["_meta"][ENDPOINT_ROUTING_META_KEY])
         discovery = self.runtime.connector_tool_discovery()
         self.assertTrue(discovery["current_contract_observed"])
         self.assertEqual(discovery["contract_sha256"], self.runtime.tool_contract["sha256"])
@@ -141,6 +155,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertIn("task_context_id", tools["task_control"]["inputSchema"]["properties"])
         self.assertIn(TASK_CONTEXT_META_KEY, body["result"]["_meta"])
         self.assertEqual(body["result"]["resultType"], "complete")
+        self.assertEqual(body["result"]["_meta"][ENDPOINT_META_KEY]["endpoint_id"], endpoint["endpoint_id"])
         discovery = self.runtime.connector_tool_discovery()
         self.assertTrue(discovery["current_contract_observed"])
         self.assertEqual(discovery["contract_sha256"], self.runtime.tool_contract["sha256"])

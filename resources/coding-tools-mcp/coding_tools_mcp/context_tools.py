@@ -25,7 +25,9 @@ from .semantic_localization import (
 )
 from .semantic_graph import SemanticRepositoryGraph
 from .context_compiler import compile_context, context_compiler_treatment
-from .solution_economics import record_patch_surface
+from .endpoint_identity import endpoint_identity_payload
+from .acceptance_receipts import validate_existing_file_adoptions
+from .solution_economics import record_existing_file_adoption, record_patch_surface
 from .tool_contract import tool_metadata_contract
 
 
@@ -106,6 +108,11 @@ class ContextToolsMixin:
         payload = {
             "workspace": str(scope_root),
             "workspace_id": str(scope_identity.get("workspace_id") or ""),
+            "endpoint": endpoint_identity_payload(
+                self,
+                workspace_root=scope_root,
+                workspace_id=str(scope_identity.get("workspace_id") or ""),
+            ),
             "task_context_id": self._current_task_scope_id() or None,
             "default_cwd": normalize_rel_display(resolved.path, scope_root),
             "project": project,
@@ -704,16 +711,34 @@ class ContextToolsMixin:
         single_patch = str(args.get("patch", "")).strip()
         if single_patch:
             patches.insert(0, single_patch)
+        raw_adoptions = args.get("adopt_existing_files", [])
+        if raw_adoptions is None:
+            raw_adoptions = []
+        if not isinstance(raw_adoptions, list):
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_INVALID",
+                "adopt_existing_files must be an array.",
+                category="validation",
+            )
+        adopt_existing_files = list(raw_adoptions)
         checks = list(dict.fromkeys(str(item).strip() for item in args.get("checks", []) if str(item).strip()))[:8]
         verification = str(args.get("verification", "tests")).lower()
         if verification not in {"none", "tests", "build", "all"}:
             raise ToolFailure("INVALID_ARGUMENT", "verification must be none, tests, build, or all.", category="validation")
-        if not patches and not checks and verification == "none":
-            raise ToolFailure("INVALID_ARGUMENT", "Provide a patch, check command, or verification step.", category="validation")
+        if not patches and not adopt_existing_files and not checks and verification == "none":
+            raise ToolFailure(
+                "INVALID_ARGUMENT",
+                "Provide a patch, existing-file adoption, check command, or verification step.",
+                category="validation",
+            )
 
         workflow_steps: list[dict[str, str]] = []
-        if patches:
-            workflow_steps.append({"id": "apply", "text": "Apply workspace changes", "status": "pending"})
+        if patches or adopt_existing_files:
+            workflow_steps.append({
+                "id": "apply",
+                "text": "Adopt existing or apply workspace changes" if adopt_existing_files else "Apply workspace changes",
+                "status": "pending",
+            })
         if checks:
             workflow_steps.append({"id": "checks", "text": "Run requested checks", "status": "pending"})
         if verification != "none":
@@ -778,8 +803,31 @@ class ContextToolsMixin:
                 raise ToolFailure(exc.code, str(exc), category="runtime", retryable=True, details=exc.details) from exc
 
         patch_results: list[dict[str, Any]] = []
+        adopted_files: list[dict[str, str]] = []
         affected_files: list[dict[str, str]] = []
         try:
+            if adopt_existing_files:
+                if ctx is None or ctx.write_lease is None:
+                    raise ToolFailure(
+                        "EXISTING_FILE_ADOPTION_LEASE_REQUIRED",
+                        "Existing-file adoption requires an active EOCL write lease.",
+                        category="runtime",
+                        retryable=False,
+                    )
+                _resolved, adoption_root, _scope_identity = self._workspace_identity_for_request(args.get("path", "."))
+                adopted_files = validate_existing_file_adoptions(
+                    adoption_root,
+                    adopt_existing_files,
+                    existing_dirty_source_paths=list(ctx.write_lease.existing_dirty_source_paths),
+                    allowed_paths=list(ctx.write_lease.allowed_paths),
+                )
+                if not bool(args.get("dry_run", False)):
+                    record_existing_file_adoption(
+                        self.orchestration_ledger,
+                        run_id=ctx.run_id,
+                        wave_id=ctx.wave_id,
+                        adoptions=adopted_files,
+                    )
             for patch_text in patches:
                 result = self.apply_patch({"patch": patch_text, "dry_run": bool(args.get("dry_run", False))})
                 patch_results.append(result)
@@ -1066,6 +1114,7 @@ class ContextToolsMixin:
             "status": "passed",
             "objective": objective,
             "patch_results": patch_results,
+            "adopted_files": adopted_files,
             "affected_files": affected_files,
             "check_results": command_results,
             "build_report": build_report,

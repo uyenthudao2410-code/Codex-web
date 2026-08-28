@@ -38,6 +38,13 @@ from . import __version__  # noqa: F401  # composition-root namespace
 from .budget_control import BudgetDeadline, RetryPolicy  # noqa: F401  # composition-root namespace
 from .envutils import ENV_PREFIX, truthy_env  # noqa: F401  # composition-root namespace
 from .errors import JsonRpcError, ToolFailure, normalize_exception_group  # noqa: F401  # composition-root namespace
+from .endpoint_identity import (  # noqa: F401  # composition-root namespace
+    ENDPOINT_META_KEY,
+    ENDPOINT_ROUTING_INSTRUCTIONS_META_KEY,
+    endpoint_identity_payload,
+    endpoint_routing_instructions,
+    endpoint_server_title,
+)
 from .execution_resources import ExecutionResourceGovernor  # noqa: F401  # composition-root namespace
 from .landlock_exec import libc_syscall  # noqa: F401  # composition-root namespace
 from .oauth import (  # noqa: F401  # composition-root namespace
@@ -832,15 +839,25 @@ class Runtime(
 
     def initialize(self, client_info: dict[str, Any] | None = None) -> dict[str, Any]:
         self.telemetry.record_session_start(client_info, self.protocol_version)
+        endpoint = endpoint_identity_payload(self)
+        routing_instructions = endpoint_routing_instructions(endpoint)
         return {
             "protocolVersion": self.protocol_version,
             "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": {
                 "name": SERVER_NAME,
-                "title": SERVER_TITLE,
+                "title": endpoint_server_title(endpoint),
                 "version": __version__,
             },
-            "instructions": self.project_context.server_instructions(),
+            "instructions": (
+                routing_instructions
+                + "\n\n"
+                + self.project_context.server_instructions()
+            ),
+            "_meta": {
+                ENDPOINT_META_KEY: endpoint,
+                ENDPOINT_ROUTING_INSTRUCTIONS_META_KEY: routing_instructions,
+            },
         }
 
     def list_tools(self) -> dict[str, Any]:
@@ -1941,9 +1958,10 @@ class Runtime(
         tools = self.exposed_tool_names()
         landlock = landlock_status_payload()
         landlock["enabled"] = self._landlock_enforced(landlock)
+        endpoint = endpoint_identity_payload(self)
         return {
             "server": SERVER_NAME,
-            "title": SERVER_TITLE,
+            "title": endpoint_server_title(endpoint),
             "version": __version__,
             "protocol_version": self.protocol_version,
             **self._exec_environment_summary(),
@@ -1963,6 +1981,7 @@ class Runtime(
             "shell_env_include_only": list(self.shell_env_policy.include_only),
             "shell_env_exclude": list(self.shell_env_policy.exclude),
             "endpoint_path": MCP_ENDPOINT_PATH,
+            "endpoint": endpoint,
             "activation": self.activation_admission_snapshot(),
             **self.activation_admission_snapshot(),
             "project_context": {

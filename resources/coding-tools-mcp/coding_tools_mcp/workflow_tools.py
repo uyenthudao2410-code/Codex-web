@@ -1295,14 +1295,49 @@ class AgentWorkflowMixin:
             }
 
         source_write_paths = self._source_write_paths(patches)
+        raw_adoptions = args.get("adopt_existing_files", [])
+        if raw_adoptions is None:
+            raw_adoptions = []
+        if not isinstance(raw_adoptions, list):
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_INVALID",
+                "adopt_existing_files must be an array.",
+                category="validation",
+            )
+        if any(
+            not isinstance(item, dict)
+            or set(item) != {"path", "sha256"}
+            or not str(item.get("path") or "").strip()
+            for item in raw_adoptions
+        ):
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_INVALID",
+                "Each existing-file adoption must contain exactly a non-empty path and sha256.",
+                category="validation",
+            )
+        adoption_paths = sorted({
+            str(item.get("path") or "").strip().replace("\\", "/")
+            for item in raw_adoptions
+            if isinstance(item, dict) and str(item.get("path") or "").strip()
+        })
+        adoption_patch_overlap = sorted(set(adoption_paths).intersection(source_write_paths))
+        if adoption_patch_overlap:
+            raise ToolFailure(
+                "EXISTING_FILE_ADOPTION_PATCH_CONFLICT",
+                "A path cannot be both adopted without a write and patched in the same wave.",
+                category="validation",
+                retryable=False,
+                details={"paths": adoption_patch_overlap},
+            )
         requested_write_paths = sorted({
             *source_write_paths,
+            *adoption_paths,
             *(str(item).strip().replace("\\", "/") for item in directories if str(item).strip()),
         })
         allowed_write_paths = list(candidate_result.get("allowed_paths") or []) if isinstance(candidate_result, dict) else list(requested_write_paths)
         if isinstance(candidate_result, dict):
             candidate_allowed = {str(item).strip().replace("\\", "/") for item in allowed_write_paths if str(item).strip()}
-            candidate_scope_violations = sorted(set(source_write_paths).difference(candidate_allowed))
+            candidate_scope_violations = sorted(set(source_write_paths).union(adoption_paths).difference(candidate_allowed))
             if candidate_scope_violations:
                 self.orchestration_control.record_failure(
                     ctx,
@@ -1384,6 +1419,7 @@ class AgentWorkflowMixin:
             execution = self.apply_changes_and_verify({
                 "objective": objective,
                 "patches": patches,
+                "adopt_existing_files": raw_adoptions,
                 "checks": args.get("commands", args.get("checks", [])),
                 "path": args.get("path", "."),
                 "workdir": args.get("workdir", args.get("path", ".")),

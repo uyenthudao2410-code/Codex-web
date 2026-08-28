@@ -42,7 +42,23 @@ The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLE
 
 ### Source validation update — 2026-08-27
 
-At the current uncommitted source fingerprint, the Node repository suite passes `482/482`, including the full-clean refresh, Recovery Host, Tunnel, Recovery Plane, UI lifecycle, delivery-surface and source-root/secret guards. The unchanged Coding Tools MCP Python source packet retains its verified complete result of `698` tests with `4` environment-conditional skips and `106` subtests; the focused full-clean/activation, acceptance, orchestration, PRL, and projection packet passes `120` tests with `1` skip and `43` subtests. These are source-level regression results only; they do not establish current-process connector discovery/ACK, package, release, deployment, or production readiness. Live process-refresh evidence remains a separate receipt.
+Before the automatic endpoint-identity packet below, the then-current uncommitted source fingerprint had a green Node repository suite (`482/482`) and a green complete Coding Tools MCP result (`698` tests, `4` environment-conditional skips, `106` subtests), including the focused full-clean/activation, acceptance, orchestration, PRL, and projection packet (`120` tests, `1` skip, `43` subtests). The newer endpoint packet has focused source proof for installation separation, workspace-generation invalidation, stateless discovery metadata, unchanged tool-contract SHA, and Python compilation. These remain source-level results only; they do not establish current-process connector discovery/ACK, controlled activation, package, release, deployment, or production readiness. Live process-refresh evidence remains a separate receipt.
+
+At `2026-08-27T16:37:26Z`, a controlled `npm start` process refresh from this
+checkout exited successfully after replacing Recovery Host, Coding MCP, Coding
+Tunnel, Recovery MCP, Recovery Tunnel, and Electron UI. The replacement Coding
+MCP (`pid=20916`, component revision
+`c6f1c2f2bb0c92ff46a5e3002cb58b9c358af9d4b27f7d3fd4b057661e29bd92`)
+and Coding Tunnel (`pid=21484`) were both ready; the former stopped-runtime
+`ORCHESTRATION_STATE_UNCERTAIN` refusal did not recur. The durable activation
+epoch `activation-mtbqsh83-094c596a51df8d2f827d01936dbda21a` remains
+truthfully `VERIFYING` with admission closed because the real external client
+has not yet produced current-process discovery for tool-contract SHA
+`57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053`;
+the retained acknowledgement names older SHA
+`3e37f9fed85bd80f46ee79a820291f617584b6b6ba65b43c16f163adf37993fd`.
+This is live component/process proof, not connector ACK, `LIVE_CLOSED`, package,
+release, deployment, or production proof.
 
 ### Live reconciliation — 2026-08-26
 
@@ -87,6 +103,33 @@ The current `smart` profile intentionally exposes exactly these eight public too
 - `command_control`
 - `request_permissions`
 - `view_image`
+
+### Automatic installed-endpoint identity (source contract)
+
+Every Electron installation already creates a durable random `device_id` and
+passes it, the current Recovery Host instance, and the OS display name to Coding
+MCP. Coding MCP now derives a non-secret `endpoint_id` and collision-resistant
+`route_key` automatically from that installation identity, while each canonical
+root retains its separate content-free `workspace_id` and
+`workspace_generation`. A standalone MCP process that has no Electron-provided
+device identity falls back to a workspace-scoped endpoint identity rather than
+collecting an implicit hardware fingerprint.
+
+Legacy initialize, authenticated stateless responses, `server/discover`, and
+`workspace_context` expose the same endpoint projection. The public unauthenticated
+server card remains generic and never exposes device/workspace identity. The dynamic server title
+includes the detected device display name and current workspace; routing
+instructions tell the client to reuse the endpoint already pinned to the task
+instead of probing peer Coding Tools connectors just to compare identities.
+Process/server/activation fields remain freshness invalidators, and mutation must
+never silently fail over to another endpoint. Dynamic endpoint metadata is kept
+outside the eight-tool schema, so installing the same build on another machine
+does not create a machine-specific `tools/list` SHA or unnecessary contract ACK.
+
+This removes any requirement to configure labels such as Home/Office manually.
+A first installation still requires the operator to select/authorize a workspace
+and supply its separately created Tunnel ID and runtime credential; those are
+authorization inputs that cannot be inferred safely from hostname or local disk.
 
 ### Authorized-root workspace projection (source contract)
 
@@ -176,6 +219,16 @@ epoch creation while holding the application ledger gate exclusively through
 the durable epoch-store create. A ledger hash, workspace, source-checkpoint, or runtime-state
 identity change fails closed before any process stop; the durable ledger and
 the failed epoch remain untouched.
+
+Because background workflows are process-scoped, a stopped-runtime census does
+not treat an old `running` row as live forever. Rows with a parseable activity
+timestamp older than the census grace window are retained as stale residue and
+the replacement runtime marks them orphaned during startup. Managed-process
+rows are likewise restart-reconcilable only when an exact OS identity probe
+proves that the original PID is gone or has been recycled. Recent or malformed
+background evidence, a live matching process, an unverifiable process identity,
+leases, fences, live lanes, projection drift, and integrity failures still
+block activation.
 
 Low-level/legacy tools may still exist in compatibility or non-smart modes, but new agent workflows should prefer the compact smart surface.
 

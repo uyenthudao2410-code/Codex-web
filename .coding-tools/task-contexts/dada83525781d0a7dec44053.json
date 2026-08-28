@@ -1,0 +1,664 @@
+{
+  "version": 2,
+  "task_id": "cd0fc63448bf4b089268bd9a11cff05e",
+  "orchestration": {
+    "run_id": "87f4559ee6bc41ce9bb15384b7180aee",
+    "wave_id": "4240fc68cea3496da3ef9a0d3f9028a8",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+    "worktree_fp": "10bc44405e69e63bce837ffdcb7568604bda2be87d6a5134f5b7c76cd2e530c5",
+    "contract_fp": ""
+  },
+  "objective": "Complete the bounded no-write existing-file adoption capability. Fix the final-acceptance propagation defect, align event/schema limits and provenance constants, fail malformed adoption entries before write-lease acquisition, preserve no-write semantics and anti-source-laundering, and ensure the current wave has durable patch authority for every runtime module implementing the capability. Do not modify electron/services/activationEpoch.js, electron/services/fullCleanActivation.js, electron/services/recoveryHost.js, activation_lifecycle.py, or http_hub_identity.py.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-27T20:50:23.418Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-27T20:50:23.418Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-27T20:50:23.418Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "iQ4waN6-ezILRtyWMQKHLM3U",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 411,
+    "finished_at": "2026-08-27T20:50:22.285Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py",
+          "state": "file",
+          "sha256": "3540365ad22ce86cc4a45f9763225bfde1cc4e1016448c0df95065a3dd70c952",
+          "size_bytes": 80563,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "87f4559ee6bc41ce9bb15384b7180aee",
+          "wave_id": "4240fc68cea3496da3ef9a0d3f9028a8"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+          "state": "file",
+          "sha256": "6dfec62f2b7fa45c90abe87da3bedf1a5ae3600094a54a20fc0d4ff7e41b17fd",
+          "size_bytes": 52581,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "87f4559ee6bc41ce9bb15384b7180aee",
+          "wave_id": "4240fc68cea3496da3ef9a0d3f9028a8"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+          "state": "file",
+          "sha256": "2e41f4128409964d5fec350310443f8a32dea5da93453d1f20ec3c5791f2d483",
+          "size_bytes": 57093,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "87f4559ee6bc41ce9bb15384b7180aee",
+          "wave_id": "4240fc68cea3496da3ef9a0d3f9028a8"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "state": "file",
+          "sha256": "ce92248731fca86aa1f90f26f055ebd615dda0a35336bb346417d7c54156c4d9",
+          "size_bytes": 83927,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "87f4559ee6bc41ce9bb15384b7180aee",
+          "wave_id": "4240fc68cea3496da3ef9a0d3f9028a8"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "state": "file",
+          "sha256": "5f40313e0e2f6377c35475cbd2568c7c7b624f1484ced6ecfb11b4b8fe5ba0fe",
+          "size_bytes": 68743,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "87f4559ee6bc41ce9bb15384b7180aee",
+          "wave_id": "4240fc68cea3496da3ef9a0d3f9028a8"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "state": "file",
+          "sha256": "3cfd41ec8fa439a1584dc27f553b0bd3293fe3121372e3fa3c66556cc0d2635f",
+          "size_bytes": 87768,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "87f4559ee6bc41ce9bb15384b7180aee",
+          "wave_id": "4240fc68cea3496da3ef9a0d3f9028a8"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 66,
+        "head_hash": "bb2cc4cb053d8504ab34b16d7048fc2400c66f08c6262aafc70beea906439c6e"
+      },
+      "reports": {
+        "run_report": "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-87f4559ee6bc41ce9bb15384b7180aee\\run-summary.md",
+        "wave_reports": [
+          "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-87f4559ee6bc41ce9bb15384b7180aee\\wave-001.md",
+          "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-87f4559ee6bc41ce9bb15384b7180aee\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "87f4559ee6bc41ce9bb15384b7180aee",
+      "wave_id": "4240fc68cea3496da3ef9a0d3f9028a8",
+      "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+      "worktree_fp": "10bc44405e69e63bce837ffdcb7568604bda2be87d6a5134f5b7c76cd2e530c5",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Complete the bounded no-write existing-file adoption capability. Fix the final-acceptance propagation defect, align event/schema limits and provenance constants, fail malformed adoption entries before write-lease acquisition, preserve no-write semantics and anti-source-laundering, and ensure the current wave has durable patch authority for every runtime module implementing the capability. Do not modify electron/services/activationEpoch.js, electron/services/fullCleanActivation.js, electron/services/recoveryHost.js, activation_lifecycle.py, or http_hub_identity.py.",
+        "objective_revision": 2,
+        "objective_sha256": "75e99de020bbfc2386ca998855a678c3f8b501864d7b4679b2a6775c1bb4b0db",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 4,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "300d8ae2fb7642ee8509748894f7fbcf",
+          "stage_id": "check:ea13f14298a0a164",
+          "status": "passed",
+          "duration_ms": 12649,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "cdc5fcf9652b4470acb873a96d2b45dd",
+          "stage_id": "check:db736406de82727e",
+          "status": "passed",
+          "duration_ms": 25643,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "97606de77ce14821833376f02c483208",
+          "stage_id": "check:ffbca0aa4709b7a6",
+          "status": "passed",
+          "duration_ms": 838,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "ea5ec85a542a4525967a7f092fd8d780",
+          "stage_id": "check:37671354a1814f92",
+          "status": "passed",
+          "duration_ms": 739,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "3361b6e5c400bafaa370171a91653f8bf1cb70b76ae8f88aaf9c468013eab8da",
+  "completion_report_acknowledged_id": "3361b6e5c400bafaa370171a91653f8bf1cb70b76ae8f88aaf9c468013eab8da",
+  "completion_report_acknowledged_at": "2026-08-27T20:52:56.740Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py",
+      "operation": "update",
+      "updated_at": "2026-08-27T20:50:23.848Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+      "operation": "update",
+      "updated_at": "2026-08-27T20:50:23.848Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+      "operation": "update",
+      "updated_at": "2026-08-27T20:50:23.848Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+      "operation": "update",
+      "updated_at": "2026-08-27T20:50:23.848Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+      "operation": "update",
+      "updated_at": "2026-08-27T20:50:23.848Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+      "operation": "update",
+      "updated_at": "2026-08-27T20:46:28.018Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+      "operation": "update",
+      "updated_at": "2026-08-27T20:46:28.018Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+      "operation": "update",
+      "updated_at": "2026-08-27T20:50:23.848Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-27T20:46:09.204Z",
+  "updated_at": "2026-08-27T20:52:56.743Z",
+  "events": [
+    {
+      "time": "2026-08-27T20:46:09.204Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:09.616Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:11.196Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:12.270Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:12.274Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:13.696Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:14.350Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:14.946Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_acceptance_file_attestation.py\"",
+        "session_id": "1d8-uihWK94lxd9hXJ98bOfX"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:27.169Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_acceptance_file_attestation.py\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:27.391Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:27.842Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:27.844Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:27.845Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:27.919Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "21e4998368cd52c5dc563bdfadbc085db323f236ac32d7a3678a630bd960698d"
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:28.018Z",
+      "event": "files_modified",
+      "details": {
+        "count": 7
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:39.595Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:46:39.918Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-08-27T20:48:38.852Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "21e4998368cd52c5dc563bdfadbc085db323f236ac32d7a3678a630bd960698d"
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:34.726Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:36.113Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:37.642Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:38.879Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:38.885Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:40.301Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:41.024Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:41.542Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_acceptance_file_attestation.py\"",
+        "session_id": "dd4VOel87KP0Prz5kMYwwnvP"
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:53.784Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_acceptance_file_attestation.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:49:54.810Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py\"",
+        "session_id": "irvMvGDtSY_qdk-rrqFX7DF2"
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:19.984Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /c \"set PYTHONPATH=resources\\coding-tools-mcp&& python -m unittest discover -s resources\\coding-tools-mcp\\tests -p test_task_state_and_build.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:20.785Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m py_compile resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "session_id": "xe0qV_GpSPbCqsbn6MLiGIrZ"
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:21.154Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m py_compile resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:21.951Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py resources/coding-tools-mcp/tests/tes",
+        "session_id": "iQ4waN6-ezILRtyWMQKHLM3U"
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:22.285Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py resources/coding-tools-mcp/tests/tes",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:23.416Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:23.418Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:23.640Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:23.644Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:23.758Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "69e8e31ddf5184d60709cf7e8557366a1a6a773d81cb5fa212366ede0a0757de"
+      }
+    },
+    {
+      "time": "2026-08-27T20:50:23.848Z",
+      "event": "files_modified",
+      "details": {
+        "count": 6
+      }
+    },
+    {
+      "time": "2026-08-27T20:51:27.419Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:52:33.087Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-27T20:52:33.090Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:52:33.200Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "3361b6e5c400bafaa370171a91653f8bf1cb70b76ae8f88aaf9c468013eab8da"
+      }
+    },
+    {
+      "time": "2026-08-27T20:52:46.200Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T20:52:56.740Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "3361b6e5c400bafaa370171a91653f8bf1cb70b76ae8f88aaf9c468013eab8da"
+      }
+    }
+  ]
+}

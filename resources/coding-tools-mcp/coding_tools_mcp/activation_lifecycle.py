@@ -474,7 +474,15 @@ class ActivationLifecycleMixin:
 
     def _activation_enter_tool_call(self, name: str = "", args: dict[str, Any] | None = None) -> None:
         with self.activation_lock:
-            if str(getattr(self, "activation_admission", "open") or "open").lower() != "open":
+            restart_runtime = bool(
+                name == "task_control"
+                and str((args or {}).get("action") or "").strip().lower() == "restart_runtime"
+                and (args or {}).get("confirm_restart") is True
+            )
+            if (
+                str(getattr(self, "activation_admission", "open") or "open").lower() != "open"
+                and not restart_runtime
+            ):
                 snapshot = self.activation_admission_snapshot()
                 raise ToolFailure(
                     "RUNTIME_ACTIVATION_PENDING",
@@ -485,7 +493,7 @@ class ActivationLifecycleMixin:
                 )
             self._activation_cleanup_locked()
             if self.activation_fence:
-                if name == "task_control" and str((args or {}).get("action") or "").lower() == "restart_runtime":
+                if restart_runtime:
                     self.active_tool_calls += 1
                     return
                 raise ToolFailure(

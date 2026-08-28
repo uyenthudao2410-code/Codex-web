@@ -1,0 +1,278 @@
+[
+  {
+    "version": 2,
+    "task_id": "eb67056c414648ca94975956b15d4301",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-27T20:49:06.308Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-08-27T20:47:53.513Z",
+    "updated_at": "2026-08-27T20:49:06.309Z",
+    "events": [
+      {
+        "time": "2026-08-27T20:47:53.513Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-27T20:47:53.706Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -C 24 \"durable_mutation, _durable_paths = _durable_wave_acceptance_paths\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "session_id": "1ZNUc_qHF17fAZBfpuzYwzR4"
+        }
+      },
+      {
+        "time": "2026-08-27T20:47:53.933Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -C 24 \"durable_mutation, _durable_paths = _durable_wave_acceptance_paths\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:48:01.474Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -C 20 \"events = [\" resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+          "session_id": "z04QeB9RCrwCg5dko9Zy2BQY"
+        }
+      },
+      {
+        "time": "2026-08-27T20:48:01.702Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -C 20 \"events = [\" resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:48:51.818Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -C 8 \"EXISTING_FILE_ADOPTION_EVENT\" resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py && rg -n -F -C 10 \"EXISTING_FILE_ADOPTION_LIMIT_EXCEEDED\" resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py && rg -n -F -C 8 \"Apply workspace changes\" resources/coding-tools-mcp/coding_tools_mcp/context_tools.py && rg -n -F -C 16 \"raw_adoptions =\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py && rg -n -F -C 10 \"existing_file_adoptions =\" resources/coding",
+          "session_id": "_EGebWAbLnM8Za84CXwptx_2"
+        }
+      },
+      {
+        "time": "2026-08-27T20:48:52.199Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -C 8 \"EXISTING_FILE_ADOPTION_EVENT\" resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py && rg -n -F -C 10 \"EXISTING_FILE_ADOPTION_LIMIT_EXCEEDED\" resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py && rg -n -F -C 8 \"Apply workspace changes\" resources/coding-tools-mcp/coding_tools_mcp/context_tools.py && rg -n -F -C 16 \"raw_adoptions =\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py && rg -n -F -C 10 \"existing_file_adoptions =\" resources/coding",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:49:06.309Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"from pathlib import Path; fs=['solution_economics.py','acceptance_receipts.py','context_tools.py','workflow_tools.py','tool_schema.py','coordination.py']; root=Path('resources/coding-tools-mcp/coding_tools_mcp'); print(' '.join(f'{f}={sum(1 for _ in (root/f).open(encoding=\\\"utf-8\\\"))}' for f in fs))\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:49:06.309Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-27T20:51:38.867Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "02a21b5bacae4adea6d6348ee525e961",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "WyzD_oBqhn_SvuRqbeFrACec",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 217,
+      "finished_at": "2026-08-27T20:53:27.528Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-27T20:51:38.867Z",
+    "updated_at": "2026-08-27T20:53:27.528Z",
+    "events": [
+      {
+        "time": "2026-08-27T20:51:38.867Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-27T20:51:39.087Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\solution_economics.py SHA256",
+          "session_id": "AqT_BnaLbgZPBWgizPOsYRjj"
+        }
+      },
+      {
+        "time": "2026-08-27T20:51:39.314Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\solution_economics.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:51:47.081Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\acceptance_receipts.py SHA256",
+          "session_id": "XLVP3BQ1PjLM8PD8yEQx6Hbo"
+        }
+      },
+      {
+        "time": "2026-08-27T20:51:47.323Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\acceptance_receipts.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:51:53.410Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py SHA256",
+          "session_id": "415OKEf6KoxHzS9nahIAUvUR"
+        }
+      },
+      {
+        "time": "2026-08-27T20:51:53.650Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:52:01.617Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py SHA256",
+          "session_id": "6dVdbbDohf30YpHb7M9ReF8B"
+        }
+      },
+      {
+        "time": "2026-08-27T20:52:01.981Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:52:10.450Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py SHA256",
+          "session_id": "LwLqTWoj-_m8a57-L-OU4KCO"
+        }
+      },
+      {
+        "time": "2026-08-27T20:52:10.674Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:52:17.226Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py SHA256",
+          "session_id": "8RIXUhXP2iNKub6DiLYnOhBF"
+        }
+      },
+      {
+        "time": "2026-08-27T20:52:17.452Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:53:14.017Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "U7PEgtqX7cquSe8PqWrUs8Wj"
+        }
+      },
+      {
+        "time": "2026-08-27T20:53:17.036Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-27T20:53:27.292Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F \"activation_closure\" scripts package.json electron | head -n 80",
+          "session_id": "WyzD_oBqhn_SvuRqbeFrACec"
+        }
+      },
+      {
+        "time": "2026-08-27T20:53:27.528Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F \"activation_closure\" scripts package.json electron | head -n 80",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-27T20:53:34.796Z",
+    "archive_reason": "finished"
+  }
+]

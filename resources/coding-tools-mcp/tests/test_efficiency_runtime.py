@@ -8,8 +8,11 @@ import time
 import unittest
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
+from coding_tools_mcp.endpoint_identity import endpoint_identity_payload
+from coding_tools_mcp.protocol import dispatch_rpc
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.performance_trace import ERROR_TAXONOMY_EPOCH, PerformanceTraceStore
 from coding_tools_mcp.server import Runtime, server_card_payload
@@ -18,6 +21,89 @@ from coding_tools_mcp.tool_contract import CAPABILITY_PROFILES, TOOL_CONTRACT_RU
 
 
 class EfficiencyRuntimeTests(unittest.TestCase):
+    def test_endpoint_identity_auto_distinguishes_installations_without_contract_drift(self) -> None:
+        first_device = {
+            "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+            "CODING_TOOLS_MCP_DEVICE_ID": "11111111-1111-4111-8111-111111111111",
+            "CODING_TOOLS_MCP_DEVICE_INSTANCE_ID": "device-instance-home-0001",
+            "CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME": "Developer PC",
+            "APPDATA": "",
+        }
+        second_device = {
+            **first_device,
+            "CODING_TOOLS_MCP_DEVICE_ID": "22222222-2222-4222-8222-222222222222",
+            "CODING_TOOLS_MCP_DEVICE_INSTANCE_ID": "device-instance-office-0001",
+        }
+        with tempfile.TemporaryDirectory() as first_temp, tempfile.TemporaryDirectory() as second_temp:
+            with patch.dict("os.environ", first_device):
+                first = Runtime(Path(first_temp), permission_mode="safe")
+                try:
+                    first_initialize = first.initialize()
+                    first_endpoint = first_initialize["_meta"]["io.coding-tools/endpoint"]
+                    first_contract = first.tool_contract["sha256"]
+                    self.assertIn("Developer PC", first_initialize["serverInfo"]["title"])
+                    self.assertIn(first_endpoint["route_key"], first_initialize["instructions"])
+                    self.assertIn(
+                        first_endpoint["route_key"],
+                        first_initialize["_meta"]["io.coding-tools/routingInstructions"],
+                    )
+                    first.initialized = False
+                    discovery = dispatch_rpc(
+                        first,
+                        {"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": {}},
+                    )["result"]
+                    self.assertEqual(
+                        discovery["_meta"]["io.coding-tools/endpoint"]["endpoint_id"],
+                        first_endpoint["endpoint_id"],
+                    )
+                    self.assertIn(
+                        first_endpoint["route_key"],
+                        discovery["_meta"]["io.coding-tools/routingInstructions"],
+                    )
+                    self.assertEqual(
+                        first.workspace_context({"detail": "compact"})["endpoint"]["endpoint_id"],
+                        first_endpoint["endpoint_id"],
+                    )
+                    public_card = server_card_payload(first)
+                    self.assertEqual(public_card["server"]["title"], "Coding Tools MCP")
+                    self.assertNotIn("endpoint", public_card)
+                    self.assertNotIn(first_endpoint["endpoint_id"], json.dumps(public_card))
+                finally:
+                    first.close()
+            with patch.dict("os.environ", second_device):
+                second = Runtime(Path(second_temp), permission_mode="safe")
+                try:
+                    second_endpoint = second.initialize()["_meta"]["io.coding-tools/endpoint"]
+                    self.assertNotEqual(first_endpoint["endpoint_id"], second_endpoint["endpoint_id"])
+                    self.assertNotEqual(first_endpoint["route_key"], second_endpoint["route_key"])
+                    self.assertEqual(first_contract, second.tool_contract["sha256"])
+                finally:
+                    second.close()
+
+    def test_endpoint_identity_stays_pinned_while_workspace_generation_changes(self) -> None:
+        device = {
+            "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+            "CODING_TOOLS_MCP_DEVICE_ID": "33333333-3333-4333-8333-333333333333",
+            "CODING_TOOLS_MCP_DEVICE_INSTANCE_ID": "device-instance-portable-0001",
+            "CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME": "Portable Workstation",
+            "APPDATA": "",
+        }
+        with tempfile.TemporaryDirectory() as first_temp, tempfile.TemporaryDirectory() as second_temp, patch.dict("os.environ", device):
+            runtime = SimpleNamespace(
+                workspace=SimpleNamespace(root=Path(first_temp)),
+                workspace_generation=1,
+                process_instance_id="process-portable-0001",
+                server_instance_id="server-portable-0001",
+                activation_epoch_id="epoch-portable-0001",
+            )
+            before = endpoint_identity_payload(runtime, workspace_id="workspace-first")
+            runtime.workspace.root = Path(second_temp)
+            runtime.workspace_generation = 2
+            after = endpoint_identity_payload(runtime, workspace_id="workspace-second")
+            self.assertEqual(before["endpoint_id"], after["endpoint_id"])
+            self.assertNotEqual(before["workspace_id"], after["workspace_id"])
+            self.assertGreater(after["workspace_generation"], before["workspace_generation"])
+
     def test_result_tail_telemetry_counts_continuation_rereads_and_stale_events(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             store = PerformanceTraceStore(Path(temp))
@@ -471,11 +557,11 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053")
+                self.assertEqual(contract["sha256"], "c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251")
                 self.assertEqual(contract["schema_version"], 1)
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["compatible_predecessor_sha256"], [
-                    "34cbb4c3ce3668f86ef6340dcb210d07425814c40ba734180ee1c026c96d409c",
+                    "57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053",
                 ])
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)

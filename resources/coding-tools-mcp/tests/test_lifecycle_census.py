@@ -144,7 +144,7 @@ class LifecycleCensusTests(unittest.TestCase):
             self.assertEqual(classifications[ids["threshold"]], "THRESHOLD_SENSITIVE_STALE_CANDIDATE")
             self.assertEqual(classifications[ids["unexplained"]], "UNEXPLAINED_ACTIVE")
             self.assertEqual(classifications[ids["terminal_parent"]], "TERMINAL_PARENT_CONTRADICTION")
-            self.assertEqual(first["managed_jobs"][0]["classification"], "ORPHANED_OR_FOREIGN_MANAGED_JOB")
+            self.assertEqual(first["managed_jobs"][0]["classification"], "STALE_MANAGED_JOB_RESIDUE")
             self.assertEqual(first["projection"]["classification"], "PROJECTION_DRIFT")
             self.assertEqual(first["summary"]["ordinary_active_runs"], 6)
             self.assertEqual(first["summary"]["unbound_live_resource_residues"], 1)
@@ -173,8 +173,110 @@ class LifecycleCensusTests(unittest.TestCase):
             job = next(item for item in result["managed_jobs"] if item["run_id"] == ids["job_run"])
             run = next(item for item in result["runs"] if item["run_id"] == ids["job_run"])
             self.assertEqual(job["identity"], "MISMATCH")
-            self.assertEqual(job["classification"], "ORPHANED_OR_FOREIGN_MANAGED_JOB")
+            self.assertEqual(job["classification"], "STALE_MANAGED_JOB_RESIDUE")
             self.assertEqual(run["ownership"]["live_managed_jobs"], 0)
+
+    def test_matching_managed_process_identity_remains_live_ownership(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger, ids = self._fixture(root)
+            expected_checkout = hashlib.sha256(str(root.resolve()).lower().encode("utf-8")).hexdigest()
+            with ledger._lock, ledger._connect() as connection:
+                connection.execute(
+                    "UPDATE managed_process_jobs SET checkout_id=? WHERE run_id=?",
+                    (expected_checkout, ids["job_run"]),
+                )
+
+            def live_probe(pid: int, _expected: str) -> ProcessIdentityObservation:
+                return ProcessIdentityObservation(pid=pid, exists=True, identity="MATCH")
+
+            with open_lifecycle_census_snapshot(root) as snapshot:
+                result = lifecycle_census(
+                    snapshot,
+                    workspace=root,
+                    observed_at=OBSERVED_AT,
+                    process_probe=live_probe,
+                )
+            job = next(item for item in result["managed_jobs"] if item["run_id"] == ids["job_run"])
+            run = next(item for item in result["runs"] if item["run_id"] == ids["job_run"])
+            self.assertEqual(job["classification"], "LIVE_OWNED")
+            self.assertEqual(run["classification"], "LIVE_OWNED")
+            self.assertEqual(run["ownership"]["live_managed_jobs"], 1)
+
+    def test_stopped_runtime_ignores_only_aged_process_scoped_residue(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            old = _iso(OBSERVED_AT - 3_600)
+            recent = _iso(OBSERVED_AT - 60)
+            stale_run = self._run(ledger, started_at=old)
+            recent_run = self._run(ledger, started_at=old)
+            terminal_run = self._run(ledger, started_at=old)
+            dead_job_run = self._run(ledger, started_at=old)
+            ledger.finish_run(terminal_run, status="accepted")
+
+            for operation_id, run_id, updated_at in (
+                ("stale-bound", stale_run, old),
+                ("recent-bound", recent_run, recent),
+                ("stale-terminal", terminal_run, old),
+                ("stale-unbound", "", old),
+                ("recent-unbound", "", recent),
+            ):
+                ledger.start_background_operation(
+                    operation_id=operation_id,
+                    server_instance_id="retired-server",
+                    tool="agent_workflow",
+                    run_id=run_id,
+                )
+                with ledger._lock, ledger._connect() as connection:
+                    connection.execute(
+                        "UPDATE background_operations SET started_at=?,updated_at=? WHERE operation_id=?",
+                        (updated_at, updated_at, operation_id),
+                    )
+
+            expected_checkout = hashlib.sha256(str(root.resolve()).lower().encode("utf-8")).hexdigest()
+            with ledger._lock, ledger._connect() as connection:
+                connection.execute(
+                    """INSERT INTO managed_process_jobs(
+                        job_id,run_id,wave_id,command_id,owner,checkout_id,resource_class,root_pid,
+                        root_process_token,process_instance_id,runtime_instance_id,lifecycle_state,
+                        started_at,updated_at,finished_at,metadata_json
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        "dead-job", dead_job_run, "", "dead-command", "test", expected_checkout,
+                        "MEDIUM", 4242, "dead-token", "retired-process", "retired-runtime", "running",
+                        old, old, None, "{}",
+                    ),
+                )
+
+            def probe(pid: int, _expected: str) -> ProcessIdentityObservation:
+                self.assertEqual(pid, 4242)
+                return ProcessIdentityObservation(pid=pid, exists=False, identity="NOT_RUNNING")
+
+            with open_lifecycle_census_snapshot(root) as snapshot:
+                result = lifecycle_census(
+                    snapshot,
+                    workspace=root,
+                    observed_at=OBSERVED_AT,
+                    grace_seconds=300,
+                    stale_after_seconds=1_800,
+                    process_probe=probe,
+                )
+
+            records = {item["run_id"]: item for item in result["runs"]}
+            self.assertEqual(records[stale_run]["classification"], "THRESHOLD_SENSITIVE_STALE_CANDIDATE")
+            self.assertEqual(records[stale_run]["ownership"]["running_background_operations"], 0)
+            self.assertEqual(records[stale_run]["stale_background_operations"], 1)
+            self.assertEqual(records[recent_run]["classification"], "LIVE_OWNED")
+            self.assertEqual(records[recent_run]["ownership"]["running_background_operations"], 1)
+            self.assertNotIn(terminal_run, records)
+            dead_job = next(item for item in result["managed_jobs"] if item["job_id"] == "dead-job")
+            self.assertEqual(dead_job["classification"], "STALE_MANAGED_JOB_RESIDUE")
+            self.assertEqual(
+                {item["resource_id"] for item in result["unbound_live_resources"]},
+                {"recent-unbound"},
+            )
+            self.assertEqual(result["summary"]["stale_background_operation_residues"], 3)
 
     def test_snapshot_never_initializes_writer_or_runtime_governor(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

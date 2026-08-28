@@ -1,0 +1,163 @@
+{
+  "version": 2,
+  "task_id": "64ba302b0d4046c889e632b4b3c6378b",
+  "orchestration": {
+    "run_id": "0b57a6b7b413483ebc2b5267efa0e3e9",
+    "wave_id": "dc4f2598f2674252b87f25259bdecbea",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+    "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+    "contract_fp": ""
+  },
+  "objective": "Diagnose and prepare the smallest causal fix for the live task_control schema drift: current tools/list publishes optional task_context_id for task_control, but an actual task_control restart_runtime call rejects task_context_id as an additional property. Preserve current smart-v3 contract semantics, stateless task isolation, EOCL authority, and all existing task_control behavior. Do not mutate in prepare. Identify the exact validator/schema source that is stale and the focused proof that must demonstrate published schema and invocation validation agree.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-08-27T19:23:27.904Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 7,
+        "head_hash": "5b8739a77ca8386ca3f32ee5b9ecdd46fe827d0d094614f877c3daede463cc67"
+      },
+      "reports": {
+        "run_report": "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-0b57a6b7b413483ebc2b5267efa0e3e9\\run-summary.md",
+        "wave_reports": [
+          "E:\\Github\\Tools-Codex-web\\.coding-tools\\orchestration\\reports\\run-0b57a6b7b413483ebc2b5267efa0e3e9\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "0b57a6b7b413483ebc2b5267efa0e3e9",
+      "wave_id": "dc4f2598f2674252b87f25259bdecbea",
+      "base_head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+      "worktree_fp": "c9cfd4f9a043e50249fbf998e36e0c0870741c94a0c06d435e24427b058dca8a",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Diagnose and prepare the smallest causal fix for the live task_control schema drift: current tools/list publishes optional task_context_id for task_control, but an actual task_control restart_runtime call rejects task_context_id as an additional property. Preserve current smart-v3 contract semantics, stateless task isolation, EOCL authority, and all existing task_control behavior. Do not mutate in prepare. Identify the exact validator/schema source that is stale and the focused proof that must demonstrate published schema and invocation validation agree.",
+        "objective_revision": 1,
+        "objective_sha256": "6373393cc131e8cb17fbcd548e1dc1975ee0325fad049186708405bf6de2bae1",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "bed30709d9e6220c37ab0c44e6ee743d525511a0b3181c86e966a1ce2bfc9072",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-08-27T19:11:08.464Z",
+  "updated_at": "2026-08-27T19:35:49.011Z",
+  "events": [
+    {
+      "time": "2026-08-27T19:11:08.464Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Diagnose and prepare the smallest causal fix for the live task_control schema drift: current tools/list publishes optional task_context_id for task_control, but an actual task_control restart_runtime call rejects task_context_id as an additional property. Preserve current smart-v3 contract semantics, stateless task isolation, EOCL authority, and all existing task_control behavior. Do not mutate in prepare. Identify the exact validator/schema source that is stale and the focused proof that must demonstrate published schema and invocation validation agree."
+      }
+    },
+    {
+      "time": "2026-08-27T19:11:09.498Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-27T19:11:40.591Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-27T19:11:40.596Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-27T19:12:11.503Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "bed30709d9e6220c37ab0c44e6ee743d525511a0b3181c86e966a1ce2bfc9072"
+      }
+    },
+    {
+      "time": "2026-08-27T19:13:01.535Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-27T19:23:27.904Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "failed"
+      }
+    }
+  ]
+}

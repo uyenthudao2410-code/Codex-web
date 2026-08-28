@@ -1239,10 +1239,23 @@ class RecoveryHost {
       let runtime = null;
       let epoch = null;
       try {
-        epoch = this.fullCleanActivation.current?.();
+        epoch = typeof this.fullCleanActivation.enforceCurrentExpiry === 'function'
+          ? this.fullCleanActivation.enforceCurrentExpiry('recovery_host_supervise')
+          : this.fullCleanActivation.current?.();
       } catch (error) {
-        this.log.error(error.message, { stage: 'recovery-host-activation-epoch-read', code: error?.code || '' });
-        return this.lastSupervisionStatus;
+        if (String(error?.code || '') === 'ACTIVATION_REQUEST_EXPIRED') {
+          try { epoch = this.fullCleanActivation.current?.(); }
+          catch (readError) {
+            this.log.error(readError.message, { stage: 'recovery-host-activation-epoch-expiry-read', code: readError?.code || '' });
+            return this.lastSupervisionStatus;
+          }
+          this.log.warn('Recovery Host terminalized an expired activation epoch during supervision; explicit refresh remains available.', {
+            activationEpochId: epoch?.activation_epoch_id || null
+          });
+        } else {
+          this.log.error(error.message, { stage: 'recovery-host-activation-epoch-read', code: error?.code || '' });
+          return this.lastSupervisionStatus;
+        }
       }
       const admissionBlocked = Boolean(epoch && epoch.state !== 'READY');
       const connectorPending = activationAwaitsTunnelOrConnector(epoch);

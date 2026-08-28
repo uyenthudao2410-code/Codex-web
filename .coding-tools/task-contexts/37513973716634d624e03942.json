@@ -1,0 +1,194 @@
+{
+  "version": 2,
+  "task_id": "e3a39f7fd3674287b51fdedbbe74638e",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": {
+    "command": "git add -A && git diff --cached --check && git commit -m \"Harden activation recovery and runtime orchestration\"",
+    "kind": "command",
+    "session_id": "mwXenxatNcBG5RmHSvmmjed6",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-08-28T00:27:15.141Z"
+  },
+  "last_command_result": {
+    "command_id": "gNWqjccOSopzx5dvgEUZKCE4",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-28T00:27:02.947Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "gNWqjccOSopzx5dvgEUZKCE4",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "gNWqjccOSopzx5dvgEUZKCE4",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "b64c43c7e092301dd9abdfad32d4dc1910192485",
+        "branch": "main",
+        "worktree_fp": "7127fdef8e0a187b46c921c45ad5328e0af21d45392518a0065251a2a1cbedfe",
+        "dirty_paths": [
+          "complete_connector_bootstrap_identity_fix.cmd",
+          "docs/ARCHITECTURE.md",
+          "docs/CURRENT_STATE.md",
+          "docs/RECOVERY_HOST.md",
+          "electron/services/activationEpoch.js",
+          "electron/services/fullCleanActivation.js",
+          "electron/services/recoveryHost.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/endpoint_identity.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/protocol.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "resources/coding-tools-mcp/tests/test_activation_epoch.py",
+          "resources/coding-tools-mcp/tests/test_activation_restart_escape.py",
+          "resources/coding-tools-mcp/tests/test_connector_bootstrap_identity.py",
+          "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "resources/coding-tools-mcp/tests/test_exception_group_boundary.py",
+          "resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+          "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "tests/activation-self-recovery.test.js",
+          "tests/runtime-lifecycle.test.js"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "e3a39f7fd3674287b51fdedbbe74638e",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "3f3e9b0251863b0cec0533e8864f3b8d9a28c3454021513645645a6c6d756eb4",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-28T00:24:55.914Z",
+  "updated_at": "2026-08-28T00:27:15.141Z",
+  "events": [
+    {
+      "time": "2026-08-28T00:24:55.914Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-28T00:24:56.195Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short && git diff --cached --stat && git diff --stat",
+        "session_id": "PSVaCrlQDclgj3xc5gchhYXH"
+      }
+    },
+    {
+      "time": "2026-08-28T00:24:58.411Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short && git diff --cached --stat && git diff --stat",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T00:25:24.660Z",
+      "event": "command_started",
+      "details": {
+        "command": "git add -A && git diff --cached --check && git status --short",
+        "session_id": "BbctPq7viuxx2qGsKE3qdr8f"
+      }
+    },
+    {
+      "time": "2026-08-28T00:25:28.256Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git add -A && git diff --cached --check && git status --short",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T00:25:37.160Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/activation-self-recovery.test.js tests/runtime-lifecycle.test.js tests/activation-epoch.test.js tests/full-clean-activation.test.js",
+        "session_id": "5q4QGHgyUMTiSUPEtjqzKmUP"
+      }
+    },
+    {
+      "time": "2026-08-28T00:25:46.814Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/activation-self-recovery.test.js tests/runtime-lifecycle.test.js tests/activation-epoch.test.js tests/full-clean-activation.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T00:25:53.743Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest tests.test_acceptance_file_attestation tests.test_activation_restart_escape tests.test_connector_bootstrap_identity tests.test_efficiency_runtime tests.test_lifecycle_census tests.test_stateless_http_2026 tests.test_task_state_and_build",
+        "session_id": "gNWqjccOSopzx5dvgEUZKCE4"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:02.947Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest tests.test_acceptance_file_attestation tests.test_activation_restart_escape tests.test_connector_bootstrap_identity tests.test_efficiency_runtime tests.test_lifecycle_census tests.test_stateless_http_2026 tests.test_task_state_and_build",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:03.841Z",
+      "even

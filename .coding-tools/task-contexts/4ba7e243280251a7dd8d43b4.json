@@ -1,0 +1,88 @@
+{
+  "version": 2,
+  "task_id": "7d9dad857f4440d887d089a22cafc989",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "oXGSXceO1A9TAL0RxRRUC8fB",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 228,
+    "finished_at": "2026-08-27T20:53:51.753Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-27T20:53:34.796Z",
+  "updated_at": "2026-08-27T20:53:51.753Z",
+  "events": [
+    {
+      "time": "2026-08-27T20:53:34.796Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-27T20:53:34.991Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -F \"activation_closure\" scripts package.json electron",
+        "session_id": "Zi9Hw13nSF_sk2YFtwwriSvA"
+      }
+    },
+    {
+      "time": "2026-08-27T20:53:35.225Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -F \"activation_closure\" scripts package.json electron",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:53:43.117Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -F -C 24 \"recovery.status\" scripts electron",
+        "session_id": "7JvfzGL7btZoERtCZYY72Ow9"
+      }
+    },
+    {
+      "time": "2026-08-27T20:53:43.370Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -F -C 24 \"recovery.status\" scripts electron",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-27T20:53:51.525Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -F \"RecoveryIpcClient\" scripts electron | findstr /I \"scripts\"",
+        "session_id": "oXGSXceO1A9TAL0RxRRUC8fB"
+      }
+    },
+    {
+      "time": "2026-08-27T20:53:51.753Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -F \"RecoveryIpcClient\" scripts electron | findstr /I \"scripts\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

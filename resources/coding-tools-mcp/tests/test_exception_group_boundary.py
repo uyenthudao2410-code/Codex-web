@@ -130,6 +130,9 @@ class ExceptionGroupBoundaryTests(unittest.TestCase):
             def __init__(self) -> None:
                 self.request_context = SimpleNamespace()
 
+            def activation_connector_bootstrap_allowed(self, _name: str) -> bool:
+                return False
+
             def _touch_hub_client(self, _identity: dict[str, object]) -> None:
                 raise grouped
 

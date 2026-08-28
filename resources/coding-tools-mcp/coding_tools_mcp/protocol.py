@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from .endpoint_identity import (
+    ENDPOINT_META_KEY,
+    ENDPOINT_ROUTING_INSTRUCTIONS_META_KEY,
+    endpoint_identity_payload,
+    endpoint_routing_instructions,
+    endpoint_server_title,
+)
 from .errors import JsonRpcError, normalize_exception_group
 
 
@@ -125,9 +132,19 @@ def _stateless_result(runtime: Any, result: dict[str, Any], *, cacheable: bool) 
     if not isinstance(meta, dict):
         meta = {}
         decorated["_meta"] = meta
+    server_info = runtime.server_info_payload()
+    endpoint = server_info.get("endpoint")
+    if not isinstance(endpoint, dict):
+        endpoint = endpoint_identity_payload(runtime)
+    meta.setdefault("io.modelcontextprotocol/serverInfo", {
+        "name": "coding-tools-mcp",
+        "title": str(server_info.get("title") or endpoint_server_title(endpoint)),
+        "version": str(server_info.get("version", "")),
+    })
+    meta.setdefault(ENDPOINT_META_KEY, endpoint)
     meta.setdefault(
-        "io.modelcontextprotocol/serverInfo",
-        {"name": "coding-tools-mcp", "version": str(runtime.server_info_payload().get("version", ""))},
+        ENDPOINT_ROUTING_INSTRUCTIONS_META_KEY,
+        endpoint_routing_instructions(endpoint),
     )
     return decorated
 
@@ -187,11 +204,25 @@ def dispatch_rpc(
         elif method == "ping":
             result = {}
         elif method == "server/discover":
+            server_info = runtime.server_info_payload()
+            endpoint = server_info.get("endpoint")
+            if not isinstance(endpoint, dict):
+                endpoint = endpoint_identity_payload(runtime)
+            routing_instructions = endpoint_routing_instructions(endpoint)
             result = {
                 "protocolVersion": runtime.protocol_version,
-                "serverInfo": {"name": "coding-tools-mcp", "title": "Coding Tools MCP", "version": runtime.server_info_payload().get("version", "")},
+                "serverInfo": {
+                    "name": "coding-tools-mcp",
+                    "title": str(server_info.get("title") or endpoint_server_title(endpoint)),
+                    "version": server_info.get("version", ""),
+                },
                 "capabilities": {"tools": {"listChanged": False}},
                 "tools": runtime.list_tools().get("tools", []),
+                "instructions": routing_instructions,
+                "_meta": {
+                    ENDPOINT_META_KEY: endpoint,
+                    ENDPOINT_ROUTING_INSTRUCTIONS_META_KEY: routing_instructions,
+                },
             }
         elif method == "tools/list":
             result = runtime.list_tools()
