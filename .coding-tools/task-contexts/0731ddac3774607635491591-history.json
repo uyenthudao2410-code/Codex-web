@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "2449943d0b104808a9e374a999309907",
+    "orchestration": {
+      "run_id": "045b4a0b336640d88a275a4fba2894d2",
+      "wave_id": "e14b044b1705436590b966032e88ff26",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+      "worktree_fp": "ca4cb51255a41947ea83fe35aad9c10b3c86c0006bb0db5a589429c83e4bfdae",
+      "contract_fp": ""
+    },
+    "objective": "Adopt the existing A1 live-hot-path worktree changes as the new canonical UI performance closure run. First prove A1 only: the live orchestration endpoint must remain read-only and bounded, must not reconcile orchestration, verify the chain, scan full run history, or invoke heavy analytics. Do not replay or modify A1 unless the focused oracle fails. Preserve all unrelated concurrent worktree changes. After A1 proof this same closure lineage will continue with bounded analytics, Electron IPC, shared Overview polling, listener lifecycle, and metric-truth fixes.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T09:45:04.057Z",
+    "updated_at": "2026-08-28T09:45:07.225Z",
+    "events": [
+      {
+        "time": "2026-08-28T09:45:04.057Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Adopt the existing A1 live-hot-path worktree changes as the new canonical UI performance closure run. First prove A1 only: the live orchestration endpoint must remain read-only and bounded, must not reconcile orchestration, verify the chain, scan full run history, or invoke heavy analytics. Do not replay or modify A1 unless the focused oracle fails. Preserve all unrelated concurrent worktree changes. After A1 proof this same closure lineage will continue with bounded analytics, Electron IPC, shared Overview polling, listener lifecycle, and metric-truth fixes."
+        }
+      },
+      {
+        "time": "2026-08-28T09:45:05.337Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T09:45:07.214Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T09:45:07.225Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T09:45:24.432Z",
+    "archive_reason": "superseded"
+  }
+]

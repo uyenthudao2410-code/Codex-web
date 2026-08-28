@@ -124,7 +124,11 @@ class Workspace:
         return resolved
 
     def reject_write_symlink(self, raw_path: str) -> None:
-        candidate = self._candidate(self.root, raw_path)
+        self.reject_write_symlink_at(self.root, raw_path)
+
+    def reject_write_symlink_at(self, base: Path, raw_path: str) -> None:
+        base = self._validate_base(base)
+        candidate = self._candidate(base, raw_path)
         if candidate.is_symlink():
             raise ToolFailure("SYMLINK_ESCAPE", "Writing through symlinks is denied.", category="security")
 

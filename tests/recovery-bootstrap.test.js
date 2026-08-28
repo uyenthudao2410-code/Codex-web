@@ -407,6 +407,152 @@ test('new bootstrap terminalizes an expired prior epoch and can create a fresh o
   assert.equal(host.activationEpochStore.current().state, 'FAILED');
 });
 
+test('receipt-conflict reconciliation preserves a failed bootstrap receipt and releases admission only after epoch, identity, and census proof', async (t) => {
+  const paths = fixture(t);
+  const request = envelope(paths, OPERATION_ONE, {
+    sourceCheckpoint: null,
+    refresh: true,
+    descriptor: { owner_pid: 78004, instance_id: 'old-recovery-host-reconcile-0001' }
+  });
+  writeBootstrapEnvelope(paths, request);
+  writeBootstrapResult(paths, {
+    operation_id: OPERATION_ONE,
+    state: 'failed',
+    error: { code: 'ORCHESTRATION_STATE_UNCERTAIN', message: 'The prior stopped-runtime census was not quiescent.' }
+  });
+  const before = readBootstrapResult(paths, OPERATION_ONE);
+  const readyEpoch = {
+    activation_epoch_id: 'activation-reconciled-ready-0001',
+    operation_id: OPERATION_TWO,
+    state: 'READY',
+    admission_state: 'OPEN'
+  };
+  const censusCalls = [];
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ workspace: paths.appRoot(), autoStartServices: false }) },
+    secrets: {},
+    environment: {},
+    log: logStub(),
+    orchestrator: {
+      setFullCleanActivation() {},
+      setActivationEpoch() {},
+      codingMcpRevisionStatus: () => ({ running_revision: REVISION, disk_revision: REVISION, update_pending: false, state: 'current' })
+    },
+    healthService: {},
+    gateway: {},
+    revisionTracker: {
+      captureRunning: () => REVISION,
+      status: () => ({ running_revision: REVISION, disk_revision: REVISION, update_pending: false, state: 'current' })
+    },
+    recoveryPlaneService: { setActivationEpoch() {} },
+    bootstrap: request,
+    processIdentityObserver: async (pid) => ({ state: 'live', pid, process_start_token: CURRENT_PROCESS_START_TOKEN }),
+    canonicalLedgerCensusFn: async (options) => {
+      censusCalls.push(options);
+      return {
+        safe: true,
+        code: 'READY',
+        reason: 'canonical_ledger_quiescent',
+        content_free: true,
+        mutated_canonical_ledger: false,
+        census_fingerprint: 'f'.repeat(64),
+        snapshot: { immutable: true, query_only: true },
+        lifecycle: {
+          projection_drift: false,
+          unexplained_active_runs: 0,
+          unbound_live_resource_residues: 0
+        }
+      };
+    }
+  });
+  host.activationEpochStore.current = () => ({ ...readyEpoch });
+  host.running = true;
+  host.ownsLock = true;
+  host.processIdentity = { pid: process.pid, process_start_token: CURRENT_PROCESS_START_TOKEN };
+  host.lastSupervisionStatus = {};
+  host.bootstrapActivation = {
+    state: 'receipt_conflict',
+    operation_id: OPERATION_TWO,
+    activation_epoch_id: readyEpoch.activation_epoch_id,
+    error_code: 'ORCHESTRATION_STATE_UNCERTAIN'
+  };
+  fs.writeFileSync(paths.recoveryHostLockFile(), JSON.stringify({ pid: process.pid, instance_id: host.instanceId }), 'utf8');
+
+  const reconciliation = await host.reconcileTerminalBootstrapReceipt(readyEpoch);
+
+  assert.equal(reconciliation.state, 'reconciled_terminal_receipt');
+  assert.equal(reconciliation.attempted_operation_id, OPERATION_ONE);
+  assert.equal(reconciliation.operation_id, OPERATION_TWO);
+  assert.equal(reconciliation.activation_epoch_id, readyEpoch.activation_epoch_id);
+  assert.equal(reconciliation.terminal_result_state, 'failed');
+  assert.equal(reconciliation.error_code, 'ORCHESTRATION_STATE_UNCERTAIN');
+  assert.equal(fs.existsSync(paths.recoveryHostBootstrapFile(OPERATION_ONE)), false);
+  assert.deepEqual(readBootstrapResult(paths, OPERATION_ONE), before, 'terminal failed receipt must remain immutable evidence');
+  assert.equal(censusCalls.length, 1);
+  assert.equal(censusCalls[0].workspace, paths.appRoot());
+  assert.equal(censusCalls[0].allowAcceptancePending, true, 'only the validated checkpoint-free refresh may preserve pending acceptance records');
+  assert.equal(host.bootstrapBlocksAdmission(), false);
+  assert.equal((await host.handlers()['recovery.ping']()).ready, true);
+  const snapshot = host.cachedRuntimeSnapshot();
+  assert.notEqual(snapshot.mcpRunning, true, 'reconciliation must not fabricate MCP readiness');
+  assert.notEqual(snapshot.tunnelRunning, true, 'reconciliation must not fabricate tunnel readiness');
+});
+
+test('receipt-conflict reconciliation remains admission-closed when the terminal bootstrap receipt is missing', async (t) => {
+  const paths = fixture(t);
+  const request = envelope(paths, OPERATION_ONE, {
+    sourceCheckpoint: null,
+    refresh: true,
+    descriptor: { owner_pid: 78005, instance_id: 'old-recovery-host-reconcile-0002' }
+  });
+  writeBootstrapEnvelope(paths, request);
+  const readyEpoch = {
+    activation_epoch_id: 'activation-reconciled-ready-0002',
+    operation_id: OPERATION_TWO,
+    state: 'READY',
+    admission_state: 'OPEN'
+  };
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ workspace: paths.appRoot(), autoStartServices: false }) },
+    secrets: {},
+    environment: {},
+    log: logStub(),
+    orchestrator: {
+      setFullCleanActivation() {},
+      setActivationEpoch() {},
+      codingMcpRevisionStatus: () => ({ running_revision: REVISION, disk_revision: REVISION, update_pending: false, state: 'current' })
+    },
+    healthService: {},
+    gateway: {},
+    revisionTracker: {
+      captureRunning: () => REVISION,
+      status: () => ({ running_revision: REVISION, disk_revision: REVISION, update_pending: false, state: 'current' })
+    },
+    recoveryPlaneService: { setActivationEpoch() {} },
+    bootstrap: request,
+    processIdentityObserver: async (pid) => ({ state: 'live', pid, process_start_token: CURRENT_PROCESS_START_TOKEN }),
+    canonicalLedgerCensusFn: async () => { throw new Error('census must not run before terminal receipt validation'); }
+  });
+  host.activationEpochStore.current = () => ({ ...readyEpoch });
+  host.running = true;
+  host.ownsLock = true;
+  host.processIdentity = { pid: process.pid, process_start_token: CURRENT_PROCESS_START_TOKEN };
+  host.bootstrapActivation = {
+    state: 'receipt_conflict',
+    operation_id: OPERATION_TWO,
+    activation_epoch_id: readyEpoch.activation_epoch_id
+  };
+  fs.writeFileSync(paths.recoveryHostLockFile(), JSON.stringify({ pid: process.pid, instance_id: host.instanceId }), 'utf8');
+
+  await assert.rejects(host.reconcileTerminalBootstrapReceipt(readyEpoch), {
+    code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_RECEIPT_UNVERIFIED'
+  });
+  assert.equal(fs.existsSync(paths.recoveryHostBootstrapFile(OPERATION_ONE)), true);
+  assert.equal(host.bootstrapBlocksAdmission(), true);
+});
+
 test('host status exposes durable operation binding and fails closed on incomplete connector evidence', async (t) => {
   const paths = fixture(t);
   const host = new RecoveryHost({

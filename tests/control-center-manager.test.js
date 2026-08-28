@@ -52,8 +52,14 @@ test('manager preload reuses the existing read-only orchestration IPC without ch
   const preload = read('electron/preload.js');
   const main = read('electron/main.js');
   assert.match(preload, /orchestration:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('panel:orchestration'\)/);
+  assert.match(preload, /dashboardAnalytics:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('panel:dashboard-analytics'\)/);
   assert.match(main, /secureHandle\('panel:orchestration'/);
   assert.match(main, /path:\s*'\/__control\/orchestration'/);
+  assert.match(main, /secureHandle\('panel:dashboard-analytics'/);
+  assert.match(main, /path:\s*'\/__control\/orchestration\/analytics'/);
+  const controlCenter = read('renderer/control-center.js');
+  assert.match(controlCenter, /coding-tools:overview-pulse/);
+  assert.match(controlCenter, /coding-tools:overview-refresh-request/);
 });
 
 test('manager router treats OpenCode connectivity and DeepSeek model activity as separate evidence', () => {

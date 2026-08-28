@@ -4,7 +4,7 @@ const path = require('node:path');
 const http = require('node:http');
 const { NativeService, isAlive, runtimeFingerprint, P5_A0_SEED_SECRET } = require('./nativeService');
 const { TunnelService } = require('./tunnelService');
-const { validateRuntimeSettings, mergeRecentWorkspaces, workspaceKey } = require('./config');
+const { validateRuntimeSettings, mergeRecentWorkspaces, normalizeWorkspacePath, workspaceKey } = require('./config');
 const { canConnect } = require('./environmentService');
 const { resolveProxy } = require('./proxyService');
 const defaultPaths = require('../paths');
@@ -1840,7 +1840,7 @@ class RuntimeOrchestrator {
   async switchWorkspace(nextWorkspace) {
     if (this.busy) throw new Error('Hiện đã có nhiệm vụ đang chạy.');
     const previous = this.settingsStore.load();
-    const workspace = path.resolve(String(nextWorkspace || '').trim());
+    const workspace = normalizeWorkspacePath(nextWorkspace);
     if (!workspace || !fs.existsSync(workspace) || !fs.statSync(workspace).isDirectory()) {
       throw new Error('Vui lòng chọn một thư mục làm việc hợp lệ.');
     }
@@ -1900,7 +1900,7 @@ class RuntimeOrchestrator {
     if (this.busy) throw new Error('Hiện đã có nhiệm vụ đang chạy.');
     const previous = this.settingsStore.load();
     const normalized = (Array.isArray(roots) ? roots : [])
-      .map((item) => path.resolve(String(item || '').trim()))
+      .map(normalizeWorkspacePath)
       .filter((item) => item && fs.existsSync(item) && fs.statSync(item).isDirectory())
       .filter((item, index, all) => all.findIndex((other) => workspaceKey(other) === workspaceKey(item)) === index)
       .filter((item) => workspaceKey(item) !== workspaceKey(previous.workspace))

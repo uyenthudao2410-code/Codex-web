@@ -636,6 +636,7 @@ class GitToolsMixin:
     def git_diff(self, args: dict[str, Any]) -> dict[str, Any]:
         git = require_git()
         git_env = self._git_env()
+        scope_root = self._current_request_workspace_root().resolve(strict=False)
         continuation_token = str(args.get("continuation", "") or "").strip()
         if continuation_token:
             payload = self._decode_diff_continuation(continuation_token)
@@ -660,15 +661,15 @@ class GitToolsMixin:
             context = int(args.get("context_lines", 3))
             max_bytes = max(1, int(args.get("max_bytes", 262144)))
             path_filters = self._git_path_filters(args)
-        if not self._is_git_repo(self.workspace.root, env=git_env):
+        if not self._is_git_repo(scope_root, env=git_env):
             if continuation_token:
                 raise ToolFailure("INVALID_CONTINUATION", "Diff continuation requires a Git workspace.", category="runtime")
             return self._fallback_diff(path_filters, max_bytes)
         chunks: list[bytes] = []
         if unstaged:
-            chunks.append(self._run_git_diff(git, context, path_filters, cached=False, env=git_env))
+            chunks.append(self._run_git_diff(git, scope_root, context, path_filters, cached=False, env=git_env))
         if staged:
-            chunks.append(self._run_git_diff(git, context, path_filters, cached=True, env=git_env))
+            chunks.append(self._run_git_diff(git, scope_root, context, path_filters, cached=True, env=git_env))
         combined = b""
         for chunk in chunks:
             if combined and chunk and not combined.endswith(b"\n"):
@@ -711,9 +712,9 @@ class GitToolsMixin:
         )
 
     def _run_git_diff(
-        self, git: str, context: int, path_filters: list[str], *, cached: bool, env: dict[str, str] | None = None
+        self, git: str, root: Path, context: int, path_filters: list[str], *, cached: bool, env: dict[str, str] | None = None
     ) -> bytes:
-        cmd = [git, "-C", str(self.workspace.root), "diff", f"--unified={context}"]
+        cmd = [git, "-C", str(root), "diff", f"--unified={context}"]
         if cached:
             cmd.append("--cached")
         if path_filters:
@@ -731,7 +732,7 @@ class GitToolsMixin:
         for rel, before in sorted(self.patch_baselines.items()):
             if selected and rel not in selected:
                 continue
-            current_path = self.workspace.resolve_for_write(rel).path
+            current_path = self.resolve_for_write(rel).path
             after = read_text_preserve_newlines(current_path) if current_path.exists() and not current_path.is_dir() else None
             if before == after:
                 continue

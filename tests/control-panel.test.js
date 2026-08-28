@@ -54,6 +54,7 @@ test('main process exposes Execution Control Center IPC through MCP control plan
   const main = read('electron/main.js');
   assert.match(main, /secureHandle\('panel:toggle'/);
   assert.match(main, /secureHandle\('panel:live-control'/);
+  assert.match(main, /secureHandle\('panel:dashboard-analytics'/);
   assert.match(main, /secureHandle\('panel:orchestration'/);
   assert.match(main, /secureHandle\('panel:handoff'/);
   assert.match(main, /secureHandle\('panel:task-control'/);
@@ -65,6 +66,7 @@ test('main process exposes Execution Control Center IPC through MCP control plan
   assert.match(main, /secureHandle\('panel:transfer-controller'/);
   assert.match(main, /secureHandle\('panel:copy-codex-config'/);
   assert.match(main, /path: '\/__control\/orchestration\/live'/);
+  assert.match(main, /path: '\/__control\/orchestration\/analytics'/);
   assert.match(main, /path: '\/__control\/orchestration'/);
   assert.match(main, /const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;/);
   assert.match(main, /const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;/);
@@ -221,6 +223,7 @@ test('control panel renders task plus multi-client authority and continuity cont
   const managerPreload = read('electron/preload.js');
   assert.match(managerPreload, /orchestration: \(\) => ipcRenderer\.invoke\('panel:orchestration'\)/);
   assert.match(managerPreload, /liveOrchestration: \(\) => ipcRenderer\.invoke\('panel:live-control'\)/);
+  assert.match(managerPreload, /dashboardAnalytics: \(\) => ipcRenderer\.invoke\('panel:dashboard-analytics'\)/);
   assert.match(managerPreload, /lightweightSnapshot: \(\) => ipcRenderer\.invoke\('app:lightweight-snapshot'\)/);
   assert.match(managerPreload, /p5A0: \(action\) => ipcRenderer\.invoke\('p5-a0:control', action\)/);
   const managerHtml = read('renderer/index.html');

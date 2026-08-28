@@ -222,6 +222,7 @@ function computeActivationClosure({
   componentRevisions = {},
   connectorContractState = 'UNAVAILABLE',
   connectorRefreshRequired = null,
+  connectorAcknowledgementPending = null,
   connectorRediscoveredAt = null,
   connectorCurrentSha256 = '',
   connectorAcknowledgedSha256 = '',
@@ -279,6 +280,7 @@ function computeActivationClosure({
       && rediscoveredAt && Number.isFinite(Date.parse(rediscoveredAt)));
   const connectorCurrent = CONNECTOR_CURRENT_STATES.has(connectorState)
     && connectorRefreshRequired === false
+    && connectorAcknowledgementPending === false
     && connectorShaCurrent
     && connectorFreshnessCurrent;
   const normalizedLifecycle = normalizeLifecycleDecision(source.lifecycle_decision);
@@ -310,6 +312,7 @@ function computeActivationClosure({
     components_current: componentsCurrent,
     connector_contract_state: connectorState,
     connector_refresh_required: connectorRefreshRequired,
+    connector_acknowledgement_pending: connectorAcknowledgementPending,
     connector_rediscovered_at: rediscoveredAt || null,
     connector_current_sha256: currentConnectorSha || null,
     connector_acknowledged_sha256: acknowledgedConnectorSha || null,

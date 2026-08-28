@@ -37,8 +37,14 @@ const DEFAULTS = Object.freeze({
 function normalizeWorkspacePath(value) {
   const text = String(value || '').trim();
   if (!text) return '';
-  const normalized = path.normalize(text).replace(/[\\/]+$/, '');
-  return normalized || path.parse(text).root || text;
+  const normalized = path.normalize(text);
+  // A drive-relative value such as `E:.` or `C:` depends on the process' per-
+  // drive current directory and can therefore bind a different workspace
+  // after reboot. Workspace authority must always be a fully-qualified path.
+  if (!path.isAbsolute(normalized)) return '';
+  const root = path.parse(normalized).root;
+  if (normalized === root) return root;
+  return normalized.replace(/[\\/]+$/, '') || root;
 }
 
 function workspaceKey(value) {

@@ -1,0 +1,667 @@
+{
+  "version": 2,
+  "task_id": "1674d4a6319c4b2fba0c73dec9fd0e2c",
+  "orchestration": {
+    "run_id": "22375c46b4264d0b828570a880263d4d",
+    "wave_id": "bdb189dec0c24a46b67a12eac57acb59",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+    "worktree_fp": "559327e346a6ecf17838a7f7f7ef55c51fa3cf2f9015aa00742797e45a8cdffc",
+    "contract_fp": ""
+  },
+  "objective": "Verify the already-applied authorized-root execution fix without source mutation using module-mode unittest discovery so the Coding Tools MCP package root is importable.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-08-28T10:09:01.304Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-28T10:09:01.304Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "TvvGx37B4BMQW5a8vEpD0iQ8",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-08-28T10:09:00.970Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_workspace_session_isolation.py",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 70,
+        "head_hash": "596ef3976a8b3566ddb611a72f61c07740493cdf503153418f2037dc31c600e6"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-22375c46b4264d0b828570a880263d4d\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-22375c46b4264d0b828570a880263d4d\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-22375c46b4264d0b828570a880263d4d\\wave-002.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-22375c46b4264d0b828570a880263d4d\\wave-003.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "22375c46b4264d0b828570a880263d4d",
+      "wave_id": "bdb189dec0c24a46b67a12eac57acb59",
+      "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+      "worktree_fp": "559327e346a6ecf17838a7f7f7ef55c51fa3cf2f9015aa00742797e45a8cdffc",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Verify the already-applied authorized-root execution fix without source mutation using module-mode unittest discovery so the Coding Tools MCP package root is importable.",
+        "objective_revision": 3,
+        "objective_sha256": "b02a3586e86ae177df5ffb7bead19839fcb0408d4173a2680f4d2722475653df",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "106e4fb306704516b319d0063563c87f",
+          "stage_id": "check:fdca123b58710a05",
+          "status": "failed",
+          "duration_ms": 16992,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 32095
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "337ee73739db7c377b259c755427aec4ca7f2c28d30b64b460a67eba47bc2c51",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/workspace_scope.py",
+      "operation": "update",
+      "updated_at": "2026-08-28T10:07:01.524Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+      "operation": "update",
+      "updated_at": "2026-08-28T10:07:01.524Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+      "operation": "update",
+      "updated_at": "2026-08-28T10:07:01.524Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+      "operation": "update",
+      "updated_at": "2026-08-28T10:07:01.524Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
+      "operation": "update",
+      "updated_at": "2026-08-28T10:07:01.524Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_workspace_session_isolation.py",
+      "operation": "update",
+      "updated_at": "2026-08-28T10:07:01.524Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy.",
+  "created_at": "2026-08-28T10:04:48.379Z",
+  "updated_at": "2026-08-28T10:09:02.819Z",
+  "events": [
+    {
+      "time": "2026-08-28T10:04:48.379Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-28T10:04:48.736Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"def _require_hub_controller|controller_client_id|controller\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "session_id": "s_pYt_nmhktXXdj_vHPRI_7x"
+      }
+    },
+    {
+      "time": "2026-08-28T10:04:49.061Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"def _require_hub_controller|controller_client_id|controller\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:05:24.460Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:10.773Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:19.154Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/tests/test_workspace_session_isolation.py' | Select-Object -Skip 350 -First 115; Get-Content 'resources/coding-tools-mcp/tests/test_workspace_session_isolation.py' | Select-Object -Last 35\"",
+        "session_id": "o2cnsN8fihpUNilJCoSFLfEb"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:20.074Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/tests/test_workspace_session_isolation.py' | Select-Object -Skip 350 -First 115; Get-Content 'resources/coding-tools-mcp/tests/test_workspace_session_isolation.py' | Select-Object -Last 35\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:52.051Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:53.396Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:54.861Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:54.875Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:57.702Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:58.081Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:58.919Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/tests/test_workspace_session_isolation.py",
+        "session_id": "Ws1SXSJf-XcqMCLQdwDlJ_L7"
+      }
+    },
+    {
+      "time": "2026-08-28T10:06:59.545Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/tests/test_workspace_session_isolation.py",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:07:00.152Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:07:01.152Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-28T10:07:01.156Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:07:01.157Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-28T10:07:01.382Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "df417184678f2a38b5f99e1e727920f4c48ae3faed7fed8cf2dc6fdd4f67c1a3"
+      }
+    },
+    {
+      "time": "2026-08-28T10:07:01.524Z",
+      "event": "files_modified",
+      "details": {
+        "count": 6
+      }
+    },
+    {
+      "time": "2026-08-28T10:07:24.223Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:07:48.282Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "df417184678f2a38b5f99e1e727920f4c48ae3faed7fed8cf2dc6fdd4f67c1a3"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:03.369Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:05.193Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:06.102Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:07.235Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:07.246Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:08.588Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:08.863Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:10.166Z",
+      "event": "command_started",
+      "details": {
+        "command": "python tests/test_workspace_session_isolation.py",
+        "session_id": "Tng32GvZLDLsE3EO9jQyv_Pz"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:10.744Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python tests/test_workspace_session_isolation.py",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:11.461Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:12.306Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:12.314Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:12.319Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:12.569Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "38035409b823933ac9e70ac87a4b0fa0739075475337fa6599f5104b2911e7a8"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:12.739Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:29.919Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:30.233Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "38035409b823933ac9e70ac87a4b0fa0739075475337fa6599f5104b2911e7a8"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:38.001Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:39.615Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:40.550Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:41.657Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:41.673Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:43.427Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:43.809Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:08:44.825Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest discover -s tests -p test_workspace_session_isolation.py",
+        "session_id": "TvvGx37B4BMQW5a8vEpD0iQ8"
+      }
+    },
+    {
+      "time": "2026-08-28T10:09:00.970Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest discover -s tests -p test_workspace_session_isolation.py",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:09:01.304Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:09:02.193Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-28T10:09:02.199Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T10:09:02.205Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-28T10:09:02.565Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "337ee73739db7c377b259c755427aec4ca7f2c28d30b64b460a67eba47bc2c51"
+      }
+    },
+    {
+      "time": "2026-08-28T10:09:02.819Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

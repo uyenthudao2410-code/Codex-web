@@ -416,6 +416,7 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
                     event_hash TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_events_run_seq ON events(run_id, seq);
+                CREATE INDEX IF NOT EXISTS idx_events_run_time_type ON events(run_id, event_time DESC, event_type);
                 CREATE INDEX IF NOT EXISTS idx_events_wave_seq ON events(wave_id, seq);
                 CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
                 CREATE TABLE IF NOT EXISTS proofs (
@@ -1065,6 +1066,83 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
         with self._lock, self._connect() as connection:
             rows = connection.execute(query, params).fetchall()
         return [self._event_row(row) for row in rows]
+
+    def live_run_projection(
+        self,
+        run_id: str,
+        *,
+        wave_limit: int = 3,
+        event_limit: int = 15,
+        proof_limit: int = 6,
+        delegation_limit: int = 4,
+    ) -> dict[str, Any]:
+        """Return only the bounded run facts needed by frequent UI polling."""
+        run_key = _bounded_text(run_id, 256)
+        waves_limit = max(1, min(int(wave_limit), 20))
+        events_limit = max(1, min(int(event_limit), 100))
+        proofs_limit = max(1, min(int(proof_limit), 50))
+        delegations_limit = max(1, min(int(delegation_limit), 50))
+        with self._lock, self._connect() as connection:
+            wave_rows = connection.execute(
+                "SELECT * FROM waves WHERE run_id=? ORDER BY ordinal DESC LIMIT ?",
+                (run_key, waves_limit),
+            ).fetchall()
+            event_rows = connection.execute(
+                "SELECT * FROM events WHERE run_id=? ORDER BY seq DESC LIMIT ?",
+                (run_key, events_limit),
+            ).fetchall()
+            proof_rows = connection.execute(
+                "SELECT * FROM proofs WHERE run_id=? ORDER BY finished_at DESC,proof_id DESC LIMIT ?",
+                (run_key, proofs_limit),
+            ).fetchall()
+            delegation_rows = connection.execute(
+                """SELECT d.* FROM delegations d
+                   JOIN waves w ON w.wave_id=d.wave_id
+                   WHERE w.run_id=?
+                   ORDER BY d.started_at DESC,d.delegation_id DESC LIMIT ?""",
+                (run_key, delegations_limit),
+            ).fetchall()
+            counts = connection.execute(
+                """SELECT
+                       (SELECT COUNT(*) FROM events WHERE run_id=?),
+                       (SELECT COUNT(*) FROM waves WHERE run_id=?),
+                       (SELECT COUNT(*) FROM checkpoints WHERE run_id=?)""",
+                (run_key, run_key, run_key),
+            ).fetchone()
+            latest_material = connection.execute(
+                """SELECT event_time FROM events
+                   WHERE run_id=?
+                     AND event_type NOT IN ('controller_transferred','write_lease_renewed')
+                   ORDER BY event_time DESC LIMIT 1""",
+                (run_key,),
+            ).fetchone()
+        return {
+            "waves": [
+                {
+                    "wave_id": row["wave_id"],
+                    "run_id": row["run_id"],
+                    "ordinal": int(row["ordinal"]),
+                    "execution_mode": row["execution_mode"],
+                    "base_head": row["base_head"],
+                    "worktree_fp": row["worktree_fp"],
+                    "contract_fp": row["contract_fp"],
+                    "status": row["status"],
+                    "started_at": row["started_at"],
+                    "finished_at": row["finished_at"],
+                    "metadata": json.loads(row["metadata_json"] or "{}"),
+                }
+                for row in reversed(wave_rows)
+            ],
+            "events": [self._event_row(row) for row in reversed(event_rows)],
+            "proofs": [self._proof_row(row) for row in reversed(proof_rows)],
+            "delegations": [self._delegation_row(row) for row in reversed(delegation_rows)],
+            "counts": {
+                "events": int(counts[0] or 0) if counts else 0,
+                "waves": int(counts[1] or 0) if counts else 0,
+                "checkpoints": int(counts[2] or 0) if counts else 0,
+            },
+            "latest_material_event_at": str(latest_material[0] or "") if latest_material else "",
+        }
 
     def record_usage_event(
         self,
@@ -3340,6 +3418,15 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
             ).fetchone()
         return self._controller_lease_row(row) if row else None
 
+    def peek_controller_lease(self, run_id: str) -> dict[str, Any] | None:
+        """Read current controller ownership without persisting lease maintenance."""
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM controller_leases WHERE run_id=?",
+                (_bounded_text(run_id, 256),),
+            ).fetchone()
+        return self._controller_lease_row(row) if row else None
+
     def acquire_controller_lease(
         self,
         *,
@@ -4738,6 +4825,20 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
         if not row:
             return None
         return self.get_run(str(row["run_id"]))
+
+    def peek_current_active_run(self, *, task_id: str = "") -> dict[str, Any] | None:
+        """Read the newest active run without triggering lease maintenance."""
+        with self._lock, self._connect() as connection:
+            if task_id:
+                row = connection.execute(
+                    "SELECT * FROM runs WHERE task_id=? AND status='active' ORDER BY started_at DESC LIMIT 1",
+                    (_bounded_text(task_id, 256),),
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    "SELECT * FROM runs WHERE status='active' ORDER BY started_at DESC LIMIT 1"
+                ).fetchone()
+        return self._run_row(row) if row else None
 
     def _stale_active_run_candidates(
         self,

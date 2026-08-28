@@ -1,0 +1,77 @@
+[
+  {
+    "version": 2,
+    "task_id": "73703ce999fc4180a7e7b8cf291402a9",
+    "orchestration": {
+      "run_id": "b045d5a133874908aa6f4eec2703c9c6",
+      "wave_id": "ed22e7fe9aa14164b461900a6a8ae238",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+      "worktree_fp": "de1fc3e100e7b6d9565cd03a9dbf8bed652c07f7c0750b0610ba9dd7f92eabf9",
+      "contract_fp": ""
+    },
+    "objective": "Close the existing Electron Dashboard/UI lag and dishonest metrics defect on the current dirty worktree without reverting unrelated concurrent work. Do not rediscover the root cause from scratch. Audit the already-present A1 live-state changes and the partially-present A2 analytics endpoint, then localize the smallest remaining coherent A2/A3/A4 patch. Required end state: fast Overview polling never calls full orchestration; live path is read-only and bounded with no reconciliation/full chain verification/history scans; analytics has a dedicated endpoint scoped by requested window and avoids accepted-run N+1 work; Electron exposes dedicated dashboard analytics IPC; Control Center is the sole Overview polling timer owner and publishes mcp:overview-pulse; Dashboard consumes pulses, refreshes analytics independently at about 30s, owns no recursive general polling loop, precomputes lane/controller windows once per breakdown, chart listeners do not accumulate, and fabricated latency/trend values are removed or replaced with measured/derived values or em dash. Preserve unknown_not_zero semantics. Do not touch .coding-tools/ledger.sqlite3 manually, do not reset/revert concurrent work, do not restart/push/release.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T09:55:27.892Z",
+    "updated_at": "2026-08-28T09:55:45.458Z",
+    "events": [
+      {
+        "time": "2026-08-28T09:55:27.893Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Close the existing Electron Dashboard/UI lag and dishonest metrics defect on the current dirty worktree without reverting unrelated concurrent work. Do not rediscover the root cause from scratch. Audit the already-present A1 live-state changes and the partially-present A2 analytics endpoint, then localize the smallest remaining coherent A2/A3/A4 patch. Required end state: fast Overview polling never calls full orchestration; live path is read-only and bounded with no reconciliation/full chain verification/history scans; analytics has a dedicated endpoint scoped by requested window and avoids accepted-run N+1 work; Electron exposes dedicated dashboard analytics IPC; Control Center is the sole Overview polling timer owner and publishes mcp:overview-pulse; Dashboard consumes pulses, refreshes analytics independently at about 30s, owns no recursive general polling loop, precomputes lane/controller windows once per breakdown, chart listeners do not accumulate, and fabricated latency/trend values are removed or replaced with measured/derived values or em dash. Preserve unknown_not_zero semantics. Do not touch .coding-tools/ledger.sqlite3 manually, do not reset/revert concurrent work, do not restart/push/release."
+        }
+      },
+      {
+        "time": "2026-08-28T09:55:28.808Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T09:55:31.374Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T09:55:31.527Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-28T09:55:45.458Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T09:57:20.138Z",
+    "archive_reason": "superseded"
+  }
+]

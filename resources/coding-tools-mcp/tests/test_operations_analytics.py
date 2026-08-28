@@ -56,6 +56,12 @@ class OperationsAnalyticsTests(unittest.TestCase):
             ledger.finish_run(aborted, status="aborted")
             self._set_times(ledger, aborted, "2026-08-19T07:40:00Z", "2026-08-19T07:41:00Z")
 
+            def unexpected_n_plus_one(*_args, **_kwargs):
+                raise AssertionError("operations analytics must use fixed-window batch evidence")
+
+            ledger.accepted_result_economics = unexpected_n_plus_one
+            ledger.accepted_result_evaluation = unexpected_n_plus_one
+            ledger.list_waves = unexpected_n_plus_one
             result = operations_analytics(ledger, performance={"run_metrics": {first: {"tool_calls": 7}}}, days=7, now="2026-08-19T08:00:00Z")
             self.assertEqual(result["measurement"], "accepted_result_operations_v1")
             self.assertEqual(result["missing_measurement_policy"], "unknown_not_zero")

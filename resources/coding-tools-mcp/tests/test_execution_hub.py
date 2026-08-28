@@ -143,6 +143,15 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         finally:
             connection.close()
 
+    def get_dashboard_analytics(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("GET", "/__control/orchestration/analytics", headers={"Authorization": f"Bearer {self.TOKEN}"})
+            response = connection.getresponse()
+            return response.status, json.loads(response.read().decode("utf-8"))
+        finally:
+            connection.close()
+
     def test_task_list_uses_the_canonical_orchestration_ledger_not_task_state_projection(self) -> None:
         self.runtime.task_state.update({
             "objective": "projection-only stale objective",
@@ -172,11 +181,29 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         original_flight = ledger.flight_recorder
         original_export = ledger.export_summary
         original_operations = mcp_http_handler_module.operations_analytics
+        original_stale_reconcile = self.runtime._maybe_reconcile_stale_orchestration
+        original_projection_reconcile = self.runtime._reconcile_task_orchestration_projection
+        original_verify = ledger.verify_chain
+        original_list_waves = ledger.list_waves
+        original_list_events = ledger.list_events
+        original_list_proofs = ledger.list_proofs
+        original_list_checkpoints = ledger.list_checkpoints
+        original_controller = ledger.get_controller_lease
+        original_current_active = ledger.current_active_run
         ledger.usage_analytics = unexpected_heavy_call
         ledger.routing_evidence = unexpected_heavy_call
         ledger.flight_recorder = unexpected_heavy_call
         ledger.export_summary = unexpected_heavy_call
         mcp_http_handler_module.operations_analytics = unexpected_heavy_call
+        self.runtime._maybe_reconcile_stale_orchestration = unexpected_heavy_call
+        self.runtime._reconcile_task_orchestration_projection = unexpected_heavy_call
+        ledger.verify_chain = unexpected_heavy_call
+        ledger.list_waves = unexpected_heavy_call
+        ledger.list_events = unexpected_heavy_call
+        ledger.list_proofs = unexpected_heavy_call
+        ledger.list_checkpoints = unexpected_heavy_call
+        ledger.get_controller_lease = unexpected_heavy_call
+        ledger.current_active_run = unexpected_heavy_call
         try:
             status, body = self.get_live_snapshot()
         finally:
@@ -185,9 +212,19 @@ class ExecutionHubHTTPTests(unittest.TestCase):
             ledger.flight_recorder = original_flight
             ledger.export_summary = original_export
             mcp_http_handler_module.operations_analytics = original_operations
+            self.runtime._maybe_reconcile_stale_orchestration = original_stale_reconcile
+            self.runtime._reconcile_task_orchestration_projection = original_projection_reconcile
+            ledger.verify_chain = original_verify
+            ledger.list_waves = original_list_waves
+            ledger.list_events = original_list_events
+            ledger.list_proofs = original_list_proofs
+            ledger.list_checkpoints = original_list_checkpoints
+            ledger.get_controller_lease = original_controller
+            ledger.current_active_run = original_current_active
 
         self.assertEqual(status, 200, body)
         self.assertEqual(body["snapshot_scope"], "live_control")
+        self.assertEqual(body["integrity"]["code"], "UNVERIFIED_ON_LIVE_PATH")
         for key in ("task", "run", "waves", "events", "proofs", "delegations", "runtime_activity", "clients", "authority", "continuity", "provider_traffic"):
             self.assertIn(key, body)
         self.assertIn("automatic_routing", body["provider_traffic"])
@@ -199,6 +236,17 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertIn("usage_analytics", full)
         self.assertIn("operations_analytics", full)
         self.assertIn("routing_evidence", full)
+
+    def test_dashboard_analytics_isolated_from_live_control_polling(self) -> None:
+        status, body = self.get_dashboard_analytics()
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body["schema_version"], 1)
+        self.assertEqual(body["snapshot_scope"], "dashboard_analytics")
+        self.assertTrue(body["content_free"])
+        self.assertIn("usage_analytics", body)
+        self.assertIn("operations_analytics", body)
+        self.assertNotIn("task", body)
+        self.assertNotIn("events", body)
 
     def structured(self, body):
         self.assertNotIn("error", body, body)

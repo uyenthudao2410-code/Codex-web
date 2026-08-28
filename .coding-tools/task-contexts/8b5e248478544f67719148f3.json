@@ -1,0 +1,141 @@
+{
+  "version": 2,
+  "task_id": "acfaf119c6224346b0fa3c55600b4e21",
+  "orchestration": {
+    "run_id": "460832ddc81d4a188cb7616677ee50cb",
+    "wave_id": "fbce7546c4fe4c458cc589e94e980938",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+    "worktree_fp": "7b5c665b05ecb7c417a41c0ccc7046fbcc66c1aca784a0c8ef9f1b31d86ef3b4",
+    "contract_fp": ""
+  },
+  "objective": "Final read-only localization for the UI lag/dashboard metrics diagnosis. Do not mutate or restart. Inspect the exact MCP HTTP orchestration snapshot builder and analytics functions used by GET /__control/orchestration and /live. Quantify from source which full-snapshot components hit the orchestration ledger/performance projection, whether accepted-result operations/usage/events/history are bounded, and which work is skipped by live mode. Also inspect the accepted prior run that introduced /live to establish what was fixed versus what remained. Finally flag renderer-side progressive-cost defects already visible in dashboard.js, especially event-listener accumulation and per-record recomputation. Return concise exact evidence and a closure-oriented repair scope.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "4f3ac2412049936db178623ba81e552a4334c177f5a68cceb2a72263dfe6ea4d"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-460832ddc81d4a188cb7616677ee50cb\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-460832ddc81d4a188cb7616677ee50cb\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "460832ddc81d4a188cb7616677ee50cb",
+      "wave_id": "fbce7546c4fe4c458cc589e94e980938",
+      "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+      "worktree_fp": "7b5c665b05ecb7c417a41c0ccc7046fbcc66c1aca784a0c8ef9f1b31d86ef3b4",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Final read-only localization for the UI lag/dashboard metrics diagnosis. Do not mutate or restart. Inspect the exact MCP HTTP orchestration snapshot builder and analytics functions used by GET /__control/orchestration and /live. Quantify from source which full-snapshot components hit the orchestration ledger/performance projection, whether accepted-result operations/usage/events/history are bounded, and which work is skipped by live mode. Also inspect the accepted prior run that introduced /live to establish what was fixed versus what remained. Finally flag renderer-side progressive-cost defects already visible in dashboard.js, especially event-listener accumulation and per-record recomputation. Return concise exact evidence and a closure-oriented repair scope.",
+        "objective_revision": 1,
+        "objective_sha256": "78c27c717c5895764abc2c68ecc68ff9aa0a86d93ed52c595823e80c5d92167d",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "914395b333f76f85a3b3220e7d9f5fc6093c3c5a3e595c5afc8700495acc90c0",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-08-28T08:06:34.263Z",
+  "updated_at": "2026-08-28T08:07:44.698Z",
+  "events": [
+    {
+      "time": "2026-08-28T08:06:34.263Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-28T08:06:35.315Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T08:06:37.632Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T08:06:37.643Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-28T08:07:44.696Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "914395b333f76f85a3b3220e7d9f5fc6093c3c5a3e595c5afc8700495acc90c0"
+      }
+    }
+  ]
+}

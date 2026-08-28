@@ -237,7 +237,7 @@ class ExecToolsMixin:
         if self.landlock_enabled():
             try:
                 landlock_fd = open_landlock_ruleset(
-                    self.workspace.root,
+                    self._current_request_workspace_root(),
                     guard_allow_roots(),
                     write_roots=self.landlock_write_roots(),
                 )
@@ -486,7 +486,16 @@ class ExecToolsMixin:
             )
 
         def runner(command: str, workdir: Path, timeout_seconds: int) -> dict[str, Any]:
-            relative = workdir.relative_to(self.workspace.root).as_posix() or "."
+            request_root = self._current_request_workspace_root().resolve(strict=False)
+            try:
+                relative = workdir.resolve(strict=False).relative_to(request_root).as_posix() or "."
+            except ValueError as exc:
+                raise ToolFailure(
+                    "ORCHESTRATION_WORKSPACE_MISMATCH",
+                    "Build verification workdir does not belong to the request-bound workspace.",
+                    category="security",
+                    retryable=False,
+                ) from exc
             started = time.time()
             exec_args: dict[str, Any] = {
                 "cmd": command,
@@ -643,7 +652,7 @@ class ExecToolsMixin:
         ):
             raise escape_failure()
         try:
-            self.workspace.resolve_existing(normalized)
+            self.resolve_existing(normalized)
         except OSError as exc:
             raise ToolFailure(
                 "INVALID_ARGUMENT",
@@ -654,7 +663,7 @@ class ExecToolsMixin:
         except ToolFailure as exc:
             if exc.code == "NOT_FOUND":
                 try:
-                    self.workspace.resolve_for_write(normalized)
+                    self.resolve_for_write(normalized)
                 except ToolFailure as write_exc:
                     if write_exc.code == "NOT_FOUND":
                         return

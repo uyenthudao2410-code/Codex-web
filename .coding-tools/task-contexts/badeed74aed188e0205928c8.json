@@ -1,0 +1,171 @@
+{
+  "version": 2,
+  "task_id": "7e51f6a44bde4cd898100186e6246f23",
+  "orchestration": {
+    "run_id": "a33c2cc019a14c49838e24978c8cb426",
+    "wave_id": "9064fcc71e594f188de0ac743eec2587",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+    "worktree_fp": "7b5c665b05ecb7c417a41c0ccc7046fbcc66c1aca784a0c8ef9f1b31d86ef3b4",
+    "contract_fp": ""
+  },
+  "objective": "Read-only audit of the user's activation-recovery report against the current E:\\DEV\\Codex-web workspace. Verify whether the described root cause and implemented behavior are actually present in source/tests, identify any inaccurate or overstated claims, and assess whether the report can be considered technically complete now that connector compatibility bootstrap has been exercised. Do not modify files, do not start commands, do not restart runtime, do not create or mutate a write wave, and do not accept/reject anything.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "7iGAngfBFk2Gi4XZarBRqUPd",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 5875,
+    "finished_at": "2026-08-28T07:11:37.912Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 10,
+        "head_hash": "930559b94df5802d43c7ff29ddfbd0f1dc84a2d8497c2ab20206a29efcf9e533"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a33c2cc019a14c49838e24978c8cb426\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a33c2cc019a14c49838e24978c8cb426\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "a33c2cc019a14c49838e24978c8cb426",
+      "wave_id": "9064fcc71e594f188de0ac743eec2587",
+      "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+      "worktree_fp": "7b5c665b05ecb7c417a41c0ccc7046fbcc66c1aca784a0c8ef9f1b31d86ef3b4",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only audit of the user's activation-recovery report against the current E:\\DEV\\Codex-web workspace. Verify whether the described root cause and implemented behavior are actually present in source/tests, identify any inaccurate or overstated claims, and assess whether the report can be considered technically complete now that connector compatibility bootstrap has been exercised. Do not modify files, do not start commands, do not restart runtime, do not create or mutate a write wave, and do not accept/reject anything.",
+        "objective_revision": 1,
+        "objective_sha256": "1267ec68219a9c071b105e093f4700ec59f99d148888e3357ca5820459ee51f8",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "4c2d47b16c729f2aef47e362412073739ba289684afecaa9128facdd16dac3b3",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-08-28T07:10:58.152Z",
+  "updated_at": "2026-08-28T07:15:44.927Z",
+  "events": [
+    {
+      "time": "2026-08-28T07:10:58.152Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only audit of the user's activation-recovery report against the current E:\\DEV\\Codex-web workspace. Verify whether the described root cause and implemented behavior are actually present in source/tests, identify any inaccurate or overstated claims, and assess whether the report can be considered technically complete now that connector compatibility bootstrap has been exercised. Do not modify files, do not start commands, do not restart runtime, do not create or mutate a write wave, and do not accept/reject anything."
+      }
+    },
+    {
+      "time": "2026-08-28T07:10:59.456Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T07:11:01.307Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T07:11:01.316Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-28T07:11:32.012Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "7iGAngfBFk2Gi4XZarBRqUPd"
+      }
+    },
+    {
+      "time": "2026-08-28T07:11:37.912Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T07:15:27.017Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "4c2d47b16c729f2aef47e362412073739ba289684afecaa9128facdd16dac3b3"
+      }
+    },
+    {
+      "time": "2026-08-28T07:15:44.189Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

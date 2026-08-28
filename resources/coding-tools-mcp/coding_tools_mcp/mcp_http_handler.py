@@ -282,6 +282,23 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 head_only=head_only,
             )
             return
+        if normalized == "/__control/orchestration/analytics":
+            if not self.is_authorized():
+                self.send_unauthorized(head_only=head_only)
+                return
+            ledger = self.runtime.orchestration_ledger
+            self.send_json({
+                "schema_version": 1,
+                "snapshot_scope": "dashboard_analytics",
+                "usage_analytics": ledger.usage_analytics(days=7),
+                "operations_analytics": operations_analytics(
+                    ledger,
+                    performance=self.runtime.performance_trace.get(),
+                    days=7,
+                ),
+                "content_free": True,
+            }, head_only=head_only)
+            return
         if normalized == "/__control/orchestration":
             if not self.is_authorized():
                 self.send_unauthorized(head_only=head_only)

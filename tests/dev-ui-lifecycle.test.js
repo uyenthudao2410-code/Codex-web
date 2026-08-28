@@ -9,7 +9,11 @@ const {
   runLifecycle,
   uiObservation,
   unavailableObservation,
-  createRuntimeDependencies
+  createRuntimeDependencies,
+  refreshLifecycle,
+  classifyRefreshEpoch,
+  previousRefreshIdentitiesFromRecord,
+  readPostMutationRefreshEpoch
 } = require('../scripts/dev-ui-lifecycle');
 const { RecoveryHost } = require('../electron/services/recoveryHost');
 
@@ -105,8 +109,90 @@ function harness(initial) {
       sleep: async () => {},
       output: (line) => lines.push(line),
       timeoutMs: 1000,
+      runtimeReadyTimeoutMs: 0,
+      runtimeReadiness: async () => ({
+        ready: true,
+        reason: 'ready',
+        mcpRunning: true,
+        nativeAlive: true,
+        tunnelRunning: true
+      }),
       pollMs: 1
     }
+  };
+}
+
+function activeRefreshRecord({
+  epoch = 'full-clean-refresh-reconcile-epoch-0001',
+  operation = 'full-clean-refresh-reconcile-operation-0001',
+  state = 'VERIFYING',
+  expiresAtUnixMs = Date.now() + 60_000,
+  overrides = {}
+} = {}) {
+  return {
+    operation_id: operation,
+    activation_epoch_id: epoch,
+    mode: 'full_clean_activation',
+    state,
+    admission_state: state === 'READY' ? 'OPEN' : 'CLOSED',
+    expires_at_unix_ms: expiresAtUnixMs,
+    source_checkpoint: null,
+    metadata: { refresh: true },
+    request_intent: {
+      operation_id: operation,
+      mode: 'full_clean_activation',
+      source_checkpoint: null,
+      metadata: { refresh: true }
+    },
+    component_evidence: {
+      recovery_host: { instance_id: 'old-recovery-host-0001', pid: 41001 },
+      electron_ui: { instance_id: 'old-electron-ui-0001', pid: 42001, process_start_token: 'old-ui-token-0001' },
+      coding_mcp: {
+        process_instance_id: 'old-coding-mcp-process-0001',
+        server_instance_id: 'old-coding-mcp-server-0001',
+        supervisor_instance_id: 'old-coding-mcp-supervisor-0001',
+        pid: 44001
+      },
+      coding_tunnel: { instance_id: 'old-coding-tunnel-0001', pid: 44002 },
+      recovery_mcp: { instance_id: 'old-recovery-mcp-0001', pid: 44003 },
+      recovery_tunnel: { instance_id: 'old-recovery-tunnel-0001', pid: 44004 }
+    },
+    verification: {
+      activation_epoch_id: epoch,
+      host_pid: 45000,
+      process_identity_verified: true,
+      process_identity_changed: true,
+      tunnel_identity_changed: true,
+      tunnel_health_verified: true,
+      recovery_host_revision_matches: true,
+      recovery_host_epoch_matches: true,
+      ui_verified: true,
+      ui_instance_id: 'new-electron-ui-0001',
+      recovery_mcp_pid: 45003,
+      recovery_tunnel_pid: 45004,
+      recovery_plane_identity_changed: true,
+      recovery_plane_epoch_matches: true,
+      recovery_plane_verified: true,
+      projection_rebuild_verified: true,
+      workspace_matches: true,
+      device_matches: true,
+      revision_matches: true,
+      epoch_matches: true,
+      connector_validation: {
+        valid: false,
+        reasons: ['CURRENT_CONTRACT_NOT_REDISCOVERED']
+      },
+      runtime: {
+        mcpRunning: true,
+        tunnelRunning: true,
+        nativeAlive: true,
+        fullyReady: false,
+        connectorContractState: 'CHANGED_NEEDS_DISCOVERY',
+        activationEpoch: { activation_epoch_id: epoch, admission_open: false },
+        codeRevision: { codingMcp: { running_revision: REVISION, disk_revision: REVISION } }
+      }
+    },
+    ...overrides
   };
 }
 
@@ -173,6 +259,70 @@ test('dev focuses an exact current UI and reports process plus revision postflig
   assert.deepEqual(fixture.calls, ['signal:focus:electron-ui-instance-0001']);
   assert.match(fixture.lines.at(-1), /DEV_UI CURRENT action=start pid=42001/);
   assert.match(fixture.lines.at(-1), new RegExp(`running_revision=${REVISION} disk_revision=${REVISION}`));
+  assert.match(fixture.lines.at(-1), /runtime=ready mcp_running=true native_alive=true tunnel_running=true/);
+});
+
+test('dev reports UI_CURRENT and fails typed when Recovery Host backend is not ready', async () => {
+  const fixture = harness(observation('CURRENT'));
+  fixture.deps.runtimeReadiness = async () => ({
+    ready: false,
+    reason: 'recovery_host_not_ready',
+    error_code: 'RECOVERY_BOOTSTRAP_IN_PROGRESS',
+    mcpRunning: false,
+    nativeAlive: false,
+    tunnelRunning: false
+  });
+
+  await assert.rejects(runLifecycle('start', fixture.deps), (error) => {
+    assert.equal(error.code, 'DEV_UI_RUNTIME_UNAVAILABLE');
+    assert.equal(error.details.reason, 'recovery_host_not_ready');
+    return true;
+  });
+
+  assert.match(fixture.lines.at(-2), /DEV_UI UI_CURRENT action=start .*runtime=unavailable reason=recovery_host_not_ready/);
+  assert.match(fixture.lines.at(-1), /DEV_UI RUNTIME_UNAVAILABLE action=start reason=recovery_host_not_ready error_code=RECOVERY_BOOTSTRAP_IN_PROGRESS/);
+  assert.equal(fixture.lines.some((line) => line.startsWith('DEV_UI CURRENT ')), false);
+});
+
+test('refresh tolerates only a bounded transient epoch-store read failure after the supported process mutation', async () => {
+  const epoch = activeRefreshRecord();
+  let reads = 0;
+  let sleeps = 0;
+  const classified = await readPostMutationRefreshEpoch({
+    activationRecordStrict: () => {
+      reads += 1;
+      if (reads === 1) {
+        throw Object.assign(new Error('backup projection is being replaced'), {
+          code: 'ACTIVATION_EPOCH_STORE_INVALID'
+        });
+      }
+      return epoch;
+    },
+    sleep: async () => { sleeps += 1; },
+    pollMs: 0,
+    epochReadRetryTimeoutMs: 100
+  }, epoch.operation_id, 'locating_refresh_epoch');
+
+  assert.equal(classified.kind, 'active');
+  assert.equal(classified.operationId, epoch.operation_id);
+  assert.equal(reads, 2);
+  assert.equal(sleeps, 1);
+  await assert.rejects(readPostMutationRefreshEpoch({
+    activationRecordStrict: () => {
+      throw Object.assign(new Error('persistent corruption'), {
+        code: 'ACTIVATION_EPOCH_STORE_INVALID'
+      });
+    },
+    sleep: async () => {},
+    pollMs: 0,
+    epochReadRetryTimeoutMs: 0
+  }, epoch.operation_id, 'locating_refresh_epoch'), (error) => {
+    assert.equal(error.code, 'DEV_UI_REFRESH_EPOCH_UNCERTAIN');
+    assert.equal(error.details.operation_id, epoch.operation_id);
+    assert.equal(error.details.phase, 'locating_refresh_epoch');
+    assert.equal(error.details.cause_code, 'ACTIVATION_EPOCH_STORE_INVALID');
+    return true;
+  });
 });
 
 test('dev:status reports lifecycle state without signaling or activating the UI', async () => {
@@ -595,6 +745,301 @@ test('npm start bootstraps a missing Recovery Host and then performs the same fu
   assert.deepEqual(fixture.calls, ['ensure-refresh-host', 'full-clean-refresh']);
   assert.match(fixture.lines[0], /DEV_UI REFRESH bootstrap=RecoveryHost source=current-checkout/);
   assert.match(fixture.lines.at(-1), /DEV_UI REFRESHED .*activation=VERIFYING .*admission=closed fully_ready=false connector=pending/);
+});
+
+test('refresh reconciles an unexpired durable epoch without invoking a second full-clean operation', async () => {
+  const fixture = harness(observation('CURRENT', 'new-electron-ui-0001', 45001));
+  const epoch = activeRefreshRecord();
+  const operationCalls = [];
+  fixture.current.descriptor = {
+    ...fixture.current.descriptor,
+    instance_id: 'new-recovery-host-0001',
+    activation_epoch_id: epoch.activation_epoch_id,
+    owner_pid: 45000
+  };
+  fixture.deps.activationRecord = () => epoch;
+  fixture.deps.activationRecordStrict = () => epoch;
+  fixture.deps.refresh = async () => {
+    operationCalls.push('refresh');
+    throw new Error('must not start a competing refresh');
+  };
+  fixture.deps.descriptor = () => fixture.current.descriptor;
+  fixture.deps.runtimeState = () => ({
+    nativePid: 45001,
+    tunnelPid: 45002,
+    nativeInstanceId: 'new-coding-mcp-supervisor-0001',
+    tunnelInstanceId: 'new-coding-tunnel-0001',
+    nativeActivationEpochId: epoch.activation_epoch_id,
+    tunnelActivationEpochId: epoch.activation_epoch_id
+  });
+  fixture.deps.processAlive = () => true;
+
+  const result = await refreshLifecycle(fixture.deps);
+  assert.equal(result.epochId, epoch.activation_epoch_id);
+  assert.deepEqual(operationCalls, []);
+  assert.match(fixture.lines.find((line) => line.startsWith('DEV_UI REFRESH RECONCILE')),
+    /action=full_clean epoch=full-clean-refresh-reconcile-epoch-0001 operation=full-clean-refresh-reconcile-operation-0001/);
+});
+
+test('refresh fails closed when an active epoch changes before mutation', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const first = activeRefreshRecord();
+  const changed = activeRefreshRecord({
+    epoch: 'full-clean-refresh-reconcile-epoch-0002',
+    operation: 'full-clean-refresh-reconcile-operation-0002'
+  });
+  let reads = 0;
+  fixture.deps.activationRecordStrict = () => (++reads === 1 ? first : changed);
+  fixture.deps.refresh = async () => { throw new Error('must not refresh after epoch change'); };
+  await assert.rejects(refreshLifecycle(fixture.deps), { code: 'DEV_UI_REFRESH_EPOCH_CHANGED' });
+});
+
+test('refresh sends an expired validated process-refresh record through the official bootstrap instead of reconciling it', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const expired = activeRefreshRecord({ expiresAtUnixMs: Date.now() - 1 });
+  const refreshedEpoch = 'full-clean-refresh-retried-epoch-0001';
+  const refreshedOperation = 'full-clean-refresh-retried-operation-0001';
+  const refreshCalls = [];
+  let strictReads = 0;
+  fixture.deps.activationRecordStrict = () => (++strictReads <= 2 ? expired : null);
+  fixture.deps.activationRecord = () => null;
+  fixture.deps.refresh = async () => {
+    refreshCalls.push('refresh');
+    fixture.current = observation('CURRENT', 'retried-electron-ui-instance-001', 46001);
+    fixture.current.descriptor = {
+      ...fixture.current.descriptor,
+      owner_pid: 46000,
+      instance_id: 'retried-recovery-host-instance-01',
+      activation_epoch_id: refreshedEpoch
+    };
+    return {
+      operationId: refreshedOperation,
+      result: { activation_epoch_id: refreshedEpoch }
+    };
+  };
+  fixture.deps.descriptor = () => fixture.current.descriptor;
+
+  await assert.rejects(refreshLifecycle(fixture.deps), { code: 'DEV_UI_REFRESH_POSTFLIGHT_FAILED' });
+  assert.deepEqual(refreshCalls, ['refresh']);
+  assert.match(fixture.lines.find((line) => line.startsWith('DEV_UI REFRESH ')), /action=full_clean/);
+  assert.equal(fixture.lines.some((line) => line.startsWith('DEV_UI REFRESH RECONCILE')), false);
+});
+
+test('refresh ignores a predecessor FAILED epoch while locating the replacement operation', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const requestedOperationId = 'full-clean-refresh-new-operation-0001';
+  const newEpochId = 'activation-new-refresh-epoch-0001';
+  const predecessor = activeRefreshRecord({
+    epoch: 'activation-predecessor-failed-0001',
+    operation: 'full-clean-refresh-predecessor-0001',
+    state: 'FAILED',
+    overrides: {
+      admission_state: 'CLOSED',
+      failed_at_unix_ms: Date.now(),
+      error: { code: 'ACTIVATION_REQUEST_EXPIRED', message: 'predecessor expired' }
+    }
+  });
+  const active = activeRefreshRecord({
+    epoch: newEpochId,
+    operation: requestedOperationId,
+    state: 'VERIFYING'
+  });
+  const observedOperations = [];
+  let strictReads = 0;
+  fixture.deps.activationRecordStrict = () => {
+    strictReads += 1;
+    const record = strictReads <= 3 ? predecessor : active;
+    observedOperations.push(record.operation_id);
+    return record;
+  };
+  fixture.deps.activationRecord = () => active;
+  let refreshCalls = 0;
+  fixture.deps.refresh = async () => {
+    refreshCalls += 1;
+    return { operationId: requestedOperationId, result: {} };
+  };
+  const replacementDescriptor = {
+    ...fixture.current.descriptor,
+    owner_pid: 45000,
+    instance_id: 'replacement-host-for-new-operation-01',
+    activation_epoch_id: newEpochId
+  };
+  let descriptorReads = 0;
+  fixture.deps.descriptor = () => (++descriptorReads === 1
+    ? fixture.current.descriptor
+    : replacementDescriptor);
+  const oldState = {
+    nativePid: 44001,
+    tunnelPid: 44002,
+    nativeInstanceId: 'old-mcp-supervisor-instance-01',
+    tunnelInstanceId: 'old-coding-tunnel-instance-01'
+  };
+  const replacementState = {
+    nativePid: 45001,
+    tunnelPid: 45002,
+    nativeInstanceId: 'replacement-mcp-instance-0001',
+    tunnelInstanceId: 'replacement-tunnel-instance-01',
+    nativeActivationEpochId: newEpochId,
+    tunnelActivationEpochId: newEpochId
+  };
+  let runtimeStateReads = 0;
+  fixture.deps.runtimeState = () => (++runtimeStateReads === 1 ? oldState : replacementState);
+  fixture.deps.recoveryPlaneState = () => ({
+    recoveryMcpPid: 44003,
+    recoveryTunnelPid: 44004,
+    recoveryMcpInstanceId: 'old-recovery-mcp-instance-001',
+    recoveryTunnelInstanceId: 'old-recovery-tunnel-instance-1'
+  });
+  fixture.deps.processAlive = () => true;
+
+  const result = await refreshLifecycle(fixture.deps);
+  assert.equal(result.epochId, newEpochId);
+  assert.equal(result.refresh.operationId, requestedOperationId);
+  assert.equal(result.descriptor.instance_id, replacementDescriptor.instance_id);
+  assert.equal(result.ui.instanceId, 'new-electron-ui-0001');
+  assert.equal(result.readiness.componentCensusVerified, true);
+  assert.equal(result.readiness.freshPids, true);
+  assert.equal(refreshCalls, 1, 'the predecessor observation must not start a second refresh request');
+  assert.deepEqual(observedOperations, [
+    predecessor.operation_id,
+    predecessor.operation_id,
+    predecessor.operation_id,
+    requestedOperationId
+  ]);
+});
+
+test('refresh still throws a FAILED epoch belonging to the requested replacement operation', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const requestedOperationId = 'full-clean-refresh-failed-operation-0001';
+  const predecessor = activeRefreshRecord({
+    epoch: 'activation-prior-failed-epoch-0001',
+    operation: 'full-clean-refresh-prior-operation-0001',
+    state: 'FAILED',
+    overrides: {
+      admission_state: 'CLOSED',
+      failed_at_unix_ms: Date.now(),
+      error: { code: 'ACTIVATION_REQUEST_EXPIRED', message: 'prior operation expired' }
+    }
+  });
+  const requestedFailure = activeRefreshRecord({
+    epoch: 'activation-requested-failed-epoch-0001',
+    operation: requestedOperationId,
+    state: 'FAILED',
+    overrides: {
+      admission_state: 'CLOSED',
+      failed_at_unix_ms: Date.now(),
+      error: { code: 'REQUESTED_REFRESH_FAILED', message: 'requested replacement failed' }
+    }
+  });
+  let strictReads = 0;
+  fixture.deps.activationRecordStrict = () => (++strictReads <= 2 ? predecessor : requestedFailure);
+  let refreshCalls = 0;
+  fixture.deps.refresh = async () => {
+    refreshCalls += 1;
+    return { operationId: requestedOperationId, result: {} };
+  };
+
+  await assert.rejects(refreshLifecycle(fixture.deps), (error) => {
+    assert.equal(error.code, 'REQUESTED_REFRESH_FAILED');
+    assert.equal(error.message, 'requested replacement failed');
+    assert.equal(error.details.operation_id, requestedOperationId);
+    return true;
+  });
+  assert.equal(refreshCalls, 1);
+  assert.equal(strictReads, 3);
+});
+
+test('refresh fails closed when a reconciled durable epoch expires before mutation', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const originalNow = Date.now;
+  let now = 1_800_000_000_000;
+  const expiresAtUnixMs = now + 1_000;
+  const epoch = activeRefreshRecord({ expiresAtUnixMs });
+  let strictReads = 0;
+  let refreshCalls = 0;
+  fixture.deps.activationRecordStrict = () => {
+    strictReads += 1;
+    if (strictReads === 2) now = expiresAtUnixMs;
+    return epoch;
+  };
+  fixture.deps.refresh = async () => {
+    refreshCalls += 1;
+    throw new Error('must not refresh after reconciliation authority expires');
+  };
+  Date.now = () => now;
+  try {
+    await assert.rejects(refreshLifecycle(fixture.deps), (error) => {
+      assert.equal(error.code, 'ACTIVATION_REQUEST_EXPIRED');
+      assert.equal(error.details.activation_epoch_id, epoch.activation_epoch_id);
+      assert.equal(error.details.operation_id, epoch.operation_id);
+      assert.equal(error.details.expires_at_unix_ms, expiresAtUnixMs);
+      assert.equal(error.details.phase, 'preflight');
+      return true;
+    });
+  } finally {
+    Date.now = originalNow;
+  }
+  assert.equal(strictReads, 2);
+  assert.equal(refreshCalls, 0);
+});
+
+test('refresh epoch classification routes an expired validated refresh to official retry but leaves READY/open terminal records alone', () => {
+  const expired = activeRefreshRecord({ expiresAtUnixMs: Date.now() - 1 });
+  assert.equal(classifyRefreshEpoch(expired).kind, 'expired');
+  const ready = activeRefreshRecord({
+    state: 'READY',
+    expiresAtUnixMs: Date.now() - 60_000,
+    overrides: {
+      epoch_state: 'VERIFYING',
+      error: { code: 'ACTIVATION_REQUEST_EXPIRED', message: 'stale nested observation' }
+    }
+  });
+  assert.equal(classifyRefreshEpoch(ready).kind, 'terminal');
+  assert.equal(classifyRefreshEpoch(ready).state, 'READY');
+  assert.throws(() => previousRefreshIdentitiesFromRecord(activeRefreshRecord({
+    overrides: { component_evidence: null }
+  })), { code: 'DEV_UI_REFRESH_EPOCH_UNCERTAIN' });
+});
+
+test('refresh refuses to adopt an active non-refresh activation epoch', () => {
+  const nonRefresh = activeRefreshRecord({
+    overrides: {
+      mode: 'full_clean_activation',
+      metadata: { refresh: false },
+      request_intent: {
+        operation_id: 'full-clean-refresh-reconcile-operation-0001',
+        mode: 'full_clean_activation',
+        source_checkpoint: {
+          checkpoint_id: 'checkpoint-0000001',
+          run_id: 'run-00000001',
+          wave_id: 'wave-00000001',
+          proof_fingerprint: REVISION,
+          git_head: 'a'.repeat(40)
+        },
+        metadata: { refresh: false }
+      },
+      source_checkpoint: {
+        checkpoint_id: 'checkpoint-0000001',
+        run_id: 'run-00000001',
+        wave_id: 'wave-00000001',
+        proof_fingerprint: REVISION,
+        git_head: 'a'.repeat(40)
+      }
+    }
+  });
+  assert.throws(() => classifyRefreshEpoch(nonRefresh), { code: 'DEV_UI_REFRESH_EPOCH_CONFLICT' });
+  assert.throws(() => classifyRefreshEpoch({
+    ...nonRefresh,
+    mode: 'soft_recovery',
+    metadata: { refresh: true },
+    request_intent: {
+      operation_id: 'full-clean-refresh-reconcile-operation-0001',
+      mode: 'soft_recovery',
+      source_checkpoint: null,
+      metadata: { refresh: true }
+    },
+    source_checkpoint: null
+  }), { code: 'DEV_UI_REFRESH_EPOCH_CONFLICT' });
 });
 
 test('refresh dependency suppresses the persisted development supervisor before bootstrap', async () => {

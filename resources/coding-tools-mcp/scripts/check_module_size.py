@@ -24,6 +24,12 @@ DEFAULT_BUDGET = 1600
 
 ALLOWLIST: dict[str, tuple[int, str]] = {
     # (override budget, reason) — re-review whenever the reason drifts.
+    # These bounded increases cover the already-landed Revision-4 control and
+    # read-model bridges; they are explicit so future growth still fails closed.
+    "coordination.py": (1700, "Revision-4 PRL and task-control authority bridge"),
+    "mcp_http_handler.py": (1750, "MCP-2026 stateless context and typed transport envelope"),
+    "orchestration_ledger.py": (5300, "bounded live-run projection and acceptance telemetry"),
+    "solution_economics.py": (1700, "Revision-4 descriptive problem-resolution analytics"),
 }
 
 

@@ -41,7 +41,49 @@ const MAX_REFRESH_ACTIVATION_TTL_MS = 600_000;
 const DEFAULT_REFRESH_HOST_TIMEOUT_MS = 90_000;
 const MAX_REFRESH_HOST_TIMEOUT_MS = 120_000;
 const DEFAULT_POLL_MS = 250;
+const DEFAULT_RUNTIME_READY_TIMEOUT_MS = 45_000;
+const DEFAULT_EPOCH_READ_RETRY_TIMEOUT_MS = 5_000;
 const REFRESH_OPERATION_ID_PATTERN = /^full-clean-refresh-[A-Za-z0-9_-]{15,127}$/;
+// These are the non-terminal coordinator states that own a refresh
+// transaction.  A second `npm start` must reconcile one of these records
+// instead of forcing the old host down and attempting to create a competing
+// epoch.  Keep this list aligned with ActivationEpochStore's ACTIVE_STATES;
+// the local copy lets the lifecycle CLI fail closed even when its store
+// implementation is loaded through a different process/checkout.
+const REFRESH_ACTIVE_EPOCH_STATES = new Set([
+  'PREPARING',
+  'ADMISSION_CLOSED',
+  'STOPPING',
+  'FROZEN',
+  'HANDOFF',
+  'STARTING',
+  'VERIFYING',
+  'READY_COMMITTED'
+]);
+const REFRESH_TERMINAL_EPOCH_STATES = new Set(['READY', 'FAILED']);
+
+function isFullCleanRefreshEpoch(record) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return false;
+  const intent = record.request_intent;
+  if (!intent || typeof intent !== 'object' || Array.isArray(intent)) return false;
+  const mode = String(intent.mode || '').trim().toLowerCase();
+  const metadata = intent.metadata;
+  // `npm start` owns only the explicit process-refresh transaction.  A normal
+  // accepted-code full-clean activation uses the same durable epoch state
+  // machine, but its source checkpoint is a different authority and must not
+  // be adopted/reconciled by this lifecycle command.
+  return mode === 'full_clean_activation'
+    && metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    && metadata.refresh === true
+    && (intent.source_checkpoint === undefined
+      || intent.source_checkpoint === null
+      || intent.source_checkpoint === '')
+    && String(record.mode || '').trim().toLowerCase() === mode
+    && record.metadata?.refresh === true
+    && (record.source_checkpoint === undefined
+      || record.source_checkpoint === null
+      || record.source_checkpoint === '');
+}
 
 function lifecycleError(code, message, details = {}) {
   return Object.assign(new Error(message), { code, details });
@@ -139,6 +181,246 @@ function refreshOperationId(now = Date.now()) {
     throw lifecycleError('DEV_UI_REFRESH_OPERATION_INVALID', 'The full-system refresh operation identity is invalid.');
   }
   return value;
+}
+
+function refreshEpochState(record) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return '';
+  // Recovery Host's IPC projection uses `state=UPDATE_INCOMPLETE` and carries
+  // the durable coordinator state in `epoch_state`.  The raw store uses
+  // top-level `state`; prefer an explicit terminal top-level state so stale
+  // nested/projection observations can never mask durable FAILED or READY.
+  const normalize = (value) => String(value || '').trim().toUpperCase().replace(/[ -]+/g, '_');
+  const topLevel = normalize(record.state);
+  const explicit = normalize(record.epoch_state);
+  if (topLevel === 'FAILED' || topLevel === 'READY') return topLevel;
+  if (explicit) return explicit;
+  return topLevel;
+}
+
+function refreshEpochFailure(record, fallbackCode = 'DEV_UI_REFRESH_EPOCH_FAILED') {
+  const error = record?.error && typeof record.error === 'object' ? record.error : {};
+  const code = String(error.code || '').trim() || fallbackCode;
+  const message = String(error.message || '').trim()
+    || 'The durable activation epoch is failed and remains admission-closed.';
+  return lifecycleError(code, message, {
+    activation_epoch_id: String(record?.activation_epoch_id || '').trim() || null,
+    operation_id: String(record?.operation_id || '').trim() || null,
+    durable_error: error || null
+  });
+}
+
+/**
+ * Classify the current durable activation record for the refresh guard.
+ *
+ * `activationRecord()` intentionally remains a tolerant status fallback.  The
+ * refresh mutation path calls this classifier only through the strict reader
+ * so malformed/unreadable state cannot be mistaken for "no epoch".
+ */
+function classifyRefreshEpoch(record, now = Date.now()) {
+  if (record === null || record === undefined) {
+    return { kind: 'none', state: 'NONE', record: null };
+  }
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_UNCERTAIN',
+      'The durable activation epoch could not be classified safely.',
+      { reason: 'record_not_object' }
+    );
+  }
+  const state = refreshEpochState(record);
+  const epochId = String(record.activation_epoch_id || record.epoch_id || '').trim();
+  const operationId = String(record.operation_id || '').trim();
+
+  // READY is terminal only when the durable admission boundary is explicit.
+  // A stale nested projection/error must not turn a valid READY/open record
+  // into an expired active request.
+  if (REFRESH_TERMINAL_EPOCH_STATES.has(state)) {
+    if (state === 'FAILED') return { kind: 'terminal', state, epochId, operationId, record };
+    const admission = String(record.admission_state || '').trim().toUpperCase();
+    if (admission === 'OPEN') {
+      return {
+        kind: 'terminal',
+        state,
+        epochId,
+        operationId,
+        record
+      };
+    }
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_UNCERTAIN',
+      'The durable READY activation epoch has no explicit OPEN admission boundary.',
+      { activation_epoch_id: epochId || null, operation_id: operationId || null, admission_state: admission || null }
+    );
+  }
+  if (!REFRESH_ACTIVE_EPOCH_STATES.has(state)) {
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_UNCERTAIN',
+      `The durable activation epoch state is unknown: ${state || 'MISSING'}.`,
+      { activation_epoch_id: epochId || null, operation_id: operationId || null, state: state || null }
+    );
+  }
+  if (!epochId || !operationId) {
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_UNCERTAIN',
+      'An active durable activation epoch is missing its immutable identity.',
+      { activation_epoch_id: epochId || null, operation_id: operationId || null, state }
+    );
+  }
+  if (!isFullCleanRefreshEpoch(record)) {
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_CONFLICT',
+      'An active activation epoch belongs to a non-refresh operation; npm start will not adopt it as a process refresh.',
+      {
+        activation_epoch_id: epochId || null,
+        operation_id: operationId || null,
+        state,
+        mode: String(record.mode || '').trim() || null,
+        refresh: record.metadata?.refresh === true,
+        source_checkpoint_present: !(record.source_checkpoint === undefined
+          || record.source_checkpoint === null
+          || record.source_checkpoint === '')
+      }
+    );
+  }
+  const expiryCandidates = [
+    record.expires_at_unix_ms,
+    record.expiresAtUnixMs,
+    record.metadata?.expires_at_unix_ms,
+    record.metadata?.expiresAtUnixMs
+  ];
+  const rawExpiry = expiryCandidates.find((value) => value !== undefined && value !== null && value !== '');
+  const expiresAtUnixMs = Number(rawExpiry);
+  if (!Number.isFinite(expiresAtUnixMs) || expiresAtUnixMs <= 0) {
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_UNCERTAIN',
+      'An active durable activation epoch is missing a finite positive expiry.',
+      { activation_epoch_id: epochId, operation_id: operationId, state, expires_at_unix_ms: rawExpiry ?? null }
+    );
+  }
+  const nowMs = Number(now);
+  if (!Number.isFinite(nowMs)) {
+    throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', 'The lifecycle clock is unavailable while checking the active epoch.', {
+      activation_epoch_id: epochId,
+      operation_id: operationId,
+      state
+    });
+  }
+  if (expiresAtUnixMs <= nowMs) {
+    // Only an immutable, validated process-refresh intent reaches here.  Let
+    // the official current-checkout bootstrap terminalize that stale epoch and
+    // create a fresh operation; never reconcile or mutate it as still active.
+    return {
+      kind: 'expired',
+      state,
+      epochId,
+      operationId,
+      expiresAtUnixMs,
+      record
+    };
+  }
+  return {
+    kind: 'active',
+    state,
+    epochId,
+    operationId,
+    expiresAtUnixMs,
+    record
+  };
+}
+
+async function readStrictRefreshEpoch(deps) {
+  if (typeof deps?.activationRecordStrict !== 'function') return null;
+  let record;
+  try {
+    // The production reader is synchronous today, but awaiting here keeps the
+    // guard deterministic for a connector-backed test/store implementation.
+    record = await deps.activationRecordStrict();
+  } catch (error) {
+    if (error?.code === 'ACTIVATION_REQUEST_EXPIRED') throw error;
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_UNCERTAIN',
+      'The durable activation epoch could not be read safely before refresh.',
+      { cause_code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID'), cause_message: String(error?.message || '') }
+    );
+  }
+  return classifyRefreshEpoch(record);
+}
+
+function transientEpochReadError(error) {
+  if (String(error?.code || '') !== 'DEV_UI_REFRESH_EPOCH_UNCERTAIN') return false;
+  return ['ACTIVATION_EPOCH_STORE_INVALID', 'EACCES', 'EBUSY', 'EPERM', 'ENOENT']
+    .includes(String(error?.details?.cause_code || ''));
+}
+
+/**
+ * After the supported bootstrap has crossed its process boundary, the epoch
+ * writer can briefly be replacing its primary/backup projection on Windows.
+ * This is not authority to ignore a bad epoch: retry only that narrow
+ * read-availability class, for a short bounded window, then return the exact
+ * classified record for the caller's normal operation/identity checks.
+ */
+async function readPostMutationRefreshEpoch(deps, operationId, phase) {
+  const timeoutMs = Math.max(0, Number(deps?.epochReadRetryTimeoutMs ?? DEFAULT_EPOCH_READ_RETRY_TIMEOUT_MS));
+  const deadline = Date.now() + timeoutMs;
+  let lastError = null;
+  while (true) {
+    try {
+      return await readStrictRefreshEpoch(deps);
+    } catch (error) {
+      if (!transientEpochReadError(error)) throw error;
+      lastError = error;
+    }
+    if (Date.now() >= deadline) {
+      throw lifecycleError(
+        'DEV_UI_REFRESH_EPOCH_UNCERTAIN',
+        'The durable activation epoch did not become readable after the supported refresh mutation.',
+        {
+          operation_id: String(operationId || '').trim() || null,
+          phase: String(phase || 'post_mutation').slice(0, 96),
+          cause_code: String(lastError?.details?.cause_code || 'ACTIVATION_EPOCH_STORE_INVALID')
+        }
+      );
+    }
+    await deps.sleep(deps.pollMs);
+  }
+}
+
+function assertSameRefreshEpoch(expected, observed, phase = 'refresh') {
+  if (!expected || expected.kind !== 'active') return observed;
+  if (!observed || observed.kind === 'none') {
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_CHANGED',
+      `The durable activation epoch disappeared during ${phase}; refusing to start a replacement refresh.`,
+      { expected_activation_epoch_id: expected.epochId, expected_operation_id: expected.operationId, phase }
+    );
+  }
+  if (observed.state === 'FAILED') throw refreshEpochFailure(observed.record);
+  if (observed.epochId !== expected.epochId || observed.operationId !== expected.operationId) {
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_CHANGED',
+      `The durable activation epoch changed during ${phase}; refusing to start a replacement refresh.`,
+      {
+        expected_activation_epoch_id: expected.epochId,
+        observed_activation_epoch_id: observed.epochId || null,
+        expected_operation_id: expected.operationId,
+        observed_operation_id: observed.operationId || null,
+        phase
+      }
+    );
+  }
+  if (observed.kind === 'expired') {
+    throw lifecycleError(
+      'ACTIVATION_REQUEST_EXPIRED',
+      `The durable activation epoch expired during ${phase} and remains admission-closed.`,
+      {
+        activation_epoch_id: observed.epochId,
+        operation_id: observed.operationId,
+        expires_at_unix_ms: observed.expiresAtUnixMs,
+        phase
+      }
+    );
+  }
+  return observed;
 }
 
 function refreshRuntimeState(paths) {
@@ -521,6 +803,10 @@ function createRuntimeDependencies(options = {}) {
     activationRecord: () => {
       try { return epochStore?.current?.() || null; } catch { return null; }
     },
+    // Mutation authority must never collapse an unreadable/malformed epoch
+    // store into "no current record".  Keep this reader strict and leave the
+    // tolerant activationRecord() above for read-only status fallback.
+    activationRecordStrict: epochStore ? (() => epochStore.current?.() || null) : null,
     bootstrapResult: (operationId) => {
       try { return readBootstrapResult(paths, operationId) || null; } catch { return null; }
     },
@@ -534,6 +820,68 @@ function createRuntimeDependencies(options = {}) {
         [],
         descriptorRequestOptions(observation.descriptor)
       );
+    },
+    // `recovery.status` proves descriptor reachability, not admission.  The
+    // start command must make one authenticated readiness observation and then
+    // require the lightweight MCP/Tunnel projection before claiming a whole
+    // development runtime is current.  Connector discovery/ACK intentionally
+    // remains a separately reported external-client gate.
+    runtimeReadiness: async (observation) => {
+      if (!observation?.client || !observation?.descriptor) {
+        return { ready: false, reason: 'recovery_host_unavailable', runtime: null, recovery: null };
+      }
+      let recovery;
+      try {
+        recovery = await observation.client.ping({
+          ...descriptorRequestOptions(observation.descriptor),
+          timeout: Math.min(8_000, Math.max(1_500, Number(options.runtimeReadinessProbeTimeoutMs || 5_000)))
+        });
+      } catch (error) {
+        return {
+          ready: false,
+          reason: 'recovery_host_not_ready',
+          runtime: null,
+          recovery: null,
+          error_code: String(error?.code || 'RECOVERY_REQUEST_FAILED')
+        };
+      }
+      if (recovery?.ready !== true) {
+        return {
+          ready: false,
+          reason: 'recovery_host_not_ready',
+          runtime: null,
+          recovery,
+          error_code: String(recovery?.recovery_bootstrap?.error_code || recovery?.error_code || '') || null
+        };
+      }
+      let runtime;
+      try {
+        runtime = await observation.client.call(
+          'runtime.lightweight_snapshot',
+          [],
+          descriptorRequestOptions(observation.descriptor)
+        );
+      } catch (error) {
+        return {
+          ready: false,
+          reason: 'runtime_snapshot_unavailable',
+          runtime: null,
+          recovery,
+          error_code: String(error?.code || 'RECOVERY_REQUEST_FAILED')
+        };
+      }
+      const mcpRunning = runtime?.mcpRunning === true;
+      const nativeAlive = runtime?.nativeAlive === true;
+      const tunnelRunning = runtime?.tunnelRunning === true;
+      return {
+        ready: mcpRunning && nativeAlive && tunnelRunning,
+        reason: mcpRunning && nativeAlive && tunnelRunning ? 'ready' : 'runtime_components_not_ready',
+        runtime,
+        recovery,
+        mcpRunning,
+        nativeAlive,
+        tunnelRunning
+      };
     },
     launch: () => spawnElectron(executable, appRoot, [], { spawnProcess, detached: true, windowsHide: false }),
     signal: (action, instanceId) => {
@@ -550,6 +898,8 @@ function createRuntimeDependencies(options = {}) {
     sleep,
     output,
     timeoutMs: Math.max(1_000, Number(options.timeoutMs || DEFAULT_TIMEOUT_MS)),
+    runtimeReadyTimeoutMs: Math.max(0, Number(options.runtimeReadyTimeoutMs ?? DEFAULT_RUNTIME_READY_TIMEOUT_MS)),
+    epochReadRetryTimeoutMs: Math.max(0, Number(options.epochReadRetryTimeoutMs ?? DEFAULT_EPOCH_READ_RETRY_TIMEOUT_MS)),
     pollMs: Math.max(25, Number(options.pollMs || DEFAULT_POLL_MS))
   };
 }
@@ -632,7 +982,35 @@ function assertCurrentReceipt(observation) {
   return observation;
 }
 
-function reportCurrent(deps, observation, action) {
+function runtimeReason(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9_-]{0,127}$/.test(normalized) ? normalized : 'runtime_readiness_unverified';
+}
+
+function reportUiCurrent(deps, observation, action, runtime = null) {
+  const ui = assertCurrentReceipt(observation).ui;
+  deps.output([
+    'DEV_UI UI_CURRENT',
+    `action=${action}`,
+    `pid=${ui.pid || 'unknown'}`,
+    `instance=${ui.instanceId || 'unknown'}`,
+    `mode=${ui.runtimeMode || 'unknown'}`,
+    `running_revision=${ui.runningRevision || 'unknown'}`,
+    `disk_revision=${ui.diskRevision || 'unknown'}`,
+    `runtime=${runtime?.ready === true ? 'ready' : 'unavailable'}`,
+    `reason=${runtimeReason(runtime?.reason)}`
+  ].join(' '));
+  return observation;
+}
+
+function reportCurrent(deps, observation, action, runtime) {
+  if (runtime?.ready !== true) {
+    throw lifecycleError(
+      'DEV_UI_RUNTIME_UNAVAILABLE',
+      'Electron UI is current, but the Recovery Host runtime postflight is unavailable.',
+      { reason: runtimeReason(runtime?.reason) }
+    );
+  }
   const ui = assertCurrentReceipt(observation).ui;
   deps.output([
     'DEV_UI CURRENT',
@@ -641,9 +1019,75 @@ function reportCurrent(deps, observation, action) {
     `instance=${ui.instanceId || 'unknown'}`,
     `mode=${ui.runtimeMode || 'unknown'}`,
     `running_revision=${ui.runningRevision || 'unknown'}`,
-    `disk_revision=${ui.diskRevision || 'unknown'}`
+    `disk_revision=${ui.diskRevision || 'unknown'}`,
+    'runtime=ready',
+    `mcp_running=${runtime.mcpRunning === true ? 'true' : 'false'}`,
+    `native_alive=${runtime.nativeAlive === true ? 'true' : 'false'}`,
+    `tunnel_running=${runtime.tunnelRunning === true ? 'true' : 'false'}`
   ].join(' '));
   return observation;
+}
+
+async function runtimePostflight(deps, initial) {
+  if (typeof deps.runtimeReadiness !== 'function') {
+    return {
+      observation: initial,
+      runtime: { ready: false, reason: 'runtime_readiness_unavailable', error_code: null }
+    };
+  }
+  const deadline = Date.now() + Math.max(0, Number(deps.runtimeReadyTimeoutMs || 0));
+  let observation = initial;
+  let runtime = null;
+  while (true) {
+    assertSameDevelopmentInstallation(observation);
+    if (!observation?.hostAvailable || observation?.ui?.state !== 'CURRENT') {
+      return {
+        observation,
+        runtime: {
+          ready: false,
+          reason: observation?.hostAvailable ? 'ui_postflight_lost_current' : 'recovery_host_unavailable',
+          error_code: observation?.errorCode || null
+        }
+      };
+    }
+    try {
+      runtime = await deps.runtimeReadiness(observation);
+    } catch (error) {
+      runtime = {
+        ready: false,
+        reason: 'runtime_readiness_unavailable',
+        error_code: String(error?.code || 'RECOVERY_REQUEST_FAILED')
+      };
+    }
+    if (runtime?.ready === true || Date.now() >= deadline) return { observation, runtime };
+    await deps.sleep(deps.pollMs);
+    observation = await deps.inspect();
+  }
+}
+
+function throwRuntimeUnavailable(deps, observation, action, runtime) {
+  const reason = runtimeReason(runtime?.reason);
+  reportUiCurrent(deps, observation, action, runtime);
+  deps.output([
+    'DEV_UI RUNTIME_UNAVAILABLE',
+    `action=${action}`,
+    `reason=${reason}`,
+    `error_code=${String(runtime?.error_code || '') || 'none'}`,
+    `mcp_running=${runtime?.mcpRunning === true ? 'true' : 'false'}`,
+    `native_alive=${runtime?.nativeAlive === true ? 'true' : 'false'}`,
+    `tunnel_running=${runtime?.tunnelRunning === true ? 'true' : 'false'}`
+  ].join(' '));
+  throw lifecycleError(
+    'DEV_UI_RUNTIME_UNAVAILABLE',
+    `Electron UI is current but the Recovery Host runtime is unavailable: ${reason}.`,
+    {
+      reason,
+      error_code: String(runtime?.error_code || '') || null,
+      mcp_running: runtime?.mcpRunning === true,
+      native_alive: runtime?.nativeAlive === true,
+      tunnel_running: runtime?.tunnelRunning === true
+    }
+  );
 }
 
 async function statusLifecycle(deps) {
@@ -716,7 +1160,11 @@ async function startLifecycle(deps) {
   if (verified.ui.state !== 'CURRENT') {
     throw lifecycleError('DEV_UI_POSTFLIGHT_FAILED', 'Electron UI lost current-source status after the focus signal.');
   }
-  return reportCurrent(deps, verified, 'start');
+  const postflight = await runtimePostflight(deps, verified);
+  if (postflight.runtime?.ready !== true) {
+    return throwRuntimeUnavailable(deps, postflight.observation, 'start', postflight.runtime);
+  }
+  return reportCurrent(deps, postflight.observation, 'start', postflight.runtime);
 }
 
 async function stopLifecycle(deps) {
@@ -754,7 +1202,11 @@ async function replaceLifecycle(deps) {
   assertSameDevelopmentInstallation(observation);
   if (!observation.hostAvailable || observation.ui.state === 'MISSING') {
     const started = await ensureCurrent(deps, observation);
-    return reportCurrent(deps, started, 'replace');
+    const postflight = await runtimePostflight(deps, started);
+    if (postflight.runtime?.ready !== true) {
+      return throwRuntimeUnavailable(deps, postflight.observation, 'replace', postflight.runtime);
+    }
+    return reportCurrent(deps, postflight.observation, 'replace', postflight.runtime);
   }
 
   observation = await ensureCurrent(deps, observation);
@@ -781,8 +1233,12 @@ async function replaceLifecycle(deps) {
     'a new current Electron UI instance'
   );
   assertCurrentReceipt(replacement);
+  const postflight = await runtimePostflight(deps, replacement);
+  if (postflight.runtime?.ready !== true) {
+    return throwRuntimeUnavailable(deps, postflight.observation, 'replace', postflight.runtime);
+  }
   deps.output(`DEV_UI REPLACED previous_pid=${previousPid} previous_instance=${previousInstanceId} new_pid=${replacement.ui.pid || 'unknown'} new_instance=${replacement.ui.instanceId} mode=${replacement.ui.runtimeMode || 'unknown'} running_revision=${replacement.ui.runningRevision} disk_revision=${replacement.ui.diskRevision}`);
-  return replacement;
+  return postflight.observation;
 }
 
 function previousRefreshIdentities(observation, runtimeState = {}, recoveryPlaneState = {}) {
@@ -814,7 +1270,104 @@ function previousRefreshIdentities(observation, runtimeState = {}, recoveryPlane
   };
 }
 
+function previousRefreshIdentitiesFromRecord(record) {
+  const evidence = record?.component_evidence;
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
+    throw lifecycleError(
+      'DEV_UI_REFRESH_EPOCH_UNCERTAIN',
+      'Active refresh reconciliation has no immutable component identity evidence.',
+      { activation_epoch_id: String(record?.activation_epoch_id || '') || null }
+    );
+  }
+  const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+  const normalizePid = (value, label, { required = false } = {}) => {
+    if (value === undefined) {
+      if (required) throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', `Component evidence is missing ${label}.`, { component: label });
+      return null;
+    }
+    if (value === null || value === '') return null;
+    const pid = Number(value);
+    if (!Number.isSafeInteger(pid) || pid <= 0) {
+      throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', `Component evidence has an invalid ${label}.`, { component: label, pid: value });
+    }
+    return pid;
+  };
+  const normalizeId = (value, label, { required = false } = {}) => {
+    if (value === undefined) {
+      if (required) throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', `Component evidence is missing ${label}.`, { component: label });
+      return null;
+    }
+    if (value === null || value === '') return null;
+    const id = String(value).trim();
+    if (!id) return null;
+    if (id.length > 256) {
+      throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', `Component evidence has an invalid ${label}.`, { component: label });
+    }
+    return id;
+  };
+  const pair = (component, value, idKeys = ['instance_id']) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', `Component evidence for ${component} is missing or malformed.`, { component });
+    }
+    // FullCleanActivation serializes an explicit null for an absent process;
+    // requiring both keys to be present distinguishes that observation from a
+    // truncated/tampered evidence object.
+    if (!hasOwn(value, 'pid')) {
+      throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', `Component evidence for ${component} is missing pid.`, { component });
+    }
+    if (!idKeys.some((key) => hasOwn(value, key))) {
+      throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', `Component evidence for ${component} is missing instance identity.`, { component });
+    }
+    const pid = normalizePid(value.pid, `${component}.pid`);
+    let id = null;
+    for (const key of idKeys) {
+      if (!hasOwn(value, key)) continue;
+      const candidate = normalizeId(value[key], `${component}.${key}`);
+      if (candidate) {
+        // A Coding MCP evidence object legitimately carries several distinct
+        // identities (process/server/supervisor).  Validate every supplied
+        // value, but use the first role-specific identity as the baseline;
+        // they are not aliases that must compare equal.
+        if (!id) id = candidate;
+      }
+    }
+    // A process identity without its corresponding PID (or vice versa) is
+    // ambiguous: it cannot prove that the replacement is fresh.
+    if ((pid && !id) || (!pid && id)) {
+      throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', `Component evidence for ${component} has an incomplete process identity pair.`, { component });
+    }
+    return { pid, instance_id: id };
+  };
+
+  const result = {
+    recovery_host: pair('recovery_host', evidence.recovery_host),
+    electron_ui: pair('electron_ui', evidence.electron_ui),
+    coding_mcp: pair('coding_mcp', evidence.coding_mcp, [
+      'instance_id', 'process_instance_id', 'server_instance_id', 'supervisor_instance_id'
+    ]),
+    coding_tunnel: pair('coding_tunnel', evidence.coding_tunnel),
+    recovery_mcp: pair('recovery_mcp', evidence.recovery_mcp, ['instance_id', 'process_instance_id']),
+    recovery_tunnel: pair('recovery_tunnel', evidence.recovery_tunnel, ['instance_id', 'process_instance_id'])
+  };
+  return result;
+}
+
+function sameRefreshIdentityBaseline(left, right) {
+  try { return JSON.stringify(left) === JSON.stringify(right); } catch { return false; }
+}
+
 async function refreshLifecycle(deps) {
+  // Read the durable epoch before touching the Recovery Host.  A previous
+  // invocation may have already crossed the stop/handoff boundary; forcing a
+  // second bootstrap in that window can tear down the replacement and then be
+  // rejected by ActivationEpochStore as ACTIVATION_EPOCH_ACTIVE.
+  const strictEpochGuard = typeof deps.activationRecordStrict === 'function';
+  const guardedEpoch = strictEpochGuard ? await readStrictRefreshEpoch(deps) : null;
+  let reconcileEpoch = guardedEpoch?.kind === 'active' ? guardedEpoch : null;
+  let reconcilePrevious = reconcileEpoch
+    ? previousRefreshIdentitiesFromRecord(reconcileEpoch.record)
+    : null;
+
   let before = typeof deps.inspectRefreshTarget === 'function'
     ? await deps.inspectRefreshTarget()
     : await deps.inspect();
@@ -836,32 +1389,97 @@ async function refreshLifecycle(deps) {
       );
     }
   }
-  const previousHostInstance = String(before.descriptor.instance_id || '').trim();
-  const previousUiInstance = String(before.ui?.instanceId || '').trim();
+  // Re-read immediately before any full-clean mutation.  If another process
+  // created an active epoch while the host was being inspected/bootstrapped,
+  // reconcile that transaction rather than asking the old host to start a
+  // second one.  If an epoch was active at entry, disappearance/change is a
+  // hard continuity failure, never evidence that a replacement is safe.
+  if (strictEpochGuard) {
+    const beforeMutationEpoch = await readStrictRefreshEpoch(deps);
+    if (reconcileEpoch) {
+      const observed = assertSameRefreshEpoch(reconcileEpoch, beforeMutationEpoch, 'preflight');
+      if (!sameRefreshIdentityBaseline(reconcilePrevious, previousRefreshIdentitiesFromRecord(observed.record))) {
+        throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', 'The active refresh epoch identity evidence changed during reconciliation.', {
+          activation_epoch_id: reconcileEpoch.epochId,
+          operation_id: reconcileEpoch.operationId
+        });
+      }
+    } else if (beforeMutationEpoch?.kind === 'active') {
+      reconcileEpoch = beforeMutationEpoch;
+      reconcilePrevious = previousRefreshIdentitiesFromRecord(reconcileEpoch.record);
+    }
+  }
+
   const beforeState = typeof deps.runtimeState === 'function' ? deps.runtimeState() : {};
   const beforeRecoveryPlane = typeof deps.recoveryPlaneState === 'function'
     ? deps.recoveryPlaneState() : {};
-  const previous = previousRefreshIdentities(before, beforeState, beforeRecoveryPlane);
-  deps.output([
-    'DEV_UI REFRESH',
-    'action=full_clean',
-    `previous_host=${previousHostInstance || 'unknown'}`,
-    `previous_ui=${previousUiInstance || 'none'}`,
-    'services=RecoveryHost,CodingMCP,CodingTunnel,RecoveryMCP,RecoveryTunnel,ElectronUI'
-  ].join(' '));
+  const previous = reconcileEpoch
+    ? reconcilePrevious
+    : previousRefreshIdentities(before, beforeState, beforeRecoveryPlane);
+  const previousHostInstance = String(previous?.recovery_host?.instance_id || before.descriptor.instance_id || '').trim();
+  const previousUiInstance = String(previous?.electron_ui?.instance_id || before.ui?.instanceId || '').trim();
 
-  const request = await deps.refresh(before);
+  let request;
+  if (reconcileEpoch) {
+    deps.output([
+      'DEV_UI REFRESH RECONCILE',
+      'action=full_clean',
+      `epoch=${reconcileEpoch.epochId}`,
+      `operation=${reconcileEpoch.operationId}`,
+      `state=${reconcileEpoch.state}`
+    ].join(' '));
+    request = {
+      operationId: reconcileEpoch.operationId,
+      operation_id: reconcileEpoch.operationId,
+      activation_epoch_id: reconcileEpoch.epochId,
+      reconciled: true,
+      result: { activation_epoch_id: reconcileEpoch.epochId, operation_id: reconcileEpoch.operationId }
+    };
+  } else {
+    deps.output([
+      'DEV_UI REFRESH',
+      'action=full_clean',
+      `previous_host=${previousHostInstance || 'unknown'}`,
+      `previous_ui=${previousUiInstance || 'none'}`,
+      'services=RecoveryHost,CodingMCP,CodingTunnel,RecoveryMCP,RecoveryTunnel,ElectronUI'
+    ].join(' '));
+    request = await deps.refresh(before);
+  }
   let epochId = String(
     request?.result?.activation_epoch_id
       || request?.result?.activationEpochId
       || request?.activation_epoch_id
       || ''
   ).trim();
+  const hasEpochReader = typeof deps.activationRecord === 'function' || strictEpochGuard;
   let replacementDescriptor = null;
-  if (!epochId && typeof deps.activationRecord === 'function') {
+  if (!epochId && hasEpochReader) {
     const deadline = Date.now() + deps.timeoutMs;
     while (Date.now() < deadline) {
-      const record = deps.activationRecord();
+      const classified = strictEpochGuard
+        ? await readPostMutationRefreshEpoch(deps, request?.operationId, 'locating_refresh_epoch')
+        : null;
+      // A current terminal record from the predecessor operation can remain
+      // visible for a short handoff window while the bootstrap host creates
+      // the new durable epoch.  It is not evidence that this request failed;
+      // only a FAILED record carrying this request's exact operation may abort
+      // the lookup.  The operation/epoch identity remains the authority.
+      const requestedOperationId = String(request?.operationId || '').trim();
+      if (classified?.kind === 'terminal'
+        && classified.state === 'FAILED'
+        && (!requestedOperationId || classified.operationId === requestedOperationId)) {
+        throw refreshEpochFailure(classified.record);
+      }
+      if (classified?.kind === 'active'
+        && request?.operationId
+        && classified.operationId !== String(request.operationId)) {
+        throw lifecycleError('DEV_UI_REFRESH_EPOCH_CHANGED', 'A different active activation operation appeared while locating the refresh epoch.', {
+          expected_operation_id: String(request.operationId),
+          observed_operation_id: classified.operationId,
+          observed_activation_epoch_id: classified.epochId
+        });
+      }
+      const record = strictEpochGuard ? classified?.record : deps.activationRecord();
       const descriptor = typeof deps.descriptor === 'function' ? deps.descriptor() : null;
       if (record
         && String(record.operation_id || '') === String(request?.operationId || '')
@@ -892,7 +1510,7 @@ async function refreshLifecycle(deps) {
   }
 
   let replacement = null;
-  if (typeof deps.activationRecord !== 'function') {
+  if (!hasEpochReader) {
     replacement = await waitForObservation(
       deps,
       (current) => current.hostAvailable
@@ -910,13 +1528,49 @@ async function refreshLifecycle(deps) {
   const deadline = Date.now() + deps.timeoutMs;
   let lastRuntime = null;
   let lastState = null;
-  let lastObservation = replacement;
+  let lastObservation = replacement || before;
   let lastRecord = null;
   while (Date.now() < deadline) {
-    lastRecord = typeof deps.activationRecord === 'function' ? deps.activationRecord() : null;
+    if (reconcileEpoch && strictEpochGuard) {
+      // Continuity checks deliberately sit outside the broad transient IPC
+      // catch below.  An epoch disappearing, changing identity, expiring, or
+      // entering FAILED is a durable error—not a descriptor gap to poll over.
+      const observedEpoch = await readPostMutationRefreshEpoch(
+        deps,
+        reconcileEpoch.operationId,
+        'refresh_postflight_continuity'
+      );
+      const continuous = assertSameRefreshEpoch(reconcileEpoch, observedEpoch, 'postflight');
+      if (!sameRefreshIdentityBaseline(reconcilePrevious, previousRefreshIdentitiesFromRecord(continuous.record))) {
+        throw lifecycleError('DEV_UI_REFRESH_EPOCH_UNCERTAIN', 'The active refresh epoch identity evidence changed during postflight.', {
+          activation_epoch_id: reconcileEpoch.epochId,
+          operation_id: reconcileEpoch.operationId
+        });
+      }
+      lastRecord = continuous.record;
+    } else {
+      lastRecord = typeof deps.activationRecord === 'function' ? deps.activationRecord() : null;
+    }
     replacementDescriptor = typeof deps.descriptor === 'function'
       ? (deps.descriptor() || replacementDescriptor) : replacementDescriptor;
     try {
+      if (reconcileEpoch) {
+        // During a handoff the durable census can briefly lag the new host.
+        // Refresh the read-only observation so runtimeSnapshot/UI identity are
+        // taken from the replacement client when available; never use this
+        // observation as the old-identity baseline (that came from the epoch
+        // evidence above).
+        const inspectFn = typeof deps.inspectRefreshTarget === 'function'
+          ? deps.inspectRefreshTarget : deps.inspect;
+        if (typeof inspectFn === 'function') {
+          const observed = await inspectFn();
+          assertSameDevelopmentInstallation(observed);
+          if (observed?.hostAvailable && observed?.descriptor) {
+            lastObservation = observed;
+            replacementDescriptor = observed.descriptor || replacementDescriptor;
+          }
+        }
+      }
       const census = activationCensus(lastRecord);
       if (census?.runtime) lastRuntime = census.runtime;
       else if (lastObservation?.client && typeof deps.runtimeSnapshot === 'function') {
@@ -931,11 +1585,11 @@ async function refreshLifecycle(deps) {
       const hostCurrent = Boolean(replacementDescriptor
         && String(replacementDescriptor.instance_id || '') !== previousHostInstance
         && String(replacementDescriptor.activation_epoch_id || '') === epochId);
-      const exactCensusRequired = typeof deps.activationRecord === 'function';
+      const exactCensusRequired = hasEpochReader;
       const activationRecordCurrent = !exactCensusRequired || Boolean(lastRecord
         && String(lastRecord.operation_id || '') === String(request?.operationId || '')
         && String(lastRecord.activation_epoch_id || '') === epochId
-        && ['VERIFYING', 'READY'].includes(String(lastRecord.state || '')));
+        && ['VERIFYING', 'READY'].includes(refreshEpochState(lastRecord)));
       if (hostCurrent
         && activationRecordCurrent
         && uiInstance
@@ -948,14 +1602,15 @@ async function refreshLifecycle(deps) {
         && readiness.processIdentitiesPresent
         && readiness.ownedProcessesAlive
         && (!exactCensusRequired || (readiness.componentCensusVerified && readiness.freshPids))) {
-        const durableReady = lastRecord?.state === 'READY' && lastRecord?.admission_state === 'OPEN';
+        const durableReady = refreshEpochState(lastRecord) === 'READY'
+          && String(lastRecord?.admission_state || '').toUpperCase() === 'OPEN';
         const admission = durableReady || (!exactCensusRequired
           && lastRuntime?.activationEpoch?.admission_open === true)
           ? 'open' : 'closed';
         const fullyReady = exactCensusRequired
           ? durableReady
           : lastRuntime?.fullyReady === true;
-        const activation = String(lastRecord?.state || (fullyReady ? 'READY' : 'VERIFYING'));
+        const activation = String(refreshEpochState(lastRecord) || (fullyReady ? 'READY' : 'VERIFYING'));
         const connectorState = String(lastRuntime?.connectorContractState || 'UNAVAILABLE');
         const connector = fullyReady && admission === 'open' ? 'ready' : 'pending';
         deps.output([
@@ -977,7 +1632,14 @@ async function refreshLifecycle(deps) {
         return {
           ...(lastObservation || {}),
           descriptor: replacementDescriptor,
-          ui: lastObservation?.ui || { state: 'CURRENT', instanceId: uiInstance },
+          ui: lastObservation?.ui && String(lastObservation.ui.instanceId || '').trim() === uiInstance
+            ? lastObservation.ui
+            : {
+              ...(lastObservation?.ui || {}),
+              state: 'CURRENT',
+              alive: true,
+              instanceId: uiInstance
+            },
           refresh: request,
           epochId,
           runtime: lastRuntime,
@@ -986,7 +1648,11 @@ async function refreshLifecycle(deps) {
           readiness
         };
       }
-    } catch {
+    } catch (error) {
+      if (String(error?.code || '').startsWith('DEV_UI_REFRESH_EPOCH_')
+        || String(error?.code || '') === 'DEV_UI_INSTALLATION_MISMATCH') {
+        throw error;
+      }
       // Replacement creates a short descriptor/IPC gap.  Keep polling while
       // preserving the exact identity predicates above; no green state is
       // inferred from a transient port or process alone.
@@ -1050,5 +1716,8 @@ module.exports = {
   runLifecycle,
   lifecycleError,
   refreshOperationId,
-  refreshRuntimeReady
+  refreshRuntimeReady,
+  classifyRefreshEpoch,
+  previousRefreshIdentitiesFromRecord,
+  readPostMutationRefreshEpoch
 };

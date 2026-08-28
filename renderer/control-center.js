@@ -528,6 +528,9 @@
       await refreshPerformance(force);
       renderAll();
       setText('ccLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
+      document.dispatchEvent(new CustomEvent('coding-tools:overview-pulse', {
+        detail: { snapshot, orchestration, performance, force: force === true, observedAt: Date.now() }
+      }));
     } finally {
       refreshInFlight = false;
     }
@@ -558,6 +561,7 @@
 
   byId('ccRestartButton')?.addEventListener('click', restartRuntime);
   byId('ccRefreshButton')?.addEventListener('click', () => refresh(true));
+  document.addEventListener('coding-tools:overview-refresh-request', () => refresh(true));
 
   document.addEventListener('click', (event) => {
     const target = event.target.closest('[data-page],[data-nav]');

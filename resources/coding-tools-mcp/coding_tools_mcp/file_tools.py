@@ -29,6 +29,28 @@ from .textutils import DEFAULT_MAX_LINES, truncate_text_head
 
 
 class FileToolsMixin:
+    def _patch_scope_path(self, resolved: ResolvedPath) -> ResolvedPath:
+        scope_root = self._current_request_workspace_root().resolve(strict=False)
+        containing_root = self.workspace._containing_root(resolved.path.resolve(strict=False))
+        if containing_root is None or containing_root.resolve(strict=False) != scope_root:
+            raise ToolFailure(
+                "ORCHESTRATION_WORKSPACE_MISMATCH",
+                "Patch path does not belong to the request-bound workspace.",
+                category="security",
+                retryable=False,
+            )
+        return ResolvedPath(
+            normalize_rel_display(resolved.path, scope_root),
+            resolved.path,
+            resolved.existed,
+        )
+
+    def _patch_resolve_existing(self, raw_path: str) -> ResolvedPath:
+        return self._patch_scope_path(self.resolve_existing(raw_path))
+
+    def _patch_resolve_for_write(self, raw_path: str) -> ResolvedPath:
+        return self._patch_scope_path(self.resolve_for_write(raw_path))
+
     def read_file(self, args: dict[str, Any]) -> dict[str, Any]:
         requested_path = str(args.get("path", ""))
         resolved = self.resolve_existing(requested_path)
@@ -552,12 +574,12 @@ class FileToolsMixin:
             for op in operations:
                 self._validate_patch_path(op.path, require_existing=op.kind in {"update", "delete"})
                 if op.kind in {"add", "update", "delete"}:
-                    self.workspace.reject_write_symlink(op.path)
+                    self.workspace.reject_write_symlink_at(self._request_default_cwd(), op.path)
                 if op.move_to:
                     self._validate_patch_path(op.move_to, require_existing=False)
-                    self.workspace.reject_write_symlink(op.move_to)
+                    self.workspace.reject_write_symlink_at(self._request_default_cwd(), op.move_to)
                 if op.kind == "add":
-                    target = self.workspace.resolve_for_write(op.path)
+                    target = self._patch_resolve_for_write(op.path)
                     if target.existed:
                         raise ToolFailure("PATCH_FAILED", "Cannot add file that already exists.", category="validation")
                     baseline = FileBaseline.capture(target.path)
@@ -572,7 +594,7 @@ class FileToolsMixin:
                     summaries.append(f"A {target.display}")
                     additions += len((op.add_content or "").splitlines())
                 elif op.kind == "delete":
-                    target = self.workspace.resolve_existing(op.path)
+                    target = self._patch_resolve_existing(op.path)
                     if target.path.is_dir():
                         raise ToolFailure("PATCH_FAILED", "Cannot delete a directory.", category="validation")
                     prior = staged.get(target.display)
@@ -582,7 +604,7 @@ class FileToolsMixin:
                     summaries.append(f"D {target.display}")
                     removals += len((baseline.data or b"").splitlines())
                 elif op.kind == "update":
-                    source = self.workspace.resolve_existing(op.path)
+                    source = self._patch_resolve_existing(op.path)
                     if source.path.is_dir():
                         raise ToolFailure("PATCH_FAILED", "Cannot update a directory.", category="validation")
                     prior = staged.get(source.display)
@@ -598,7 +620,7 @@ class FileToolsMixin:
                             removals += line.startswith("-")
                     source_mode = prior.mode if prior is not None else baseline.mode
                     if op.move_to:
-                        dest = self.workspace.resolve_for_write(op.move_to)
+                        dest = self._patch_resolve_for_write(op.move_to)
                         if dest.existed and dest.display != source.display:
                             raise ToolFailure("PATCH_FAILED", "Cannot move over an existing file.", category="validation")
                         dest_baseline = baseline if dest.display == source.display else FileBaseline.capture(dest.path)
@@ -644,9 +666,9 @@ class FileToolsMixin:
 
     def _validate_patch_path(self, raw_path: str, *, require_existing: bool) -> None:
         if require_existing:
-            self.workspace.resolve_existing(raw_path)
+            self._patch_resolve_existing(raw_path)
         else:
-            self.workspace.resolve_for_write(raw_path)
+            self._patch_resolve_for_write(raw_path)
 
     def _commit_staged_files(self, staged: list[StagedFile]) -> None:
         self.patch_committer.commit(staged)

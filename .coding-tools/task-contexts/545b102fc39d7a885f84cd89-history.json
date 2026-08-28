@@ -1,0 +1,118 @@
+[
+  {
+    "version": 2,
+    "task_id": "05e95dc469c44ad19eca4eb06fa3bf77",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-28T09:43:58.327Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-08-28T09:43:58.320Z",
+    "updated_at": "2026-08-28T09:43:58.327Z",
+    "events": [
+      {
+        "time": "2026-08-28T09:43:58.320Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-28T09:43:58.327Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline --decorate -n 20 && git grep -n -I -E \"accepted result|accepted software|time to accepted|orchestration|control plane|ChatWeb|Coding-VP|workspace_context|smart-v3\" -- README.md AGENTS.md docs electron resources/coding-tools-mcp | head -n 220",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-28T09:43:58.327Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T09:44:05.579Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f503f357d6e54ab68f7919130fb262e2",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Yo-r1IKEBNwNm7bK_Ozt3CAf",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 549,
+      "finished_at": "2026-08-28T09:44:06.663Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T09:44:05.581Z",
+    "updated_at": "2026-08-28T09:44:06.663Z",
+    "events": [
+      {
+        "time": "2026-08-28T09:44:05.581Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-28T09:44:06.155Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --oneline --decorate -n 20 && git grep -n -I -E \"accepted result|accepted software|time to accepted|orchestration|control plane|ChatWeb|Coding-VP|workspace_context|smart-v3\" -- README.md AGENTS.md docs electron resources/coding-tools-mcp | head -n 220",
+          "session_id": "Yo-r1IKEBNwNm7bK_Ozt3CAf"
+        }
+      },
+      {
+        "time": "2026-08-28T09:44:06.663Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline --decorate -n 20 && git grep -n -I -E \"accepted result|accepted software|time to accepted|orchestration|control plane|ChatWeb|Coding-VP|workspace_context|smart-v3\" -- README.md AGENTS.md docs electron resources/coding-tools-mcp | head -n 220",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T09:44:14.164Z",
+    "archive_reason": "finished"
+  }
+]

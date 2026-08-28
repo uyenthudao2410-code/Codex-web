@@ -55,26 +55,20 @@
   const NON_TOKEN_TOOLS = new Set(['view_image']);
   const REALTIME_WINDOW_MS = 5 * 60 * 1000;
   const DASHBOARD_WINDOW_HOURS = 7 * 24;
-  const DASHBOARD_SNAPSHOT_REFRESH_MS = 30000;
-  const DASHBOARD_PERFORMANCE_REFRESH_MS = 10000;
-  const DASHBOARD_ORCHESTRATION_REFRESH_MS = 5000;
-  const DASHBOARD_BUSY_POLL_MS = 10000;
-  const DASHBOARD_IDLE_POLL_MS = 5000;
-  const DASHBOARD_HIDDEN_POLL_MS = 15000;
+  const DASHBOARD_ANALYTICS_REFRESH_MS = 30000;
 
   const STATE_RANK = { offline: 0, connected: 1, waiting: 2, blocked: 3, active: 4 };
 
   let perf = null;
   let orchestration = null;
   let snapshot = null;
+  let analyticsSnapshot = null;
   let cost = {
     preset: 'gpt-4o-mini', rateIn: 0.15, rateOut: 0.6, currency: 'USD',
     fxRate: 0, bytesPerToken: 4, laneRates: { ...DEFAULT_LANE_RATES }
   };
-  let refreshInFlight = false;
-  let lastPerfReadAt = 0;
-  let lastOrchestrationReadAt = 0;
-  let lastSnapshotReadAt = 0;
+  let analyticsInFlight = null;
+  let lastAnalyticsReadAt = 0;
   let lastEventSeq = -1;
   let reducedMotion = false;
   let chartTimeMode = 'hour';
@@ -205,7 +199,7 @@
   }
 
   function canonicalControllerUsageState() {
-    const analytics = orchestration?.usage_analytics;
+    const analytics = analyticsSnapshot?.usage_analytics || orchestration?.usage_analytics;
     if (!analytics || analytics.measurement !== 'canonical_non_overlapping') return null;
     if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
     const controller = analytics.controller_usage;
@@ -225,7 +219,7 @@
   }
 
   function canonicalOperationsAnalytics() {
-    const analytics = orchestration?.operations_analytics;
+    const analytics = analyticsSnapshot?.operations_analytics || orchestration?.operations_analytics;
     if (!analytics || analytics.measurement !== 'accepted_result_operations_v1') return null;
     if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
     if (!analytics.outcomes || !analytics.speed || !analytics.efficiency || !analytics.cost) return null;
@@ -233,7 +227,7 @@
   }
 
   function canonicalMeasuredUsage() {
-    const analytics = orchestration?.usage_analytics;
+    const analytics = analyticsSnapshot?.usage_analytics || orchestration?.usage_analytics;
     if (!analytics || analytics.measurement !== 'canonical_non_overlapping') return null;
     if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
     const overall = analytics.overall && typeof analytics.overall === 'object' ? analytics.overall : {};
@@ -515,14 +509,12 @@
     return windows.filter((window) => window.owner);
   }
 
-  function modelOf(record) {
-    const lanes = laneWindows();
+  function modelOf(record, lanes = laneWindows(), windows = controllerWindows()) {
     const lane = lanes.find((window) => record.time >= window.start && record.time < window.end);
     if (lane) return lane.lane;
-    const windows = controllerWindows();
     const window = windows.find((item) => record.time >= item.start && record.time < item.end);
     const owner = window?.owner || '';
-    if (owner === 'chatweb') return 'chatweb';
+    if (owner === 'chatweb' || owner.startsWith('chatweb:')) return 'chatweb';
     if (owner === 'codex-desktop') return 'desktop';
     if (owner === 'opencode') return 'opencode';
     return 'unassigned';
@@ -530,15 +522,19 @@
 
   function modelBreakdown(records) {
     const map = new Map();
+    const lanes = laneWindows();
+    const windows = controllerWindows();
     for (const record of records) {
-      const model = modelOf(record);
+      const model = modelOf(record, lanes, windows);
       let entry = map.get(model);
       if (!entry) {
-        entry = { model, calls: 0, ok: 0, inTokens: 0, outTokens: 0, cost: 0 };
+        entry = { model, calls: 0, ok: 0, inTokens: 0, outTokens: 0, cost: 0, execMs: 0, waitMs: 0 };
         map.set(model, entry);
       }
       entry.calls += 1;
       if (record.ok) entry.ok += 1;
+      entry.execMs += Math.max(0, Number(record.durationMs) || 0);
+      entry.waitMs += Math.max(0, Number(record.waitMs) || 0);
       if (!record.tokenEligible || record.modelVisibleBytes === null) continue;
       const inTokens = tokensFromBytes(record.modelVisibleBytes);
       const outTokens = 0;
@@ -561,7 +557,8 @@
       const client = (Array.isArray(data.clients) ? data.clients : [])
         .find((item) => item?.client_id === 'chatweb' || item?.client_type === 'chatweb');
       if (!client?.online) return 'offline';
-      return data?.authority?.controller?.owner_client_id === 'chatweb' ? 'active' : 'connected';
+      const owner = String(data?.authority?.controller?.owner_client_id || '');
+      return owner === 'chatweb' || owner.startsWith('chatweb:') ? 'active' : 'connected';
     }
     if (modelId === 'desktop' || modelId === 'opencode') {
       const type = modelId === 'desktop' ? 'codex_desktop' : 'opencode';
@@ -702,7 +699,11 @@
     empty.hidden = hasData;
     svg.hidden = !hasData;
     svg.replaceChildren();
-    if (!hasData) return;
+    if (!hasData) {
+      svg.onmouseleave = null;
+      svg.onmousemove = null;
+      return;
+    }
 
     const width = 640;
     const height = 210;
@@ -764,8 +765,8 @@
       svg.querySelectorAll('.hover-guide,.hover-dot').forEach((node) => node.remove());
       if (tooltip) tooltip.hidden = true;
     };
-    svg.addEventListener('mouseleave', clearGuide);
-    svg.addEventListener('mousemove', (event) => {
+    svg.onmouseleave = clearGuide;
+    svg.onmousemove = (event) => {
       const bounds = svg.getBoundingClientRect();
       const x = ((event.clientX - bounds.left) / bounds.width) * width;
       const index = Math.round(((x - pad.left) / plotW) * (buckets.length - 1));
@@ -790,7 +791,7 @@
           tooltip.style.top = `${event.clientY - cardBounds.top - 30}px`;
         }
       }
-    });
+    };
   }
 
   function renderDonut(entries, evidence = 'estimated') {
@@ -1049,14 +1050,12 @@
     const totalCost = [...breakdown.values()].reduce((sum, entry) => sum + entry.cost, 0);
     const totalTokens = [...breakdown.values()].reduce((sum, entry) => sum + entry.inTokens + entry.outTokens, 0);
 
-    let rows = 0;
     for (const model of MODELS) {
       const entry = breakdown.get(model.id);
       const state = modelState(model.id);
       const online = state !== 'offline';
       const hasTraffic = Boolean(entry && entry.calls > 0);
       if (model.optional && !online && !hasTraffic) continue;
-      rows += 1;
 
       const calls = entry?.calls || 0;
       const inTokens = entry?.inTokens || 0;
@@ -1065,12 +1064,14 @@
       const rowCost = entry?.cost || 0;
       const share = totalCost ? percent(rowCost, totalCost) : (totalTokens ? percent(modelTokens, totalTokens) : 0);
       const costPer1k = modelTokens > 0 ? (rowCost / (modelTokens / 1000)) : 0;
-      const okRate = calls ? percent(entry?.ok || calls, calls) : 100;
+      const okRate = calls ? percent(Math.max(0, Number(entry?.ok) || 0), calls) : null;
+      const latencyMs = calls
+        ? (Math.max(0, Number(entry?.execMs) || 0) + Math.max(0, Number(entry?.waitMs) || 0)) / calls
+        : null;
 
       const tr = document.createElement('tr');
       tr.className = `da-fleet-row${state === 'active' ? ' is-active' : ''}`;
 
-      // Model col
       const tdModel = document.createElement('td');
       tdModel.className = 'cell-model';
       const iconSpan = document.createElement('span');
@@ -1080,53 +1081,44 @@
       nameB.textContent = model.name;
       tdModel.append(iconSpan, nameB);
 
-      // Total Tokens col
       const tdTokens = document.createElement('td');
       tdTokens.className = 'cell-num';
       tdTokens.textContent = compact(modelTokens);
       tdTokens.title = 'ESTIMATED từ model-visible bytes trong performance trace; không phải UsageEvent canonical';
 
-      // Share col
       const tdShare = document.createElement('td');
       tdShare.className = 'cell-num';
       tdShare.textContent = `${share.toFixed(1)}%`;
 
-      // Cost col
       const tdCost = document.createElement('td');
       tdCost.className = 'cell-num';
       tdCost.textContent = money(displayedCost(rowCost));
       tdCost.title = 'SCENARIO settings estimate; không phải provider billing';
 
-      // Cost / 1K col
       const tdCostPer1k = document.createElement('td');
       tdCostPer1k.className = 'cell-num';
       tdCostPer1k.textContent = money(displayedCost(costPer1k));
       tdCostPer1k.title = 'SCENARIO / 1K ESTIMATED token; không phải provider billing';
 
-      // Efficiency / Stars col
       const tdStars = document.createElement('td');
       tdStars.className = 'cell-stars';
-      const starCount = okRate >= 98 ? 5 : okRate >= 90 ? 4 : okRate >= 75 ? 3 : 2;
-      const starHtml = '★'.repeat(starCount) + (starCount < 5 ? `<span class="dim">${'☆'.repeat(5 - starCount)}</span>` : '');
-      tdStars.innerHTML = starHtml;
+      tdStars.textContent = okRate === null ? '—' : `${okRate.toFixed(1)}%`;
+      tdStars.title = okRate === null ? 'Không có lệnh quan sát được' : 'Tỷ lệ lệnh thành công quan sát được trong performance trace';
 
-      // Latency col
       const tdLatency = document.createElement('td');
       tdLatency.className = 'cell-num';
-      tdLatency.textContent = calls ? `${(1.1 + (rows % 4) * 0.15).toFixed(2)}s` : '—';
+      tdLatency.textContent = latencyMs === null ? '—' : formatDuration(latencyMs);
+      tdLatency.title = latencyMs === null ? 'Latency unknown' : 'Observed execution + estimated wait per attributed trace call';
 
-      // Error rate col
       const tdError = document.createElement('td');
       tdError.className = 'cell-num';
-      tdError.textContent = `${(100 - okRate).toFixed(1)}%`;
+      tdError.textContent = okRate === null ? '—' : `${(100 - okRate).toFixed(1)}%`;
 
-      // Trend 24h col
       const tdTrend = document.createElement('td');
       tdTrend.className = 'cell-trend';
-      const trendColor = state === 'active' ? 'var(--da-blue)' : 'var(--da-muted)';
-      tdTrend.innerHTML = `<svg viewBox="0 0 60 16" width="60" height="16"><path d="M0 12 Q15 ${8 + (rows % 3) * 2} 30 ${6 + (rows % 2) * 4} T60 4" fill="none" stroke="${trendColor}" stroke-width="1.8"/></svg>`;
+      tdTrend.textContent = '—';
+      tdTrend.title = 'Chưa có per-model time-series evidence; không nội suy trend 24h.';
 
-      // Status col
       const tdStatus = document.createElement('td');
       tdStatus.className = 'cell-status';
       const statusPill = document.createElement('span');
@@ -1135,7 +1127,6 @@
       statusPill.textContent = state === 'active' ? '● Đang chạy' : state === 'connected' ? '● Sẵn sàng' : state === 'waiting' ? '● Đang chờ' : '● Tạm dừng';
       tdStatus.appendChild(statusPill);
 
-      // More col
       const tdMore = document.createElement('td');
       tdMore.className = 'cell-more';
       tdMore.textContent = '⋮';
@@ -1216,7 +1207,7 @@
           <div class="alert-icon-circle red"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
           <div class="alert-info">
             <b>Ghi nhận ${errorCount} lỗi thực thi lệnh</b>
-            <small>Đã kích hoạt cơ chế retry / idempotency tự động</small>
+            <small>Theo performance trace hiện có; kiểm tra causal event trước khi kết luận nguyên nhân</small>
           </div>
           <span class="tag-badge red">Cao</span>
         </div>
@@ -1238,16 +1229,16 @@
         <div class="da-alert-row">
           <div class="alert-icon-circle green"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
           <div class="alert-info">
-            <b>Hệ thống vận hành tối ưu</b>
-            <small>Không phát hiện biến động bất thường hoặc lỗi nghẽn</small>
+            <b>Chưa ghi nhận lỗi trong trace hiện tại</b>
+            <small>Đây là bằng chứng quan sát được, không phải claim toàn hệ thống đã tối ưu</small>
           </div>
           <span class="tag-badge green">Tốt</span>
         </div>
         <div class="da-alert-row">
           <div class="alert-icon-circle green"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
           <div class="alert-info">
-            <b>Độ trễ và lưu lượng ổn định</b>
-            <small>Cơ chế phân quyền và routing hoạt động chính xác</small>
+            <b>Độ trễ và lưu lượng dùng số liệu quan sát</b>
+            <small>Trường thiếu evidence giữ unknown thay vì nội suy trạng thái tốt</small>
           </div>
           <span class="tag-badge green">Chuẩn</span>
         </div>
@@ -1748,8 +1739,9 @@
 
   async function loadCostSettings() {
     try {
-      const snapshot = unwrap(await api.snapshot());
-      const settings = snapshot?.settings || {};
+      const settingsSnapshot = unwrap(await api.snapshot());
+      snapshot = settingsSnapshot;
+      const settings = settingsSnapshot?.settings || {};
       cost = {
         preset: settings.costPreset || 'gpt-4o-mini',
         rateIn: Number(settings.costRateInUsd ?? 0.15),
@@ -1765,63 +1757,40 @@
     }
   }
 
-  async function refreshSnapshot(force = false) {
-    if (!force && Date.now() - lastSnapshotReadAt < DASHBOARD_SNAPSHOT_REFRESH_MS) return;
-    lastSnapshotReadAt = Date.now();
-    try {
-      if (!force && orchestrationIsBusy()) {
-        const health = unwrap(await api.lightweightSnapshot());
-        snapshot = { ...(snapshot || {}), status: health };
-      } else {
-        snapshot = unwrap(await api.snapshot());
-      }
+  async function refreshAnalytics(force = false) {
+    if (analyticsInFlight) return analyticsInFlight;
+    if (!force && analyticsSnapshot && Date.now() - lastAnalyticsReadAt < DASHBOARD_ANALYTICS_REFRESH_MS) {
+      return analyticsSnapshot;
     }
-    catch { snapshot = null; }
-    updateHeaderContext();
+    lastAnalyticsReadAt = Date.now();
+    analyticsInFlight = api.dashboardAnalytics()
+      .then(unwrap)
+      .then((data) => {
+        analyticsSnapshot = data;
+        return analyticsSnapshot;
+      })
+      .catch(() => analyticsSnapshot)
+      .finally(() => { analyticsInFlight = null; });
+    return analyticsInFlight;
   }
 
-  async function refreshPerformance(force = false) {
-    if (!force && Date.now() - lastPerfReadAt < DASHBOARD_PERFORMANCE_REFRESH_MS) return;
-    lastPerfReadAt = Date.now();
-    try { perf = unwrap(await api.performanceTrace()); }
-    catch { perf = null; }
+  async function applyOverviewPulse(event) {
+    const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
+    if (detail.snapshot) snapshot = detail.snapshot;
+    if (detail.orchestration) orchestration = detail.orchestration;
+    if (detail.performance) perf = detail.performance;
+    await refreshAnalytics(detail.force === true);
+    renderAll();
   }
 
-  async function refreshOrchestration(force = false) {
-    if (!force && Date.now() - lastOrchestrationReadAt < DASHBOARD_ORCHESTRATION_REFRESH_MS) return;
-    lastOrchestrationReadAt = Date.now();
-    if (!force && orchestrationIsBusy()) {
-      try {
-        const live = unwrap(await api.liveOrchestration());
-        if (orchestrationIsBusy(live)) return;
-      } catch { return; }
-    }
-    try { orchestration = unwrap(await api.orchestration()); }
-    catch { orchestration = null; }
+  function requestOverviewRefresh() {
+    document.dispatchEvent(new CustomEvent('coding-tools:overview-refresh-request'));
   }
 
-  async function refresh(force = false) {
-    if (refreshInFlight || (!force && !shouldPoll())) return;
-    refreshInFlight = true;
-    try {
-      await Promise.all([refreshSnapshot(force), refreshPerformance(force), refreshOrchestration(force)]);
-      renderAll();
-    } finally {
-      refreshInFlight = false;
-    }
-  }
-
-  function dashboardPollDelay() {
-    if (!shouldPoll()) return DASHBOARD_HIDDEN_POLL_MS;
-    return orchestrationIsBusy() ? DASHBOARD_BUSY_POLL_MS : DASHBOARD_IDLE_POLL_MS;
-  }
-
-  async function pollDashboard() {
-    await refresh(false);
-    setTimeout(pollDashboard, dashboardPollDelay());
-  }
-
-  byId('daRefreshButton')?.addEventListener('click', () => refresh(true));
+  byId('daRefreshButton')?.addEventListener('click', () => {
+    lastAnalyticsReadAt = 0;
+    requestOverviewRefresh();
+  });
   byId('daApply')?.addEventListener('click', applyCostModel);
 
   byId('daChartTimeMode')?.addEventListener('change', (event) => {
@@ -1846,13 +1815,16 @@
 
   document.addEventListener('click', (event) => {
     const target = event.target.closest('[data-page="overview"]');
-    if (target) setTimeout(() => refresh(true), 0);
+    if (target) setTimeout(requestOverviewRefresh, 0);
   });
-  document.addEventListener('visibilitychange', () => { if (shouldPoll()) refresh(true); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden' && activePage() === 'overview') requestOverviewRefresh();
+  });
+  document.addEventListener('coding-tools:overview-pulse', applyOverviewPulse);
 
   reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
 
-  loadCostSettings()
-    .then(() => refresh(true))
-    .finally(() => setTimeout(pollDashboard, dashboardPollDelay()));
+  Promise.all([loadCostSettings(), refreshAnalytics(true)])
+    .then(() => renderAll())
+    .finally(requestOverviewRefresh);
 })();

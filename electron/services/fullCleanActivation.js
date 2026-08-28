@@ -30,6 +30,10 @@ const COMPONENTS = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui'])
 // after this bounded expiry; this only gives the connector phase its intended
 // post-start window instead of racing the startup deadline.
 const DEFAULT_TTL_MS = 600_000;
+// Coding MCP accepts an activation-preparation fence only inside its own
+// 60-second validation window. Keep a small transport/clock margin while the
+// durable full-clean epoch retains the longer end-to-end deadline above.
+const MCP_PREPARE_FENCE_TTL_MS = 55_000;
 const execFileAsync = promisify(execFile);
 const HEX64 = /^[a-f0-9]{64}$/;
 const TERMINAL_P5_LIFECYCLES = new Set(['EPOCH_CLOSED', 'EPOCH_HARD_STOPPED']);
@@ -1169,10 +1173,18 @@ class FullCleanActivation {
 
   async _prepareFence(operationIdValue, expiresAtUnixMs, sourceCheckpoint, allowAcceptancePending) {
     if (typeof this.orchestrator?.prepareCodeActivation !== 'function') return null;
+    const nowUnixMs = this.now();
+    const prepareExpiresAtUnixMs = Math.min(
+      Number(expiresAtUnixMs || 0),
+      nowUnixMs + MCP_PREPARE_FENCE_TTL_MS
+    );
+    if (!Number.isSafeInteger(prepareExpiresAtUnixMs) || prepareExpiresAtUnixMs <= nowUnixMs) {
+      throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request expired before Coding MCP preparation.');
+    }
     try {
       return await this.orchestrator.prepareCodeActivation({
         operationId: operationIdValue,
-        expiresAtUnixMs,
+        expiresAtUnixMs: prepareExpiresAtUnixMs,
         allowAcceptancePending: allowAcceptancePending === true,
         ...(sourceCheckpoint ? { sourceCheckpoint } : {})
       });
@@ -1180,6 +1192,21 @@ class FullCleanActivation {
       if (String(error?.code || '') === 'COMPONENT_STOPPED') return { code: 'COMPONENT_STOPPED', safe: true, fenced: false };
       throw error;
     }
+  }
+
+  _requireExactPreparedFence(fence, operationIdValue, stage) {
+    const expectedOperationId = text(operationIdValue);
+    if (!fence
+      || fence.safe !== true
+      || fence.fenced !== true
+      || text(fence.fence_operation_id) !== expectedOperationId) {
+      throw epochError(
+        'ACTIVATION_PREFLIGHT_UNVERIFIED',
+        `Full clean activation requires an exact checkpoint-bound runtime fence ${stage}.`,
+        { fence, operation_id: expectedOperationId, stage }
+      );
+    }
+    return fence;
   }
 
   async _freshActivationObservation(record) {
@@ -1525,9 +1552,7 @@ class FullCleanActivation {
       this.store.update(epochId, { state: 'ADMISSION_CLOSED', reason: 'new-admission-closed' });
       const fence = await this._prepareFence(operation_id, expiresAtUnixMs, options.sourceCheckpoint || null, options.allowAcceptancePending);
       const runtimeRunning = preflight.runtime?.code !== 'COMPONENT_STOPPED';
-      if (runtimeRunning && (!fence || fence.safe !== true || fence.fenced !== true || String(fence.fence_operation_id || '') !== operation_id)) {
-        throw epochError('ACTIVATION_PREFLIGHT_UNVERIFIED', 'Full clean activation requires an exact checkpoint-bound runtime fence before stopping processes.', { fence });
-      }
+      if (runtimeRunning) this._requireExactPreparedFence(fence, operation_id, 'before stopping processes');
       if (!runtimeRunning && preflight.safe !== true) {
         throw epochError('ORCHESTRATION_STATE_UNCERTAIN', 'Stopped runtime did not provide a safe canonical preflight receipt.');
       }
@@ -1538,6 +1563,18 @@ class FullCleanActivation {
         await this.terminateUi(uiPresence);
       }
       if (typeof this.orchestrator?.stop === 'function') {
+        // UI termination may take longer than Coding MCP's bounded admission
+        // fence. Renew the same operation immediately before the runtime stop
+        // so no process mutation relies on an expired preparation receipt.
+        if (runtimeRunning) {
+          const stopFence = await this._prepareFence(
+            operation_id,
+            expiresAtUnixMs,
+            options.sourceCheckpoint || null,
+            options.allowAcceptancePending
+          );
+          this._requireExactPreparedFence(stopFence, operation_id, 'immediately before Coding MCP stop');
+        }
         await this.orchestrator.stop({ manual: false, fullClean: true, activationEpochId: epochId });
       }
       if (typeof this.recoveryPlane?.stop === 'function') await this.recoveryPlane.stop();

@@ -1,0 +1,220 @@
+[
+  {
+    "version": 2,
+    "task_id": "91f7cf03e863442f994a5e82ebd944e5",
+    "orchestration": {
+      "run_id": "d6576dbfdfbe4e4590a82479662707b1",
+      "wave_id": "1cd3c60ab65a4a1f84e7198f6d5b02ee",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+      "worktree_fp": "7b5c665b05ecb7c417a41c0ccc7046fbcc66c1aca784a0c8ef9f1b31d86ef3b4",
+      "contract_fp": ""
+    },
+    "objective": "Diagnose the currently observed Codex-web Electron UI lag/freezing and dashboard/control-center metrics not being measured or populated. This is an evidence-first diagnosis only: do not modify source, do not create patches, do not restart runtime, do not clean/reset/revert concurrent work, and do not touch ledger.sqlite3 manually. Determine whether both symptoms share a causal path. Inspect current renderer/dashboard refresh logic, performance/telemetry collection and persistence, Electron IPC/runtime status polling, stale orchestration aggregation, and the in-progress dev UI lifecycle/runtime changes already present in the dirty worktree. Identify concrete hot paths, blocking/synchronous operations, unbounded scans/polling, missing instrumentation or schema/filter mismatches, and explain why prior fixes could leave the user-visible problem unresolved. Return a ranked root-cause assessment, exact relevant files/symbols, current evidence, smallest coherent repair scope, and cheapest authoritative proof plan.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T08:04:40.000Z",
+    "updated_at": "2026-08-28T08:04:46.295Z",
+    "events": [
+      {
+        "time": "2026-08-28T08:04:40.000Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Diagnose the currently observed Codex-web Electron UI lag/freezing and dashboard/control-center metrics not being measured or populated. This is an evidence-first diagnosis only: do not modify source, do not create patches, do not restart runtime, do not clean/reset/revert concurrent work, and do not touch ledger.sqlite3 manually. Determine whether both symptoms share a causal path. Inspect current renderer/dashboard refresh logic, performance/telemetry collection and persistence, Electron IPC/runtime status polling, stale orchestration aggregation, and the in-progress dev UI lifecycle/runtime changes already present in the dirty worktree. Identify concrete hot paths, blocking/synchronous operations, unbounded scans/polling, missing instrumentation or schema/filter mismatches, and explain why prior fixes could leave the user-visible problem unresolved. Return a ranked root-cause assessment, exact relevant files/symbols, current evidence, smallest coherent repair scope, and cheapest authoritative proof plan."
+        }
+      },
+      {
+        "time": "2026-08-28T08:04:41.714Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T08:04:46.287Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T08:04:46.295Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T08:05:03.394Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "6ae9d5496744467e837015abca1e0019",
+    "orchestration": {
+      "run_id": "4f22d13d4a704ee7960a8e938bcf2ae7",
+      "wave_id": "fab23cad475d46039eb10969f65fd525",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+      "worktree_fp": "7b5c665b05ecb7c417a41c0ccc7046fbcc66c1aca784a0c8ef9f1b31d86ef3b4",
+      "contract_fp": ""
+    },
+    "objective": "Continue the same read-only diagnosis. Narrow specifically to the Electron renderer/control-center data path. Do not modify files or runtime. Locate how renderer/app.js schedules refreshes, which preload/IPC APIs it calls, what runtime/control-center snapshot payloads contain, whether any UI refresh request triggers heavy ledger/task-history/performance aggregation, and whether dashboard metric fields are absent, stale, filtered, or never wired. Also inspect any current dirty diff on renderer/runtime/lifecycle surfaces only if available through the workflow context. Return exact symbols and a causal explanation tying UI freezes to metric blindness where evidence supports it.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T08:05:03.396Z",
+    "updated_at": "2026-08-28T08:05:07.762Z",
+    "events": [
+      {
+        "time": "2026-08-28T08:05:03.396Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T08:05:04.506Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T08:05:07.754Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T08:05:07.762Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T08:05:58.719Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "9b0b30cfa8b4414aa70f6f0dc2246e24",
+    "orchestration": {
+      "run_id": "1c4c7699bbea4a9fbd109270ed8fde15",
+      "wave_id": "8727f16334b4493989d99b12118a0645",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "148de18795787e820ef1bc51d0f2591052d24238",
+      "worktree_fp": "7b5c665b05ecb7c417a41c0ccc7046fbcc66c1aca784a0c8ef9f1b31d86ef3b4",
+      "contract_fp": ""
+    },
+    "objective": "Continue the same read-only diagnosis. Inspect the actual Command Center and analytics scripts plus their tests and the MCP orchestration projection path. Do not modify source or runtime. Confirm: (1) exact polling cadence and single-flight/backoff behavior in renderer/control-center.js and renderer/dashboard.js; (2) every API call each refresh makes and whether full /__control/orchestration is duplicated; (3) whether dashboard consumes performanceTrace or only orchestration data; (4) which KPI fields intentionally remain unknown because provider telemetry is absent versus which should be derivable; (5) whether history/stale-run/accepted-result aggregation is bounded or recomputed across the retained ledger; (6) prior task-history evidence of attempted lag/dashboard fixes and what they actually changed. Return exact symbols, bounded evidence, ranked causal chain, and the smallest coherent architectural repair that would close both UI responsiveness and metric-population defects without weakening truthful unknown semantics.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T08:05:58.721Z",
+    "updated_at": "2026-08-28T08:06:03.444Z",
+    "events": [
+      {
+        "time": "2026-08-28T08:05:58.721Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T08:06:00.676Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T08:06:03.444Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T08:06:03.444Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T08:06:34.263Z",
+    "archive_reason": "superseded"
+  }
+]

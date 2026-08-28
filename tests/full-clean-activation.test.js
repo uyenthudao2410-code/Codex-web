@@ -1070,6 +1070,116 @@ test('explicit process refresh starts a full-clean epoch without inventing a sou
   assert.equal(observed.sourceCheckpoint, null);
 });
 
+test('full-clean bounds the Coding MCP preparation fence without shortening the durable epoch', async (t) => {
+  const { root, paths } = fixture(t);
+  const nowUnixMs = 1_700_000_000_000;
+  const calls = [];
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: epochStore(paths),
+    settings: { load: () => ({ workspace: root }) },
+    orchestrator: {
+      prepareCodeActivation: async (options) => {
+        calls.push(options);
+        return {
+          safe: true,
+          fenced: true,
+          fence_operation_id: options.operationId,
+          expires_at_unix_ms: options.expiresAtUnixMs
+        };
+      }
+    },
+    now: () => nowUnixMs
+  });
+  const operationId = id('operation-bounded-fence', '1001');
+  const durableExpiresAtUnixMs = nowUnixMs + 600_000;
+
+  const bounded = await coordinator._prepareFence(operationId, durableExpiresAtUnixMs, null, false);
+  const shortDeadline = await coordinator._prepareFence(operationId, nowUnixMs + 30_000, null, false);
+
+  assert.equal(calls[0].expiresAtUnixMs, nowUnixMs + 55_000);
+  assert.equal(bounded.expires_at_unix_ms, nowUnixMs + 55_000);
+  assert.equal(calls[1].expiresAtUnixMs, nowUnixMs + 30_000);
+  assert.equal(shortDeadline.expires_at_unix_ms, nowUnixMs + 30_000);
+  assert.equal(durableExpiresAtUnixMs, nowUnixMs + 600_000,
+    'the end-to-end activation epoch keeps its independent ten-minute deadline');
+});
+
+test('public full-clean refresh renews the Coding MCP fence after slow UI termination without shortening handoff expiry', async (t) => {
+  const { root, paths } = fixture(t);
+  let nowUnixMs = 1_700_000_000_000;
+  const durableExpiresAtUnixMs = nowUnixMs + 600_000;
+  const operationId = id('operation-renewed-fence', '1001');
+  const prepareCalls = [];
+  const events = [];
+  const spawnCalls = [];
+  const store = new ActivationEpochStore({ paths, now: () => nowUnixMs });
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: store,
+    settings: { load: () => ({ workspace: root }) },
+    orchestrator: {
+      inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: root }),
+      prepareCodeActivation: async (options) => {
+        prepareCalls.push({ preparedAtUnixMs: nowUnixMs, ...options });
+        events.push('prepare');
+        return {
+          safe: true,
+          fenced: true,
+          fence_operation_id: options.operationId,
+          expires_at_unix_ms: options.expiresAtUnixMs
+        };
+      },
+      currentMcpHealth: async () => null,
+      stop: async () => { events.push('runtime.stop'); return true; }
+    },
+    recoveryPlane: { stop: async () => { events.push('recovery-plane.stop'); } },
+    getUiPresence: () => ({ alive: true, pid: process.pid + 1, instance_id: id('old-electron-ui', '1001') }),
+    terminateUi: async () => {
+      events.push('ui.stop');
+      nowUnixMs += 56_000;
+    },
+    spawnRecoveryReplacement: async (options) => {
+      events.push('recovery.spawn');
+      spawnCalls.push(options);
+    },
+    now: () => nowUnixMs
+  });
+
+  const result = await coordinator.restart({
+    operationId,
+    refresh: true,
+    mode: 'full_clean_refresh',
+    expiresAtUnixMs: durableExpiresAtUnixMs
+  });
+
+  assert.equal(result.state, 'HANDOFF');
+  assert.deepEqual(events, [
+    'prepare',
+    'ui.stop',
+    'prepare',
+    'runtime.stop',
+    'recovery-plane.stop',
+    'recovery.spawn'
+  ]);
+  assert.equal(prepareCalls.length, 2);
+  for (const call of prepareCalls) {
+    assert.equal(call.operationId, operationId);
+    assert.ok(call.expiresAtUnixMs > call.preparedAtUnixMs);
+    assert.ok(call.expiresAtUnixMs <= call.preparedAtUnixMs + 55_000);
+  }
+  assert.equal(prepareCalls[0].expiresAtUnixMs, 1_700_000_055_000);
+  assert.equal(prepareCalls[1].preparedAtUnixMs, 1_700_000_056_000,
+    'UI termination advances beyond the first short-lived preparation fence');
+  assert.equal(prepareCalls[1].expiresAtUnixMs, 1_700_000_111_000);
+  assert.equal(spawnCalls.length, 1);
+  assert.equal(spawnCalls[0].operationId, operationId);
+  assert.equal(spawnCalls[0].expiresAtUnixMs, durableExpiresAtUnixMs);
+  assert.equal(store.current().expires_at_unix_ms, durableExpiresAtUnixMs);
+  assert.equal(store.current().source_checkpoint, null,
+    'the public refresh path must not invent an accepted source checkpoint');
+});
+
 test('full-clean single-flight reuses only the exact operation and source authority', async (t) => {
   const { root, paths } = fixture(t);
   const coordinator = new FullCleanActivation({

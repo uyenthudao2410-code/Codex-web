@@ -1,6 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { normalize, validateRuntimeSettings, mergeRecentWorkspaces, workspaceKey } = require('../electron/services/config');
+const path = require('node:path');
+const {
+  normalize,
+  normalizeWorkspacePath,
+  validateRuntimeSettings,
+  mergeRecentWorkspaces,
+  workspaceKey
+} = require('../electron/services/config');
 
 test('invalid modes fall back to safe defaults', () => {
   const result = normalize({ permissionMode: 'dangerous', toolMode: 'dangerous', proxyMode: 'dangerous' });
@@ -65,4 +72,31 @@ test('recent workspaces use a 50-item MRU list', () => {
   assert.equal(recent.length, 50);
   assert.equal(workspaceKey(recent[0]), workspaceKey('C:\\workspace-20'));
   assert.equal(recent.filter((item) => workspaceKey(item) === workspaceKey('C:\\workspace-20')).length, 1);
+});
+
+test('workspace paths are fully qualified and preserve filesystem roots', () => {
+  const absoluteRoot = path.parse(path.resolve(process.cwd())).root;
+  assert.equal(normalizeWorkspacePath(absoluteRoot), path.normalize(absoluteRoot));
+  assert.equal(normalizeWorkspacePath('.'), '');
+  assert.equal(normalizeWorkspacePath('relative-workspace'), '');
+
+  if (process.platform === 'win32') {
+    assert.equal(normalizeWorkspacePath('C:'), '');
+    assert.equal(normalizeWorkspacePath('E:.'), '');
+    assert.equal(normalizeWorkspacePath('C:\\'), 'C:\\');
+    assert.equal(normalizeWorkspacePath('C:\\workspace\\'), 'C:\\workspace');
+  }
+});
+
+test('settings normalization removes cwd-dependent workspace history and roots', () => {
+  const activeWorkspace = path.resolve(process.cwd());
+  const validRoot = path.parse(activeWorkspace).root;
+  const result = normalize({
+    workspace: activeWorkspace,
+    recentWorkspaces: ['E:.', 'relative-workspace', activeWorkspace],
+    authorizedRoots: ['C:', 'relative-root', validRoot]
+  });
+
+  assert.deepEqual(result.recentWorkspaces, [activeWorkspace]);
+  assert.deepEqual(result.authorizedRoots, workspaceKey(validRoot) === workspaceKey(activeWorkspace) ? [] : [validRoot]);
 });

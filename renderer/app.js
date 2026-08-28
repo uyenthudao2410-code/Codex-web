@@ -328,6 +328,15 @@ function componentSourcePresentation(revision, { running = true, label = 'compon
 function connectorContractPresentation(status = {}) {
   const reported = String(status.connectorContractState || '').toUpperCase();
   const explicit = reported === 'COMPATIBLE_ACKNOWLEDGED' ? 'UNAVAILABLE' : reported;
+  if (status.connectorAcknowledgementPending === true
+    && ['UNCHANGED_ACKNOWLEDGED', 'CURRENT_ACKNOWLEDGED', 'CURRENT_COMPATIBLE_ACKNOWLEDGED'].includes(explicit)) {
+    return {
+      state: 'UNAVAILABLE',
+      notice: true,
+      message: 'Connector receipt đang mâu thuẫn: state đã acknowledged nhưng acknowledgement vẫn pending. Chờ runtime hội tụ trước khi hiển thị xanh.',
+      toast: 'Connector acknowledgement chưa hội tụ; không dùng trạng thái xanh cũ.'
+    };
+  }
   if (explicit === 'UNCHANGED_ACKNOWLEDGED') {
     const activationClosed = status?.activationEpoch?.admission_open === false;
     return {
@@ -921,13 +930,13 @@ function applyHeartbeat(status) {
   delete state.snapshot.status.signalStale;
   // Heartbeats are authoritative point-in-time projections. Never retain a
   // previous green closure/connector receipt when the current host omits it.
-  for (const key of ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure', 'activationEpoch', 'updateIncomplete']) {
+  for (const key of ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorAcknowledgementPending', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure', 'activationEpoch', 'updateIncomplete']) {
     if (!Object.hasOwn(status, key)) delete state.snapshot.status[key];
   }
   state.snapshot.status.runtimeRunning = Boolean(status.mcpRunning);
   state.snapshot.status.tunnelRunning = Boolean(status.tunnelRunning);
   state.snapshot.status.fullyReady = Boolean(status.fullyReady);
-  ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure', 'activationEpoch', 'updateIncomplete'].forEach((key) => {
+  ['codeRevision', 'toolContract', 'connectorContractState', 'connectorRefreshRequired', 'connectorAcknowledgementPending', 'connectorRediscovered', 'connectorRediscoveredAt', 'activationClosure', 'activationEpoch', 'updateIncomplete'].forEach((key) => {
     if (Object.hasOwn(status, key)) state.snapshot.status[key] = status[key];
   });
   if (status.recoveryHost) state.snapshot.recoveryHost = status.recoveryHost;

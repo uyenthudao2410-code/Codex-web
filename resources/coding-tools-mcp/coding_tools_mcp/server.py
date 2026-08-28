@@ -1935,9 +1935,17 @@ class Runtime(
         return self.workspace.resolve_for_write_at(self._request_default_cwd(), raw_path)
 
     def git_path_filter(self, raw_path: str) -> str:
-        if raw_path == ".":
-            return self.default_cwd_display()
-        return self.resolve_for_write(raw_path).display
+        scope_root = self._current_request_workspace_root().resolve(strict=False)
+        target = self._request_default_cwd() if raw_path == "." else self.resolve_for_write(raw_path).path
+        containing_root = self.workspace._containing_root(target.resolve(strict=False))
+        if containing_root is None or containing_root.resolve(strict=False) != scope_root:
+            raise ToolFailure(
+                "ORCHESTRATION_WORKSPACE_MISMATCH",
+                "Git path filter does not belong to the request-bound workspace.",
+                category="security",
+                retryable=False,
+            )
+        return normalize_rel_display(target, scope_root)
 
     def _exec_environment_summary(self) -> dict[str, Any]:
         return {

@@ -35,6 +35,7 @@ const UI_RECOVERY_COOLDOWN_MS = 20_000;
 const UI_RECOVERY_WINDOW_MS = 10 * 60_000;
 const UI_RECOVERY_ATTEMPT_LIMIT = 4;
 const UI_RECOVERY_CIRCUIT_BREAK_MS = 5 * 60_000;
+const TERMINAL_BOOTSTRAP_STATES = new Set(['completed', 'failed', 'expired', 'reconciled_terminal_receipt']);
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -159,6 +160,7 @@ function activationClosureProjection({
     },
     connectorContractState,
     connectorRefreshRequired: status?.connectorRefreshRequired,
+    connectorAcknowledgementPending: status?.connectorAcknowledgementPending,
     connectorRediscoveredAt: status?.connectorRediscoveredAt,
     connectorCurrentSha256: status?.toolContract?.sha256,
     connectorAcknowledgedSha256: status?.connectorContractAcknowledgedSha256,
@@ -226,7 +228,8 @@ class RecoveryHost {
     exitProcess = null, replacement = null, autoActivationController = null, recoveryPlaneService = null,
     deviceIdentity = null, bootstrap = null, processAlive = isProcessAlive,
     processIdentityObserver = observeProcessIdentity,
-    exactProcessTerminator = terminateExactProcessTree
+    exactProcessTerminator = terminateExactProcessTree,
+    canonicalLedgerCensusFn = canonicalLedgerCensus
   }) {
     this.paths = paths;
     this.settings = settings;
@@ -282,6 +285,9 @@ class RecoveryHost {
     this.exactProcessTerminator = typeof exactProcessTerminator === 'function'
       ? exactProcessTerminator
       : terminateExactProcessTree;
+    this.canonicalLedgerCensus = typeof canonicalLedgerCensusFn === 'function'
+      ? canonicalLedgerCensusFn
+      : null;
     this.processIdentity = null;
     this.exitProcess = exitProcess || (() => {});
     this.handoffStarted = false;
@@ -345,7 +351,7 @@ class RecoveryHost {
       getUiPresence: () => this.activation.uiPresence(),
       getUiRevision: (options) => this.activation.uiRevisionStatus(options),
       getRecoveryPlaneStatus: () => this.lastRecoveryPlaneStatus,
-      canonicalLedgerCensus: (options) => canonicalLedgerCensus({ paths: this.paths, ...options }),
+      canonicalLedgerCensus: (options) => this.canonicalLedgerCensus({ paths: this.paths, ...options }),
       recoveryHostRunningRevision: this.recoveryHostRunningRevision,
       setActivationEpoch: (epochId) => {
         if (this.ipcServer && typeof this.ipcServer.updateActivationEpoch === 'function') {
@@ -553,7 +559,12 @@ class RecoveryHost {
   }
 
   bootstrapBlocksAdmission() {
-    return Boolean(this.bootstrap && this.bootstrapActivation?.state !== 'completed');
+    const state = String(this.bootstrapActivation?.state || 'pending');
+    // A failed bootstrap receipt is immutable evidence of a failed attempt,
+    // not an enduring ownership lease.  It may release admission only through
+    // reconcileTerminalBootstrapReceipt(), which validates the independent
+    // durable epoch, current Recovery Host identity, and a fresh ledger census.
+    return Boolean(this.bootstrap && !TERMINAL_BOOTSTRAP_STATES.has(state));
   }
 
   assertBootstrapMutationAllowed() {
@@ -565,6 +576,164 @@ class RecoveryHost {
         state: this.bootstrapActivation?.state || 'pending'
       }
     });
+  }
+
+  async reconcileTerminalBootstrapReceipt(durableEpoch = null) {
+    const bootstrap = this.bootstrap;
+    const activation = this.bootstrapActivation;
+    const attemptedOperationId = String(bootstrap?.operation_id || '').trim();
+    if (!bootstrap || !attemptedOperationId || String(activation?.state || '') !== 'receipt_conflict') {
+      throw Object.assign(new Error('Recovery Host has no terminal bootstrap receipt conflict to reconcile.'), {
+        code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_UNAVAILABLE'
+      });
+    }
+    if (!this.running || !this.ownsLock || !this.processIdentity) {
+      throw Object.assign(new Error('Recovery Host ownership is unavailable for terminal bootstrap reconciliation.'), {
+        code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_UNVERIFIED'
+      });
+    }
+
+    const verifyReadyEpoch = (record) => {
+      const operationId = String(record?.operation_id || '').trim();
+      const activationEpochId = String(record?.activation_epoch_id || '').trim();
+      const admission = String(record?.admission_state || '').trim().toUpperCase();
+      if (!record || record.state !== 'READY' || admission !== 'OPEN'
+        || !operationId || !activationEpochId || operationId === attemptedOperationId) {
+        throw Object.assign(new Error('The durable activation epoch cannot prove that this terminal bootstrap attempt is superseded.'), {
+          code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_EPOCH_UNVERIFIED',
+          details: {
+            attempted_operation_id: attemptedOperationId,
+            durable_operation_id: operationId || null,
+            activation_epoch_id: activationEpochId || null,
+            state: String(record?.state || '') || null,
+            admission_state: admission || null
+          }
+        });
+      }
+      const conflictOperationId = String(activation?.operation_id || '').trim();
+      const conflictEpochId = String(activation?.activation_epoch_id || '').trim();
+      if ((conflictOperationId && conflictOperationId !== operationId)
+        || (conflictEpochId && conflictEpochId !== activationEpochId)) {
+        throw Object.assign(new Error('The receipt-conflict projection does not match the current durable activation epoch.'), {
+          code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_EPOCH_CHANGED',
+          details: {
+            attempted_operation_id: attemptedOperationId,
+            conflict_operation_id: conflictOperationId || null,
+            durable_operation_id: operationId,
+            conflict_activation_epoch_id: conflictEpochId || null,
+            durable_activation_epoch_id: activationEpochId
+          }
+        });
+      }
+      return { operationId, activationEpochId };
+    };
+
+    const initialEpoch = durableEpoch || this.activationEpochStore.current();
+    const readyEpoch = verifyReadyEpoch(initialEpoch);
+    const terminalResult = readBootstrapResult(this.paths, attemptedOperationId);
+    const terminalState = String(terminalResult?.state || '');
+    const terminalErrorCode = String(terminalResult?.error?.code || '').trim();
+    const terminalErrorMessage = String(terminalResult?.error?.message || '').trim();
+    if (!terminalResult || terminalResult.operation_id !== attemptedOperationId
+      || !['failed', 'expired'].includes(terminalState)
+      || !terminalErrorCode || !terminalErrorMessage) {
+      throw Object.assign(new Error('The conflicting bootstrap result is not a valid terminal failed/expired receipt.'), {
+        code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_RECEIPT_UNVERIFIED',
+        details: {
+          attempted_operation_id: attemptedOperationId,
+          result_state: terminalState || null,
+          error_code: terminalErrorCode || null
+        }
+      });
+    }
+
+    const observedSelf = await this.processIdentityObserver(process.pid);
+    if (observedSelf?.state !== 'live' || !sameProcessIdentity(this.processIdentity, observedSelf)) {
+      throw Object.assign(new Error('Recovery Host process identity changed before terminal bootstrap reconciliation.'), {
+        code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_IDENTITY_CHANGED',
+        details: { pid: process.pid, instance_id: this.instanceId }
+      });
+    }
+    const lock = readLock(this.paths.recoveryHostLockFile());
+    if (Number(lock?.pid) !== Number(process.pid) || String(lock?.instance_id || '') !== this.instanceId) {
+      throw Object.assign(new Error('Recovery Host lock ownership changed before terminal bootstrap reconciliation.'), {
+        code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_OWNERSHIP_CHANGED',
+        details: { pid: process.pid, instance_id: this.instanceId }
+      });
+    }
+    if (typeof this.canonicalLedgerCensus !== 'function') {
+      throw Object.assign(new Error('Canonical ledger census is unavailable for terminal bootstrap reconciliation.'), {
+        code: 'ORCHESTRATION_STATE_UNCERTAIN'
+      });
+    }
+    // An explicit npm-start process refresh is intentionally checkpoint-free
+    // and preserves pre-existing accepted-work state.  It may observe durable
+    // AWAITING_ACCEPTANCE records without gaining authority to accept them;
+    // this is the same narrow allowance used by FullCleanActivation for a
+    // validated refresh envelope, never for a source-checkpoint activation.
+    const allowAcceptancePending = bootstrap.refresh === true
+      && bootstrap.source_checkpoint === null
+      && bootstrap.allow_acceptance_pending === true;
+    const workspace = String(this.settings?.load?.()?.workspace || '').trim();
+    const census = await this.canonicalLedgerCensus({
+      paths: this.paths,
+      workspace,
+      allowAcceptancePending
+    });
+    const validCensus = census?.safe === true
+      && census?.code === 'READY'
+      && census?.content_free === true
+      && census?.mutated_canonical_ledger === false
+      && census?.snapshot?.immutable === true
+      && census?.snapshot?.query_only === true
+      && census?.lifecycle?.projection_drift === false
+      && Number(census?.lifecycle?.unexplained_active_runs || 0) === 0
+      && Number(census?.lifecycle?.unbound_live_resource_residues || 0) === 0;
+    if (!validCensus) {
+      throw Object.assign(new Error('Canonical ledger census refused terminal bootstrap reconciliation.'), {
+        code: census?.code || 'ORCHESTRATION_STATE_UNCERTAIN',
+        details: {
+          attempted_operation_id: attemptedOperationId,
+          census_code: census?.code || null,
+          census_reason: census?.reason || null,
+          census_fingerprint: census?.census_fingerprint || null
+        }
+      });
+    }
+    const finalEpoch = this.activationEpochStore.current();
+    const finalReadyEpoch = verifyReadyEpoch(finalEpoch);
+    if (finalReadyEpoch.operationId !== readyEpoch.operationId
+      || finalReadyEpoch.activationEpochId !== readyEpoch.activationEpochId) {
+      throw Object.assign(new Error('The durable activation epoch changed during terminal bootstrap reconciliation.'), {
+        code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_EPOCH_CHANGED',
+        details: {
+          attempted_operation_id: attemptedOperationId,
+          initial_operation_id: readyEpoch.operationId,
+          final_operation_id: finalReadyEpoch.operationId,
+          initial_activation_epoch_id: readyEpoch.activationEpochId,
+          final_activation_epoch_id: finalReadyEpoch.activationEpochId
+        }
+      });
+    }
+    const consumed = removeBootstrapEnvelope(this.paths, attemptedOperationId, bootstrap.integrity_sha256 || '');
+    if (consumed !== true) {
+      throw Object.assign(new Error('The exact bootstrap envelope was unavailable for guarded reconciliation consumption.'), {
+        code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_ENVELOPE_UNVERIFIED',
+        details: { attempted_operation_id: attemptedOperationId }
+      });
+    }
+    this.bootstrapEnvelopeConsumed = true;
+    this.bootstrapActivation = {
+      state: 'reconciled_terminal_receipt',
+      operation_id: finalReadyEpoch.operationId,
+      activation_epoch_id: finalReadyEpoch.activationEpochId,
+      attempted_operation_id: attemptedOperationId,
+      terminal_result_state: terminalState,
+      error_code: terminalErrorCode,
+      reconciled_at_unix_ms: Date.now(),
+      census_fingerprint: String(census.census_fingerprint || '') || null
+    };
+    return this.bootstrapActivation;
   }
 
   async prepareBootstrapStart(durableEpoch) {
@@ -898,7 +1067,12 @@ class RecoveryHost {
         old_host_pid: Number(this.bootstrap.old_host_pid || 0) || null,
         old_host_process_start_token: this.bootstrap.old_host_process_start_token || null,
         old_host_instance_id: this.bootstrap.old_host_instance_id || null,
-        state: this.bootstrapActivation?.state || 'pending'
+        state: this.bootstrapActivation?.state || 'pending',
+        attempted_operation_id: this.bootstrapActivation?.attempted_operation_id || null,
+        terminal_result_state: this.bootstrapActivation?.terminal_result_state || null,
+        error_code: this.bootstrapActivation?.error_code || null,
+        reconciled_at_unix_ms: this.bootstrapActivation?.reconciled_at_unix_ms || null,
+        census_fingerprint: this.bootstrapActivation?.census_fingerprint || null
       } : null,
       capabilities: {
         full_clean_activation: fullCleanAvailable,
@@ -1792,20 +1966,33 @@ class RecoveryHost {
       persistReplacementFailure(error);
       const terminalEpoch = this.activationEpochStore.current();
       if (terminalReady || terminalEpoch?.state === 'READY') {
-        // Runtime readiness is authoritative once durably finalized. A stale or
-        // conflicting transient bootstrap receipt must not tear the recovered
-        // runtime back down; surface the receipt error for reconciliation.
-        this.recordBootstrapEpoch(terminalEpoch, {
-          replacement_host_instance_id: this.instanceId,
-          replacement_host_pid: process.pid,
-          receipt_error_code: error?.code || 'RECOVERY_BOOTSTRAP_RESULT_FAILED'
-        });
+        // A READY epoch from an older operation must not overwrite a failed
+        // bootstrap receipt as `completed`: that terminal receipt is immutable
+        // evidence for the attempted operation.  Preserve it and retain the
+        // envelope until the guarded reconciliation below proves the current
+        // host/epoch/ledger relationship.
         this.bootstrapActivation = {
           state: 'receipt_conflict',
           operation_id: terminalEpoch.operation_id || null,
           activation_epoch_id: terminalEpoch.activation_epoch_id || null,
           error_code: error?.code || 'RECOVERY_BOOTSTRAP_RESULT_FAILED'
         };
+        try {
+          const reconciliation = await this.reconcileTerminalBootstrapReceipt(terminalEpoch);
+          this.log?.warn?.('Reconciled a terminal failed bootstrap receipt against the current durable activation epoch.', {
+            attemptedOperationId: reconciliation.attempted_operation_id,
+            activationEpochId: reconciliation.activation_epoch_id,
+            censusFingerprint: reconciliation.census_fingerprint || null
+          });
+        } catch (reconciliationError) {
+          // Keep the host alive for read-only status, but preserve admission
+          // closure.  A failed/missing receipt, identity drift, or non-quiescent
+          // ledger must never be converted into a permissive runtime owner.
+          this.log?.error?.(reconciliationError.message, {
+            stage: 'recovery-bootstrap-terminal-reconciliation',
+            code: reconciliationError?.code || 'RECOVERY_BOOTSTRAP_RECONCILIATION_FAILED'
+          });
+        }
         return this.hostStatus();
       }
       this.recordBootstrapFailure(error, terminalEpoch);

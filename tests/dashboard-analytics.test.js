@@ -32,6 +32,8 @@ test('operations dashboard consumes a coverage-qualified accepted-result project
   assert.match(js, /Tool calls unobserved; unknown, not zero/);
   assert.match(handler, /"operations_analytics": operations_analytics\(/);
   assert.match(handler, /performance=runtime\.performance_trace\.get\(\)/);
+  assert.match(handler, /"snapshot_scope": "dashboard_analytics"/);
+  assert.match(handler, /normalized == "\/__control\/orchestration\/analytics"/);
 });
 
 test('realtime performance uses exact rolling five-minute evidence without stale aggregate fallbacks', () => {
@@ -54,7 +56,9 @@ test('realtime performance uses exact rolling five-minute evidence without stale
 
 test('dashboard analytics derive context estimates from measured model-visible bytes', () => {
   const js = read('renderer/dashboard.js');
-  assert.match(js, /api\.performanceTrace\(\)/);
+  const controlCenter = read('renderer/control-center.js');
+  assert.match(controlCenter, /api\.performanceTrace\(\)/);
+  assert.match(controlCenter, /detail: \{ snapshot, orchestration, performance, force:/);
   assert.match(js, /NON_TOKEN_TOOLS = new Set\(\['view_image'\]\)/);
   assert.match(js, /function tokensFromBytes/);
   assert.match(js, /function hourBuckets/);
@@ -67,11 +71,14 @@ test('dashboard analytics derive context estimates from measured model-visible b
   assert.match(js, /Transport request\/response bytes are payload telemetry, not token truth/);
   assert.doesNotMatch(js, /tokensFromBytes\(record\.requestBytes\)/);
   assert.doesNotMatch(js, /tokensFromBytes\(record\.responseBytes\)/);
-  assert.match(js, /function dashboardPollDelay\(\)/);
-  assert.match(js, /setTimeout\(pollDashboard, dashboardPollDelay\(\)\)/);
-  assert.match(js, /api\.liveOrchestration\(\)/);
-  assert.match(js, /api\.lightweightSnapshot\(\)/);
-  assert.match(js, /!force && orchestrationIsBusy\(\)/);
+  assert.match(js, /DASHBOARD_ANALYTICS_REFRESH_MS = 30000/);
+  assert.match(js, /api\.dashboardAnalytics\(\)/);
+  assert.match(js, /coding-tools:overview-pulse/);
+  assert.match(js, /coding-tools:overview-refresh-request/);
+  assert.doesNotMatch(js, /function pollDashboard\(/);
+  assert.doesNotMatch(js, /api\.liveOrchestration\(\)/);
+  assert.doesNotMatch(js, /api\.orchestration\(\)/);
+  assert.doesNotMatch(js, /api\.lightweightSnapshot\(\)/);
   assert.doesNotMatch(js, /setInterval\(\(\) => refresh\(false\), 3000\)/);
   assert.doesNotMatch(js, /fetch\(/);
   assert.doesNotMatch(js, /localStorage/);
@@ -116,7 +123,20 @@ test('model control table attributes traffic to every running lane including Cha
   assert.match(js, /function modelOf/);
   assert.match(js, /function modelBreakdown/);
   assert.match(js, /controller_transferred/);
-  assert.match(js, /api\.orchestration\(\)/);
+  assert.match(js, /coding-tools:overview-pulse/);
+});
+
+test('dashboard reuses Control Center pulse and never accumulates chart listeners or fabricates fleet latency/trend', () => {
+  const js = read('renderer/dashboard.js');
+  assert.match(js, /document\.addEventListener\('coding-tools:overview-pulse', applyOverviewPulse\)/);
+  assert.match(js, /svg\.onmouseleave = clearGuide/);
+  assert.match(js, /svg\.onmousemove = \(event\) =>/);
+  assert.doesNotMatch(js, /svg\.addEventListener\('mousemove'/);
+  assert.doesNotMatch(js, /1\.1 \+ \(rows % 4\) \* 0\.15/);
+  assert.doesNotMatch(js, /M0 12 Q15/);
+  assert.match(js, /Observed execution \+ estimated wait per attributed trace call/);
+  assert.match(js, /Chưa có per-model time-series evidence; không nội suy trend 24h/);
+  assert.match(js, /percent\(Math\.max\(0, Number\(entry\?\.ok\) \|\| 0\), calls\)/);
 });
 
 test('dashboard honors real evidence: delegations drive lanes, controller lease drives ChatWeb', () => {

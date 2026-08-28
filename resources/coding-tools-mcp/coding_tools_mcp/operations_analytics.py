@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import math
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -42,6 +43,107 @@ def _nearest_rank(values: list[int], percentile: int) -> int | None:
     return ordered[rank - 1]
 
 
+def _json_object(value: Any) -> dict[str, Any]:
+    try:
+        parsed = json.loads(str(value or "{}"))
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _phase_metrics(run: dict[str, Any], events: list[dict[str, Any]]) -> tuple[int | None, float | None]:
+    started = _parse_time(run.get("started_at"))
+    finished = _parse_time(run.get("finished_at"))
+    if started is None or finished is None or finished < started:
+        return None, None
+    tta_ms = max(0, int((finished - started).total_seconds() * 1000))
+    points: list[tuple[str, datetime]] = []
+    for event in events:
+        state = str(event.get("state_after") or "").strip()
+        at = _parse_time(event.get("event_time"))
+        if not state or at is None:
+            continue
+        if points and points[-1][0] == state:
+            continue
+        points.append((state, at))
+    observed_ms = 0
+    for index, (_state, at) in enumerate(points):
+        end_at = points[index + 1][1] if index + 1 < len(points) else finished
+        observed_ms += max(0, int((end_at - at).total_seconds() * 1000))
+    coverage = round(min(1.0, observed_ms / tta_ms), 6) if tta_ms > 0 else None
+    return tta_ms, coverage
+
+
+def _window_evidence(ledger: Any, start: datetime, end: datetime) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Read a terminal result window with a fixed number of SQL statements."""
+    start_iso = _iso(start)
+    end_iso = _iso(end)
+    with ledger._lock, ledger._connect() as connection:
+        run_rows = connection.execute(
+            """SELECT run_id,status,started_at,finished_at,metadata_json
+               FROM runs
+               WHERE finished_at IS NOT NULL AND finished_at<>''
+                 AND julianday(finished_at) >= julianday(?)
+                 AND julianday(finished_at) <= julianday(?)
+               ORDER BY finished_at DESC, run_id DESC""",
+            (start_iso, end_iso),
+        ).fetchall()
+        wave_rows = connection.execute(
+            """SELECT w.run_id,COUNT(*) AS wave_count,
+                      SUM(CASE WHEN lower(w.status)='replanned' THEN 1 ELSE 0 END) AS replan_count
+               FROM waves w JOIN runs r ON r.run_id=w.run_id
+               WHERE lower(r.status)='accepted'
+                 AND julianday(r.finished_at) >= julianday(?)
+                 AND julianday(r.finished_at) <= julianday(?)
+               GROUP BY w.run_id""",
+            (start_iso, end_iso),
+        ).fetchall()
+        proof_rows = connection.execute(
+            """SELECT p.run_id,COUNT(*) AS proof_count
+               FROM proofs p JOIN runs r ON r.run_id=p.run_id
+               WHERE lower(r.status)='accepted'
+                 AND julianday(r.finished_at) >= julianday(?)
+                 AND julianday(r.finished_at) <= julianday(?)
+               GROUP BY p.run_id""",
+            (start_iso, end_iso),
+        ).fetchall()
+        event_rows = connection.execute(
+            """SELECT e.run_id,e.seq,e.event_type,e.state_after,e.event_time,e.payload_json
+               FROM events e JOIN runs r ON r.run_id=e.run_id
+               WHERE lower(r.status)='accepted'
+                 AND julianday(r.finished_at) >= julianday(?)
+                 AND julianday(r.finished_at) <= julianday(?)
+               ORDER BY e.run_id,e.seq""",
+            (start_iso, end_iso),
+        ).fetchall()
+
+    terminal = [{
+        "run_id": str(row["run_id"]),
+        "status": str(row["status"] or "unknown").strip().lower() or "unknown",
+        "started_at": str(row["started_at"] or ""),
+        "finished_at": str(row["finished_at"] or ""),
+        "finished": _parse_time(row["finished_at"]),
+        "metadata": _json_object(row["metadata_json"]),
+    } for row in run_rows]
+    metrics: dict[str, dict[str, Any]] = {}
+    for row in wave_rows:
+        metrics.setdefault(str(row["run_id"]), {}).update({
+            "wave_count": max(0, int(row["wave_count"] or 0)),
+            "replan_count": max(0, int(row["replan_count"] or 0)),
+        })
+    for row in proof_rows:
+        metrics.setdefault(str(row["run_id"]), {})["proof_count"] = max(0, int(row["proof_count"] or 0))
+    for row in event_rows:
+        metrics.setdefault(str(row["run_id"]), {}).setdefault("events", []).append({
+            "seq": int(row["seq"] or 0),
+            "event_type": str(row["event_type"] or ""),
+            "state_after": str(row["state_after"] or ""),
+            "event_time": str(row["event_time"] or ""),
+            "payload": _json_object(row["payload_json"]),
+        })
+    return terminal, metrics
+
+
 def operations_analytics(
     ledger: Any,
     *,
@@ -58,25 +160,8 @@ def operations_analytics(
         raise ValueError("operations analytics now must be ISO-8601 when supplied")
     start = end - timedelta(days=bounded_days)
 
-    with ledger._lock, ledger._connect() as connection:
-        rows = connection.execute(
-            """SELECT run_id,status,started_at,finished_at
-               FROM runs
-               WHERE finished_at IS NOT NULL AND finished_at<>''
-               ORDER BY finished_at DESC, run_id DESC"""
-        ).fetchall()
-
-    terminal: list[dict[str, Any]] = []
-    for row in rows:
-        finished = _parse_time(row["finished_at"])
-        if finished is None or finished < start or finished > end:
-            continue
-        terminal.append({
-            "run_id": str(row["run_id"]),
-            "status": str(row["status"] or "unknown").strip().lower() or "unknown",
-            "finished_at": str(row["finished_at"] or ""),
-            "finished": finished,
-        })
+    terminal, window_metrics = _window_evidence(ledger, start, end)
+    terminal = [item for item in terminal if item.get("finished") is not None]
 
     run_metrics = performance.get("run_metrics") if isinstance(performance, dict) else {}
     if not isinstance(run_metrics, dict):
@@ -140,56 +225,74 @@ def operations_analytics(
             accepted_count += 1
             if hour_key in hourly:
                 hourly[hour_key]["accepted"] += 1
-            economics = ledger.accepted_result_economics(run_id)
-            evaluation = ledger.accepted_result_evaluation(run_id)
-
-            first_pass = economics.get("first_pass_accepted") is True
+            evidence = window_metrics.get(run_id) or {}
+            events = evidence.get("events") if isinstance(evidence.get("events"), list) else []
+            replan_count = max(0, int(evidence.get("replan_count") or 0))
+            first_pass = replan_count == 0
             row_result["first_pass"] = first_pass
             if first_pass:
                 first_pass_count += 1
                 if hour_key in hourly:
                     hourly[hour_key]["first_pass"] += 1
 
-            tta = economics.get("tta_ms")
-            if isinstance(tta, (int, float)) and not isinstance(tta, bool) and tta >= 0:
-                measured_tta = int(tta)
+            measured_tta, phase_coverage = _phase_metrics(item, events)
+            if measured_tta is not None:
                 tta_values.append(measured_tta)
                 row_result["tta_ms"] = measured_tta
-
-            phase = economics.get("phase_timing") if isinstance(economics.get("phase_timing"), dict) else {}
-            phase_coverage = _finite_nonnegative(phase.get("tta_coverage"))
             if phase_coverage is not None:
                 phase_coverage_values.append(min(1.0, phase_coverage))
 
-            wave_count = len(ledger.list_waves(run_id))
+            wave_count = max(0, int(evidence.get("wave_count") or 0))
             row_result["wave_count"] = wave_count
             total_waves += wave_count
 
-            repair = economics.get("repair") if isinstance(economics.get("repair"), dict) else {}
-            replan_count = int(repair.get("replan_count") or 0)
             row_result["replan_count"] = replan_count
             total_replans += replan_count
             if replan_count > 0:
                 replanned_accepted += 1
 
-            proof = economics.get("proof") if isinstance(economics.get("proof"), dict) else {}
-            proof_records += max(0, int(proof.get("records") or 0))
+            proof_records += max(0, int(evidence.get("proof_count") or 0))
 
             if observed_tool_calls is not None:
                 tool_call_samples += 1
                 tool_calls_total += observed_tool_calls
 
-            provider = economics.get("provider_economics") if isinstance(economics.get("provider_economics"), dict) else {}
-            provider_cost = _finite_nonnegative(provider.get("provider_cost"))
-            if provider.get("cost_complete") is True and provider.get("attribution_complete") is True and provider_cost is not None:
+            usage_events = [
+                event.get("payload") or {}
+                for event in events
+                if event.get("event_type") == "usage_event"
+                and str((event.get("payload") or {}).get("actor") or "provider").strip().lower() != "controller"
+            ]
+            measured_costs: list[float] = []
+            attribution_complete = bool(usage_events)
+            for usage_event in usage_events:
+                measurement = usage_event.get("measurement") if isinstance(usage_event.get("measurement"), dict) else {}
+                cost_payload = usage_event.get("cost") if isinstance(usage_event.get("cost"), dict) else {}
+                measured = _finite_nonnegative(cost_payload.get("provider_cost"))
+                if measurement.get("cost") == "measured" and measured is not None:
+                    measured_costs.append(measured)
+                provenance = usage_event.get("provenance") if isinstance(usage_event.get("provenance"), dict) else {}
+                if str(provenance.get("source") or "").strip() != "opencode:provider_dispatch":
+                    attribution_complete = False
+            cost_complete = bool(usage_events) and len(measured_costs) == len(usage_events)
+            provider_cost = round(sum(measured_costs), 12) if cost_complete else None
+            if cost_complete and attribution_complete and provider_cost is not None:
                 provider_cost_samples += 1
                 provider_cost_total += provider_cost
                 row_result["provider_cost_usd"] = round(provider_cost, 12)
                 row_result["provider_cost_measurement"] = "measured_attributed_complete"
 
-            total_cost = evaluation.get("total_monetary_cost") if isinstance(evaluation.get("total_monetary_cost"), dict) else {}
-            total_cost_value = _finite_nonnegative(total_cost.get("value"))
-            if total_cost.get("complete") is True and total_cost_value is not None:
+            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+            evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
+            controller = evaluation.get("controller") if isinstance(evaluation.get("controller"), dict) else {}
+            controller_cost = _finite_nonnegative(controller.get("monetary_cost"))
+            provider_cost_value = provider_cost if cost_complete and attribution_complete else None
+            total_cost_value = (
+                round(controller_cost + (provider_cost_value or 0.0), 12)
+                if controller_cost is not None and (provider_cost_value is not None or not usage_events)
+                else None
+            )
+            if total_cost_value is not None:
                 system_cost_samples += 1
                 system_cost_total += total_cost_value
                 row_result["total_system_cost_usd"] = round(total_cost_value, 12)
@@ -277,6 +380,6 @@ def operations_analytics(
         },
         "hourly": hourly_rows,
         "runs": result_rows,
-        "sources": {"outcomes": "orchestration_ledger.runs", "accepted_result": "accepted_result_economics_and_evaluation", "tool_calls": "performance_trace.run_metrics"},
+        "sources": {"outcomes": "orchestration_ledger.runs_window", "accepted_result": "orchestration_ledger.fixed_window_batch_v1", "tool_calls": "performance_trace.run_metrics"},
         "content_free": True,
     }

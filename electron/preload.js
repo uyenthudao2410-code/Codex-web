@@ -113,6 +113,7 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   lightweightSnapshot: () => ipcRenderer.invoke('app:lightweight-snapshot'),
   orchestration: () => ipcRenderer.invoke('panel:orchestration').then(sanitizeOrchestrationResult),
   liveOrchestration: () => ipcRenderer.invoke('panel:live-control').then(sanitizeOrchestrationResult),
+  dashboardAnalytics: () => ipcRenderer.invoke('panel:dashboard-analytics'),
   p5A0: (action) => ipcRenderer.invoke('p5-a0:control', action),
   chooseWorkspace: () => ipcRenderer.invoke('dialog:workspace'),
   switchWorkspace: (workspace) => ipcRenderer.invoke('workspace:switch', workspace),

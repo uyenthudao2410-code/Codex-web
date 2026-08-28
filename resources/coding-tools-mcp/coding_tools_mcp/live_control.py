@@ -49,6 +49,7 @@ def control_presence_projection(
     capsule: dict[str, Any] | None,
     client_online_seconds: float,
     include_cursors: bool,
+    latest_material_event_at: str = "",
 ) -> dict[str, Any]:
     """Project current client/authority/continuity facts without analytics."""
     ledger = runtime.orchestration_ledger
@@ -75,7 +76,7 @@ def control_presence_projection(
             item["cursor"] = cursor_by_client.get(client_id)
         client_view.append(item)
 
-    controller = ledger.get_controller_lease(run_id) if run_id else None
+    controller = ledger.peek_controller_lease(run_id) if run_id else None
     controller_view = {
         "owner_client_id": (controller or {}).get("owner_client_id", ""),
         "status": (controller or {}).get("status", "unclaimed"),
@@ -103,14 +104,16 @@ def control_presence_projection(
         capsule_status = "current"
         capsule_created_at = str(capsule.get("created_at") or "")
         control_only_events = {"controller_transferred", "write_lease_renewed"}
-        if any(
+        if latest_material_event_at:
+            capsule_status = "stale" if latest_material_event_at > capsule_created_at else "current"
+        elif any(
             str(event.get("event_time") or "") > capsule_created_at
             and str(event.get("event_type") or "") not in control_only_events
             for event in events
         ):
             capsule_status = "stale"
     if run_active:
-        if not (integrity or {}).get("ok", False):
+        if (integrity or {}).get("ok") is False:
             reason_codes.append("LEDGER_INTEGRITY_FAILED")
         if state.get("status") in {"paused", "stopped", "failed"}:
             reason_codes.append("TASK_NOT_RUNNABLE")
@@ -221,27 +224,31 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
                 "context_pressure": {"status": "unknown", "source": "activation_pending"},
             },
         }
-    runtime._maybe_reconcile_stale_orchestration()
-    runtime._reconcile_task_orchestration_projection()
     state = runtime.task_state.get()
     projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
     ledger = runtime.orchestration_ledger
     run_id = str(projection.get("run_id") or "").strip()
     if not run_id:
-        active = ledger.current_active_run()
+        active = ledger.peek_current_active_run()
         if active:
             run_id = str(active.get("run_id") or "").strip()
 
     run = ledger.get_run(run_id) if run_id else None
-    waves = ledger.list_waves(run_id) if run_id else []
-    events = ledger.list_events(run_id) if run_id else []
-    proofs = ledger.list_proofs(run_id) if run_id else []
-    checkpoints = ledger.list_checkpoints(run_id) if run_id else []
-    delegations: list[dict[str, Any]] = []
-    for wave in waves:
-        delegations.extend(ledger.list_delegations(str(wave.get("wave_id") or "")))
+    live_projection = ledger.live_run_projection(run_id) if run_id else {
+        "waves": [], "events": [], "proofs": [], "delegations": [],
+        "counts": {"events": 0, "waves": 0, "checkpoints": 0},
+        "latest_material_event_at": "",
+    }
+    waves = list(live_projection.get("waves") or [])
+    events = list(live_projection.get("events") or [])
+    proofs = list(live_projection.get("proofs") or [])
+    delegations = list(live_projection.get("delegations") or [])
     capsule = ledger.latest_handoff_capsule(run_id=run_id) if run_id else None
-    integrity = ledger.verify_chain(run_id) if run_id else {}
+    integrity = {
+        "ok": None,
+        "code": "UNVERIFIED_ON_LIVE_PATH",
+        "measurement": "not_checked_on_live_path",
+    } if run_id else {}
     presence = control_presence_projection(
         runtime,
         run_id=run_id,
@@ -252,6 +259,7 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
         capsule=capsule,
         client_online_seconds=client_online_seconds,
         include_cursors=False,
+        latest_material_event_at=str(live_projection.get("latest_material_event_at") or ""),
     )
     provider_traffic = runtime.provider_traffic_snapshot()
     return {
@@ -270,21 +278,17 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
         },
         "run_id": run_id,
         "run": run,
-        "waves": waves[-3:],
+        "waves": waves,
         "events": _compact_events(events),
         "proofs": _compact_proofs(proofs),
-        "delegations": delegations[-4:],
+        "delegations": delegations,
         "provider_traffic": {"automatic_routing": dict(provider_traffic.get("automatic_routing") or {})},
         "capsule": capsule,
         "runtime_activity": runtime.runtime_activity_snapshot(
             write_active=presence["write_lease"] is not None,
             delegations=delegations,
         ),
-        "counts": {
-            "events": len(events),
-            "waves": len(waves),
-            "checkpoints": len(checkpoints),
-        },
+        "counts": dict(live_projection.get("counts") or {}),
         "integrity": integrity,
         "runtime": {
             "process_instance_id": runtime.process_instance_id,

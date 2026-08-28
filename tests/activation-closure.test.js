@@ -142,6 +142,7 @@ function liveArgs(overrides = {}) {
     componentRevisions: revisions(),
     connectorContractState: 'UNCHANGED_ACKNOWLEDGED',
     connectorRefreshRequired: false,
+    connectorAcknowledgementPending: false,
     connectorRediscoveredAt: null,
     connectorCurrentSha256: CONTRACT,
     connectorAcknowledgedSha256: CONTRACT,
@@ -344,6 +345,7 @@ test('canonical empty proof closes only a valid zero-target checkpoint', () => {
 test('unchanged acknowledgement needs matching SHA and no refresh, while changed acknowledgement needs timestamp', () => {
   assert.equal(computeActivationClosure(liveArgs()).closure_state, 'LIVE_CLOSED');
   assert.equal(computeActivationClosure(liveArgs({ connectorRefreshRequired: true })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
+  assert.equal(computeActivationClosure(liveArgs({ connectorAcknowledgementPending: true })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
   assert.equal(computeActivationClosure(liveArgs({ connectorAcknowledgedSha256: 'f'.repeat(64) })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
   assert.equal(computeActivationClosure(liveArgs({
     connectorContractState: 'CURRENT_ACKNOWLEDGED',
@@ -433,6 +435,7 @@ test('Recovery Host projection uses fresh component revision and contradictory r
       fullyReady: true,
       connectorContractState: 'UNCHANGED_ACKNOWLEDGED',
       connectorRefreshRequired: false,
+      connectorAcknowledgementPending: false,
       connectorRediscoveredAt: null,
       connectorContractAcknowledgedSha256: CONTRACT,
       toolContract: { sha256: CONTRACT },

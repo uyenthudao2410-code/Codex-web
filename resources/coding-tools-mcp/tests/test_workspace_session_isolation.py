@@ -3,6 +3,7 @@
 import http.client
 import json
 import os
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -397,6 +398,88 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                 self.assertEqual(runtime.workspace.root, workspace.resolve())
                 self.assertIn(authorized.resolve(), runtime.workspace.authorized_roots)
             finally:
+                runtime.close()
+
+    def test_authorized_project_patch_verify_diff_and_acceptance_stay_on_bound_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            primary = base / "primary"
+            authorized = base / "authorized"
+            primary.mkdir()
+            authorized.mkdir()
+            (primary / "app.py").write_text("PRIMARY = 1\n", encoding="utf-8")
+            (authorized / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            (authorized / "authorized.marker").write_text("bound\n", encoding="utf-8")
+            subprocess.run(["git", "init"], cwd=authorized, check=True, capture_output=True)
+            subprocess.run(["git", "add", "app.py", "authorized.marker"], cwd=authorized, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "base"],
+                cwd=authorized,
+                check=True,
+                capture_output=True,
+            )
+            with patch.dict(os.environ, {
+                "CODING_TOOLS_MCP_TOOL_MODE": "smart",
+                "CODING_TOOLS_MCP_AUTHORIZED_ROOTS": json.dumps([str(authorized)]),
+            }):
+                runtime = Runtime(primary, permission_mode="dangerous", transport="http")
+            identity = {
+                "client_id": "chatweb:authorized-e2e",
+                "client_type": "chatweb",
+                "execution_context_id": "authorized-e2e-context",
+            }
+            runtime.request_context.hub_client = dict(identity)
+            try:
+                bound = runtime.call_tool("workspace_context", {"path": str(authorized), "detail": "compact"})
+                self.assertFalse(bound["isError"], bound)
+                self.assertEqual(bound["structuredContent"]["workspace"], str(authorized.resolve()))
+                result = runtime.call_tool("agent_workflow", {
+                    "workflow": "bugfix",
+                    "phase": "run",
+                    "path": str(authorized),
+                    "workdir": ".",
+                    "objective": "change the authorized project only",
+                    "execution_route": "deterministic",
+                    "execution_mode": "mcp_only",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "tests",
+                    "test_command": "python -c \"from pathlib import Path; raise SystemExit(0 if Path('authorized.marker').is_file() else 7)\"",
+                    "include_diff": True,
+                })
+                self.assertFalse(result["isError"], result)
+                structured = result["structuredContent"]
+                self.assertTrue(structured["execution"]["ok"], structured)
+                self.assertEqual(structured["orchestration"]["orchestration_state"], "ACCEPTING")
+                self.assertEqual((authorized / "app.py").read_text(encoding="utf-8"), "VALUE = 2\n")
+                self.assertEqual((primary / "app.py").read_text(encoding="utf-8"), "PRIMARY = 1\n")
+                self.assertEqual(runtime.workspace.root, primary.resolve())
+                workflow_diff = structured["execution"]["git_diff"]["diff"]
+                self.assertIn("+VALUE = 2", workflow_diff)
+                self.assertNotIn("PRIMARY = 1", workflow_diff)
+                run_id = structured["orchestration"]["run_id"]
+                wave_id = structured["orchestration"]["wave_id"]
+                accepted = runtime.call_tool("task_control", {
+                    "action": "accept",
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                })
+                self.assertFalse(accepted["isError"], accepted)
+                self.assertTrue(accepted["structuredContent"]["accepted"])
+                self.assertEqual(
+                    accepted["structuredContent"]["orchestration"]["orchestration_state"],
+                    "CHECKPOINTED",
+                )
+                run = runtime._orchestration_ledger_for_root(authorized).get_run(run_id)
+                self.assertEqual(
+                    run["metadata"]["workspace_identity"]["root_id"],
+                    runtime._content_free_workspace_root_id(authorized),
+                )
+                self.assertEqual(runtime.workspace.root, primary.resolve())
+            finally:
+                del runtime.request_context.hub_client
+                if hasattr(runtime.request_context, "workspace_root"):
+                    del runtime.request_context.workspace_root
                 runtime.close()
 
     def test_unauthorized_project_is_rejected_before_task_or_background_mutation(self) -> None:
