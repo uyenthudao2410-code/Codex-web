@@ -2324,6 +2324,13 @@
       "updated_at": "2026-08-26T10:14:45.915Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_1eb4acdfb8635d223630a8f6f30d2e4e": {
+      "canonical_root": "E:\\Github\\Tools-Codex-web",
+      "created_at": "2026-08-28T00:27:52.774Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-28T00:27:52.774Z",
+      "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
+    },
     "ctx_1ec75587f4e26a0bc4541eb3add1d7c0": {
       "canonical_root": "E:\\Github\\Tools-Codex-web",
       "created_at": "2026-08-24T16:59:05.302Z",
@@ -16498,6 +16505,13 @@
       "schema_version": 1,
       "updated_at": "2026-08-26T11:52:46.697Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
+    "ctx_ca69b743f6bc43157a1502172246f14e": {
+      "canonical_root": "E:\\Github\\Tools-Codex-web",
+      "created_at": "2026-08-28T00:28:54.417Z",
+      "schema_version": 1,
+      "updated_at": "2026-08-28T00:28:54.417Z",
+      "workspace_id": "3543efd78b6674836a3d770b272bd624a19b6ccdd5c42711707996125965561b"
     },
     "ctx_ca73d2c82595b52fa7bcc762f9f5eff6": {
       "canonical_root": "E:\\DEV\\Codex-web",

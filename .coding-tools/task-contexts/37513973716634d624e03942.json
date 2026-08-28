@@ -5,23 +5,16 @@
   "objective": "Run a workspace command",
   "status": "waiting",
   "steps": [],
-  "current_step": "Completed - operator report required",
-  "current_command": {
-    "command": "git add -A && git diff --cached --check && git commit -m \"Harden activation recovery and runtime orchestration\"",
-    "kind": "command",
-    "session_id": "mwXenxatNcBG5RmHSvmmjed6",
-    "workdir": ".",
-    "status": "running",
-    "started_at": "2026-08-28T00:27:15.141Z"
-  },
+  "current_step": "Waiting for model",
+  "current_command": null,
   "last_command_result": {
-    "command_id": "gNWqjccOSopzx5dvgEUZKCE4",
+    "command_id": "kBMUzh5DdA7k5Zpe0LLySAnG",
     "kind": "command",
     "status": "exited",
     "result_status": "passed",
     "exit_code": 0,
-    "duration_ms": null,
-    "finished_at": "2026-08-28T00:27:02.947Z"
+    "duration_ms": 859,
+    "finished_at": "2026-08-28T00:27:59.814Z"
   },
   "completion_report": {
     "schema_version": 1,
@@ -116,7 +109,7 @@
   "failure": null,
   "next_step": "Present this completion_report to the operator before starting another material wave.",
   "created_at": "2026-08-28T00:24:55.914Z",
-  "updated_at": "2026-08-28T00:27:15.141Z",
+  "updated_at": "2026-08-28T00:27:59.816Z",
   "events": [
     {
       "time": "2026-08-28T00:24:55.914Z",
@@ -191,4 +184,76 @@
     },
     {
       "time": "2026-08-28T00:27:03.841Z",
-      "even
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "gNWqjccOSopzx5dvgEUZKCE4",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "3f3e9b0251863b0cec0533e8864f3b8d9a28c3454021513645645a6c6d756eb4"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:15.141Z",
+      "event": "command_started",
+      "details": {
+        "command": "git add -A && git diff --cached --check && git commit -m \"Harden activation recovery and runtime orchestration\"",
+        "session_id": "mwXenxatNcBG5RmHSvmmjed6"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:19.970Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git add -A && git diff --cached --check && git commit -m \"Harden activation recovery and runtime orchestration\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:28.908Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short && git log -1 --oneline && git remote -v",
+        "session_id": "mAPiTaodDx-HqRq8PL5i5DdG"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:29.792Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short && git log -1 --oneline && git remote -v",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:39.514Z",
+      "event": "command_started",
+      "details": {
+        "command": "git push origin main",
+        "session_id": "jcOx6iF8bgDNqAsswrurKC3A"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:49.614Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git push origin main",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:58.911Z",
+      "event": "command_started",
+      "details": {
+        "command": "git rev-parse HEAD && git rev-parse origin/main && git status --short",
+        "session_id": "kBMUzh5DdA7k5Zpe0LLySAnG"
+      }
+    },
+    {
+      "time": "2026-08-28T00:27:59.816Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git rev-parse HEAD && git rev-parse origin/main && git status --short",
+        "status": "passed"
+      }
+    }
+  ]
+}
