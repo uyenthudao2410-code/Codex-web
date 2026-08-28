@@ -238,11 +238,35 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertIn("routing_evidence", full)
 
     def test_dashboard_analytics_isolated_from_live_control_polling(self) -> None:
-        status, body = self.get_dashboard_analytics()
+        ledger = self.runtime.orchestration_ledger
+        original_usage = ledger.usage_analytics
+        original_operations = mcp_http_handler_module.operations_analytics
+        observed = {}
+
+        def usage(*, days=7, now=None):
+            observed["usage"] = (days, now)
+            return original_usage(days=days, now=now)
+
+        def operations(*args, days=7, now=None, **kwargs):
+            observed["operations"] = (days, now)
+            return original_operations(*args, days=days, now=now, **kwargs)
+
+        ledger.usage_analytics = usage
+        mcp_http_handler_module.operations_analytics = operations
+        try:
+            status, body = self.get_dashboard_analytics()
+        finally:
+            ledger.usage_analytics = original_usage
+            mcp_http_handler_module.operations_analytics = original_operations
         self.assertEqual(status, 200, body)
         self.assertEqual(body["schema_version"], 1)
         self.assertEqual(body["snapshot_scope"], "dashboard_analytics")
         self.assertTrue(body["content_free"])
+        self.assertEqual(body["window_days"], 7)
+        self.assertTrue(str(body["generated_at"]).endswith("Z"), body)
+        self.assertEqual(observed["usage"], observed["operations"])
+        self.assertEqual(observed["usage"][0], 7)
+        self.assertEqual(observed["usage"][1], body["generated_at"])
         self.assertIn("usage_analytics", body)
         self.assertIn("operations_analytics", body)
         self.assertNotIn("task", body)

@@ -389,22 +389,29 @@ test('new bootstrap terminalizes an expired prior epoch and can create a fresh o
     bootstrap: request,
     processIdentityObserver: async (pid) => ({ state: 'absent', pid, process_start_token: null })
   });
-  const created = host.activationEpochStore.create({
-    operation_id: OPERATION_ONE,
-    expires_at_unix_ms: Date.now() + 30,
-    component_evidence: {
-      recovery_host: { instance_id: 'expired-epoch-owner-0001', pid: 78002 }
-    }
-  });
-  host.activationEpochStore.update(created.activation_epoch_id, { state: 'VERIFYING' });
-  await new Promise((resolve) => setTimeout(resolve, 40));
+  const originalNow = Date.now;
+  let now = originalNow();
+  Date.now = () => now;
+  try {
+    const created = host.activationEpochStore.create({
+      operation_id: OPERATION_ONE,
+      expires_at_unix_ms: now + 30,
+      component_evidence: {
+        recovery_host: { instance_id: 'expired-epoch-owner-0001', pid: 78002 }
+      }
+    });
+    host.activationEpochStore.update(created.activation_epoch_id, { state: 'VERIFYING' });
+    now += 40;
 
-  const plan = await host.prepareBootstrapStart(host.activationEpochStore.current());
-  assert.equal(plan.operationId, OPERATION_TWO);
-  assert.equal(plan.requiresNewEpoch, true);
-  assert.equal(plan.durableEpoch.state, 'FAILED');
-  assert.equal(plan.durableEpoch.error.code, 'ACTIVATION_REQUEST_EXPIRED');
-  assert.equal(host.activationEpochStore.current().state, 'FAILED');
+    const plan = await host.prepareBootstrapStart(host.activationEpochStore.current());
+    assert.equal(plan.operationId, OPERATION_TWO);
+    assert.equal(plan.requiresNewEpoch, true);
+    assert.equal(plan.durableEpoch.state, 'FAILED');
+    assert.equal(plan.durableEpoch.error.code, 'ACTIVATION_REQUEST_EXPIRED');
+    assert.equal(host.activationEpochStore.current().state, 'FAILED');
+  } finally {
+    Date.now = originalNow;
+  }
 });
 
 test('receipt-conflict reconciliation preserves a failed bootstrap receipt and releases admission only after epoch, identity, and census proof', async (t) => {

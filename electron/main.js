@@ -48,7 +48,7 @@ let runtimeHeartbeatInFlight = null;
 const TOOLBAR_HEIGHT = 112;
 const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
 const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;
-const PANEL_ANALYTICS_TIMEOUT_MS = 5000;
+const PANEL_ANALYTICS_TIMEOUT_MS = 10000;
 const recoveryHostMode = process.argv.includes('--recovery-host') || process.env.WEBCODEX_PROCESS_ROLE === 'recovery-host';
 const runtimePaths = createElectronRuntimePaths(app);
 runtimePathApi.configureRuntimePaths(runtimePaths);

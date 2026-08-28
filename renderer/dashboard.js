@@ -199,7 +199,7 @@
   }
 
   function canonicalControllerUsageState() {
-    const analytics = analyticsSnapshot?.usage_analytics || orchestration?.usage_analytics;
+    const analytics = analyticsSnapshot?.usage_analytics;
     if (!analytics || analytics.measurement !== 'canonical_non_overlapping') return null;
     if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
     const controller = analytics.controller_usage;
@@ -219,7 +219,7 @@
   }
 
   function canonicalOperationsAnalytics() {
-    const analytics = analyticsSnapshot?.operations_analytics || orchestration?.operations_analytics;
+    const analytics = analyticsSnapshot?.operations_analytics;
     if (!analytics || analytics.measurement !== 'accepted_result_operations_v1') return null;
     if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
     if (!analytics.outcomes || !analytics.speed || !analytics.efficiency || !analytics.cost) return null;
@@ -227,7 +227,7 @@
   }
 
   function canonicalMeasuredUsage() {
-    const analytics = analyticsSnapshot?.usage_analytics || orchestration?.usage_analytics;
+    const analytics = analyticsSnapshot?.usage_analytics;
     if (!analytics || analytics.measurement !== 'canonical_non_overlapping') return null;
     if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
     const overall = analytics.overall && typeof analytics.overall === 'object' ? analytics.overall : {};

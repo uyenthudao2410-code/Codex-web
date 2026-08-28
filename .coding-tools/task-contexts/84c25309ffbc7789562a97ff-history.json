@@ -1,0 +1,110 @@
+[
+  {
+    "version": 2,
+    "task_id": "a3e3b455a2f141428e7e281af447ad0a",
+    "orchestration": {
+      "run_id": "61087e690a0544628b9657a1719e2b6b",
+      "wave_id": "7dadb4e0f1ca4db3bc53340f04ad1edf",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "2cc0eefc7d881827ef44e4d1584d84bbd9e494b6",
+      "worktree_fp": "08d5eff546bfac808472cd14e0042135ae520e28e699173818afcda2093969ae",
+      "contract_fp": ""
+    },
+    "objective": "Close the remaining Electron Dashboard/UI performance contract gaps on the current E:\\DEV\\Codex-web worktree without touching concurrent recovery/runtimeOrchestrator work or .coding-tools state. Exact required behavior: (1) Control Center Overview refresh, including force/manual/visibility refresh, must use only lightweightSnapshot + liveOrchestration and never full snapshot/orchestration; (2) analytics IPC timeout is 10000 ms; (3) dedicated dashboard analytics payload includes generated_at and window_days; (4) Dashboard KPI/model helpers consume analyticsSnapshot only and never fall back to full orchestration usage_analytics/operations_analytics; (5) preserve existing overview-pulse single-timer ownership, independent analytics cadence, bounded listeners/windows, unknown_not_zero and no fake telemetry. Localize exact current source/test contexts and identify the smallest patch. Do not mutate in prepare.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "wq_VMl9T06z-TAZnxpmTs3yJ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 843,
+      "finished_at": "2026-08-28T10:46:45.959Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T10:45:07.164Z",
+    "updated_at": "2026-08-28T10:46:45.959Z",
+    "events": [
+      {
+        "time": "2026-08-28T10:45:07.164Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Close the remaining Electron Dashboard/UI performance contract gaps on the current E:\\DEV\\Codex-web worktree without touching concurrent recovery/runtimeOrchestrator work or .coding-tools state. Exact required behavior: (1) Control Center Overview refresh, including force/manual/visibility refresh, must use only lightweightSnapshot + liveOrchestration and never full snapshot/orchestration; (2) analytics IPC timeout is 10000 ms; (3) dedicated dashboard analytics payload includes generated_at and window_days; (4) Dashboard KPI/model helpers consume analyticsSnapshot only and never fall back to full orchestration usage_analytics/operations_analytics; (5) preserve existing overview-pulse single-timer ownership, independent analytics cadence, bounded listeners/windows, unknown_not_zero and no fake telemetry. Localize exact current source/test contexts and identify the smallest patch. Do not mutate in prepare."
+        }
+      },
+      {
+        "time": "2026-08-28T10:45:09.166Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T10:45:16.848Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T10:45:17.018Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-28T10:46:20.495Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"orchestration\\?\\.usage_analytics|orchestration\\?\\.operations_analytics|PANEL_ANALYTICS_TIMEOUT_MS|api\\.orchestration\\(\\)|api\\.snapshot\\(\\)|dashboard analytics|dashboardAnalytics\" tests/dashboard-analytics.test.js tests/control-center-manager.test.js tests/control-panel.test.js",
+          "session_id": "TZIhOFiJ2HT9MgMMY732t9JM"
+        }
+      },
+      {
+        "time": "2026-08-28T10:46:21.136Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"orchestration\\?\\.usage_analytics|orchestration\\?\\.operations_analytics|PANEL_ANALYTICS_TIMEOUT_MS|api\\.orchestration\\(\\)|api\\.snapshot\\(\\)|dashboard analytics|dashboardAnalytics\" tests/dashboard-analytics.test.js tests/control-center-manager.test.js tests/control-panel.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-28T10:46:45.402Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 \"orchestration\\?\\.usage_analytics\" tests/dashboard-analytics.test.js",
+          "session_id": "wq_VMl9T06z-TAZnxpmTs3yJ"
+        }
+      },
+      {
+        "time": "2026-08-28T10:46:45.959Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"orchestration\\?\\.usage_analytics\" tests/dashboard-analytics.test.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T10:46:56.521Z",
+    "archive_reason": "finished"
+  }
+]

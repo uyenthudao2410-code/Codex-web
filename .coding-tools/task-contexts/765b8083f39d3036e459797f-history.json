@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "b75c9fbf856c4454811d4be8d2cd2308",
+    "orchestration": {
+      "run_id": "936207298981446fb9312f8a55f7fe8f",
+      "wave_id": "e850f6a8b9b248418f072be2ddc14539",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "2cc0eefc7d881827ef44e4d1584d84bbd9e494b6",
+      "worktree_fp": "c1652a1c4631d3417d99b93291f95dc90ce67aa5ac02ad086b7752dce0ff8112",
+      "contract_fp": ""
+    },
+    "objective": "Finish the existing Electron UI lag/dashboard observability closure on current HEAD 2cc0eefc7d881827ef44e4d1584d84bbd9e494b6 without touching unrelated dirty runtime/docs files. Audit and prepare the smallest final patch for the remaining verified gaps only: (1) on Overview, every refresh including force/manual/initial/visibility/dashboard-request must use api.lightweightSnapshot()+api.liveOrchestration(), never api.snapshot()/api.orchestration(); non-Overview forced manager refresh may retain full APIs; publish page in the existing coding-tools:overview-pulse detail. (2) dedicated /__control/orchestration/analytics must return a single coherent generated_at and window_days=7 and use that timestamp for usage_analytics and operations_analytics; add analytics path to OPTIONS allowlist if appropriate; no reconciliation. (3) PANEL_ANALYTICS_TIMEOUT_MS must be 10000. (4) dashboard canonical usage/controller/operations helpers must consume analyticsSnapshot only, with no fallback to orchestration analytics. Update focused tests to fail on regression. Preserve current shared event naming, no unrelated refactor, no restart/commit/push/release in prepare.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T10:22:39.171Z",
+    "updated_at": "2026-08-28T10:22:42.680Z",
+    "events": [
+      {
+        "time": "2026-08-28T10:22:39.171Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Finish the existing Electron UI lag/dashboard observability closure on current HEAD 2cc0eefc7d881827ef44e4d1584d84bbd9e494b6 without touching unrelated dirty runtime/docs files. Audit and prepare the smallest final patch for the remaining verified gaps only: (1) on Overview, every refresh including force/manual/initial/visibility/dashboard-request must use api.lightweightSnapshot()+api.liveOrchestration(), never api.snapshot()/api.orchestration(); non-Overview forced manager refresh may retain full APIs; publish page in the existing coding-tools:overview-pulse detail. (2) dedicated /__control/orchestration/analytics must return a single coherent generated_at and window_days=7 and use that timestamp for usage_analytics and operations_analytics; add analytics path to OPTIONS allowlist if appropriate; no reconciliation. (3) PANEL_ANALYTICS_TIMEOUT_MS must be 10000. (4) dashboard canonical usage/controller/operations helpers must consume analyticsSnapshot only, with no fallback to orchestration analytics. Update focused tests to fail on regression. Preserve current shared event naming, no unrelated refactor, no restart/commit/push/release in prepare."
+        }
+      },
+      {
+        "time": "2026-08-28T10:22:40.148Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T10:22:42.664Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T10:22:42.680Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T10:23:58.663Z",
+    "archive_reason": "superseded"
+  }
+]

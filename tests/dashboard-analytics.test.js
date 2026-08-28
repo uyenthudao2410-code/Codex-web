@@ -204,7 +204,10 @@ test('operations overview renders measured token KPIs from canonical non-overlap
   const js = read('renderer/dashboard.js');
   assert.match(js, /function canonicalControllerUsageState/);
   assert.match(js, /function canonicalMeasuredUsage/);
-  assert.match(js, /orchestration\?\.usage_analytics/);
+  assert.match(js, /const analytics = analyticsSnapshot\?\.usage_analytics;/);
+  assert.match(js, /const analytics = analyticsSnapshot\?\.operations_analytics;/);
+  assert.doesNotMatch(js, /orchestration\?\.usage_analytics/);
+  assert.doesNotMatch(js, /orchestration\?\.operations_analytics/);
   assert.match(js, /analytics\.measurement !== 'canonical_non_overlapping'/);
   assert.match(js, /missing_measurement_policy !== 'unknown_not_zero'/);
   assert.match(js, /analytics\.controller_usage/);

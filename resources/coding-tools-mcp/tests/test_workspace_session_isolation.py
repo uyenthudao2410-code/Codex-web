@@ -433,6 +433,9 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                 bound = runtime.call_tool("workspace_context", {"path": str(authorized), "detail": "compact"})
                 self.assertFalse(bound["isError"], bound)
                 self.assertEqual(bound["structuredContent"]["workspace"], str(authorized.resolve()))
+                runtime.request_context.workspace_root = str(authorized.resolve())
+                runtime._touch_hub_client(identity)
+                del runtime.request_context.workspace_root
                 result = runtime.call_tool("agent_workflow", {
                     "workflow": "bugfix",
                     "phase": "run",
@@ -445,7 +448,6 @@ class WorkspaceSessionIsolationTests(unittest.TestCase):
                     "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
                     "verification": "tests",
                     "test_command": "python -c \"from pathlib import Path; raise SystemExit(0 if Path('authorized.marker').is_file() else 7)\"",
-                    "include_diff": True,
                 })
                 self.assertFalse(result["isError"], result)
                 structured = result["structuredContent"]

@@ -1252,7 +1252,12 @@ class RuntimeOrchestrator {
       refreshRequired: Boolean(contractChanged && !rediscovered && !compatibilityEligible),
       acknowledgementPending: Boolean(
         (contractChanged && (rediscovered || compatibilityEligible))
-        || (sameContractBootstrapEligible && !compatibilityAcknowledged)
+        // A real current-process discovery is stronger than a retained
+        // no-workspace compatibility bootstrap. Do not leave a fully
+        // rediscovered matching contract pending merely because the previous
+        // epoch also has bootstrap evidence that was never persisted as the
+        // chosen acknowledgement mode.
+        || (sameContractBootstrapEligible && !compatibilityAcknowledged && !rediscovered)
       )
     };
   }

@@ -1,0 +1,60 @@
+[
+  {
+    "version": 2,
+    "task_id": "db7ee9759050474097ab4add07199d58",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "CfM7ZAXjHXiQRjvkY7wcxv6D",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 16879,
+      "finished_at": "2026-08-28T10:24:12.485Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-28T10:23:55.173Z",
+    "updated_at": "2026-08-28T10:24:12.485Z",
+    "events": [
+      {
+        "time": "2026-08-28T10:23:55.173Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-28T10:23:55.537Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest discover -s tests -p test_workspace_session_isolation.py -v",
+          "session_id": "CfM7ZAXjHXiQRjvkY7wcxv6D"
+        }
+      },
+      {
+        "time": "2026-08-28T10:24:12.485Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m unittest discover -s tests -p test_workspace_session_isolation.py -v",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-28T10:24:26.973Z",
+    "archive_reason": "finished"
+  }
+]

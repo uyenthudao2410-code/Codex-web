@@ -57,9 +57,14 @@ test('manager preload reuses the existing read-only orchestration IPC without ch
   assert.match(main, /path:\s*'\/__control\/orchestration'/);
   assert.match(main, /secureHandle\('panel:dashboard-analytics'/);
   assert.match(main, /path:\s*'\/__control\/orchestration\/analytics'/);
+  assert.match(main, /const PANEL_ANALYTICS_TIMEOUT_MS = 10000;/);
   const controlCenter = read('renderer/control-center.js');
   assert.match(controlCenter, /coding-tools:overview-pulse/);
   assert.match(controlCenter, /coding-tools:overview-refresh-request/);
+  assert.match(controlCenter, /const snapshotRequest = api\.lightweightSnapshot\(\);/);
+  assert.match(controlCenter, /const orchestrationRequest = api\.liveOrchestration\(\);/);
+  assert.doesNotMatch(controlCenter, /api\.snapshot\(\)/);
+  assert.doesNotMatch(controlCenter, /api\.orchestration\(\)/);
 });
 
 test('manager router treats OpenCode connectivity and DeepSeek model activity as separate evidence', () => {
@@ -71,8 +76,8 @@ test('manager router treats OpenCode connectivity and DeepSeek model activity as
   assert.doesNotMatch(js, /opencode\?\.online\s*\?\s*'active'/);
   assert.match(js, /api\.lightweightSnapshot\(\)/);
   assert.match(js, /api\.liveOrchestration\(\)/);
-  assert.match(js, /force \? api\.snapshot\(\) : api\.lightweightSnapshot\(\)/);
-  assert.match(js, /force \? api\.orchestration\(\) : api\.liveOrchestration\(\)/);
+  assert.match(js, /const snapshotRequest = api\.lightweightSnapshot\(\);/);
+  assert.match(js, /const orchestrationRequest = api\.liveOrchestration\(\);/);
   assert.match(js, /setTimeout\(pollControlCenter, controlCenterPollDelay\(\)\)/);
   assert.doesNotMatch(js, /setInterval\(\(\) => refresh\(false\), 2500\)/);
   assert.match(js, /\['overview', 'task'\]\.includes\(activePage\(\)\)/);

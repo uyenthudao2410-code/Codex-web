@@ -513,13 +513,13 @@
     if (refreshInFlight || (!force && !shouldPoll())) return;
     refreshInFlight = true;
     try {
-      const snapshotRequest = force ? api.snapshot() : api.lightweightSnapshot();
-      const orchestrationRequest = force ? api.orchestration() : api.liveOrchestration();
+      const snapshotRequest = api.lightweightSnapshot();
+      const orchestrationRequest = api.liveOrchestration();
       const [snapshotResult, orchestrationResult] = await Promise.allSettled([snapshotRequest, orchestrationRequest]);
       if (snapshotResult.status === 'fulfilled') {
         try {
           const payload = unwrap(snapshotResult.value);
-          snapshot = force ? payload : { ...(snapshot || {}), status: payload };
+          snapshot = { ...(snapshot || {}), status: payload };
         } catch { snapshot = null; }
       }
       if (orchestrationResult.status === 'fulfilled') {

@@ -2094,3 +2094,217 @@ vào process đang chạy; nó không phải lý do để tự động restart h
 foreign. Báo cáo giữ nguyên nguyên tắc: mỗi source drift cần một activation
 operation được ủy quyền và một receipt mới trước khi đánh giá `CURRENT` hay
 đóng immutable baseline.
+
+## 22. P1 authority-matrix checkpoint — 2026-08-28
+
+Đã hoàn tất artifact P1.3 ở mức source/documentation:
+[`docs/AUTHORITY_MATRIX.md`](../AUTHORITY_MATRIX.md) liệt kê các identity hiện
+đang có trong runtime (workspace/task/run/wave/lease/activation/process/device,
+checkpoint/proof/problem/capsule/connector), nêu rõ identity nào được phép cấp
+authority ở gate nào, ai tạo/vô hiệu hóa, khả năng sống qua restart, và vì sao
+không được suy luận từ projection/UI/process proximity. Matrix dùng đúng
+precedence hiện tại: implementation + focused tests là authority; report chỉ là
+inventory có timestamp/HEAD.
+
+Validation cho wave này:
+
+```text
+docs/AUTHORITY_MATRIX.md       added (bounded documentation artifact)
+git diff --check               PASS
+source/runtime/process state   unchanged by this wave
+```
+
+Artifact này đóng phần inventory P1.3 nhưng không tự đóng P0.2/P0.3/P0.6,
+không biến `task_context_id`, capsule, proof hash hay connector hash thành
+quyền mutation, và không cấp phép restart/adopt/kill/reconcile ledger,
+commit/push/release/deploy. Các blocker runtime được giữ nguyên như receipt ở
+§21: runtime hiện đang dừng/không fully ready, UI process stale so với disk,
+connector chưa có current-process discovery receipt, lifecycle census còn cần
+được xử lý qua supported authority trước khi tạo accepted baseline.
+
+## 23. Fresh read-only lifecycle receipt — 2026-08-28T10:14:44Z
+
+Một immutable Backup-API/query-only census mới đã chạy sau khi runtime hiện tại
+đã dừng các process Coding MCP/Tunnel. Census không khởi tạo writer/runtime/
+governor và xác nhận `mutated_canonical_ledger=false`:
+
+```text
+schema_version                         11
+physical snapshot SHA-256              ace311839643334d19be0e2831ac9d30e1ee271228074c33427d1bb262230701
+logical snapshot SHA-256                bb2908d50673b5746b55cca53f387255105d7cb520392385914dd340c3febd36
+ordinary active runs                    102
+threshold stale candidates              88
+awaiting acceptance                    10
+grace-period inactive                   4
+managed job residues (not live)         2
+unbound live resource residues          0
+unexplained active runs                 0
+projection classification               PROJECTION_DRIFT
+projection context count                289
+projection missing relevant runs       3
+mutated canonical ledger                false
+```
+
+Ba run còn thiếu contextual projection là các exact tuple sau; chúng không
+được tự tạo hoặc gán lại vì census chỉ quan sát:
+
+```text
+7f852fd7a0fa4c17838eedb41826e706 / b4841039b1304780b4b421621b0b28ed / PREFLIGHT
+a572b052953f43df92919ebc0bf923af / d9c44485e9404b339af43be2002d1336 / PREFLIGHT
+e917aad443df43cba0540cac77805759 / 56802762c9644fb692ed20dfea0c414e / PREFLIGHT
+```
+
+Receipt này làm rõ blocker hiện tại: unbound live sidecar residue đã biến mất
+theo quan sát (hai managed-job rows còn lại đều `NOT_RUNNING`), nhưng P0.2 vẫn
+chưa đạt vì 88 stale candidates chưa qua supported reconciliation và projection
+vẫn thiếu ba binding. P0.3 cũng chưa đạt: `npm run dev:status` tiếp tục báo
+`state=STALE`, `update_pending=true`, còn runtime snapshot báo MCP/Tunnel
+stopped và `connector_state=UNAVAILABLE`. Chỉ owner có authority mới được
+reconcile các run/rows này hoặc thực hiện full-clean activation; không có mutation
+hay restart nào được thực hiện trong wave này.
+
+## 24. Completion-goal checkpoint — 2026-08-28T10:54:54Z
+
+Đây là receipt hiện tại sau khi tiếp tục goal với quyền thao tác repository và
+runtime có kiểm soát. Các thay đổi source đúng phạm vi P0.5 đã hiện diện trên
+worktree hiện tại, gồm:
+
+```text
+renderer/control-center.js
+  Overview refresh dùng lightweightSnapshot + liveOrchestration cho mọi đường
+  force/manual/initial/visibility/dashboard-request; không còn force full API
+  trên Overview.
+renderer/dashboard.js
+  canonicalControllerUsageState, canonicalOperationsAnalytics và
+  canonicalMeasuredUsage chỉ đọc analyticsSnapshot.
+electron/main.js
+  PANEL_ANALYTICS_TIMEOUT_MS = 10000.
+mcp_http_handler.py
+  /__control/orchestration/analytics trả generated_at/window_days=7 và truyền
+  cùng generated_at vào usage_analytics(now=...) và operations_analytics(now=...).
+```
+
+Focused proof thực tế trên cùng worktree:
+
+```text
+python -m pytest tests/test_execution_hub.py -q                  PASS 11
+python -m pytest tests/test_lifecycle_census.py tests/test_projection_rebuild.py -q
+                                                                  PASS 18 (+8 subtests)
+node --test tests/dashboard-analytics.test.js tests/control-center-manager.test.js
+          tests/runtime-lifecycle.test.js                         PASS 99
+node --test tests/recovery-bootstrap.test.js ...                  PASS (included in prior 116-test run)
+git diff --check                                                PASS
+```
+
+Test HTTP analytics còn xác nhận hai helper nhận đúng cùng một timestamp
+`generated_at`; endpoint không thực hiện reconciliation. Đây là source/focused
+proof, chưa phải packaged/released proof.
+
+Runtime đã từng đạt một epoch `READY/open` sau census sạch, với process/server
+identity mới và revision MCP/UI khớp disk. Sau đó source tiếp tục drift bởi
+worktree song song, vì vậy receipt đó không được tái sử dụng. Một full-clean
+refresh mới đã được gọi qua `npm run dev:refresh`; Recovery Host từ chối khi
+census lại xuất hiện work đang tiến hành song song. Census immutable gần nhất:
+
+```text
+physical snapshot SHA-256              f4d828fcdd8a37b1a415a96dab737205f082bdf8399bc8cd39d9d7f3a4c9fb44
+logical snapshot SHA-256                7a18719f3bed9c0d655d1205b96e520e0807b9185833463f5abfcc990a3358fd
+integrity / foreign keys                ok / 0
+ordinary active runs                    103
+awaiting acceptance                     13
+grace-period inactive                   1
+threshold stale candidates              89
+managed job residue                     1 (identity NOT_RUNNING; unbound)
+unbound live resources                  0
+unexplained active runs                 0
+projection classification               PROJECTION_DRIFT
+projection context count                297
+projection missing relevant runs       1
+missing exact run                       61087e690a0544628b9657a1719e2b6b
+missing exact wave/state                 7dadb4e0f1ca4db3bc53340f04ad1edf / PREFLIGHT
+```
+
+Run `61087…` được tạo bởi một task song song và đang trong grace period; không
+được tự gán contextual projection, accept/reject/stop, hay adopt managed job.
+`npm run dev:status` hiện tại là `MISSING` (host available, runtime process
+không còn được chứng minh), do đó P0.3/P0.6 vẫn mở. Connector probe đã được
+thực hiện trước đó trên current process (`server/discover`, HTTP 200, token
+không lộ ra), nhưng vì source/runtime drift và refresh chưa đạt current epoch
+mới nên không dùng nó để đóng connector gate hiện tại.
+
+Trạng thái gate sau checkpoint này:
+
+```text
+P0.1 task_control contract/binding        SOURCE + focused proof COMPLETE
+P0.2 lifecycle/projection convergence     OPEN / BLOCKED by concurrent PREFLIGHT + managed residue
+P0.3 source/runtime convergence           OPEN / runtime MISSING after refused refresh
+P0.4 operational evidence retention       GOVERNED; .coding-tools preserved
+P0.5 UI read-model/analytics mechanics     SOURCE + focused proof COMPLETE
+P0.6 immutable accepted baseline           NOT CREATED
+P1.3 authority matrix                     SOURCE/documentation COMPLETE
+P2/P3/P4 natural outcome, canary, delivery NOT PROVEN; no push/release/deploy occurred
+```
+
+Không có direct SQLite edit, process kill/adopt, bulk stale reconciliation,
+commit, push, package, release hoặc deployment trong checkpoint này. Next
+critical action là đợi task `61087…` và managed-job residue đi qua supported
+lifecycle boundary, recapture one clean immutable census, rồi chạy lại
+full-clean refresh trên exact current source. Chỉ sau `READY/open`, matching
+running/disk revision, fresh current-process discovery và connector ACK hợp lệ
+mới được tạo accepted baseline; không được suy luận natural HR outcome từ
+technical proof.
+
+## 25. Current completion-goal receipt — 2026-08-28T11:10:45Z
+
+Receipt mới nhất sau khi thử tiếp tục activation trên đúng checkout hiện tại:
+
+```text
+HEAD                                      2cc0eefc7d881827ef44e4d1584d84bbd9e494b6
+immutable census observed_at              2026-08-28T11:10:45.708Z
+physical snapshot SHA-256                 0ee862fb511eff51c340cbac6a5b4d66e7d3ea8396609c28718bbc056272bc58
+logical snapshot SHA-256                  c9a2e8f3cfa9452c0c9069f81922f4dd7bca84aa1df6b793c001cbc535fcdb02
+integrity / foreign keys                  ok / 0
+projection classification                 CONTEXTUAL_PROJECTIONS
+projection missing relevant runs          0
+unexplained active runs                   0
+unbound live resources                    0
+managed jobs                              0
+awaiting acceptance                       13
+active agent lanes                        1
+lane owner                                run 54290b6f078c43bdabe921de358a5d3a
+lane state                                ACCEPTING (task remains active)
+```
+
+`npm run dev:refresh` đã đi qua đường full-clean chính thức nhưng receipt
+`recovery-host-bootstrap.full-clean-refresh-mtcuk6fz-595629e84fd8299eac04130f.result.json`
+trả:
+
+```text
+state                                     failed
+code                                      ORCHESTRATION_STATE_UNCERTAIN
+message                                   Canonical ledger census refused stopped-runtime activation.
+activation_epoch_id                       null
+admission_open / fully_ready              false / false
+```
+
+Nguyên nhân được tái hiện bằng canonical census helper là
+`active_runtime_work`, cụ thể `active_agent_lanes=1` của run `54290…`; đây là
+lane của task song song đang ở `ACCEPTING`. Không có quyền hợp lệ để tự
+accept/reject/stop/adopt lane hoặc sửa canonical ledger, vì vậy P0.2/P0.3
+không được đóng bằng suy luận. `npm run dev` sau đó xác nhận UI không đủ:
+
+```text
+DEV_UI STATUS state=MISSING host=available installation=current
+running_revision=none update_pending=false
+connector_state=UNAVAILABLE connector_rediscovered=false
+```
+
+Kết luận wave: lifecycle snapshot đã đạt các điều kiện integrity/projection và
+không còn residue tài nguyên, nhưng runtime admission vẫn đóng bởi active
+lane; connector freshness chưa có current-process `tools/list`/`server/discover`
+receipt. Không tạo accepted baseline, không claim `fullyReady`, natural outcome,
+delivery, release hoặc production. Next exact action là để owner của run
+`54290…` hoàn tất checkpoint/giải phóng lane theo supported lifecycle, sau đó
+recapture census mới và lặp lại full-clean activation; chỉ khi epoch mới
+`READY/open` và connector tuple `rediscovered=true`, timestamp khác rỗng,
+`refresh_required=false`, `ack_pending=false` mới tiếp tục ACK/baseline.

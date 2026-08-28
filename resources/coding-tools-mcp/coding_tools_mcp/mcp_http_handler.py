@@ -287,14 +287,19 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 self.send_unauthorized(head_only=head_only)
                 return
             ledger = self.runtime.orchestration_ledger
+            window_days = 7
+            generated_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             self.send_json({
                 "schema_version": 1,
                 "snapshot_scope": "dashboard_analytics",
-                "usage_analytics": ledger.usage_analytics(days=7),
+                "generated_at": generated_at,
+                "window_days": window_days,
+                "usage_analytics": ledger.usage_analytics(days=window_days, now=generated_at),
                 "operations_analytics": operations_analytics(
                     ledger,
                     performance=self.runtime.performance_trace.get(),
-                    days=7,
+                    days=window_days,
+                    now=generated_at,
                 ),
                 "content_free": True,
             }, head_only=head_only)

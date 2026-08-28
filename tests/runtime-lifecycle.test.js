@@ -940,6 +940,31 @@ test('activation connector compatibility bootstrap is exact, no-workspace, and n
   assert.equal(sameContractAcknowledged.contractState, 'CURRENT_COMPATIBLE_ACKNOWLEDGED');
   assert.equal(sameContractAcknowledged.compatibilitySource, 'exact_current_contract_activation_bootstrap');
   assert.equal(sameContractAcknowledged.rediscovered, false);
+
+  const currentDiscovery = {
+    current_contract_observed: true,
+    contract_sha256: currentSha,
+    observed_at: new Date(nowUnixMs - 1).toISOString(),
+    process_instance_id: nextBootstrap.process_instance_id,
+    server_instance_id: nextBootstrap.server_instance_id
+  };
+  const rediscovered = nextOrchestrator.connectorContractStatus(
+    nextHealth.tool_contract,
+    currentDiscovery,
+    null,
+    nextBootstrap
+  );
+  assert.equal(rediscovered.contractState, 'CURRENT_ACKNOWLEDGED');
+  assert.equal(rediscovered.rediscovered, true);
+  assert.equal(rediscovered.acknowledgementPending, false);
+  assert.deepEqual(nextOrchestrator.connectorContractFreshness({
+    ...nextHealth,
+    connector_tool_discovery: currentDiscovery
+  }, rediscovered), {
+    ready: true,
+    mode: 'current_process_discovery',
+    observedAt: currentDiscovery.observed_at
+  });
   fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
 });
 

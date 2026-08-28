@@ -1,0 +1,222 @@
+{
+  "version": 2,
+  "task_id": "598b4e44850e47b88a755732c0840b9d",
+  "orchestration": {
+    "run_id": "cced3b69ebb04839b8209a76232977b0",
+    "wave_id": "df2d57b91a934a33805a47e32b2ec003",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "2cc0eefc7d881827ef44e4d1584d84bbd9e494b6",
+    "worktree_fp": "5cfbffd1308744f9996cdbdb42bc9fb623da72f581dcba89a751805cb6ac469b",
+    "contract_fp": ""
+  },
+  "objective": "Read-only diagnosis of the control-plane blocker preventing canonical acceptance. Pinpoint the exact source/schema path where task_control omits task_context_id while workspace_context/agent_workflow support it, causing task_control calls from ChatWeb to open a fresh isolated context and fail to see the canonical RUN/report. Do not mutate files, do not restart, do not touch ledger.sqlite3. Return the smallest causal source/test scope and whether a safe project patch is possible without altering acceptance semantics. Also verify whether the recent UI final-gap source changes are physically present in the current worktree despite Git status no longer listing those files.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "f7XBQIhiIctAL6pfAXY3uUDw",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1377,
+    "finished_at": "2026-08-28T10:29:31.679Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 21,
+        "head_hash": "8aa675b6f88c24a3b67ae67a954a3d96a29b6d6ccad0c6ebb416617bdd13afe4"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-cced3b69ebb04839b8209a76232977b0\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-cced3b69ebb04839b8209a76232977b0\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "cced3b69ebb04839b8209a76232977b0",
+      "wave_id": "df2d57b91a934a33805a47e32b2ec003",
+      "base_head": "2cc0eefc7d881827ef44e4d1584d84bbd9e494b6",
+      "worktree_fp": "5cfbffd1308744f9996cdbdb42bc9fb623da72f581dcba89a751805cb6ac469b",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only diagnosis of the control-plane blocker preventing canonical acceptance. Pinpoint the exact source/schema path where task_control omits task_context_id while workspace_context/agent_workflow support it, causing task_control calls from ChatWeb to open a fresh isolated context and fail to see the canonical RUN/report. Do not mutate files, do not restart, do not touch ledger.sqlite3. Return the smallest causal source/test scope and whether a safe project patch is possible without altering acceptance semantics. Also verify whether the recent UI final-gap source changes are physically present in the current worktree despite Git status no longer listing those files.",
+        "objective_revision": 1,
+        "objective_sha256": "fd1f9388f705f9982ee76334afc83a7e175821e832deffda502b52619920c3d8",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "94fd29a016b39fbd24b21cce0645c95f4ca68bb8398484254c12d8f77df7eee5",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-08-28T10:27:19.003Z",
+  "updated_at": "2026-08-28T10:44:40.748Z",
+  "events": [
+    {
+      "time": "2026-08-28T10:27:19.003Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only diagnosis of the control-plane blocker preventing canonical acceptance. Pinpoint the exact source/schema path where task_control omits task_context_id while workspace_context/agent_workflow support it, causing task_control calls from ChatWeb to open a fresh isolated context and fail to see the canonical RUN/report. Do not mutate files, do not restart, do not touch ledger.sqlite3. Return the smallest causal source/test scope and whether a safe project patch is possible without altering acceptance semantics. Also verify whether the recent UI final-gap source changes are physically present in the current worktree despite Git status no longer listing those files."
+      }
+    },
+    {
+      "time": "2026-08-28T10:27:20.427Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T10:27:24.367Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-28T10:27:24.387Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-28T10:27:40.643Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff -- electron/main.js renderer/control-center.js renderer/dashboard.js resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/tests/test_execution_hub.py tests/control-center-manager.test.js tests/control-panel.test.js tests/dashboard-analytics.test.js && rg -n \"task_context_id|TASK_CONTROL_CONTINUATION_ACTIONS|task_control\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resour",
+        "session_id": "wktlZZwirS14m73cTqcdcTXp"
+      }
+    },
+    {
+      "time": "2026-08-28T10:27:41.531Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff -- electron/main.js renderer/control-center.js renderer/dashboard.js resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/tests/test_execution_hub.py tests/control-center-manager.test.js tests/control-panel.test.js tests/dashboard-analytics.test.js && rg -n \"task_context_id|TASK_CONTROL_CONTINUATION_ACTIONS|task_control\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resour",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:28:36.959Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"PANEL_ANALYTICS_TIMEOUT_MS|managerRefresh|coding-tools:overview-pulse|analyticsSnapshot\\?\\.usage_analytics|analyticsSnapshot\\?\\.operations_analytics|orchestration\\?\\.usage_analytics|orchestration\\?\\.operations_analytics|generated_at|window_days|/__control/orchestration/analytics\" electron/main.js renderer/control-center.js renderer/dashboard.js resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py tests/control-center-manager.test.js tests/control-panel.test.js tests/dashboard-a",
+        "session_id": "ZqQQIFLgDgu-DlIBJlmdlV3s"
+      }
+    },
+    {
+      "time": "2026-08-28T10:28:37.652Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"PANEL_ANALYTICS_TIMEOUT_MS|managerRefresh|coding-tools:overview-pulse|analyticsSnapshot\\?\\.usage_analytics|analyticsSnapshot\\?\\.operations_analytics|orchestration\\?\\.usage_analytics|orchestration\\?\\.operations_analytics|generated_at|window_days|/__control/orchestration/analytics\" electron/main.js renderer/control-center.js renderer/dashboard.js resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py tests/control-center-manager.test.js tests/control-panel.test.js tests/dashboard-a",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:28:59.899Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 14 \"async function refresh\" renderer/control-center.js",
+        "session_id": "HxAMfzNYuXnZCMFecNTJwq_C"
+      }
+    },
+    {
+      "time": "2026-08-28T10:29:00.835Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 14 \"async function refresh\" renderer/control-center.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:29:10.444Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 18 \"coding-tools:overview-pulse\" renderer/control-center.js",
+        "session_id": "_O_4WC6aSN3Bo-Rc7VwmoAEB"
+      }
+    },
+    {
+      "time": "2026-08-28T10:29:10.899Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 18 \"coding-tools:overview-pulse\" renderer/control-center.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:29:31.228Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 80 \"TASK_CONTROL_CONTINUATION_ACTIONS\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+        "session_id": "f7XBQIhiIctAL6pfAXY3uUDw"
+      }
+    },
+    {
+      "time": "2026-08-28T10:29:31.679Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 80 \"TASK_CONTROL_CONTINUATION_ACTIONS\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-28T10:44:40.742Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "94fd29a016b39fbd24b21cce0645c95f4ca68bb8398484254c12d8f77df7eee5"
+      }
+    }
+  ]
+}
