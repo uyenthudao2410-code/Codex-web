@@ -2308,3 +2308,260 @@ delivery, release hoặc production. Next exact action là để owner của run
 recapture census mới và lặp lại full-clean activation; chỉ khi epoch mới
 `READY/open` và connector tuple `rediscovered=true`, timestamp khác rỗng,
 `refresh_required=false`, `ack_pending=false` mới tiếp tục ACK/baseline.
+
+## 26. Review-driven remediation receipt — 2026-08-28T11:28:29Z
+
+Một review độc lập read-only cho packet Dashboard/UI đã trả `VERDICT: fix` và
+chỉ ra năm vi phạm có thể tái hiện. Các sửa chữa nhỏ nhất đã được áp dụng trên
+worktree hiện tại:
+
+```text
+resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py
+  snapshot(..., recover_if_missing=False) cho phép live path không cold-recover.
+resources/coding-tools-mcp/coding_tools_mcp/live_control.py
+  live control gọi snapshot(..., recover_if_missing=False), không replay
+  waves/events hoặc assert_write_fence khi context cache lạnh.
+renderer/app.js
+  top-bar #refreshButton phát coding-tools:overview-refresh-request để
+  Control Center sở hữu cặp lightweightSnapshot + liveOrchestration.
+renderer/dashboard.js
+  bỏ api.snapshot() trực tiếp; cấu hình đọc từ snapshot của overview pulse;
+  renderAll() chạy trước analytics IPC và analytics rerender độc lập;
+  animateText hủy requestAnimationFrame chain trước đó.
+tests/*
+  thêm regression cho cold-context live path, top-bar routing, shared pulse,
+  analytics independence và animation cancellation.
+```
+
+Focused proof sau remediation:
+
+```text
+node --test tests/control-panel.test.js tests/dashboard-analytics.test.js
+  tests/control-center-manager.test.js tests/runtime-lifecycle.test.js
+  tests/recovery-bootstrap.test.js                       PASS 119
+python -m pytest tests/test_execution_hub.py
+  tests/test_orchestration_control.py -q                  PASS 20
+git diff --check                                           PASS
+```
+
+Một lần chạy HTTP test trung gian gặp `ConnectionAbortedError` tại nhánh
+401 unauthorized; chạy lại đúng test đơn lẻ và toàn bộ packet đều pass, nên
+được phân loại là flaky transient chứ không phải failure mới.
+
+HEAD đã tiến lên đồng thời trong worktree bởi commit ngoài wave này:
+
+```text
+HEAD                                      e4075d81e5de465837e501e28016ccc7b2afa7ce
+```
+
+Immutable census cùng thời điểm vẫn giữ:
+
+```text
+physical snapshot SHA-256                 0ee862fb511eff51c340cbac6a5b4d66e7d3ea8396609c28718bbc056272bc58
+logical snapshot SHA-256                  c9a2e8f3cfa9452c0c9069f81922f4dd7bca84aa1df6b793c001cbc535fcdb02
+projection                                CONTEXTUAL_PROJECTIONS
+missing / unexplained / unbound / managed 0 / 0 / 0 / 0
+active agent lanes                        1 (run 54290… vẫn ACCEPTING)
+awaiting acceptance                       13
+```
+
+Remediation source đã hoàn tất ở mức focused proof, nhưng live closure chưa
+thể thực hiện: lane `54290…` vẫn là active authority residue, Recovery
+Host/runtime chưa có admission `READY/open`, và connector chưa có
+current-process discovery receipt. Không accept/reject/stop lane, không sửa
+ledger, không tạo synthetic workload, không tạo accepted baseline, và không có
+push/release/deploy. Next action vẫn là để owner của lane hoàn tất supported
+checkpoint, recapture census, rồi chạy full-clean activation và connector
+rediscovery từ đầu trên HEAD mới.
+
+## 27. Repeated `npm start` failure — exact current cause and authority boundary — 2026-08-28T11:39:42Z
+
+Lỗi người dùng quan sát được tái hiện nguyên văn trên `HEAD=e4075d81e5de465837e501e28016ccc7b2afa7ce`:
+
+```text
+DEV_UI REFRESH action=full_clean
+DEV_UI ERROR code=ORCHESTRATION_STATE_UNCERTAIN
+message=Canonical ledger census refused stopped-runtime activation.
+exit_code=1
+```
+
+Đây không phải lỗi thiếu Python, lỗi cổng, hay lỗi source patch. Recovery Host
+đã được xác thực nhưng Coding MCP/Tunnel đang dừng; proxy trả `503` vì durable
+activation admission vẫn đóng. Census query-only mới nhất (`observed_at`
+`2026-08-28T11:39:42.202Z`) giữ các điều kiện integrity:
+
+```text
+physical snapshot SHA-256                 0ee862fb511eff51c340cbac6a5b4d66e7d3ea8396609c28718bbc056272bc58
+logical snapshot SHA-256                  c9a2e8f3cfa9452c0c9069f81922f4dd7bca84aa1df6b793c001cbc535fcdb02
+integrity / foreign keys                 ok / 0
+projection                               CONTEXTUAL_PROJECTIONS
+projection missing / unexplained         0 / 0
+unbound / managed residue                0 / 0
+awaiting acceptance                      13
+active agent lanes                       1
+```
+
+Lane duy nhất còn sống là exact row sau:
+
+```text
+run_id                                   54290b6f078c43bdabe921de358a5d3a
+lane_id                                  F-GzPsj9YBqqCDj_
+thread_id                                01a047fe-32e3-7652-8734-b03f658a8b4c
+semantic_key                             dashboard-ui-performance-independent-review-v1
+lifecycle                                active
+latest bridge status                     inProgress
+parent run state                         ACCEPTING
+```
+
+Thread review đã thực sự trả `VERDICT: fix` và hiện idle/completed, nhưng lane
+ledger chưa nhận được terminal outcome. Tôi đã gửi yêu cầu chính thức cho
+thread owner tự terminalize; owner xác nhận task hiện không expose
+`task_control`, `coordination`, hay `checkpoint` surface. Do đó không có
+authority surface hợp lệ để đóng exact lane từ task hiện tại. Sửa trực tiếp
+SQLite, tự accept/reject/stop/adopt run, hoặc nới census để bỏ qua lane sẽ là
+false-green và vi phạm boundary của ledger.
+
+Kết luận hiện tại: source remediation và focused proof vẫn COMPLETE; live
+activation P0.2/P0.3 vẫn BLOCKED bởi authority residue thật, không phải do
+patch chưa sửa. Next action bắt buộc là owner/controller có supported
+task-control surface đóng lane `F-GzPsj9YBqqCDj_` và hoàn tất/giải quyết run
+`54290…`; sau đó recapture immutable census và chạy lại `npm start`. Chỉ khi
+epoch mới `READY/open`, process identities/revision khớp, và connector có
+fresh current-process `tools/list` hoặc `server/discover` mới được ACK hoặc
+tạo accepted baseline. Không có direct SQLite edit, process kill, commit,
+push, release, deploy, hay production action trong checkpoint này.
+
+## 28. Live activation and connector closure — 2026-08-29T09:03:37Z
+
+Blocker activation/connector của các checkpoint trước đã được giải quyết bằng
+current-process evidence. Repository vẫn ở `branch=main`,
+`HEAD=e4075d81e5de465837e501e28016ccc7b2afa7ce`, worktree dirty được bảo toàn;
+không có reset/restore/clean hoặc direct ledger edit.
+
+Official Recovery Host capture qua các read-only action `recovery.status`,
+`runtime.lightweight_snapshot`, `runtime.activation_epoch_status` và durable
+activation receipt xác nhận cùng một epoch:
+
+```text
+activation_epoch_id                    activation-mte4v3zt-96dafc173b4553ca8bd5d69b81fb5f45
+operation_id                           full-clean-refresh-mte4uoyr-902fccedaaf005d6ebbe2272
+epoch state                            READY
+admission_open                         true
+update_incomplete                      false
+ready_commit_digest                    93cd38fb10d36ee35e8346a75af376cb94201e19ef72d6e0af2afc0634db0f5f
+ready_at                               2026-08-29T08:44:25.692Z
+error                                  null
+workspace                              E:\DEV\Codex-web
+mcp / native / tunnel                  true / true / true
+componentsReady / connectorReady       true / true
+fullyReady                             true
+Recovery Host state                    healthy/current
+Electron UI PID / instance             29308 / 2a088accf701f2b0b69020bf8252b3dd
+Electron UI running/disk revision      cb6c9bf6945e9b4e8aa41c12826ba8953adba7fcb1ac091c7d8e1cde80e21f90
+Coding MCP running/disk revision       8efa200a45a1bac182f61a15d467de81932fc0ba299d4c45287de68b875a0d70
+update_pending                         false
+```
+
+Current activation receipt binds the external discovery to the replacement
+MCP identity instead of relying on response text, persisted hash, raw HTTP, or
+`workspace_context`:
+
+```text
+process_instance_id                    Xk7ni_BgTxMQmN-q
+server_instance_id                     JTB1LgSgIqB8WU3m
+connector validation                   valid=true, code=READY, reasons=[]
+connector state                        CURRENT_ACKNOWLEDGED
+connector freshness                    current_process_discovery
+connector_rediscovered                 true
+connector_rediscovered_at              2026-08-29T08:44:10.850647+00:00
+connector_refresh_required             false
+connector_ack_pending                  false
+current contract SHA-256               c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251
+acknowledged contract SHA-256          c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251
+public profile / tool count            smart-v3 / 8
+```
+
+Không gọi ACK lần nữa vì state đã là `CURRENT_ACKNOWLEDGED` và
+`connector_ack_pending=false`. `recovery.status.gateway_metrics.by_kind.mcp.n`
+ở capture này là `0`, nhưng metric đó có scope riêng
+`electron_loopback_proxy_to_local_mcp`; nó không thay thế hoặc phủ định durable
+current-process discovery receipt nêu trên. Coding Tunnel log có forward
+traffic trong current runtime window, còn receipt activation là authority
+ràng buộc epoch/process/server/contract.
+
+Sau khi một real ChatWeb controller ngắn hạn tự terminalize và lease tự được
+release/expire, immutable Backup-API/query-only census cuối tại
+`2026-08-29T09:03:37.737Z` trả:
+
+```text
+schema_version                         11
+physical snapshot SHA-256              3e932f77eaec7c441e68bc770770dfb82607a39092fad0a057d5db6b977beb02
+logical snapshot SHA-256               187f33e2f9bed5fffb90350215871679e44f95109706e4e5c61f5918dc9d5b03
+integrity / foreign keys               ok / 0
+query_only / immutable                 true / true
+mutated_canonical_ledger               false
+active agent lanes                     0
+active controller leases               0
+active write fences                    0
+live managed jobs                      0
+running background operations          0
+unexplained active runs                0
+unbound live resource residues         0
+stale background residues              0
+projection                             CONTEXTUAL_PROJECTIONS
+projection missing/conflicting         0 / 0
+projection_drift                       false
+```
+
+Do đó activation admission, process replacement, connector freshness/ACK và
+live ownership convergence hiện PASS. Danh sách RUN lịch sử còn lại không phải
+lỗi kết nối hoặc live authority: census phân loại `93` ordinary active rows là
+`THRESHOLD_SENSITIVE_STALE_CANDIDATE`, tất cả không có live ownership. Chúng
+vẫn là housekeeping cần supported exact-ID reconciliation; không bulk-close,
+force-release hoặc sửa SQLite chỉ để tạo false-green.
+
+### 28.1. Accepted-baseline decision
+
+Read-only `report_p5_baseline.py` quan sát được baseline lịch sử hữu cơ nhưng
+không tạo sample, assignment, treatment hoặc production behavior:
+
+```text
+baseline kind                          organic_rework_observational_v1
+baseline_observed                      true
+accepted runs                          480
+first-pass / repaired accepted         281 / 199
+first-pass / repaired rate             0.585417 / 0.414583
+P5 canonical start readiness           false
+P5 epoch lifecycle                     EPOCH_HARD_STOPPED
+treatment_started / samples_created    false / false
+current-source accepted runs           0
+exact current-source window            false
+current-source decision                insufficient_head_window_volume
+monetary CAR coverage                  0.0
+CAR status                             unavailable
+promotion evaluation                   NOT_STARTED
+```
+
+Đây chỉ là descriptive observational evidence, không phải treatment effect và
+không phải P0.6 immutable accepted baseline. P0.6 vẫn `NOT CREATED` vì các exit
+criteria trong §P0.6 chưa đồng thời đạt:
+
+```text
+Git/workspace/runtime/contract identity current   PASS
+connector discovery/ack current-process           PASS
+proof bundle                                      existing focused proof; no new source proof in this docs-only wave
+live ownership and projection convergence         PASS
+historical stale-run count=0                      FAIL (93 exact candidates remain)
+measured real-machine UI performance baseline     NOT ESTABLISHED
+exact-current-source accepted-result window       NOT ESTABLISHED
+complete monetary CAR                             NOT ESTABLISHED; missing remains unknown, not zero
+```
+
+Vì vậy không tạo accepted baseline, không mở P5, không enroll/assign, không tạo
+synthetic/natural outcome giả và không claim production readiness. Next exact
+actions là: (1) reconcile từng historical stale candidate qua supported
+authority với exact guard; (2) recapture census yêu cầu stale-run count `0`;
+(3) đo UI event-loop/IPC/read-model trên representative real-machine window;
+và (4) chỉ khi source/proof/runtime/contract/performance cùng immutable mới ghi
+accepted P0.6 baseline. Không commit, push, package, release hoặc deploy trong
+checkpoint này; chronology `260826` không bị sửa.

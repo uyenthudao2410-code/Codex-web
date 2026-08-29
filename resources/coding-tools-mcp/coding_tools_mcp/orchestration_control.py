@@ -894,11 +894,13 @@ class OrchestrationControl:
         self.mark_accepting(ctx, proof_summary=proof_summary)
         return self.checkpoint(ctx)
 
-    def snapshot(self, run_id: str) -> RunContext | None:
+    def snapshot(self, run_id: str, *, recover_if_missing: bool = True) -> RunContext | None:
         with self._lock:
             current = self._contexts.get(run_id)
             if current is not None:
                 return copy.deepcopy(current)
+        if not recover_if_missing:
+            return None
         return self.recover(run_id)
 
     def recover(self, run_id: str) -> RunContext | None:

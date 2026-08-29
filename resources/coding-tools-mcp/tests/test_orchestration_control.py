@@ -178,6 +178,25 @@ class OrchestrationControlTests(unittest.TestCase):
             self.assertEqual(recovered.write_lease.allowed_paths, ("app.py",))
             self.assertEqual(recovered.write_lease.existing_dirty_source_paths, ("known.py",))
 
+    def test_live_snapshot_can_skip_cold_context_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            control = OrchestrationControl(root, ledger)
+            ctx = control.begin(
+                objective="cold live read",
+                task_id="task-cold-live",
+                execution_mode="mcp_only",
+                base_head="abc",
+                worktree_fp="fp",
+            )
+            # A fresh control instance has no in-memory context.  The bounded
+            # live path must be able to observe that miss without reconstructing
+            # waves/events or touching write-fence state.
+            cold = OrchestrationControl(root, ledger)
+            with patch.object(ledger, "list_waves", side_effect=AssertionError("cold live path must not recover")):
+                self.assertIsNone(cold.snapshot(ctx.run_id, recover_if_missing=False))
+
 
     def test_workspace_fence_blocks_concurrent_writer_and_increments_after_release(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

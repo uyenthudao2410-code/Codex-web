@@ -1,0 +1,296 @@
+{
+  "version": 2,
+  "task_id": "1dd3a78e32f84c3e96a906589cef8ff6",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "qE_msu0T0olNrxUSoCfBiBjS",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-29T02:20:08.222Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "qE_msu0T0olNrxUSoCfBiBjS",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "qE_msu0T0olNrxUSoCfBiBjS",
+        "kind": "test",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "e4075d81e5de465837e501e28016ccc7b2afa7ce",
+        "branch": "main",
+        "worktree_fp": "d24fa2c1d10fe91ab73de8638453188c4b7e6c5accc85e132e600a4b245fcbe2",
+        "dirty_paths": [
+          "docs/research/260828_CODING_WEB_TARGET_STATE_GAP_ANALYSIS_AND_COMPLETION_PLAN.md",
+          "renderer/app.js",
+          "renderer/dashboard.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+          "resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "resources/coding-tools-mcp/tests/test_orchestration_control.py",
+          "tests/control-panel.test.js",
+          "tests/dashboard-analytics.test.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/completed_agent_lane_reconciliation.py",
+          "resources/coding-tools-mcp/scripts/reconcile_exact_completed_agent_lane.py",
+          "resources/coding-tools-mcp/tests/test_exact_completed_agent_lane_reconciliation.py"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "1dd3a78e32f84c3e96a906589cef8ff6",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "kind": "test",
+          "status": "passed",
+          "exit_code": 0,
+          "duration_ms": null,
+          "command_id": "qE_msu0T0olNrxUSoCfBiBjS"
+        }
+      ]
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "a3c04141a1aecc9ea660be9d316818eca35720b046e64f6d5c968180458f3578",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_exact_completed_agent_lane_reconciliation.py tests/test_orchestration_control.py tests/test_execution_hub.py -q && cd ..\\.. && node --test tests/control-panel.test.js tests/dashboard-analytics.test.js && git diff --check\"",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 52 lines | tail: \"warning: in the working copy of 'tests/dashboard-analytics.test.js', LF will be replaced by CRLF the next time Git to...\"",
+      "finished_at": "2026-08-29T02:20:08.222Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "qE_msu0T0olNrxUSoCfBiBjS"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "size_bytes": 4437,
+        "command_id": "qE_msu0T0olNrxUSoCfBiBjS",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:qE_msu0T0olNrxUSoCfBiBjS:stdout",
+            "total_stream_bytes": 2868,
+            "total_retained_bytes": 2868,
+            "head_retained_bytes": 2868,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:qE_msu0T0olNrxUSoCfBiBjS:stderr",
+            "total_stream_bytes": 1569,
+            "total_retained_bytes": 1569,
+            "head_retained_bytes": 1569,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-29T02:18:12.665Z",
+  "updated_at": "2026-08-29T02:20:08.528Z",
+  "events": [
+    {
+      "time": "2026-08-29T02:18:12.665Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-29T02:18:13.068Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "Bg9THvlIVG8hVNc51L7d0ZT_"
+      }
+    },
+    {
+      "time": "2026-08-29T02:18:19.953Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:18:28.973Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --stat && git diff --name-status && git ls-files --others --exclude-standard",
+        "session_id": "5hJR_3PTnlJw-Wp7SfKs01Bk"
+      }
+    },
+    {
+      "time": "2026-08-29T02:18:30.524Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --stat && git diff --name-status && git ls-files --others --exclude-standard",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:18:54.185Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"proof_fingerprint|0000000000000000000000000000000000000000000000000000000000000000|CHECKPOINTED|PENDING_FINAL_ACCEPTANCE|task_orchestration_projection_reconciled\" resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests electron renderer",
+        "session_id": "srhiVhqKJS7jNCTR4mwPk4WV"
+      }
+    },
+    {
+      "time": "2026-08-29T02:18:54.519Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"proof_fingerprint|0000000000000000000000000000000000000000000000000000000000000000|CHECKPOINTED|PENDING_FINAL_ACCEPTANCE|task_orchestration_projection_reconciled\" resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests electron renderer",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:02.008Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"proof_fingerprint=\\\"\\\"|def accept|accept_checkpoint_atomic|passed_proof_fingerprint\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "session_id": "n1v7_3Xc893KLAJqod1kvtCd"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:02.323Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"proof_fingerprint=\\\"\\\"|def accept|accept_checkpoint_atomic|passed_proof_fingerprint\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:08.649Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 120 \"durable_mutation, _durable_paths = _durable_wave_acceptance_paths\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "session_id": "vJS9D5u5BAdF3IWfxR7SsKP0"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:09.016Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 120 \"durable_mutation, _durable_paths = _durable_wave_acceptance_paths\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:15.369Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 45 \"def passed_proof_fingerprint\" resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+        "session_id": "asVN6RyVMpeM5R3z6Z-fbBYl"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:15.649Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 45 \"def passed_proof_fingerprint\" resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:24.449Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 35 \"def _passed_proof_keys\" resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+        "session_id": "4-a-LHg8aI4K1Pck38WNCpKi"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:24.791Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 35 \"def _passed_proof_keys\" resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:19:40.803Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_exact_completed_agent_lane_reconciliation.py tests/test_orchestration_control.py tests/test_execution_hub.py -q && cd ..\\.. && node --test tests/control-panel.test.js tests/dashboard-analytics.test.js && git diff --check\"",
+        "session_id": "qE_msu0T0olNrxUSoCfBiBjS"
+      }
+    },
+    {
+      "time": "2026-08-29T02:20:08.222Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_exact_completed_agent_lane_reconciliation.py tests/test_orchestration_control.py tests/test_execution_hub.py -q && cd ..\\.. && node --test tests/control-panel.test.js tests/dashboard-analytics.test.js && git diff --check\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:20:08.528Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "qE_msu0T0olNrxUSoCfBiBjS",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "a3c04141a1aecc9ea660be9d316818eca35720b046e64f6d5c968180458f3578"
+      }
+    }
+  ]
+}

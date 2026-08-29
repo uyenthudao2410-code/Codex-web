@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "task_id": "6c18b6c4a5cd4b0f928b73fbffd01b0f",
+  "orchestration": {
+    "run_id": "8d3aff88412e42bda0001b9d4f68b3a6",
+    "wave_id": "942d206f771b486b826935245e0772d8",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "e4075d81e5de465837e501e28016ccc7b2afa7ce",
+    "worktree_fp": "d24fa2c1d10fe91ab73de8638453188c4b7e6c5accc85e132e600a4b245fcbe2",
+    "contract_fp": ""
+  },
+  "objective": "Diagnose why the Dashboard/Control Center 'Loaded runtime source' and 'Operator Truth Console' panels render UNKNOWN/UNAVAILABLE despite the live runtime being CURRENT. Determine whether these panels have a valid operational purpose and, if so, identify the smallest causal wiring/data-contract fix so they show truthful live values; if a panel is dead/duplicative with no reliable authoritative data source, identify it for removal. Preserve unrelated dirty worktree changes and do not modify source during prepare.",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "AGQWpcr6IhBSf9c924c5fsFw",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 255,
+    "duration_ms": 694,
+    "finished_at": "2026-08-29T02:36:13.536Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-29T02:31:38.857Z",
+  "updated_at": "2026-08-29T02:36:13.536Z",
+  "events": [
+    {
+      "time": "2026-08-29T02:31:38.857Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Diagnose why the Dashboard/Control Center 'Loaded runtime source' and 'Operator Truth Console' panels render UNKNOWN/UNAVAILABLE despite the live runtime being CURRENT. Determine whether these panels have a valid operational purpose and, if so, identify the smallest causal wiring/data-contract fix so they show truthful live values; if a panel is dead/duplicative with no reliable authoritative data source, identify it for removal. Preserve unrelated dirty worktree changes and do not modify source during prepare."
+      }
+    },
+    {
+      "time": "2026-08-29T02:31:39.962Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-29T02:31:42.662Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-29T02:31:42.672Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T02:32:02.230Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T02:33:10.180Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T02:33:24.992Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T02:34:19.877Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T02:34:37.730Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:29.812Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:48.559Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -A 90 -B 8 \"def _orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py && git grep -n \"_orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/*.py",
+        "session_id": "OMN6cemxWT5d8DVPOeXwgxG-"
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:49.694Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -A 90 -B 8 \"def _orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py && git grep -n \"_orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/*.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:36:12.935Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -A 55 -B 10 \"lastSupervisionStatus\" -- electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js && git grep -n -A 35 -B 8 \"codeRevision\" -- electron/services/runtimeOrchestrator.js | head -n 220",
+        "session_id": "AGQWpcr6IhBSf9c924c5fsFw"
+      }
+    },
+    {
+      "time": "2026-08-29T02:36:13.536Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -A 55 -B 10 \"lastSupervisionStatus\" -- electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js && git grep -n -A 35 -B 8 \"codeRevision\" -- electron/services/runtimeOrchestrator.js | head -n 220",
+        "status": "failed"
+      }
+    }
+  ]
+}

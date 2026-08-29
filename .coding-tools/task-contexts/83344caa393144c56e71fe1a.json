@@ -1,0 +1,231 @@
+{
+  "version": 2,
+  "task_id": "030bfb772231456f963524c094f4713a",
+  "orchestration": {
+    "run_id": "c16117ed48a74936b7cc6f430bd0a009",
+    "wave_id": "a412abb268a4494fb224a8fc4337e0da",
+    "orchestration_state": "PROVING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "e4075d81e5de465837e501e28016ccc7b2afa7ce",
+    "worktree_fp": "d24fa2c1d10fe91ab73de8638453188c4b7e6c5accc85e132e600a4b245fcbe2",
+    "contract_fp": ""
+  },
+  "objective": "Complete the current Operational Convergence wave with the smallest safe source patch. Preserve all pre-existing dirty work and do not auto-terminalize stale runs from live polling. Implement only: (1) after canonical accept/CHECKPOINTED, make the task-state projection/completion_report reflect the accepted terminal report rather than retaining PENDING_FINAL_ACCEPTANCE/active-wave data; projection reconciliation must leave canonical CHECKPOINTED task fields consistent, (2) fail closed on an accepted checkpoint proof_fingerprint equal to the 64-character all-zero sentinel while preserving legitimate empty proof identity where the existing no-mutation contract allows it, and add regression proving mutation-bearing acceptance records the deterministic passed-proof fingerprint, (3) provide a bounded official maintenance batch surface for stale-run reconciliation that reuses existing preflight_exact_stale_run_reconciliation/reconcile_exact_stale_run per exact RUN with fresh guards and still requires explicit runtime_stopped=True; do not weaken or bypass that fence, (4) retain and validate the existing terminal-parent/completed-agent lane reconciliation primitives without touching the already-closed reviewer lane. Do not modify tool_schema for task_context_id because source already exposes it. Do not restart, commit, push, reset, clean, manually edit ledger.sqlite3, or alter unrelated UI/dashboard behavior.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-29T02:36:10.770Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "in_progress",
+      "updated_at": "2026-08-29T02:36:10.770Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-08-29T02:36:10.770Z"
+    }
+  ],
+  "current_step": "Testing and building",
+  "current_command": {
+    "command": "python -m pytest tests/test_orchestration_workflow.py tests/test_orchestration_ledger.py tests/test_task_state_and_build.py tests/test_exact_stale_run_reconciliation.py tests/test_lifecycle_reconciliation.py -q",
+    "kind": "test",
+    "session_id": "52TnzfvE6wtgiKI_eS6v4yvg",
+    "workdir": "resources/coding-tools-mcp",
+    "status": "running",
+    "started_at": "2026-08-29T02:36:11.844Z",
+    "owner_run": "c16117ed48a74936b7cc6f430bd0a009",
+    "owner_wave": "a412abb268a4494fb224a8fc4337e0da"
+  },
+  "last_command_result": {
+    "command_id": "FQ3hnXZJF8vaJJ7Ps6w8vGjz",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-29T02:36:10.361Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_orchestration_workflow.py tests/test_orchestration_ledger.py tests/test_task_state_and_build.py tests/test_exact_stale_run_reconciliation.py tests/test_lifecycle_reconciliation.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 4 lines | tail: '128 passed, 18 subtests passed in 54.33s'",
+      "finished_at": "2026-08-29T02:36:10.361Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "FQ3hnXZJF8vaJJ7Ps6w8vGjz"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "c16117ed48a74936b7cc6f430bd0a009",
+        "owner_wave": "a412abb268a4494fb224a8fc4337e0da",
+        "size_bytes": 258,
+        "command_id": "FQ3hnXZJF8vaJJ7Ps6w8vGjz",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:FQ3hnXZJF8vaJJ7Ps6w8vGjz:stdout",
+            "total_stream_bytes": 258,
+            "total_retained_bytes": 258,
+            "head_retained_bytes": 258,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:FQ3hnXZJF8vaJJ7Ps6w8vGjz:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Run all requested checks and summarize the result.",
+  "created_at": "2026-08-29T02:34:33.470Z",
+  "updated_at": "2026-08-29T02:36:11.844Z",
+  "events": [
+    {
+      "time": "2026-08-29T02:34:33.470Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-29T02:34:34.253Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 45 -B 20 \"def _reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+        "session_id": "zekb0cX_icVyGlGZ17jzSJD_"
+      }
+    },
+    {
+      "time": "2026-08-29T02:34:34.772Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 45 -B 20 \"def _reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:10.419Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:11.791Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:12.685Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:12.694Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:13.570Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:13.825Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-29T02:35:14.713Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py tests/test_orchestration_ledger.py tests/test_task_state_and_build.py tests/test_exact_stale_run_reconciliation.py tests/test_lifecycle_reconciliation.py -q",
+        "session_id": "FQ3hnXZJF8vaJJ7Ps6w8vGjz"
+      }
+    },
+    {
+      "time": "2026-08-29T02:36:10.361Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py tests/test_orchestration_ledger.py tests/test_task_state_and_build.py tests/test_exact_stale_run_reconciliation.py tests/test_lifecycle_reconciliation.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-29T02:36:10.770Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-29T02:36:11.844Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py tests/test_orchestration_ledger.py tests/test_task_state_and_build.py tests/test_exact_stale_run_reconciliation.py tests/test_lifecycle_reconciliation.py -q",
+        "session_id": "52TnzfvE6wtgiKI_eS6v4yvg"
+      }
+    }
+  ]
+}

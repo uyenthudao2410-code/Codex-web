@@ -1008,7 +1008,11 @@ function bindEvents() {
     $$('.choice').forEach((choice) => choice.classList.toggle('selected', choice.contains(input) && input.checked));
   }));
 
-  $('#refreshButton').addEventListener('click', () => refreshSnapshot());
+  $('#refreshButton').addEventListener('click', () => {
+    // Overview refreshes have one owner: Control Center.  Keep this top-bar
+    // affordance on the same lightweightSnapshot + liveOrchestration path.
+    document.dispatchEvent(new CustomEvent('coding-tools:overview-refresh-request'));
+  });
   $('#deviceRefresh')?.addEventListener('click', () => refreshSnapshot());
   $('#deviceStart')?.addEventListener('click', () => runRuntime('start'));
   $('#deviceRestart')?.addEventListener('click', () => runRuntime('restart'));

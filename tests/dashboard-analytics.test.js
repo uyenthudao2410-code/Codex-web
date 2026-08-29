@@ -84,6 +84,20 @@ test('dashboard analytics derive context estimates from measured model-visible b
   assert.doesNotMatch(js, /localStorage/);
 });
 
+test('dashboard reads snapshot and live state only from the shared overview pulse', () => {
+  const js = read('renderer/dashboard.js');
+  assert.doesNotMatch(js, /api\.snapshot\(\)/);
+  assert.match(js, /if \(detail\.snapshot\) \{/);
+  assert.match(js, /coding-tools:overview-pulse/);
+  assert.match(js, /void refreshAnalytics\(detail\.force === true\)\.then\(\(\) => renderAll\(\)\)/);
+});
+
+test('dashboard animation cancels the previous frame chain before scheduling a new one', () => {
+  const js = read('renderer/dashboard.js');
+  assert.match(js, /element\.__dashboardAnimationFrame/);
+  assert.match(js, /cancelAnimationFrame\(element\.__dashboardAnimationFrame\)/);
+});
+
 test('dashboard analytics never fabricate provider billing data', () => {
   const js = read('renderer/dashboard.js');
   const html = read('renderer/index.html');

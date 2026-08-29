@@ -84,7 +84,10 @@ def control_presence_projection(
         "expires_at": (controller or {}).get("expires_at", 0),
         "updated_at": (controller or {}).get("updated_at", ""),
     }
-    ctx = runtime.orchestration_control.snapshot(run_id) if run_id else None
+    # The live control path is a bounded read model.  A cold in-memory context
+    # must not trigger orchestration recovery, full wave/event scans, or lease
+    # maintenance writes from a GET request.
+    ctx = runtime.orchestration_control.snapshot(run_id, recover_if_missing=False) if run_id else None
     write_lease = ctx.write_lease if ctx else None
     write_view = {
         "owner": write_lease.owner if write_lease else "",

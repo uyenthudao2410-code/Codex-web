@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "01c24c41272b4055ab0e99446b53b9f8",
     "wave_id": "fcd0952f058842aa8401820bd69d7322",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Fix EOCL final acceptance so stateless task_control acceptance reconstructs exact accepted source-file receipts from durable exact-run/exact-wave mutation evidence when request-local task_state.modified_files is empty. Use complete patch_surface_observed file_ids matched against write_lease_acquired allowed_paths, exclude pre-existing dirty and protected paths, and fail closed before checkpoint if durable mutation cannot be reconstructed. Preserve explicit acceptance_files behavior, preserve zero-file acceptance for truly no-mutation runs, do not change the public smart-v3 tool contract, and preserve all existing unrelated worktree edits. Add focused regression tests. Do not commit or push.",
-  "status": "waiting",
+  "status": "completed",
   "steps": [
     {
       "id": "apply",
@@ -43,7 +43,7 @@
       "updated_at": "2026-08-25T06:57:15.925Z"
     }
   ],
-  "current_step": "Acceptance decision - operator report required",
+  "current_step": "Completed - operator report required",
   "current_command": {
     "command": "..\\native-python\\python.exe -m unittest discover -s tests -p test_acceptance_file_attestation.py",
     "kind": "command",
@@ -11986,9 +11986,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject.",
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
   "created_at": "2026-08-25T06:56:56.236Z",
-  "updated_at": "2026-08-25T06:57:16.567Z",
+  "updated_at": "2026-08-29T02:13:44.882Z",
   "events": [
     {
       "time": "2026-08-25T06:56:56.236Z",
@@ -12153,6 +12153,19 @@
       "event": "files_modified",
       "details": {
         "count": 2
+      }
+    },
+    {
+      "time": "2026-08-29T02:13:44.882Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     }
   ]

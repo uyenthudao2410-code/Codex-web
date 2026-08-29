@@ -106,5 +106,819 @@
     ],
     "archived_at": "2026-08-28T10:46:56.521Z",
     "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8c29ae2870d74a0ea48eb59e463dfcce",
+    "orchestration": {
+      "run_id": "54290b6f078c43bdabe921de358a5d3a",
+      "wave_id": "e7388c6e405a4186817a474aac4ca63a",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "2cc0eefc7d881827ef44e4d1584d84bbd9e494b6",
+      "worktree_fp": "e19654361da7d1f6aebfc47c0d7d64563227cedcbafd2bda951a0c19654b80d9",
+      "contract_fp": ""
+    },
+    "objective": "Update the final stale Control Center regression assertion so the test requires api.liveOrchestration() for every Overview refresh and no longer requires the removed force-to-full orchestration path. Do not change implementation source or unrelated tests. Run the focused Node suite and git diff --check.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-28T10:49:45.902Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-28T10:49:45.902Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-28T10:49:45.902Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "EfJK9Pv7YuH5s_tqfzoCEzq5",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-08-28T10:49:44.882Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "electron/main.js",
+            "operation": "update"
+          },
+          {
+            "path": "renderer/control-center.js",
+            "operation": "update"
+          },
+          {
+            "path": "renderer/dashboard.js",
+            "operation": "update"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+            "operation": "update"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_execution_hub.py",
+            "operation": "update"
+          },
+          {
+            "path": "tests/control-center-manager.test.js",
+            "operation": "update"
+          },
+          {
+            "path": "tests/dashboard-analytics.test.js",
+            "operation": "update"
+          }
+        ],
+        "source": "aligned_task_modified_files",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 75,
+          "head_hash": "d88f12d55d7d9b29139e26614c36cda4cd5bb5f6fc36ff8e7db3e224ffd65d91"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-54290b6f078c43bdabe921de358a5d3a\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-54290b6f078c43bdabe921de358a5d3a\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-54290b6f078c43bdabe921de358a5d3a\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-54290b6f078c43bdabe921de358a5d3a\\wave-003.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "54290b6f078c43bdabe921de358a5d3a",
+        "wave_id": "e7388c6e405a4186817a474aac4ca63a",
+        "base_head": "2cc0eefc7d881827ef44e4d1584d84bbd9e494b6",
+        "worktree_fp": "e19654361da7d1f6aebfc47c0d7d64563227cedcbafd2bda951a0c19654b80d9",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Update the final stale Control Center regression assertion so the test requires api.liveOrchestration() for every Overview refresh and no longer requires the removed force-to-full orchestration path. Do not change implementation source or unrelated tests. Run the focused Node suite and git diff --check.",
+          "objective_revision": 3,
+          "objective_sha256": "8bc70b033e8ed1a006e16e09c691b9eef1dda8b03473b77641a7daf65a063e09",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "f6388efbe412431ab7afd5e865e9b8e2",
+            "stage_id": "check:503fc0a60259959a",
+            "status": "passed",
+            "duration_ms": 2067,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "a301e90de34b4c8a96c6f4a4d00a588d",
+            "stage_id": "check:466c2f308b48c766",
+            "status": "passed",
+            "duration_ms": 2375,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+      "blocker_or_failure": null,
+      "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+      "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    },
+    "completion_report_id": "0ec1ec41ae84d05e5ea36f842da0412346f5f15e2c7fbc2a1e43b2b736e53073",
+    "completion_report_acknowledged_id": "0ec1ec41ae84d05e5ea36f842da0412346f5f15e2c7fbc2a1e43b2b736e53073",
+    "completion_report_acknowledged_at": "2026-08-28T10:50:01.413Z",
+    "test_results": [
+      {
+        "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_execution_hub.py tests/test_operations_analytics.py -q\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '13 passed in 13.73s'",
+        "finished_at": "2026-08-28T10:47:55.400Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "EfgqFn-0JLAyMnrjA1YWUw1A"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "54290b6f078c43bdabe921de358a5d3a",
+          "owner_wave": "1216109b5a5d4ac5929bd3ad0b606521",
+          "size_bytes": 102,
+          "command_id": "EfgqFn-0JLAyMnrjA1YWUw1A",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:EfgqFn-0JLAyMnrjA1YWUw1A:stdout",
+              "total_stream_bytes": 102,
+              "total_retained_bytes": 102,
+              "head_retained_bytes": 102,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:EfgqFn-0JLAyMnrjA1YWUw1A:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "electron/main.js",
+        "operation": "update",
+        "updated_at": "2026-08-28T10:47:59.744Z"
+      },
+      {
+        "path": "renderer/control-center.js",
+        "operation": "update",
+        "updated_at": "2026-08-28T10:47:59.744Z"
+      },
+      {
+        "path": "renderer/dashboard.js",
+        "operation": "update",
+        "updated_at": "2026-08-28T10:47:59.744Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+        "operation": "update",
+        "updated_at": "2026-08-28T10:47:59.744Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_execution_hub.py",
+        "operation": "update",
+        "updated_at": "2026-08-28T10:47:59.744Z"
+      },
+      {
+        "path": "tests/control-center-manager.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-28T10:49:47.132Z"
+      },
+      {
+        "path": "tests/dashboard-analytics.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-28T10:47:59.744Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-28T10:46:56.525Z",
+    "updated_at": "2026-08-28T11:49:28.155Z",
+    "events": [
+      {
+        "time": "2026-08-28T10:46:56.525Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-28T10:46:57.613Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"orchestration\" tests/dashboard-analytics.test.js",
+          "session_id": "ddg2Tg53E8rQKC135KTmVJku"
+        }
+      },
+      {
+        "time": "2026-08-28T10:46:58.243Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"orchestration\" tests/dashboard-analytics.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:06.517Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 \"canonicalMeasuredUsage\" tests/dashboard-analytics.test.js",
+          "session_id": "kBROsZoi5ZIELmayeaH2SZa_"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:07.085Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 \"canonicalMeasuredUsage\" tests/dashboard-analytics.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:34.312Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:35.786Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:36.999Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:37.008Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:38.587Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:38.951Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:39.899Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_execution_hub.py tests/test_operations_analytics.py -q\"",
+          "session_id": "EfgqFn-0JLAyMnrjA1YWUw1A"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:55.400Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_execution_hub.py tests/test_operations_analytics.py -q\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:56.937Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/control-panel.test.js tests/control-center-manager.test.js tests/dashboard-analytics.test.js",
+          "session_id": "OH4F9EosyJf91A8j3oUeDRdF"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:57.538Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/control-panel.test.js tests/control-center-manager.test.js tests/dashboard-analytics.test.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:57.910Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:59.011Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:59.017Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:59.023Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:59.552Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "a6d9f895848a04c3beaac5651c23f26aa68585246a2211404cc71da8e3cc3f78"
+        }
+      },
+      {
+        "time": "2026-08-28T10:47:59.744Z",
+        "event": "files_modified",
+        "details": {
+          "count": 7
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:11.453Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:11.718Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:39.727Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "a6d9f895848a04c3beaac5651c23f26aa68585246a2211404cc71da8e3cc3f78"
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:54.613Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:56.110Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:57.132Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:58.186Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:58.200Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:59.395Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-28T10:48:59.672Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:00.585Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/control-panel.test.js tests/control-center-manager.test.js tests/dashboard-analytics.test.js",
+          "session_id": "tCk11fGS5XYAUy2IwsNFBeMA"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:01.218Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/control-panel.test.js tests/control-center-manager.test.js tests/dashboard-analytics.test.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:01.554Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:02.442Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:02.448Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:02.453Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:02.830Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "b5fd15206c9f4a3f9881eeefb911667f9d9a144beba6dad2b9b7eb44a4ae672a"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:02.994Z",
+        "event": "files_modified",
+        "details": {
+          "count": 1
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:11.425Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:23.959Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "b5fd15206c9f4a3f9881eeefb911667f9d9a144beba6dad2b9b7eb44a4ae672a"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:33.193Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:34.867Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:35.915Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:37.048Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:37.063Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:39.087Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:39.483Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:41.110Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/control-panel.test.js tests/control-center-manager.test.js tests/dashboard-analytics.test.js",
+          "session_id": "fXVOZN9ookdp_iLJ73AIUXTM"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:41.863Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/control-panel.test.js tests/control-center-manager.test.js tests/dashboard-analytics.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:43.392Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check",
+          "session_id": "EfJK9Pv7YuH5s_tqfzoCEzq5"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:44.882Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:45.893Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:45.902Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:46.342Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:46.348Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:46.856Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "0ec1ec41ae84d05e5ea36f842da0412346f5f15e2c7fbc2a1e43b2b736e53073"
+        }
+      },
+      {
+        "time": "2026-08-28T10:49:47.132Z",
+        "event": "files_modified",
+        "details": {
+          "count": 1
+        }
+      },
+      {
+        "time": "2026-08-28T10:50:01.082Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T10:50:01.413Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "0ec1ec41ae84d05e5ea36f842da0412346f5f15e2c7fbc2a1e43b2b736e53073"
+        }
+      },
+      {
+        "time": "2026-08-28T10:50:10.234Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-28T11:49:28.155Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T02:18:08.179Z",
+    "archive_reason": "finished"
   }
 ]

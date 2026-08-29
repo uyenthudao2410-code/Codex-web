@@ -586,6 +586,9 @@
     const from = Number(element.dataset.value) || 0;
     const to = Number(next) || 0;
     if (from === to) return;
+    if (element.__dashboardAnimationFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(element.__dashboardAnimationFrame);
+    }
     const start = performance.now();
     const duration = 520;
     element.dataset.value = String(to);
@@ -596,9 +599,13 @@
       const progress = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
       element.textContent = formatter(from + (to - from) * eased);
-      if (progress < 1) requestAnimationFrame(step);
+      if (progress < 1) {
+        element.__dashboardAnimationFrame = requestAnimationFrame(step);
+      } else {
+        element.__dashboardAnimationFrame = null;
+      }
     };
-    requestAnimationFrame(step);
+    element.__dashboardAnimationFrame = requestAnimationFrame(step);
   }
 
   function setText(id, value) {
@@ -1737,24 +1744,18 @@
     }
   }
 
-  async function loadCostSettings() {
-    try {
-      const settingsSnapshot = unwrap(await api.snapshot());
-      snapshot = settingsSnapshot;
-      const settings = settingsSnapshot?.settings || {};
-      cost = {
-        preset: settings.costPreset || 'gpt-4o-mini',
-        rateIn: Number(settings.costRateInUsd ?? 0.15),
-        rateOut: Number(settings.costRateOutUsd ?? 0.6),
-        currency: settings.costCurrency === 'VND' ? 'VND' : 'USD',
-        fxRate: Number(settings.costFxRate || 0),
-        bytesPerToken: Number(settings.costBytesPerToken ?? 4),
-        laneRates: parseLaneRates(settings.costLaneRates)
-      };
-      fillCostForm();
-    } catch {
-      fillCostForm();
-    }
+  function loadCostSettings() {
+    const settings = snapshot?.settings || {};
+    cost = {
+      preset: settings.costPreset || 'gpt-4o-mini',
+      rateIn: Number(settings.costRateInUsd ?? 0.15),
+      rateOut: Number(settings.costRateOutUsd ?? 0.6),
+      currency: settings.costCurrency === 'VND' ? 'VND' : 'USD',
+      fxRate: Number(settings.costFxRate || 0),
+      bytesPerToken: Number(settings.costBytesPerToken ?? 4),
+      laneRates: parseLaneRates(settings.costLaneRates)
+    };
+    fillCostForm();
   }
 
   async function refreshAnalytics(force = false) {
@@ -1776,11 +1777,17 @@
 
   async function applyOverviewPulse(event) {
     const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
-    if (detail.snapshot) snapshot = detail.snapshot;
+    if (detail.snapshot) {
+      snapshot = detail.snapshot;
+      loadCostSettings();
+    }
     if (detail.orchestration) orchestration = detail.orchestration;
     if (detail.performance) perf = detail.performance;
-    await refreshAnalytics(detail.force === true);
+    // Render the live pulse immediately. Analytics is an independent,
+    // window-bounded read and must never hold the live Overview render behind
+    // its IPC timeout or an in-flight request.
     renderAll();
+    void refreshAnalytics(detail.force === true).then(() => renderAll());
   }
 
   function requestOverviewRefresh() {
@@ -1824,7 +1831,7 @@
 
   reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
 
-  Promise.all([loadCostSettings(), refreshAnalytics(true)])
+  Promise.all([Promise.resolve(loadCostSettings()), refreshAnalytics(true)])
     .then(() => renderAll())
     .finally(requestOverviewRefresh);
 })();

@@ -79,6 +79,15 @@ test('main process exposes Execution Control Center IPC through MCP control plan
   assert.match(main, /panel:visibility/);
 });
 
+test('top-bar overview refresh delegates to the Control Center lightweight path', () => {
+  const app = read('renderer/app.js');
+  assert.match(app, /\$\('#refreshButton'\)/);
+  assert.match(app, /coding-tools:overview-refresh-request/);
+  const handler = app.match(/#refreshButton'[\s\S]*?\n\s*}\);/);
+  assert.ok(handler, 'refreshButton listener should be present');
+  assert.doesNotMatch(handler[0], /refreshSnapshot\(\)/);
+});
+
 test('MCP exposes an authorized orchestration snapshot endpoint', () => {
   // HTTP routing was extracted from server.py into the focused handler module;
   // keep the source assertion on the module that owns the endpoint.

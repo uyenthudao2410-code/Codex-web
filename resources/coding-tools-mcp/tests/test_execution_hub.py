@@ -5,6 +5,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import coding_tools_mcp.mcp_http_handler as mcp_http_handler_module
 from coding_tools_mcp.server import (
@@ -236,6 +237,20 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertIn("usage_analytics", full)
         self.assertIn("operations_analytics", full)
         self.assertIn("routing_evidence", full)
+
+    def test_live_snapshot_does_not_recover_a_cold_orchestration_context(self) -> None:
+        # Simulate a process restart: the durable run remains, but the
+        # in-memory context cache is empty.  The live read must stay bounded and
+        # write-free instead of replaying waves/events or expiring a fence.
+        self.runtime.orchestration_control._contexts.pop(self.ctx.run_id, None)
+        ledger = self.runtime.orchestration_ledger
+        with patch.object(ledger, "list_waves", side_effect=AssertionError("live path must not scan waves")), patch.object(
+            ledger, "list_events", side_effect=AssertionError("live path must not scan events")
+        ), patch.object(ledger, "assert_write_fence", side_effect=AssertionError("live path must not maintain leases")):
+            status, body = self.get_live_snapshot()
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body["snapshot_scope"], "live_control")
+        self.assertEqual(body["authority"]["write"]["status"], "released")
 
     def test_dashboard_analytics_isolated_from_live_control_polling(self) -> None:
         ledger = self.runtime.orchestration_ledger

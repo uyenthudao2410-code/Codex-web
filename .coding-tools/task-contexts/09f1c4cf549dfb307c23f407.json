@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "33e992f0682b4a43898729a2478c1965",
     "wave_id": "80e41bbff34343a0a81898242c629418",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -66,7 +66,7 @@
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
+      "orchestration_state": "CHECKPOINTED",
       "run_status": "active",
       "wave_status": "active",
       "task_status": "waiting",

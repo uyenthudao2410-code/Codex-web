@@ -1,0 +1,141 @@
+{
+  "version": 2,
+  "task_id": "d05f280d2af6428f838fe51fa91526cd",
+  "orchestration": {
+    "run_id": "8bac3484b76e471486199fba29f762e6",
+    "wave_id": "c07c28035f2143dca22aa3272bd855ba",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "e4075d81e5de465837e501e28016ccc7b2afa7ce",
+    "worktree_fp": "ef076930fb7615072372665e1fb699fb3105546de63070558fc6e501b5c7ddfc",
+    "contract_fp": ""
+  },
+  "objective": "Read-only architectural comparison research for E:\\DEV\\Codex-web. Identify the project's actual product role, ingress/API surfaces, MCP/tool discovery and call path, workspace execution plane, connector/runtime lifecycle, orchestration/EOCL/proof/acceptance mechanisms, model/provider integration, remote host/tunnel architecture, and UI role. Do not modify files or run mutation commands. Return concise evidence with relevant file paths/symbols so it can be compared against public project HEXUXIU/M365-Copilot2API.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "d6c898e0d503fa92759ceb33f9b9af3557ffc7d4963885a0f121ffb3bf93ab05"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8bac3484b76e471486199fba29f762e6\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8bac3484b76e471486199fba29f762e6\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "8bac3484b76e471486199fba29f762e6",
+      "wave_id": "c07c28035f2143dca22aa3272bd855ba",
+      "base_head": "e4075d81e5de465837e501e28016ccc7b2afa7ce",
+      "worktree_fp": "ef076930fb7615072372665e1fb699fb3105546de63070558fc6e501b5c7ddfc",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only architectural comparison research for E:\\DEV\\Codex-web. Identify the project's actual product role, ingress/API surfaces, MCP/tool discovery and call path, workspace execution plane, connector/runtime lifecycle, orchestration/EOCL/proof/acceptance mechanisms, model/provider integration, remote host/tunnel architecture, and UI role. Do not modify files or run mutation commands. Return concise evidence with relevant file paths/symbols so it can be compared against public project HEXUXIU/M365-Copilot2API.",
+        "objective_revision": 1,
+        "objective_sha256": "478b3e226661aec3ab3c05572a56ec050e89d77e21d9953202d727696a07b224",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "01e579d371726d23d5a57cdd8dbfa47c6e91ebe944e0944ad5a0d2dd8615d082",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-08-29T09:00:16.442Z",
+  "updated_at": "2026-08-29T09:02:14.469Z",
+  "events": [
+    {
+      "time": "2026-08-29T09:00:16.442Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only architectural comparison research for E:\\DEV\\Codex-web. Identify the project's actual product role, ingress/API surfaces, MCP/tool discovery and call path, workspace execution plane, connector/runtime lifecycle, orchestration/EOCL/proof/acceptance mechanisms, model/provider integration, remote host/tunnel architecture, and UI role. Do not modify files or run mutation commands. Return concise evidence with relevant file paths/symbols so it can be compared against public project HEXUXIU/M365-Copilot2API."
+      }
+    },
+    {
+      "time": "2026-08-29T09:00:17.802Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-29T09:00:43.907Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-29T09:00:43.911Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T09:00:49.589Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-29T09:02:14.466Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "01e579d371726d23d5a57cdd8dbfa47c6e91ebe944e0944ad5a0d2dd8615d082"
+      }
+    }
+  ]
+}

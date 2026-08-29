@@ -1,0 +1,330 @@
+[
+  {
+    "version": 2,
+    "task_id": "fcc5d3bfd0474ff7af03d144cb550345",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-29T02:13:02.492Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-29T02:12:48.095Z",
+    "updated_at": "2026-08-29T02:13:02.492Z",
+    "events": [
+      {
+        "time": "2026-08-29T02:12:48.095Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-29T02:12:48.515Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"ACCEPTING|CHECKPOINTED|completion_report_id|run_id|wave_id\" .coding-tools/task-contexts .coding-tools/orchestration/task-context-workspaces.json",
+          "session_id": "qhpCxkKsTttO6sqhuzkaeI8X"
+        }
+      },
+      {
+        "time": "2026-08-29T02:12:48.851Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"ACCEPTING|CHECKPOINTED|completion_report_id|run_id|wave_id\" .coding-tools/task-contexts .coding-tools/orchestration/task-context-workspaces.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:12:55.458Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 4 \"run_id|wave_id|completion_report_id|completion_report|ack|ACCEPTING|CHECKPOINTED|proof|lease|acceptance_owner|state\" .coding-tools/task-contexts/feb4f8259e65250b0ec73326.json",
+          "session_id": "4WEy53EPdUkC_FeTINCx3mgY"
+        }
+      },
+      {
+        "time": "2026-08-29T02:12:56.566Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 4 \"run_id|wave_id|completion_report_id|completion_report|ack|ACCEPTING|CHECKPOINTED|proof|lease|acceptance_owner|state\" .coding-tools/task-contexts/feb4f8259e65250b0ec73326.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:02.492Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -l '\"orchestration_state\": \"ACCEPTING\"' .coding-tools/task-contexts/*.json",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:02.492Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T02:13:07.088Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "27a97a10b5b04b40bdd02d2e0f0dc99b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "6Rwt1NsQVbdk6lpoyDd62NMN",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 432,
+      "finished_at": "2026-08-29T02:13:07.841Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-29T02:13:07.088Z",
+    "updated_at": "2026-08-29T02:13:07.841Z",
+    "events": [
+      {
+        "time": "2026-08-29T02:13:07.088Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:07.524Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -l '\"orchestration_state\": \"ACCEPTING\"' .coding-tools/task-contexts",
+          "session_id": "6Rwt1NsQVbdk6lpoyDd62NMN"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:07.841Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -l '\"orchestration_state\": \"ACCEPTING\"' .coding-tools/task-contexts",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T02:13:11.949Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "7b2b4faf35754e26977a40c05524e8c9",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "NPuN5kOk7z18SuwfkKlwarkz",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 352,
+      "finished_at": "2026-08-29T02:13:21.798Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-29T02:13:11.978Z",
+    "updated_at": "2026-08-29T02:13:21.798Z",
+    "events": [
+      {
+        "time": "2026-08-29T02:13:11.978Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:12.299Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -l orchestration_state.*ACCEPTING .coding-tools\\task-contexts",
+          "session_id": "gwBGJn7aOQvggXqlumdNiJ77"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:12.550Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -l orchestration_state.*ACCEPTING .coding-tools\\task-contexts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:21.524Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 8 run_id|wave_id|orchestration_state|completion_report_id|status .coding-tools\\task-contexts\\2aa63f05db41f27eeeb9d107.json .coding-tools\\task-contexts\\2c41b5703ac6fe55beed3089.json .coding-tools\\task-contexts\\5ffc1797422b5b70f7a7beb3.json .coding-tools\\task-contexts\\a7212e53b8b168aafd600682.json .coding-tools\\task-contexts\\c024f689d7adebc95a29f127.json .coding-tools\\task-contexts\\e03d978f88198b286a0850c5.json",
+          "session_id": "NPuN5kOk7z18SuwfkKlwarkz"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:21.798Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 8 run_id|wave_id|orchestration_state|completion_report_id|status .coding-tools\\task-contexts\\2aa63f05db41f27eeeb9d107.json .coding-tools\\task-contexts\\2c41b5703ac6fe55beed3089.json .coding-tools\\task-contexts\\5ffc1797422b5b70f7a7beb3.json .coding-tools\\task-contexts\\a7212e53b8b168aafd600682.json .coding-tools\\task-contexts\\c024f689d7adebc95a29f127.json .coding-tools\\task-contexts\\e03d978f88198b286a0850c5.json",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T02:13:26.635Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f851af1e386f4bf58945fa4eb6aa3dee",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "FqHoUTD8LV1whKUejgNLCJBd",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 339,
+      "finished_at": "2026-08-29T02:16:22.408Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-29T02:13:26.635Z",
+    "updated_at": "2026-08-29T02:16:22.408Z",
+    "events": [
+      {
+        "time": "2026-08-29T02:13:26.635Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:27.083Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 8 -e run_id -e wave_id -e orchestration_state -e completion_report_id -e status .coding-tools\\task-contexts\\2aa63f05db41f27eeeb9d107.json .coding-tools\\task-contexts\\2c41b5703ac6fe55beed3089.json .coding-tools\\task-contexts\\5ffc1797422b5b70f7a7beb3.json .coding-tools\\task-contexts\\a7212e53b8b168aafd600682.json .coding-tools\\task-contexts\\c024f689d7adebc95a29f127.json .coding-tools\\task-contexts\\e03d978f88198b286a0850c5.json",
+          "session_id": "rEkiXtvvhDtmCHA0H89xy2jV"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:27.400Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 8 -e run_id -e wave_id -e orchestration_state -e completion_report_id -e status .coding-tools\\task-contexts\\2aa63f05db41f27eeeb9d107.json .coding-tools\\task-contexts\\2c41b5703ac6fe55beed3089.json .coding-tools\\task-contexts\\5ffc1797422b5b70f7a7beb3.json .coding-tools\\task-contexts\\a7212e53b8b168aafd600682.json .coding-tools\\task-contexts\\c024f689d7adebc95a29f127.json .coding-tools\\task-contexts\\e03d978f88198b286a0850c5.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:37.262Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 4 -e run_id -e wave_id -e orchestration_state -e completion_report_id .coding-tools\\task-contexts\\2aa63f05db41f27eeeb9d107.json",
+          "session_id": "r6NIvdouqbOI2LERSoYypSbJ"
+        }
+      },
+      {
+        "time": "2026-08-29T02:13:37.910Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 4 -e run_id -e wave_id -e orchestration_state -e completion_report_id .coding-tools\\task-contexts\\2aa63f05db41f27eeeb9d107.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:15:35.242Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 20 -e updated_at -e objective -e run_id -e wave_id -e orchestration_state -e completion_report_id -e completion_report_acknowledged_id -e proof -e git_head -e worktree_fp .coding-tools\\task-contexts\\2aa63f05db41f27eeeb9d107.json .coding-tools\\task-contexts\\2c41b5703ac6fe55beed3089.json .coding-tools\\task-contexts\\5ffc1797422b5b70f7a7beb3.json .coding-tools\\task-contexts\\a7212e53b8b168aafd600682.json .coding-tools\\task-contexts\\c024f689d7adebc95a29f127.json .coding-tools\\task-contexts\\e0",
+          "session_id": "92lBcAdORZWcvqaDxeg6duYH"
+        }
+      },
+      {
+        "time": "2026-08-29T02:15:35.575Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 20 -e updated_at -e objective -e run_id -e wave_id -e orchestration_state -e completion_report_id -e completion_report_acknowledged_id -e proof -e git_head -e worktree_fp .coding-tools\\task-contexts\\2aa63f05db41f27eeeb9d107.json .coding-tools\\task-contexts\\2c41b5703ac6fe55beed3089.json .coding-tools\\task-contexts\\5ffc1797422b5b70f7a7beb3.json .coding-tools\\task-contexts\\a7212e53b8b168aafd600682.json .coding-tools\\task-contexts\\c024f689d7adebc95a29f127.json .coding-tools\\task-contexts\\e0",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:16:21.999Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -l -e '\"orchestration_state\": \"ACCEPTING\"' .coding-tools\\task-contexts",
+          "session_id": "FqHoUTD8LV1whKUejgNLCJBd"
+        }
+      },
+      {
+        "time": "2026-08-29T02:16:22.408Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -l -e '\"orchestration_state\": \"ACCEPTING\"' .coding-tools\\task-contexts",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T02:16:26.077Z",
+    "archive_reason": "finished"
+  }
+]

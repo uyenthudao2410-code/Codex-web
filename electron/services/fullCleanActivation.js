@@ -343,6 +343,11 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
   }
 
   if (validateCompatibilityReceipt) {
+    // A compatibility bootstrap is deliberately an intermediate admission
+    // state. It proves a cached ChatWeb client reached this current process,
+    // but it is not the strict tools/list/server/discover receipt required to
+    // close a full-clean epoch.
+    add('STRICT_CONNECTOR_REDISCOVERY_REQUIRED');
     if (!activationBootstrap || typeof activationBootstrap !== 'object' || Array.isArray(activationBootstrap)) {
       add('COMPATIBILITY_BOOTSTRAP_RECEIPT_MISSING');
     } else {
@@ -391,13 +396,29 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
 function reusablePendingProjectionObservation(record) {
   const verification = record?.verification;
   const receipt = verification?.projection_rebuild_receipt;
+  const connectorValidation = verification?.connector_validation;
+  const strictConnectorReceipt = Boolean(
+    connectorValidation
+    && typeof connectorValidation === 'object'
+    && !Array.isArray(connectorValidation)
+    && connectorValidation.valid === true
+    && connectorValidation.freshness_mode === 'current_process_discovery'
+    && text(connectorValidation.rediscovered_at)
+  );
   const reusable = Boolean(
     record
     && record.state === 'VERIFYING'
     && record.admission_state === 'CLOSED'
     && verification && typeof verification === 'object' && !Array.isArray(verification)
     && verification.projection_rebuild_verified === true
-    && verification.connector_validation?.valid === false
+    && connectorValidation
+    && typeof connectorValidation === 'object'
+    && !Array.isArray(connectorValidation)
+    // A negative connector gate is the normal waiting state. A passing
+    // candidate is reusable only when it already contains the strict
+    // current-process discovery receipt; compatibility bootstrap must never
+    // become a finalization shortcut.
+    && (connectorValidation.valid !== true || strictConnectorReceipt)
     && verification.process_identity_verified === true
     && verification.workspace_matches === true
     && verification.device_matches === true
@@ -1273,6 +1294,24 @@ class FullCleanActivation {
     if (!clean || (sourceCheckpoint && (!normalized || !lifecycleDecisionIsClean(normalized)))) {
       throw epochError('LIFECYCLE_VERIFICATION_FAILED', 'Full clean activation did not receive a fresh checkpoint-bound unfenced lifecycle proof.', {
         operation_id: record.operation_id,
+        observation: {
+          safe: raw?.safe === true,
+          code: text(raw?.code) || null,
+          reason: text(raw?.reason) || null,
+          observed_operation_id: text(raw?.operation_id) || null,
+          workspace: text(raw?.workspace) || null,
+          fenced: raw?.fenced === true,
+          fence_operation_id: text(raw?.fence_operation_id) || null,
+          counts: raw?.counts && typeof raw.counts === 'object' ? raw.counts : null,
+          lifecycle: lifecycle && typeof lifecycle === 'object' ? {
+            projection_classification: text(lifecycle.projection_classification || lifecycle.projection?.classification) || null,
+            unexplained_active_runs: lifecycle.unexplained_active_runs ?? null,
+            unbound_live_resource_residues: lifecycle.unbound_live_resource_residues ?? null,
+            projection_rebuild: lifecycle.projection_rebuild && typeof lifecycle.projection_rebuild === 'object'
+              ? { current: lifecycle.projection_rebuild.current === true, validation: lifecycle.projection_rebuild.validation || null }
+              : null
+          } : null
+        },
         source_checkpoint_verified: sourceMatches,
         canonical_lifecycle_observed: canonicalLifecycleSnapshot,
         workspace_matches: workspaceMatches,
@@ -1937,8 +1976,10 @@ class FullCleanActivation {
       && uiReady && recoveryMcpReady && recoveryTunnelReady && projectionRebuild.valid);
     let connectorAcknowledgement = { attempted: false, completed: false, error: null };
     if (componentsReadyForConnector
-      && ['CHANGED_DISCOVERED_NEEDS_ACK', 'CHANGED_COMPATIBLE_NEEDS_ACK', 'UNCHANGED_COMPATIBLE_NEEDS_ACK']
-        .includes(connectorContractStatus?.contractState)) {
+      // Only a real current-process discovery can be acknowledged at the
+      // activation boundary. Compatibility bootstrap remains pending until
+      // ChatWeb/Coding-VP performs tools/list or server/discover.
+      && connectorContractStatus?.contractState === 'CHANGED_DISCOVERED_NEEDS_ACK') {
       connectorAcknowledgement = { attempted: true, completed: false, error: null };
       try {
         if (typeof this.orchestrator?.acknowledgeExactConnectorDiscovery !== 'function') {

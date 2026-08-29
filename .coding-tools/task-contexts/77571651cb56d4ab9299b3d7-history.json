@@ -1,0 +1,284 @@
+[
+  {
+    "version": 2,
+    "task_id": "d0ba08da34fe44a7a2ea1294418f9cce",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "5PXju7KijCCfLkiikHoV4jI1",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 521,
+      "finished_at": "2026-08-29T09:01:07.741Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-29T08:59:08.739Z",
+    "updated_at": "2026-08-29T09:01:07.742Z",
+    "events": [
+      {
+        "time": "2026-08-29T08:59:08.739Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:09.229Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "b1KjUY8f2zFP-kykjj5MQrF2"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:13.095Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:19.008Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Status",
+          "session_id": "62hD1QEeTnVdDNrqE3nyZ3QK"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:21.099Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:27.082Z",
+        "event": "command_started",
+        "details": {
+          "command": "node scripts/execution-hub-activation-probe.js",
+          "session_id": "AgUvGQC2kVCw5SZdgJWsj7Ts"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:27.466Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/execution-hub-activation-probe.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:33.694Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json'; $j=Get-Content -Raw $p | ConvertFrom-Json; $c=$j.current; [pscustomobject]@{activation_epoch_id=$c.activation_epoch_id; state=$c.state; admission_state=$c.admission_state; ready_at=$c.ready_at; tool_count=$c.connector_validation.tool_count; connector_valid=$c.connector_validation.valid; connector_code=$c.connector_validation.code; freshness_mode=$c.connector_validation.freshness_mode; redisco",
+          "session_id": "Y_MAP7ww1oeEKSAq11k2pyH1"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:34.411Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json'; $j=Get-Content -Raw $p | ConvertFrom-Json; $c=$j.current; [pscustomobject]@{activation_epoch_id=$c.activation_epoch_id; state=$c.state; admission_state=$c.admission_state; ready_at=$c.ready_at; tool_count=$c.connector_validation.tool_count; connector_valid=$c.connector_validation.valid; connector_code=$c.connector_validation.code; freshness_mode=$c.connector_validation.freshness_mode; redisco",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:42.065Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json'; $j=Get-Content -Raw $p | ConvertFrom-Json; 'TOP='+(($j.PSObject.Properties.Name)-join ','); 'CURRENT='+(($j.current.PSObject.Properties.Name)-join ','); if($j.current.verification){'VERIFICATION='+(($j.current.verification.PSObject.Properties.Name)-join ',')}; if($j.current.connector_validation){'CONNECTOR_VALIDATION='+(($j.current.connector_validation.PSObject.Properties.Name)-join ',')}; if",
+          "session_id": "F0sG2nxJ8I6GZrNXP_O2Vbaf"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:42.699Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json'; $j=Get-Content -Raw $p | ConvertFrom-Json; 'TOP='+(($j.PSObject.Properties.Name)-join ','); 'CURRENT='+(($j.current.PSObject.Properties.Name)-join ','); if($j.current.verification){'VERIFICATION='+(($j.current.verification.PSObject.Properties.Name)-join ',')}; if($j.current.connector_validation){'CONNECTOR_VALIDATION='+(($j.current.connector_validation.PSObject.Properties.Name)-join ',')}; if",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:51.966Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json'; $j=Get-Content -Raw $p | ConvertFrom-Json; $f=$j.current.verification.final_census; 'FINAL_CENSUS='+(($f.PSObject.Properties.Name)-join ','); foreach($n in $f.PSObject.Properties.Name){$v=$f.$n; if($v -and $v.PSObject -and $v.PSObject.Properties.Count -gt 0){$pn=($v.PSObject.Properties.Name)-join ','; Write-Output ($n+'={'+$pn+'}')}}\"",
+          "session_id": "ltH6vryW13ra7p4Bb-Krppu8"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:52.725Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json'; $j=Get-Content -Raw $p | ConvertFrom-Json; $f=$j.current.verification.final_census; 'FINAL_CENSUS='+(($f.PSObject.Properties.Name)-join ','); foreach($n in $f.PSObject.Properties.Name){$v=$f.$n; if($v -and $v.PSObject -and $v.PSObject.Properties.Count -gt 0){$pn=($v.PSObject.Properties.Name)-join ','; Write-Output ($n+'={'+$pn+'}')}}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:58.833Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json'; $j=Get-Content -Raw $p | ConvertFrom-Json; $c=$j.current; $f=$c.verification.final_census; [pscustomobject]@{activation_epoch_id=$c.activation_epoch_id; state=$c.state; admission_state=$c.admission_state; ready_at=$c.ready_at; expires_at=$c.expires_at; ready_commit_digest_present=[bool]$c.ready_commit_digest; verified=$c.verification.verified; census_pass=$f.pass; workspace_matches=$f.workspa",
+          "session_id": "EoKZG3Nk5_QW1qSERBxo98-V"
+        }
+      },
+      {
+        "time": "2026-08-29T08:59:59.505Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json'; $j=Get-Content -Raw $p | ConvertFrom-Json; $c=$j.current; $f=$c.verification.final_census; [pscustomobject]@{activation_epoch_id=$c.activation_epoch_id; state=$c.state; admission_state=$c.admission_state; ready_at=$c.ready_at; expires_at=$c.expires_at; ready_commit_digest_present=[bool]$c.ready_commit_digest; verified=$c.verification.verified; census_pass=$f.pass; workspace_matches=$f.workspa",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:12.462Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$files=@(@{p='electron/services/fullCleanActivation.js';a=1;b=40},@{p='electron/services/fullCleanActivation.js';a=900;b=930},@{p='scripts/dev-ui-lifecycle.js';a=1;b=35},@{p='resources/coding-tools-mcp/coding_tools_mcp/server.py';a=1180;b=1210},@{p='resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py';a=1;b=45},@{p='resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py';a=1;b=35},@{p='resources/recovery-supervisor/recovery-supervisor.ps1';a",
+          "session_id": "00bNTfS3pz9rWd2icalJ78Jf"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:13.228Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$files=@(@{p='electron/services/fullCleanActivation.js';a=1;b=40},@{p='electron/services/fullCleanActivation.js';a=900;b=930},@{p='scripts/dev-ui-lifecycle.js';a=1;b=35},@{p='resources/coding-tools-mcp/coding_tools_mcp/server.py';a=1180;b=1210},@{p='resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py';a=1;b=45},@{p='resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py';a=1;b=35},@{p='resources/recovery-supervisor/recovery-supervisor.ps1';a",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:23.288Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Select-String -Path resources/coding-tools-mcp/coding_tools_mcp/server.py -Pattern 'tool_discovery_receipts|record.*discovery|client_type.*chatweb|tools/list' -Context 4,8 | ForEach-Object { $_.Context.PreContext; ('LINE '+$_.LineNumber+': '+$_.Line); $_.Context.PostContext; '---' }\"",
+          "session_id": "-3xeLdHQczUOFT8thtB0ixRF"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:24.743Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Select-String -Path resources/coding-tools-mcp/coding_tools_mcp/server.py -Pattern 'tool_discovery_receipts|record.*discovery|client_type.*chatweb|tools/list' -Context 4,8 | ForEach-Object { $_.Context.PreContext; ('LINE '+$_.LineNumber+': '+$_.Line); $_.Context.PostContext; '---' }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:30.111Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$targets=@(@{p='resources/coding-tools-mcp/coding_tools_mcp/server.py';a=1158;b=1178},@{p='resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py';a=40;b=80}); foreach($t in $targets){Write-Output ('--- '+$t.p+' ---');$c=Get-Content $t.p;for($i=$t.a;$i -le $t.b;$i++){Write-Output (('{0}: {1}' -f $i,$c[$i-1]))}}\"",
+          "session_id": "DHxFMrEhiJINKIo4TcJub7vv"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:30.744Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$targets=@(@{p='resources/coding-tools-mcp/coding_tools_mcp/server.py';a=1158;b=1178},@{p='resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py';a=40;b=80}); foreach($t in $targets){Write-Output ('--- '+$t.p+' ---');$c=Get-Content $t.p;for($i=$t.a;$i -le $t.b;$i++){Write-Output (('{0}: {1}' -f $i,$c[$i-1]))}}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:38.301Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Select-String -Path electron/services/fullCleanActivation.js,electron/services/activationPostflight.js,electron/services/runtimeOrchestrator.js -Pattern 'connector_validation|connectorRediscovered|current_process_discovery|connectorReady|fullyReady' -Context 3,6 | ForEach-Object { ('--- '+$_.Path+':'+$_.LineNumber+' ---'); $_.Context.PreContext; $_.Line; $_.Context.PostContext }\"",
+          "session_id": "MsyfF0AFonObLqk5X2etH7r2"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:39.145Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Select-String -Path electron/services/fullCleanActivation.js,electron/services/activationPostflight.js,electron/services/runtimeOrchestrator.js -Pattern 'connector_validation|connectorRediscovered|current_process_discovery|connectorReady|fullyReady' -Context 3,6 | ForEach-Object { ('--- '+$_.Path+':'+$_.LineNumber+' ---'); $_.Context.PreContext; $_.Line; $_.Context.PostContext }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:46.503Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json';$j=Get-Content -Raw $p|ConvertFrom-Json;$tc=$j.current.verification.final_census.runtime.toolContract;'TOOL_CONTRACT='+(($tc.PSObject.Properties.Name)-join ',');$tc|ConvertTo-Json -Compress\"",
+          "session_id": "x9RQTeG2Kvsm5Y5uJrUj8jz5"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:47.213Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json';$j=Get-Content -Raw $p|ConvertFrom-Json;$tc=$j.current.verification.final_census.runtime.toolContract;'TOOL_CONTRACT='+(($tc.PSObject.Properties.Name)-join ',');$tc|ConvertTo-Json -Compress\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:54.941Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json';$j=Get-Content -Raw $p|ConvertFrom-Json;$h=@($j.history)|Where-Object{$_.activation_epoch_id -eq 'activation-mte2qf0b-d46629780d54ad0641bab55aa3e3ab58'}|Select-Object -Last 1; if($h){[pscustomobject]@{activation_epoch_id=$h.activation_epoch_id;state=$h.state;admission_state=$h.admission_state;failed_at=$h.failed_at;error_code=$h.error.code;error_message=$h.error.message;expires_at=$h.expires_a",
+          "session_id": "gPggE4mAvO6_0SlIkdOSKKZO"
+        }
+      },
+      {
+        "time": "2026-08-29T09:00:55.649Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\activation-epoch.json';$j=Get-Content -Raw $p|ConvertFrom-Json;$h=@($j.history)|Where-Object{$_.activation_epoch_id -eq 'activation-mte2qf0b-d46629780d54ad0641bab55aa3e3ab58'}|Select-Object -Last 1; if($h){[pscustomobject]@{activation_epoch_id=$h.activation_epoch_id;state=$h.state;admission_state=$h.admission_state;failed_at=$h.failed_at;error_code=$h.error.code;error_message=$h.error.message;expires_at=$h.expires_a",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T09:01:00.525Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Get-Content -Raw package.json|ConvertFrom-Json; [pscustomobject]@{start=$p.scripts.start;dev_status=$p.scripts.'dev:status';recovery_supervisor_install=$p.scripts.'recovery:supervisor:install'}|ConvertTo-Json -Compress\"",
+          "session_id": "jjh6Nw56N0mxsU5Eb9vbdMZV"
+        }
+      },
+      {
+        "time": "2026-08-29T09:01:01.147Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Get-Content -Raw package.json|ConvertFrom-Json; [pscustomobject]@{start=$p.scripts.start;dev_status=$p.scripts.'dev:status';recovery_supervisor_install=$p.scripts.'recovery:supervisor:install'}|ConvertTo-Json -Compress\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T09:01:07.324Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ids=29308,39768,40048,35936; foreach($id in $ids){try{$p=Get-Process -Id $id -ErrorAction Stop; [pscustomobject]@{pid=$id;alive=$true;name=$p.ProcessName;start_time=$p.StartTime.ToString('o')}}catch{[pscustomobject]@{pid=$id;alive=$false;name=$null;start_time=$null}}}|ConvertTo-Json -Compress\"",
+          "session_id": "5PXju7KijCCfLkiikHoV4jI1"
+        }
+      },
+      {
+        "time": "2026-08-29T09:01:07.742Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ids=29308,39768,40048,35936; foreach($id in $ids){try{$p=Get-Process -Id $id -ErrorAction Stop; [pscustomobject]@{pid=$id;alive=$true;name=$p.ProcessName;start_time=$p.StartTime.ToString('o')}}catch{[pscustomobject]@{pid=$id;alive=$false;name=$null;start_time=$null}}}|ConvertTo-Json -Compress\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T09:01:14.081Z",
+    "archive_reason": "finished"
+  }
+]

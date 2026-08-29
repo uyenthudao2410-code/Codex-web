@@ -250,6 +250,289 @@ class LifecycleReconciliationLedgerMixin:
             "event_hash": str(event["event_hash"]),
         }
 
+    def reconcile_exact_completed_agent_lane(
+        self,
+        *,
+        lane_id: str,
+        expected_logical_sha256: str,
+        expected_run_id: str,
+        expected_wave_id: str,
+        expected_semantic_key: str,
+        expected_thread_id: str,
+        expected_session_id: str,
+        expected_lane_last_turn_id: str,
+        expected_lane_lifecycle: str,
+        expected_lane_updated_at: str,
+        expected_run_status: str,
+        expected_run_state: str,
+        expected_run_last_event_seq: int,
+        expected_run_last_event_hash: str,
+        external_completed_turn_id: str,
+        external_thread_status: str,
+        externally_observed_at: str,
+        runtime_stopped: bool,
+        authority: str,
+        reason: str = "completed_external_agent_lane_stopped_runtime_deadlock",
+    ) -> dict[str, Any]:
+        """Close one exact external lane after its real client task completed.
+
+        This is an operator-only stopped-runtime escape hatch for the activation
+        deadlock where Coding MCP cannot expose ``task_control`` until the last
+        live lane is closed.  It never changes the parent RUN/WAVE lifecycle or
+        acceptance state.  Every ledger identity and the caller's independently
+        observed terminal turn are bound into one durable receipt.
+        """
+        identifier = _bounded_text(lane_id, 256).strip()
+        expected_logical = _bounded_text(expected_logical_sha256, 64).strip().lower()
+        run_guard = _bounded_text(expected_run_id, 256).strip()
+        wave_guard = _bounded_text(expected_wave_id, 256).strip()
+        semantic_guard = _bounded_text(expected_semantic_key, 512).strip()
+        thread_guard = _bounded_text(expected_thread_id, 256).strip()
+        session_guard = _bounded_text(expected_session_id, 256).strip()
+        lane_turn_guard = _bounded_text(expected_lane_last_turn_id, 256).strip()
+        lifecycle_guard = _bounded_text(expected_lane_lifecycle, 64).strip().lower()
+        updated_guard = _bounded_text(expected_lane_updated_at, 64).strip()
+        status_guard = _bounded_text(expected_run_status, 64).strip().lower()
+        state_guard = _bounded_text(expected_run_state, 64).strip().upper()
+        event_hash_guard = _bounded_text(expected_run_last_event_hash, 64).strip().lower()
+        completed_turn = _bounded_text(external_completed_turn_id, 256).strip()
+        thread_status = _bounded_text(external_thread_status, 64).strip().lower()
+        observed_at = _bounded_text(externally_observed_at, 64).strip()
+        operator = _bounded_text(authority, 128).strip()
+        bounded_reason = _bounded_text(reason, 256).strip()
+        required = (
+            identifier,
+            run_guard,
+            wave_guard,
+            semantic_guard,
+            thread_guard,
+            session_guard,
+            lane_turn_guard,
+            lifecycle_guard,
+            updated_guard,
+            status_guard,
+            state_guard,
+            completed_turn,
+            thread_status,
+            observed_at,
+            operator,
+            bounded_reason,
+        )
+        if not all(required):
+            raise LifecycleReconciliationError("completed-agent lane reconciliation requires complete exact guards")
+        if runtime_stopped is not True:
+            raise LifecycleReconciliationError("completed-agent lane reconciliation requires explicit stopped-runtime authority")
+        if len(expected_logical) != 64 or any(char not in "0123456789abcdef" for char in expected_logical):
+            raise LifecycleReconciliationError("expected logical ledger SHA-256 is invalid")
+        if expected_run_last_event_seq < 0 or (
+            event_hash_guard
+            and (len(event_hash_guard) != 64 or any(char not in "0123456789abcdef" for char in event_hash_guard))
+        ):
+            raise LifecycleReconciliationError("expected run event guard is invalid")
+        if lifecycle_guard not in _LIVE_LANE_LIFECYCLES | {"closed"}:
+            raise LifecycleReconciliationError("completed-agent lane lifecycle guard is not reconcilable")
+        if status_guard != "active" or state_guard != "ACCEPTING":
+            raise LifecycleReconciliationError("completed-agent lane parent must remain active and ACCEPTING")
+        if thread_status not in {"idle", "completed"}:
+            raise LifecycleReconciliationError("external agent thread is not in an observed terminal status")
+        if completed_turn == lane_turn_guard:
+            raise LifecycleReconciliationError("external completion proof must be a later turn than the lane's interrupted turn")
+        try:
+            parsed_observation = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise LifecycleReconciliationError("external completion observation timestamp is invalid") from exc
+        if parsed_observation.tzinfo is None:
+            raise LifecycleReconciliationError("external completion observation timestamp must include a timezone")
+
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            if logical_ledger_sha256(connection) != expected_logical:
+                connection.rollback()
+                raise LifecycleReconciliationError("logical ledger snapshot changed before completed-agent lane reconciliation")
+            row = connection.execute(
+                """SELECT l.*,r.status AS run_status,w.run_id AS wave_run_id
+                   FROM agent_lanes l
+                   JOIN runs r ON r.run_id=l.run_id
+                   JOIN waves w ON w.wave_id=l.wave_id
+                   WHERE l.lane_id=?""",
+                (identifier,),
+            ).fetchone()
+            if row is None:
+                connection.rollback()
+                raise LifecycleReconciliationError("completed-agent lane target was not found")
+            last = connection.execute(
+                "SELECT seq,event_hash,event_type,state_after FROM events WHERE run_id=? ORDER BY seq DESC LIMIT 1",
+                (run_guard,),
+            ).fetchone()
+            actual_seq = int(last["seq"] or 0) if last is not None else 0
+            actual_hash = str(last["event_hash"] or "") if last is not None else ""
+            actual_state = str(last["state_after"] or "").upper() if last is not None else ""
+            exact_lane_guards = (
+                str(row["run_id"] or "") == run_guard,
+                str(row["wave_id"] or "") == wave_guard,
+                str(row["wave_run_id"] or "") == run_guard,
+                str(row["semantic_key"] or "") == semantic_guard,
+                str(row["thread_id"] or "") == thread_guard,
+                str(row["session_id"] or "") == session_guard,
+                str(row["last_turn_id"] or "") == lane_turn_guard,
+                str(row["lifecycle"] or "").lower() == lifecycle_guard,
+                str(row["updated_at"] or "") == updated_guard,
+                str(row["run_status"] or "").lower() == status_guard,
+                actual_state == state_guard,
+                actual_seq == int(expected_run_last_event_seq),
+                actual_hash == event_hash_guard,
+            )
+            if not all(exact_lane_guards):
+                connection.rollback()
+                raise LifecycleReconciliationError("completed-agent lane guard changed before reconciliation")
+
+            metadata = json.loads(row["metadata_json"] or "{}")
+            metadata = metadata if isinstance(metadata, dict) else {}
+            receipt = metadata.get("completed_agent_lane_reconciliation")
+            receipt = receipt if isinstance(receipt, dict) else {}
+            if lifecycle_guard == "closed":
+                if (
+                    str(receipt.get("run_id") or "") != run_guard
+                    or str(receipt.get("wave_id") or "") != wave_guard
+                    or str(receipt.get("thread_id") or "") != thread_guard
+                    or str(receipt.get("external_completed_turn_id") or "") != completed_turn
+                ):
+                    connection.rollback()
+                    raise LifecycleReconciliationError("closed lane lacks the exact completed-agent reconciliation receipt")
+                connection.commit()
+                return {
+                    "changed": False,
+                    "idempotent": True,
+                    "lane_id": identifier,
+                    "run_id": run_guard,
+                    "wave_id": wave_guard,
+                    "lifecycle": "closed",
+                    "parent_state": "ACCEPTING",
+                    "external_completed_turn_id": completed_turn,
+                }
+
+            if connection.execute(
+                "SELECT 1 FROM p5_experiment_epochs WHERE ledger_run_id=? LIMIT 1",
+                (run_guard,),
+            ).fetchone():
+                connection.rollback()
+                raise LifecycleReconciliationError("P5 experiment anchor is not a completed-agent lane target")
+            live_checks = (
+                connection.execute(
+                    "SELECT 1 FROM controller_leases WHERE run_id=? AND status='active' LIMIT 1",
+                    (run_guard,),
+                ).fetchone(),
+                connection.execute(
+                    "SELECT 1 FROM write_fences WHERE (run_id=? OR wave_id=?) AND status='active' LIMIT 1",
+                    (run_guard, wave_guard),
+                ).fetchone(),
+                connection.execute(
+                    "SELECT 1 FROM background_operations WHERE (run_id=? OR wave_id=?) AND status='running' LIMIT 1",
+                    (run_guard, wave_guard),
+                ).fetchone(),
+                connection.execute(
+                    """SELECT 1 FROM managed_process_jobs
+                       WHERE (run_id=? OR wave_id=?)
+                       AND lifecycle_state IN ('starting','active','waiting','idle','running') LIMIT 1""",
+                    (run_guard, wave_guard),
+                ).fetchone(),
+                connection.execute(
+                    """SELECT 1 FROM agent_lanes
+                       WHERE run_id=? AND lane_id<>?
+                       AND lifecycle IN ('starting','active','waiting','idle') LIMIT 1""",
+                    (run_guard, identifier),
+                ).fetchone(),
+            )
+            if any(live_checks):
+                connection.rollback()
+                raise LifecycleReconciliationError("completed-agent lane target has competing live ownership")
+
+            now = _utc_now()
+            receipt = {
+                "schema_version": 1,
+                "reason": bounded_reason,
+                "authority": operator,
+                "runtime_stopped_attested": True,
+                "run_id": run_guard,
+                "wave_id": wave_guard,
+                "semantic_key": semantic_guard,
+                "thread_id": thread_guard,
+                "session_id": session_guard,
+                "lane_last_turn_id": lane_turn_guard,
+                "external_completed_turn_id": completed_turn,
+                "external_thread_status": thread_status,
+                "externally_observed_at": observed_at,
+                "reconciled_at": now,
+                "parent_status": status_guard,
+                "parent_state": state_guard,
+            }
+            metadata["completed_agent_lane_reconciliation"] = receipt
+            connection.execute(
+                "UPDATE agent_lanes SET lifecycle='closed',metadata_json=?,updated_at=? WHERE lane_id=?",
+                (_json(metadata), now, identifier),
+            )
+            event = append_hash_chained_event(
+                connection,
+                run_id=run_guard,
+                event_type="completed_agent_lane_reconciled",
+                wave_id=wave_guard,
+                delegation_id=None,
+                state_before="ACCEPTING",
+                state_after="ACCEPTING",
+                payload={
+                    "lane_id": identifier,
+                    "reason": bounded_reason,
+                    "authority": operator,
+                    "lane_lifecycle_before": lifecycle_guard,
+                    "lane_lifecycle_after": "closed",
+                    "thread_id": thread_guard,
+                    "lane_last_turn_id": lane_turn_guard,
+                    "external_completed_turn_id": completed_turn,
+                    "external_thread_status": thread_status,
+                    "externally_observed_at": observed_at,
+                    "runtime_stopped_attested": True,
+                    "parent_status": status_guard,
+                    "parent_state": state_guard,
+                },
+                event_time=now,
+                sanitize=lambda value: value,
+                serialize=_json,
+                bounded_text=_bounded_text,
+            )
+            connection.execute(
+                """INSERT INTO coordination_messages(
+                    message_id,run_id,wave_id,lane_id,direction,kind,status,base_head,worktree_fp,
+                    created_at,acknowledged_at,payload_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    uuid.uuid4().hex,
+                    run_guard,
+                    wave_guard,
+                    identifier,
+                    "system",
+                    "completed_agent_lane_reconciled",
+                    "pending",
+                    str(row["base_head"] or ""),
+                    str(row["worktree_fp"] or ""),
+                    now,
+                    None,
+                    _json(receipt),
+                ),
+            )
+            connection.commit()
+        return {
+            "changed": True,
+            "idempotent": False,
+            "lane_id": identifier,
+            "run_id": run_guard,
+            "wave_id": wave_guard,
+            "lifecycle": "closed",
+            "parent_state": "ACCEPTING",
+            "external_completed_turn_id": completed_turn,
+            "event_seq": int(event["seq"]),
+            "event_hash": str(event["event_hash"]),
+        }
+
     def reconcile_terminal_parent_lane(
         self,
         *,

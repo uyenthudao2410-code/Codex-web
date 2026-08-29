@@ -1,0 +1,338 @@
+[
+  {
+    "version": 2,
+    "task_id": "80c53cb6429e43bca192020c4bae9065",
+    "orchestration": {
+      "run_id": "8e7f2276b85b4e038146131a931ac78b",
+      "wave_id": "a3e3548693d64773bf4471625ae41aa9",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e4075d81e5de465837e501e28016ccc7b2afa7ce",
+      "worktree_fp": "d24fa2c1d10fe91ab73de8638453188c4b7e6c5accc85e132e600a4b245fcbe2",
+      "contract_fp": ""
+    },
+    "objective": "Finish the existing Operational Convergence batch on the current dirty worktree without reverting concurrent work. Diagnose the partial source changes already present for: (1) reconciling task projection to canonical CHECKPOINTED/terminal EOCL state, (2) terminalizing completed or parent-terminal Codex agent lane residue through the runtime's official reconciliation path, (3) reconciling the 70 stale orchestration runs without manual ledger edits, and (4) preventing accepted checkpoints from carrying an invalid all-zero proof fingerprint when exact passed proofs exist. Preserve existing UI/dashboard behavior and all .coding-tools evidence. Do not restart, commit, push, clean, reset, or manually edit ledger.sqlite3. Return the smallest coherent remaining patch and exact proof plan.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "KnT5-FIAP2a-UDAQiE004xnH",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 758,
+      "finished_at": "2026-08-29T02:32:51.618Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-29T02:30:22.475Z",
+    "updated_at": "2026-08-29T02:32:51.618Z",
+    "events": [
+      {
+        "time": "2026-08-29T02:30:22.475Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Finish the existing Operational Convergence batch on the current dirty worktree without reverting concurrent work. Diagnose the partial source changes already present for: (1) reconciling task projection to canonical CHECKPOINTED/terminal EOCL state, (2) terminalizing completed or parent-terminal Codex agent lane residue through the runtime's official reconciliation path, (3) reconciling the 70 stale orchestration runs without manual ledger edits, and (4) preventing accepted checkpoints from carrying an invalid all-zero proof fingerprint when exact passed proofs exist. Preserve existing UI/dashboard behavior and all .coding-tools evidence. Do not restart, commit, push, clean, reset, or manually edit ledger.sqlite3. Return the smallest coherent remaining patch and exact proof plan."
+        }
+      },
+      {
+        "time": "2026-08-29T02:30:23.436Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-29T02:30:25.438Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-29T02:30:25.447Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-29T02:30:51.944Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/completed_agent_lane_reconciliation.py resources/coding-tools-mcp/scripts/reconcile_exact_completed_agent_lane.py resources/c",
+          "session_id": "-WNd55WME1yJ3UIP5wWj6xjB"
+        }
+      },
+      {
+        "time": "2026-08-29T02:30:52.572Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_orchestration_control.py resources/coding-tools-mcp/coding_tools_mcp/completed_agent_lane_reconciliation.py resources/coding-tools-mcp/scripts/reconcile_exact_completed_agent_lane.py resources/c",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:31:11.884Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 110 -B 15 \"def _maybe_reconcile_stale_orchestration\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "8e8svVbaQtlnfBuYGZuUmiq9"
+        }
+      },
+      {
+        "time": "2026-08-29T02:31:12.462Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 110 -B 15 \"def _maybe_reconcile_stale_orchestration\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:31:24.543Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 125 -B 20 \"def reconcile_exact_stale_run\" resources/coding-tools-mcp/coding_tools_mcp/stale_run_reconciliation.py && rg -n \"reconcile_exact_stale_run\" resources/coding-tools-mcp/scripts package.json",
+          "session_id": "qs5P42hYZK_Y4qx9y-rl-o-r"
+        }
+      },
+      {
+        "time": "2026-08-29T02:31:25.110Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 125 -B 20 \"def reconcile_exact_stale_run\" resources/coding-tools-mcp/coding_tools_mcp/stale_run_reconciliation.py && rg -n \"reconcile_exact_stale_run\" resources/coding-tools-mcp/scripts package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:32:51.035Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"task_control\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_specs.py",
+          "session_id": "KnT5-FIAP2a-UDAQiE004xnH"
+        }
+      },
+      {
+        "time": "2026-08-29T02:32:51.618Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"task_control\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_specs.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T02:32:59.006Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "ed20682db16f43318fc0f1b2d70fdc41",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "pkzOZXfIgXBuehTq1Gd4m1UW",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 1114,
+      "finished_at": "2026-08-29T02:33:00.652Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-29T02:32:59.006Z",
+    "updated_at": "2026-08-29T02:33:00.652Z",
+    "events": [
+      {
+        "time": "2026-08-29T02:32:59.006Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:00.112Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"task_context_id\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schemas.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "pkzOZXfIgXBuehTq1Gd4m1UW"
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:00.652Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"task_context_id\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schemas.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T02:33:09.321Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "cab92eb175a744a097e30fa7438a51e8",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-29T02:34:23.984Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-29T02:33:09.326Z",
+    "updated_at": "2026-08-29T02:34:23.984Z",
+    "events": [
+      {
+        "time": "2026-08-29T02:33:09.326Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:10.126Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 95 -B 35 \"if name == \\\"task_control\\\"\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "5X2h8PPeHoCDN-YRjVvNS8bv"
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:10.717Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 95 -B 35 \"if name == \\\"task_control\\\"\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:21.825Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l \"task_context_id\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "Zz84P-xpJSa-7tGsFJxOuPYO"
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:22.368Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l \"task_context_id\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:28.777Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 220 -B 30 \"task_control\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py && rg -n -A 40 -B 20 \"task_context_id\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "T1phtY2WVdE3pN12puk39-rH"
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:29.468Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 220 -B 30 \"task_control\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py && rg -n -A 40 -B 20 \"task_context_id\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:34:06.112Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 170 -B 30 \"def record_checkpoint|def accept_checkpoint_atomic|CREATE TABLE IF NOT EXISTS checkpoints\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "session_id": "GL2g_bMs22sBtFsqe-Ns4eHd"
+        }
+      },
+      {
+        "time": "2026-08-29T02:34:06.626Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 170 -B 30 \"def record_checkpoint|def accept_checkpoint_atomic|CREATE TABLE IF NOT EXISTS checkpoints\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:34:16.409Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 150 -B 25 \"def reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py && rg -n \"_reconcile_task_orchestration_projection\\(\\)\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "c9VGRlDGAArCDjdJUvd3jnnO"
+        }
+      },
+      {
+        "time": "2026-08-29T02:34:17.050Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 150 -B 25 \"def reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py && rg -n \"_reconcile_task_orchestration_projection\\(\\)\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:34:23.984Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 40 -B 20 \"def _reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/server.py && rg -n -A 65 -B 20 \"test_.*reconcile.*projection\" resources/coding-tools-mcp/tests/test_task_state_and_build.py resources/coding-tools-mcp/tests/test_engineering_casebook.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:34:23.984Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-29T02:34:33.470Z",
+    "archive_reason": "finished"
+  }
+]

@@ -241,6 +241,41 @@ test('pending projection reuse requires every admission-closed identity and immu
   }
 });
 
+test('pending projection reuse permits a strict discovered candidate for finalize without a second preflight', () => {
+  const root = path.resolve('pending-projection-strict-workspace');
+  const receipt = projectionReceipt(root);
+  const record = {
+    activation_epoch_id: receipt.activation_epoch_id,
+    state: 'VERIFYING',
+    admission_state: 'CLOSED',
+    verification: {
+      projection_rebuild_verified: true,
+      projection_rebuild_receipt: receipt,
+      connector_validation: {
+        valid: true,
+        freshness_mode: 'current_process_discovery',
+        rediscovered_at: '2026-08-29T00:00:00.000Z'
+      },
+      process_identity_verified: true,
+      workspace_matches: true,
+      device_matches: true,
+      revision_matches: true,
+      recovery_host_revision_matches: true,
+      recovery_host_epoch_matches: true,
+      ui_verified: true,
+      recovery_plane_verified: true,
+      epoch_matches: true,
+      lifecycle_decision: { safe: true, code: 'READY' }
+    }
+  };
+
+  const reusable = reusablePendingProjectionObservation(record);
+
+  assert.ok(reusable);
+  assert.equal(reusable.reused_pending_projection, true);
+  assert.equal(reusable.projection_rebuild_receipt, receipt);
+});
+
 function projectionGateInput(root, {
   preflightReceipt = projectionReceipt(root),
   healthReceipt = preflightReceipt,
@@ -590,7 +625,7 @@ test('connector gate binds ACK and rediscovery to the exact post-preflight healt
   assert.ok(staleAcknowledgement.reasons.includes('ACKNOWLEDGED_SHA256_MISMATCH'));
 });
 
-test('connector gate accepts only an exact acknowledged no-workspace compatibility bootstrap', () => {
+test('connector gate keeps an exact no-workspace compatibility bootstrap pending strict rediscovery', () => {
   const nowUnixMs = 1_700_000_000_000;
   const activationEpochId = id('activation-compatible-gate', '1001');
   const contractSha256 = 'e'.repeat(64);
@@ -637,7 +672,8 @@ test('connector gate accepts only an exact acknowledged no-workspace compatibili
   };
 
   const ready = validateConnectorReadyGate({ health, contractStatus, nowUnixMs });
-  assert.equal(ready.valid, true);
+  assert.equal(ready.valid, false);
+  assert.ok(ready.reasons.includes('STRICT_CONNECTOR_REDISCOVERY_REQUIRED'));
   assert.equal(ready.freshness_mode, 'compatible_activation_bootstrap');
   assert.equal(ready.rediscovered_at, null);
   assert.equal(ready.compatibility_acknowledged_at, observedAt);
